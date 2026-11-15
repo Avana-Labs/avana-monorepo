@@ -396,6 +396,14 @@ contract LPPriceMathUnitTest is AvanaTest {
         assertEq(m.usdLevel(_u2(MAX_ROUTE + 1, 1e8)), 0, "oversize quote: 0");
     }
 
+    // TEST-251 verifies: SPEC-ORC-011, REQ-ORACLE-042
+    // The token count is checked before the quotes: one valid quote, or nine, is malformed (0), not a level.
+    function test_TEST_251_usdLevelTokenCount() public view {
+        assertEq(m.usdLevel(_filled(1, 1e8)), 0, "one token: 0");
+        assertEq(m.usdLevel(_filled(9, 1e8)), 0, "nine tokens: 0");
+        assertEq(m.usdLevel(_filled(8, 1e8)), 1e8, "eight tokens: a level");
+    }
+
     // TEST-251 verifies: SPEC-ORC-011, REQ-ORACLE-042, REQ-ORACLE-103
     // Sources: MATH-UO-75i (at MAX_ROUTE_ANSWER = 10^18 six factors are exact, seven or eight saturate), MATH-UO-75j
     // (a saturated product reports usdLevel = type(uint256).max, and the level and the band test still agree)

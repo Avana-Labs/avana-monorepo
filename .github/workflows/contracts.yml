@@ -470,17 +470,16 @@ jobs:
 
       - run: forge soldeer install
 
-      - name: Build Aave V4 artifacts for the fixture
-        # Suites built on the Aave V4 fixture deploy the release from out-aave/ (vm.getCode / deployCode).
-        run: |
-          FOUNDRY_PROFILE=aave forge build
-          FOUNDRY_PROFILE=univ3 forge build
-          FOUNDRY_PROFILE=univ3-periphery forge build
-          FOUNDRY_PROFILE=slipstream-v1 forge build
-          FOUNDRY_PROFILE=slipstream-main forge build
-          FOUNDRY_PROFILE=univ4 forge build
-          FOUNDRY_PROFILE=permit2 forge build
-          FOUNDRY_PROFILE=aerodrome forge build
+      - name: Reuse the build job's compiled output
+        # The whole project's build, as the test shards use it, with the out-aave/ and other pinned third-party
+        # artifacts the fixtures deploy (vm.getCode / deployCode). A build of only this file's import graph (the
+        # invariant profile's match_path) compiled each contract the fixtures deploy by name only in the profiles of
+        # the suites that import it, so `deployCode("X.sol:X")` could find copies in two other profiles and none in
+        # the test's own, and failed `multiple matching artifacts found` (Integration, run 43653564553).
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge-out
+          path: contracts
 
       - name: Invariant suite ${{ matrix.file }} (2,000 runs, depth 400)
         env:

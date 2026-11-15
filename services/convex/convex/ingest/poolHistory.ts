@@ -7,10 +7,9 @@
 import { v } from "convex/values";
 import { chainById } from "@avana/services-common/chains";
 import { optionalEnv } from "@avana/services-common/env";
-import type { SeriesRecord } from "@avana/services-common/series";
 import { internal } from "../_generated/api";
 import { internalAction } from "../_generated/server";
-import { exportGet } from "./pull.ts";
+import { exportClient } from "../lib/exportClient.ts";
 
 /** Blocks per request; the endpoint accepts up to 50,000. */
 const RANGE = 10_000n;
@@ -23,10 +22,10 @@ export const backfill = internalAction({
     const listed = BigInt(listedBlock);
     const start = listed > days * perDay ? listed - days * perDay : 0n;
     const progress = await ctx.runMutation(internal.ingest.apply.poolBackfill, { chainId, pool, fromBlock: start.toString(), listedBlock });
+    const exp = exportClient();
     for (let from = BigInt(progress.throughBlock) + 1n; from < listed; ) {
       const to = from + RANGE - 1n < listed - 1n ? from + RANGE - 1n : listed - 1n;
-      const body = await exportGet<{ records: SeriesRecord[] }>(`/export/v1/pool-history?chainId=${chainId}&pool=${pool}&fromBlock=${from}&toBlock=${to}`);
-      if (!body) return;
+      const body = await exp.poolHistory(chainId, pool, from, to);
       const { applied } = await ctx.runMutation(internal.ingest.apply.applyPoolHistory, { chainId, pool, fromBlock: from.toString(), toBlock: to.toString(), records: body.records });
       if (!applied) return; // another run is ahead
       from = to + 1n;

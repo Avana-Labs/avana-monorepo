@@ -1,31 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The scheduled pull (README, "Scheduled pull"): checks the checkpoint hash over Convex's own RPC, requests signed
-// export pages after it, validates each, checks `toBlockHash` over the same RPC and applies it in one mutation, up
-// to 20 pages a run; then the series pages after the series cursor. A hash mismatch stops the chain's import and
-// rewinds to the newest stored checkpoint that still matches.
+// export pages after it (the export client validates each), checks `toBlockHash` over the same RPC and applies it in
+// one mutation, up to 20 pages a run; then the series pages after the series cursor. A hash mismatch stops the
+// chain's import and rewinds to the newest stored checkpoint that still matches.
 
 import { v } from "convex/values";
-import type { ExportPage } from "@avana/services-common/export";
-import type { SeriesExportPage } from "@avana/services-common/series";
-import { requireEnv } from "@avana/services-common/env";
 import { internal } from "../_generated/api";
 import { type ActionCtx, internalAction, internalQuery } from "../_generated/server";
-import { validatePage, validateSeriesPage } from "../lib/exportPage.ts";
-import { signRequest } from "../lib/hmac.ts";
+import { exportClient } from "../lib/exportClient.ts";
 import { rpcClient } from "../lib/rpc.ts";
 
 const PAGES_PER_RUN = 20;
-
-/** GET on the indexer's export, signed; null on 204. */
-export async function exportGet<T>(pathAndQuery: string): Promise<T | null> {
-  const base = requireEnv(process.env, "INDEXER_EXPORT_URL").replace(/\/$/, "");
-  const headers = await signRequest(requireEnv(process.env, "INDEXER_EXPORT_SECRET"), requireEnv(process.env, "INDEXER_EXPORT_KEY_ID"), "GET", pathAndQuery, Math.floor(Date.now() / 1000));
-  const res = await fetch(`${base}${pathAndQuery}`, { headers });
-  if (res.status === 204) return null;
-  if (!res.ok) throw new Error(`export ${pathAndQuery} answered ${res.status}`);
-  return (await res.json()) as T;
-}
 
 export const history = internalQuery({
   args: { chainId: v.number() },
@@ -52,16 +38,15 @@ export const pull = internalAction({
     // A chain without a deployments row is skipped (crons.ts), before its RPC variables are read.
     if (!(await ctx.runQuery(internal.ingest.apply.state, { chainId })).deployment) return;
     const client = rpcClient(chainId);
+    const exp = exportClient();
     for (let i = 0; i < PAGES_PER_RUN; i++) {
       const { checkpoint } = await ctx.runQuery(internal.ingest.apply.state, { chainId });
       if (checkpoint) {
         const block = await client.getBlock({ blockNumber: BigInt(checkpoint.throughBlock) });
         if (block.hash !== checkpoint.throughBlockHash) return rebuild(ctx, chainId);
       }
-      const after = checkpoint ? `&after=${checkpoint.throughBlock}` : "";
-      const page = await exportGet<ExportPage>(`/export/v1/pages?chainId=${chainId}${after}&limit=500`);
+      const page = await exp.pages(chainId, checkpoint ? BigInt(checkpoint.throughBlock) : null);
       if (!page) break;
-      validatePage(page, chainId, checkpoint ? BigInt(checkpoint.throughBlock) : null);
       const tip = await client.getBlock({ blockNumber: BigInt(page.toBlock) });
       if (tip.hash !== page.toBlockHash) throw new Error(`ingest ${chainId}: toBlock ${page.toBlock} hash differs from RPC`);
       const { applied } = await ctx.runMutation(internal.ingest.apply.applyPage, { chainId, page });
@@ -70,10 +55,8 @@ export const pull = internalAction({
     for (let i = 0; i < PAGES_PER_RUN; i++) {
       const { checkpoint } = await ctx.runQuery(internal.ingest.apply.state, { chainId });
       if (!checkpoint) return;
-      const after = checkpoint.seriesThroughTime >= 0 ? `&after=${checkpoint.seriesThroughTime}` : "";
-      const page = await exportGet<SeriesExportPage>(`/export/v1/series?chainId=${chainId}${after}&limit=2000`);
+      const page = await exp.series(chainId, checkpoint.seriesThroughTime);
       if (!page) return;
-      validateSeriesPage(page, chainId, checkpoint.seriesThroughTime);
       const { applied } = await ctx.runMutation(internal.ingest.apply.applySeriesPage, { chainId, page });
       if (!applied) return;
     }

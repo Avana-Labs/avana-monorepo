@@ -177,6 +177,14 @@
       "approval": "approved (Josue, 2026-11-13)"
     },
     {
+      "fingerprint": "155f63bab850403b",
+      "check": "SWC-116",
+      "file": "LensPriceModule",
+      "function": "_function_0x4b0dac35",
+      "reason": "LensPriceModule.getDebtPriceState(address,uint256) (src/lens/lens/LensPrice.sol, LensBase._debtView, PriceAge): block.timestamp is the reported block stamp, the updatedAt of a fixed-price reserve, and the clock of the age and of the borrowFresh and liquidationFresh flags, which apply execution's own freshness rules (REQ-LENS-030, REQ-RISK-061, REQ-SWAP-008). The function is a view of the read-only Lens module (no storage, every function view, reached by STATICCALL from Lens): it moves no funds and decides nothing on chain, and a few seconds of validator drift change only the reported age by those seconds.",
+      "approval": "approved (Josue, 2026-11-14)"
+    },
+    {
       "fingerprint": "c008f4a647191e92",
       "check": "SWC-113",
       "file": "LensRiskModule",

@@ -119,7 +119,8 @@ contract ListMarkets is ListingBase {
         } else if (_eq(step, "oracles")) {
             _oracles();
         } else if (_eq(step, "markets")) {
-            _propose(_markets(), NORMAL_DELAY);
+            (Operation memory op, uint256[] memory starts) = _markets();
+            _proposeInParts(op, starts, NORMAL_DELAY);
         } else if (_eq(step, "activate")) {
             _propose(_activate(), SHORT_DELAY);
         } else {
@@ -142,7 +143,7 @@ contract ListMarkets is ListingBase {
         console2.log(op.name, vm.toString(id), _operationPath(op.name));
         if (vm.envOr("AVANA_SCHEDULE", false)) {
             vm.broadcast(safe);
-            ITimelockOps(timelock).scheduleBatch(op.targets, op.values, op.payloads, bytes32(0), op.salt, delay);
+            ITimelockOps(timelock).scheduleBatch(op.targets, op.values, op.payloads, op.predecessor, op.salt, delay);
             console2.log("scheduled as the governance Safe", safe);
         }
     }
@@ -199,7 +200,7 @@ contract ListMarkets is ListingBase {
     function _listTokens(
         Operation memory op
     ) private {
-        uint256 n = _count(cfg, ".listing.tokens");
+        uint256 n = _cfgCount(".listing.tokens");
         string[4] memory roles = ["primary", "alternate", "standby", "second"];
         for (uint256 i = 0; i < n; ++i) {
             string memory k = _at("tokens", i);
@@ -276,7 +277,7 @@ contract ListMarkets is ListingBase {
     function _listDebtAssets(
         Operation memory op
     ) private view {
-        uint256 n = _count(cfg, ".listing.debtAssets");
+        uint256 n = _cfgCount(".listing.debtAssets");
         for (uint256 i = 0; i < n; ++i) {
             string memory k = _at("debtAssets", i);
             string memory sym = _str(string.concat(k, ".symbol"));
@@ -320,7 +321,7 @@ contract ListMarkets is ListingBase {
     function _recordSpokes(
         Operation memory op
     ) private view {
-        uint256 n = _count(cfg, ".listing.spokes");
+        uint256 n = _cfgCount(".listing.spokes");
         bytes32 standard = registry.STANDARD_SPOKE_IMPLEMENTATION().codehash;
         bytes32[] memory seen = new bytes32[](n);
         for (uint256 i = 0; i < n; ++i) {
@@ -366,7 +367,7 @@ contract ListMarkets is ListingBase {
         Operation memory op
     ) private view {
         string memory coverage = vm.readFile(_outputPath("coverage"));
-        uint256 n = _count(cfg, ".listing.debtReserves");
+        uint256 n = _cfgCount(".listing.debtReserves");
         for (uint256 i = 0; i < n; ++i) {
             if (!_firstOfPair(i)) continue;
             string memory k = _at("debtReserves", i);
@@ -448,7 +449,7 @@ contract ListMarkets is ListingBase {
     // ─── oracles ───
 
     function _oracles() private {
-        uint256 n = _count(cfg, ".listing.debtAssets");
+        uint256 n = _cfgCount(".listing.debtAssets");
         string memory o = "oracles";
         string memory json = _keepOutput(o, "listing-oracles");
         vm.startBroadcast(deployerOf());
@@ -519,10 +520,15 @@ contract ListMarkets is ListingBase {
         bool relisting;
     }
 
-    function _markets() private returns (Operation memory op) {
+    /// @return op The listing batch.
+    /// @return starts The index in `op` of each new market's first call; the calls before the first are the routes of
+    /// listed markets and the debt reserves.
+    function _markets() private returns (Operation memory op, uint256[] memory starts) {
         op = _newOperation("listing-markets", release, 400);
         uint256 first = registry.marketCount() + 1;
-        uint256 n = _count(cfg, ".listing.markets");
+        uint256 n = _cfgCount(".listing.markets");
+        starts = new uint256[](n);
+        uint256 newMarkets;
         IVaultTokenFactory f = IVaultTokenFactory(vm.parseJsonAddress(avanaJson, ".vaultTokenFactory"));
         // Routes the config adds to listed markets come first: enabling a debt reserve on a Spoke requires every live
         // market of that Spoke to have its primary and backup routes into the asset (REQ-MREG-032).
@@ -555,11 +561,156 @@ contract ListMarkets is ListingBase {
             } else {
                 console2.log("relisting cancelled market", m.marketId, m.vaultToken);
             }
+            starts[newMarkets++] = op.targets.length;
             address[] memory routes = _listMarket(op, m, f, token == address(0));
             json = vm.serializeString(out, string.concat("market", vm.toString(m.marketId)), _marketJson(m, routes));
         }
+        assembly ("memory-safe") {
+            mstore(starts, newMarkets)
+        }
         if (op.targets.length != 0) op.salt = _listingMetadataHash(first);
         if (op.targets.length != 0) vm.writeJson(json, _outputPath("listing-markets"));
+    }
+
+    // ─── listing batch gas ───
+
+    /// @notice Gas the timelock spends per call of a batch beyond the call itself (the loop, the cold call, the
+    /// payload copy and the `CallExecuted` event), the price of a calldata byte, and a transaction's base cost.
+    uint256 internal constant PER_CALL_GAS = 12_000;
+    uint256 internal constant CALLDATA_GAS_PER_BYTE = 16;
+    uint256 internal constant TX_BASE_GAS = 21_000;
+    /// @notice Default execution gas budget of one timelock operation: about five markets on Ethereum, well inside a
+    /// block. `.chain.operationGasBudget` in the network config sets a chain's own; `AVANA_OPERATION_GAS_BUDGET`
+    /// overrides both.
+    uint256 internal constant DEFAULT_OPERATION_GAS_BUDGET = 40_000_000;
+
+    function _operationGasBudget() internal view returns (uint256) {
+        uint256 budget = vm.keyExistsJson(cfg, ".chain.operationGasBudget")
+            ? vm.parseJsonUint(cfg, ".chain.operationGasBudget")
+            : DEFAULT_OPERATION_GAS_BUDGET;
+        return vm.envOr("AVANA_OPERATION_GAS_BUDGET", budget);
+    }
+
+    /// @notice Schedules the listing batch as one or more operations, each estimated to execute within the chain's
+    /// budget (`_operationGasBudget`). The batch is cut only between markets: the routes of listed markets and the
+    /// debt reserves stay with the first market, and each market's calls stay together. Part 1 keeps the name
+    /// `listing-markets`; part k is `listing-markets.<k>` and names part k-1 as its predecessor, so the parts execute
+    /// in order (`05_ExecuteOperations` follows them). The last part carries the listing metadata salt, so the pages
+    /// load once every market of the listing is on chain; the others' salts derive from it.
+    function _proposeInParts(
+        Operation memory op,
+        uint256[] memory starts,
+        uint256 delay
+    ) private {
+        if (op.targets.length == 0) {
+            _propose(op, delay);
+            return;
+        }
+        uint256[] memory gas = _simulatedGas(op);
+        uint256 budget = _operationGasBudget();
+        uint256[] memory cuts = _cuts(op, starts, gas, budget);
+        uint256 parts = cuts.length - 1;
+        bytes32 previous;
+        for (uint256 k = 0; k < parts; ++k) {
+            Operation memory part = _part(op, gas, cuts[k], cuts[k + 1], k, parts);
+            part.predecessor = previous;
+            console2.log(part.name, "calls", part.targets.length);
+            console2.log("  estimated execution gas", part.gasEstimate, "budget", budget);
+            _propose(part, delay);
+            previous = _operationId(timelock, part);
+        }
+        if (parts > 1) console2.log("listing-markets split in", parts, "operations, executed in order");
+    }
+
+    /// @notice Where the batch is cut: `cuts[k]` is the first call of part k and the last entry is the batch length.
+    /// Groups are [0, starts[1]) (the routes and debt reserves with the first market), then one per market; a group
+    /// goes into the current part unless that takes the part over `budget`.
+    function _cuts(
+        Operation memory op,
+        uint256[] memory starts,
+        uint256[] memory gas,
+        uint256 budget
+    ) private pure returns (uint256[] memory cuts) {
+        uint256 groups = starts.length == 0 ? 1 : starts.length;
+        cuts = new uint256[](groups + 1);
+        uint256 parts;
+        uint256 partGas = TX_BASE_GAS;
+        for (uint256 g = 0; g < groups; ++g) {
+            uint256 from = g == 0 ? 0 : starts[g];
+            uint256 to = g + 1 < groups ? starts[g + 1] : op.targets.length;
+            uint256 groupGas;
+            for (uint256 i = from; i < to; ++i) {
+                groupGas += gas[i];
+            }
+            require(
+                TX_BASE_GAS + groupGas <= budget,
+                string.concat(
+                    "listing-markets: the calls from ",
+                    op.labels[from],
+                    " need about ",
+                    vm.toString(groupGas),
+                    " gas, above the operation budget ",
+                    vm.toString(budget)
+                )
+            );
+            if (g != 0 && partGas + groupGas > budget) {
+                cuts[++parts] = from;
+                partGas = TX_BASE_GAS;
+            }
+            partGas += groupGas;
+        }
+        cuts[++parts] = op.targets.length;
+        assembly ("memory-safe") {
+            mstore(cuts, add(parts, 1))
+        }
+    }
+
+    /// @notice Part `k` of `parts`: calls [from, to) of the batch with their gas estimate. Part 1 keeps the batch's
+    /// name and part k is `<name>.<k>`; the last part keeps the batch's salt and the others' derive from it.
+    function _part(
+        Operation memory op,
+        uint256[] memory gas,
+        uint256 from,
+        uint256 to,
+        uint256 k,
+        uint256 parts
+    ) private view returns (Operation memory part) {
+        part = _newOperation(k == 0 ? op.name : string.concat(op.name, ".", vm.toString(k + 1)), release, to - from);
+        part.gasEstimate = TX_BASE_GAS;
+        for (uint256 i = from; i < to; ++i) {
+            _add(part, op.targets[i], op.payloads[i], op.labels[i]);
+            part.values[i - from] = op.values[i];
+            part.gasEstimate += gas[i];
+        }
+        part.salt = k + 1 == parts ? op.salt : keccak256(abi.encode(op.salt, "part", k + 1));
+    }
+
+    /// @notice Each call's estimated execution gas inside `executeBatch`: the call itself, made in order as the
+    /// timelock on a snapshot of the chain that is reverted afterwards, plus the timelock's per-call cost and its
+    /// calldata. A call that reverts stops the step, since it would revert at execution, after the delay.
+    function _simulatedGas(
+        Operation memory op
+    ) private returns (uint256[] memory gas) {
+        gas = new uint256[](op.targets.length);
+        uint256 snap = vm.snapshotState();
+        for (uint256 i = 0; i < op.targets.length; ++i) {
+            vm.prank(timelock);
+            uint256 before = gasleft();
+            (bool ok, bytes memory ret) = op.targets[i].call{value: op.values[i]}(op.payloads[i]);
+            uint256 used = before - gasleft();
+            if (!ok) {
+                // The call's own revert data, which forge decodes (a custom error by name), after the call's label.
+                console2.log(
+                    "listing-markets: this call reverts when simulated, so it would at execution:", op.labels[i]
+                );
+                assembly ("memory-safe") {
+                    revert(add(ret, 0x20), mload(ret))
+                }
+            }
+            // A payload costs its bytes plus its offset, length, target and value words in the batch's calldata.
+            gas[i] = used + PER_CALL_GAS + CALLDATA_GAS_PER_BYTE * (op.payloads[i].length + 4 * 32);
+        }
+        vm.revertToState(snap);
     }
 
     /// @notice Refuses a market whose `collateralFactorBps` (the vault token's Aave collateral factor, set by step 10's
@@ -758,7 +909,7 @@ contract ListMarkets is ListingBase {
     function _debtAssetOf(
         string memory spokeLabel
     ) private view returns (address) {
-        uint256 n = _count(cfg, ".listing.debtReserves");
+        uint256 n = _cfgCount(".listing.debtReserves");
         for (uint256 i = 0; i < n; ++i) {
             if (_eq(_str(string.concat(_at("debtReserves", i), ".spoke")), spokeLabel)) {
                 return _token(_str(string.concat(_at("debtReserves", i), ".symbol")));
@@ -854,7 +1005,7 @@ contract ListMarkets is ListingBase {
     ) private view {
         string memory sources = vm.readFile(_outputPath("listing-oracles"));
         string memory coverage = vm.readFile(_outputPath("coverage"));
-        uint256 n = _count(cfg, ".listing.debtReserves");
+        uint256 n = _cfgCount(".listing.debtReserves");
         for (uint256 i = 0; i < n; ++i) {
             string memory k = _at("debtReserves", i);
             string memory sym = _str(string.concat(k, ".symbol"));
@@ -891,7 +1042,7 @@ contract ListMarkets is ListingBase {
                 "PS.loosenDebtSpeedLimit"
             );
         }
-        uint256 a = _count(cfg, ".listing.debtAssets");
+        uint256 a = _cfgCount(".listing.debtAssets");
         for (uint256 i = 0; i < a; ++i) {
             string memory k = _at("debtAssets", i);
             if (store.floorRoundingAllowance(_token(_str(string.concat(k, ".symbol")))) != 0) continue;
@@ -915,7 +1066,7 @@ contract ListMarkets is ListingBase {
         string memory field,
         string memory fallbackParent
     ) private view returns (uint256) {
-        uint256 a = _count(cfg, ".listing.debtAssets");
+        uint256 a = _cfgCount(".listing.debtAssets");
         for (uint256 i = 0; i < a; ++i) {
             string memory k = _at("debtAssets", i);
             if (!_eq(_str(string.concat(k, ".symbol")), sym)) continue;
@@ -929,7 +1080,7 @@ contract ListMarkets is ListingBase {
     function _debtAssetFixed(
         string memory sym
     ) private view returns (bool) {
-        uint256 a = _count(cfg, ".listing.debtAssets");
+        uint256 a = _cfgCount(".listing.debtAssets");
         for (uint256 i = 0; i < a; ++i) {
             if (_eq(_str(string.concat(_at("debtAssets", i), ".symbol")), sym)) {
                 return _bool(string.concat(_at("debtAssets", i), ".fixedPrice"));
@@ -1053,7 +1204,7 @@ contract ListMarkets is ListingBase {
         Operation memory op,
         Mkt memory m
     ) private returns (address[] memory routes) {
-        uint256 n = _count(cfg, string.concat(m.key, ".routes"));
+        uint256 n = _cfgCount(string.concat(m.key, ".routes"));
         routes = new address[](2 * n);
         for (uint256 i = 0; i < n; ++i) {
             string memory rk = string.concat(m.key, ".routes[", vm.toString(i), "]");
@@ -1145,7 +1296,7 @@ contract ListMarkets is ListingBase {
         rc.tokenIn = tokenIn;
         rc.tokenOut = tokenOut;
         rc.tokenClassMask = uint8(1 << _uint(string.concat(_spokeKey(m.spokeLabel), ".tier")));
-        rc.uniswapV3Factory = _addr(cfg, ".listing.uniswapV3Factory");
+        rc.uniswapV3Factory = _cfgAddr(".listing.uniswapV3Factory");
         rc.curveLegacyPools = new address[](0);
         vm.broadcast(deployerOf());
         return
@@ -1185,7 +1336,7 @@ contract ListMarkets is ListingBase {
     /// @notice `MKT-022`, `MKT-026`: every listed LPOracle poked (it must be Live), then `activateMarket` for each.
     function _activate() private returns (Operation memory op) {
         IVaultTokenFactory f = IVaultTokenFactory(vm.parseJsonAddress(avanaJson, ".vaultTokenFactory"));
-        uint256 n = _count(cfg, ".listing.markets");
+        uint256 n = _cfgCount(".listing.markets");
         op = _newOperation("listing-activate", release, n);
         // The config's markets that are listed and still Registered: each LPOracle poked Live, then `activateMarket`.
         uint256[] memory ids = new uint256[](n);

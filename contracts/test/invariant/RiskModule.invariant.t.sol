@@ -32,10 +32,11 @@ contract RiskModuleInvariantTest is RiskModuleFixture {
                 marketId: mid,
                 vtReserve: VT_RESERVE,
                 debtReserve: GHO_RESERVE,
-                feedAge: FEED_AGE
+                feedAge: FEED_AGE,
+                legTokens: [address(usdc), address(usdt)],
+                legFeeds: [feedUsdc, feedUsdt]
             })
         );
-        handler.setLegs([address(usdc), address(usdt)], [feedUsdc, feedUsdt]);
         targetContract(address(handler));
     }
 

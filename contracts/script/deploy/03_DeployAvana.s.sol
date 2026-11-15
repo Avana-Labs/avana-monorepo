@@ -12,7 +12,9 @@ import {console2} from "forge-std/console2.sol";
 /// @title DeployAvana
 /// @notice Step 3: the AvanaTimelock and every Avana contract of one chain (`script/README.md`, deployment order).
 /// @dev Inputs: `script/deploy/config/$AVANA_NETWORK.json` (its `chainId` must be the RPC's), `AVANA_RELEASE` overrides
-/// the config's release. The deployer is the broadcasting account (`--account`, `--ledger` or, on anvil, an unlocked
+/// the config's release; it is a release tag, and off anvil HEAD is that tag (`DeployInputs._checkRelease`). A
+/// release record (`AVANA_RELEASE_RECORD`, or `deployments-local/<network>/release.json`) must name the same release,
+/// commit, salts and, for this deployer, addresses. The deployer is the broadcasting account (`--account`, `--ledger` or, on anvil, an unlocked
 /// test key); it ends with no role anywhere. Output: `deployments-local/<network>/avana.json`.
 contract DeployAvana is AvanaDeploy, DeploymentOutput {
     function run() external returns (AvanaDeployment memory d) {
@@ -21,6 +23,11 @@ contract DeployAvana is AvanaDeploy, DeploymentOutput {
         create3 = AvanaCreate3Factory(_create3FactoryAddress());
         vm.startBroadcast();
         (, deployer,) = vm.readCallers();
+        string memory record = _releaseRecordPath();
+        if (bytes(record).length != 0) {
+            _checkReleaseRecord(record, _requireReleaseCheckout(release));
+            console2.log("release record matches:", record);
+        }
         d = _deployAvana(c);
         vm.stopBroadcast();
         vm.createDir(string.concat(vm.projectRoot(), "/", OUTPUT_DIR, "/", c.network), true);

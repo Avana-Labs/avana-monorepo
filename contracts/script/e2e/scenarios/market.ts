@@ -1449,6 +1449,7 @@ async function failoverDrill(e: Env) {
   const { tmpdir } = await import("node:os");
   const { join: joinPath, resolve } = await import("node:path");
   const n = e.numbers;
+  const breakerFaults: string[] = [];
   const keystore = process.env.E2E_DRILL_KEYSTORE;
   const passwordFile = process.env.E2E_DRILL_KEYSTORE_PASSWORD_FILE;
   if (!keystore || !passwordFile) return { ok: false, detail: "not run: no drill signer keystore (E2E_DRILL_KEYSTORE, made by e2e-local.sh)" };
@@ -1520,6 +1521,16 @@ async function failoverDrill(e: Env) {
   keeper.stdout.on("data", (d: Buffer) => log.push(...d.toString().split("\n").filter(Boolean)));
   keeper.stderr.on("data", (d: Buffer) => log.push(...d.toString().split("\n").filter(Boolean)));
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  /** Waits until the keeper reports `head` handled (keeper_head_block), at most `ms`. */
+  const keeperAt = async (head: bigint, ms: number) => {
+    const until = Date.now() + ms;
+    while (Date.now() < until) {
+      const text = await fetch(`http://127.0.0.1:${metricsPort}/metrics`).then((r) => r.text()).catch(() => "");
+      const at = /^keeper_head_block(?:\{[^}]*\})?\s+(\d+)/m.exec(text);
+      if (at && BigInt(at[1]!) >= head) return;
+      await sleep(250);
+    }
+  };
   try {
     let mode = "";
     for (let i = 0; i < 90 && !mode.includes('mode="active"'); i++) {
@@ -1562,9 +1573,11 @@ async function failoverDrill(e: Env) {
         break;
       }
       await e.advance(BLOCK_SECONDS);
-      await sleep(4_000);
       // Only this loop mines, so a liquidation seen now is in the block just mined.
       const head = await e.ctx.client.getBlockNumber();
+      // The next block comes once the keeper has handled this one, or after a block time: the window is counted in
+      // blocks, and a slow runner must not cost the keeper blocks that a 12 s chain would give it.
+      await keeperAt(head, BLOCK_SECONDS * 1_000);
       for (const [i, x] of accounts.entries()) {
         if (x.minedAt === null && (await e.debt(x.m, x.a)) < debtAtCrash[i]!) x.minedAt = head;
       }
@@ -1572,9 +1585,41 @@ async function failoverDrill(e: Env) {
   } finally {
     keeper.kill();
     await e.rpc("evm_setAutomine", [true]).catch(() => undefined);
+    // The keeper's breaker pokes during the crash record a breach on these markets: a latched reason is reset, as the
+    // Aave Protocol Guardian would, and the breach keeps the breaker TEMPORARY for the recovery time after it. The
+    // closed gate is recorded, the clock then passes the recovery time, the crashed prices are restored, and the gate
+    // must then be open, so the scenarios after this one pledge on these markets again.
+    const recovery = BigInt(e.ctx.config.parameters?.globals?.gateRecoverySeconds ?? 1800);
+    const riskModule = e.ctx.manifest.avana.riskModule.address as Address;
+    const status = async (marketId: bigint) =>
+      (await e.read(riskModule, riskModuleAbi, "getBreakerStatus", [marketId])) as readonly [number, bigint];
+    for (const m of [um, sm]) {
+      const [latched, lastBreach] = (await e.read(e.registry, marketRegistryAbi, "marketBreaker", [m.marketId])) as readonly [number, bigint];
+      const notes: string[] = [];
+      if (Number(latched) !== 0) {
+        await e.gasFor(e.ctx.actors.aaveProtocolGuardian!);
+        await e.must("reset breaker", e.ctx.actors.aaveProtocolGuardian!, e.registry, marketRegistryAbi, "resetMarketBreaker", [m.marketId]);
+        notes.push(`latched reasons ${latched} reset by the Aave Protocol Guardian`);
+      }
+      const now = (await e.ctx.client.getBlock()).timestamp;
+      if (lastBreach !== 0n && now < lastBreach + recovery) {
+        const [closed, reopensAt] = await status(m.marketId);
+        notes.push(`breach at ${lastBreach}: gate closed with reasons ${closed}, reopening at ${reopensAt}`);
+        if (Number(closed) === 0) breakerFaults.push(`${m.name}: gate open within the recovery after the breach at ${lastBreach}`);
+        await e.advance(Number(lastBreach + recovery - now) + 1);
+        notes.push(`clock moved past the ${recovery} s recovery`);
+      }
+      n[`${m.name}.breaker`] = notes.join("; ");
+    }
+    n.restored = await e.settle();
+    for (const m of [um, sm]) {
+      const [open, reopensAt] = await status(m.marketId);
+      n[`${m.name}.breaker`] += `; reasons after the prices are restored ${open}`;
+      if (Number(open) !== 0) breakerFaults.push(`${m.name}: breaker reasons ${open} still set after the recovery and the price restore (reopening at ${reopensAt})`);
+    }
     rmSync(dir, { recursive: true, force: true });
-    // The whole keeper log, kept for reading after a failure.
-    n.log = joinPath(tmpdir(), `keeper-drill-${Date.now()}.log`);
+    // The whole keeper log, kept with the run's logs for reading after a failure.
+    n.log = joinPath(e.ctx.out, "logs", "keeper-drill.log");
     write(n.log, log.map((l) => `${l}\n`).join(""));
   }
 
@@ -1605,7 +1650,11 @@ async function failoverDrill(e: Env) {
       detail.push(`${x.label}: sent ${(age - 1) * BLOCK_SECONDS} s after HF 1, mined at +${age * BLOCK_SECONDS} s`);
     }
   }
-  if (!ok) detail.push(`keeper log tail: ${log.slice(-3).join(" | ").slice(0, 600)}`);
+  if (breakerFaults.length > 0) {
+    ok = false;
+    detail.push(...breakerFaults);
+  }
+  if (!ok) detail.push(`keeper liquidation attempts, last 4: ${log.filter((l) => l.includes('"job":"liquidation"')).slice(-4).join(" | ").slice(0, 1200)}`);
   return { ok, detail: detail.join("; ") };
 }
 

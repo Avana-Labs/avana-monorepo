@@ -200,6 +200,19 @@ export default defineSchema({
     addHeadroom: dec,
     pauseState: v.number(),
     breakerReasons: v.number(),
+    /** Avana's caps (USD 8 decimals) and the risk configuration beside them (Lens `MarketView`, REQ-LENS-057). */
+    caps: v.optional(
+      v.object({
+        liquidationThresholdBps: v.number(),
+        liquidationFeeBps: v.number(),
+        hardHealthFloorWad: dec,
+        marketUsdCap8: dec,
+        topUpSliceUsd8: dec,
+        depositorUsdCap8: dec,
+        tokenUsdCaps8: v.array(dec),
+        addCap: dec,
+      }),
+    ),
     /** Each debt reserve of the market's Spoke: the market's borrow rate and what it can borrow now (BOR-024). */
     borrow: v.array(
       v.object({
@@ -283,6 +296,23 @@ export default defineSchema({
       v.array(v.object({ symbol: v.string(), shortLabel: v.string(), bgClassName: v.string(), textClassName: v.string(), iconUrl: v.optional(v.string()) })),
     ),
     resources: v.optional(v.array(v.object({ label: v.string(), href: v.string() }))),
+    links: v.optional(
+      v.object({
+        website: v.optional(v.string()),
+        x: v.optional(v.string()),
+        docs: v.optional(v.string()),
+        github: v.optional(v.string()),
+        audits: v.optional(v.array(v.object({ label: v.string(), href: v.string() }))),
+      }),
+    ),
+    risk: v.optional(
+      v.object({
+        summary: v.string(),
+        factors: v.array(
+          v.object({ id: v.string(), label: v.string(), level: v.union(v.literal("low"), v.literal("moderate"), v.literal("elevated"), v.literal("high")), text: v.string() }),
+        ),
+      }),
+    ),
     contentHash: v.string(),
     operationId: v.string(),
     loadedAt: v.number(),
@@ -371,6 +401,7 @@ export default defineSchema({
     .index("by_spoke_reserve", ["spokeReserveKey", "at"])
     .index("by_market", ["marketKey", "at"])
     .index("by_wallet", ["wallet", "at"])
+    .index("by_tx", ["txHash"])
     .index("by_at", ["at"]),
 
   /** Progress of each pool's pre-listing history import; ranges apply in order, each once. */
@@ -542,6 +573,88 @@ export default defineSchema({
    * dev-token). Must live here, not in process memory, so a horizontally-scaled deploy
    * enforces ONE limit across instances. `resetAt` = epoch ms the window ends.
    */
+  /** Merkl incentives matched to one page at the chain's last successful fetch (incentives.ts). */
+  incentives: defineTable({
+    chainId: v.number(),
+    scope: v.union(v.literal("lend"), v.literal("asset"), v.literal("pool")),
+    slug: v.string(),
+    aprPct: v.number(),
+    rewardTokens: v.array(v.string()),
+    opportunities: v.number(),
+    updatedAt: v.number(),
+  }).index("by_page", ["chainId", "scope", "slug"]),
+
+  /** The last Merkl fetch per chain: `lastOkAt` null until one succeeds. */
+  incentiveRuns: defineTable({
+    chainId: v.number(),
+    lastRunAt: v.number(),
+    lastOkAt: v.union(v.number(), v.null()),
+    error: v.optional(v.string()),
+  }).index("by_chain", ["chainId"]),
+
+  /** Hourly market risk scores (riskScores.ts); the model version names the formula that produced them. */
+  riskScores: defineTable({
+    chainId: v.number(),
+    marketId: v.string(),
+    model: v.string(),
+    score: v.number(),
+    level: v.union(v.literal("low"), v.literal("moderate"), v.literal("elevated"), v.literal("high")),
+    factors: v.array(v.object({ id: v.string(), label: v.string(), points: v.number(), value: v.string() })),
+    computedAt: v.number(),
+  }).index("by_market", ["chainId", "marketId"]),
+
+  /**
+   * One day of a market's liquidations or a Hub asset's revenue (rollups.ts), kept past the 30-day log window.
+   * `day` is the UTC day `YYYY-MM-DD`; `values` are USD amounts and counts.
+   */
+  dailyRollups: defineTable({
+    chainId: v.number(),
+    scopeKind: v.union(v.literal("market"), v.literal("hubAsset")),
+    scopeKey: v.string(),
+    day: v.string(),
+    values: v.record(v.string(), v.number()),
+    updatedAt: v.number(),
+  }).index("by_scope", ["scopeKind", "scopeKey", "day"]),
+
+  /**
+   * Transaction progress of a submitted wallet transaction (lib/intents.ts): the hash, the wallet that signed it and a
+   * label, never a target, amount or calldata (REQ-ARCH-140).
+   */
+  intents: defineTable({
+    wallet: address,
+    chainId: v.number(),
+    txHash: hex,
+    kind: v.string(),
+    page: v.optional(v.object({ scope: v.union(v.literal("lend"), v.literal("asset"), v.literal("pool")), slug: v.string() })),
+    status: v.union(v.literal("pending"), v.literal("included"), v.literal("failed"), v.literal("indexed"), v.literal("confirmed"), v.literal("dropped")),
+    submittedAt: v.number(),
+    blockNumber: v.optional(dec),
+    blockHash: v.optional(hex),
+    finalizedAt: v.optional(v.number()),
+    /** False once the state is final; the tracker reads open intents, least recently checked first. */
+    open: v.boolean(),
+    checkedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_tx", ["chainId", "txHash"])
+    .index("by_wallet", ["wallet", "submittedAt"])
+    .index("by_open", ["chainId", "open", "checkedAt"]),
+
+  /**
+   * SIWE sign-in sessions the web app's server opens and revokes (siweSessions.ts). `sessionId` is the SHA-256 of the
+   * session's JWT ID, never the token; a revoked or expired session no longer authorizes per-wallet features.
+   */
+  siweSessions: defineTable({
+    sessionId: v.string(),
+    wallet: address,
+    issuedAt: v.number(),
+    expiresAt: v.number(),
+    revokedAt: v.optional(v.number()),
+  })
+    .index("by_session", ["sessionId"])
+    .index("by_wallet", ["wallet", "issuedAt"])
+    .index("by_expiry", ["expiresAt"]),
+
   rateLimitBuckets: defineTable({
     key: v.string(),
     count: v.number(),

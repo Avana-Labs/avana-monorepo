@@ -29,4 +29,27 @@ Layer gate (2.1 … 2.6), both kinds (decided 2026-11-10), and every push to `ma
 
 ## Latest result
 
-No campaign run is recorded in this folder; `results/` is empty.
+`mutation-gate` 43653570827 on `main` (commit `48864ef`, dispatched 2026-11-14), recorded as its jobs finish: [results/README.md](results/README.md) (per contract mutants, killed, survived, timed out, not compiled and kill rate; the Necessist table) and [results/survivors.md](results/survivors.md) (every surviving mutant and every removal that left the tests passing). `certoraMutate` did not run (`CERTORA_ENABLED` off); the Certora mutants run with the local Prover through `contracts/script/certora-mutate-local.sh`. In this run the mutants of the LPOracleCL contracts, LPOracleCalls, ParameterStore, ClPriceMath and AaveAdapter ran without some of their own test suites (the `tests` globs of `security/mutation-layers.json`, fixed after the run), so their survivors are marked inflated until the re-dispatch of layers 2.1, 2.2 and 2.5.
+
+### Triage of the earlier run 43492416937
+
+`mutation-gate.yml` run 43492416937 on `main` at `aa340fb` (dispatched 2026-11-13) stalled in the queue: 151 `slither-mutate` jobs finished, all of layer 2.1 (three mutator groups per contract), and 243 never ran; the Necessist jobs are in [../necessist/README.md](../necessist/README.md). `slither-mutate` survivors are report-only in CI.
+
+The finished jobs left 1,678 uncaught mutants. `survivors.txt` lists 1,617 distinct lines because `grep UNCAUGHT` keeps only the last line of a mutant that spans several lines; the triage reads each contract's log instead.
+
+Triage, at `fda9bed`: [contracts/security/slither-mutate-triage.json](../../../contracts/security/slither-mutate-triage.json). Each entry gives the file, function, line at `aa340fb` and at `fda9bed`, the mutator, the original and mutated text, a fingerprint, the class and the reason; `approval` is `pending`.
+
+| Class | Mutants |
+|---|---|
+| real test gap | 220 (52 now killed by tests added in this triage, 168 recorded with the missing test described) |
+| equivalent or harmless | 778 |
+| noise (no-op mutants, an unused constant, error arguments in the out-of-gas path) | 49 |
+| superseded (the line changed after `aa340fb`) | 4 |
+| not triaged | 400 |
+| test set fixed; needs the next mutation-gate run | 227 |
+
+Liquidation and the LPOracle router were triaged in full: `LPVaultSwapDeleverageLogic` 55 (18 real gaps, all now tested), `LPVaultSwapPendingLogic` 23 (4, tested), `LPVaultSwapLiquidationLogic` 14 (5, 4 tested), `LPVaultSwap` 18, `LPVaultSwapStorage` 13 and `SettlementMath` 5 (no gap), `LPPriceMath` 43 (1 gap, tested), `LPOracle` 55 (21 gaps, 18 tested), `LPOracleRecovery` 144 (99 gaps in the recovery-evidence bookkeeping, 6 tested, the rest described). `DebtOracle` 53 (27 gaps described, 18 equivalent, 8 left) `DebtOracleRecovery` 45 (32 gaps described), `DebtOracleEvaluation` 52 (2 gaps described, 36 equivalent or harmless, 14 left) and `DebtOracleReads` 6 (5 gaps described). Tests added: `LPVaultSwap.Deleverage`, `.DeleverageGho`, `.SettlePending`, `.PriceGates`, `.Funding`, `.Shortfall`, `LPPriceMath`, `LPOracle.Access` and `LPOracle.RecoveryEdges` unit files. They have not yet been run: the shared forge gate was held for another run when this triage was written, so the next step is one `forge test --match-path` per file and, if one fails, correcting that test before the 52 mutants are counted as killed.
+
+Not triaged in this pass (400): `LPOracleConfig` 60, `LPOracleReads` 47, `LPOracleViews` 36, `LPOracleEval` 32, `LPOraclePoke` 27, `LPOracleListingLogic` 16, `DebtOracle` 8, `DebtOracleEvaluation` 14, `ParameterStoreRisk` 36, `ParameterStoreAdminRiskLogic` 23, `ParameterStoreListingLogic` 17, `ParameterStoreViews` 8, `ParameterStore` 3, `ParameterStoreAdminOracleLogic` 5, `ParameterStoreStorage` 4, `ParameterStoreSpeedRules` 2, `ParameterStoreLoosenLogic` 1, `ParameterStoreTightenLogic` 1, `AvanaTimelock` 29, `TimelockSelectors` 3, `MarketRegistryActivationLogic` 9, `MarketRegistryListingLogic` 7, `MarketRegistry` 3, `MarketRegistryDebtChecks` 3, `MarketRegistryDriftView` 3, `MarketRegistryOracleChecks` 3.
+
+Test set fixed; needs the next mutation-gate run (227): `LPOracleCL`, `LPOracleCLInitLogic`, `LPOracleCLListingLogic`, `LPOracleCLModule`, `LPOracleCLModuleCaller`, `LPOracleCLModuleLogic`, `LPOracleCLPool`, `LPOracleCLViewLogic` and `LPOracleCalls` ran at `aa340fb` against `test/{unit,fuzz}/LPOracle.*` only, so their own tests never ran against these mutants. `security/mutation-layers.json` now runs every `LPOracle*` file against all `test/{unit,fuzz}/LPOracle*` suites, and the `lp-vault-swap` entry includes `AaveAdapter.LPVaultSwap*`; these survivors are triaged after the re-run.

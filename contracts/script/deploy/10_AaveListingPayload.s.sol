@@ -37,7 +37,7 @@ contract AaveListingPayload is ListingBase, AavePayloads {
     function run() external {
         _loadListing();
         bool execute = block.chainid != 1 && block.chainid != 8453;
-        address controller = execute ? _addr(cfg, ".aaveLocal.payloadsController") : address(0);
+        address controller = execute ? _cfgAddr(".aaveLocal.payloadsController") : address(0);
         deployer = controller;
         string memory step = vm.envString("AVANA_AAVE_STEP");
         Builder memory b;
@@ -45,15 +45,13 @@ contract AaveListingPayload is ListingBase, AavePayloads {
         if (_eq(step, "debt")) (b, name) = (_debt(), "AvanaDebtReserves");
         else if (_eq(step, "vault-tokens")) (b, name) = (_vaultTokens(), "AvanaMarkets");
         else revert(string.concat("unknown AVANA_AAVE_STEP ", step));
-        _shipPayload(
-            name, b, _addr(cfg, ".aave.configEngine"), _addr(cfg, ".aave.governanceExecutor"), controller, execute
-        );
+        _shipPayload(name, b, _cfgAddr(".aave.configEngine"), _cfgAddr(".aave.governanceExecutor"), controller, execute);
     }
 
     function _debt() private view returns (Builder memory b) {
         b = _newBuilder();
         string memory sources = vm.readFile(_outputPath("listing-oracles"));
-        uint256 n = _count(cfg, ".listing.debtReserves");
+        uint256 n = _cfgCount(".listing.debtReserves");
         for (uint256 i = 0; i < n; ++i) {
             string memory k = _at("debtReserves", i);
             string memory sym = _str(string.concat(k, ".symbol"));
@@ -61,7 +59,7 @@ contract AaveListingPayload is ListingBase, AavePayloads {
             (,, uint256 rid) = _reserveOf(spokeLabel, _token(sym));
             if (IAaveListedViews(_spokeAddr(spokeLabel)).getReserveConfig(rid).borrowable) continue;
             AReserveConfigUpdate memory u = _keepReserveConfig();
-            u.spokeConfigurator = _addr(cfg, ".aave.spokeConfigurator");
+            u.spokeConfigurator = _cfgAddr(".aave.spokeConfigurator");
             u.spoke = _spokeAddr(spokeLabel);
             u.hub = _hub(_hubOfSpoke(spokeLabel));
             u.underlying = _token(sym);
@@ -98,14 +96,14 @@ contract AaveListingPayload is ListingBase, AavePayloads {
     ) private view {
         address hub = vm.parseJsonAddress(markets, string.concat(k, ".hub"));
         string memory hubLabel = _hubOfSpoke(vm.parseJsonString(markets, string.concat(k, ".spokeLabel")));
-        address hubCfg = _addr(cfg, ".aave.hubConfigurator");
+        address hubCfg = _cfgAddr(".aave.hubConfigurator");
         AAssetListing memory l;
         l.hubConfigurator = hubCfg;
         l.hub = hub;
         l.underlying = vaultToken;
-        l.feeReceiver = _addr(cfg, ".aave.treasurySpoke");
+        l.feeReceiver = _cfgAddr(".aave.treasurySpoke");
         l.liquidityFee = 0;
-        l.irStrategy = _addr(cfg, string.concat(".aave.irStrategies.", hubLabel));
+        l.irStrategy = _cfgAddr(string.concat(".aave.irStrategies.", hubLabel));
         l.irData = AInterestRateData(9000, 0, 400, 6000);
         _assetListing(b, l);
         ASpokeConfigUpdate memory fee = _keepSpokeConfig();
@@ -137,7 +135,7 @@ contract AaveListingPayload is ListingBase, AavePayloads {
         address vaultToken
     ) private view {
         AReserveListing memory r;
-        r.spokeConfigurator = _addr(cfg, ".aave.spokeConfigurator");
+        r.spokeConfigurator = _cfgAddr(".aave.spokeConfigurator");
         r.spoke = vm.parseJsonAddress(markets, string.concat(k, ".spoke"));
         r.hub = vm.parseJsonAddress(markets, string.concat(k, ".hub"));
         r.underlying = vaultToken;

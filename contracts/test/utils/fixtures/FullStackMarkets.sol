@@ -341,7 +341,7 @@ abstract contract FullStackMarkets is FullStackFixture {
                 curveFactory: address(0),
                 curveLegacyPools: new address[](0)
             });
-            r[k] = deployCode("DexPathRoute.sol:DexPathRoute", abi.encode(c, hops));
+            r[k] = deployCode("DexPathRoute.sol:DexPathRoute:default", abi.encode(c, hops));
             routePoolOf[tokenIn][tokenOut][k] = p;
         }
         routeOf[tokenIn][tokenOut] = r;

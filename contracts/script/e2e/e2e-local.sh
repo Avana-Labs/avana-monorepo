@@ -12,9 +12,10 @@
 # Usage, from contracts/:   script/e2e/e2e-local.sh            (all steps)
 #                           E2E_STEPS="deploy manifest" script/e2e/e2e-local.sh
 #                           E2E_STEPS="deploy day2 exotic manifest services scenarios" script/e2e/e2e-local.sh
-# Steps: deploy (rehearsal 00), day2 (01-05), exotic (08: exotic pools and borrowable assets on the day-2 config, as two
-# releases recorded exotic:<step> and exotic2:<step>), the rerun of every step with nothing new (06, after day2 or
-# exotic), hostile (07, on the latest config), manifest, services and scenarios.
+# Steps: deploy (rehearsal 00), day2 (01-05), exotic (08: exotic pools and borrowable assets on the day-2 config, one
+# release of ten markets whose listing batch is split by gas, recorded exotic:<step>), the rerun of every step with nothing new (06, after day2 or
+# exotic), hostile (07, on the latest config), manifest, services and scenarios. compose (not in the default list; it
+# needs Docker) runs the services' container images against the run's node: E2E_STEPS="deploy manifest compose".
 # Needs: anvil, forge, cast, node >= 22.12 with the workspace installed (npm ci at the repo root), and the builds
 # `make build build-aave build-external` (the default and aave profiles, Uniswap v3, Slipstream, Aerodrome, Aave V3 and
 # the Chainlink OCR2 aggregator and proxy).
@@ -103,6 +104,16 @@ if cast wallet import drill-signer --keystore-dir "$KEYSTORE_DIR" --unsafe-passw
   export E2E_DRILL_KEYSTORE="$KEYSTORE_DIR/drill-signer" E2E_DRILL_KEYSTORE_PASSWORD_FILE="$KEYSTORE_DIR/password"
 fi
 unset KEYSTORE_PASSWORD
+# The compose step builds its images before the deploy, so a Docker problem shows here and not after the deploy; the
+# step is then recorded and dropped, and the other steps run.
+if [[ " $STEPS " == *" compose "* && " $STEPS " == *" deploy "* ]]; then
+  script/e2e/services-compose.sh --build > "$LOG/compose.log" 2>&1
+  case $? in
+    0) ;;
+    3) record compose not-run "$(tail -1 "$LOG/compose.log")"; STEPS="${STEPS/compose/}" ;;
+    *) record compose fail "see $LOG/compose.log: docker compose build failed"; STEPS="${STEPS/compose/}" ;;
+  esac
+fi
 # The chain state is saved to anvil-state.json when the node stops; a run without the deploy step reloads it, so the
 # manifest and scenario steps can be rerun on the same deployment (E2E_STEPS="manifest scenarios"). A reloaded node
 # holds only the latest state while the indexer reads contracts at past blocks (BlockOutOfRangeError), and anvil's
@@ -115,7 +126,11 @@ if cast block-number --rpc-url "$RPC_ANVIL" >/dev/null 2>&1; then
   for s in $STEPS; do record "$s" not-run "a node already answers on port $PORT: stop it or set E2E_PORT"; done
   exit 1
 fi
-anvil --port "$PORT" --chain-id 31337 --auto-impersonate --code-size-limit 49152 --gas-limit 60000000 \
+# The compose step's containers reach the node through host.docker.internal: Docker Desktop forwards that to the host's
+# loopback, while Linux maps it to the bridge gateway, so there the node listens on every interface.
+ANVIL_HOST=127.0.0.1
+[[ " $STEPS " == *" compose "* && "$(uname -s)" == Linux ]] && ANVIL_HOST=0.0.0.0
+anvil --host "$ANVIL_HOST" --port "$PORT" --chain-id 31337 --auto-impersonate --code-size-limit 49152 --gas-limit 60000000 \
   --timestamp 1794500000 --state "$STATE" > "$LOG/anvil.log" 2>&1 &
 ANVIL_PID=$!
 for _ in $(seq 1 50); do cast block-number --rpc-url "$RPC_ANVIL" >/dev/null 2>&1 && break; sleep 0.2; done
@@ -239,7 +254,7 @@ fi
 # on what the config adds. Day 2 (script/e2e/day2-additions.ts: a Hub with its Spokes, a lend asset, a borrowable asset
 # on a listed Spoke, a collateral token and two markets), then the exotic pass (script/e2e/exotic-additions.ts: a Hub
 # lending a meme coin, a governance token, an 8-decimals token and USDC against meme, governance, WBTC-type and thin
-# pools on Uniswap v3 and Slipstream, five markets per release). After the last one, every step once more, which must do
+# pools on Uniswap v3 and Slipstream, ten markets in one release). After the last one, every step once more, which must do
 # nothing. Later steps read the last config.
 grow() { # phase "generator [args]" config
   # shellcheck disable=SC2086 # the generator and its arguments, split on purpose
@@ -271,6 +286,30 @@ grow() { # phase "generator [args]" config
   PHASE=""
   return $ok
 }
+# The listing batch of a phase was split into operations under the gas budget, each executed in order and each
+# within the block gas limit (09_ListMarkets._proposeInParts, 05_ExecuteOperations).
+listing_split() { # phase
+  local detail
+  if detail="$(node -e '
+    const fs = require("fs"), out = process.argv[1];
+    const parts = [];
+    for (let k = 1; ; k++) {
+      const f = `${out}/operation-listing-markets${k === 1 ? "" : "." + k}.json`;
+      if (!fs.existsSync(f)) break;
+      const op = JSON.parse(fs.readFileSync(f, "utf8"));
+      if (k > 1 && op.predecessor !== parts[k - 2].id) break;
+      parts.push(op);
+    }
+    if (parts.length < 2) { console.log(`one listing operation (${parts[0]?.targets.length ?? 0} calls), not split`); process.exit(1); }
+    const over = parts.filter((p) => !(p.gasEstimate > 0 && p.gasEstimate <= 60000000));
+    if (over.length) { console.log(`estimate missing or above the block: ${over.map((p) => p.name).join(", ")}`); process.exit(1); }
+    console.log(parts.map((p) => `${p.name}: ${p.targets.length} calls, ~${(p.gasEstimate / 1e6).toFixed(1)}M gas`).join("; "));
+  ' "$OUT" 2>&1)"; then
+    record "$1:listing-split" pass "$detail"
+  else
+    record "$1:listing-split" fail "$detail"; return 1
+  fi
+}
 GREW=""
 GROW_FAILED=""
 if [[ " $STEPS " == *" day2 "* ]]; then
@@ -280,10 +319,9 @@ if [[ " $STEPS " == *" exotic "* ]]; then
   if [ -n "$GROW_FAILED" ]; then
     record exotic not-run "the day2 phase failed"
   elif [ -f "$OUT/config-day2.json" ]; then
-    # Two releases: one listing batch of all ten markets would not fit in a block (exotic-additions.ts).
-    { grow exotic "script/e2e/exotic-additions.ts --part 1" deployments-local/anvil/config-exotic.json &&
-      grow exotic2 "script/e2e/exotic-additions.ts --part 2" deployments-local/anvil/config-exotic.json && GREW=1; } ||
-      GROW_FAILED=exotic
+    # One release of ten markets: one listing batch would not fit in a block, so 09-listing-markets splits it.
+    { grow exotic script/e2e/exotic-additions.ts deployments-local/anvil/config-exotic.json &&
+      listing_split exotic && GREW=1; } || GROW_FAILED=exotic
   else
     record exotic not-run "needs the day-2 config (run day2 first)"
   fi
@@ -378,6 +416,25 @@ if [[ " $STEPS " == *" manifest "* ]]; then
   fi
 fi
 
+# compose (opt-in, needs Docker): the services' container images on this run's node (script/e2e/services-compose.sh).
+if [[ " $STEPS " == *" compose "* ]]; then
+  if [[ " $STEPS " != *" deploy "* ]]; then
+    record compose not-run "the indexer replays past blocks, which a node reloaded from anvil-state.json does not hold: run it with the deploy step"
+  elif [ -f "$OUT/manifest.json" ]; then
+    script/e2e/services-compose.sh "$OUT/manifest.json" >> "$LOG/compose.log" 2>&1
+    rc=$?
+    case $rc in
+      0) record compose pass "$(grep -E '^(indexer|keeper|monitor):' "$LOG/compose.log" | tr '
+' ' ')" ;;
+      3) record compose not-run "$(tail -1 "$LOG/compose.log")" ;;
+      *) record compose fail "see $LOG/compose.log: $(grep -E 'FAIL|failed' "$LOG/compose.log" | head -3 | tr '
+' ' ')" ;;
+    esac
+  else
+    record compose not-run "no manifest"
+  fi
+fi
+
 if [[ " $STEPS " == *" services "* ]]; then
   if [[ " $STEPS " != *" deploy "* ]]; then
     record services not-run "the indexer reads past blocks, which a node reloaded from anvil-state.json does not hold: run it with the deploy step"
@@ -407,10 +464,17 @@ drill() { # name
   node script/e2e/drills.ts --network anvil --drill "$1" > "$log" 2>&1
   rc=$?
   case $rc in
-    0) record "$name" pass "$(tail -1 "$log" | sed 's/^PASS //' | cut -c1-400)" ;;
-    3) record "$name" not-run "$(tail -1 "$log" | sed 's/^NOT-RUN //' | cut -c1-400)" ;;
-    *) record "$name" fail "see $log: $(tail -1 "$log" | sed 's/^FAIL //' | cut -c1-400)" ;;
+    0) record "$name" pass "$(drill_line "$log" PASS)" ;;
+    3) record "$name" not-run "$(drill_line "$log" NOT-RUN)" ;;
+    *) record "$name" fail "see $log: $(drill_line "$log" FAIL)" ;;
   esac
+}
+# The drill's own outcome line: node's warnings on stderr can follow it in the log.
+drill_line() { # log outcome
+  local l
+  l="$(grep -E "^$2 " "$1" | tail -1)"
+  [ -n "$l" ] || l="$(tail -1 "$1")"
+  printf '%s' "${l#"$2 "}" | cut -c1-400
 }
 if [[ " $STEPS " == *" drills "* ]]; then
   if [ -f "$OUT/manifest.json" ]; then

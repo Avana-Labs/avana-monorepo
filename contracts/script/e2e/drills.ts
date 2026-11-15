@@ -286,7 +286,7 @@ type HolderName = keyof ReturnType<typeof holders>;
 type Drill = (e: Env, c: Checks, log: string[]) => Promise<void>;
 
 /** A guardian or timelock switch whose forward refuses a borrow (and optionally a pledge) and whose backward reopens it. */
-function switchDrill(forward: string, backward: string, want: RegExp, opts: { pledge?: RegExp; holder?: keyof Pick<State, "borrower" | "volBorrower">; extra?: HolderName[] } = {}): Drill {
+function switchDrill(forward: string, backward: string | (() => string), want: RegExp, opts: { pledge?: RegExp; holder?: keyof Pick<State, "borrower" | "volBorrower">; extra?: HolderName[] } = {}): Drill {
   return async (e, c, log) => {
     const s = loadState();
     const h = s[opts.holder ?? "borrower"];
@@ -299,7 +299,7 @@ function switchDrill(forward: string, backward: string, want: RegExp, opts: { pl
     for (const x of opts.extra ?? []) c.refused(`forward: borrow on ${s[x].market}`, await borrowProbe(e, s[x]), want);
     if (opts.pledge) c.refused("forward: pledge by a new account", await pledgeProbe(e, s), opts.pledge);
     c.works("forward: repay stays open", await repayProbe(e, h));
-    mustApply(backward, log);
+    mustApply(typeof backward === "string" ? backward : backward(), log);
     await e.settle();
     c.works("backward: borrow", await borrowProbe(e, h));
     for (const x of opts.extra ?? []) c.works(`backward: borrow on ${s[x].market}`, await borrowProbe(e, s[x]));
@@ -342,7 +342,7 @@ const DRILLS: Record<string, Drill> = {
   "hub-pause": switchDrill("hub-pause-forward.json", "hub-pause-back.json", /ApplicationPaused|NotRescueTopUp/, { pledge: /ApplicationPaused|NotRescueTopUp/ }),
 
   // pauseAll by the guardian; every Hub unpaused by one timelock operation (normal delay).
-  "pause-all": switchDrill("pause-all-forward.json", "pause-all-back.json", /ApplicationPaused|NotRescueTopUp/, { extra: ["volBorrower", "slipBorrower", "v4Borrower", "v4StableBorrower"] }),
+  "pause-all": switchDrill("pause-all-forward.json", unpauseEveryHub, /ApplicationPaused|NotRescueTopUp/, { extra: ["volBorrower", "slipBorrower", "v4Borrower", "v4StableBorrower"] }),
 
   // freezeAddress by the guardian; unfreezeAddress only through the timelock (normal delay).
   "freeze-address": switchDrill("freeze-address-forward.json", "freeze-address-back.json", /AddressIsFrozen/),
@@ -453,9 +453,13 @@ const DRILLS: Record<string, Drill> = {
     await e.setWeth(r < 1_000n ? r : 1_000n, [m.lpOracle]);
     const hubAbi = aaveV4HubAbi;
     const assetId = (await e.read(m.hub, hubAbi, "getAssetId", [m.debtAsset])) as bigint;
+    const pools = await routePoolPrices(e, m);
     const liq = await e.liquidate(m, a, keeper, "drill", true);
     const deficit = (await e.read(m.hub, hubAbi, "getSpokeDeficitRay", [assetId, m.spoke])) as bigint;
     c.that("forward: deficit on the CDP Spoke", liq.ok && deficit > 0n, `liquidation ${liq.ok ? "ok" : liq.error}; deficit ${deficit} (ray units)`);
+    // The liquidation sold the seized WETH through the market's routes at the pools' (uncrashed) prices: the pools go
+    // back to where they were, or a later liquidation on these routes finds them drained (NoRouteAvailable).
+    await restorePoolPrices(e, pools, log);
     await e.settle();
     mustApply("deficit-breaker-forward.json", log);
     c.refused("forward: GHO borrow on the volatile Spoke", await borrowProbe(e, s.volBorrower), /DebtBreakerTripped/);
@@ -694,6 +698,40 @@ function restoreOutputs(bak: string) {
   }
   cpSync(bak, out, { recursive: true });
   rmSync(bak, { recursive: true, force: true });
+}
+
+const UNI_POOL_SLOT0 = parseAbi(["function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16, uint16, uint16, uint8, bool)"]);
+
+/** The current price of every Uniswap v3 pool on the market's routes into its debt asset (from the current config). */
+async function routePoolPrices(e: Env, m: Market): Promise<Map<Address, bigint>> {
+  const config = JSON.parse(readFileSync(join(CONTRACTS, currentConfig()), "utf8"));
+  const market = (config.listing.markets as { name: string; routes?: { asset: string; primary: string[]; backup: string[] }[] }[]).find((x) => x.name === m.name);
+  const uni = (e.ctx.world.uniswapPools ?? {}) as Record<string, Address>;
+  const prices = new Map<Address, bigint>();
+  for (const r of market?.routes ?? []) {
+    if (r.asset !== e.sym(m.debtAsset)) continue;
+    for (const name of [...r.primary, ...r.backup]) {
+      const pool = uni[name];
+      if (pool && !prices.has(pool)) prices.set(pool, ((await e.read(pool, UNI_POOL_SLOT0, "slot0")) as readonly [bigint])[0]);
+    }
+  }
+  return prices;
+}
+
+async function restorePoolPrices(e: Env, prices: Map<Address, bigint>, log: string[]) {
+  for (const [pool, sqrt] of prices) log.push(`    pool ${pool} back to its price before the drill: ${await e.moveUniswapPool(pool, sqrt)}`);
+}
+
+/** pause-all's way back: one `unpause` per Hub of the current config, every Hub `pauseAll` paused, in one timelock
+ * operation. Written for the run (deployments-local/<network>/drills/pause-all-back.changes.json), so a Hub a later
+ * release added is unpaused too. */
+function unpauseEveryHub(): string {
+  const config = JSON.parse(readFileSync(join(CONTRACTS, currentConfig()), "utf8"));
+  const changes = (config.aave.hubs as { label: string }[]).map((h) => ({ contract: "MarketRegistry", function: "unpause", args: { hub: `hub:${h.label}` } }));
+  const file = join(out, "drills", "pause-all-back.changes.json");
+  mkdirSync(join(out, "drills"), { recursive: true });
+  writeFileSync(file, `${JSON.stringify({ name: "pause-all-back", description: "every Hub unpaused in one timelock operation (normal delay)", via: "timelock", changes }, null, 2)}\n`);
+  return file;
 }
 
 /** The config the last release step used (the rehearsal exports it as AVANA_CONFIG). */

@@ -8,6 +8,7 @@ import {DebtPriceView} from "../../src/oracle/debt-oracle/types/DebtPriceView.so
 import {PriceState} from "../../src/types/PriceState.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
 import {DebtOracleFixture} from "../utils/fixtures/DebtOracleFixture.sol";
+import {MockAggregator} from "../utils/mocks/MockAggregator.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 /// @title DebtOracleLatchUnitTest
@@ -99,5 +100,37 @@ contract DebtOracleLatchUnitTest is DebtOracleFixture {
         vm.expectEmit(address(oracle));
         emit IDebtOracleEvents.DebtGraceStarted(uint64(t), uint64(t + 1800), true);
         _poke();
+    }
+
+    // TEST-219 verifies: REQ-ORACLE-030, REQ-ORACLE-065, REQ-ORACLE-092, SPEC-ORC-013
+    /// @notice The latch is set by the first poke at or after `staleAt + cachedWindow`, also when that poke comes later
+    /// than the boundary second: a first poke at `STALE_AT + 5,000` latches with `(staleAt, now)`.
+    function test_TEST_219_latchAfterTheBoundary() public {
+        vm.warp(STALE_AT + 5000);
+        vm.expectEmit(address(oracle));
+        emit IDebtOracleEvents.DebtOutageExpiredLatched(uint64(STALE_AT), uint64(STALE_AT + 5000));
+        _poke();
+    }
+
+    // TEST-219 verifies: REQ-ORACLE-030, REQ-ORACLE-065, REQ-ORACLE-092, SPEC-ORC-013
+    /// @notice A recovery clears the failure start, so the next failure starts a new one: both routes stop answering at
+    /// `T0 + 10`, answer again at `T0 + 20` and stop again at `T0 + 5,000`, where a new failure is recorded and
+    /// reported from `T0 + 5,000`.
+    function test_TEST_219_secondFailureStartsANewTimer() public {
+        bytes32 recorded = keccak256("DebtFailureRecorded(uint64,uint256)");
+        vm.warp(T0 + 10);
+        pUsd.setAll(MockAggregator.Mode.Revert);
+        aEth.setAll(MockAggregator.Mode.Revert);
+        assertEq(_pokeCount(recorded), 1, "first failure");
+        vm.warp(T0 + 20);
+        pUsd.setAll(MockAggregator.Mode.Normal);
+        aEth.setAll(MockAggregator.Mode.Normal);
+        _poke();
+        assertEq(oracle.getPriceState().failureStart, 0, "recovered");
+        vm.warp(T0 + 5000);
+        pUsd.setAll(MockAggregator.Mode.Revert);
+        aEth.setAll(MockAggregator.Mode.Revert);
+        assertEq(_pokeCount(recorded), 1, "second failure recorded");
+        assertEq(oracle.getPriceState().failureStart, T0 + 5000, "from the second failure");
     }
 }

@@ -203,7 +203,7 @@ contract AaveAdapterMock is IAaveAdapterErrors, IAaveAdapterEvents {
         if (!_session.repaid || _session.released) revert NoDeleverageSession();
         if (
             position.positionKey != _session.positionKey || units != _session.units
-                || keccak256(abi.encode(minAmounts)) != _session.minsHash
+                || (keccak256(abi.encode(minAmounts)) != _session.minsHash && !_emptyMinsAsZeros(minAmounts))
         ) revert NoDeleverageSession();
         if (units == 0) revert ZeroAmount();
         ++releaseCalls;
@@ -296,6 +296,18 @@ contract AaveAdapterMock is IAaveAdapterErrors, IAaveAdapterEvents {
     }
 
     // ─── Internals ───
+
+    /// @dev The AaveAdapter binds an empty `minAmounts` as one zero per market token, the array LPVaultSwap passes to
+    /// `deleverageRelease` in that case: an all-zero array matches a session opened with empty minimums.
+    function _emptyMinsAsZeros(
+        uint256[] calldata minAmounts
+    ) private view returns (bool) {
+        if (_session.minsHash != keccak256(abi.encode(new uint256[](0)))) return false;
+        for (uint256 i = 0; i < minAmounts.length; ++i) {
+            if (minAmounts[i] != 0) return false;
+        }
+        return true;
+    }
 
     function _checkStep(
         address proxy

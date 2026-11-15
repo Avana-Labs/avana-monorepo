@@ -7,6 +7,8 @@ import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSw
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
+import {LVSLyingRoute} from "../utils/mocks/LPVaultSwapMocks.sol";
+import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapShortfallUnitTest
@@ -178,5 +180,29 @@ contract LPVaultSwapShortfallUnitTest is LPVaultSwapUnitBase {
         LiquidationResult memory r = _liquidateAs(keeper, p);
         assertGt(r.shortfall, 0, "the caller tops up the floor gap");
         assertEq(r.recovered + r.shortfall, r.minOut, "R' = minRec");
+    }
+
+    /// @notice REQ-SWAP-112: the top-up pull must raise LPVaultSwap's balance by exactly the shortfall. A debt asset
+    /// that starts minting 1 extra unit, or burning 1 unit, on each `transferFrom` after the swaps (switched on by the
+    /// route call) makes the arrival 1 above or 1 below it: `FundingMismatch` both ways; unchanged, the same call
+    /// settles.
+    // TEST-233 verifies: SPEC-LIQ-019, REQ-SWAP-064, REQ-SWAP-112
+    function test_TEST_233_shortfallArrivalExact() public {
+        (, uint256 a1) = _released(975e6);
+        LVSLyingRoute crash = new LVSLyingRoute(address(usdt), address(usdc));
+        usdc.mint(address(crash), a1);
+        crash.setOut(a1 * 95 / 100);
+        registry.setRoute(MARKET_ID, address(usdt), address(usdc), 0, address(crash), true);
+        LiquidationParams memory p = _params(proxy, 1950e6);
+        p.maxShortfall = 200e6;
+        uint256 snapshot = vm.snapshotState();
+        crash.setReenter(address(usdc), abi.encodeCall(PayoutToken.setBonus, (1)));
+        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapErrors.FundingMismatch.selector));
+        vm.revertToState(snapshot);
+        crash.setReenter(address(usdc), abi.encodeCall(PayoutToken.setDrain, (1)));
+        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapErrors.FundingMismatch.selector));
+        vm.revertToState(snapshot);
+        LiquidationResult memory r = _liquidateAs(keeper, p);
+        assertGt(r.shortfall, 0, "a top-up is pulled");
     }
 }

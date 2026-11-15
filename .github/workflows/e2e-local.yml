@@ -4,7 +4,8 @@ name: e2e-local
 # Aerodrome Slipstream, an Aave V3 market, Multicall3, test tokens, Chainlink OCR2 feeds and dozens of pools; then every
 # Avana deploy step and the Aave-side AIPs through market activation, every timelock operation through the real
 # AvanaTimelock, the release manifest produced and verified against the chain, the keeper, the indexer and a local Convex
-# deployment started on it (every listed market's page with its data and listing text), and the scenario runner.
+# deployment started on it (every listed market's page with its data and listing text), the services' container images
+# run against the same node (the compose step), and the scenario runner.
 # contracts/script/e2e/e2e-local.sh records each step as pass, fail or not-run; a not-run step (a missing tool or
 # build) is reported as a warning annotation and in the job summary,
 # never as a pass, and fails the job only when E2E_REQUIRE_ALL is true (the manual input). A failed step fails the job.
@@ -43,7 +44,7 @@ jobs:
     # Nightly runs only when the repository variable NIGHTLY_ENABLED is true (paused until the final slow run).
     if: github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 110
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -91,7 +92,7 @@ jobs:
       - name: Rehearsal
         id: e2e
         env:
-          E2E_STEPS: ${{ inputs.steps }}
+          E2E_STEPS: ${{ inputs.steps || 'deploy day2 exotic hostile manifest compose services drills scenarios' }}
           E2E_DRILLS: ${{ inputs.drills }}
         run: script/e2e/e2e-local.sh
 

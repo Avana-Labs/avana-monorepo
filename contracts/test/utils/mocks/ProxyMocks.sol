@@ -67,6 +67,39 @@ contract ProxyCallTarget {
     }
 }
 
+/// @title ProxyPingTarget
+/// @notice A lean callee for the symbolic PositionProxy harness: `ping` records only the caller, the value and the call
+/// count, and two functions revert with a custom error or no data.
+/// @dev `ProxyCallTarget` also stores the whole calldata in a `bytes` slot; with a symbolic argument hevm carried that
+/// symbolic write through the proxy's return path and reached the CI job's 14 GB memory cap (security-slow run
+/// 43653574421). The harness checks none of that calldata, so this target leaves it out.
+contract ProxyPingTarget {
+    error TargetError(uint256 code);
+
+    address public lastCaller;
+    uint256 public lastValue;
+    uint256 public calls;
+
+    function ping(
+        uint256 x
+    ) external payable returns (uint256) {
+        lastCaller = msg.sender;
+        lastValue = msg.value;
+        ++calls;
+        return x + 1;
+    }
+
+    function failWithError(
+        uint256 code
+    ) external pure {
+        revert TargetError(code);
+    }
+
+    function failEmpty() external pure {
+        revert();
+    }
+}
+
 /// @title ProxyReentrantTarget
 /// @notice Callee that calls back into the proxy that called it, as a hostile Spoke or token would.
 contract ProxyReentrantTarget {

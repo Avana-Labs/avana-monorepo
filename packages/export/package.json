@@ -1,0 +1,30 @@
+{
+  "name": "@avana/export",
+  "version": "0.0.0",
+  "private": true,
+  "license": "BUSL-1.1",
+  "description": "Client side of the indexer's private export: request signing and verification, page hashing, the checks a consumer runs on event, series and history pages, and a typed client for every export endpoint.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth": "./src/auth.ts",
+    "./client": "./src/client.ts",
+    "./validate": "./src/validate.ts"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@avana/services-common": "file:../../services/common",
+    "viem": "2.57.11"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
+  }
+}

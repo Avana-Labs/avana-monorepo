@@ -45,6 +45,13 @@ Recorded at each contract's gate (progress log of the build):
 
 The contracts merged after the ParameterStore (MarketRegistry, VaultTokenFactory, Collateralization, the flash source, the proxies, the routes, the PayoutEscrow and the CoverageSpoke) passed the same contract gate before their independent review ([reviews](../reviews/)).
 
+Slow CI runs on `main`:
+
+| Date | Run | Result |
+|---|---|---|
+| 2026-11-15 | `contracts` 43653564553 (`48864ef`), ci shard 9/30 and the deep RiskModule campaign | `invariant_TEST_095_noGateBypassed` failed ("a pre-check passed with a gate closed"), shrunk to 2 calls: `setLegs` with both leg feeds 0, then `withdraw(2)` (shard 9) or `withdraw(3235)` (deep). `targetContract(handler)` exposed the handler's setup helper `setLegs`; with no named feed the RiskModule has no feed age to check (an unused leg is skipped, 2.7 step (5)), while the handler counted the stale-feed gate it closed by warping. A handler bug, not a RiskModule bug: the handler now takes the legs in its constructor and has no setter. `test/unit/RiskModule.HandlerLegs.unit.t.sol` replays both seeds ([register](../findings-register.md) `SLOW-01`) |
+| 2026-11-15 | `contracts` 43653564553, deep Integration campaign | `setUp()` failed `vm.getCode: multiple matching artifacts found`. The campaign compiled only its file's import graph; the `IntegrationHandler` compilation restriction puts the test in a non-default profile, and `deployCode("X.sol:X")` keeps only the copy in the running test's profile, of which the narrow build had none (and two in other profiles) for the contracts the fixtures deploy by name. Fixed in the fixtures (`X.sol:X:default` for the unrestricted contracts, the bytecode that ships) and in CI (the campaigns reuse the build job's full output, as the shards do) ([register](../findings-register.md) `SLOW-02`) |
+
 ## Results folder
 
 - [`test-inventory-2026-11-10.md`](results/test-inventory-2026-11-10.md): test files and test functions per folder and per contract.

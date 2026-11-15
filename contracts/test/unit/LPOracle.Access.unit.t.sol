@@ -9,7 +9,10 @@ import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
 import {ILPOracleEvents} from "../../src/oracle/lp-oracle/ILPOracleEvents.sol";
 import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
+import {OracleConfig} from "../../src/types/OracleConfig.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
+import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {TokenOracleConfig} from "../../src/types/TokenOracleConfig.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 import {
     LPOracleHarness,
@@ -17,11 +20,12 @@ import {
     LPOracleHarnessListingLogic,
     LPOracleHarnessPokeLogic
 } from "../utils/harness/LPOracleHarness.sol";
-import {ReadMode} from "../utils/mocks/LPOracleMocks.sol";
+import {OracleFeedMock, OracleTokenMock, ReadMode} from "../utils/mocks/LPOracleMocks.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 /// @notice Roles, upgrades, `setPokeMinGas` and `initialize` of the LPOracle base (2.10 Permissions).
 contract LPOracleAccessUnitTest is LPOracleFixture {
@@ -182,5 +186,101 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
             new LPOracleHarnessPokeLogic(tl, BLOCK_TIME, POKE_FLOOR + 1, POKE_CEILING, false);
         vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, 0));
         new LPOracleHarness(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, address(other), listingLogic, viewLogic);
+    }
+
+    // TEST-062 verifies: REQ-ORACLE-038, REQ-ORACLE-058, SPEC-ORC-023
+    /// @notice `pokeMinGas` bounds are inclusive at both ends: `initialize` accepts a value inside the range and the
+    /// ceiling itself and refuses one above it, `setPokeMinGas` accepts the ceiling, and a chain whose floor equals its
+    /// ceiling deploys.
+    function test_TEST_062_pokeMinGasBoundsInclusive() public {
+        InitParams memory p = _params();
+        p.pokeMinGas = POKE_FLOOR + 1;
+        (bool ok,) = _deploy(p);
+        assertTrue(ok, "inside the range");
+        p.pokeMinGas = POKE_CEILING;
+        (ok,) = _deploy(p);
+        assertTrue(ok, "at the ceiling");
+        p.pokeMinGas = POKE_CEILING + 1;
+        bytes memory ret;
+        (ok, ret) = _deploy(p);
+        assertEq(ret, abi.encodeWithSelector(ILPOracleErrors.PokeMinGasOutOfBounds.selector, POKE_CEILING + 1));
+        vm.prank(tl);
+        oracle.setPokeMinGas(POKE_CEILING);
+        assertEq(oracle.pokeMinGas(), POKE_CEILING, "setPokeMinGas at the ceiling");
+        new LPOracleHarnessPokeLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_FLOOR, false);
+    }
+
+    // TEST-062 verifies: REQ-ORACLE-080
+    /// @notice The feed reports its logic contracts and its market identity as stored at `initialize`.
+    function test_TEST_062_logicAndIdentityViews() public view {
+        assertTrue(oracle.INIT_LOGIC() != address(0), "INIT_LOGIC");
+        assertTrue(oracle.VIEW_LOGIC() != address(0), "VIEW_LOGIC");
+        assertTrue(oracle.VIEW_LOGIC() != oracle.POKE_LOGIC(), "VIEW_LOGIC is its own contract");
+        assertEq(oracle.marketId(), MARKET, "marketId");
+        assertEq(oracle.integration(), integrationAddr, "integration");
+        assertEq(oracle.parameterStore(), address(store), "parameterStore");
+        assertEq(oracle.marketRegistry(), address(registry), "marketRegistry");
+        address[] memory list = oracle.tokens();
+        assertEq(list.length, 2, "two tokens");
+        assertEq(list[0], address(tokenA), "token A");
+        assertEq(list[1], address(tokenB), "token B");
+        assertEq(oracle.stableCeilingUsd(), 1e8, "stableCeilingUsd = $1.00");
+    }
+
+    // TEST-062 verifies: REQ-ORACLE-058
+    /// @notice `initialize` records each token's registry route version, so the first `poke()` of a feed listed after
+    /// its tokens' routes changed sees no version change (no `PriceRouteVersionObserved`).
+    function test_TEST_062_initializeRecordsRouteVersions() public {
+        registry.setVersion(address(tokenA), 3);
+        registry.setVersion(address(tokenB), 5);
+        LPOracleHarness impl = LPOracleHarnessDeployer.deploy(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false);
+        LPOracleHarness feed = LPOracleHarness(
+            address(new ERC1967Proxy(address(impl), abi.encodeCall(ILPOracle.initialize, (_params()))))
+        );
+        vm.recordLogs();
+        feed.poke();
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i = 0; i < logs.length; ++i) {
+            assertTrue(logs[i].topics[0] != ILPOracleEvents.PriceRouteVersionObserved.selector, "no version change");
+        }
+        assertEq(uint8(feed.getPriceState().state), uint8(PriceState.Live), "Live");
+    }
+
+    /// @dev `initialize` parameters of an `n`-token market of USD stables, each priced like the fixture's tokens.
+    function _nTokenParams(
+        uint256 n
+    ) internal returns (InitParams memory p) {
+        p = _params();
+        OracleConfig memory c = _config();
+        c.tokens = new TokenOracleConfig[](n);
+        p.isUsdStable = new bool[](n);
+        uint256[] memory composition = new uint256[](n);
+        for (uint256 i = 0; i < n; ++i) {
+            OracleTokenMock token = new OracleTokenMock(6);
+            OracleFeedMock primary = _feed("primary");
+            OracleFeedMock alternate = _feed("alternate");
+            OracleFeedMock second = _feed("second");
+            registry.setRoutes(address(token), _one(address(primary)), _one(address(alternate)), RouteSlot.None);
+            c.tokens[i] = _tokenConfig(address(token), address(primary), address(alternate), address(second));
+            p.isUsdStable[i] = true;
+            composition[i] = 1e18;
+        }
+        p.config = c;
+        p.market = abi.encode(composition);
+        store.setConfig(c);
+    }
+
+    // TEST-062 verifies: REQ-ORACLE-058, REQ-ORACLE-059, MKT-019
+    /// @notice A market of two to eight tokens is accepted (three and eight here); nine is `MarketMismatch`.
+    function test_TEST_062_threeToEightTokenMarkets() public {
+        uint256 snap = vm.snapshotState();
+        (bool ok, bytes memory ret) = _deploy(_nTokenParams(3));
+        assertTrue(ok, "three tokens");
+        vm.revertToState(snap);
+        (ok, ret) = _deploy(_nTokenParams(8));
+        assertTrue(ok, "eight tokens");
+        vm.revertToState(snap);
+        (ok, ret) = _deploy(_nTokenParams(9));
+        assertEq(ret, abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, MARKET), "nine tokens");
     }
 }

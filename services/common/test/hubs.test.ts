@@ -124,6 +124,22 @@ describe("a chain with two Hubs and three Lend Spokes", () => {
 
 const kindOf = (snap: Awaited<ReturnType<typeof read>>, spoke: Address) => snap.slices.find((s) => s.spoke === spoke)!.kind;
 
+describe("market caps (REQ-LENS-057)", () => {
+  it("keeps Avana's caps, the liquidation threshold and fee and the hard floor from the market view", async () => {
+    const m = (await read()).markets[0]!;
+    expect(m.caps).toEqual({
+      liquidationThresholdBps: 8_000,
+      liquidationFeeBps: 1_000,
+      hardHealthFloorWad: "0",
+      marketUsdCap8: (5_000_000n * 10n ** 8n).toString(),
+      topUpSliceUsd8: (500_000n * 10n ** 8n).toString(),
+      depositorUsdCap8: (1_000_000n * 10n ** 8n).toString(),
+      tokenUsdCaps8: [(10n ** 15n).toString(), (10n ** 15n).toString()],
+      addCap: "5000000",
+    });
+  });
+});
+
 describe("speed limits of each market (BOR-024)", () => {
   it("reads what each debt reserve of the market can borrow now and when more frees up", async () => {
     const m = (await read()).markets[0]!;

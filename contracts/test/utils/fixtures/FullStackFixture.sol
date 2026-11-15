@@ -126,7 +126,8 @@ abstract contract FullStackFixture is FullStackDeploy {
         address[] memory amm = new address[](2);
         if (_realStack()) {
             flashSource = deployCode(
-                "AaveV3FlashSource.sol:AaveV3FlashSource", abi.encode(address(v3Pool), lpVaultSwap, address(store))
+                "AaveV3FlashSource.sol:AaveV3FlashSource:default",
+                abi.encode(address(v3Pool), lpVaultSwap, address(store))
             );
             vm.label(flashSource, "AaveV3FlashSource");
             (amm[0], amm[1]) = (address(nfpm), address(factory));
@@ -353,7 +354,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         uint256 whole = 10 ** ClTestToken(asset).decimals();
         if (_realStack()) {
             cs = deployCode(
-                "AvanaFirstLossReserve.sol:AvanaFirstLossReserve",
+                "AvanaFirstLossReserve.sol:AvanaFirstLossReserve:default",
                 abi.encode(aave.hub, asset, assetId, aave.accessManager, 1_209_600)
             );
             uint24 maxRp = IAaveV4Hub(aave.hub).MAX_RISK_PREMIUM_THRESHOLD();

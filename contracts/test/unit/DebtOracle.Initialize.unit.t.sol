@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {IDebtOracleErrors} from "../../src/oracle/debt-oracle/IDebtOracleErrors.sol";
 import {IDebtOracleEvents} from "../../src/oracle/debt-oracle/IDebtOracleEvents.sol";
+import {DebtOracleInitParams} from "../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
 import {DebtPriceView} from "../../src/oracle/debt-oracle/types/DebtPriceView.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
@@ -134,5 +135,15 @@ contract DebtOracleInitializeUnitTest is DebtOracleFixture {
         for (uint256 i = 0; i < t.length; ++i) {
             t[i] = ret[i + 4];
         }
+    }
+
+    // TEST-242 verifies: REQ-ORACLE-097
+    /// @notice `initialize` refuses any timelock other than the implementation's `TIMELOCK`.
+    function test_TEST_242_initializeRefusesAnotherTimelock() public {
+        address other = makeAddr("otherTimelock");
+        DebtOracleInitParams memory p = _params();
+        p.timelock = other;
+        vm.expectRevert(abi.encodeWithSelector(IDebtOracleErrors.AdminRoleOnlyTimelock.selector, bytes32(0), other));
+        new ERC1967Proxy(address(impl), abi.encodeCall(IDebtOracle.initialize, (p)));
     }
 }
