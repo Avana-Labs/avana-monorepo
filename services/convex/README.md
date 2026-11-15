@@ -181,6 +181,8 @@ The web app's server opens a session after it verifies a SIWE signature (`siweSe
 
 ## Wallet activity
 
+`wallet.live.accounts` reads the wallet's accounts at the head with Lens `getAccounts` over Convex's RPC (health factor, collateral and debt in USD, debts, gates), unstored and rate limited per wallet, for clients that cannot read the chain themselves.
+
 `wallet.activity.listForWallet` pages through the wallet's logs of the last 30 days (`ingestedLogs.by_wallet`, exact cursor) as dashboard rows, each with the page it belongs to and an explorer link; `wallet/history:older` serves anything older. `deployments.explorers` returns each chain's explorer for links the app builds itself.
 
 ## Configuration
