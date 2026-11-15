@@ -101,7 +101,7 @@ eqm("SYM-107", "SPEC-BACK-003: NFT 42 charges ceil(5e9*2e8/1e6) = 1e12 at price8
    sp.Matrix([mul_div(5 * 10 ** 9, max(2 * 10 ** 8, 10 ** 8), 10 ** 6, True), mul_div(5 * 10 ** 9, max(9 * 10 ** 7, 10 ** 8), 10 ** 6, True)]),
    sp.Matrix([10 ** 12, 5 * 10 ** 11]))
 # SYM-108 verifies: SPEC-BACK-004
-eqm("SYM-108", "SPEC-BACK-004: top-up charge 3e11 with slice 2e11 adds $1,000 regular, $2,000 slice, $3,000 per token and depositor",
+eqm("SYM-108", "SPEC-BACK-004: top-up charge 3e11 with slice 2e11 adds $1,000 regular, $2,000 slice, $3,000 per token",
    sp.Matrix([3 * 10 ** 11 - 2 * 10 ** 11, 2 * 10 ** 11, 3 * 10 ** 11]), sp.Matrix([10 ** 11, 2 * 10 ** 11, 3 * 10 ** 11]))
 rem = mul_div(10 ** 12, 3_425_000_000, 5_000_000_000, True)
 # SYM-109 verifies: SPEC-BACK-005
