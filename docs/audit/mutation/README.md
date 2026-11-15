@@ -31,6 +31,26 @@ Layer gate (2.1 … 2.6), both kinds (decided 2026-11-10), and every push to `ma
 
 `mutation-gate` 43653570827 on `main` (commit `48864ef`, dispatched 2026-11-14), recorded as its jobs finish: [results/README.md](results/README.md) (per contract mutants, killed, survived, timed out, not compiled and kill rate; the Necessist table) and [results/survivors.md](results/survivors.md) (every surviving mutant and every removal that left the tests passing). `certoraMutate` did not run (`CERTORA_ENABLED` off); the Certora mutants run with the local Prover through `contracts/script/certora-mutate-local.sh`. In this run the mutants of the LPOracleCL contracts, LPOracleCalls, ParameterStore, ClPriceMath and AaveAdapter ran without some of their own test suites (the `tests` globs of `security/mutation-layers.json`, fixed after the run), so their survivors are marked inflated until the re-dispatch of layers 2.1, 2.2 and 2.5.
 
+### Second triage pass (2026-11-15, at `6805212`)
+
+Every survivor of run 43492416937 now has a class in [contracts/security/slither-mutate-triage.json](../../../contracts/security/slither-mutate-triage.json); each group is a row of [findings-register.md](../findings-register.md) section 2.2.
+
+| Class | Mutants |
+|---|---|
+| real test gap, test added and passing | 386 |
+| equivalent or harmless | 1,011 |
+| noise | 50 |
+| superseded (the line changed after `aa340fb`) | 4 |
+| test set fixed; needs the next mutation-gate run | 227 |
+| not triaged | 0 |
+| **All** | **1,678** |
+
+- The first pass's gap tests (14 files) pass in targeted `forge test` runs.
+- The 52 first-pass gaps marked "not written" now have tests, except 8 shown equivalent: `SM-072` (with feeds that follow the Chainlink round rules, a both-stale interval found after a poke that was not failed always ends after the stored `recoveredAt`), part of `SM-020` (a failed read already falls back to the stored value) and part of `SM-029` (`e.quote` is 0 whenever the market is failed).
+- The 393 survivors that pass did not reach (418 by exact text; 25 already matched an entry by the truncated mutant text) were triaged against the source at `6805212`: 214 real gaps, each with a test in a file inside its contract's `mutation-layers.json` test glob, 178 equivalent and 1 noise.
+- The tests were run one targeted file set at a time. Kills are confirmed by the next `mutation-gate` run on `main`, which also triages the 227 `LPOracleCL*` and `LPOracleCalls` survivors against their own tests.
+- The pass found one defect in `DebtOracle._recordSeen` (`MUT-01` in the register), fixed in [pull request 74](https://github.com/Avana-Labs/avana-monorepo/pull/74).
+
 ### Triage of the earlier run 43492416937
 
 `mutation-gate.yml` run 43492416937 on `main` at `aa340fb` (dispatched 2026-11-13) stalled in the queue: 151 `slither-mutate` jobs finished, all of layer 2.1 (three mutator groups per contract), and 243 never ran; the Necessist jobs are in [../necessist/README.md](../necessist/README.md). `slither-mutate` survivors are report-only in CI.
