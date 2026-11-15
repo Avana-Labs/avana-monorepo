@@ -3,8 +3,31 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
 import {FlashLiquidatorFixture} from "../utils/fixtures/FlashLiquidatorFixture.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
+
+/// @notice A token-transfer hook that tries to reenter the helper and records the revert selector of its first try.
+contract ReentryRecorder {
+    address internal immutable TARGET;
+    bytes internal data;
+    bytes4 public firstSelector;
+    uint256 public attempts;
+
+    constructor(
+        address target,
+        bytes memory data_
+    ) {
+        TARGET = target;
+        data = data_;
+    }
+
+    function poke() external {
+        ++attempts;
+        (, bytes memory ret) = TARGET.call(data);
+        if (attempts == 1) firstSelector = ret.length >= 4 ? bytes4(ret) : bytes4(0);
+    }
+}
 
 /// @notice A swap route as the helper reads it: only its `intermediates()`.
 contract IntermediatesRoute {
@@ -111,8 +134,9 @@ contract FlashLiquidatorResiduesUnitTest is FlashLiquidatorFixture {
     }
 
     // TEST-174 verifies: REQ-HELPER-010
-    /// @notice When the standing credit cannot be cleared (its recipient cannot receive), it stays for `claimEscrowed`
-    /// and the call never claims it to its own caller.
+    /// @notice The accepted remainder of audit finding L-04: with a token that blocks both the helper and `feeRecipient`,
+    /// the standing credit cannot be cleared, the later call's own credit joins it, and the whole credit goes only to
+    /// `feeRecipient` through `claimEscrowed`, never to either caller (REQ-HELPER-010).
     function test_TEST_174_unclearableStandingCreditNeverGoesToTheCaller() public {
         weth.setBlocked(address(helper), true);
         weth.setBlocked(caller, true);
@@ -122,10 +146,30 @@ contract FlashLiquidatorResiduesUnitTest is FlashLiquidatorFixture {
         weth.setBlocked(feeRecipient, true);
         _run(address(helper));
         assertEq(weth.balanceOf(caller), 0, "a standing credit never goes to a later caller");
+        assertEq(weth.balanceOf(address(helper)), 0, "the helper holds nothing");
         assertEq(escrow.claimable(address(weth), address(helper)), 0.8e18, "both credits stand");
         weth.setBlocked(feeRecipient, false);
         assertEq(helper.claimEscrowed(address(weth)), 0.8e18);
         assertEq(weth.balanceOf(feeRecipient), 0.8e18, "to feeRecipient");
+    }
+
+    // TEST-174 verifies: REQ-HELPER-010, REQ-HELPER-004
+    /// @notice The standing credit is cleared only once the call's context is open: a token callback during that claim
+    /// that tries to reenter the helper meets `ContextActive`.
+    function test_TEST_174_standingClaimRunsInsideTheContext() public {
+        weth.setBlocked(address(helper), true);
+        weth.setBlocked(caller, true);
+        lvs.addResidue(weth, 0.4e18);
+        _run(address(helper));
+        weth.setBlocked(caller, false);
+        ReentryRecorder recorder =
+            new ReentryRecorder(address(helper), abi.encodeCall(helper.flashLiquidate, (_exampleRequest())));
+        weth.setHook(address(recorder), abi.encodeCall(ReentryRecorder.poke, ()));
+        _run(address(helper));
+        // The claim is the call's first move of WETH, so the first callback is the one made during the claim.
+        assertGt(recorder.attempts(), 0, "the claim's transfer called back");
+        assertEq(recorder.firstSelector(), IFlashLiquidatorErrors.ContextActive.selector, "reentry refused");
+        assertEq(weth.balanceOf(feeRecipient), 0.4e18, "standing credit cleared to feeRecipient");
     }
 
     // TEST-174 verifies: REQ-HELPER-008

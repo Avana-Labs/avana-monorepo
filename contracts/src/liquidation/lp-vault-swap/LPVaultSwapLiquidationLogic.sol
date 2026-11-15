@@ -229,8 +229,8 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
     /// @dev A liquidation that booked a deficit pays its borrower surplus `B` into the First-Loss Reserve of the debt
     /// asset's funding Hub (`fund`, exact allowance reset to 0) rather than to the defaulted borrower (REQ-SWAP-027).
     /// `funded` is the fall of LPVaultSwap's own balance over the call, at most `amount`: 0 when no reserve is recorded
-    /// for (funding Hub, asset), when `fund` reverts, or when the reserve takes nothing. The call is low-level and its
-    /// return data is not decoded, so a reserve without code or with a malformed return cannot revert the liquidation.
+    /// for (funding Hub, asset), when `fund` reverts, or when the reserve takes nothing. The call is low-level and copies
+    /// no return data, so a reserve without code, with a malformed return or with a huge one cannot revert the liquidation.
     /// The caller pays `amount − funded` to the borrower as for any liquidation, so the reserve never blocks a settlement.
     /// @custom:spec REQ-SWAP-027, SPEC-LIQ-022
     function _fundReserve(
@@ -243,8 +243,14 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         IERC20 asset = IERC20(d.asset);
         uint256 before = asset.balanceOf(address(this));
         asset.forceApprove(reserve, amount);
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool ok,) = reserve.call(abi.encodeCall(IAvanaFirstLossReserve.fund, (amount)));
+        bytes memory data = abi.encodeCall(IAvanaFirstLossReserve.fund, (amount));
+        bool ok;
+        // A call that copies no return data: Solidity's own call syntax copies the whole return buffer, so a reserve
+        // returning a huge one could make the liquidation revert on memory expansion.
+        // solhint-disable-next-line no-inline-assembly
+        assembly ("memory-safe") {
+            ok := call(gas(), reserve, 0, add(data, 0x20), mload(data), 0, 0)
+        }
         asset.forceApprove(reserve, 0);
         uint256 balance = asset.balanceOf(address(this));
         if (!ok || balance >= before) return 0;

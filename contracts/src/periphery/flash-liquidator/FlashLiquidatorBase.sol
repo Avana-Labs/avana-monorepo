@@ -140,8 +140,9 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         // Balances before anything moves: the payout and the forwarded market tokens are rises over these.
         uint256 assetBefore = asset.balanceOf(address(this));
         Watch memory w = _watch(request.params.marketId, market.tokens, address(asset));
-        _clearStanding(w);
         address payer = _openContext(lender, address(asset), request);
+        // After the context opens: a token callback during a claim finds it active and cannot reenter.
+        _clearStanding(w);
         // Inventory X - F and the SPEC-LIQ-019 shortfall budget; the unused part returns in the payout.
         uint256 prefund = request.params.debtToCover - flashAmount + request.params.maxShortfall;
         // The payer is fixed by the variant, never by the request: `msg.sender` (public) or the immutable
@@ -480,7 +481,8 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
     /// @notice Claims every watched token's PayoutEscrow credit that stands before the liquidation to the address
     /// `claimEscrowed` pays, then re-reads it, so a credit this call creates is its caller's alone and is never merged
     /// into one an earlier caller left (REQ-HELPER-010). A credit whose claim fails, or with no such address, keeps
-    /// standing and is left to `claimEscrowed`, as before.
+    /// standing and is left to `claimEscrowed`, as before. Runs once the call's context is open, so a token callback
+    /// during a claim cannot reenter the helper (`ContextActive`).
     /// @param w The watch list; its credits are updated to what still stands.
     /// @custom:spec REQ-HELPER-010
     function _clearStanding(

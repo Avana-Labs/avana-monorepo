@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILens} from "../../../src/lens/lens/ILens.sol";
 import {LiquidationPreview} from "../../../src/lens/lens/types/LiquidationPreview.sol";
@@ -482,6 +483,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         b.lender = asset.balanceOf(env.v3Pool.getReserveAToken(address(asset)));
         b.helper = asset.balanceOf(env.helper);
         b.helperEscrowed = env.escrow.claimable(address(asset), env.helper);
+        b.deficit = IAaveV4Hub(env.hub).getSpokeDeficitRay(IAaveV4Hub(env.hub).getAssetId(address(asset)), env.spoke);
         address[] memory sources = asset == env.gho ? env.ghoSources : env.usdcSources;
         for (uint256 i = 0; i < sources.length; ++i) {
             b.sources += asset.balanceOf(sources[i]);

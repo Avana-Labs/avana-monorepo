@@ -75,6 +75,8 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
         uint256 escrow;
         uint256 sources;
         uint256 parked;
+        // The Spoke's USDC deficit on the Hub (ray): a rise marks a call that booked a deficit (SPEC-LIQ-022).
+        uint256 deficit;
     }
 
     /// @dev A route rate at or above this (per 10,000) meets the per-leg minimum at the fixture's 1 % slippage
@@ -364,6 +366,7 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
         b.sources = usdc.balanceOf(env.lpVault) + usdc.balanceOf(address(env.primaryPool))
             + usdc.balanceOf(address(env.backupPool));
         b.parked = usdc.balanceOf(env.coll);
+        b.deficit = IAaveV4Hub(env.hub).getSpokeDeficitRay(env.usdcAssetId, env.spoke);
     }
 
     /// @dev TEST-093 conservation on balances. With `in = caller's fall + sources' fall` and `out = rise of the Hub,
@@ -372,7 +375,8 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
     /// unchanged and the escrow's rise is exactly the escrowed credit, so no USDC appeared or vanished. The result must
     /// report what the balances show: `D` the Hub's rise, `A` the fee recipient's, `B` the borrower's, `R` the sources'
     /// fall less Collateralization's rise and `keeperOut − Kf − shortfall` the caller's change. The part of `B` a deficit
-    /// liquidation paid into the First-Loss Reserve (`DeficitSurplusFunded`) reaches the Hub, not the borrower. Floor: `R + shortfall >= minOut` and `D <= Kf <=
+    /// liquidation paid into the First-Loss Reserve (`DeficitSurplusFunded`) reaches the Hub, not the borrower; it is
+    /// all of `B` on a call that raised the Spoke's deficit and 0 on any other call (REQ-SWAP-027). Floor: `R + shortfall >= minOut` and `D <= Kf <=
     /// debtToCover`, `shortfall <= maxShortfall`.
     function _checkBalances(
         Usdc memory b,
@@ -394,7 +398,8 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
         ) ++conservationBreaks;
         if (
             toHub != int256(r.debtRepaid + funded) || toFee != int256(r.avanaFee)
-                || toBorrower != int256(r.borrowerSurplus) - int256(funded) || recovered != int256(r.recovered)
+                || toBorrower != int256(r.borrowerSurplus) - int256(funded)
+                || funded != (a.deficit > b.deficit ? r.borrowerSurplus : 0) || recovered != int256(r.recovered)
                 || -callerIn != int256(r.keeperOut) - int256(r.callerFunds) - int256(r.shortfall)
         ) ++reportBreaks;
         if (

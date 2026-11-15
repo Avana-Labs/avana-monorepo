@@ -102,6 +102,7 @@ The core money paths held up under every attack class tried: custody, units-to-v
   3. Anyone can then call `claimEscrowed(T)`, which sends the whole credit to the claim recipient (`feeRecipient` on the public helper).
 - **Impact in funds:** later callers of the public helper lose their dust and route residues in `T`. It is hard to cause on purpose.
 - **Fix:** record the credit at the start of the call and claim only the increase, or keep credits per caller.
+- **Fixed in PR #80, with an accepted remainder:** each call first claims any standing credit to `claimEscrowed`'s recipient (after its context opens), so a later caller's residue is never merged into an earlier one and no caller receives another's. Claiming only the increase needs an amount-limited `PayoutEscrow.claim`, a recorded follow-up. Until then one case remains: a token that blocks both the helper and `feeRecipient`. There the standing claim fails, the caller's new credit joins it, and the whole credit goes only to `feeRecipient` through `claimEscrowed`, never to another caller (REQ-HELPER-010; pinned by `test_TEST_174_unclearableStandingCreditNeverGoesToTheCaller`).
 
 ### I-01 (Low, first reported as Info): `observe` at maximum cardinality can exceed the 100k cap
 

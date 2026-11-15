@@ -8,6 +8,29 @@ import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSw
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+/// @dev A First-Loss Reserve stand-in that takes the amount it is funded with, then returns a 2 MiB buffer: copying it
+/// would cost the caller about 8.8M gas of memory expansion.
+contract HugeReturnReserve {
+    IERC20 internal immutable ASSET;
+
+    constructor(
+        IERC20 asset
+    ) {
+        ASSET = asset;
+    }
+
+    function fund(
+        uint256 amount
+    ) external returns (uint256) {
+        require(ASSET.transferFrom(msg.sender, address(this), amount), "pull");
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            return(0, 0x200000)
+        }
+    }
+}
 
 /// @title LPVaultSwapBadDebtIntegrationTest
 /// @notice An account whose collateral is worth less than its debt, on the local Aave V4 (2.11 SPEC-LIQ-005,
@@ -137,6 +160,33 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
         }
         assertGt(deficitSurplus, 0, "the deficit call carried a borrower surplus");
         assertEq(usdc.balanceOf(address(lvs)), 0, "LPVaultSwap neutral");
+    }
+
+    /// @notice A reserve that returns a huge buffer cannot make the deficit call revert: LPVaultSwap copies no return
+    /// data from `fund`, so each call settles within a gas limit that the 2 MiB copy alone would exceed.
+    // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-027
+    function test_TEST_216_hugeReserveReturnDoesNotBlockTheSettlement() public {
+        HugeReturnReserve reserve = new HugeReturnReserve(IERC20(address(usdc)));
+        registry.setAvanaFirstLossReserve(aave.hub, address(usdc), address(reserve));
+        lpOracle.setAnswer(int256(100_000_000));
+        uint256 funded = 0;
+        for (uint256 i = 0; i < 30 && _suppliedUnits(proxy) != 0; ++i) {
+            uint256 debt = _debtOf(proxy, usdcReserveId);
+            LiquidationParams memory p = _params(proxy, debt);
+            p.maxShortfall = debt / 5;
+            uint256 deficitBefore = _deficit();
+            uint256 heldBefore = usdc.balanceOf(address(reserve));
+            usdc.mint(keeper, p.debtToCover + p.maxShortfall);
+            vm.startPrank(keeper);
+            usdc.approve(address(lvs), p.debtToCover + p.maxShortfall);
+            LiquidationResult memory r = lvs.liquidate{gas: 12_000_000}(p);
+            vm.stopPrank();
+            if (_deficit() > deficitBefore) {
+                assertEq(usdc.balanceOf(address(reserve)), heldBefore + r.borrowerSurplus, "reserve took B");
+                funded += r.borrowerSurplus;
+            }
+        }
+        assertGt(funded, 0, "the deficit call funded the reserve");
     }
 
     /// @notice A zero repayment is refused `InvalidAmount` even on an insolvent account.
