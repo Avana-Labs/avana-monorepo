@@ -12,7 +12,7 @@ counter arithmetic bounds ([2.3] SPEC-BACK-003, SPEC-BACK-004, SPEC-BACK-005, [2
            capReleased     = currentUsdCharge - remainingCharge;   currentUsdCharge = remainingCharge
            fromSlice = min(capReleased, Slice);  Slice -= fromSlice;
            Regular   = max(Regular - (capReleased - fromSlice), 0)
-           token and depositor counters: max(counter - capReleased, 0)
+           token counters: max(counter - capReleased, 0)  (there is no depositor counter)
 """
 import os
 import sys
@@ -58,7 +58,7 @@ cnt = [R >= 0, S >= 0, rest >= 0, ch >= 0, rel >= 0, rel <= ch, R + S == rest + 
 prove('MATH-UO-25d', 'slice first: Slice and Regular stay >= 0, the slice drops by min(capReleased, Slice), and Regular + Slice drops by exactly capReleased (saturation never clamps)',
       cnt, And(S2 >= 0, R2 >= 0, S2 == S - fs, R2 + S2 == R + S - rel, R - (rel - fs) >= 0))
 # MATH-UO-25 verifies: SPEC-BACK-005
-prove('MATH-UO-25e', 'token and depositor counters (>= sum of charges) fall by exactly capReleased; max(counter - capReleased, 0) never clamps',
+prove('MATH-UO-25e', 'token counters (>= sum of charges) fall by exactly capReleased; max(counter - capReleased, 0) never clamps',
       cnt, If(Tk - rel > 0, Tk - rel, 0) == Tk - rel)
 
 # ---------------------------------------------------------------------------

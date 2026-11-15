@@ -26,7 +26,7 @@ Run: `../../run_all.sh`, or `../../.venv/bin/python <file>.py` from this folder.
 | `SPEC-HUB-007` | Aave V4 kinked curve: `u = ⌈drawn × RAY / (liquidity + drawn)⌉`; `rate = base + ⌈⌈before × u / RAY⌉ × RAY / U*⌉` for `u ≤ U*`, else `base + before + ⌈⌈after × (u − U*) / RAY⌉ × RAY / (RAY − U*)⌉`, values in bps × 1e23 (`Q-408`) | up | ar14 |
 | `SPEC-HUB-004` | `threshold ≥ max collateralRisk + 1`; `Σ_i percentMulUp(d_i, r_i) ≤ percentMulUp(Σ d_i, T)` | premium shares up | ar05 |
 | `SPEC-CAP-001` | `usdCharge = ⌈L × max(price8, floor) / 10^d⌉`; `pledgeUsd = ⌊L × price8 / 10^d⌋ ≥ minPledgeUsd` | charge up, value down | ar08 |
-| `SPEC-CAP-002` | `room = max(K − R, 0)`; new pledge `c ≤ room`; top-up `slice = max(c − room, 0)`, `S + slice ≤ Z`; token and depositor tests on `c − slice` | none | ar08 |
+| `SPEC-CAP-002` | `room = max(K − R, 0)`; new pledge `c ≤ room`; top-up `slice = max(c − room, 0)`, `S + slice ≤ Z`; token test on `c − slice`; `K` and `tokenCap` may be 0 | none | ar08 |
 | `SPEC-CAP-003` | `x = ⌈(h_o − hf) D / (WAD RAY)⌉`, `usdToRestore = ⌈x 10^4 / (CF 10^18)⌉`, `restoreBooked = ⌈usdToRestore × max(price8, floor) / served8⌉` | up | ar08 |
 | `SPEC-CAP-004` | `charge(u) = ⌈C0 u / U0⌉`, `release = charge(u_b) − charge(u_a)`, slice first | up on the remaining charge | ar08 |
 | `SPEC-CAP-005` | `(supply + L) × 10^4 ≤ poolShareMaxBps × liqHM` | floored liqHM | ar08 |
@@ -152,6 +152,7 @@ Bounds common to the integer models: shares and indices `< 2^120`, prices `< 2^6
 | MATH-AR-45e | 9,999,500,000,000; 5,000,000,000,000; 999,950,000 reverts; 1,000,149,990 passes | SPEC-CAP-001 | d = 6 | COMPUTED |
 | MATH-AR-46a–d | regular budget never exceeded; slice within Z; `R ≤ K`, `S ≤ Z` kept; token counter ≤ cap + slices | SPEC-CAP-002, INV-028 | — | PROVED |
 | MATH-AR-46e | room $10,000, slice $10,000, R $1,000,000, new-account revert | SPEC-CAP-002 | — | COMPUTED |
+| MATH-AR-46f | zero caps: no new-account pledge passes; a passing top-up at K = 0 and tokenCap = 0 is all slice, within Z | SPEC-CAP-002, REQ-RISK-042 | — | PROVED |
 | MATH-AR-47a–b | `usdToRestore` restores `h_o`; a top-up within `restoreBooked` has served value < `usdToRestore` + 1 when `served8 ≤ max(price8, floor)` | SPEC-CAP-003, REQ-RISK-066 | `price8 = min(fresh, accepted)` (`REQ-RISK-026`); 47b `served8 ≤ max(price8, floor)` | PROVED |
 | MATH-AR-47g | every state, a served price above the booking basis after a rally included: a top-up within `restoreBooked` has served value < `usdToRestore` + `served8 / max(price8, floor)` units of 1e-8 USD | SPEC-CAP-003, REQ-RISK-026, REQ-RISK-066 | no order between `served8` and `price8` | PROVED |
 | MATH-AR-47h | why 47b needs `served8 ≤ max(price8, floor)`: above the basis the one-unit bound can be exceeded by the rounding of `restoreBooked` (by less than 47g's bound) | SPEC-CAP-003, REQ-RISK-026 | same | COUNTEREXAMPLE (deliberate) |

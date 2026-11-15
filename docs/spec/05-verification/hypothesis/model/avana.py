@@ -114,7 +114,7 @@ class System(SwapMixin):
         self.freeze_log = {}              # guardian -> [timestamps]
         self.config_drift = False         # Aave risk configuration drift (Q-270)
         self.hostile_swap = False         # an LPVaultSwap version that never settles (Q-201)
-        self.counters_regular, self.counters_slice, self.counters_token, self.counters_depositor = {}, {}, {}, {}
+        self.counters_regular, self.counters_slice, self.counters_token = {}, {}, {}
         self.pending = {}                 # market -> dict(units, amounts {token: raw})
         self.orphan_burned = {}           # ghost: units burned without a debit (Q-257)
         self.unsettled = {}               # ghost: (proxy, market) -> units a faulty LPVaultSwap seized, unreconciled
@@ -596,7 +596,6 @@ class System(SwapMixin):
         self.counters_slice[m] = self.counters_slice.get(m, 0) + sl
         for t in (mk.t0, mk.t1):
             self.counters_token[t] = self.counters_token.get(t, 0) + c
-        self.counters_depositor[wallet] = self.counters_depositor.get(wallet, 0) + c
 
     def _release(self, rec, exited):
         """SPEC-BACK-005: remaining = ceil(V0 × remaining / U0); slice released first; saturating counters; rescue
@@ -612,7 +611,6 @@ class System(SwapMixin):
         rec.charge, rec.slice_charge = rem_charge, rec.slice_charge - rs
         for t in (mk.t0, mk.t1):
             self.counters_token[t] = max(0, self.counters_token.get(t, 0) - released)
-        self.counters_depositor[rec.depositor] = max(0, self.counters_depositor.get(rec.depositor, 0) - released)
         rec.credited = remaining
         rec.rescue_units = min(rec.rescue_units, rec.credited)
         return released
