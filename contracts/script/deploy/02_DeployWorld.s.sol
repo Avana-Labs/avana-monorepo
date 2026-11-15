@@ -443,7 +443,9 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3, WorldUniswapV4 
     }
 
     /// @notice The Uniswap v3 fee-500 pool of the pair (WETH for native ETH), created and seeded with `usd` dollars of
-    /// full-range liquidity when absent, with its observation cardinality grown for the TWAP.
+    /// full-range liquidity when absent, with its observation cardinality grown for the TWAP. As in `_uniswapPool`, the
+    /// cardinality is grown before the mint: a pool's cardinality takes its grown value only at the next observation
+    /// write, and the mint is that write.
     function _referencePool(
         TokenInfo memory a,
         TokenInfo memory b,
@@ -452,14 +454,17 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3, WorldUniswapV4 
         if (a.token == address(0)) a = tokens[keccak256("WETH")];
         if (a.token > b.token) (a, b) = (b, a);
         pool = IUniswapV3FactoryAdmin(uniFactory).getPool(a.token, b.token, 500);
-        if (pool == address(0)) {
+        bool created = pool == address(0);
+        if (created) {
             pool = IUniswapV3FactoryAdmin(uniFactory).createPool(a.token, b.token, 500);
             IPoolInit(pool).initialize(_sqrtPrice(a, b));
-            (uint256 a0, uint256 a1) = _fund(a, b, usd, uniNpm);
-            _mintUni(a.token, b.token, 500, a0, a1);
         }
         IPoolInit(pool)
             .increaseObservationCardinalityNext(uint16(vm.parseJsonUint(cfg, ".world.observationCardinality")));
+        if (created) {
+            (uint256 a0, uint256 a1) = _fund(a, b, usd, uniNpm);
+            _mintUni(a.token, b.token, 500, a0, a1);
+        }
     }
 
     // ─── Helpers ───
