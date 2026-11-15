@@ -68,8 +68,7 @@ verdict() {
     echo invalid; return
   fi
   local report
-  report=$(find "$1" -maxdepth 3 -path '*/emv-*/Reports/output.json' -printf '%T@ %p
-' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
+  report=$(find "$1" -maxdepth 3 -path '*/emv-*/Reports/output.json' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
   [ -n "$report" ] || { echo error; return; }
   python3 -I - "$report" <<'PY'
 import json, sys
