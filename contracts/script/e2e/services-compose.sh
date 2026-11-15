@@ -38,6 +38,9 @@ RPC="${RPC_ANVIL:-http://127.0.0.1:8545}"
 # The containers reach the host's node through host.docker.internal.
 RPC_IN="${RPC/127.0.0.1/host.docker.internal}"
 RPC_IN="${RPC_IN/localhost/host.docker.internal}"
+# The monitor refuses a fallback equal to its primary. A rehearsal has one node, so the fallback reaches the same node
+# through a second host name (anvil-fallback, compose.anvil.yaml).
+RPC_FB="${RPC_IN/host.docker.internal/anvil-fallback}"
 
 for t in docker openssl curl node; do command -v "$t" >/dev/null || { echo "not run: $t missing"; exit 3; }; done
 docker info >/dev/null 2>&1 || { echo "not run: the docker daemon is not running (start Docker Desktop)"; exit 3; }
@@ -64,7 +67,7 @@ cat > "$WORK/indexer.env" <<EOF
 INDEXER_NETWORK_SET=local
 AVANA_MANIFEST=/local/$MANIFEST_FILE
 RPC_ANVIL=$RPC_IN
-RPC_ANVIL_FALLBACK=$RPC_IN
+RPC_ANVIL_FALLBACK=$RPC_FB
 RPC_ANVIL_WS=${RPC_IN/http/ws}
 DATABASE_SCHEMA=rehearsal
 INDEXER_EXPORT_KEYS=keeper:$EXPORT_SECRET
@@ -74,7 +77,7 @@ cat > "$WORK/keeper.env" <<EOF
 KEEPER_NETWORK_SET=local
 AVANA_MANIFEST=/local/$MANIFEST_FILE
 RPC_ANVIL=$RPC_IN
-RPC_ANVIL_FALLBACK=$RPC_IN
+RPC_ANVIL_FALLBACK=$RPC_FB
 RPC_ANVIL_WS=${RPC_IN/http/ws}
 KEEPER_MODE=observe
 KEEPER_ROLE=primary
@@ -95,7 +98,7 @@ cat > "$WORK/monitor.env" <<EOF
 MONITOR_NETWORK_SET=local
 AVANA_MANIFEST=/local/$MANIFEST_FILE
 RPC_ANVIL=$RPC_IN
-RPC_ANVIL_FALLBACK=$RPC_IN
+RPC_ANVIL_FALLBACK=$RPC_FB
 MONITOR_INTERVAL_SECONDS=12
 MONITOR_CHANNELS=log:log
 ${ROUTES}MONITOR_STATUS_TOKEN=$(secret)
@@ -108,15 +111,27 @@ echo "building the images and starting the stack"
 "${COMPOSE[@]}" up -d --build > "$WORK/up.log" 2>&1 || { echo "docker compose up failed"; tail -30 "$WORK/up.log"; exit 1; }
 
 status=0
-head="$(curl -sf -X POST -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}' "$RPC" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(Number(BigInt(JSON.parse(s).result))))')"
+rpc() { curl -sf -X POST -H 'content-type: application/json' --data "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"$1\",\"params\":[]}" "$RPC"; }
+head="$(rpc eth_blockNumber | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(Number(BigInt(JSON.parse(s).result))))')"
+indexed() { curl -sf http://127.0.0.1:42069/status | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(Object.values(JSON.parse(s))[0].block.number)}catch{console.log(0)}})'; }
 
-# Indexer: replays from the manifest's start blocks to the head the node had when the stack started.
+# Indexer: replays from the manifest's start blocks to the head the node had when the stack started. `/ready` means the
+# finalized range is indexed; the blocks after it are indexed live, and Ponder takes them up only when a new block
+# arrives, which an idle anvil node never mines, so empty blocks are mined until its checkpoint reaches that head.
 ready=0
 for _ in $(seq 1 180); do
   if curl -sf http://127.0.0.1:42069/ready >/dev/null; then ready=1; break; fi
   sleep 5
 done
-at="$(curl -sf http://127.0.0.1:42069/status | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(Object.values(JSON.parse(s))[0].block.number)}catch{console.log(0)}})')"
+at=0
+if [ $ready -eq 1 ]; then
+  for _ in $(seq 1 90); do
+    rpc evm_mine >/dev/null
+    at="$(indexed)"
+    [ "${at:-0}" -ge "$head" ] && break
+    sleep 2
+  done
+fi
 if [ $ready -eq 1 ] && [ "${at:-0}" -ge "$head" ]; then echo "indexer: replayed to block $at (head $head) PASS"
 else echo "indexer: not ready or behind (ready=$ready, block ${at:-?}, head $head) FAIL"; status=1; fi
 
