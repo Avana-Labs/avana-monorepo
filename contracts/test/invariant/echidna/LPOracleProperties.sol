@@ -55,9 +55,8 @@ contract LPOracleEchidnaTarget is LPOracleHarnessPokeLogic {
         returns (PriceState state, uint256 answer, uint256 accepted, uint256 fresh, uint256 lower, bool disagreeing)
     {
         Evaluation memory e = _evaluate(true);
-        return (
-            e.state, e.served, uint256(_s().accepted.answer), e.fresh, e.lower, e.pauseActive || e.disagreementExpired
-        );
+        return
+            (e.state, e.served, uint256(_s().accepted.answer), e.fresh, e.lower, e.pauseActive || e.disagreementExpired);
     }
 
     /// @notice The failure and disagreement timers and the accepted price's timestamp, read in one call.
