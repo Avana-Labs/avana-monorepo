@@ -5,7 +5,8 @@
 import { describe, expect, it } from "vitest";
 import { FIXTURE_HUB, FIXTURE_USDC, fixtureMarkets } from "@avana/services-common/fixtures";
 import { type Tail, coverageProbe, m07, m13Offset, m13Reserve, m14, tailKey } from "../src/probes/coverage.ts";
-import { contextOf, fakeProvider, on } from "./fakeChain.ts";
+import { encodePacked, keccak256, toHex } from "viem";
+import { EMPTY_MANIFEST, contextOf, fakeProvider, fixtureSnapshot, on } from "./fakeChain.ts";
 
 const OFFSET = "0x00000000000000000000000000000000000000d0";
 const tail = (o: Partial<Tail> = {}): Tail => ({ hub: FIXTURE_HUB, asset: FIXTURE_USDC, funded: 300n, minimum: 200n, ratioBps: 20_000n, deficitOffset: OFFSET, offsetFunded: 100n, offsetMinimum: 100n, ...o });
@@ -65,5 +66,55 @@ describe("coverageProbe", () => {
     liquidity = 600n;
     expect((await round(3_000))[`M-28 pool:${pool}`]).toBe("page");
     expect((await round(4_700))[`M-28 pool:${pool}`]).toBe("warn"); // the 1,000 sample left the hour; 800 -> 600
+  });
+});
+
+describe("coverageProbe on a pool keyed by identifier", () => {
+  const MANAGER = "0x000000000004444c5dc75cb358380d2e3de08a90";
+  const POOL_ID = `0x${"7c".repeat(32)}` as const;
+  const ZERO_POOL = "0x0000000000000000000000000000000000000000";
+  const v4Market = { ...fixtureMarkets[0]!, marketId: "3", pool: ZERO_POOL, poolId: POOL_ID, vaultToken: "0x00000000000000000000000000000000000000f3" } as (typeof fixtureMarkets)[number];
+  // StateLibrary: the pool's state at keccak256(poolId . 6), liquidity in the low 128 bits of the fourth word.
+  const LIQUIDITY_SLOT = toHex(BigInt(keccak256(encodePacked(["bytes32", "uint256"], [POOL_ID, 6n]))) + 3n, { size: 32 });
+  const withManager = { ...EMPTY_MANIFEST, uniswapV4: { poolManager: { address: MANAGER, startBlock: 1 } } } as typeof EMPTY_MANIFEST;
+  let word = 0n;
+  const chain = fakeProvider({
+    snapshot: (b) => fixtureSnapshot(b, (s) => ({ ...s, markets: [...s.markets, v4Market] })),
+    handlers: [
+      on("getCapHeadroom", () => ({ poolShareBps: 100n, poolShareMaxBps: 2_000n })),
+      on("checkBacking", () => ({ supplyEqualsCredited: true, hubHoldsSupplied: true, sharesEqualAssets: true, noDrawnShares: true, noDrawCap: true, singleBorrowSpoke: true, noLiquidityFee: true, noReinvestment: true, reserveFlags: true })),
+      on("getTailCoverage", () => ({ funded: 250n, minimum: 200n, ratioBps: 20_000n, deficitOffset: OFFSET, offsetFunded: 50n })),
+      on("firstLossReserveMinimum", () => 100n, OFFSET),
+      on("liquidity", () => 1_000n),
+      on("extsload", (args) => (args[0] === LIQUIDITY_SLOT ? toHex(word, { size: 32 }) : undefined), MANAGER),
+    ],
+  });
+  const findings = async (manifest: typeof EMPTY_MANIFEST, timestamp: number) => {
+    const probe = coverageProbe();
+    const ctx = await contextOf(chain, { number: BigInt(timestamp), timestamp }, manifest);
+    return probe.evaluate(await probe.read(ctx), ctx.block).filter((f) => f.signal === "M-28");
+  };
+
+  it("reads the pool's liquidity through the PoolManager and keys the subject by poolId", async () => {
+    const probe = coverageProbe();
+    const round = async (timestamp: number) => {
+      const ctx = await contextOf(chain, { number: BigInt(timestamp), timestamp }, withManager);
+      return probe.evaluate(await probe.read(ctx), ctx.block).filter((f) => f.signal === "M-28" && f.subject === `pool:${POOL_ID}`);
+    };
+    word = (5n << 200n) | 1_000n; // bits above 128 are not liquidity
+    expect(await round(1_000)).toMatchObject([{ kind: "condition", level: "ok", detail: { pool: POOL_ID, liquidity: "1000" } }]);
+    word = 600n;
+    expect(await round(2_000)).toMatchObject([{ kind: "condition", level: "page" }]);
+  });
+
+  it("never reads address(0) as a pool", async () => {
+    const subjects = (await findings(withManager, 1_000)).map((f) => f.subject);
+    expect(subjects).not.toContain(`pool:${ZERO_POOL}`);
+    expect(subjects).toContain(`pool:${fixtureMarkets[0]!.pool.toLowerCase()}`);
+  });
+
+  it("reports the pool unread when the manifest names no PoolManager", async () => {
+    word = 1_000n;
+    expect((await findings(EMPTY_MANIFEST, 1_000)).filter((f) => f.subject === `pool:${POOL_ID}`)).toMatchObject([{ kind: "unread" }]);
   });
 });

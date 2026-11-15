@@ -2,11 +2,14 @@
 // Copyright (c) 2026 Avana Labs
 // Loss-layer, backing and pool signals: M-07 Avana's live share of each pool, M-13 the First-Loss Reserve and DAO
 // deficit offset balances against their minimums, M-14 the tail coverage ratio, M-21 the Lens backing check of each
-// market, and M-28 liquidity leaving each listed pool (the pool's in-range liquidity, judged over the hour).
+// market, and M-28 liquidity leaving each listed pool (the pool's in-range liquidity, judged over the hour). A pool
+// keyed by identifier (pool address(0), a Uniswap v4 PoolId) is read through the manifest's PoolManager and keyed by
+// its poolId; it is unread when the manifest names no PoolManager.
 
 import { lensAbi } from "@avana/protocol/abis";
-import { ZERO, some } from "@avana/services-common/views";
-import { type Address, parseAbi } from "viem";
+import { uniswapV4PoolManager } from "@avana/services-common";
+import { type ContractCall, ZERO, some } from "@avana/services-common/views";
+import { type Address, type Hex, encodeAbiParameters, keccak256, parseAbi, toHex } from "viem";
 import { History } from "../history.ts";
 import { type Probe, text } from "../probe.ts";
 import { type Level, type SignalId, ratioLevel } from "../signals.ts";
@@ -14,6 +17,14 @@ import { dropLevel } from "../rules/snapshot.ts";
 import type { Finding } from "../types.ts";
 
 const poolAbi = parseAbi(["function liquidity() view returns (uint128)"]);
+const extsloadAbi = parseAbi(["function extsload(bytes32 slot) view returns (bytes32)"]);
+const UINT128 = (1n << 128n) - 1n;
+
+/** Uniswap v4 StateLibrary: pools mapping at slot 6, liquidity in the low 128 bits of the pool state's fourth word. */
+export function v4LiquiditySlot(poolId: Hex): Hex {
+  const state = BigInt(keccak256(encodeAbiParameters([{ type: "bytes32" }, { type: "uint256" }], [poolId, 6n])));
+  return toHex(state + 3n, { size: 32 });
+}
 const minimumAbi = parseAbi(["function firstLossReserveMinimum() view returns (uint256)"]);
 
 /** The invariants `Lens.checkBacking` reports; each must hold. */
@@ -82,14 +93,25 @@ export function coverageProbe(): Probe<CoverageInput> {
       const lens = ctx.manifest.avana.lens.address;
       const markets = ctx.snapshot.markets;
       const tails = ctx.snapshot.hubAssets.filter((a) => a.exposure !== null && a.exposure.firstLossReserve !== ZERO).map((a) => ({ hub: a.hub, asset: a.underlying }));
-      const pools = [...new Set(markets.map((m) => m.pool.toLowerCase() as Address))];
+      // One read per pool: `liquidity()` on a pool contract, or the PoolManager's storage for a pool keyed by id.
+      const manager = uniswapV4PoolManager(ctx.manifest);
+      const poolReads = new Map<string, ContractCall | null>();
+      for (const m of markets) {
+        const byId = m.pool.toLowerCase() === ZERO && !/^0x0{64}$/i.test(m.poolId);
+        const key = byId ? m.poolId.toLowerCase() : m.pool.toLowerCase();
+        if (poolReads.has(key)) continue;
+        if (!byId) poolReads.set(key, { address: key as Address, abi: poolAbi, functionName: "liquidity" });
+        else poolReads.set(key, manager ? { address: manager.address, abi: extsloadAbi, functionName: "extsload", args: [v4LiquiditySlot(key as Hex)] } : null);
+      }
+      const pools = [...poolReads.keys()];
+      const poolCalls = [...poolReads.values()].filter((c): c is ContractCall => c !== null);
       const r = await some(ctx.views, [
         ...markets.flatMap((m) => [
           { address: lens, abi: lensAbi, functionName: "getCapHeadroom", args: [m.vaultToken, ZERO] },
           { address: lens, abi: lensAbi, functionName: "checkBacking", args: [m.vaultToken] },
         ]),
         ...tails.map((t) => ({ address: lens, abi: lensAbi, functionName: "getTailCoverage", args: [t.hub, t.asset] })),
-        ...pools.map((p) => ({ address: p, abi: poolAbi, functionName: "liquidity" })),
+        ...poolCalls,
       ]);
       let i = 0;
       const marketOut = new Map<string, MarketCoverage | null>();
@@ -101,8 +123,9 @@ export function coverageProbe(): Probe<CoverageInput> {
       const tailRows = tails.map((t) => ({ t, c: r[i++] as { funded: bigint; minimum: bigint; ratioBps: bigint; deficitOffset: Address; offsetFunded: bigint } | null }));
       const poolOut = new Map<string, bigint | null>();
       for (const p of pools) {
-        const l = r[i++];
-        poolOut.set(p, l === null ? null : asBig(l));
+        const call = poolReads.get(p)!;
+        const l = call === null ? null : r[i++];
+        poolOut.set(p, l === null ? null : call!.functionName === "extsload" ? BigInt(l as Hex) & UINT128 : asBig(l));
       }
       // The offsets' minimums, once the coverage reads name them.
       const offsets = tailRows.filter((x) => x.c && x.c.deficitOffset !== ZERO).map((x) => x.c!.deficitOffset);
