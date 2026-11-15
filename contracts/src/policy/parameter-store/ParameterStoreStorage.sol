@@ -59,6 +59,10 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         mapping(address hub => mapping(address asset => SpeedLimit)) debtSpeed;
         // Appended for REQ-ORACLE-056: true for a market with a token that is not USD-pegged, which gets no USD band.
         mapping(uint256 marketId => bool) unbanded;
+        // Appended for REQ-PSTORE-026: true once `setInitialTokenCap` has written the (Hub, token) cap. A cap tightened
+        // to 0 stays set, so it reopens only by `USD_CAP_REOPEN_BASE` and the loosening steps, never by a second
+        // initial write; a pair never set cannot be loosened.
+        mapping(address hub => mapping(address token => bool)) tokenCapSet;
     }
 
     /// @dev `keccak256(abi.encode(uint256(keccak256("avana.storage.ParameterStore")) - 1)) & ~bytes32(uint256(0xff))`.

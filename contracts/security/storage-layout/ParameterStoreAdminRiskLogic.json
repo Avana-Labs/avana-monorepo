@@ -762,6 +762,27 @@
           "offset": 0,
           "bytes": "1",
           "type": "bool"
+        },
+        {
+          "path": "tokenCapSet",
+          "slot": "32",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => mapping(address => bool))"
+        },
+        {
+          "path": "tokenCapSet[]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "32",
+          "type": "mapping(address => bool)"
+        },
+        {
+          "path": "tokenCapSet[][]",
+          "slot": "0",
+          "offset": 0,
+          "bytes": "1",
+          "type": "bool"
         }
       ]
     }

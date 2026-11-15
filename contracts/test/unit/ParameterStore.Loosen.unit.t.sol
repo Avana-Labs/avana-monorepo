@@ -151,18 +151,23 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
             )
         );
         store.loosenTokenUsdCap(h, usdc, 31_000_000e8);
-        // A pair with no cap reads as 0, like a cap tightened to 0: one loosening reaches at most the $1,000 reopen
-        // base (REQ-PSTORE-017).
-        _tl();
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IParameterStoreErrors.LoosenStepTooLarge.selector, _key("tokenUsdCap", keccak256(abi.encode(h, usdt)))
-            )
+        // A pair with no cap cannot be loosened into existence, not even to the $1,000 reopen base (REQ-PSTORE-026).
+        bytes memory noCap = abi.encodeWithSelector(
+            IParameterStoreErrors.LoosenStepTooLarge.selector, _key("tokenUsdCap", keccak256(abi.encode(h, usdt)))
         );
-        store.loosenTokenUsdCap(h, usdt, 1000e8 + 1);
         _tl();
+        vm.expectRevert(noCap);
+        store.loosenTokenUsdCap(h, usdt, 1);
+        _tl();
+        vm.expectRevert(noCap);
         store.loosenTokenUsdCap(h, usdt, 1000e8);
-        assertEq(store.tokenUsdCap(h, usdt), 1000e8);
+        // Its listing then writes the cap it intends, once.
+        _tl();
+        store.setInitialTokenCap(h, usdt, 12_000_000e8);
+        assertEq(store.tokenUsdCap(h, usdt), 12_000_000e8, "the listing's cap");
+        _tl();
+        vm.expectRevert(IParameterStoreErrors.NotInListing.selector);
+        store.setInitialTokenCap(h, usdt, 20_000_000e8);
         _tl();
         vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
         store.loosenTokenUsdCap(h, usdc, uint256(type(uint128).max) + 1);

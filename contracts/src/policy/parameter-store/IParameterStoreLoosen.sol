@@ -84,6 +84,7 @@ interface IParameterStoreLoosen {
 
     /// @notice Raises a token's `tokenUsdCap(hub, token)`, to at most 1.5 times the current value or
     /// `USD_CAP_REOPEN_BASE` ($1,000), whichever is higher.
+    /// @dev Reverts `LoosenStepTooLarge` for a (Hub, token) pair whose cap `setInitialTokenCap` never wrote.
     /// @param hub The Hub the cap is keyed by; every CDP Spoke and market of that Hub on the chain shares it.
     /// @param token Underlying pool token.
     /// @param value New cap, 8-decimal USD.

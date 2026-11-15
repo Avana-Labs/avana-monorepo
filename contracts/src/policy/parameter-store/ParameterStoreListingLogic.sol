@@ -147,9 +147,12 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
         _onlyDelegated();
         _requireListedToken(token);
         _requireHub(hub);
-        if (_s().tokenUsdCap[hub][token] != 0) revert NotInListing();
+        Layout storage $ = _s();
+        // Once per pair: a cap tightened to 0 is still set and reopens only through the loosening steps.
+        if ($.tokenCapSet[hub][token]) revert NotInListing();
         if (cap == 0 || cap > USD_CAP_MAX) revert OutOfBounds();
-        _s().tokenUsdCap[hub][token] = cap;
+        $.tokenCapSet[hub][token] = true;
+        $.tokenUsdCap[hub][token] = cap;
         emit CapLoosened("tokenUsdCap", _pair(hub, token), 0, cap, msg.sender);
     }
 

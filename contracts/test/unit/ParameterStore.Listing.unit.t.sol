@@ -253,6 +253,54 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         store.setInitialMarketCaps(M, 1e8, 0, 1e8);
     }
 
+    // TEST-272 verifies: REQ-PSTORE-026, REQ-PSTORE-017, REQ-RISK-042, REQ-PSTORE-012
+    /// @notice A cap tightened to 0 cannot be written again by its initial setter: a token cap stays set and an active
+    /// market is out of listing, so either reopens only by the $1,000 base and then the 1.5x steps.
+    function test_TEST_272_zeroCapsReopenOnlyByTheSteps() public {
+        _listMarket();
+        address h = address(hub);
+        _tl();
+        store.tightenTokenUsdCap(h, usdc, 0);
+        _tl();
+        vm.expectRevert(IParameterStoreErrors.NotInListing.selector);
+        store.setInitialTokenCap(h, usdc, 20_000_000e8);
+        bytes memory tokenStep = abi.encodeWithSelector(
+            IParameterStoreErrors.LoosenStepTooLarge.selector,
+            keccak256(abi.encode(bytes32("tokenUsdCap"), _pairKey(h, usdc)))
+        );
+        _tl();
+        vm.expectRevert(tokenStep);
+        store.loosenTokenUsdCap(h, usdc, 1000e8 + 1);
+        _tl();
+        store.loosenTokenUsdCap(h, usdc, 1000e8);
+        assertEq(store.tokenUsdCap(h, usdc), 1000e8, "token cap reopened to the base");
+
+        _activate();
+        _tl();
+        store.tightenMarketUsdCap(M, 0);
+        _tl();
+        vm.expectRevert(IParameterStoreErrors.NotInListing.selector);
+        store.setInitialMarketCaps(M, 5_000_000e8, 0, 1e8);
+        _tl();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IParameterStoreErrors.LoosenStepTooLarge.selector,
+                keccak256(abi.encode(bytes32("marketUsdCap"), bytes32(M)))
+            )
+        );
+        store.loosenMarketUsdCap(M, 1000e8 + 1);
+        _tl();
+        store.loosenMarketUsdCap(M, 1000e8);
+        assertEq(store.marketUsdCap(M), 1000e8, "market cap reopened to the base");
+    }
+
+    function _pairKey(
+        address h,
+        address token
+    ) private pure returns (bytes32) {
+        return keccak256(abi.encode(h, token));
+    }
+
     // TEST-272 verifies: REQ-RISK-045, SPEC-CAP-006
     function test_TEST_272_stressFloor() public {
         _listMarket();

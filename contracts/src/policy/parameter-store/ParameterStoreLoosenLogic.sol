@@ -185,7 +185,8 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         bytes32 scope = _pair(hub, token);
         if (value <= old) revert NotLooser();
         if (value > USD_CAP_MAX) revert OutOfBounds();
-        _step(_capStepOk(old, value), "tokenUsdCap", scope);
+        // A pair whose cap was never set by its listing has no cap to loosen (REQ-PSTORE-026).
+        _step(_s().tokenCapSet[hub][token] && _capStepOk(old, value), "tokenUsdCap", scope);
         _spaceLoosening("tokenUsdCap", scope);
         _s().tokenUsdCap[hub][token] = value;
         emit CapLoosened("tokenUsdCap", scope, old, value, msg.sender);

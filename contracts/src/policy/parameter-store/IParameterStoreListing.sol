@@ -44,8 +44,8 @@ interface IParameterStoreListing {
     ) external;
 
     /// @notice Writes the initial exposure cap of a listed token on a Hub that has none yet.
-    /// @dev Reverts `TokenNotListed` for an unlisted token and `NotInListing` if the (Hub, token) pair already has a
-    /// cap.
+    /// @dev Reverts `TokenNotListed` for an unlisted token and `NotInListing` if the (Hub, token) pair's cap was already
+    /// written, also when it has since been tightened to 0 (it then reopens only through `loosenTokenUsdCap`).
     /// @param hub The Hub the cap is keyed by.
     /// @param token Underlying pool token.
     /// @param cap Aggregate exposure cap across every market of the Hub, 8-decimal USD.
