@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "4.0.44",
+    "@avana/export": "file:../../packages/export",
+    "@avana/protocol": "file:../../packages/protocol",
     "@avana/services-common": "file:../common",
     "@convex-dev/agent": "0.7.0",
     "@convex-dev/rag": "0.7.6",

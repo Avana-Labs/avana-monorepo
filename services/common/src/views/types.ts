@@ -180,6 +180,19 @@ export interface MarketBorrowRow {
 }
 
 /** One collateral market (one pool range on one CDP Spoke). */
+/** USD values have 8 decimals; `addCap` is whole vault tokens, `type(uint40).max` meaning none; 0 floor = off. */
+export interface MarketCaps {
+  readonly liquidationThresholdBps: number;
+  readonly liquidationFeeBps: number;
+  readonly hardHealthFloorWad: DecimalString;
+  readonly marketUsdCap8: DecimalString;
+  readonly topUpSliceUsd8: DecimalString;
+  readonly depositorUsdCap8: DecimalString;
+  /** One per pool token, in pool order: `tokenUsdCap(hub, token)`. */
+  readonly tokenUsdCaps8: readonly DecimalString[];
+  readonly addCap: DecimalString;
+}
+
 export interface MarketRow {
   readonly chainId: number;
   readonly marketId: DecimalString;
@@ -224,6 +237,8 @@ export interface MarketRow {
   readonly addHeadroom: DecimalString;
   readonly pauseState: number;
   readonly breakerReasons: number;
+  /** Avana's caps and the risk configuration `Lens.getMarket` carries beside the headroom (REQ-LENS-057). */
+  readonly caps: MarketCaps;
   /** Every debt reserve enabled on the market's Spoke, with the market's rate and borrow speed. */
   readonly borrow: readonly MarketBorrowRow[];
   /** The market's pledge-speed window, 8-decimal USD; null when the Lens refuses the read. */

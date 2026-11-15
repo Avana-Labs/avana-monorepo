@@ -39,3 +39,20 @@ export async function requireWallet(ctx: AnyCtx, requestedWallet: string): Promi
   }
   return authed
 }
+
+/**
+ * `requireWallet`, and when the Convex JWT carries a `sid` claim (the SHA-256 of the SIWE session's JWT ID, as
+ * `siweSessions.open` stored it), that session must still be open: a logout or "sign out everywhere" ends access
+ * before the short Convex JWT expires. A JWT without `sid` is checked by `requireWallet` alone.
+ */
+export async function requireWalletSession(ctx: Pick<QueryCtx | MutationCtx, "auth" | "db">, requestedWallet: string): Promise<string> {
+  const wallet = await requireWallet(ctx, requestedWallet)
+  const identity = await ctx.auth.getUserIdentity()
+  const sid = (identity as unknown as { sid?: unknown } | null)?.sid
+  if (sid === undefined) return wallet
+  const row = typeof sid === "string" ? await ctx.db.query("siweSessions").withIndex("by_session", (q) => q.eq("sessionId", sid)).unique() : null
+  if (!row || row.wallet !== wallet || row.revokedAt !== undefined || row.expiresAt <= Date.now()) {
+    throw codedError("SESSION_ENDED: sign in again.")
+  }
+  return wallet
+}

@@ -16,6 +16,21 @@ export interface Visual {
   readonly iconUrl?: string;
 }
 
+/** Project links of a page (listing metadata version 2). */
+export interface PageLinks {
+  readonly website?: string;
+  readonly x?: string;
+  readonly docs?: string;
+  readonly github?: string;
+  readonly audits?: readonly { readonly label: string; readonly href: string }[];
+}
+
+/** The risk card's text (listing metadata version 2): a summary and the rated factors behind it. */
+export interface PageRisk {
+  readonly summary: string;
+  readonly factors: readonly { readonly id: string; readonly label: string; readonly level: RiskLevel; readonly text: string }[];
+}
+
 /** Editorial content of a page, from its listing metadata. */
 export interface PageContent {
   readonly slug: string;
@@ -31,6 +46,8 @@ export interface PageContent {
   readonly faqs: readonly { readonly question: string; readonly answer: string }[];
   readonly visuals?: readonly Visual[];
   readonly resources?: readonly { readonly label: string; readonly href: string }[];
+  readonly links?: PageLinks;
+  readonly risk?: PageRisk;
 }
 
 /** One row of the market lists and the detail headers (`markets.listMarketSnapshots`). */
@@ -97,6 +114,9 @@ export interface DetailTxRow {
   readonly walletLabel: string;
   readonly counterpartyLabel?: string;
   readonly txHashShort: string;
+  readonly txHash?: string;
+  /** The transaction on the chain's block explorer; absent when the chain has none. */
+  readonly href?: string;
   /** The app's row origin flag; rows read from the chain are served as "seed". */
   readonly source: "wallet" | "seed";
 }

@@ -12,7 +12,7 @@ The backend the web app reads. This folder is one Convex project (`@avana/convex
 | `convex/ingest/` | Export pull, series pull, pool history, current-value sampler, the mutations that apply them |
 | `convex/listing/` | Listing metadata: fetch, hash check, store |
 | `convex/wallet/`, `kept.ts` | A wallet's accounts and last samples; its older activity on request (`wallet/history:older`: a signed `/export/v1/history` page, checked and returned unstored, 20 requests a minute per wallet, "unavailable" while the indexer reindexes); typed stubs of kept features (rewards, referrals, swap quotes, the in-app assistant) |
-| `convex/lib/` | Pure functions the tests run offline: page numbers, charts, fees, metadata, export checks, event decoding |
+| `convex/lib/` | Pure functions the tests run offline: page numbers, charts, fees, metadata, event decoding; `exportClient.ts` configures the export client of `@avana/export` (signing and page checks) |
 | `convex/auth.config.ts`, `walletAuth.ts`, `rateLimits.ts`, `writeRateLimit.ts`, `codedError.ts` | The web app's SIWE→JWT issuer (only the per-wallet features below use it; protocol queries stay public), the wallet guard, the SIWE route rate limiter and coded errors |
 | `convex/wallet/profiles.ts`, `support.ts`, `fx.ts`, `tokenPrices.ts` | Per-wallet display preferences, Support Center requests, FX rates (open.er-api.com, hourly) and DefiLlama prices of tokens outside the protocol (display only; protocol values use `prices.ts`) |
 | `convex/askAI*.ts`, `convex/lib/askAI/`, `convex.config.ts`, `knowledge/` | Ask AI: threads, turn queue, quotas, the agent (Convex Agent + OpenAI), the market cache (DefiLlama pools, Aave markets), knowledge search over `askAICorpus.generated.ts` (rendered from `knowledge/*.md` by `scripts/render-ask-ai-corpus.mjs`). The wallet tools answer "not available yet" until they read the chain. Components: agent, rag, rate-limiter |
@@ -65,6 +65,17 @@ Names, slugs, descriptions, FAQs, history and long text of the pages a listing a
 4. One mutation stores each entry in `marketContent` and sets the slug on the row it names.
 
 A 404 marks the operation as carrying no metadata; a refused file is recorded with its reason and nothing is stored. A later listing's entry for the same key replaces the earlier one.
+
+Version 2 (version 1 files stay valid) adds per entry:
+
+| Field | Rules | Shown as |
+|---|---|---|
+| `links` | `website`, `docs`, `github`: https URLs; `x`: an x.com or twitter.com profile; `audits`: up to 20 `{ label, href }` | The page's Website, X, docs and audit links (`readContent`, `readSiloedMarket`) |
+| `risk` | `summary` up to 2,000 characters; up to 12 `factors` `{ id, label, level: low | moderate | elevated | high, text }` | The Lend and Borrow asset risk card (hidden without it); on a pool page, after the collateral risk premium |
+| `faqs` | At most 30 | The page's FAQ |
+| Lend entries | Must name `symbol` and `category` | List grouping (stable or crypto) |
+
+A version 1 entry carrying `links` or `risk` is refused.
 
 ## Frontend fee
 
@@ -123,7 +134,7 @@ A Convex cron runs `ingest/pull.pull` for each chain every 30 s on Ethereum and 
 1. Reads the checkpoint `(throughBlock, throughBlockHash)`.
 2. Checks that `throughBlockHash` is still the hash of `throughBlock` over Convex's own RPC (not the indexer's). A mismatch goes to [reorg rebuild](#reorg-rebuild).
 3. Requests `GET /export/v1/pages?chainId&after=throughBlock&limit=500`, signed with the HMAC key from Convex environment variables (`INDEXER_EXPORT_URL`, `INDEXER_EXPORT_KEY_ID`, `INDEXER_EXPORT_SECRET`). A 204 ends the event pages.
-4. Validates the page: known `schemaVersion`; `fromBlock = throughBlock + 1`; `toBlock ≤ finalizedBlock`; records ordered by `(blockNumber, logIndex)` and inside `fromBlock..toBlock`; every record's `blockHash` equal to the page's entry for its block; `pageHash` recomputed from the canonical JSON; `toBlockHash` equal to the hash of `toBlock` over Convex's own RPC.
+4. Validates the page with `@avana/export` (`packages/export`): known `schemaVersion`; `fromBlock = throughBlock + 1`; `toBlock ≤ finalizedBlock`; records ordered by `(blockNumber, logIndex)` and inside `fromBlock..toBlock`; every record's `blockHash` equal to the page's entry for its block; `pageHash` recomputed from the canonical JSON; `toBlockHash` equal to the hash of `toBlock` over Convex's own RPC.
 5. Calls the internal mutation `ingest/apply.applyPage(page)`.
 6. Repeats while pages keep coming, up to 20 pages per run, then pulls series pages the same way.
 
@@ -151,11 +162,32 @@ The export serves only finalized blocks, so a rebuild means something outside no
 
 ## Transaction progress
 
-After the user's wallet submits, Convex tracks the receipt over RPC at the head: the intent moves to `included` when the receipt shows success, the account is refreshed by a live read at that block, and the activity is marked `indexed` when the export delivers the same `txHash`. If a reorg removes the block before finality, the intent returns to `pending` (`TEST-143`).
+After the user's wallet submits, the app calls `intents.submit` (signed-in wallet, the hash, a kind from a fixed list and the page; never a target, amount or calldata). The `track intents` cron reads each open intent's receipt over Convex's own RPC about once a block (`lib/intents.ts`):
+
+| From | To | When |
+|---|---|---|
+| `pending` | `included` / `failed` | The receipt shows success / a revert |
+| `pending` | `dropped` (final) | No receipt an hour after submission |
+| `included`, `failed` | `pending` | The receipt's block is no longer canonical (reorg) |
+| any open | `indexed` (final) | An imported (finalized) log carries the hash |
+| `included` | `confirmed` (final) | Its block is finalized and the export still has no log of it 10 minutes later (an approval, a swap outside the protocol) |
+| `failed` | final | Its block is finalized |
+
+`intents.listForWallet` returns the wallet's latest intents with explorer links (`TEST-143`).
+
+## SIWE sessions
+
+The web app's server opens a session after it verifies a SIWE signature (`siweSessions.open`, keyed by the SHA-256 of the session JWT's ID, at most 7 days), revokes it on logout (`revoke`) or for every device (`revokeWallet`), and checks it (`status`). Each call needs `CONVEX_SESSION_SECRET` (at least 32 characters; unset refuses every call). A Convex JWT carrying that hash as its `sid` claim authorizes per-wallet features only while the session is open (`walletAuth.requireWalletSession`); intents use it. Expired sessions are pruned daily.
+
+## Wallet activity
+
+`wallet.live.accounts` reads the wallet's accounts at the head with Lens `getAccounts` over Convex's RPC (health factor, collateral and debt in USD, debts, gates), unstored and rate limited per wallet, for clients that cannot read the chain themselves.
+
+`wallet.activity.listForWallet` pages through the wallet's logs of the last 30 days (`ingestedLogs.by_wallet`, exact cursor) as dashboard rows, each with the page it belongs to and an explorer link; `wallet/history:older` serves anything older. `deployments.explorers` returns each chain's explorer for links the app builds itself.
 
 ## Configuration
 
-Convex environment variables: `RPC_<CHAIN>` and `RPC_<CHAIN>_FALLBACK` (`MAINNET`, `BASE`), `INDEXER_EXPORT_URL`, `INDEXER_EXPORT_KEY_ID`, `INDEXER_EXPORT_SECRET` (base64, at least 32 bytes), `LISTING_CONTENT_URL`, `POOL_HISTORY_DAYS`. Each chain's `deployments` row is written from its verified release manifest with `deployments.setDeployment` (internal).
+Convex environment variables: `RPC_<CHAIN>` and `RPC_<CHAIN>_FALLBACK` (`MAINNET`, `BASE`), `INDEXER_EXPORT_URL`, `INDEXER_EXPORT_KEY_ID`, `INDEXER_EXPORT_SECRET` (base64, at least 32 bytes), `LISTING_CONTENT_URL`, `POOL_HISTORY_DAYS`, `CONVEX_SESSION_SECRET`. Each chain's `deployments` row is written from its verified release manifest with `deployments.setDeployment` (internal).
 
 ## Build and test
 

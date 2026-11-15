@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from "vitest";
 import { EXPORT_SCHEMA_VERSION, type HistoryPage } from "@avana/services-common/export";
-import { HistoryRejected, validateHistoryPage } from "../convex/lib/historyPage.ts";
+import { PageRejected as HistoryRejected, validateHistoryPage } from "@avana/export";
 
 const H = (n: number) => `0x${n.toString(16).padStart(64, "0")}` as const;
 const WALLET = "0x00000000000000000000000000000000000000c0";

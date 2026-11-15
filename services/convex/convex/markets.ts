@@ -10,6 +10,7 @@ import { bpsToPct, rayToAprPct, rayToApyPct, usd } from "@avana/services-common/
 import { query, type QueryCtx } from "./_generated/server";
 import { type RangeId, type Values, combineSources, daySeries, filledBuckets, quickStats, valueAt } from "./lib/charts.ts";
 import { feedRow, type IngestedLog, type Pricing } from "./lib/activity.ts";
+import { explorerLinks } from "./lib/explorer.ts";
 import { hubAssetKey, lendSnapshot, assetSnapshot, poolSnapshot } from "./lib/pages.ts";
 import type { DaySeries, DetailTxRow, MarketSnapshotRow, PageScope } from "./lib/uiTypes.ts";
 import { lendTotals } from "./lib/hubViews.ts";
@@ -223,7 +224,7 @@ export const getLendSupplyBorrow = query({ args: { slug: v.string() }, handler: 
 export { supplyBorrow as readSupplyBorrow };
 
 /** Price and symbol of the token a feed row is in: the debt asset at its Lend Spoke price, or the vault token. */
-function pricing(w: World, log: IngestedLog, token: "asset" | "collateral"): Pricing | null {
+export function pricing(w: World, log: IngestedLog, token: "asset" | "collateral"): Pricing | null {
   if (token === "collateral") {
     const m = w.markets.find((x) => `${x.chainId}:${x.marketId}` === log.marketKey);
     return m ? { symbol: m.symbol, decimals: m.vaultDecimals, priceUsd8: BigInt(m.acceptedPrice) } : null;
@@ -256,10 +257,12 @@ export async function readRecentTransactions(ctx: QueryCtx, w: World, scope: Pag
     .withIndex(index as "by_market", (q) => q.eq(field as "marketKey", key))
     .order("desc")
     .take(take * 4);
+  const links = explorerLinks((await ctx.db.query("deployments").withIndex("by_chain", (q) => q.eq("chainId", row.chainId)).unique())?.explorerUrl);
   const out: DetailTxRow[] = [];
   for (const log of logs) {
     const r = feedRow(log as unknown as IngestedLog, scope, (l, t) => pricing(w, l, t));
-    if (r) out.push(r);
+    const href = links?.tx(log.txHash);
+    if (r) out.push({ ...r, txHash: log.txHash, ...(href ? { href } : {}) });
     if (out.length >= take) break;
   }
   return out;

@@ -3,6 +3,7 @@
 !package.json
 !package-lock.json
 !packages/protocol/
+!packages/export/package.json
 !services/
 services/convex/
 !services/convex/package.json
