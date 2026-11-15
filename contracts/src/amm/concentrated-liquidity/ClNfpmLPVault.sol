@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
+import {AmmConstants} from "../../types/AmmConstants.sol";
 import {PositionShape} from "../../types/PositionShape.sol";
 import {ShapeKind} from "../../types/ShapeKind.sol";
 import {IAmmIntegration} from "../IAmmIntegration.sol";
@@ -201,6 +202,13 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
             nativeToken: false,
             rateTokens: false
         });
+    }
+
+    /// @inheritdoc IAmmIntegration
+    /// @dev The global bound of 16: a Uniswap v3 or Slipstream removal is one NFPM decrease and one collect.
+    /// @custom:spec REQ-AMM-CORE-020
+    function maxRecordsPerAccountMarket() external pure override returns (uint256) {
+        return AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET;
     }
 
     // ─── Risk metadata and hooks ───

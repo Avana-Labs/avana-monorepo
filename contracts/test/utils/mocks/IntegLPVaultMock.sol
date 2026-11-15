@@ -140,6 +140,10 @@ contract IntegLPVaultMock is ILPVaultErrors {
 
     // ─── AMM integration surface ───
 
+    function maxRecordsPerAccountMarket() external pure returns (uint256) {
+        return 16;
+    }
+
     function capabilities() external pure returns (IntegrationCapabilities memory caps) {
         caps.poolKeying = PoolKeying.Address;
         caps.shapeKind = ShapeKind.TickRange;

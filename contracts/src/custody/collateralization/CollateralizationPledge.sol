@@ -32,7 +32,8 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// @dev Collateralization trusts the Adapter for `depositor`, `proxy` and `requireRescue`, and still enforces the
 /// custody limits of REQ-COLL-005 whatever it passes: the depositor is neither the market's LPVault nor this contract,
 /// the LPVault pulls the position from its owner and matches the exact shape, `credited` is the units read after
-/// custody, one record per position, at most 16 per account-market, one market per proxy.
+/// custody, one record per position, at most the integration's record cap per account-market (16 or fewer,
+/// REQ-AMM-CORE-020), one market per proxy.
 /// @custom:spec REQ-COLL-005, REQ-COLL-015, REQ-COLL-024, REQ-COLL-025, REQ-COLL-026, REQ-COLL-027, REQ-COLL-031, REQ-COLL-037, REQ-VAULT-006, REQ-VAULT-007, REQ-VAULT-012, REQ-VAULT-013, REQ-VAULT-014, REQ-VAULT-015, REQ-VAULT-016, REQ-VAULT-017, REQ-VAULT-018, REQ-VAULT-022, REQ-VAULT-024, REQ-VAULT-025, REQ-VAULT-027, REQ-VAULT-042
 abstract contract CollateralizationPledge is CollateralizationLedger, ICollateralizationAdapter {
     /// @inheritdoc ICollateralizationAdapter
@@ -54,7 +55,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         if (bound != address(0) && bound != vaultToken) revert ProxyMarketMismatch(proxy);
         if (_recordIdOf[c.integrationId][positionKey] != 0) revert AlreadyPledged();
         uint256 open = seizureList[proxy][vaultToken].length + zeroCreditList[proxy][vaultToken].length;
-        if (open >= MAX_RECORDS_PER_ACCOUNT_MARKET) revert TooManyRecords(open);
+        if (open >= _recordCap(c.lpVault)) revert TooManyRecords(open);
 
         _checkReadSafe(c);
         credited = IAmmIntegration(c.lpVault).receivePosition(c.marketId, depositor, positionKey);

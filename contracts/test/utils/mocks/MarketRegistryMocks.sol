@@ -299,6 +299,10 @@ contract RegistryLPVaultMock {
         shapeKind = s;
     }
 
+    function maxRecordsPerAccountMarket() external pure returns (uint256) {
+        return 16;
+    }
+
     function capabilities() external view returns (IntegrationCapabilities memory c) {
         c.poolKeying = keying;
         c.shapeKind = shapeKind;

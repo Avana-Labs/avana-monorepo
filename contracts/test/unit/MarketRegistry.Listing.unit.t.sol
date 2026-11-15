@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
 import {PoolKeying} from "../../src/amm/types/PoolKeying.sol";
 import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
 import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketRegistryEvents.sol";
@@ -206,6 +207,25 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         vm.prank(address(timelock));
         vm.expectRevert(IMarketRegistryErrors.VaultTokenMismatch.selector);
         registry.listCollateralMarket(_marketDef(vt, address(o)));
+    }
+
+    // TEST-138 verifies: REQ-AMM-CORE-020
+    /// @notice The integration's open-record cap must be between 1 and the global bound of 16; 12 lists.
+    function test_TEST_138_recordCapMustBeWithinTheGlobalBound() public {
+        (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(1, _shape());
+        bytes memory cap = abi.encodeCall(IAmmIntegration.maxRecordsPerAccountMarket, ());
+        vm.mockCall(address(lpVault), cap, abi.encode(uint256(0)));
+        vm.prank(address(timelock));
+        _expectListing("records");
+        registry.listCollateralMarket(_marketDef(vt, address(o)));
+        vm.mockCall(address(lpVault), cap, abi.encode(uint256(17)));
+        vm.prank(address(timelock));
+        _expectListing("records");
+        registry.listCollateralMarket(_marketDef(vt, address(o)));
+        vm.mockCall(address(lpVault), cap, abi.encode(uint256(12)));
+        vm.prank(address(timelock));
+        registry.listCollateralMarket(_marketDef(vt, address(o)));
+        vm.clearMockedCalls();
     }
 
     // TEST-138 verifies: REQ-CONFIG-033, REQ-CONFIG-030, REQ-CONFIG-011, REQ-CONFIG-007

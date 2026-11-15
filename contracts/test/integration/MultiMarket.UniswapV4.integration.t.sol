@@ -3,12 +3,16 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
 import {IAmmIntegrationHooks} from "../../src/amm/IAmmIntegrationHooks.sol";
 import {UniswapV4State} from "../../src/amm/uniswap-v4/UniswapV4State.sol";
+import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
 import {IUniswapV4PoolManager} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
 import {PositionFeesView} from "../../src/lens/lens/types/PositionFeesView.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
+import {PledgePreview} from "../../src/types/PledgePreview.sol";
 import {PositionRef} from "../../src/types/PositionRef.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {PriceStateView} from "../../src/types/PriceStateView.sol";
@@ -175,5 +179,27 @@ contract MultiMarketUniswapV4IntegrationTest is RealStackUniswapV4 {
         adapterC.withdraw(c.marketId, PositionRef(V4, key), units, _deadline(), 0);
         assertEq(v4posm.ownerOf(uint256(key)), c.wallet, "position returned");
         assertEq(_sharesOn(_spokeOf(c.marketId), proxy, mkt[c.marketId].reserveId), 0, "nothing supplied");
+    }
+
+    // TEST-331 verifies: REQ-AMM-V4-012, REQ-AMM-CORE-020, INV-096
+    /// @notice The v4 LPVault caps an account-market at 12 open records, where the Uniswap v3 LPVault keeps 16: the
+    /// pledge preview names `TooManyRecords` and a 13th pledge reverts, while a re-credit of an existing record is
+    /// not limited.
+    function test_TEST_331_v4RecordCapIsTwelve() public {
+        assertEq(IAmmIntegration(v4Vault).maxRecordsPerAccountMarket(), 12, "v4 cap");
+        assertEq(IAmmIntegration(registry.getMarket(mA).integration).maxRecordsPerAccountMarket(), 16, "v3 cap");
+        Case memory c = cases[1];
+        address proxy;
+        for (uint256 i = 0; i < 12; ++i) {
+            (, proxy) = _v4PledgeUsd(c.wallet, c.marketId, 50);
+        }
+        assertEq(coll.getOpenRecordCount(proxy, mkt[c.marketId].vaultToken), 12, "12 records held");
+        bytes32 key = _v4MintUsd(c.wallet, c.marketId, 50);
+        PledgePreview memory p = riskModule.previewPledge(c.wallet, c.marketId, key);
+        assertFalse(p.eligible, "a 13th record is not eligible");
+        assertEq(p.reason, IRiskModuleErrors.TooManyRecords.selector, "preview names the record cap");
+        vm.prank(c.wallet);
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.TooManyRecords.selector, uint256(12)));
+        adapterC.pledge(c.marketId, PositionRef(V4, key), _deadline());
     }
 }

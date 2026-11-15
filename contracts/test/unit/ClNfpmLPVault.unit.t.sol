@@ -19,4 +19,9 @@ contract ClNfpmLPVaultUnitTest is UniswapV3IntegrationFixture {
         vault.releaseToDepositor(key, 1e9, _vec(6, 0));
         _unlock();
     }
+
+    // TEST-237 verifies: REQ-AMM-CORE-020
+    function test_TEST_237_recordCapIsTheGlobalBound() public view {
+        assertEq(vault.maxRecordsPerAccountMarket(), 16);
+    }
 }

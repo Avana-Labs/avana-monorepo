@@ -69,6 +69,10 @@ contract LPVaultIdentityMock {
         _rawRevert = doRevert;
     }
 
+    function maxRecordsPerAccountMarket() external pure returns (uint256) {
+        return 16;
+    }
+
     function capabilities() external view returns (IntegrationCapabilities memory caps) {
         if (_rawRevert) revert("capabilities");
         bytes memory raw = _raw;

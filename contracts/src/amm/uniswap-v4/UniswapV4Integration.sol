@@ -55,6 +55,10 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     int24 internal constant MAX_TICK_SPACING = 6931;
     /// @dev Token supply bound at listing (`REQ-AMM-V4-009`).
     uint256 internal constant SUPPLY_BOUND = 1 << 127;
+    /// @notice Open records per account and market (`REQ-AMM-V4-012`): a v4 record's removal costs about 253k gas in a
+    /// whole-account seizure against 167k for Uniswap v3, so 12 records with 4 debts stay within the 7.5M liquidation
+    /// budget where 16 would not.
+    uint256 internal constant MAX_RECORDS = 12;
     /// @dev Bytes of `bindMarket`'s `integrationData`: `abi.encode(UniswapV4PoolKey key, address referencePool,
     /// uint256 price0, uint256 price1)`.
     uint256 internal constant INTEGRATION_DATA_LENGTH = 8 * 32;
@@ -244,6 +248,12 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
             nativeToken: true,
             rateTokens: false
         });
+    }
+
+    /// @inheritdoc IAmmIntegration
+    /// @custom:spec REQ-AMM-CORE-020, REQ-AMM-V4-012
+    function maxRecordsPerAccountMarket() external pure override returns (uint256) {
+        return MAX_RECORDS;
     }
 
     // ─── Risk metadata and hooks ───

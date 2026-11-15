@@ -72,8 +72,16 @@ abstract contract CollateralizationBase is ICollateralizationEvents, ICollateral
         uint256 capReleased;
     }
 
-    /// @notice At most 16 open records per account and market (SPEC-BACK-016).
+    /// @notice At most 16 open records per account and market (SPEC-BACK-016); an integration may set fewer
+    /// (`REQ-AMM-CORE-020`, `_recordCap`).
     uint256 internal constant MAX_RECORDS_PER_ACCOUNT_MARKET = AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET;
+
+    /// @dev The open-record cap of the market's integration (`REQ-AMM-CORE-020`), never above the global bound.
+    function _recordCap(
+        address lpVault
+    ) internal view returns (uint256) {
+        return Math.min(IAmmIntegration(lpVault).maxRecordsPerAccountMarket(), MAX_RECORDS_PER_ACCOUNT_MARKET);
+    }
 
     /// @notice Bound of a record's credited units, the Hub's share type (`2^120 - 1`).
     uint256 internal constant MAX_CREDITED_UNITS = type(uint120).max;

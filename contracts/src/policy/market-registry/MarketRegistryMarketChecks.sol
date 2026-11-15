@@ -47,6 +47,11 @@ abstract contract MarketRegistryMarketChecks is MarketRegistryStorage {
         if (sh.kind == ShapeKind.FullPool ? (sh.tickLower != 0 || sh.tickUpper != 0) : sh.tickLower >= sh.tickUpper) {
             revert ListingCheckFailed("shape");
         }
+        // REQ-AMM-CORE-020: the integration's record cap is between 1 and the global bound.
+        uint256 records = IAmmIntegration(lpVault).maxRecordsPerAccountMarket();
+        if (records == 0 || records > AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET) {
+            revert ListingCheckFailed("records");
+        }
     }
 
     /// @dev REQ-MREG-030: the factory's token of (Spoke, market key) must be `def.vaultToken`; its `marketId()` is the

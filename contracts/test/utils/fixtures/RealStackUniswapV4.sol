@@ -199,7 +199,7 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
         uint256 assetId,
         address source,
         bool fixedPrice
-    ) private returns (uint256 reserveId) {
+    ) internal returns (uint256 reserveId) {
         uint24 maxRp = IAaveV4Hub(hub).MAX_RISK_PREMIUM_THRESHOLD();
         vm.startPrank(aaveDao);
         ICollHubConfigurator(aave.hubConfigurator)

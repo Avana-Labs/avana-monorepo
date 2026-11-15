@@ -331,4 +331,9 @@ contract UniswapV4IntegrationUnitTest is UniswapV4IntegrationFixture {
         fees = vault.collectFees(key, depositor);
         _unlock();
     }
+
+    // TEST-331 verifies: REQ-AMM-V4-012, REQ-AMM-CORE-020
+    function test_TEST_331_recordCapIsTwelve() public view {
+        assertEq(vault.maxRecordsPerAccountMarket(), 12);
+    }
 }

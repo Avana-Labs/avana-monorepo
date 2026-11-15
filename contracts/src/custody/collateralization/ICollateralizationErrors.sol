@@ -34,7 +34,8 @@ interface ICollateralizationErrors {
     /// @custom:spec REQ-VAULT-013, REQ-VAULT-048, REQ-COLL-010
     error UnknownProxy(address proxy);
 
-    /// @notice The account-market already holds `MAX_RECORDS_PER_ACCOUNT_MARKET` = 16 open records; add value to an
+    /// @notice The account-market already holds its integration's record cap of open records (16, or fewer for an
+    /// integration whose removal costs more gas, REQ-AMM-CORE-020); add value to an
     /// existing record with a re-credit instead (AMMN-GAS-01).
     /// @param openRecords Open records of the account-market.
     /// @custom:spec REQ-VAULT-025, REQ-AMM-CORE-002, Q-369

@@ -42,6 +42,14 @@ interface IAmmIntegration {
     /// @custom:spec REQ-AMM-CORE-009
     function capabilities() external view returns (IntegrationCapabilities memory caps);
 
+    /// @notice The most open records one account may hold in one market of this integration.
+    /// @dev Constant, between 1 and `AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET` (16): lower where one record's
+    /// removal costs more gas, so a whole-account seizure stays within the liquidation gas budget (`INV-096`). The
+    /// MarketRegistry refuses a listing outside that range; Collateralization and the pledge preview enforce it.
+    /// @return records Constant.
+    /// @custom:spec REQ-AMM-CORE-020, INV-096
+    function maxRecordsPerAccountMarket() external view returns (uint256 records);
+
     /// @notice Binds a market to its pool and exact shape, once, at listing.
     /// @dev Requires `msg.sender == MARKET_REGISTRY` (`NotMarketRegistry`) and an unbound `marketId`
     /// (`MarketBinding`). Validates the pool against the AMM protocol's canonical factory or singleton (`InvalidPool`)
