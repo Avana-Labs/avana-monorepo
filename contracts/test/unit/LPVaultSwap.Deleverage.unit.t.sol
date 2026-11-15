@@ -325,7 +325,8 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
             held += send - send * 100 / 10_000;
         }
         assertEq(owed - held, 20, "20 raw USDC short after four transfers");
-        assertEq(held + 20 - 20 * 100 / 10_000, owed, "a fifth transfer would clear it");
+        uint256 fifth = owed - held;
+        assertEq(held + fifth - fifth * 100 / 10_000, owed, "a fifth transfer would clear it");
         vm.prank(alice);
         (bool ok, bytes memory ret) = address(adapter)
             .call(
