@@ -98,8 +98,8 @@ contract LPOracleV4GuardsUnitTest is LPOracleV4Fixture {
 
     // ─── Reads ───
 
-    // TEST-331 verifies: REQ-AMM-V4-003, REQ-AMM-V4-011, REQ-ORACLE-016
-    function test_TEST_331_failedPoolManagerReadsFailTheMarket() public {
+    // TEST-335 verifies: REQ-AMM-V4-003, REQ-AMM-V4-011, REQ-ORACLE-016
+    function test_TEST_335_failedPoolManagerReadsFailTheMarket() public {
         vm.mockCallRevert(address(pm), abi.encodeWithSignature("exttload(bytes32)"), "");
         _assertState(PriceState.Cached);
         vm.clearMockedCalls();
@@ -110,8 +110,8 @@ contract LPOracleV4GuardsUnitTest is LPOracleV4Fixture {
         vm.clearMockedCalls();
     }
 
-    // TEST-331 verifies: REQ-AMM-V4-005, REQ-ORACLE-014, REQ-ORACLE-104
-    function test_TEST_331_unavailableReferenceTwapIsDrifting() public {
+    // TEST-335 verifies: REQ-AMM-V4-005, REQ-ORACLE-014, REQ-ORACLE-104
+    function test_TEST_335_unavailableReferenceTwapIsDrifting() public {
         vm.mockCallRevert(address(ref), abi.encodeWithSelector(IUniswapV3Pool.observe.selector), "OLD");
         PriceStateView memory v = _state();
         assertEq(uint8(v.state), uint8(PriceState.Drifting));
@@ -126,8 +126,8 @@ contract LPOracleV4GuardsUnitTest is LPOracleV4Fixture {
         vm.clearMockedCalls();
     }
 
-    // TEST-331 verifies: SPEC-AMM-V4-002, REQ-ORACLE-104
-    function test_TEST_331_stableAboveItsCeilingUsesTheQuote() public {
+    // TEST-335 verifies: SPEC-AMM-V4-002, REQ-ORACLE-104
+    function test_TEST_335_stableAboveItsCeilingUsesTheQuote() public {
         vm.warp(block.timestamp + 1);
         _setPrices(price0, 101_000_000);
         PriceStateView memory v = _state();

@@ -160,8 +160,8 @@ contract UniswapV4IntegrationForkTest is AvanaTest {
         vm.label(address(vault), "UniswapV4LPVault");
     }
 
-    // TEST-331 verifies: REQ-AMM-V4-001, REQ-AMM-V4-003, REQ-AMM-V4-004, REQ-AMM-V4-007, SPEC-AMM-V4-003
-    function test_TEST_331_uniswapV4CustodyNativeRemovalAndReadGuard() public {
+    // TEST-333 verifies: REQ-AMM-V4-001, REQ-AMM-V4-003, REQ-AMM-V4-004, REQ-AMM-V4-007, SPEC-AMM-V4-003
+    function test_TEST_333_uniswapV4CustodyNativeRemovalAndReadGuard() public {
         uint128 l = 1e15;
         uint256 id = _mint(alice, lower, upper, l);
         bytes32 positionKey = bytes32(id);

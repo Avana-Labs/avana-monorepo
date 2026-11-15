@@ -133,8 +133,8 @@ contract UniswapV4IntegrationGuardsUnitTest is UniswapV4IntegrationFixture {
 
     // ─── Custody through v4 ───
 
-    // TEST-331 verifies: REQ-AMM-CORE-005, REQ-VAULT-012, REQ-VAULT-107
-    function test_TEST_331_zeroUnitsAreRefused() public {
+    // TEST-333 verifies: REQ-AMM-CORE-005, REQ-VAULT-012, REQ-VAULT-107
+    function test_TEST_333_zeroUnitsAreRefused() public {
         uint8 k = vault.unitExponent(M1);
         if (k == 0) return;
         bytes32 key = _mintFor(alice, stableKey, M1_LOWER, M1_UPPER, uint128(10 ** k - 1));
@@ -142,8 +142,8 @@ contract UniswapV4IntegrationGuardsUnitTest is UniswapV4IntegrationFixture {
         vault.validatePosition(M1, alice, key);
     }
 
-    // TEST-331 verifies: REQ-AMM-CORE-007, REQ-AMM-V4-004
-    function test_TEST_331_releaseChecksLengthsAndMinimums() public {
+    // TEST-334 verifies: REQ-AMM-CORE-007, REQ-AMM-V4-004
+    function test_TEST_334_releaseChecksLengthsAndMinimums() public {
         bytes32 key = _mintFor(alice, stableKey, M1_LOWER, M1_UPPER, 1e15);
         uint128 units = _receive(M1, alice, key);
         _lock();
@@ -159,8 +159,8 @@ contract UniswapV4IntegrationGuardsUnitTest is UniswapV4IntegrationFixture {
         assertGt(out[0] + out[1], 0, "principal released to the depositor");
     }
 
-    // TEST-331 verifies: REQ-AMM-V4-004, REQ-AMM-V4-010
-    function test_TEST_331_collectOnAnEmptiedPositionPaysNothing() public {
+    // TEST-334 verifies: REQ-AMM-V4-004, REQ-AMM-V4-010
+    function test_TEST_334_collectOnAnEmptiedPositionPaysNothing() public {
         uint8 k = vault.unitExponent(M1);
         bytes32 key = _mintFor(alice, stableKey, M1_LOWER, M1_UPPER, uint128(1000 * 10 ** k));
         uint128 units = _receive(M1, alice, key);
@@ -172,8 +172,8 @@ contract UniswapV4IntegrationGuardsUnitTest is UniswapV4IntegrationFixture {
         assertEq(fees[0] + fees[1], 0);
     }
 
-    // TEST-331 verifies: REQ-AMM-V4-010
-    function test_TEST_331_feesBelowTheRange() public {
+    // TEST-334 verifies: REQ-AMM-V4-010
+    function test_TEST_334_feesBelowTheRange() public {
         bytes32 key = _mintFor(alice, ethKey, M2_LOWER, M2_UPPER, 1e18);
         _receive(M2, alice, key);
         v4Actor.swap(ethKey, true, -1e16, 4_295_128_740);
@@ -191,14 +191,14 @@ contract UniswapV4IntegrationGuardsUnitTest is UniswapV4IntegrationFixture {
 
     // ─── Reads ───
 
-    // TEST-331 verifies: REQ-AMM-CORE-008, REQ-AMM-V4-003
-    function test_TEST_331_unknownPositionReadsAsNoUnits() public view {
+    // TEST-333 verifies: REQ-AMM-CORE-008, REQ-AMM-V4-003
+    function test_TEST_333_unknownPositionReadsAsNoUnits() public view {
         RiskMetadata memory meta = vault.riskMetadata(M1, bytes32(uint256(999_999)));
         assertEq(meta.positionUnits, 0);
     }
 
-    // TEST-331 verifies: REQ-AMM-V4-005, REQ-AMM-V4-008, REQ-AMM-CORE-013
-    function test_TEST_331_failedOrMalformedReferenceReads() public {
+    // TEST-333 verifies: REQ-AMM-V4-005, REQ-AMM-V4-008, REQ-AMM-CORE-013
+    function test_TEST_333_failedOrMalformedReferenceReads() public {
         _observe(stableRef, 10);
         (, bool ok) = vault.consistencyDeviation(M1, 0, _vec(ONE, ONE));
         assertFalse(ok, "zero window");

@@ -121,27 +121,27 @@ contract LiquidationWholeAccountUniswapV4GasTest is RealStackUniswapV4, GasCalib
         assertLt(used, TX_GAS_CAP / 2, "within half the per-transaction gas limit");
     }
 
-    // TEST-331 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012
+    // TEST-336 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012
     /// @notice One native ETH/USDC v4 record, USDC debt: the whole reserve in one call.
-    function test_TEST_331_v4OneRecordOneDebt() public {
+    function test_TEST_336_v4OneRecordOneDebt() public {
         _run(1, false);
     }
 
-    // TEST-331 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012
+    // TEST-336 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012
     /// @notice The v4 cap of 12 records, USDC debt: every record debited and removed in one call.
-    function test_TEST_331_v4TwelveRecordsOneDebt() public {
+    function test_TEST_336_v4TwelveRecordsOneDebt() public {
         _run(V4_RECORDS, false);
     }
 
-    // TEST-331 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-012
+    // TEST-336 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-012
     /// @notice One v4 record at the Spoke's limit of 4 borrowed reserves.
-    function test_TEST_331_v4OneRecordFourDebts() public {
+    function test_TEST_336_v4OneRecordFourDebts() public {
         _run(1, true);
     }
 
-    // TEST-331 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012, INV-096
+    // TEST-336 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012, INV-096
     /// @notice The worst supported v4 account: 12 records at the Spoke's limit of 4 borrowed reserves, within 7.5M.
-    function test_TEST_331_v4TwelveRecordsFourDebts() public {
+    function test_TEST_336_v4TwelveRecordsFourDebts() public {
         _run(V4_RECORDS, true);
     }
 }

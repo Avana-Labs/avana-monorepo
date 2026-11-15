@@ -292,7 +292,7 @@ The ProxyManager and every PositionProxy are immutable, so no proxy code can be 
 
 Every row of 5.1 with the test files under `contracts/test/` that link it: a function is linked when a `// TEST-NNN verifies:` tag line precedes it or its name carries `TEST_NNN_`. The number after each file is how many of its functions link the row; `forge test --match-test 'TEST_NNN_'` runs those named for it. A row no file links yet shows the script or harness that checks it, or the folder and file its test is planned in (folders of the keeper and off-chain rows `TEST-140`–`TEST-149` and `TEST-178` are relative to the repository root, all others to `contracts/test/`). The tagged IDs of each function are in the file, next to the function.
 
-259 rows are linked to test files; 51 are not, of which 13 are checked by a script or harness.
+263 rows are linked to test files; 51 are not, of which 13 are checked by a script or harness.
 
 | ID | Type | Files (`contracts/test/`, linked functions) | Planned, or checked outside `contracts/test/` |
 |---|---|---|---|
@@ -604,8 +604,12 @@ Every row of 5.1 with the test files under `contracts/test/` that link it: a fun
 | TEST-328 | unit | — | planned with the first Uniswap v2 integration in `contracts/src` |
 | TEST-329 | unit | — | planned with the first Curve StableSwap-NG integration in `contracts/src` |
 | TEST-330 | unit | — | planned with the first Balancer integration in `contracts/src` |
-| TEST-331 | unit | `fork/UniswapV4Integration.fork.t.sol` (1), `gas/Liquidation.WholeAccount.UniswapV4.gas.t.sol` (4), `gas/UniswapV4.Removal.gas.t.sol` (3), `integration/MultiMarket.UniswapV4.integration.t.sol` (5), `unit/LPOracleV4.Guards.unit.t.sol` (5), `unit/LPOracleV4.unit.t.sol` (6), `unit/UniswapV4Integration.Guards.unit.t.sol` (9), `unit/UniswapV4Integration.unit.t.sol` (16) | — |
+| TEST-331 | unit | `integration/MultiMarket.UniswapV4.integration.t.sol` (1), `unit/LPOracleV4.Guards.unit.t.sol` (2), `unit/LPOracleV4.unit.t.sol` (3), `unit/UniswapV4Integration.Guards.unit.t.sol` (3), `unit/UniswapV4Integration.unit.t.sol` (3) | — |
 | TEST-332 | integration | `integration/LPOracleCL.UnitExponent.integration.t.sol` (12) | — |
+| TEST-333 | unit, fork | `fork/UniswapV4Integration.fork.t.sol` (1), `unit/UniswapV4Integration.Guards.unit.t.sol` (3), `unit/UniswapV4Integration.unit.t.sol` (7) | — |
+| TEST-334 | unit, gas | `gas/UniswapV4.Removal.gas.t.sol` (2), `unit/UniswapV4Integration.Guards.unit.t.sol` (3), `unit/UniswapV4Integration.unit.t.sol` (9) | — |
+| TEST-335 | unit, integration, gas | `gas/UniswapV4.Removal.gas.t.sol` (1), `integration/MultiMarket.UniswapV4.integration.t.sol` (1), `unit/LPOracleV4.Guards.unit.t.sol` (3), `unit/LPOracleV4.unit.t.sol` (4) | — |
+| TEST-336 | integration, gas | `gas/Liquidation.WholeAccount.UniswapV4.gas.t.sol` (4), `integration/MultiMarket.UniswapV4.integration.t.sol` (3), `unit/UniswapV4Integration.unit.t.sol` (1) | — |
 
 ## 8. INV map
 

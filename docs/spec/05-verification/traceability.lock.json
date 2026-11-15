@@ -5089,7 +5089,7 @@
     ]
   },
   "INV-096": {
-    "hash": "e8934c3ffd4892ea",
+    "hash": "1532c29e68ddbe3e",
     "checks": [
       "IAmmIntegration",
       "MATH-CAP-09",
@@ -5099,7 +5099,7 @@
       "TEST-102",
       "TEST-123",
       "TEST-269",
-      "TEST-331"
+      "TEST-336"
     ]
   },
   "INV-097": {

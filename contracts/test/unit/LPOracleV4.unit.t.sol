@@ -23,8 +23,8 @@ contract LPOracleV4UnitTest is LPOracleV4Fixture {
         _deployV4Market();
     }
 
-    // TEST-331 verifies: REQ-AMM-V4-005, SPEC-AMM-V4-001, SPEC-AMM-V4-002, REQ-ORACLE-014
-    function test_TEST_331_liveAtTheOraclePriceWithBothReadsInTolerance() public view {
+    // TEST-335 verifies: REQ-AMM-V4-005, SPEC-AMM-V4-001, SPEC-AMM-V4-002, REQ-ORACLE-014
+    function test_TEST_335_liveAtTheOraclePriceWithBothReadsInTolerance() public view {
         PriceStateView memory v = _state();
         assertEq(uint8(v.state), uint8(PriceState.Live), "Live, not Drifting");
         assertEq(v.reasons & (LPOracleCodes.CONSISTENCY_UNAVAILABLE | LPOracleCodes.CONSISTENCY_DEVIATION), 0);
@@ -34,8 +34,8 @@ contract LPOracleV4UnitTest is LPOracleV4Fixture {
         assertEq(r.tickLower, LOWER);
     }
 
-    // TEST-331 verifies: REQ-AMM-V4-005, SPEC-AMM-V4-001, SPEC-AMM-V4-002, REQ-AMM-CORE-006
-    function test_TEST_331_parkedPoolFailsClosedAndTheQuoteHolds() public {
+    // TEST-335 verifies: REQ-AMM-V4-005, SPEC-AMM-V4-001, SPEC-AMM-V4-002, REQ-AMM-CORE-006
+    function test_TEST_335_parkedPoolFailsClosedAndTheQuoteHolds() public {
         int256 before = oracle.latestAnswer();
         (uint160 s,) = _slot0V4(key);
         _swapV4To(key, uint160((uint256(s) * 97) / 100));
@@ -46,8 +46,8 @@ contract LPOracleV4UnitTest is LPOracleV4Fixture {
         assertEq(oracle.latestAnswer(), before, "composition at the oracle price");
     }
 
-    // TEST-331 verifies: REQ-AMM-V4-003, REQ-AMM-V4-011
-    function test_TEST_331_readInsideUnlockIsPoolLocked() public {
+    // TEST-335 verifies: REQ-AMM-V4-003, REQ-AMM-V4-011
+    function test_TEST_335_readInsideUnlockIsPoolLocked() public {
         (bool ok, bytes memory ret) = v4Actor.callInside(address(oracle), abi.encodeCall(oracle.getPriceState, ()));
         assertTrue(ok);
         PriceStateView memory v = abi.decode(ret, (PriceStateView));
@@ -55,8 +55,8 @@ contract LPOracleV4UnitTest is LPOracleV4Fixture {
         assertEq(uint8(v.state), uint8(PriceState.Cached));
     }
 
-    // TEST-331 verifies: REQ-AMM-V4-005, REQ-AMM-CORE-014
-    function test_TEST_331_quoteChangeCapHoldsAOneBlockMove() public {
+    // TEST-335 verifies: REQ-AMM-V4-005, REQ-AMM-CORE-014
+    function test_TEST_335_quoteChangeCapHoldsAOneBlockMove() public {
         assertEq(uint8(oracle.poke()), uint8(PriceState.Live));
         vm.warp(block.timestamp + 1);
         // Both tokens 2% lower: the price ratio, and so the spot gate and the TWAP check, are unchanged, while the quote
