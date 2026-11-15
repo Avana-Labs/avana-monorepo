@@ -384,6 +384,7 @@ export default defineSchema({
     .index("by_spoke_reserve", ["spokeReserveKey", "at"])
     .index("by_market", ["marketKey", "at"])
     .index("by_wallet", ["wallet", "at"])
+    .index("by_tx", ["txHash"])
     .index("by_at", ["at"]),
 
   /** Progress of each pool's pre-listing history import; ranges apply in order, each once. */
@@ -555,6 +556,45 @@ export default defineSchema({
    * dev-token). Must live here, not in process memory, so a horizontally-scaled deploy
    * enforces ONE limit across instances. `resetAt` = epoch ms the window ends.
    */
+  /**
+   * Transaction progress of a submitted wallet transaction (lib/intents.ts): the hash, the wallet that signed it and a
+   * label, never a target, amount or calldata (REQ-ARCH-140).
+   */
+  intents: defineTable({
+    wallet: address,
+    chainId: v.number(),
+    txHash: hex,
+    kind: v.string(),
+    page: v.optional(v.object({ scope: v.union(v.literal("lend"), v.literal("asset"), v.literal("pool")), slug: v.string() })),
+    status: v.union(v.literal("pending"), v.literal("included"), v.literal("failed"), v.literal("indexed"), v.literal("confirmed"), v.literal("dropped")),
+    submittedAt: v.number(),
+    blockNumber: v.optional(dec),
+    blockHash: v.optional(hex),
+    finalizedAt: v.optional(v.number()),
+    /** False once the state is final; the tracker reads open intents, least recently checked first. */
+    open: v.boolean(),
+    checkedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_tx", ["chainId", "txHash"])
+    .index("by_wallet", ["wallet", "submittedAt"])
+    .index("by_open", ["chainId", "open", "checkedAt"]),
+
+  /**
+   * SIWE sign-in sessions the web app's server opens and revokes (siweSessions.ts). `sessionId` is the SHA-256 of the
+   * session's JWT ID, never the token; a revoked or expired session no longer authorizes per-wallet features.
+   */
+  siweSessions: defineTable({
+    sessionId: v.string(),
+    wallet: address,
+    issuedAt: v.number(),
+    expiresAt: v.number(),
+    revokedAt: v.optional(v.number()),
+  })
+    .index("by_session", ["sessionId"])
+    .index("by_wallet", ["wallet", "issuedAt"])
+    .index("by_expiry", ["expiresAt"]),
+
   rateLimitBuckets: defineTable({
     key: v.string(),
     count: v.number(),

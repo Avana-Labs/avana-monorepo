@@ -151,11 +151,30 @@ The export serves only finalized blocks, so a rebuild means something outside no
 
 ## Transaction progress
 
-After the user's wallet submits, Convex tracks the receipt over RPC at the head: the intent moves to `included` when the receipt shows success, the account is refreshed by a live read at that block, and the activity is marked `indexed` when the export delivers the same `txHash`. If a reorg removes the block before finality, the intent returns to `pending` (`TEST-143`).
+After the user's wallet submits, the app calls `intents.submit` (signed-in wallet, the hash, a kind from a fixed list and the page; never a target, amount or calldata). The `track intents` cron reads each open intent's receipt over Convex's own RPC about once a block (`lib/intents.ts`):
+
+| From | To | When |
+|---|---|---|
+| `pending` | `included` / `failed` | The receipt shows success / a revert |
+| `pending` | `dropped` (final) | No receipt an hour after submission |
+| `included`, `failed` | `pending` | The receipt's block is no longer canonical (reorg) |
+| any open | `indexed` (final) | An imported (finalized) log carries the hash |
+| `included` | `confirmed` (final) | Its block is finalized and the export still has no log of it 10 minutes later (an approval, a swap outside the protocol) |
+| `failed` | final | Its block is finalized |
+
+`intents.listForWallet` returns the wallet's latest intents with explorer links (`TEST-143`).
+
+## SIWE sessions
+
+The web app's server opens a session after it verifies a SIWE signature (`siweSessions.open`, keyed by the SHA-256 of the session JWT's ID, at most 7 days), revokes it on logout (`revoke`) or for every device (`revokeWallet`), and checks it (`status`). Each call needs `CONVEX_SESSION_SECRET` (at least 32 characters; unset refuses every call). A Convex JWT carrying that hash as its `sid` claim authorizes per-wallet features only while the session is open (`walletAuth.requireWalletSession`); intents use it. Expired sessions are pruned daily.
+
+## Wallet activity
+
+`wallet.activity.listForWallet` pages through the wallet's logs of the last 30 days (`ingestedLogs.by_wallet`, exact cursor) as dashboard rows, each with the page it belongs to and an explorer link; `wallet/history:older` serves anything older. `deployments.explorers` returns each chain's explorer for links the app builds itself.
 
 ## Configuration
 
-Convex environment variables: `RPC_<CHAIN>` and `RPC_<CHAIN>_FALLBACK` (`MAINNET`, `BASE`), `INDEXER_EXPORT_URL`, `INDEXER_EXPORT_KEY_ID`, `INDEXER_EXPORT_SECRET` (base64, at least 32 bytes), `LISTING_CONTENT_URL`, `POOL_HISTORY_DAYS`. Each chain's `deployments` row is written from its verified release manifest with `deployments.setDeployment` (internal).
+Convex environment variables: `RPC_<CHAIN>` and `RPC_<CHAIN>_FALLBACK` (`MAINNET`, `BASE`), `INDEXER_EXPORT_URL`, `INDEXER_EXPORT_KEY_ID`, `INDEXER_EXPORT_SECRET` (base64, at least 32 bytes), `LISTING_CONTENT_URL`, `POOL_HISTORY_DAYS`, `CONVEX_SESSION_SECRET`. Each chain's `deployments` row is written from its verified release manifest with `deployments.setDeployment` (internal).
 
 ## Build and test
 

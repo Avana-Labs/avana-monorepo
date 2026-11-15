@@ -4,7 +4,8 @@
 // `aave.borrowSpokes`, `avana.firstLossReserves`); run by an operator with each release (internal: no client can call it).
 
 import { v } from "convex/values";
-import { internalMutation } from "./_generated/server";
+import { internalMutation, query } from "./_generated/server";
+import { explorerLinks } from "./lib/explorer.ts";
 import { chainSlug } from "./lib/format.ts";
 
 export const setDeployment = internalMutation({
@@ -40,4 +41,14 @@ export const setDeployment = internalMutation({
     if (existing) await ctx.db.replace(existing._id, row);
     else await ctx.db.insert("deployments", row);
   },
+});
+
+/**
+ * The block explorer of every served chain, for links the app builds itself (a receipt, the dashboard's activity):
+ * `{ chainId, chainSlug, explorerUrl }`, with `explorerUrl` null for a chain that has no explorer (anvil).
+ */
+export const explorers = query({
+  args: {},
+  handler: async (ctx) =>
+    (await ctx.db.query("deployments").collect()).map((d) => ({ chainId: d.chainId, chainSlug: d.chainSlug, explorerUrl: explorerLinks(d.explorerUrl)?.base ?? null })),
 });

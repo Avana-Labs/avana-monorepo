@@ -97,6 +97,9 @@ export interface DetailTxRow {
   readonly walletLabel: string;
   readonly counterpartyLabel?: string;
   readonly txHashShort: string;
+  readonly txHash?: string;
+  /** The transaction on the chain's block explorer; absent when the chain has none. */
+  readonly href?: string;
   /** The app's row origin flag; rows read from the chain are served as "seed". */
   readonly source: "wallet" | "seed";
 }
