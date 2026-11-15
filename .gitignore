@@ -37,6 +37,10 @@ contracts/out-slipstream-v1/
 contracts/cache-slipstream-v1/
 contracts/out-slipstream-main/
 contracts/cache-slipstream-main/
+contracts/out-univ4/
+contracts/cache-univ4/
+contracts/out-permit2/
+contracts/cache-permit2/
 contracts/broadcast/*/31337/
 
 # Security tooling (contracts/script/install-security-tools.sh, security-fast.sh, security-slow.sh)

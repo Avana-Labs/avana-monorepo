@@ -9,6 +9,10 @@ Third-party protocols Avana runs against on test networks (anvil, Sepolia), buil
 | OpenZeppelin 3.4.2-solc-0.7 | Soldeer registry `@openzeppelin-contracts` 3.4.2-solc-0.7 | zip sha256 `81842c01…d0e9` | (periphery, Slipstream) | — | MIT |
 | Aerodrome Slipstream v1.0.0 | github.com/aerodrome-finance/slipstream | `37eead2c7e5302a204dec78bfa0775bbb8ff48a2` | `slipstream-v1` → `out-slipstream-v1/` (entry `external/slipstream-v1/`) | 0.7.6, istanbul, 200 runs | BUSL-1.1, change licence GPL-2.0-or-later |
 | Aerodrome Slipstream main | github.com/aerodrome-finance/slipstream | `f8717faaae6e6717db3c8e3850149c01a79c0603` (2026-04-10) | `slipstream-main` → `out-slipstream-main/` (entry `external/slipstream-main/`) | 0.7.6, istanbul, 200 runs | as above |
+| Uniswap v4 core v4.0.0 | github.com/Uniswap/v4-core | `e50237c43811bd9b526eff40f26772152a42daba` (tag v4.0.0) | `univ4` → `out-univ4/` (entry `external/univ4/`) | 0.8.26, cancun, via-IR, 44,444,444 runs, no metadata hash | BUSL-1.1 (converted to MIT) |
+| Uniswap v4 periphery 1.0.1 | github.com/Uniswap/v4-periphery | `ea2bf2e1ba6863bb809fc2ff791744f308c4a26d` (npm 1.0.1) | `univ4` → `out-univ4/` (PositionManager, StateView) | 0.8.26, cancun, via-IR, PositionManager 30,000 runs | MIT |
+| Permit2 | github.com/Uniswap/permit2 | `cc56ad0f3439c502c246fc5cfcc3db92bb8b7219` (v4 periphery 1.0.1 submodule) | `permit2` → `out-permit2/` (entry `external/permit2/`) | 0.8.17, via-IR, 1,000,000 runs | MIT |
+| Solmate | github.com/transmissions11/solmate | `4b47a19038b798b4a33d9749d25e570443520647` (v4 core submodule) | (Uniswap v4, Permit2) | — | AGPL-3.0-only |
 | ExcessivelySafeCall | github.com/nomad-xyz/ExcessivelySafeCall | `81cd99ce3e69117d665d7601c330ea03b97acce0` (Slipstream submodule) | (Slipstream) | — | MIT OR Apache-2.0 |
 | Aave V3 origin v3.7.0 | github.com/aave-dao/aave-v3-origin | `cff15de6d1271b0c800fc001f4aea4c263e8a597` (tag v3.7.0) | `aave-v3` → `out-aave-v3/` | 0.8.27, shanghai, 200 runs, no metadata hash | BUSL-1.1 |
 | Aave solidity-utils | github.com/aave-dao/solidity-utils | `fdc69f984036585d508889147734902dc0c64bf3` (Aave V3 origin submodule) | (Aave V3) | — | MIT |
