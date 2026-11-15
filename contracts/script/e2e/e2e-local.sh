@@ -61,6 +61,8 @@ for a in out/AvanaTimelock.sol/AvanaTimelock.json out/AvanaAaveV4Payload.sol/Ava
   out-aave/AaveV4ConfigEngine.sol/AaveV4ConfigEngine.json \
   out-univ3/UniswapV3Factory.sol/UniswapV3Factory.json out-univ3-periphery/NonfungiblePositionManager.sol/NonfungiblePositionManager.json \
   out-slipstream-v1/CLFactory.sol/CLFactory.json out-aerodrome/Voter.sol/Voter.json \
+  out-univ4/PoolManager.sol/PoolManager.json out-univ4/PositionManager.sol/PositionManager.json \
+  out-univ4/StateView.sol/StateView.json out-permit2/Permit2.sol/Permit2.json \
   out-aave-v3/AaveV3PoolBatch.sol/AaveV3PoolBatch.json \
   out-chainlink-ocr2/AccessControlledOCR2Aggregator.sol/AccessControlledOCR2Aggregator.json \
   out-chainlink-proxy/EACAggregatorProxy.sol/EACAggregatorProxy.json external/multicall3/Multicall3.runtime.hex; do

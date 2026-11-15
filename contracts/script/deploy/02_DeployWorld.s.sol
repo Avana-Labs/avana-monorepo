@@ -3,11 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {WorldAaveV3} from "./lib/WorldAaveV3.sol";
 import {WorldAerodrome} from "./lib/WorldAerodrome.sol";
 import {WorldFeeds} from "./lib/WorldFeeds.sol";
+import {WorldUniswapV4} from "./lib/WorldUniswapV4.sol";
 import {FeeOnTransferToken, FeeSwitchToken, NoDecimalsToken, RebasingToken} from "./local/HostileTokens.sol";
 import {TestToken} from "./local/TestToken.sol";
+import {TestWETH9} from "./local/TestWETH9.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {console2} from "forge-std/console2.sol";
 
@@ -24,6 +27,11 @@ interface IUniswapV3FactoryAdmin {
     function feeAmountTickSpacing(
         uint24 fee
     ) external view returns (int24);
+    function getPool(
+        address a,
+        address b,
+        uint24 fee
+    ) external view returns (address);
 }
 
 interface IPoolInit {
@@ -94,10 +102,15 @@ interface ISlipNpm {
 /// factory and pool implementation), an Aave V3 market (origin v3.7.0, `WorldAaveV3`) listing every token with its
 /// primary feed, flash loans enabled and `world.aaveV3SupplyUsd` dollars supplied, and every pool of the network's
 /// `world.uniswapPools` and `world.slipstreamPools`, created at the feeds' price with full-range liquidity of `usd`
-/// dollars from the deployer.
+/// dollars from the deployer. With `world.uniswapV4Pools`, also Uniswap v4 (`WorldUniswapV4`: Permit2, PoolManager,
+/// PositionManager, StateView) and each of those hookless pools (`ETH` for native ETH) at the feeds' price with
+/// full-range liquidity of `usd` dollars, and its Uniswap v3 reference pool: the fee-500 pool of the same pair (WETH for
+/// ETH), created with `usd` dollars of full-range liquidity when `world.uniswapPools` has none, its observation
+/// cardinality grown to `world.observationCardinality`.
 /// @dev Stand-ins (marked `standIn` in the output, listed in deployments/README.md): `TestToken` (and LINK, the OCR2
-/// payment token). Output: `deployments-local/<network>/world.json`.
-contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
+/// payment token), `TestWETH9` for a token with `weth9: true` (the v4 PositionManager's WETH9). Output:
+/// `deployments-local/<network>/world.json`.
+contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3, WorldUniswapV4 {
     uint160 internal constant Q96 = 2 ** 96;
     int24 internal constant MAX_TICK = 887_272;
 
@@ -114,6 +127,8 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
     address internal me;
     address internal uniFactory;
     address internal uniNpm;
+    /// @notice The token created as `TestWETH9` (`weth9: true`), or 0.
+    address internal weth9Token;
 
     function run() external {
         string memory network = _network();
@@ -130,6 +145,8 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
         address flashPool = _deployAaveV3();
         _uniswapPools();
         _slipstreamPools();
+        bool v4 = _count(cfg, ".world.uniswapV4Pools") != 0;
+        if (v4) _deployUniswapV4(weth);
         _switchOnHostile();
         vm.stopBroadcast();
         vm.serializeAddress("world", "deployer", me);
@@ -145,7 +162,13 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
         vm.serializeAddress("world", "aaveV3PoolAddressesProvider", aaveV3.poolAddressesProvider);
         vm.serializeAddress("world", "aaveV3PoolConfigurator", aaveV3.poolConfiguratorProxy);
         vm.serializeAddress("world", "aaveV3Oracle", aaveV3.aaveOracle);
-        string memory json = vm.serializeString("world", "external", _externalJson(flashPool));
+        if (v4) {
+            vm.serializeAddress("world", "permit2", permit2);
+            vm.serializeAddress("world", "uniswapV4PoolManager", v4PoolManager);
+            vm.serializeAddress("world", "uniswapV4PositionManager", v4PositionManager);
+            vm.serializeAddress("world", "uniswapV4StateView", v4StateView);
+        }
+        string memory json = vm.serializeString("world", "external", _externalJson(flashPool, v4));
         vm.createDir(string.concat(vm.projectRoot(), "/", OUTPUT_DIR, "/", network), true);
         vm.writeJson(json, _outputPath("world"));
         console2.log("world output", _outputPath("world"));
@@ -192,6 +215,12 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
         uint8 dec
     ) private returns (address) {
         string memory kk = string.concat(k, ".kind");
+        string memory wk = string.concat(k, ".weth9");
+        if (vm.keyExistsJson(cfg, wk) && vm.parseJsonBool(cfg, wk)) {
+            require(dec == 18 && weth9Token == address(0), string.concat("one 18-decimal weth9 token: ", sym));
+            weth9Token = address(new TestWETH9(me));
+            return weth9Token;
+        }
         if (!vm.keyExistsJson(cfg, kk)) return address(new TestToken(string.concat("Test ", sym), sym, dec, me));
         bytes32 kind = keccak256(bytes(vm.parseJsonString(cfg, kk)));
         if (kind == keccak256("feeOnTransfer")) return address(new FeeOnTransferToken(sym, me));
@@ -347,6 +376,92 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
         ISlipNpm(npm).mint(ISlipNpm.MintParams(t0, t1, spacing, lo, -lo, a0, a1, 0, 0, me, block.timestamp + 1 days, 0));
     }
 
+    // ─── Uniswap v4 ───
+
+    /// @notice Uniswap v4 with the world's WETH as the PositionManager's WETH9, then every pool of
+    /// `world.uniswapV4Pools`.
+    function _deployUniswapV4(
+        address weth
+    ) private {
+        require(weth == weth9Token, "world.uniswapV4Pools needs the WETH token with weth9: true");
+        _uniswapV4Core(me, weth);
+        uint256 n = _count(cfg, ".world.uniswapV4Pools");
+        string memory list = "{}";
+        for (uint256 i = 0; i < n; ++i) {
+            list = _uniswapV4Pool(string.concat(".world.uniswapV4Pools[", vm.toString(i), "]"));
+        }
+        vm.serializeString("world", "uniswapV4Pools", list);
+    }
+
+    /// @notice One hookless v4 pool with its reference pool; the output entry is its key, pool ID and reference pool.
+    function _uniswapV4Pool(
+        string memory k
+    ) private returns (string memory list) {
+        (TokenInfo memory a, TokenInfo memory b) = _v4Pair(k);
+        UniswapV4PoolKey memory key = UniswapV4PoolKey(
+            a.token,
+            b.token,
+            uint24(vm.parseJsonUint(cfg, string.concat(k, ".fee"))),
+            int24(vm.parseJsonInt(cfg, string.concat(k, ".tickSpacing"))),
+            address(0)
+        );
+        uint256 usd = vm.parseJsonUint(cfg, string.concat(k, ".usd"));
+        address ref = _referencePool(a, b, usd);
+        uint256 a0 = _amountForUsd(a, usd / 2);
+        uint256 a1 = _amountForUsd(b, usd / 2);
+        if (a.token == address(0)) require(me.balance > a0, "the deployer lacks the ether of a native v4 pool");
+        else TestToken(a.token).mint(me, a0);
+        TestToken(b.token).mint(me, a1);
+        _v4Pool(key, _sqrtPrice(a, b), a0, a1, me);
+        string memory name = vm.parseJsonString(cfg, string.concat(k, ".name"));
+        string memory o = string.concat("uniswapV4Pool.", name);
+        vm.serializeAddress(o, "currency0", key.currency0);
+        vm.serializeAddress(o, "currency1", key.currency1);
+        vm.serializeUint(o, "fee", key.fee);
+        vm.serializeInt(o, "tickSpacing", key.tickSpacing);
+        vm.serializeAddress(o, "hooks", key.hooks);
+        vm.serializeBytes32(o, "poolId", keccak256(abi.encode(key)));
+        string memory one = vm.serializeAddress(o, "referencePool", ref);
+        list = vm.serializeString("uniswapV4Pools", name, one);
+    }
+
+    /// @notice A v4 pool's two currencies, sorted; `ETH` is native ether (address 0, priced as WETH).
+    function _v4Pair(
+        string memory k
+    ) private view returns (TokenInfo memory a, TokenInfo memory b) {
+        a = _v4Currency(vm.parseJsonString(cfg, string.concat(k, ".a")));
+        b = _v4Currency(vm.parseJsonString(cfg, string.concat(k, ".b")));
+        require(a.price8 != 0 && b.price8 != 0 && a.token != b.token, string.concat("bad v4 pair in ", k));
+        if (a.token > b.token) (a, b) = (b, a);
+    }
+
+    function _v4Currency(
+        string memory sym
+    ) private view returns (TokenInfo memory t) {
+        if (keccak256(bytes(sym)) != keccak256("ETH")) return tokens[keccak256(bytes(sym))];
+        t = TokenInfo(address(0), 18, tokens[keccak256("WETH")].price8);
+    }
+
+    /// @notice The Uniswap v3 fee-500 pool of the pair (WETH for native ETH), created and seeded with `usd` dollars of
+    /// full-range liquidity when absent, with its observation cardinality grown for the TWAP.
+    function _referencePool(
+        TokenInfo memory a,
+        TokenInfo memory b,
+        uint256 usd
+    ) private returns (address pool) {
+        if (a.token == address(0)) a = tokens[keccak256("WETH")];
+        if (a.token > b.token) (a, b) = (b, a);
+        pool = IUniswapV3FactoryAdmin(uniFactory).getPool(a.token, b.token, 500);
+        if (pool == address(0)) {
+            pool = IUniswapV3FactoryAdmin(uniFactory).createPool(a.token, b.token, 500);
+            IPoolInit(pool).initialize(_sqrtPrice(a, b));
+            (uint256 a0, uint256 a1) = _fund(a, b, usd, uniNpm);
+            _mintUni(a.token, b.token, 500, a0, a1);
+        }
+        IPoolInit(pool)
+            .increaseObservationCardinalityNext(uint16(vm.parseJsonUint(cfg, ".world.observationCardinality")));
+    }
+
     // ─── Helpers ───
 
     /// @notice The pool's two tokens, sorted (token0 < token1).
@@ -411,7 +526,8 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
 
     /// @notice `external` section for the manifest producer: group → name → {address, standIn}.
     function _externalJson(
-        address flashPool
+        address flashPool,
+        bool v4
     ) private returns (string memory) {
         _ext("uniswap-v3", "UniswapV3Factory", uniFactory, false);
         string memory uni = _ext("uniswap-v3", "NonfungiblePositionManager", uniNpm, false);
@@ -447,6 +563,12 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3 {
         vm.serializeString("external", "uniswap-v3", uni);
         vm.serializeString("external", "slipstream", slip);
         vm.serializeString("external", "aave-v3", aave3);
+        if (v4) {
+            _ext("uniswap-v4", "Permit2", permit2, false);
+            _ext("uniswap-v4", "PoolManager", v4PoolManager, false);
+            _ext("uniswap-v4", "PositionManager", v4PositionManager, false);
+            vm.serializeString("external", "uniswap-v4", _ext("uniswap-v4", "StateView", v4StateView, false));
+        }
         return vm.serializeString("external", "token", toks);
     }
 

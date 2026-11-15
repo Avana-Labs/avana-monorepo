@@ -41,9 +41,10 @@ struct AaveInputs {
 /// @notice One AMM integration's LPVault (1.2 deployment step 6).
 struct IntegrationInput {
     uint32 integrationId;
-    // "uniswap-v3" or "slipstream".
+    // "uniswap-v3", "slipstream" or "uniswap-v4".
     string kind;
-    // Uniswap v3: one position manager and factory; Slipstream: the four generations of 2.21, index 0 to 3.
+    // Uniswap v3: one position manager and factory; Slipstream: the four generations of 2.21, index 0 to 3; Uniswap v4:
+    // the PositionManager and the chain's Uniswap v3 factory, whose pools are the reference pools.
     address[] positionManagers;
     address[] factories;
 }
@@ -108,7 +109,8 @@ struct AvanaDeployment {
     address lensAaveSizing;
     address debtOracleImplementation;
     // Per integration (same order as `integrations`): the concentrated-liquidity LPOracle implementation the
-    // integration registers as its pricing, its module logic and its four logic contracts (poke, init, listing, view).
+    // integration registers as its pricing (`LPOracleV4` for Uniswap v4), its module logic and its four logic contracts
+    // (poke, init, listing, view).
     address[] clOraclePricing;
     address[] clOracleModuleLogics;
     address[] clOracleLogics;
