@@ -878,6 +878,14 @@
       "review": "Pattern: specified timestamps (SPEC-ORC-013/014/015/016/019, REQ-ORACLE-032/034 windows and age limits; boundaries fail closed)."
     },
     {
+      "fingerprint": "accce6c295fa1171",
+      "check": "timestamp",
+      "file": "src/oracle/debt-oracle/DebtOracle.sol",
+      "function": "DebtOracle._recordSeen(DebtOracleStorage.DebtOracleLayout,DebtEvaluation)",
+      "reason": "The flagged comparison, (e.reasons & R_CONFIG_UNAVAILABLE) != 0, tests a reason flag of the evaluation and compares no time; slither flags it because the evaluation struct also holds block and source timestamps. When the configuration read failed, no leg was read and every seen record is kept (REQ-ORACLE-031). Covered by TEST-219 (test/unit/DebtOracle.SeenRecords.unit.t.sol).",
+      "approval": "approved (Josue, 2026-11-15)"
+    },
+    {
       "fingerprint": "f28e7b8b8cf8974b",
       "check": "timestamp",
       "file": "src/oracle/debt-oracle/DebtOracleEvaluation.sol",
