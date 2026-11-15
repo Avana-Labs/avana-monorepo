@@ -50,7 +50,7 @@ Setup (Ethereum market 1, native ETH/USDC 0.05% hookless pool, `tickSpacing = 10
 
 - Lens: [`getRecords`](../../lens/lens/ILensAccount.sol#L60), [`checkRecordBacking`](../../lens/lens/ILensMarket.sol#L34), [`getPositionFees`](../../lens/lens/ILensFees.sol#L19) (uncollected v4 fees, computed as the PoolManager would credit them). Direct views: [`validatePosition`](../concentrated-liquidity/ClLPVaultCustody.sol#L55), [`tokenIdOf`](../concentrated-liquidity/ClLPVaultMarkets.sol#L45), [`v4Market`](UniswapV4Integration.sol#L231).
 - Events to index: LPVault `MarketBound`, `PositionReceived`, `PositionReturned`, `UnitsUnwound`, `UnitsReleased`, `FeesCollected`, `StrayReceived`, `StrayReturned` ([ILPVaultEvents.sol](../../custody/lp-vault/ILPVaultEvents.sol)); the PoolManager's `ModifyLiquidity`.
-- User calls: the depositor mints through the PositionManager (with Permit2 approvals for ERC-20 legs), approves the LPVault on the PositionManager, and must not subscribe the position. To add liquidity, the depositor calls `PositionManager.modifyLiquidities` with `INCREASE_LIQUIDITY`, then AaveAdapter `recredit`.
+- User calls: the depositor mints through the PositionManager (with Permit2 approvals for ERC-20 legs), approves the LPVault on the PositionManager, and must not subscribe the position. A pledged v4 position cannot take more liquidity: the v4 PositionManager adds liquidity only for the NFT's owner or an approved address, and the LPVault owns it and approves no one, so more collateral means a new position (review finding V4-02, open).
 
 ## Spec
 
