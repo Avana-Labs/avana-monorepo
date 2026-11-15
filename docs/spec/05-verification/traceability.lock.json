@@ -16872,7 +16872,7 @@
     ]
   },
   "REQ-COLL-040": {
-    "hash": "25c51c8121818fd5",
+    "hash": "9af889edf36043fd",
     "checks": [
       "AaveAdapterCollateralLogic",
       "AaveAdapterExitLogic",
