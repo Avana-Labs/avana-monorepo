@@ -85,6 +85,7 @@ import type * as lib_pages from "../lib/pages.js";
 import type * as lib_riskViews from "../lib/riskViews.js";
 import type * as lib_rpc from "../lib/rpc.js";
 import type * as lib_uiTypes from "../lib/uiTypes.js";
+import type * as lib_windows from "../lib/windows.js";
 import type * as liquidity from "../liquidity.js";
 import type * as listing_load from "../listing/load.js";
 import type * as listing_store from "../listing/store.js";
@@ -105,6 +106,7 @@ import type * as wallet_positions from "../wallet/positions.js";
 import type * as wallet_productBalances from "../wallet/productBalances.js";
 import type * as wallet_profiles from "../wallet/profiles.js";
 import type * as walletAuth from "../walletAuth.js";
+import type * as windows from "../windows.js";
 import type * as writeRateLimit from "../writeRateLimit.js";
 
 import type { ApiFromModules, FilterApi, FunctionReference } from "convex/server";
@@ -185,6 +187,7 @@ declare const fullApi: ApiFromModules<{
   "lib/riskViews": typeof lib_riskViews;
   "lib/rpc": typeof lib_rpc;
   "lib/uiTypes": typeof lib_uiTypes;
+  "lib/windows": typeof lib_windows;
   liquidity: typeof liquidity;
   "listing/load": typeof listing_load;
   "listing/store": typeof listing_store;
@@ -205,6 +208,7 @@ declare const fullApi: ApiFromModules<{
   "wallet/productBalances": typeof wallet_productBalances;
   "wallet/profiles": typeof wallet_profiles;
   walletAuth: typeof walletAuth;
+  windows: typeof windows;
   writeRateLimit: typeof writeRateLimit;
 }>;
 
