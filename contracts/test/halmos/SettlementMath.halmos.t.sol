@@ -237,13 +237,15 @@ contract SettlementMathHalmosTest is Test {
     // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-061, REQ-SWAP-062, Q-397, Q-404
     /// @notice The second case of `check_PROP_015_gapSettlesWithoutRevertPayouts`: for every `D`, `Kf − D`, `R` and
     /// `minRec` below 2^120 and every fee `A` and borrower surplus `B` with `A + B ≤ S = max(0, max(R, minRec) − D)`,
-    /// the gap is at most `max(0, minRec − R)` and `keeperPayout` with that top-up does not revert and balances.
-    /// Coverage: every input of the single check (`minRec ≤ V < 2^120`, share 2,000) is an input of the `Payouts` case,
-    /// which gives its `A`, `B` the bound `A + B ≤ S` with this `S`; `V` and the share reach the gap and the payout
-    /// only through `A` and `B`. So the two cases cover the single check, and with the share symbolic in the `Payouts` case
-    /// they extend it to every share ≤ 10⁴. Every term here is a sum, a difference or a comparison: no product and
-    /// no division.
-    function check_PROP_015_gapSettlesWithoutRevertAnyPayouts(
+    /// the gap is at most `max(0, minRec − R)` and `keeperPayout` with that top-up does not revert and balances
+    /// (`_anyPayouts`). Coverage: every input of the single check (`minRec ≤ V < 2^120`, share 2,000) is an input of the
+    /// `Payouts` case, which gives its `A`, `B` the bound `A + B ≤ S` with this `S`; `V` and the share reach the gap and
+    /// the payout only through `A` and `B`. So the `Payouts` case and the two `AnyPayouts` checks, split by `R ≥ minRec`
+    /// (no floor gap, `S = max(0, R − D)`) and `R < minRec` (gap `minRec − R`, `S = max(0, minRec − D)`), cover the
+    /// single check and extend it to every share ≤ 10⁴. Every term is a sum, a difference or a comparison; as one check
+    /// over both sides of `R ≥ minRec` it did not complete within 1 hour (run 43742353540), while each side completes
+    /// in about 2 minutes.
+    function check_PROP_015_gapSettlesWithoutRevertAnyPayoutsAboveFloor(
         uint256 debt,
         uint256 extraFunding,
         uint256 minRec,
@@ -251,6 +253,32 @@ contract SettlementMathHalmosTest is Test {
         uint256 fee,
         uint256 surplusToBorrower
     ) public {
+        vm.assume(recovered >= minRec);
+        _anyPayouts(debt, extraFunding, minRec, recovered, fee, surplusToBorrower);
+    }
+
+    // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-061, REQ-SWAP-062, Q-397, Q-404
+    /// @notice `check_PROP_015_gapSettlesWithoutRevertAnyPayoutsAboveFloor` for a recovery below the floor.
+    function check_PROP_015_gapSettlesWithoutRevertAnyPayoutsBelowFloor(
+        uint256 debt,
+        uint256 extraFunding,
+        uint256 minRec,
+        uint256 recovered,
+        uint256 fee,
+        uint256 surplusToBorrower
+    ) public {
+        vm.assume(recovered < minRec);
+        _anyPayouts(debt, extraFunding, minRec, recovered, fee, surplusToBorrower);
+    }
+
+    function _anyPayouts(
+        uint256 debt,
+        uint256 extraFunding,
+        uint256 minRec,
+        uint256 recovered,
+        uint256 fee,
+        uint256 surplusToBorrower
+    ) internal {
         vm.assume(debt < 2 ** 120 && extraFunding < 2 ** 120 && minRec < 2 ** 120 && recovered < 2 ** 120);
         uint256 surplus = _surplusOnFloor(minRec, recovered, debt);
         vm.assume(fee <= surplus && surplusToBorrower <= surplus - fee);
