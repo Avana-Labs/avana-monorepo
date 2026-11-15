@@ -28,6 +28,10 @@ contract DebtOracleHalmosTest is Test {
     address internal constant ASSET = address(0x7201);
     uint256 internal constant T0 = 1_762_650_000;
     uint256 internal constant A = 99_990_000;
+    /// @dev Feed bound of every route: an answer is valid only in (0, MAX_ANSWER).
+    uint256 internal constant MAX_ANSWER = 1e12;
+    /// @dev The alternate's fixed answer in the `driftingTimestampFollowsPrimaryOrAccepted` checks (0.95).
+    uint40 internal constant B_FIXED = 95_000_000;
 
     DebtOracle internal oracle;
     DebtRegistryMock internal reg;
@@ -156,21 +160,71 @@ contract DebtOracleHalmosTest is Test {
     }
 
     // PROP-074 verifies: SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018, REQ-ORACLE-093
-    // Sources: review DO-01, with the alternate symbolic and the primary at A: a disagreement serves the larger route
-    // with its own timestamp and legs.
-    function check_PROP_074_driftingTimestampFollowsAlternate(
+    // Sources: review DO-01, with the alternate symbolic and the primary at A: a disagreement serves the median
+    // max(min(p, b), A) with its own timestamp and legs, or the accepted timestamp and no legs when A is served.
+    // The alternate's answer is split by branch into three checks whose ranges together are every uint40:
+    // `Invalid` (b = 0 or b >= 1e12, outside the feed bounds, so no disagreement), `Below` (0 < b < A) and `Above`
+    // (A <= b < 1e12). In each case the route order and validity are fixed, so every comparison deciding the state,
+    // the served route and `deviationBps` has one feasible side, and the timestamp and legs asserted are constants:
+    // `Below` can only serve A (no legs), `Above` only the primary. The single check with b symbolic over all of
+    // uint40 was cancelled at the 6-hour job limit in run 43492412351 with no result.
+    function check_PROP_074_driftingTimestampFollowsAlternateInvalid(
         uint40 bAnswer
     ) public {
+        vm.assume(bAnswer == 0 || bAnswer >= MAX_ANSWER);
+        _driftTimestamps(uint40(A), bAnswer);
+    }
+
+    // PROP-074 verifies: SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018, REQ-ORACLE-093
+    // Sources: `check_PROP_074_driftingTimestampFollowsAlternateInvalid` for 0 < b < A: a disagreement serves A
+    // with the accepted timestamp, age limits 0 and no legs. A < 2^32, so a uint32 input holds the whole range and
+    // the answer, the divisor of `deviationBps` in this case, is 32 bits wide.
+    function check_PROP_074_driftingTimestampFollowsAlternateBelow(
+        uint32 bAnswer
+    ) public {
+        vm.assume(bAnswer > 0 && bAnswer < A);
+        _driftTimestamps(uint40(A), uint40(bAnswer));
+    }
+
+    // PROP-074 verifies: SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018, REQ-ORACLE-093
+    // Sources: `check_PROP_074_driftingTimestampFollowsAlternateInvalid` for A <= b < 1e12: a disagreement serves
+    // the primary (the lower route, at A) with its timestamp and legs.
+    function check_PROP_074_driftingTimestampFollowsAlternateAbove(
+        uint40 bAnswer
+    ) public {
+        vm.assume(bAnswer >= A && bAnswer < MAX_ANSWER);
         _driftTimestamps(uint40(A), bAnswer);
     }
 
     // PROP-074 verifies: SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018, REQ-ORACLE-093
     // Sources: review DO-01, with the primary symbolic and the alternate at 0.95: the primary's timestamp when it is
-    // served, the accepted timestamp and no legs when A is.
-    function check_PROP_074_driftingTimestampFollowsPrimaryOrAccepted(
+    // served, the accepted timestamp and no legs when A is. Split by branch as the alternate checks, the three ranges
+    // together being every uint40: `Invalid` (p = 0 or p >= 1e12), `Below` (0 < p < 0.95) and `Above`
+    // (0.95 <= p < 1e12). The lower route is at most 0.95 < A in every case, so a disagreement always serves A.
+    function check_PROP_074_driftingTimestampFollowsPrimaryOrAcceptedInvalid(
         uint40 pAnswer
     ) public {
-        _driftTimestamps(pAnswer, 95_000_000);
+        vm.assume(pAnswer == 0 || pAnswer >= MAX_ANSWER);
+        _driftTimestamps(pAnswer, B_FIXED);
+    }
+
+    // PROP-074 verifies: SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018, REQ-ORACLE-093
+    // Sources: `check_PROP_074_driftingTimestampFollowsPrimaryOrAcceptedInvalid` for 0 < p < 0.95, as a uint32 input
+    // (95,000,000 < 2^32), as in `check_PROP_074_driftingTimestampFollowsAlternateBelow`.
+    function check_PROP_074_driftingTimestampFollowsPrimaryOrAcceptedBelow(
+        uint32 pAnswer
+    ) public {
+        vm.assume(pAnswer > 0 && pAnswer < B_FIXED);
+        _driftTimestamps(uint40(pAnswer), B_FIXED);
+    }
+
+    // PROP-074 verifies: SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018, REQ-ORACLE-093
+    // Sources: `check_PROP_074_driftingTimestampFollowsPrimaryOrAcceptedInvalid` for 0.95 <= p < 1e12.
+    function check_PROP_074_driftingTimestampFollowsPrimaryOrAcceptedAbove(
+        uint40 pAnswer
+    ) public {
+        vm.assume(pAnswer >= B_FIXED && pAnswer < MAX_ANSWER);
+        _driftTimestamps(pAnswer, B_FIXED);
     }
 
     /// @dev Primary at `T0 - 80`, alternate at `T0 - 50`, accepted `A` at `T0 - 100`.

@@ -6,6 +6,8 @@ pragma solidity 0.8.28;
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {SettlementMath} from "../../src/liquidation/lp-vault-swap/SettlementMath.sol";
 import {SettlementMathHarness} from "../utils/harness/SettlementMathHarness.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title SettlementMathHalmosTest
@@ -17,7 +19,13 @@ import {Test} from "forge-std/Test.sol";
 /// Avana fee (PROP-069). Every amount is in base units of the repaid debt asset; no liquidation term carries a flash
 /// principal, premium or transfer fee (Q-404).
 /// @dev Functions are called directly as internal library code, except where a check reads a revert: those go through
-/// `SettlementMathHarness` with a low-level call.
+/// `SettlementMathHarness` with a low-level call. Halmos abstracts a product of two symbolic values, a division and
+/// `mulmod` as uninterpreted functions and falls back to their full 256-bit (or 512-bit) semantics only when the
+/// abstract query has a model; that fallback is what ran out of the 5-hour budget. Several checks therefore assert that
+/// the code returns a reference formula built from the same terms the code computes (`...Formula`, the
+/// `unitAndPendingValues` cases), which holds on the terms alone, and the Z3 models MATH-ST-140…146
+/// (`docs/spec/05-verification/z3/settlement/st18_halmos_reference_formulas.py`) prove the original inequalities
+/// for those formulas in exact integers.
 contract SettlementMathHalmosTest is Test {
     uint256 internal constant BPS = 10_000;
 
@@ -109,37 +117,61 @@ contract SettlementMathHalmosTest is Test {
 
     // PROP-018 verifies: SPEC-LIQ-005, INV-034, Q-085, Q-159, Q-198
     /// @notice For `V ≤ 10²⁶` and `s ≤ 10⁴`: the slippage term `⌈V × (10⁴ − s) / 10⁴⌉` is at least the exact net value
-    /// and below it plus 1, and `minRec + U + ε` covers it for every `U`, `ε`.
-    function check_PROP_018_minRecoveryRounding(
+    /// and below it plus 1, and `minRec + U + ε` covers it for every `U`, `ε`. Proved as a formula: for every
+    /// `V ≤ 10²⁶`, `s ≤ 10⁴` and every `U`, `ε` (a superset of the earlier `U, ε ≤ 10³⁰`), `recoveryFloor(V, s, U, ε)`
+    /// equals `subFloor(Math.ceilDiv(V × (10⁴ − s), 10⁴), U, ε)`, and the slippage term is the case `U = ε = 0`.
+    /// MATH-ST-140 bounds `V × (10⁴ − s)` by 10³⁰ (no uint256 term wraps), MATH-ST-141 proves that OpenZeppelin's
+    /// `Math.ceilDiv(P, 10⁴)` is `⌈P / 10⁴⌉` (the first two inequalities, with `subFloor(g, 0, 0) = g`) and
+    /// MATH-ST-142 proves `0 ≤ minRec ≤ gross ≤ minRec + U + ε`. The earlier form asserted the inequalities on the
+    /// product `V × (10⁴ − s)` of two symbolic values and ran out of the 5-hour budget.
+    function check_PROP_018_minRecoveryRoundingFormula(
         uint256 v,
         uint256 s,
         uint256 units,
         uint256 allowance
     ) public pure {
-        vm.assume(v <= 1e26 && s <= BPS && units <= 1e30 && allowance <= 1e30);
-        uint256 gross = SettlementMath.recoveryFloor(v, s, 0, 0);
-        assert(gross * BPS >= v * (BPS - s));
-        assert(gross * BPS < v * (BPS - s) + BPS);
-        uint256 minRec = SettlementMath.recoveryFloor(v, s, units, allowance);
-        assert(minRec + units + allowance >= gross);
-        assert(minRec <= gross);
+        _recoveryFloorIsFormula(v, s, units, allowance);
     }
 
     // PROP-048 verifies: SPEC-LIQ-005, INV-034, Q-159, Q-198
     /// @notice The floor never asks for more than the net oracle value, and an unwind that loses at most `U` (one raw
-    /// unit per token) against it passes the floor, down to a dust seizure.
-    function check_PROP_048_floorWithRoundingTerms(
+    /// unit per token) against it passes the floor, down to a dust seizure. Proved as a formula: the code equals
+    /// `subFloor(Math.ceilDiv(V × (10⁴ − s), 10⁴), U, ε)` for every `V ≤ 10²⁶`, `s ≤ 10⁴` and every `U`, `ε` (this
+    /// check), and MATH-ST-143 proves for that formula, with `U ≥ 1` and `ε ≥ 1`, `minRec × 10⁴ ≤ V × (10⁴ − s)` and
+    /// `R ≥ minRec` for every `R` with `R × 10⁴ + U × 10⁴ ≥ V × (10⁴ − s)` (the earlier domain had `U, ε ≤ 10³⁰` and
+    /// `R ≤ 10²⁷`; the model has no upper bound). The earlier form ran out of the 5-hour budget on the product
+    /// `V × (10⁴ − s)` of two symbolic values.
+    function check_PROP_048_floorWithRoundingTermsFormula(
         uint256 v,
         uint256 s,
         uint256 units,
-        uint256 allowance,
-        uint256 recovered
+        uint256 allowance
     ) public pure {
-        vm.assume(v <= 1e26 && s <= BPS && units >= 1 && units <= 1e30 && allowance >= 1 && allowance <= 1e30);
-        vm.assume(recovered <= 1e27 && recovered * BPS + units * BPS >= v * (BPS - s));
-        uint256 minRec = SettlementMath.recoveryFloor(v, s, units, allowance);
-        assert(minRec * BPS <= v * (BPS - s));
-        assert(recovered >= minRec);
+        _recoveryFloorIsFormula(v, s, units, allowance);
+    }
+
+    /// @dev `recoveryFloor(V, s, U, ε) == subFloor(Math.ceilDiv(V × (10⁴ − s), 10⁴), U, ε)` for `V ≤ 10²⁶`, `s ≤ 10⁴`
+    /// and every `U`, `ε`. The reference computes the product and calls the same `Math.ceilDiv`, so both sides are the
+    /// same product and quotient terms and no query needs their semantics (MATH-ST-140…143 hold them).
+    function _recoveryFloorIsFormula(
+        uint256 v,
+        uint256 s,
+        uint256 units,
+        uint256 allowance
+    ) internal pure {
+        vm.assume(v <= 1e26 && s <= BPS);
+        uint256 gross = Math.ceilDiv(v * (BPS - s), BPS);
+        assert(SettlementMath.recoveryFloor(v, s, units, allowance) == _subFloorRef(gross, units, allowance));
+    }
+
+    /// @dev `max(0, a − b − c)` in the branch order of `SettlementMath._subFloor`.
+    function _subFloorRef(
+        uint256 a,
+        uint256 b,
+        uint256 c
+    ) internal pure returns (uint256) {
+        if (a <= b) return 0;
+        return a - b > c ? a - b - c : 0;
     }
 
     // PROP-019 verifies: SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-029, INV-034, INV-038, Q-190, Q-397
@@ -179,24 +211,74 @@ contract SettlementMathHalmosTest is Test {
     // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-061, REQ-SWAP-062, Q-397, Q-404
     /// @notice A caller-funded call always settles: with `Kf ≥ D` (Aave pulls `D` out of `Kf`), the gap never exceeds
     /// the floor gap, the top-up is `max(0, minRec − R)` and `keeperPayout` never reverts; the waterfall reads
-    /// `R_f = max(R, minRec)`, so the top-up never counts as surplus beyond the floor. The fee share is the default
-    /// 2,000 bps (a symbolic share makes the fee product nonlinear; the 10,000-run fuzz twin
-    /// `testFuzz_TEST_198_callerFundingAlwaysSettles` covers it).
-    function check_PROP_015_gapSettlesWithoutRevert(
+    /// `R_f = max(R, minRec)`, so the top-up never counts as surplus beyond the floor. Split in two so that no query
+    /// carries the fee quotient `⌊G × share / 10⁴⌋` together with the gap and payout sums (the single check, at the
+    /// 2,000 bps default share, ran out of the 5-hour budget). This case: for every `V`, `D`, `R` below 2^120,
+    /// `minRec ≤ V` and every share ≤ 10⁴, `payouts` on `R_f = recoveryWithFloor(minRec, R)` returns
+    /// `S = max(0, max(R, minRec) − D)` and `A + B ≤ S`. `A + B ≤ S` follows from the path conditions of `payouts`
+    /// alone (`kr = min(S, G) − A` does not underflow, `B = S − A − kr`), so no query needs the semantics of the fee
+    /// product or quotient; `check_PROP_015_settlementIdentity` passes on the same terms.
+    function check_PROP_015_gapSettlesWithoutRevertPayouts(
         uint256 value,
+        uint256 debt,
+        uint256 minRec,
+        uint256 recovered,
+        uint256 share
+    ) public pure {
+        vm.assume(value < 2 ** 120 && debt < 2 ** 120 && minRec <= value && recovered < 2 ** 120);
+        vm.assume(share <= BPS);
+        uint256 rf = SettlementMath.recoveryWithFloor(minRec, recovered);
+        assert(rf == (recovered > minRec ? recovered : minRec));
+        SettlementMath.Payouts memory p = SettlementMath.payouts(value, debt, rf, share);
+        assert(p.surplus == _surplusOnFloor(minRec, recovered, debt));
+        assert(p.avanaFee + p.borrowerSurplus <= p.surplus);
+    }
+
+    // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-061, REQ-SWAP-062, Q-397, Q-404
+    /// @notice The second case of `check_PROP_015_gapSettlesWithoutRevertPayouts`: for every `D`, `Kf − D`, `R` and
+    /// `minRec` below 2^120 and every fee `A` and borrower surplus `B` with `A + B ≤ S = max(0, max(R, minRec) − D)`,
+    /// the gap is at most `max(0, minRec − R)` and `keeperPayout` with that top-up does not revert and balances.
+    /// Coverage: every input of the single check (`minRec ≤ V < 2^120`, share 2,000) is an input of the `Payouts` case,
+    /// which gives its `A`, `B` the bound `A + B ≤ S` with this `S`; `V` and the share reach the gap and the payout
+    /// only through `A` and `B`. So the two cases cover the single check, and with the share symbolic in the `Payouts` case
+    /// they extend it to every share ≤ 10⁴. Every term here is a sum, a difference or a comparison: no product and
+    /// no division.
+    function check_PROP_015_gapSettlesWithoutRevertAnyPayouts(
         uint256 debt,
         uint256 extraFunding,
         uint256 minRec,
-        uint256 recovered
+        uint256 recovered,
+        uint256 fee,
+        uint256 surplusToBorrower
     ) public {
-        vm.assume(value < 2 ** 120 && debt < 2 ** 120 && extraFunding < 2 ** 120);
-        vm.assume(minRec <= value && recovered < 2 ** 120);
-        uint256 callerFunds = debt + extraFunding;
-        Flows memory c = Flows(callerFunds, recovered, 0, debt);
-        SettlementMath.Payouts memory p =
-            SettlementMath.payouts(value, debt, SettlementMath.recoveryWithFloor(minRec, recovered), 2000);
-        uint256 gap = SettlementMath.roundingGap(debt, p.avanaFee, p.borrowerSurplus, callerFunds, recovered);
-        uint256 floorGap = minRec > recovered ? minRec - recovered : 0;
+        vm.assume(debt < 2 ** 120 && extraFunding < 2 ** 120 && minRec < 2 ** 120 && recovered < 2 ** 120);
+        uint256 surplus = _surplusOnFloor(minRec, recovered, debt);
+        vm.assume(fee <= surplus && surplusToBorrower <= surplus - fee);
+        SettlementMath.Payouts memory p;
+        p.avanaFee = fee;
+        p.borrowerSurplus = surplusToBorrower;
+        _gapWithinFloorGap(Flows(debt + extraFunding, recovered, 0, debt), minRec, p);
+    }
+
+    /// @dev `S = max(0, R_f − D)` with `R_f = max(R, minRec)`.
+    function _surplusOnFloor(
+        uint256 minRec,
+        uint256 recovered,
+        uint256 debt
+    ) internal pure returns (uint256) {
+        uint256 rf = recovered > minRec ? recovered : minRec;
+        return rf > debt ? rf - debt : 0;
+    }
+
+    /// @dev The gap of the flows `c` with `A`, `B` from `p` is at most the floor gap, and the call settles with the
+    /// floor gap as its top-up.
+    function _gapWithinFloorGap(
+        Flows memory c,
+        uint256 minRec,
+        SettlementMath.Payouts memory p
+    ) internal {
+        uint256 gap = SettlementMath.roundingGap(c.debt, p.avanaFee, p.borrowerSurplus, c.callerFunds, c.recovered);
+        uint256 floorGap = minRec > c.recovered ? minRec - c.recovered : 0;
         assert(gap <= floorGap);
         c.shortfall = floorGap;
         _checkSettles(c, p);
@@ -346,20 +428,51 @@ contract SettlementMathHalmosTest is Test {
     // PROP-018 verifies: SPEC-LIQ-005, SPEC-LIQ-014, SPEC-LIQ-018
     /// @notice Unit, leg and pending values for 6-decimal tokens against an 18-decimal $1 debt asset, prices below 2^64:
     /// the unit value is the ceiling and at least 1, the leg value the floor, the pending value the ceiling, of the exact
-    /// value.
-    function check_PROP_018_unitAndPendingValues(
+    /// value. A $1 debt asset (`Pdebt = 10⁸`); symbolic quotes are covered by `testFuzz_TEST_198_decimals6And18`.
+    /// Split into the unit value (this case, every price) and the leg values (`...Leg`, every amount and price), and
+    /// proved as formulas: the single check ran out of the 5-hour budget on `Math.mulDiv`, whose high half
+    /// `mulmod(x, y, 2^256 − 1) − x × y` Halmos could not show to be 0 without the full 512-bit product. Here
+    /// `unitValue(price, 6, 18, 10⁸) = mulDiv(1, Y, 10¹⁴, Ceil)` with `Y = price × 10¹⁸` equals
+    /// `Y / 10¹⁴ + [mulmod(1, Y, 10¹⁴) > 0]`; MATH-ST-145 proves that formula at least 1, at least
+    /// `price × 10¹² / 10⁸` and less than it plus 1 (the earlier assertions).
+    function check_PROP_018_unitAndPendingValuesUnit(
+        uint256 price
+    ) public pure {
+        vm.assume(price >= 1 && price < 2 ** 64);
+        uint256 y = price * 1e18; // price × 10^dd, dd = 18
+        // Y < 2^124, so mulmod(1, Y, 2^256 − 1) = Y by EVM semantics (MATH-ST-145): this excludes no price. It states
+        // the fact on the term `Math.mulDiv` computes, so its branch on the high half of the product needs no 512-bit
+        // division.
+        vm.assume(mulmod(1, y, type(uint256).max) == y);
+        uint256 u = SettlementMath.unitValue(price, 6, 18, 1e8);
+        assert(u == y / 1e14 + SafeCast.toUint(mulmod(1, y, 1e14) > 0));
+    }
+
+    // PROP-018 verifies: SPEC-LIQ-005, SPEC-LIQ-014, SPEC-LIQ-018
+    /// @notice The leg and pending values of `check_PROP_018_unitAndPendingValuesUnit`, for every amount below 2^64
+    /// and price in `[1, 2^64)`: with `Y = price × 10¹⁸`, `legValue(amount, price, 6, 18, 10⁸) = (amount × Y) / 10¹⁴`
+    /// and `pendingLegValue(...) = (amount × Y) / 10¹⁴ + [mulmod(amount, Y, 10¹⁴) > 0]`. MATH-ST-146 proves
+    /// `amount × Y < 2^256 − 1` and, for these formulas, `lv × 10⁸ ≤ amount × price × 10¹² < (lv + 1) × 10⁸`,
+    /// `pv × 10⁸ ≥ amount × price × 10¹²` and `pv ≤ lv + 1` (the earlier assertions). Together with the unit case this
+    /// covers every input of the single check.
+    function check_PROP_018_unitAndPendingValuesLeg(
         uint256 amount,
         uint256 price
     ) public pure {
         vm.assume(amount < 2 ** 64 && price >= 1 && price < 2 ** 64);
-        uint256 quote = 1e8; // a $1 debt asset; symbolic quotes are covered by testFuzz_TEST_198_decimals6And18
-        uint256 num = amount * price * 1e12; // 10^(18 - 6)
-        uint256 u = SettlementMath.unitValue(price, 6, 18, quote);
-        assert(u >= 1 && u * quote >= price * 1e12 && (u - 1) * quote < price * 1e12);
-        uint256 lv = SettlementMath.legValue(amount, price, 6, 18, quote);
-        assert(lv * quote <= num && (lv + 1) * quote > num);
-        uint256 pv = SettlementMath.pendingLegValue(amount, price, 6, 18, quote);
-        assert(pv * quote >= num && pv <= lv + 1);
+        uint256 y = price * 1e18; // price × 10^dd, dd = 18
+        uint256 prod;
+        unchecked {
+            prod = amount * y; // below 2^188 (MATH-ST-146), so the product does not wrap
+        }
+        // amount × Y < 2^256 − 1, so mulmod(amount, Y, 2^256 − 1) = amount × Y by EVM semantics (MATH-ST-146): this
+        // excludes no input. It states the fact on the terms `Math.mulDiv` computes (`x * y` and
+        // `mulmod(x, y, not(0))`), so its branch on the high half of the product needs no 512-bit product.
+        vm.assume(mulmod(amount, y, type(uint256).max) == prod);
+        uint256 lv = SettlementMath.legValue(amount, price, 6, 18, 1e8);
+        assert(lv == prod / 1e14);
+        uint256 pv = SettlementMath.pendingLegValue(amount, price, 6, 18, 1e8);
+        assert(pv == prod / 1e14 + SafeCast.toUint(mulmod(amount, y, 1e14) > 0));
     }
 
     // PROP-069 verifies: SPEC-LIQ-008, SPEC-LIQ-009, INV-036, INV-086, Q-256, Q-333
@@ -377,18 +490,25 @@ contract SettlementMathHalmosTest is Test {
     }
 
     // PROP-069 verifies: SPEC-LIQ-009, INV-036, INV-086, Q-256
-    /// @notice `A` is non-decreasing in `V`.
-    function check_PROP_069_feeMonotoneInValue(
-        uint256 v1,
-        uint256 v2,
+    /// @notice `A` is non-decreasing in `V`. Proved as a formula: for every `V`, `R'`, `D` below 2^128 and share
+    /// ≤ 10⁴, `payouts` returns `G = max(0, V − D)`, `S = max(0, R' − D)` and `A = min(⌊G × share / 10⁴⌋, S)`, and
+    /// MATH-ST-144 proves that `G × share < 2^256` (the uint256 terms are the exact integers) and that the formula is
+    /// non-decreasing in `V` for every share ≤ 10⁴. Coverage: each of the two values `v1 ≤ v2` of the earlier form is a
+    /// `V` of this check, with the same `R'`, `D` and share. The earlier form compared `G1 × share` with `G2 × share`,
+    /// two products of symbolic values, and ran out of the 5-hour budget; here the reference fee multiplies the same
+    /// `oracleGain` term the code multiplies, so no query needs the semantics of the product or the division.
+    function check_PROP_069_feeMonotoneInValueFormula(
+        uint256 value,
         uint256 rp,
         uint256 debt,
         uint256 share
     ) public pure {
-        vm.assume(v1 <= v2 && v2 < 2 ** 128 && rp < 2 ** 128 && debt < 2 ** 128 && share <= BPS);
-        assert(
-            SettlementMath.payouts(v1, debt, rp, share).avanaFee <= SettlementMath.payouts(v2, debt, rp, share).avanaFee
-        );
+        vm.assume(value < 2 ** 128 && rp < 2 ** 128 && debt < 2 ** 128 && share <= BPS);
+        SettlementMath.Payouts memory p = SettlementMath.payouts(value, debt, rp, share);
+        assert(p.oracleGain == (value > debt ? value - debt : 0));
+        assert(p.surplus == (rp > debt ? rp - debt : 0));
+        uint256 feeOnGain = p.oracleGain * share / BPS;
+        assert(p.avanaFee == (feeOnGain < p.surplus ? feeOnGain : p.surplus));
     }
 
     // PROP-069 verifies: SPEC-LIQ-009, INV-086, Q-256

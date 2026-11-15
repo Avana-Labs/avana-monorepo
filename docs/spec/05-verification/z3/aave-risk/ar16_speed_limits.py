@@ -135,6 +135,17 @@ witness('MATH-AR-86d', 'on the raw D a split would grow L inside the window (why
         + [u <= limN1, u + Int('more') <= limN2, Int('more') > 0])
 prove('MATH-AR-86e', 'fail closed: an unset scope (all zero) refuses every positive charge',
       [rate == 0, lo == 0, hi == 0, base >= 0] + side + [x > 0], Not(x <= lim))
+# The reference formula of check_PROP_111_ownChargesNeverRaiseTheLimitBaseGrows (contracts/test/halmos/
+# SpeedLimitMath.halmos.t.sol), which proves SpeedLimitMath.limit equals it for every rate <= 10^4, min <= max < 2^96
+# and base <= 2^128: L does not decrease from base to base + 1. The product PF = rate x base is a fresh variable and
+# rate x (base + 1) is written PF + rate, which is exact; dropping PF's definition only weakens the premises.
+PF, qF0, qF1 = Ints('PF qF0 qF1')
+limF0 = If(qF0 < lo, lo, If(qF0 > hi, hi, qF0))
+limF1 = If(qF1 < lo, lo, If(qF1 > hi, hi, qF1))
+prove('MATH-AR-86f', 'L(base + 1) >= L(base) for every rate in [0, 10^4] and base >= 0, with rate x (base + 1) = rate x base + rate',
+      [rate >= 0, rate <= BPS, PF >= 0, lo >= 0, hi >= lo,
+       qF0 * BPS <= PF, PF < qF0 * BPS + BPS, qF1 * BPS <= PF + rate, PF + rate < qF1 * BPS + BPS],
+      limF1 >= limF0)
 
 # ---------------------------------------------------------------------------
 # MATH-AR-87  SPEC-CAP-013: rounding of the USD charge (against the borrower) and the Spoke debt (floor).
@@ -147,6 +158,18 @@ prove('MATH-AR-87a', 'the USD charge is never below the exact value (ceiling)', 
 prove('MATH-AR-87b', 'the USD charge exceeds the exact value by less than one 8-decimal unit', b87,
       usd * p10 - amt * price < p10)
 prove('MATH-AR-87c', 'products stay below 2^192 (no overflow in mulDiv)', b87, amt * price < 2**192)
+# The reference formula of check_PROP_112_usdChargeIsTheCeilingDec6 and Dec18 (contracts/test/halmos/
+# SpeedLimitMath.halmos.t.sol), which prove SpeedLimitMath.usdOf equals u = floor(P / 10^d) + (P mod 10^d > 0 ? 1 : 0)
+# with P = amount x price8 < 2^192: u is the ceiling bounded as in MATH-AR-87a-b, for d = 6 and d = 18.
+h87d, g87d = [], []
+for d87 in (6, 18):
+    D87 = 10**d87
+    P87, q87, r87 = Ints(f'P{d87} q{d87} r{d87}')
+    u87 = q87 + If(r87 > 0, 1, 0)
+    h87d += [P87 >= 0, P87 < 2**192, P87 == q87 * D87 + r87, r87 >= 0, r87 < D87]
+    g87d += [u87 * D87 >= P87, u87 * D87 < P87 + D87]
+prove('MATH-AR-87d', 'floor(P / 10^d) + (P mod 10^d > 0 ? 1 : 0) is at least P / 10^d and less than one unit above it (d = 6, 18)',
+      h87d, And(*g87d))
 
 # ---------------------------------------------------------------------------
 # MATH-AR-88  SPEC-CAP-011 next-capacity time (moreAt) and amount.

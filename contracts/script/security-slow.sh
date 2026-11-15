@@ -19,10 +19,9 @@
 #   medusa   every `*Properties` harness in test/invariant/echidna/ and test/invariant/medusa/ (property and
 #            assertion tests in one campaign), each on a build of its own file and imports
 #            (out-security/build/medusa/<Name>, slow-tier settings) with a copy of medusa.json pointing at it
-#   halmos   every `check_` function in test/halmos/ (contract names ending in HalmosTest); a single check listed in
-#            security/halmos-bounds.json runs within that entry's wall-clock budget, and when the budget (or a solver
-#            timeout) ends it without a counterexample it is reported as bounded, no violation found, and passes; a
-#            counterexample always fails, and so does an unlisted check that runs out (script/halmos-outcome.py)
+#   halmos   every `check_` function in test/halmos/ (contract names ending in HalmosTest), within HALMOS_TIMEOUT; a
+#            counterexample fails, and so does a check that the budget or a solver timeout ends before it completes
+#            (script/halmos-outcome.py; security/halmos-bounds.json must list no check)
 #   hevm     against a local anvil chain (see hevm_targets below): `hevm symbolic` on each assertion entry point of
 #            every harness, deployed so its constructor has run (each must reach QED; a counterexample fails the step
 #            only when replaying it with `cast call` on the deployed harness ends in Panic(1), and an hevm internal
@@ -51,8 +50,7 @@
 # names; empty: all), MEDUSA_TEST_LIMIT
 # (medusa.json), HEVM_SMT_TIMEOUT=300 seconds per query, HEVM_SMT_MEMORY=1024 MB per z3 instance (hevm's own
 # default), one z3 instance per hevm run (--num-solvers 1), HALMOS_LOOP=8 with one solver thread (--solver-threads 1),
-# HALMOS_TIMEOUT (seconds of wall clock per Halmos run; empty: none) unless security/halmos-bounds.json sets the
-# budget, and the loop bound, of the one selected check;
+# HALMOS_TIMEOUT (seconds of wall clock per Halmos run; empty: none);
 # SECURITY_MEMORY_MAX (empty: no cap) bounds the memory of each hevm and Halmos run (see `capped`);
 # BUILD_CHUNK=60 files per strict build group;
 # MUTATE_LAYERS and MUTATE_CONTRACTS (space-separated; empty: every layer and contract of
@@ -369,20 +367,14 @@ step_halmos() {
   fi
   # HALMOS_CONTRACTS selects exact contract names and HALMOS_TESTS exact test function names (CI runs one of each per
   # job); halmos fails with "No tests with" when the selection matches no test.
-  local match='HalmosTest$' tests=() single=() budget=${HALMOS_TIMEOUT:-} loop=$HALMOS_LOOP listed bloop
+  local match='HalmosTest$' tests=() single=() budget=${HALMOS_TIMEOUT:-} loop=$HALMOS_LOOP
   [ -n "${HALMOS_CONTRACTS:-}" ] && match="^($(echo $HALMOS_CONTRACTS | tr ' ' '|'))\$"
   [ -n "${HALMOS_TESTS:-}" ] && tests=(--match-test "^($(echo $HALMOS_TESTS | tr ' ' '|'))\\(")
-  # A single-check run (one contract and one test function, as each CI job runs) of a check listed in
-  # security/halmos-bounds.json takes that entry's wall-clock budget (`timeout`, seconds) and, when given, its loop
-  # bound; any other run takes HALMOS_TIMEOUT (empty: no wall-clock budget) and HALMOS_LOOP.
+  # security/halmos-bounds.json must hold an empty `bounded` list: every check runs to completion or fails.
+  "$PY" script/halmos-outcome.py check || return 1
+  # A single-check run (one contract and one test function, as each CI job runs) requires exactly "1 passed".
   if [ "$(wc -w <<<"${HALMOS_CONTRACTS:-}")" -eq 1 ] && [ "$(wc -w <<<"${HALMOS_TESTS:-}")" -eq 1 ]; then
     single=("$(echo $HALMOS_CONTRACTS)" "$(echo $HALMOS_TESTS)")
-    listed=$("$PY" script/halmos-outcome.py budget "${single[@]}") || return 1
-    if [ -n "$listed" ]; then
-      read -r budget bloop <<<"$listed"
-      [ "$bloop" = - ] || loop=$bloop
-      echo "halmos ${single[0]}.${single[1]}: listed in security/halmos-bounds.json, budget ${budget}s, loop $loop"
-    fi
   fi
   # timeout: at the budget Halmos gets SIGTERM, on which it shuts its solver processes down, and SIGKILL 5 minutes
   # later if it has not exited (a solver call in progress holds the signal back); timeout signals its whole process
@@ -410,9 +402,9 @@ step_halmos() {
   if [ -n "$budget" ]; then
     if [ "$rc" -eq 124 ] || { [ "$rc" -eq 137 ] && [ $((SECONDS - start)) -ge "$budget" ]; }; then exhausted=1; fi
   fi
-  # pass, bounded or fail (script/halmos-outcome.py): a counterexample always fails; a listed single check that its
-  # budget or a solver timeout ended without one is "bounded, no violation found" and passes; an unlisted check that
-  # runs out fails. The outcome goes to out-security/halmos-outcome.json and, in CI, to the job summary.
+  # pass or fail (script/halmos-outcome.py): a counterexample fails, and so does a check that its budget or a solver
+  # timeout ended before it completed. The outcome goes to out-security/halmos-outcome.json and, in CI, to the job
+  # summary.
   "$PY" script/halmos-outcome.py classify "$OUT/halmos.txt" "$rc" "$exhausted" "$OUT/halmos-outcome.json" \
     ${single[@]+"${single[@]}"}
 }

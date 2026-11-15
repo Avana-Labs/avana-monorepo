@@ -31903,10 +31903,11 @@
     ]
   },
   "SPEC-CAP-012": {
-    "hash": "8181a04fc01b0061",
+    "hash": "7f3c963714f5e893",
     "checks": [
       "BorrowSpeedInputs",
       "IRiskModuleChecks",
+      "IRiskModuleSpeedLogic",
       "MATH-AR-86",
       "MATH-AR-89",
       "MarketSpeedLimits",
@@ -31915,6 +31916,7 @@
       "RiskModuleSpeedLogic",
       "SpeedLimit",
       "SpeedLimitMath",
+      "SpeedWindow",
       "TEST-320",
       "TEST-321",
       "TEST-322",
