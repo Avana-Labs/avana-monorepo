@@ -247,8 +247,8 @@ contract RiskModuleOrderUnitTest is RiskModuleFixture {
         _inject(VT_PAUSED);
         s = riskModule.getAccountGateStatus(address(proxy));
         assertTrue(s.markets[0].aaveReservePaused);
-        // The paused vault-token reserve is also the Spoke-halted drift reason.
-        assertEq(uint8(s.driftReason), uint8(DriftReason.SpokeHalted));
+        // A paused vault-token reserve is the market's own containment, not drift (REQ-RISK-014).
+        assertEq(uint8(s.driftReason), uint8(DriftReason.None));
         vtCfg.paused = false;
         rSpoke.setConfig(VT_RESERVE, vtCfg);
         _inject(SHARES);

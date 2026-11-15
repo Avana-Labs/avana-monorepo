@@ -130,7 +130,7 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
         _release(address(adapter));
         (SpeedView memory m,) = riskModule.getBorrowSpeed(mid, GHO_RESERVE);
         assertEq(m.used, 100_000e8);
-        assertEq(m.limit, 225_000e8, "25 % of ($1,000,000 - $100,000)");
+        assertEq(m.limit, 250_000e8, "25 % of the window-start base $1,000,000");
     }
 
     // ─── Helpers ───

@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
+import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
 import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
@@ -210,14 +211,22 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
 
     // TEST-239 verifies: REQ-ADAPTER-080, REQ-ADAPTER-086, REQ-ADAPTER-047, Q-356
     /// @notice With every gate the RiskModule applies failing (sequencer aside, which the Adapter itself reads for a
-    /// repay with collateral), a repay with collateral completes and calls the RiskModule not once.
+    /// repay with collateral), a repay with collateral completes and calls no RiskModule check (only the speed credit).
     function test_TEST_239_repayWithCollateralCallsNoRiskModule() public {
         lpOracleA.setState(PriceState.Expired, 0, false);
         usdcOracle.setReport(PriceState.Expired, uint64(block.timestamp), false);
         registry.setLatched(bytes32(MARKET_ID), BreakerReasons.MANUAL, 0);
         swap.setActiveKeeperCount(0);
         swap.setDeleverage(1000e18, 2e12, 0);
-        vm.expectCall(address(rm), "", 0);
+        // The one RiskModule call an exit makes is the speed credit (REQ-RISK-005); no check is called.
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.preBorrowCheck.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.preWithdrawCheck.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.postHealthCheck.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.checkPledge.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.pokeBreakers.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.pokeConfig.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.checkRemainingRecord.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.checkAaveConfig.selector), 0);
         RepayWithCollateralParams memory params = _rwc(MARKET_ID, k1, 500_000_000, debtReserveId);
         vm.prank(alice);
         (uint256 repaid,) = adapterC.repayWithCollateral(params);
@@ -226,11 +235,19 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
     }
 
     // TEST-099 verifies: REQ-ADAPTER-047, REQ-ADAPTER-086, REQ-PROXY-035, INV-043, INV-045
-    /// @notice Every exit completes with every RiskModule gate failing, the sequencer down included, and none calls
-    /// the RiskModule.
+    /// @notice Every exit completes with every RiskModule gate failing, the sequencer down included, and none calls a
+    /// RiskModule check (each repay and release only gives room back to the speed windows).
     function test_TEST_099_exitsCallNoRiskModule() public {
         _stopEverythingTheRiskModuleReads();
-        vm.expectCall(address(rm), "", 0);
+        // The one RiskModule call an exit makes is the speed credit (REQ-RISK-005); no check is called.
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.preBorrowCheck.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.preWithdrawCheck.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.postHealthCheck.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.checkPledge.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.pokeBreakers.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.pokeConfig.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.checkRemainingRecord.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.checkAaveConfig.selector), 0);
         uint256 g = _debtOf(p, debtReserveId);
         uint256 u = _debtOf(p, usdcReserveId);
         _fund(alice, debtReserveId, g);
