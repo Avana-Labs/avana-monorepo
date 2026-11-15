@@ -51,7 +51,7 @@ contract AvanaFirstLossReserveInvariantTest is Test, HandlerReach {
         address[] memory own = new address[](2);
         (own[0], own[1]) = (address(handler), address(this));
         Reach memory r = _replayLanded(address(handler), actions, bytes4(0), 32, 50, 0, own, true);
-        _check(r, names, new string[](0), _floors(0, 0), new uint256[](0));
+        _check(r, names, new string[](0), _floors(5, 0), new uint256[](0));
     }
 
     function _reached() internal pure override returns (bool[] memory hit) {
@@ -60,7 +60,26 @@ contract AvanaFirstLossReserveInvariantTest is Test, HandlerReach {
 
     /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
     function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
-        (actions, names, kinds) = (new bytes4[](0), new string[](0), new int16[][](0));
+        (actions, names, kinds) = (new bytes4[](5), new string[](5), new int16[][](5));
+        (actions[0], names[0]) = (AvanaFirstLossReserveHandler.reportDeficit.selector, "reportDeficit");
+        kinds[0] = new int16[](2);
+        kinds[0][0] = 256;
+        kinds[0][1] = 256;
+        (actions[1], names[1]) = (AvanaFirstLossReserveHandler.cover.selector, "cover");
+        kinds[1] = new int16[](2);
+        kinds[1][0] = 256;
+        kinds[1][1] = 256;
+        (actions[2], names[2]) = (AvanaFirstLossReserveHandler.warp.selector, "warp");
+        kinds[2] = new int16[](1);
+        kinds[2][0] = 256;
+        (actions[3], names[3]) = (AvanaFirstLossReserveHandler.fund.selector, "fund");
+        kinds[3] = new int16[](2);
+        kinds[3][0] = 256;
+        kinds[3][1] = 256;
+        (actions[4], names[4]) = (AvanaFirstLossReserveHandler.setAllowlist.selector, "setAllowlist");
+        kinds[4] = new int16[](2);
+        kinds[4][0] = 256;
+        kinds[4][1] = 1;
     }
 
     function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {

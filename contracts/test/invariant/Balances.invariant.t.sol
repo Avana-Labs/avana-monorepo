@@ -255,7 +255,7 @@ contract BalancesInvariantTest is Deployments, HandlerReach {
         address[] memory own = new address[](2);
         (own[0], own[1]) = (address(handler), address(this));
         Reach memory r = _replayLanded(address(handler), actions, BalancesHandler.Skipped.selector, 32, 50, 0, own, true);
-        _check(r, names, new string[](0), _floors(0, 0), new uint256[](0));
+        _check(r, names, new string[](0), _floors(6, 0), new uint256[](0));
     }
 
     function _reached() internal pure override returns (bool[] memory hit) {
@@ -264,7 +264,32 @@ contract BalancesInvariantTest is Deployments, HandlerReach {
 
     /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
     function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
-        (actions, names, kinds) = (new bytes4[](0), new string[](0), new int16[][](0));
+        (actions, names, kinds) = (new bytes4[](6), new string[](6), new int16[][](6));
+        (actions[0], names[0]) = (BalancesHandler.supplyCollateral.selector, "supplyCollateral");
+        kinds[0] = new int16[](2);
+        kinds[0][0] = 256;
+        kinds[0][1] = 256;
+        (actions[1], names[1]) = (BalancesHandler.borrow.selector, "borrow");
+        kinds[1] = new int16[](3);
+        kinds[1][0] = 256;
+        kinds[1][1] = 256;
+        kinds[1][2] = 256;
+        (actions[2], names[2]) = (BalancesHandler.repay.selector, "repay");
+        kinds[2] = new int16[](3);
+        kinds[2][0] = 256;
+        kinds[2][1] = 256;
+        kinds[2][2] = 256;
+        (actions[3], names[3]) = (BalancesHandler.lenderSupply.selector, "lenderSupply");
+        kinds[3] = new int16[](2);
+        kinds[3][0] = 256;
+        kinds[3][1] = 256;
+        (actions[4], names[4]) = (BalancesHandler.lenderWithdraw.selector, "lenderWithdraw");
+        kinds[4] = new int16[](2);
+        kinds[4][0] = 256;
+        kinds[4][1] = 256;
+        (actions[5], names[5]) = (BalancesHandler.warp.selector, "warp");
+        kinds[5] = new int16[](1);
+        kinds[5][0] = 256;
     }
 
     function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {

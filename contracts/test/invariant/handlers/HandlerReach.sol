@@ -122,6 +122,13 @@ abstract contract HandlerReach is CommonBase {
             new uint256[](n), new uint256[](n), new uint256[](n), new uint256[](targets), runs, new uint256[](n)
         );
         uint256 snapshot = vm.snapshotState();
+        // Each step allocates its calldata, return data and state diff, and none of it is read after the step, so the
+        // free memory pointer goes back to this mark after every step; otherwise a replay of 1,600 calls with state
+        // diffs ends in `MemoryLimitOOG`.
+        uint256 mark;
+        assembly ("memory-safe") {
+            mark := mload(0x40)
+        }
         for (uint256 run = 0; run < runs; ++run) {
             vm.revertToState(snapshot);
             uint256 seed = uint256(keccak256(abi.encode("reach", run)));
@@ -129,6 +136,9 @@ abstract contract HandlerReach is CommonBase {
                 seed = uint256(keccak256(abi.encode(seed)));
                 uint256 k = seed % n;
                 uint256 outcome = _step(handler, selectors[k], skipped, seed);
+                assembly ("memory-safe") {
+                    mstore(0x40, mark)
+                }
                 if (outcome == 0) ++r.ok[k];
                 else if (outcome == 1) ++r.noop[k];
                 else if (outcome == 2) ++r.skipped[k];
@@ -137,6 +147,9 @@ abstract contract HandlerReach is CommonBase {
             bool[] memory hit = _reached();
             for (uint256 t = 0; t < targets; ++t) {
                 if (hit[t]) ++r.reached[t];
+            }
+            assembly ("memory-safe") {
+                mstore(0x40, mark)
             }
         }
         vm.revertToState(snapshot);
