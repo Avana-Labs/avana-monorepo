@@ -316,12 +316,14 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
     }
 
     /// @dev `REQ-ORACLE-031`: every leg whose read decoded records its aggregator, round and timestamp; legs that did
-    /// not decode keep their previous record.
+    /// not decode keep their previous record. When the configuration read failed (`R_CONFIG_UNAVAILABLE`), no leg was
+    /// read, even if the route feeds were, so every record is kept.
     /// @custom:spec REQ-ORACLE-031
     function _recordSeen(
         DebtOracleLayout storage $,
         DebtEvaluation memory e
     ) internal {
+        if ((e.reasons & R_CONFIG_UNAVAILABLE) != 0) return;
         _recordLeg($.seen[0][0], e.routes[0], 0);
         _recordLeg($.seen[0][1], e.routes[0], 1);
         _recordLeg($.seen[1][0], e.routes[1], 0);
