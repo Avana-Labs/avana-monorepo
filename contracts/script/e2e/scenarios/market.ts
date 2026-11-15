@@ -1404,6 +1404,16 @@ async function failoverDrill(e: Env) {
   keeper.stdout.on("data", (d: Buffer) => log.push(...d.toString().split("\n").filter(Boolean)));
   keeper.stderr.on("data", (d: Buffer) => log.push(...d.toString().split("\n").filter(Boolean)));
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  /** Waits until the keeper reports `head` handled (keeper_head_block), at most `ms`. */
+  const keeperAt = async (head: bigint, ms: number) => {
+    const until = Date.now() + ms;
+    while (Date.now() < until) {
+      const text = await fetch(`http://127.0.0.1:${metricsPort}/metrics`).then((r) => r.text()).catch(() => "");
+      const at = /^keeper_head_block(?:\{[^}]*\})?\s+(\d+)/m.exec(text);
+      if (at && BigInt(at[1]!) >= head) return;
+      await sleep(250);
+    }
+  };
   try {
     let mode = "";
     for (let i = 0; i < 90 && !mode.includes('mode="active"'); i++) {
@@ -1446,9 +1456,11 @@ async function failoverDrill(e: Env) {
         break;
       }
       await e.advance(BLOCK_SECONDS);
-      await sleep(4_000);
       // Only this loop mines, so a liquidation seen now is in the block just mined.
       const head = await e.ctx.client.getBlockNumber();
+      // The next block comes once the keeper has handled this one, or after a block time: the window is counted in
+      // blocks, and a slow runner must not cost the keeper blocks that a 12 s chain would give it.
+      await keeperAt(head, BLOCK_SECONDS * 1_000);
       for (const [i, x] of accounts.entries()) {
         if (x.minedAt === null && (await e.debt(x.m, x.a)) < debtAtCrash[i]!) x.minedAt = head;
       }
@@ -1456,6 +1468,15 @@ async function failoverDrill(e: Env) {
   } finally {
     keeper.kill();
     await e.rpc("evm_setAutomine", [true]).catch(() => undefined);
+    // The keeper's breaker pokes during the crash latch the markets' breakers: reset them, as the Aave Protocol
+    // Guardian would, so the scenarios after this one pledge on these markets again.
+    for (const m of [um, sm]) {
+      const [latched] = (await e.read(e.registry, marketRegistryAbi, "marketBreaker", [m.marketId])) as readonly [number, bigint];
+      if (Number(latched) === 0) continue;
+      await e.gasFor(e.ctx.actors.aaveProtocolGuardian!);
+      await e.must("reset breaker", e.ctx.actors.aaveProtocolGuardian!, e.registry, marketRegistryAbi, "resetMarketBreaker", [m.marketId]);
+      n[`${m.name}.breaker`] = `latched reasons ${latched}, reset by the Aave Protocol Guardian`;
+    }
     rmSync(dir, { recursive: true, force: true });
     // The whole keeper log, kept for reading after a failure.
     n.log = joinPath(tmpdir(), `keeper-drill-${Date.now()}.log`);
