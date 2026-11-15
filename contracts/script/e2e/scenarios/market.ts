@@ -1435,12 +1435,12 @@ async function failoverDrill(e: Env) {
     // The keeper's startup transactions (an oracle poke per oracle) are mined and handled before the crash: with
     // automine on, each mines its own block, and blocks still coming during the crash would count against the window.
     for (let i = 0; i < 20; i++) {
-      const head = await e.ctx.client.getBlockNumber();
+      const head = await e.ctx.client.getBlockNumber({ cacheTime: 0 });
       await keeperAt(head, 15_000);
       await sleep(1_000);
-      if ((await e.ctx.client.getBlockNumber()) === head) break;
+      if ((await e.ctx.client.getBlockNumber({ cacheTime: 0 })) === head) break;
     }
-    const beforeCrash = await e.ctx.client.getBlockNumber();
+    const beforeCrash = await e.ctx.client.getBlockNumber({ cacheTime: 0 });
     // Blocks 12 s apart, mined only by this drill from here on: with automine on, each keeper transaction would mine
     // its own block and start the next pass, and a breaker poke due every block (REQ-RISK-091) would then mine blocks
     // without end. The keeper's transactions wait in the mempool for the next block, as on a real chain. The crash is
@@ -1459,7 +1459,7 @@ async function failoverDrill(e: Env) {
     }
     await crash;
     // Each account's clock starts at the first block whose state has it below HF 1, as the keeper measures it.
-    const afterCrash = await e.ctx.client.getBlockNumber();
+    const afterCrash = await e.ctx.client.getBlockNumber({ cacheTime: 0 });
     for (const x of accounts) {
       for (let b = beforeCrash + 1n; b <= afterCrash && x.since === null; b++) {
         const d = (await e.ctx.client.readContract({ address: x.m.spoke, abi: aaveV4SpokeAbi, functionName: "getUserAccountData", args: [x.a.proxy], blockNumber: b })) as { healthFactor: bigint };
@@ -1476,8 +1476,10 @@ async function failoverDrill(e: Env) {
         break;
       }
       await e.advance(BLOCK_SECONDS);
-      // Only this loop mines, so a liquidation seen now is in the block just mined.
-      const head = await e.ctx.client.getBlockNumber();
+      // Only this loop mines, so a liquidation seen now is in the block just mined. Block numbers here are read with
+      // cacheTime 0: viem caches eth_blockNumber for its 4 s polling interval, and a cached number would date a
+      // liquidation one block early.
+      const head = await e.ctx.client.getBlockNumber({ cacheTime: 0 });
       // The next block comes once the keeper has handled this one, or after a block time: the window is counted in
       // blocks, and a slow runner must not cost the keeper blocks that a 12 s chain would give it.
       await keeperAt(head, BLOCK_SECONDS * 1_000);
