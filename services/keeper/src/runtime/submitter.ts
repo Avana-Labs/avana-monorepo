@@ -102,6 +102,10 @@ export class Submitter {
     try {
       const f = await fees(this.client);
       const gas = gasLimit(sim.gasEstimate);
+      if (plan.job === "liquidation" && !reused) {
+        const hash = await this.preempt(ctx, plan, gas, f);
+        if (hash) return hash;
+      }
       return await this.nonces.withNonce(async (nonce) => {
         await this.checkCeiling(plan, nonce, gas, f);
         const raw = await this.sign(plan, nonce, gas, f);
@@ -120,6 +124,50 @@ export class Submitter {
       throw err;
     }
   }
+
+  /**
+   * Pre-emption (services/README.md, Submission > Pre-emption): every transaction of the instance shares one signer,
+   * so a due liquidation sent at a fresh nonce waits behind every pending poke. It is sent instead at the lowest nonce
+   * a pending non-liquidation transaction holds, not yet mined, as a replacement of that transaction: fees at least the
+   * replacement bump over it, and the gas ceiling as for any send. The dropped transaction is handed back through
+   * `preempted`, so its job sends it again in a later pass. A pending liquidation is never pre-empted. Returns null
+   * when there is nothing to pre-empt, or when the node refuses the replacement; the liquidation then takes a fresh
+   * nonce.
+   */
+  private async preempt(ctx: BlockContext, plan: TxPlan, gas: bigint, fresh: Pending["fees"]): Promise<Hex | null> {
+    const mined = await this.client.getTransactionCount({ address: this.signer.address, blockTag: "latest" });
+    let victim: [string, Pending] | null = null;
+    for (const entry of this.pending) {
+      const p = entry[1];
+      if (p.plan.job === "liquidation" || p.nonce < mined) continue;
+      if (victim === null || p.nonce < victim[1].nonce) victim = entry;
+    }
+    if (victim === null) return null;
+    const [key, p] = victim;
+    const bumped = bumpFees(p.fees);
+    const f = {
+      maxFeePerGas: bumped.maxFeePerGas > fresh.maxFeePerGas ? bumped.maxFeePerGas : fresh.maxFeePerGas,
+      maxPriorityFeePerGas: bumped.maxPriorityFeePerGas > fresh.maxPriorityFeePerGas ? bumped.maxPriorityFeePerGas : fresh.maxPriorityFeePerGas,
+    };
+    await this.checkCeiling(plan, p.nonce, gas, f);
+    const raw = await this.nonces.withNonce((n) => this.sign(plan, n, gas, f), p.nonce);
+    try {
+      await sendPrivate(this.cfg.rpc.privateSend, raw, this.post);
+    } catch (err) {
+      logAttempt({ at: new Date().toISOString(), chainId: this.cfg.chain.id, blockNumber: ctx.blockNumber.toString(10), job: plan.job, subject: plan.subject, outcome: "sendRefused", reason: `preemption: ${String(err)}`, nonce: p.nonce, params: stringifyParams(plan.params) });
+      return null;
+    }
+    const hash = keccakOf(raw);
+    this.pending.delete(key);
+    this.inventory.release(this.cfg.chain.id, key);
+    this.pending.set(plan.subject, { plan, nonce: p.nonce, hash, sentBlock: ctx.blockNumber, fees: f, replacements: 0 });
+    logAttempt({ at: new Date().toISOString(), chainId: this.cfg.chain.id, blockNumber: ctx.blockNumber.toString(10), job: p.plan.job, subject: key, outcome: "preempted", reason: `nonce taken by the liquidation of ${plan.subject}`, txHash: p.hash, nonce: p.nonce, params: stringifyParams(p.plan.params) });
+    this.preempted(p.plan);
+    return hash;
+  }
+
+  /** Called with a transaction a liquidation pre-empted, so its job can send it again (an oracle poke forgets its last poke). */
+  preempted: (plan: TxPlan) => void = () => {};
 
   /**
    * After a reorg: every transaction seen mined whose nonce the new head no longer counts as consumed was removed with

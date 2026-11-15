@@ -49,6 +49,13 @@ export interface ChainLoopDeps {
 
 export function chainLoop(d: ChainLoopDeps) {
   const book = new PokeBook();
+  // A poke a liquidation pre-empted is sent again: an oracle poke forgets its last poke so it is due in the next pass;
+  // a breaker poke is due again as long as its simulation still records a breach.
+  if (d.submitter) {
+    d.submitter.preempted = (plan) => {
+      if (plan.job === "oraclePoke") book.lastPokeAt.delete(plan.params.oracle as Address);
+    };
+  }
   const hints = new Map<string, RetryHint>();
   let poolMismatchPaged = false;
   let previous: Head | null = null;
