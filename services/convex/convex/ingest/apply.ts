@@ -96,7 +96,7 @@ export const applySnapshot = internalMutation({
     }
     for (const m of s.markets) {
       const slug = (await contentSlug(ctx, "pool", s.chainId, m.marketId)) ?? defaultSlug.pool(s.chainId, m.marketId);
-      const row = { ...m, tokens: [...m.tokens], tokenDecimals: [...m.tokenDecimals], borrow: [...m.borrow], slug, updatedAt: now };
+      const row = { ...m, tokens: [...m.tokens], tokenDecimals: [...m.tokenDecimals], caps: { ...m.caps, tokenUsdCaps8: [...m.caps.tokenUsdCaps8] }, borrow: [...m.borrow], slug, updatedAt: now };
       const existing = await ctx.db.query("markets").withIndex("by_key", (q) => q.eq("chainId", m.chainId).eq("marketId", m.marketId)).unique();
       if (existing) await ctx.db.replace(existing._id, row);
       else await ctx.db.insert("markets", row);

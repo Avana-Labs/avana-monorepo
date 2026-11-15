@@ -20,6 +20,7 @@ FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/protocol/package.json packages/protocol/
+COPY packages/export/package.json packages/export/
 COPY services/common/package.json services/common/
 COPY services/indexer/package.json services/indexer/
 COPY services/keeper/package.json services/keeper/

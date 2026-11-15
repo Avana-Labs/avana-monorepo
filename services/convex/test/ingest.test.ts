@@ -8,8 +8,7 @@ import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { keccak256, toBytes } from "viem";
 import { EXPORT_SCHEMA_VERSION, type ExportPage, canonicalJson } from "@avana/services-common/export";
-import { PageRejected, validatePage } from "../convex/lib/exportPage.ts";
-import { signRequest } from "../convex/lib/hmac.ts";
+import { PageRejected, signRequest, validatePage } from "@avana/export";
 import { MetadataRejected, metadataHash, parseMetadata } from "../convex/lib/metadata.ts";
 
 const H = (n: number) => `0x${n.toString(16).padStart(64, "0")}` as const;

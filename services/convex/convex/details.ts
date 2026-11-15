@@ -7,9 +7,11 @@ import type { QueryCtx } from "./_generated/server";
 import { type Values, combineSources, filledBuckets } from "./lib/charts.ts";
 import { chainSlug } from "./lib/format.ts";
 import { hubAssetKey, interestRateModel, marketAllocation, poolBorrowables, headlineReserve } from "./lib/pages.ts";
-import { assetRiskParameters, atRisk, cashflow, lendRiskParameters, liquidationRisk, poolRiskAssessment, poolRiskParameters, type LiquidationWindow } from "./lib/riskViews.ts";
+import { assetRiskParameters, atRisk, cashflow, contentRiskAssessment, lendRiskParameters, liquidationRisk, poolRiskAssessment, poolRiskParameters, type LiquidationWindow } from "./lib/riskViews.ts";
 import type { ChangelogRow, ContractAddressRow, PageScope } from "./lib/uiTypes.ts";
 import { type World, bySlug, contentOf, lendKey, reserveKey, scopePoints, sliceOf, symbolOf } from "./model.ts";
+import { liquidationTotals } from "./lib/rollups.ts";
+import { liquidationPricing } from "./rollups.ts";
 import type { HubAssetDoc, MarketDoc, SpokeReserveDoc } from "./model.ts";
 
 const contentScope = (s: PageScope) => s;
@@ -49,7 +51,15 @@ export async function readContent(ctx: QueryCtx, w: World, scope: PageScope, slu
   const page = pageKey(w, scope, slug);
   const c = page ? contentOf(w, contentScope(scope), page.chainId, page.key) : null;
   if (!c) return null;
-  return { description: c.description, stats: c.stats, history: c.history, faqs: c.faqs, changelog: await readChangelog(ctx, w, scope, slug) };
+  return {
+    description: c.description,
+    stats: c.stats,
+    history: c.history,
+    faqs: c.faqs,
+    ...(c.links ? { links: c.links } : {}),
+    ...(c.risk ? { risk: c.risk } : {}),
+    changelog: await readChangelog(ctx, w, scope, slug),
+  };
 }
 
 export function readInterestRateModel(w: World, scope: "lend" | "asset", slug: string) {
@@ -75,14 +85,41 @@ export function readRiskParameters(w: World, scope: PageScope, slug: string) {
   const m = row as MarketDoc;
   const head = headlineReserve(w.reserves.filter((r) => r.chainId === m.chainId), m.spoke);
   const asset = head ? w.assetsByKey.get(hubAssetKey(head)) : undefined;
-  return poolRiskParameters(slug, m, asset?.drawnRateRay ?? null);
+  const room = readPoolBorrowables(w, slug).map((b) => b.availableNowUsd);
+  const borrowRoomUsd = room.length > 0 && room.every((x) => x !== null) ? room.reduce<number>((acc, x) => acc + (x ?? 0), 0) : null;
+  return poolRiskParameters(slug, m, asset?.drawnRateRay ?? null, borrowRoomUsd);
 }
 
-/** The premium card: a collateral market's own premium. Supply markets and debt reserves have none (card hidden). */
+/**
+ * The risk card. A collateral market shows its own premium plus any risk text its listing published; a Lend or Borrow
+ * asset page shows its listed risk text, and hides the card when the listing published none.
+ */
 export function readRisk(w: World, scope: PageScope, slug: string) {
-  if (scope !== "pool") return null;
+  const page = pageKey(w, scope, slug);
+  const c = page ? contentOf(w, scope, page.chainId, page.key) : null;
+  if (scope === "pool") {
+    const m = bySlug(w, "pool", slug) as MarketDoc | null;
+    return m ? poolRiskAssessment(m, c?.risk) : null;
+  }
+  return contentRiskAssessment(c?.risk, `${c?.name ?? slug} risk`);
+}
+
+/**
+ * `readRisk` with the pool's stored risk score (riskScores.ts): the score and level come from the job, and each
+ * scored input is added to the card's metrics. Without a stored score the card keeps the premium-based level.
+ */
+export async function readRiskScored(ctx: QueryCtx, w: World, scope: PageScope, slug: string) {
+  const card = readRisk(w, scope, slug);
+  if (!card || scope !== "pool") return card;
   const m = bySlug(w, "pool", slug) as MarketDoc | null;
-  return m ? poolRiskAssessment(m) : null;
+  const scored = m ? await ctx.db.query("riskScores").withIndex("by_market", (q) => q.eq("chainId", m.chainId).eq("marketId", m.marketId)).unique() : null;
+  if (!scored) return card;
+  return {
+    ...card,
+    score: scored.score,
+    level: scored.level,
+    metrics: [...card.metrics, ...scored.factors.map((x) => ({ id: `score:${x.id}`, label: x.label, value: x.value, hint: `${x.points} of the score (${scored.model})` }))],
+  };
 }
 
 export function readPoolBorrowables(w: World, slug: string) {
@@ -109,31 +146,9 @@ export async function readLiquidationRisk(ctx: QueryCtx, w: World, slug: string)
     .query("ingestedLogs")
     .withIndex("by_market", (q) => q.eq("marketKey", `${m.chainId}:${m.marketId}`).gte("at", now - 2 * 86_400_000))
     .collect();
-  const window = (from: number, to: number): LiquidationWindow => {
-    let liquidations = 0;
-    let collateralSeizedUsd = 0;
-    let debtRepaidUsd = 0;
-    let badDebtUsd = 0;
-    for (const l of logs) {
-      if (l.at < from || l.at >= to) continue;
-      if (l.kind === "AaveSpoke.ReportDeficit") {
-        // Deficit in drawn shares, valued at the current drawn index and price of the reserve's Hub asset.
-        const r = w.reserves.find((x) => `${x.chainId}:${x.spoke}:${x.reserveId}` === l.spokeReserveKey);
-        const a = r ? w.assetsByKey.get(hubAssetKey(r)) : undefined;
-        const shares = BigInt(String((l.args as { drawnShares: string }).drawnShares));
-        if (a) badDebtUsd += Number((((shares * BigInt(a.drawnIndexRay)) / 10n ** 27n) * BigInt(a.priceUsd8)) / 10n ** BigInt(a.decimals)) / 1e8;
-        continue;
-      }
-      if (l.kind !== "LPVaultSwap.LiquidationSettled") continue;
-      const report = (l.args as { report: { debtReserveId: string; debtRepaid: string; unitsSeized: string } }).report;
-      liquidations += 1;
-      collateralSeizedUsd += Number((BigInt(report.unitsSeized) * BigInt(m.acceptedPrice)) / 10n ** BigInt(m.vaultDecimals)) / 1e8;
-      const r = w.reserves.find((x) => x.chainId === m.chainId && x.spoke === m.spoke && x.reserveId === String(report.debtReserveId));
-      const a = r ? w.assetsByKey.get(hubAssetKey(r)) : undefined;
-      if (a) debtRepaidUsd += Number((BigInt(report.debtRepaid) * BigInt(a.priceUsd8)) / 10n ** BigInt(a.decimals)) / 1e8;
-    }
-    return { liquidations, collateralSeizedUsd, debtRepaidUsd, badDebtUsd };
-  };
+  // Each event is valued at the price of its hour (rollups.ts), not today's price.
+  const pricing = await liquidationPricing(ctx, w, m, now - 2 * 86_400_000);
+  const window = (from: number, to: number): LiquidationWindow => liquidationTotals(logs as never, from, to, pricing);
   const positions = await ctx.db
     .query("positions")
     .withIndex("by_market", (q) => q.eq("chainId", m.chainId).eq("marketId", m.marketId))
@@ -206,5 +221,6 @@ export function readSiloedMarket(w: World, scope: PageScope, slug: string) {
     ...(c?.iconUrl ? { iconUrl: c.iconUrl } : {}),
     ...(c?.visuals ? { visuals: c.visuals } : {}),
     ...(c?.resources ? { resources: c.resources } : {}),
+    ...(c?.links ? { links: c.links } : {}),
   };
 }

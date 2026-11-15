@@ -37,6 +37,18 @@ export const store = internalMutation({
         faqs: [...e.faqs],
         ...(e.visuals ? { visuals: [...e.visuals] } : {}),
         ...(e.resources ? { resources: [...e.resources] } : {}),
+        ...(e.links
+          ? {
+              links: {
+                ...(e.links.website ? { website: e.links.website } : {}),
+                ...(e.links.x ? { x: e.links.x } : {}),
+                ...(e.links.docs ? { docs: e.links.docs } : {}),
+                ...(e.links.github ? { github: e.links.github } : {}),
+                ...(e.links.audits ? { audits: e.links.audits.map((a) => ({ label: a.label, href: a.href })) } : {}),
+              },
+            }
+          : {}),
+        ...(e.risk ? { risk: { summary: e.risk.summary, factors: e.risk.factors.map((x) => ({ id: x.id, label: x.label, level: x.level, text: x.text })) } } : {}),
         contentHash,
         operationId,
         loadedAt: now,
