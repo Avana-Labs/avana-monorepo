@@ -126,10 +126,10 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
     /// @inheritdoc ICollateralizationViews
     function getCounters(
         address vaultToken,
-        address depositor
+        address
     ) external view override returns (PledgeCounters memory counters) {
         _checkView();
-        counters = _counters(_load(vaultToken), depositor);
+        counters = _counters(_load(vaultToken));
     }
 
     /// @inheritdoc ICollateralizationViews

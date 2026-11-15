@@ -2096,7 +2096,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Field | Value |
 |---|---|
 | Target | RiskModule rescue top-ups, `postHealthCheck` |
-| Objective | Use rescue top-ups, which pass the pool-share cap, the breakers, the address freeze and `Paused(General)`, and slice top-ups, whose slice part sits outside the token and depositor caps, as a route to borrow more than the caps allow |
+| Objective | Use rescue top-ups, which pass the pool-share cap, the breakers, the address freeze and `Paused(General)`, and slice top-ups, whose slice part sits outside the token caps, as a route to borrow more than the caps allow |
 | Affected steps | `DEP` rescue top-up; `BOR`; `WDR` |
 | Prerequisites | An indebted account below `rescueHealthFactor` (1.10) |
 | Attack approach | Top up from the slice to restore HF 1.10, borrow back down to HF 1, repeat; or withdraw a regular record with debt after a rescue top-up |
@@ -2254,12 +2254,12 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Field | Value |
 |---|---|
 | Target | Collateralization cap counters, RiskModule |
-| Objective | Push a Hub's exposure to one token, depositor or pool above its cap by spreading pledges over several Spokes and markets |
+| Objective | Push a Hub's exposure to one token or pool above its cap by spreading pledges over several Spokes and markets |
 | Affected steps | `DEP` cap checks, top-up, re-credit |
 | Prerequisites | Several CDP Spokes or markets on one Hub sharing a token, for example USDC/USDT, USDT/DAI and USDT/GHO |
 | Attack approach | With `tokenUsdCap[USDT]` = $10M, pledge $10M of USDT exposure in each of three markets, or list one pool twice with two ranges to double the pool-share cap |
 | Impact | None: the fourth $10M is refused |
-| Expected protection | `INV-092`, `INV-027`, `INV-028`: the token and depositor counters live in the one per-chain ledger, keyed by Hub, and every pledge, top-up, re-credit and debit in every market of the Hub updates the same counter; the pool-share counter is keyed by pool and sums every market (every range or shape) of that pool on the chain, so k ranges of one pool share one `poolShareMaxBps` cap; token exposure is counted per funding Hub over every Spoke that draws from it; adding Spokes or markets never adds cap room (Source: Q-174, Q-363, Q-383) |
+| Expected protection | `INV-092`, `INV-027`, `INV-028`: the token counters live in the one per-chain ledger, keyed by Hub, and every pledge, top-up, re-credit and debit in every market of the Hub updates the same counter; the pool-share counter is keyed by pool and sums every market (every range or shape) of that pool on the chain, so k ranges of one pool share one `poolShareMaxBps` cap; token exposure is counted per funding Hub over every Spoke that draws from it; adding Spokes or markets never adds cap room (Source: Q-174, Q-363, Q-383) |
 | Result | Mitigated |
 | Checks | TEST-272, PROP-077, FINDING-205 |
 
@@ -2634,10 +2634,10 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Target | Cap counters |
 | Objective | Fill `marketUsdCap`, `tokenUsdCap` or the pool share with debt-free pledges, or pledges carrying a token borrow, so borrowers cannot open accounts |
 | Affected steps | `DEP` |
-| Prerequisites | Capital; several wallets to pass `depositorUsdCap` |
+| Prerequisites | Capital |
 | Attack approach | Pledge debt-free up to the caps and keep earning fees |
 | Impact | Bounded: denial of new pledges in that market until the attacker leaves or governance raises the cap; no loss of funds |
-| Expected protection | `INV-028`, `INV-092`: caps are counted per Hub in one ledger and charged at pledge; there is no idle-collateral mechanism (`Q-396`), so a debt-free position keeps its charge in the market's cap for as long as it stays pledged. This is the accepted risk AMMN-FLOW-16: caps are set at listing (`marketUsdCap`, `tokenUsdCap`, `depositorUsdCap`, `poolShareMaxBps`), monitoring reports each market's cap use by debt-free positions, `depositorUsdCap` limits each wallet, the attacker carries the full price risk of its positions while pledged, and governance can raise a market's cap through the timelock (Source: Q-157, Q-363, Q-384, Q-396) |
+| Expected protection | `INV-028`, `INV-092`: caps are counted per Hub in one ledger and charged at pledge; there is no idle-collateral mechanism (`Q-396`), so a debt-free position keeps its charge in the market's cap for as long as it stays pledged. This is the accepted risk AMMN-FLOW-16: caps are set at listing (`marketUsdCap`, `tokenUsdCap`, `poolShareMaxBps`), monitoring reports each market's cap use by debt-free positions, the attacker carries the full price risk of its positions while pledged, and governance can raise a market's cap through the timelock (Source: Q-157, Q-363, Q-384, Q-396) |
 | Result | Accepted risk (AMMN-FLOW-16, `Q-396`) — owner: Avana governance (cap sizing at listing and monitoring); bound: a liveness loss for new pledges in one market, no loss of funds |
 | Checks | TEST-272, FINDING-232 |
 
@@ -2911,19 +2911,19 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Result | Mitigated |
 | Checks | TEST-321, TEST-323, TEST-324, PROP-110, PROP-111 |
 
-### ATTACK-206: Filling the window to block other borrowers
+### ATTACK-206: Filling the window to block other borrowers or pledgers
 
 | Field | Value |
 |---|---|
-| Target | The market and (funding Hub, asset) borrow windows |
-| Objective | Keep other borrowers from borrowing by consuming the window's room without keeping the debt |
-| Affected steps | `BOR-023`, `BOR-024` |
-| Prerequisites | Collateral in the market worth at least `L / CF_LP` (about $801,000 against a $250,000 window at the launch collateral factor), and gas |
-| Attack approach | Borrow the window's whole room, repay it at once (the same or the next block), and repeat whenever room frees |
-| Impact | Other borrowers of the market wait up to two windows (12 hours at launch); no funds are at risk, and repay, withdrawal and liquidation stay open |
-| Expected protection | `REQ-RISK-094`, `REQ-RISK-096`: exits never meet a window, so no one's position is at risk. Charges are gross because the RiskModule never sees a repay (exits must not call it, `REQ-RISK-005`), so the attacker pays a borrow per window and holds collateral at risk the whole time; monitoring sees a window filled and emptied by one account, and governance can raise the market's limit (normal delay) or the Guardian can freeze the address, which stops its borrowing |
-| Result | Accepted risk (liveness only, bounded wait) |
-| Checks | TEST-321, TEST-324 |
+| Target | The market and (funding Hub, asset) borrow windows and the market pledge window |
+| Objective | Keep other borrowers or pledgers out by consuming a window's room without keeping the debt or the collateral |
+| Affected steps | `BOR-023`, `BOR-024`, `DEP` pledge, `WDR` withdrawal |
+| Prerequisites | Collateral for one slice of the window and gas; a contract wallet can borrow and repay, or pledge and withdraw, many times in one transaction |
+| Attack approach | Borrow a slice of the window and repay it at once, `k` times (or pledge a position and withdraw it debt-free, `k` times), so that gross charges reach `L` with collateral for only `L / k`; repeat whenever room frees. A variant lowers the limit itself: when the limit was `rate × (live base − charges)`, the repays lowered the live base while the gross charges stayed |
+| Impact | Before the windows were net: with gross charges, ten $100,000 borrow-and-repay cycles filled a $1,000,000 market window for 6 to 12 hours at the cost of gas, and the same worked on the pledge window; repays also shrank the limit below `rate × D0`. No funds were at risk |
+| Expected protection | `REQ-RISK-092`, `REQ-RISK-093`, `SPEC-CAP-011`, `SPEC-CAP-012`: the windows are net-flow windows. Every repay through the AaveAdapter (repay, repay-all, repay with collateral) credits both borrow windows by what it repaid (`creditRepay`), and every withdrawal, partial removal and deleverage release credits the pledge window by the booked value it released (`creditWithdraw`), each from the current bucket first, then the bucket before, never below zero. A borrow-and-repay cycle therefore nets to zero, and only debt or collateral that stays counts. The limit is computed on the window-start base (the base when the current bucket's first charge opened it, less the bucket before), so neither a repay nor a borrow inside the bucket moves it. The credit runs with a fixed gas stipend inside a try/catch behind a gas floor, so a failing RiskModule never blocks an exit (`REQ-RISK-005`) and a caller cannot pick a gas limit that skips the credit (the exit reverts `InsufficientGas` instead). Liquidations give no room back. `REQ-RISK-094`, `REQ-RISK-096`: exits are never tested against a window |
+| Result | Mitigated: filling a window now needs collateral and debt that stay for the window's length; a credit that fails leaves the window fuller (liveness only) |
+| Checks | TEST-320, TEST-321, TEST-322, TEST-323, TEST-324, TEST-326, PROP-110, PROP-111 |
 
 ### ATTACK-202: Liquidation fee on the vault-token reserve halts seizure
 

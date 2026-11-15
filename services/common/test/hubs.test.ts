@@ -133,7 +133,6 @@ describe("market caps (REQ-LENS-057)", () => {
       hardHealthFloorWad: "0",
       marketUsdCap8: (5_000_000n * 10n ** 8n).toString(),
       topUpSliceUsd8: (500_000n * 10n ** 8n).toString(),
-      depositorUsdCap8: (1_000_000n * 10n ** 8n).toString(),
       tokenUsdCaps8: [(10n ** 15n).toString(), (10n ** 15n).toString()],
       addCap: "5000000",
     });

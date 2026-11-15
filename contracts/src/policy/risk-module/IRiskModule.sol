@@ -17,7 +17,7 @@ import {IRiskModuleViews} from "./IRiskModuleViews.sol";
 /// `rescueHealthFactor = 1.10e18` (rescue top-up threshold, not a borrow gate); the record limit is `AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET = 16`. No Hub, AMM protocol or debt asset is an
 /// immutable: each market's home Hub, AMM integration (position manager, factory, pricing) and each debt reserve's
 /// funding Hub and asset come from the MarketRegistry, so one RiskModule serves every Hub, CDP Spoke and AMM
-/// integration on the chain. The token and depositor caps are keyed by Hub and the pool-share cap by pool,
+/// integration on the chain. The token caps are keyed by Hub and the pool-share cap by pool,
 /// summed over every market (range) of that pool on the chain, all counted in the one chain-wide Collateralization
 /// ledger, so adding a Spoke or a range never multiplies them (AMMN-RT-05); other limits are keyed by Spoke and market
 /// where they apply. There is no minimum debt (`Q-381`). Each account is one PositionProxy bound to one market, so the

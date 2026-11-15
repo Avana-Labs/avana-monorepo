@@ -26,8 +26,6 @@ struct PledgePreview {
     uint256 sliceRoomUsd;
     // Per-token room in pool order.
     uint256[] tokenRoomUsd;
-    // depositorUsdCap minus the depositor counter, floored at 0.
-    uint256 depositorRoomUsd;
     // Units still admissible under the pool-share cap.
     uint256 poolShareRoomUnits;
     // Open records the account may still add to the market (MAX_RECORDS_PER_ACCOUNT_MARKET minus open records).

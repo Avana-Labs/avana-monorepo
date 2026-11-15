@@ -158,7 +158,6 @@ const market = (marketId: string, name: string, suppliedWhole: bigint, collatera
     hardHealthFloorWad: "0",
     marketUsdCap8: (2_000_000n * 10n ** 8n).toString(10),
     topUpSliceUsd8: (500_000n * 10n ** 8n).toString(10),
-    depositorUsdCap8: (250_000n * 10n ** 8n).toString(10),
     tokenUsdCaps8: [(3_000_000n * 10n ** 8n).toString(10), (3_000_000n * 10n ** 8n).toString(10)],
     addCap: String(2n ** 40n - 1n),
   },

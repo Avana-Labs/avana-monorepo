@@ -111,7 +111,6 @@ export function poolRiskParameters(slug: string, market: MarketRow, headRateRay:
       ...(caps
         ? [
             { id: "topUpSlice", label: "Top-up slice", value: usd8(caps.topUpSliceUsd8) },
-            { id: "depositorCap", label: "Per-depositor cap", value: usd8(caps.depositorUsdCap8) },
             { id: "liquidationFee", label: "Liquidation fee", value: pct(bpsToPct(caps.liquidationFeeBps)), description: "Share of the bonus kept by the protocol." },
             { id: "hardHealthFloor", label: "Hard health floor", value: BigInt(caps.hardHealthFloorWad) === 0n ? "Off" : wadHf(caps.hardHealthFloorWad) },
           ]

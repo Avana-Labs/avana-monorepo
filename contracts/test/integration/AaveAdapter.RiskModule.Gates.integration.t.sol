@@ -163,7 +163,6 @@ contract AaveAdapterRiskModuleGatesIntegrationTest is AaveAdapterRiskFixture {
     function test_TEST_284_aaveSourceSwitchIsDriftForNewRiskOnly() public {
         rstore.setTokenCap(aave.hub, address(usdc), 1e30);
         rstore.setTokenCap(aave.hub, address(usdt), 1e30);
-        rstore.setDepositorCap(aave.hub, 1e30);
         PledgeCounters memory k = ICollateralizationViews(address(coll)).getCounters(vt, bob);
         address bobProxy_ = makeAddr("bob's proxy");
         rm.checkPledge(bob, bobProxy_, MARKET_ID, INTEGRATION, bytes32(uint256(77)), UNITS, k, false);

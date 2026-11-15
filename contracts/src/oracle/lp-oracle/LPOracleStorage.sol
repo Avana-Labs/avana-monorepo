@@ -226,6 +226,18 @@ abstract contract LPOracleStorage is ILPOracleEvents, ILPOracleErrors {
         bytes32 poolRef
     ) internal view virtual returns (bool own);
 
+    /// @dev Whether a MarketRegistry record's pool, pool identifier and shape (`Market` head words 5 to 9, as ABI words)
+    /// are the module's own market, fixed at `initialize`; `checkConfig` refuses any other (`CHECK_MARKET`,
+    /// REQ-ORACLE-046). Never reverts.
+    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-103
+    function _isOwnMarket(
+        uint256 poolWord,
+        uint256 poolIdWord,
+        uint256 kindWord,
+        uint256 tickLowerWord,
+        uint256 tickUpperWord
+    ) internal view virtual returns (bool own);
+
     /// @dev The pricing module's listing checks on `config` at the current quotes; returned bits are shifted to
     /// `MODULE_CHECKS_SHIFT` and above by the caller.
     /// @custom:spec REQ-ORACLE-103

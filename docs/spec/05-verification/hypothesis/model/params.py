@@ -34,7 +34,6 @@ class Params:
     cap_market_usd: int = 3_000_000 * USD
     topup_slice_usd: int = 300_000 * USD
     cap_token_usd: int = 5_000_000 * USD
-    cap_depositor_usd: int = 1_500_000 * USD
     pool_share_bps: int = 1000                   # poolShareMaxBps (SPEC-CAP-005)
     stress_floor_usd8: int = USD                 # $1.00 per whole vault token
     min_pledge_usd: int = 10 * USD               # Q-230, Q-277

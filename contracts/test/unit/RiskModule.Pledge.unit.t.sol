@@ -222,18 +222,13 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
 
     // TEST-272 verifies: REQ-RISK-079, REQ-RISK-021, SPEC-CAP-002, INV-028
     // Sources: 2.7 REQ-RISK-079 example (tokenUsdCap $10,000,000, $9,500,000 used)
-    function test_TEST_272_tokenAndDepositorCaps() public {
+    function test_TEST_272_tokenCaps() public {
         PledgeCounters memory k = _counters();
         store.setCaps(mid, 100_000_000e8, 100_000e8, 1e8);
         k.tokenUsed[1] = 9_500_000e8;
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("TOKEN")));
         _pledge(300_000e18, k, false); // $600,000
-        k.tokenUsed[1] = 0;
-        k.depositorUsed = 4_500_000e8;
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("DEPOSITOR")));
-        _pledge(300_000e18, k, false);
         k.tokenUsed = new uint256[](1);
-        k.depositorUsed = 0;
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("TOKEN")));
         _pledge(TEN_K, k, false);
     }
@@ -265,13 +260,124 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
         _pledge(TEN_K, k, false);
     }
 
+    // TEST-272 verifies: REQ-RISK-022, REQ-RISK-066, SPEC-CAP-002, SPEC-CAP-003
+    /// @notice Market full and USDT exactly at its cap: an eligible top-up is charged entirely to the slice and passes.
+    /// Collateralization then books the full charge into the token counter, lifting it above the cap; a second
+    /// identical top-up still passes, because the token test applies to the regular part only.
+    function test_TEST_272_sliceOnlyRescuePassesWithTheTokenCounterAtOrAboveItsCap() public {
+        PledgeCounters memory k = _counters();
+        k.regularUsed = 1_000_000e8;
+        k.tokenUsed[1] = 10_000_000e8;
+        _debt(1.02e18, 1_000_000);
+        PledgeCharge memory c = _pledge(TEN_K, k, false);
+        assertEq(c.usdCharge, 20_000e8, "charge");
+        assertEq(c.sliceUsd, 20_000e8, "all in the slice");
+        k.tokenUsed[0] += c.usdCharge;
+        k.tokenUsed[1] += c.usdCharge;
+        k.sliceUsed += uint128(c.sliceUsd);
+        c = _pledge(TEN_K, k, false);
+        assertEq(c.sliceUsd, 20_000e8, "second top-up above the token cap");
+        assertEq(c.rescueUnits, TEN_K, "every unit is a rescue unit");
+    }
+
+    // TEST-272 verifies: REQ-RISK-022, REQ-RISK-042, REQ-RISK-066, SPEC-CAP-002
+    /// @notice Both token caps tightened to 0 with $6,000,000 of exposure booked and the market full: a slice-only
+    /// rescue top-up passes, while a new-account pledge is refused.
+    function test_TEST_272_sliceOnlyRescuePassesAtAZeroTokenCap() public {
+        store.setTokenCap(address(hub), address(usdc), 0);
+        store.setTokenCap(address(hub), address(usdt), 0);
+        PledgeCounters memory k = _counters();
+        k.regularUsed = 1_000_000e8;
+        k.tokenUsed[0] = 6_000_000e8;
+        k.tokenUsed[1] = 6_000_000e8;
+        _debt(1.02e18, 1_000_000);
+        PledgeCharge memory c = _pledge(TEN_K, k, false);
+        assertEq(c.sliceUsd, 20_000e8, "slice-only top-up passes at a zero token cap");
+        rSpoke.setAccount(address(proxy), 0, 0, 0);
+        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("MARKET")));
+        _pledge(TEN_K, k, false);
+    }
+
+    // TEST-272 verifies: REQ-RISK-022, REQ-RISK-042, REQ-RISK-066, SPEC-CAP-002, SPEC-CAP-003
+    /// @notice USDT's token cap tightened to 0 with $500,000 booked, and the market with $900,000 of regular room: an
+    /// eligible top-up within the slice is charged entirely to the slice and passes, a new-account pledge and a healthy
+    /// top-up are refused `CapExceeded(TOKEN)`. With token room short of the charge, the slice takes the rest.
+    function test_TEST_272_zeroTokenCapWithMarketRoomLeavesRescueTopUpsToTheSlice() public {
+        store.setTokenCap(address(hub), address(usdt), 0);
+        PledgeCounters memory k = _counters();
+        k.regularUsed = 100_000e8;
+        k.tokenUsed[0] = 500_000e8;
+        k.tokenUsed[1] = 500_000e8;
+        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("TOKEN")));
+        _pledge(TEN_K, k, false); // new account
+        _debt(1.2e18, 1000);
+        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("TOKEN")));
+        _pledge(TEN_K, k, false); // healthy top-up: not eligible for the slice
+        _debt(1.02e18, 1_000_000);
+        PledgeCharge memory c = _pledge(TEN_K, k, false);
+        assertEq(c.usdCharge, 20_000e8, "charge");
+        assertEq(c.sliceUsd, 20_000e8, "all in the slice despite the market room");
+        assertFalse(c.rescue);
+        assertEq(c.rescueUnits, TEN_K, "every unit is a rescue unit");
+        // USDC with $5,000 of room and USDT reopened with $8,000: the regular part is the smaller room.
+        store.setTokenCap(address(hub), address(usdc), 505_000e8);
+        store.setTokenCap(address(hub), address(usdt), 508_000e8);
+        c = _pledge(TEN_K, k, false);
+        assertEq(c.sliceUsd, 15_000e8, "slice takes what the tightest token refuses");
+        assertEq(c.rescueUnits, TEN_K * 3 / 4);
+    }
+
+    // TEST-272 verifies: REQ-RISK-022, REQ-RISK-042, SPEC-CAP-002, SPEC-CAP-003
+    /// @notice A top-up larger than the regular room plus the slice room is refused: $5,000 of token room and $10,000
+    /// of slice room cannot take a $20,000 charge (`CapExceeded(SLICE)`), and at a zero token cap a slice part above
+    /// the restore amount reverts `SliceNotAvailable`.
+    function test_TEST_272_topUpAboveRegularRoomPlusSliceIsRefused() public {
+        store.setTokenCap(address(hub), address(usdc), 505_000e8);
+        PledgeCounters memory k = _counters();
+        k.regularUsed = 100_000e8;
+        k.tokenUsed[0] = 500_000e8;
+        k.sliceUsed = 90_000e8;
+        _debt(1.02e18, 1_000_000);
+        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("SLICE")));
+        _pledge(TEN_K, k, false);
+        assertEq(_pledge(7500e18, k, false).sliceUsd, 10_000e8, "$15,000: $5,000 regular and $10,000 slice fit");
+        store.setTokenCap(address(hub), address(usdc), 0);
+        k.sliceUsed = 0;
+        _debt(1.0999e18, 1000);
+        vm.expectRevert(IRiskModuleErrors.SliceNotAvailable.selector);
+        _pledge(TEN_K, k, false);
+    }
+
+    // TEST-272 verifies: REQ-RISK-021, REQ-RISK-079, SPEC-CAP-002
+    /// @notice USDT at its cap, then at a zero cap, with $10,000 of market room: a pledge not eligible for the slice
+    /// (a new account, a healthy top-up) has a regular part and is refused `CapExceeded(TOKEN)`; an eligible top-up of
+    /// the same $20,000 has no token room, so it is charged entirely to the slice.
+    function test_TEST_272_anyRegularPartIsRefusedWithTheTokenAtItsCap() public {
+        PledgeCounters memory k = _counters();
+        k.regularUsed = 990_000e8;
+        k.tokenUsed[1] = 10_000_000e8;
+        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("TOKEN")));
+        _pledge(1000e18, k, false); // new account, $2,000
+        _debt(1.2e18, 1000);
+        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("TOKEN")));
+        _pledge(1000e18, k, false); // healthy top-up
+        _debt(1.02e18, 1_000_000);
+        assertEq(_pledge(TEN_K, k, false).sliceUsd, 20_000e8, "eligible: no regular part");
+        store.setTokenCap(address(hub), address(usdt), 0);
+        _debt(1.2e18, 1000);
+        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("TOKEN")));
+        _pledge(1000e18, k, false);
+        rSpoke.setAccount(address(proxy), 0, 0, 0);
+        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("TOKEN")));
+        _pledge(1000e18, k, false);
+    }
+
     // TEST-034 verifies: REQ-RISK-023, SPEC-CAP-005, REQ-RISK-052
     // Sources: 2.7 SPEC-CAP-005 example (cap 1,000 bps, depth 2e13, U = 1.5e12)
     function test_TEST_034_poolShareCap() public {
         store.setPoolShare(poolKey, 1000);
         store.setMinPledge(mid, 0);
         store.setCaps(mid, 100_000_000_000e8, 100_000e8, 1e8);
-        store.setDepositorCap(address(hub), 100_000_000_000e8);
         store.setTokenCap(address(hub), address(usdc), 100_000_000_000e8);
         store.setTokenCap(address(hub), address(usdt), 100_000_000_000e8);
         rHub.setSpokeConfig(VT_ASSET, address(spoke), type(uint40).max, 0);

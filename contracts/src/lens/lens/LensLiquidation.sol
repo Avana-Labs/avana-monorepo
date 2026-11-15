@@ -209,6 +209,42 @@ abstract contract LensLiquidation is LensBase {
         }
     }
 
+    /// @dev REQ-LENS-028: `PrimaryThenBackup` whenever every token has a usable primary or backup route, since
+    /// LPVaultSwap skips an unusable primary and falls back to the backup in that mode, so it settles every case
+    /// `BackupOnly` settles and more. Only when some token has no usable route at all (the liquidation cannot settle in
+    /// either mode) does the earlier rule apply: `BackupOnly` when any primary is unusable.
+    function _routeMode(
+        RouteStatus[] memory routes
+    ) internal pure returns (RouteMode) {
+        for (uint256 i = 0; i < routes.length; ++i) {
+            if (!_hasUsableRoute(routes, routes[i].token)) {
+                return _anyPrimaryDown(routes) ? RouteMode.BackupOnly : RouteMode.PrimaryThenBackup;
+            }
+        }
+        return RouteMode.PrimaryThenBackup;
+    }
+
+    /// @dev Whether `token` has a usable primary or backup route in `routes`.
+    function _hasUsableRoute(
+        RouteStatus[] memory routes,
+        address token
+    ) private pure returns (bool) {
+        for (uint256 i = 0; i < routes.length; ++i) {
+            if (routes[i].token == token && routes[i].usable) return true;
+        }
+        return false;
+    }
+
+    /// @dev Whether any primary route in `routes` is unusable.
+    function _anyPrimaryDown(
+        RouteStatus[] memory routes
+    ) private pure returns (bool) {
+        for (uint256 i = 0; i < routes.length; ++i) {
+            if (routes[i].routeKind == 0 && !routes[i].usable) return true;
+        }
+        return false;
+    }
+
     /// @dev Ready-to-send parameters: the margined whole debt when the repayment is the whole debt, seizes every
     /// supplied share, or leaves a remainder within the margin of Aave's dust threshold; Aave's repayment otherwise.
     /// Every amount is 0 at a health factor of at least 1e18.
@@ -222,10 +258,7 @@ abstract contract LensLiquidation is LensBase {
         LiquidationParams memory q = p.params;
         (q.proxy, q.marketId, q.debtReserveId, q.deadline) = (p.proxy, p.marketId, p.debtReserveId, deadline);
         q.minAmounts = new uint256[](0);
-        q.routeMode = RouteMode.PrimaryThenBackup;
-        for (uint256 i = 0; i < p.routeUsable.length; ++i) {
-            if (p.routeUsable[i].routeKind == 0 && !p.routeUsable[i].usable) q.routeMode = RouteMode.BackupOnly;
-        }
+        q.routeMode = _routeMode(p.routeUsable);
         if (!p.aaveLiquidatable || s.debtRepaid == 0) return;
         uint256 bps = SettlementMath.BPS;
         uint256 margin = LensConstants.LENS_DUST_MARGIN_BPS;

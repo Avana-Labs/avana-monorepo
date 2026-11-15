@@ -64,7 +64,7 @@ contract CollateralizationPledgeChargeUnitTest is CollateralizationFixture {
 
     /// @notice A second pledge: `checkPledge` receives the depositor, proxy, market, integration, key and units with
     /// the ledger's current counters (the account's one open record counted); the returned split of 7 USD into 4
-    /// regular and 3 slice is booked as returned on the market and depositor counters. The RiskModule reading the
+    /// regular and 3 slice is booked as returned on the market and token counters. The RiskModule reading the
     /// ledger while the Lock is held reverts `Locked`. A returned charge the bounds forbid (slice above the charge, a
     /// charge of `2^64`) reverts the pledge with no counter change.
     // TEST-164 verifies: REQ-COLL-026, REQ-VAULT-015, REQ-VAULT-091, SPEC-BACK-004, Q-240
@@ -99,7 +99,7 @@ contract CollateralizationPledgeChargeUnitTest is CollateralizationFixture {
         PledgeCounters memory a = coll.getCounters(vt, alice);
         assertEq(a.regularUsed, k.regularUsed + 400_000_000, "regular part booked");
         assertEq(a.sliceUsed, k.sliceUsed + 300_000_000, "slice part booked");
-        assertEq(a.depositorUsed, k.depositorUsed + 700_000_000, "depositor counter");
+        assertEq(a.tokenUsed[0], k.tokenUsed[0] + 700_000_000, "token counter");
 
         PledgeCharge[2] memory bad = [
             PledgeCharge({usdCharge: 1, sliceUsd: 2, rescue: false, rescueUnits: 0}),
@@ -118,7 +118,7 @@ contract CollateralizationPledgeChargeUnitTest is CollateralizationFixture {
             PledgeCounters memory c = coll.getCounters(vt, alice);
             assertEq(c.regularUsed, a.regularUsed, "regular unchanged");
             assertEq(c.sliceUsed, a.sliceUsed, "slice unchanged");
-            assertEq(c.depositorUsed, a.depositorUsed, "depositor unchanged");
+            assertEq(c.tokenUsed[0], a.tokenUsed[0], "token unchanged");
         }
     }
 

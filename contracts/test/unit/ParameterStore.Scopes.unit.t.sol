@@ -133,14 +133,10 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
             address h = bad[j];
             bytes memory err = abi.encodeWithSelector(IParameterStoreErrors.UnknownHub.selector, h);
             _refuses(abi.encodeCall(store.tightenTokenUsdCap, (h, usdc, 1)), err);
-            _refuses(abi.encodeCall(store.tightenDepositorUsdCap, (h, 1)), err);
             _refuses(abi.encodeCall(store.loosenTokenUsdCap, (h, usdc, 1)), err);
-            _refuses(abi.encodeCall(store.loosenDepositorUsdCap, (h, 1)), err);
-            _refuses(abi.encodeCall(store.setInitialHubCaps, (h, 1)), err);
             _refuses(abi.encodeCall(store.setInitialTokenCap, (h, usdt, 1)), err);
             _refuses(abi.encodeCall(store.tightenBreakerDeficitMax, (h, gho, 0)), err);
             _refuses(abi.encodeCall(store.loosenBreakerDeficitMax, (h, gho, 1)), err);
-            assertEq(store.depositorUsdCap(h), 0);
             assertEq(store.tokenUsdCap(h, usdt), 0);
         }
     }
@@ -149,10 +145,8 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
     function test_TEST_272_hubForgottenByTheRegistryLosesItsSetters() public {
         registry.setHub(address(hub), false);
         bytes memory err = abi.encodeWithSelector(IParameterStoreErrors.UnknownHub.selector, address(hub));
-        _refuses(abi.encodeCall(store.tightenDepositorUsdCap, (address(hub), 1)), err);
         _refuses(abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 1)), err);
         // Its stored caps are kept and still served.
-        assertEq(store.depositorUsdCap(address(hub)), 1_000_000e8);
         assertEq(store.tokenUsdCap(address(hub), usdc), 20_000_000e8);
     }
 
@@ -168,13 +162,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
             abi.encodeCall(store.setInitialTokenCap, (address(hub), usdc, 1)),
             abi.encodeWithSelector(IParameterStoreErrors.NotInListing.selector)
         );
-        // An already-capped Hub refuses a second depositor cap.
-        _refuses(
-            abi.encodeCall(store.setInitialHubCaps, (address(hub), 1)),
-            abi.encodeWithSelector(IParameterStoreErrors.NotInListing.selector)
-        );
         assertEq(store.tokenUsdCap(address(hub), usdc), 20_000_000e8);
-        assertEq(store.depositorUsdCap(address(hub)), 1_000_000e8);
     }
 
     // ─── Tokens ───
@@ -294,7 +282,6 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         assertEq(store.slippageAllowanceMinBps(UNKNOWN), 0);
         assertEq(store.twapMinObservations(UNKNOWN), 0);
         assertEq(store.tokenUsdCap(stray, unlisted), 0);
-        assertEq(store.depositorUsdCap(stray), 0);
         assertEq(store.tokenCollateralFactorBps(unlisted), 0);
         assertEq(store.feedAgreementToleranceBps(unlisted), 0);
         assertEq(store.borrowPriceMaxAge(noFeed), 0);

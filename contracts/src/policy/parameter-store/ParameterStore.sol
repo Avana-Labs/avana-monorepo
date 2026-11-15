@@ -62,7 +62,6 @@ contract ParameterStore is
     function initialize(
         address timelock,
         GlobalParams calldata,
-        uint256,
         uint16
     ) external override initializer {
         if (timelock != _TIMELOCK) revert AdminRoleOnlyTimelock(DEFAULT_ADMIN_ROLE, timelock);

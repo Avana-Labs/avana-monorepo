@@ -285,7 +285,6 @@ contract RiskTokenMock is RegistryTokenMock {
 contract RiskStoreMock is RegistryParameterStoreMock {
     mapping(address => uint16) public tokenCollateralFactorBps;
     mapping(address => mapping(address => uint256)) public tokenUsdCap;
-    mapping(address => uint256) public depositorUsdCap;
     mapping(bytes32 => uint16) internal _poolShare;
     mapping(bytes32 => bool) internal _poolShareSet;
     mapping(address => uint32) public borrowPriceMaxAge;
@@ -307,13 +306,6 @@ contract RiskStoreMock is RegistryParameterStoreMock {
         uint256 cap
     ) external {
         tokenUsdCap[hub][token] = cap;
-    }
-
-    function setDepositorCap(
-        address hub,
-        uint256 cap
-    ) external {
-        depositorUsdCap[hub] = cap;
     }
 
     function setPoolShare(

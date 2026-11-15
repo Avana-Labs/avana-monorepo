@@ -154,7 +154,6 @@ abstract contract FullStackFixture is FullStackDeploy {
             })
         );
         store.setLiquidationExpectations(aave.cdpSpoke, TARGET_HEALTH_FACTOR, 200);
-        store.setInitialHubCaps(aave.hub, DEPOSITOR_CAP);
         vm.stopPrank();
         vm.prank(aaveDao);
         ICollSpokeConfigurator(aave.spokeConfigurator)
