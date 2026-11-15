@@ -5,6 +5,6 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
 import { loadWorld } from "../model.ts";
-import { readRisk } from "../details.ts";
+import { readRiskScored } from "../details.ts";
 
-export const getRisk = query({ args: { slug: v.string() }, handler: async (ctx, { slug }) => readRisk(await loadWorld(ctx), "pool", slug) });
+export const getRisk = query({ args: { slug: v.string() }, handler: async (ctx, { slug }) => readRiskScored(ctx, await loadWorld(ctx), "pool", slug) });

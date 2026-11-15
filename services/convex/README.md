@@ -208,3 +208,12 @@ npx convex dev      # against a Convex deployment; regenerates convex/_generated
 | `activity.test.ts` | Each event lands in the right pages' feeds and in no page twice; changelog rows with previous values; listing operations from the timelock |
 
 The import's fork tests (`TEST-143`): duplicate, overlapping, out-of-order and tampered pages leave the state of a clean run; an Anvil reorg below the checkpoint with an indexer pointed at a different branch rebuilds to the state of a clean run; an end-to-end fork run goes from pledge, borrow, price drop and keeper liquidation through the indexer, export and Convex to the UI.
+
+## Detail-page jobs
+
+| Module | Schedule | Serves |
+|---|---|---|
+| `windows.getRateWindows` | Read time | 1D, 30D and 90D averages of supply APY, borrow APR and utilization; on pool pages the market's borrow APR and the LP fee APR of its tick range (`lib/windows.ts`: fees per unit of active liquidity over the value of one unit across the range, 0 out of range). Pool rows' `supplyApyPct` is the 24 h LP fee APR |
+| `rollups.rollUp` → `rollups.history` | Daily, 00:30 UTC | Each market's liquidations, collateral seized, debt repaid and bad debt, and each Hub asset's interest, reserve and supplier shares, for the UTC day that ended; events are valued at their hour's price. Kept past the 30-day log window |
+| `riskScores.score` | Hourly | The market risk score, model `avana-risk-v1` (`lib/riskScore.ts`: premium, cap usage, price state, breaker, Hub pause, debt below HF 1.10, recent bad debt). The pool risk card shows it with each input's points |
+| `incentives.refresh` → `incentives.forPage` | Hourly per chain | Merkl's live opportunities matched to each page: `rewards` with the APR, `none` after a fresh check with no campaign, `unknown` when Merkl failed or the last check is over 3 hours old. `MERKL_API_URL` overrides the API |

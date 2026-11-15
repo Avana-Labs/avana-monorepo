@@ -5,7 +5,7 @@
 
 import { v } from "convex/values";
 import { query } from "./_generated/server";
-import { readAddresses, readAllocationForAsset, readContent, readInterestRateModel, readLiquidationRisk, readPoolBorrowables, readRisk, readRiskParameters, readSiloedMarket } from "./details.ts";
+import { readAddresses, readAllocationForAsset, readContent, readInterestRateModel, readLiquidationRisk, readPoolBorrowables, readRisk, readRiskParameters, readRiskScored, readSiloedMarket } from "./details.ts";
 import { readMarketSnapshot, readRecentTransactions, readSupplyBorrow } from "./markets.ts";
 import { loadWorld } from "./model.ts";
 
@@ -38,7 +38,7 @@ export const getBorrowPoolDetail = query({
     return {
       snapshot: await readMarketSnapshot(ctx, w, "pool", slug),
       transactions: await readRecentTransactions(ctx, w, "pool", slug),
-      risk: readRisk(w, "pool", slug),
+      risk: await readRiskScored(ctx, w, "pool", slug),
       content: await readContent(ctx, w, "pool", slug),
       riskParameters: readRiskParameters(w, "pool", slug),
       poolBorrowables: readPoolBorrowables(w, slug),

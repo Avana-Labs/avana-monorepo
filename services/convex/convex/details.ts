@@ -104,6 +104,24 @@ export function readRisk(w: World, scope: PageScope, slug: string) {
   return contentRiskAssessment(c?.risk, `${c?.name ?? slug} risk`);
 }
 
+/**
+ * `readRisk` with the pool's stored risk score (riskScores.ts): the score and level come from the job, and each
+ * scored input is added to the card's metrics. Without a stored score the card keeps the premium-based level.
+ */
+export async function readRiskScored(ctx: QueryCtx, w: World, scope: PageScope, slug: string) {
+  const card = readRisk(w, scope, slug);
+  if (!card || scope !== "pool") return card;
+  const m = bySlug(w, "pool", slug) as MarketDoc | null;
+  const scored = m ? await ctx.db.query("riskScores").withIndex("by_market", (q) => q.eq("chainId", m.chainId).eq("marketId", m.marketId)).unique() : null;
+  if (!scored) return card;
+  return {
+    ...card,
+    score: scored.score,
+    level: scored.level,
+    metrics: [...card.metrics, ...scored.factors.map((x) => ({ id: `score:${x.id}`, label: x.label, value: x.value, hint: `${x.points} of the score (${scored.model})` }))],
+  };
+}
+
 export function readPoolBorrowables(w: World, slug: string) {
   const m = bySlug(w, "pool", slug) as MarketDoc | null;
   return m ? poolBorrowables(m, w.reserves.filter((r) => r.chainId === m.chainId), w.assetsByKey, (t) => symbolOf(w, m.chainId, t)) : [];

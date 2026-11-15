@@ -573,6 +573,36 @@ export default defineSchema({
    * dev-token). Must live here, not in process memory, so a horizontally-scaled deploy
    * enforces ONE limit across instances. `resetAt` = epoch ms the window ends.
    */
+  /** Merkl incentives matched to one page at the chain's last successful fetch (incentives.ts). */
+  incentives: defineTable({
+    chainId: v.number(),
+    scope: v.union(v.literal("lend"), v.literal("asset"), v.literal("pool")),
+    slug: v.string(),
+    aprPct: v.number(),
+    rewardTokens: v.array(v.string()),
+    opportunities: v.number(),
+    updatedAt: v.number(),
+  }).index("by_page", ["chainId", "scope", "slug"]),
+
+  /** The last Merkl fetch per chain: `lastOkAt` null until one succeeds. */
+  incentiveRuns: defineTable({
+    chainId: v.number(),
+    lastRunAt: v.number(),
+    lastOkAt: v.union(v.number(), v.null()),
+    error: v.optional(v.string()),
+  }).index("by_chain", ["chainId"]),
+
+  /** Hourly market risk scores (riskScores.ts); the model version names the formula that produced them. */
+  riskScores: defineTable({
+    chainId: v.number(),
+    marketId: v.string(),
+    model: v.string(),
+    score: v.number(),
+    level: v.union(v.literal("low"), v.literal("moderate"), v.literal("elevated"), v.literal("high")),
+    factors: v.array(v.object({ id: v.string(), label: v.string(), points: v.number(), value: v.string() })),
+    computedAt: v.number(),
+  }).index("by_market", ["chainId", "marketId"]),
+
   /**
    * One day of a market's liquidations or a Hub asset's revenue (rollups.ts), kept past the 30-day log window.
    * `day` is the UTC day `YYYY-MM-DD`; `values` are USD amounts and counts.

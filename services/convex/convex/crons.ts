@@ -2,7 +2,8 @@
 // Copyright (c) 2026 Avana Labs
 // Schedules: current values every 30 s per chain, the export pull every 30 s on Ethereum and 10 s on Base, and the
 // 30-day log retention daily; open transaction intents about once a block (12 s on Ethereum, 4 s on Base) and
-// expired SIWE sessions daily; the previous UTC day's liquidation and revenue rollups at 00:30. Chains are those with a `deployments` row; a chain without one is skipped. The app
+// expired SIWE sessions daily; the previous UTC day's liquidation and revenue rollups at 00:30; Merkl incentives and
+// market risk scores hourly. Chains are those with a `deployments` row; a chain without one is skipped. The app
 // features add: off-protocol token prices every 10 minutes (and a daily close), FX hourly, and the Ask AI market
 // cache (DefiLlama pools hourly, Aave markets twice an hour).
 
@@ -14,9 +15,11 @@ const crons = cronJobs();
 for (const chainId of [1, 8453]) {
   crons.interval(`sample current values ${chainId}`, { seconds: 30 }, internal.ingest.sampler.refresh, { chainId });
   crons.interval(`pull export ${chainId}`, { seconds: chainId === 1 ? 30 : 10 }, internal.ingest.pull.pull, { chainId });
+  crons.cron(`refresh merkl incentives ${chainId}`, chainId === 1 ? "17 * * * *" : "47 * * * *", internal.incentives.refresh, { chainId });
   crons.interval(`track intents ${chainId}`, { seconds: chainId === 1 ? 12 : 4 }, internal.intents.track, { chainId });
 }
 crons.daily("prune activity older than 30 days", { hourUTC: 3, minuteUTC: 0 }, internal.ingest.apply.prune, {});
+crons.cron("score market risk", "5 * * * *", internal.riskScores.score, {});
 crons.daily("roll up liquidations and revenue", { hourUTC: 0, minuteUTC: 30 }, internal.rollups.rollUp, {});
 crons.daily("prune expired SIWE sessions", { hourUTC: 3, minuteUTC: 20 }, internal.siweSessions.prune, {});
 
