@@ -118,4 +118,19 @@ contract LPOraclePriceUnitTest is LPOracleFixture {
         assertEq(_state().tokens[0].routeUsed, 2, "decimals() revert: Error");
         assertEq(oracle.latestAnswer(), int256(SEEDED));
     }
+
+    // TEST-038 verifies: REQ-ORACLE-044, REQ-ORACLE-009, REQ-ORACLE-103
+    /// @notice While the market is neither failed nor held by the quote-change cap, `getTokenPrices` returns the fresh
+    /// vector, not the accepted one: after token A moves to 0.995 (an LP price change below the 100 bps cap), the view
+    /// reports 99,500,000 for A while the accepted vector still holds 100,000,000.
+    function test_TEST_038_tokenPricesAreFreshWhenNotFailedOrCapped() public {
+        vm.warp(T0 + 60);
+        pA.push(99_500_000, T0 + 60);
+        aA.push(99_500_000, T0 + 60);
+        sA.push(99_500_000, T0 + 60);
+        (uint256[] memory prices,, PriceState state) = oracle.getTokenPrices();
+        assertEq(uint8(state), uint8(PriceState.Live), "Live");
+        assertEq(prices[0], 99_500_000, "fresh price of token A");
+        assertEq(prices[1], ONE, "token B unchanged");
+    }
 }
