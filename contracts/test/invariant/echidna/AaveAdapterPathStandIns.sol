@@ -104,6 +104,9 @@ contract BorWorld {
     BorToken public vt;
     BorToken public usdc;
     address internal adapter;
+    /// @dev Creates the proxies, so their ProxyManager (the creator, which `PositionProxy.execute` refuses as a
+    /// target) is not this contract, which is also the Spoke they call.
+    BorProxyFactory internal immutable PROXIES = new BorProxyFactory();
 
     uint256 public price = 1000e8;
     PauseState public state;
@@ -397,7 +400,7 @@ contract BorWorld {
         uint256 marketId
     ) external returns (address) {
         require(msg.sender == adapter, "adapter");
-        return address(new PositionProxy(adapter, wallet, spoke, marketId));
+        return PROXIES.deploy(adapter, wallet, spoke, marketId);
     }
 
     // ─── Collateralization ───
@@ -465,6 +468,20 @@ contract BorWorld {
         hf = healthFactor(proxy);
         uint256 required = RiskModuleMath.requiredHealthFactor(HARD_FLOOR, minHealthFactor);
         require(hf >= required, "HealthFactorTooLow");
+    }
+}
+
+/// @notice The proxy-creating part of the ProxyManager stand-in. A `PositionProxy` records its creator as the
+/// ProxyManager and never calls it; with `BorWorld` as the creator every proxy call to the Spoke stand-in (also
+/// `BorWorld`) reverted `InvalidTarget`.
+contract BorProxyFactory {
+    function deploy(
+        address adapter,
+        address wallet,
+        address spoke,
+        uint256 marketId
+    ) external returns (address) {
+        return address(new PositionProxy(adapter, wallet, spoke, marketId));
     }
 }
 

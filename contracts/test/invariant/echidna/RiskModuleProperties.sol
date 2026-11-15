@@ -156,23 +156,24 @@ contract RiskModuleProperties {
     }
 
     /// @notice `hfEx = max(0, hf − ⌈E × 10⁴⁵ / D⌉)` at the smallest debt value where the code takes `mulDiv`,
-    /// `D = WAD × RAY = 10⁴⁵`, for every health factor below `2^128` and value `E` below `2^96` (the worked example's
-    /// value is 3.12 × 10²⁸, below `2^95`). `property_rescueExclusionBounded` checks `hfEx ≤ hf` and that the exclusion
-    /// removes at least the exact value at every value and at debts up to `2^128`.
+    /// `D = WAD × RAY = 10⁴⁵`, for every health factor below `2^128`, at five values `E` (`_rescueValue`). With `E`
+    /// symbolic as well, hevm explored this entry point only partially (security-slow run 43708786168);
+    /// `property_rescueExclusionBounded` checks `hfEx ≤ hf` and that the exclusion removes at least the exact value at
+    /// every value and at debts up to `2^128`.
     function rescueExclusion(
         uint256 hf,
-        uint256 e
+        uint8 which
     ) public {
-        _checkRescueExclusion(hf % B128, e % B96, WAD_RAY);
+        _checkRescueExclusion(hf % B128, _rescueValue(which), WAD_RAY);
         ++checks;
     }
 
     /// @notice The same formula at the worked example's debt value, `D = 10⁵⁷`.
     function rescueExclusionDebt57(
         uint256 hf,
-        uint256 e
+        uint8 which
     ) public {
-        _checkRescueExclusion(hf % B128, e % B96, 1e57);
+        _checkRescueExclusion(hf % B128, _rescueValue(which), 1e57);
         ++checks;
     }
 
@@ -325,6 +326,19 @@ contract RiskModuleProperties {
         }
         assert(hfEx == expected);
         assert(hfEx <= hf);
+    }
+
+    /// @dev Five values of the rescued collateral: 1, the worked example's 3.12 × 10²⁸, `2^64 − 1`, `10³¹ + 1` and
+    /// `2^96 − 1`; each times `10⁴⁵` fits 256 bits, as `_checkRescueExclusion` requires when `D ≥ WAD × RAY`.
+    function _rescueValue(
+        uint8 which
+    ) internal pure returns (uint256) {
+        which %= 5;
+        if (which == 0) return 1;
+        if (which == 1) return 3.12e28;
+        if (which == 2) return B64 - 1;
+        if (which == 3) return 1e31 + 1;
+        return B96 - 1;
     }
 
     /// @dev The rescue exclusion never raises the health factor and removes at least the exact value.
