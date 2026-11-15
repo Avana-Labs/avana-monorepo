@@ -296,6 +296,23 @@ export default defineSchema({
       v.array(v.object({ symbol: v.string(), shortLabel: v.string(), bgClassName: v.string(), textClassName: v.string(), iconUrl: v.optional(v.string()) })),
     ),
     resources: v.optional(v.array(v.object({ label: v.string(), href: v.string() }))),
+    links: v.optional(
+      v.object({
+        website: v.optional(v.string()),
+        x: v.optional(v.string()),
+        docs: v.optional(v.string()),
+        github: v.optional(v.string()),
+        audits: v.optional(v.array(v.object({ label: v.string(), href: v.string() }))),
+      }),
+    ),
+    risk: v.optional(
+      v.object({
+        summary: v.string(),
+        factors: v.array(
+          v.object({ id: v.string(), label: v.string(), level: v.union(v.literal("low"), v.literal("moderate"), v.literal("elevated"), v.literal("high")), text: v.string() }),
+        ),
+      }),
+    ),
     contentHash: v.string(),
     operationId: v.string(),
     loadedAt: v.number(),

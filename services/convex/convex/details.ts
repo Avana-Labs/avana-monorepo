@@ -7,7 +7,7 @@ import type { QueryCtx } from "./_generated/server";
 import { type Values, combineSources, filledBuckets } from "./lib/charts.ts";
 import { chainSlug } from "./lib/format.ts";
 import { hubAssetKey, interestRateModel, marketAllocation, poolBorrowables, headlineReserve } from "./lib/pages.ts";
-import { assetRiskParameters, atRisk, cashflow, lendRiskParameters, liquidationRisk, poolRiskAssessment, poolRiskParameters, type LiquidationWindow } from "./lib/riskViews.ts";
+import { assetRiskParameters, atRisk, cashflow, contentRiskAssessment, lendRiskParameters, liquidationRisk, poolRiskAssessment, poolRiskParameters, type LiquidationWindow } from "./lib/riskViews.ts";
 import type { ChangelogRow, ContractAddressRow, PageScope } from "./lib/uiTypes.ts";
 import { type World, bySlug, contentOf, lendKey, reserveKey, scopePoints, sliceOf, symbolOf } from "./model.ts";
 import type { HubAssetDoc, MarketDoc, SpokeReserveDoc } from "./model.ts";
@@ -49,7 +49,15 @@ export async function readContent(ctx: QueryCtx, w: World, scope: PageScope, slu
   const page = pageKey(w, scope, slug);
   const c = page ? contentOf(w, contentScope(scope), page.chainId, page.key) : null;
   if (!c) return null;
-  return { description: c.description, stats: c.stats, history: c.history, faqs: c.faqs, changelog: await readChangelog(ctx, w, scope, slug) };
+  return {
+    description: c.description,
+    stats: c.stats,
+    history: c.history,
+    faqs: c.faqs,
+    ...(c.links ? { links: c.links } : {}),
+    ...(c.risk ? { risk: c.risk } : {}),
+    changelog: await readChangelog(ctx, w, scope, slug),
+  };
 }
 
 export function readInterestRateModel(w: World, scope: "lend" | "asset", slug: string) {
@@ -80,11 +88,18 @@ export function readRiskParameters(w: World, scope: PageScope, slug: string) {
   return poolRiskParameters(slug, m, asset?.drawnRateRay ?? null, borrowRoomUsd);
 }
 
-/** The premium card: a collateral market's own premium. Supply markets and debt reserves have none (card hidden). */
+/**
+ * The risk card. A collateral market shows its own premium plus any risk text its listing published; a Lend or Borrow
+ * asset page shows its listed risk text, and hides the card when the listing published none.
+ */
 export function readRisk(w: World, scope: PageScope, slug: string) {
-  if (scope !== "pool") return null;
-  const m = bySlug(w, "pool", slug) as MarketDoc | null;
-  return m ? poolRiskAssessment(m) : null;
+  const page = pageKey(w, scope, slug);
+  const c = page ? contentOf(w, scope, page.chainId, page.key) : null;
+  if (scope === "pool") {
+    const m = bySlug(w, "pool", slug) as MarketDoc | null;
+    return m ? poolRiskAssessment(m, c?.risk) : null;
+  }
+  return contentRiskAssessment(c?.risk, `${c?.name ?? slug} risk`);
 }
 
 export function readPoolBorrowables(w: World, slug: string) {
@@ -208,5 +223,6 @@ export function readSiloedMarket(w: World, scope: PageScope, slug: string) {
     ...(c?.iconUrl ? { iconUrl: c.iconUrl } : {}),
     ...(c?.visuals ? { visuals: c.visuals } : {}),
     ...(c?.resources ? { resources: c.resources } : {}),
+    ...(c?.links ? { links: c.links } : {}),
   };
 }

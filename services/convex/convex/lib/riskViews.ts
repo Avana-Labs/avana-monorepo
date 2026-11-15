@@ -8,7 +8,7 @@
 import { type HubAssetRow, type HubAssetSpokeRow, type MarketRow, type SpokeReserveRow, MAX_SPOKE_CAP, bpsToPct, capRoom, marketBorrowRateRay, rayToAprPct, spokeHeadroom, tokens, usd } from "@avana/services-common/views";
 import { type Values } from "./charts.ts";
 import { compactUsd, pct } from "./format.ts";
-import type { Cashflow, LiquidationRisk, RiskAssessment, RiskLevel, RiskParameters } from "./uiTypes.ts";
+import type { Cashflow, LiquidationRisk, PageRisk, RiskAssessment, RiskLevel, RiskParameters } from "./uiTypes.ts";
 
 const PAUSE = ["None", "Frozen", "Paused"] as const;
 const PRICE = ["Live", "Drifting", "Cached", "Expired"] as const;
@@ -127,16 +127,33 @@ export function poolRiskParameters(slug: string, market: MarketRow, headRateRay:
 
 const level = (bps: number): RiskLevel => (bps < 200 ? "low" : bps < 500 ? "moderate" : bps < 1_000 ? "elevated" : "high");
 
+const LEVEL_RANK: Readonly<Record<RiskLevel, number>> = { low: 0, moderate: 1, elevated: 2, high: 3 };
+const worst = (levels: readonly RiskLevel[]): RiskLevel => levels.reduce<RiskLevel>((acc, l) => (LEVEL_RANK[l] > LEVEL_RANK[acc] ? l : acc), "low");
+
+/** The factors of a page's listed risk text as card rows (no basis points: they are rated, not priced). */
+const factorRows = (risk: PageRisk) => risk.factors.map((x) => ({ id: x.id, label: x.label, bps: 0, level: x.level, description: x.text }));
+
+/**
+ * The risk card of a Lend or Borrow asset page, from the risk text its listing published (metadata version 2). The
+ * level is the worst rated factor; without listed risk text the card stays hidden (null).
+ */
+export function contentRiskAssessment(risk: PageRisk | undefined, headline: string): RiskAssessment | null {
+  if (!risk) return null;
+  const lvl = worst(risk.factors.map((x) => x.level));
+  return { premiumBps: 0, level: lvl, score: LEVEL_RANK[lvl] * 25 + 10, headline, summary: risk.summary, breakdown: factorRows(risk), metrics: [] };
+}
+
 /** The pool page's premium card: the market's `collateralRisk`, the one premium every borrower of it pays. */
-export function poolRiskAssessment(market: MarketRow): RiskAssessment {
+export function poolRiskAssessment(market: MarketRow, risk?: PageRisk): RiskAssessment {
   const bps = market.collateralRiskBps;
+  const listed = risk ? factorRows(risk) : [];
   return {
     premiumBps: bps,
     level: level(bps),
     score: Math.min(100, Math.round(bps / 20)),
     headline: `${pct(bpsToPct(bps))} collateral risk premium`,
-    summary: `Every borrower against this market pays the Hub's base rate plus ${pct(bpsToPct(bps))} of it, set by the Aave DAO for this collateral.`,
-    breakdown: [{ id: "collateralRisk", label: "Collateral risk", bps, level: level(bps), description: "Aave V4 collateral risk of the market's vault-token reserve." }],
+    summary: risk?.summary ?? `Every borrower against this market pays the Hub's base rate plus ${pct(bpsToPct(bps))} of it, set by the Aave DAO for this collateral.`,
+    breakdown: [{ id: "collateralRisk", label: "Collateral risk", bps, level: level(bps), description: "Aave V4 collateral risk of the market's vault-token reserve." }, ...listed],
     metrics: [
       { id: "cf", label: "Collateral factor", value: pct(bpsToPct(market.collateralFactorBps)) },
       { id: "bonus", label: "Max liquidation bonus", value: pct(bpsToPct(market.maxLiquidationBonusBps)) },

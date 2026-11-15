@@ -66,6 +66,17 @@ Names, slugs, descriptions, FAQs, history and long text of the pages a listing a
 
 A 404 marks the operation as carrying no metadata; a refused file is recorded with its reason and nothing is stored. A later listing's entry for the same key replaces the earlier one.
 
+Version 2 (version 1 files stay valid) adds per entry:
+
+| Field | Rules | Shown as |
+|---|---|---|
+| `links` | `website`, `docs`, `github`: https URLs; `x`: an x.com or twitter.com profile; `audits`: up to 20 `{ label, href }` | The page's Website, X, docs and audit links (`readContent`, `readSiloedMarket`) |
+| `risk` | `summary` up to 2,000 characters; up to 12 `factors` `{ id, label, level: low | moderate | elevated | high, text }` | The Lend and Borrow asset risk card (hidden without it); on a pool page, after the collateral risk premium |
+| `faqs` | At most 30 | The page's FAQ |
+| Lend entries | Must name `symbol` and `category` | List grouping (stable or crypto) |
+
+A version 1 entry carrying `links` or `risk` is refused.
+
 ## Frontend fee
 
 The app charges 10 bps on every app action: supply, withdraw, pledge, withdraw collateral, borrow, repay, repay with collateral, deleverage, and swap if it ships (Q-409). A keeper's liquidation is not an app action and pays none. No contract charges, computes or enforces the fee (Q-231), so a direct contract caller pays none.
