@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { sampleManifest } from "@avana/protocol/manifest/sample";
-import { aaveTopology, loadManifest } from "../src/manifest.ts";
+import { aaveTopology, loadManifest, uniswapV4PoolManager } from "../src/manifest.ts";
 
 const ABI_HASH = `0x${"ab".repeat(32)}` as const;
 const dir = mkdtempSync(join(tmpdir(), "avana-manifest-"));
@@ -127,5 +127,16 @@ describe("aaveTopology", () => {
   it("refuses a manifest naming one address twice", () => {
     const twice = { ...aave, lendSpokes: [...aave.lendSpokes, { ...up(2), label: "Hub B again" }] };
     expect(() => aaveTopology({ chainId: 1, aave: twice } as never)).toThrow(/twice/);
+  });
+});
+
+describe("uniswapV4PoolManager", () => {
+  it("is null for a manifest without a PoolManager", () => {
+    expect(uniswapV4PoolManager(loadManifest(write("no-v4.json", manifest), ABI_HASH))).toBeNull();
+  });
+
+  it("reads the PoolManager address in lower case with its start block", () => {
+    const pm = { address: "0x000000000004444C5dC75cB358380D2e3dE08A90", startBlock: 21_688_329 };
+    expect(uniswapV4PoolManager({ uniswapV4: { poolManager: pm } } as never)).toEqual({ address: "0x000000000004444c5dc75cb358380d2e3de08a90", startBlock: 21_688_329 });
   });
 });

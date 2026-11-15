@@ -46,3 +46,20 @@ export const ammPool = onchainTable(
   }),
   (table) => ({ pk: primaryKey({ columns: [table.chainId, table.pool] }) }),
 );
+
+/**
+ * Each pool a listed market names by identifier (pool address(0), a non-zero poolId: a Uniswap v4 PoolId), from
+ * `MarketRegistered`. The PoolManager handlers write series only for these pools; each swap carries its own fee.
+ */
+export const ammPoolId = onchainTable(
+  "amm_pool_id",
+  (t) => ({
+    chainId: t.integer().notNull(),
+    poolId: t.hex().notNull(),
+    integrationId: t.integer().notNull(),
+    /** Block of the first `MarketRegistered` naming the pool. */
+    listedBlock: t.bigint().notNull(),
+    lastBlock: t.bigint().notNull(),
+  }),
+  (table) => ({ pk: primaryKey({ columns: [table.chainId, table.poolId] }) }),
+);

@@ -6,7 +6,7 @@
 // their blocks up to a common ancestor.
 
 import { type Abi, type Address, type Hex, decodeEventLog, encodeAbiParameters, encodeEventTopics, keccak256, toHex } from "viem";
-import { clPoolAbi } from "@avana/services-common/views";
+import { clPoolAbi, uniswapV4PoolManagerAbi } from "@avana/services-common/views";
 import { abis } from "../../src/config/abis.ts";
 import { MemoryStore } from "./store.ts";
 import { registered } from "./registry.ts";
@@ -22,6 +22,7 @@ import "../../src/handlers/markets.ts";
 import "../../src/handlers/oracles.ts";
 import "../../src/handlers/premium.ts";
 import "../../src/handlers/pools.ts";
+import "../../src/handlers/poolManager.ts";
 import "../../src/handlers/progress.ts";
 
 export { registered };
@@ -31,6 +32,7 @@ export function abiOfSource(source: string): Abi {
   if (source.startsWith("AaveSpoke")) return abis.AaveSpoke as Abi;
   if (source.startsWith("AaveHub")) return abis.AaveHub as Abi;
   if (source === "AmmPool") return clPoolAbi as Abi;
+  if (source === "UniswapV4PoolManager") return uniswapV4PoolManagerAbi as Abi;
   if (source === "DaoDeficitOffset") return abis.AvanaFirstLossReserve as Abi;
   const abi = (abis as unknown as Record<string, Abi>)[source];
   if (!abi) throw new Error(`no ABI for source ${source}`);

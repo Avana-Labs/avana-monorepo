@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { Abi } from "viem";
-import { clPoolAbi } from "@avana/services-common/views";
+import { clPoolAbi, uniswapV4PoolManagerAbi } from "@avana/services-common/views";
 import { abis } from "../src/config/abis.ts";
 import { AAVE_HUB_SOURCES, AAVE_SPOKE_SOURCES } from "../src/config/aaveSources.ts";
 import { registered } from "./harness/run.ts";
@@ -14,6 +14,7 @@ import { registered } from "./harness/run.ts";
 /** Events deliberately not handled, by `<Source>.<Event>`. */
 const NOT_INDEXED: Readonly<Record<string, string>> = {
   "VaultToken.Approval": "vault-token allowances are internal to the AaveAdapter and its proxies; no consumer reads them",
+  "UniswapV4PoolManager.Initialize": "a pool is initialized before any market can list it; the market row carries its tokens",
 };
 
 const SOURCES: Readonly<Record<string, Abi>> = {
@@ -22,6 +23,7 @@ const SOURCES: Readonly<Record<string, Abi>> = {
   ...Object.fromEntries(AAVE_HUB_SOURCES.map((s) => [s, abis.AaveHub])),
   DaoDeficitOffset: abis.AvanaFirstLossReserve,
   AmmPool: clPoolAbi,
+  UniswapV4PoolManager: uniswapV4PoolManagerAbi,
 } as Record<string, Abi>;
 
 describe("event coverage", () => {

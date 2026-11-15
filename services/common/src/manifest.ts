@@ -70,6 +70,8 @@ export interface ServiceManifest {
   };
   /** Chainlink sequencer-uptime feed on an L2, null on Ethereum. */
   readonly sequencerFeed: Address | null;
+  /** The chain's Uniswap v4 PoolManager; absent on a chain without a v4 integration. */
+  readonly uniswapV4?: { readonly poolManager: Deployed };
 }
 
 /** An Aave V4 Hub with the label the app shows and its risk tier (`MarketRegistry.hubTier`). */
@@ -151,6 +153,12 @@ export function aaveTopology(m: Pick<ServiceManifest, "chainId" | "aave">): Aave
   const twice = all.find((a, i) => all.indexOf(a) !== i);
   if (twice) throw new Error(`manifest of chain ${m.chainId} names ${twice} twice among its Hubs and Spokes`);
   return { hubs, lendSpokes, borrowSpokes };
+}
+
+/** The manifest's Uniswap v4 PoolManager, address in lower case, or null when it names none. */
+export function uniswapV4PoolManager(m: Pick<ServiceManifest, "uniswapV4">): Deployed | null {
+  const pm = m.uniswapV4?.poolManager;
+  return pm ? { address: pm.address.toLowerCase() as Address, startBlock: pm.startBlock } : null;
 }
 
 /** Manifests store uint256 values as decimal strings; IDs named *Id parse to bigint. */

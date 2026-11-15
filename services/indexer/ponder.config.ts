@@ -5,7 +5,7 @@
 
 import { createConfig } from "ponder";
 import { abis } from "./src/config/abis.ts";
-import { clPoolAbi } from "@avana/services-common/views";
+import { clPoolAbi, uniswapV4PoolManagerAbi } from "@avana/services-common/views";
 import {
   activeChains,
   ammPoolSource,
@@ -16,6 +16,7 @@ import {
   hubSource,
   lpOracleSource,
   perChain,
+  poolManagerSource,
   samplerSource,
   spokeAddedSource,
   spokeApprovedSource,
@@ -72,6 +73,8 @@ export default createConfig({
     AaveHubRecorded: { abi: abis.AaveHub, chain: hubRecordedSource() },
     // The AMM pool of every listed market, for its volume, fee and price series.
     AmmPool: { abi: clPoolAbi, chain: ammPoolSource() },
+    // The Uniswap v4 PoolManager of a chain whose manifest names one; only pools a market lists by poolId are kept.
+    UniswapV4PoolManager: { abi: uniswapV4PoolManagerAbi, chain: poolManagerSource() },
   },
   // One row per chain records the last block handled at the realtime head; the export never serves past it.
   blocks: {

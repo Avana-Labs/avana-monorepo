@@ -52,6 +52,22 @@ export function burnValues(a: LiquidityArgs): Record<string, DecimalString> {
   return { burns: "1", liquidityRemoved: s(a.amount) };
 }
 
+/** A Uniswap v4 swap in pool terms: v4 reports the swapper's deltas (input negative), the pool view is the opposite. */
+export function poolManagerSwapArgs(a: SwapArgs): SwapArgs {
+  return { ...a, amount0: -a.amount0, amount1: -a.amount1 };
+}
+
+/** A Uniswap v4 `ModifyLiquidity`: a mint when liquidity is added, a burn when removed, nothing for a fee-only call. */
+export function liquidityDeltaValues(liquidityDelta: bigint): Record<string, DecimalString> | null {
+  if (liquidityDelta === 0n) return null;
+  return liquidityDelta > 0n ? mintValues({ amount: liquidityDelta, amount0: 0n, amount1: 0n }) : burnValues({ amount: -liquidityDelta, amount0: 0n, amount1: 0n });
+}
+
+/** A Uniswap v4 `Donate`: paid to in-range liquidity like a fee, so it adds to the fees. */
+export function donateValues(amount0: bigint, amount1: bigint): Record<string, DecimalString> {
+  return { fees0: s(amount0), fees1: s(amount1) };
+}
+
 export type PoolLog =
   | { readonly kind: "Swap"; readonly blockNumber: bigint; readonly logIndex: number; readonly timestamp: number; readonly args: SwapArgs }
   | { readonly kind: "Mint" | "Burn"; readonly blockNumber: bigint; readonly logIndex: number; readonly timestamp: number; readonly args: LiquidityArgs };

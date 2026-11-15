@@ -216,6 +216,16 @@ The pool of every listed market is followed from its `MarketRegistered` (`AmmPoo
 | Pool | `Mint(address sender, address owner idx, int24 tickLower idx, int24 tickUpper idx, uint128 amount, uint256 amount0, uint256 amount1)` | `series_point` pool: `mints`, `liquidityAdded` | C |
 | Pool | `Burn(address owner idx, int24 tickLower idx, int24 tickUpper idx, uint128 amount, uint256 amount0, uint256 amount1)` | `series_point` pool: `burns`, `liquidityRemoved` | C |
 
+A market listed with pool `address(0)` and a non-zero `poolId` (a Uniswap v4 PoolId) is followed through the chain's PoolManager (`UniswapV4PoolManager`), named by the optional manifest field `uniswapV4.poolManager` and indexed from the later of its deployment and the MarketRegistry's; a chain whose manifest has no such field has no PoolManager source. Every PoolManager log is matched on its `id` against `amm_pool_id`, and logs of pools no market lists are dropped. The series fields are those of a concentrated-liquidity pool, keyed `chainId:poolId`. Pool history before listing is not served for these pools.
+
+| Contract | Event | Updates | Used by |
+|---|---|---|---|
+| MarketRegistry | `MarketRegistered` (above), pool `address(0)` and `poolId` non-zero | `amm_pool_id` (no read) | C |
+| PoolManager | `Swap(bytes32 id idx, address sender idx, int128 amount0, int128 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick, uint24 fee)` | `series_point` pool, as `Swap` above; the amounts are the swapper's deltas (input negative) and are negated, the fee is the log's own `fee` | C |
+| PoolManager | `ModifyLiquidity(bytes32 id idx, address sender idx, int24 tickLower, int24 tickUpper, int256 liquidityDelta, bytes32 salt)` | `series_point` pool: `mints`, `liquidityAdded` when `liquidityDelta > 0`; `burns`, `liquidityRemoved` when below 0; nothing at 0 | C |
+| PoolManager | `Donate(bytes32 id idx, address sender idx, uint256 amount0, uint256 amount1)` | `series_point` pool: added to `fees0`, `fees1` (paid to in-range liquidity) | C |
+| PoolManager | `Initialize` | not indexed: a pool is initialized before a market can list it | |
+
 The `SeriesSampler` block source runs once an hour of block time (300 blocks on Ethereum, 1,800 on Base) from the later of the Lens and the first Lend Spoke deployment on, so a full reindex rebuilds the history from archive reads. At each sample block it reads, through Ponder's client pinned to that block, every Hub of the manifest and every Hub the MarketRegistry has recorded, with all their assets and Spokes (`@avana/services-common/views`, `discovery.ts`):
 
 | Scope (`series_point.scopeKind`) | Key | Reads | Metrics |
