@@ -42,9 +42,14 @@ interface ILPVaultSwapEvents {
     /// @param firstLossReserve The reserve funded (`MarketRegistry.firstLossReserveOf(fundingHub, debtAsset)`).
     /// @param debtAsset The debt asset paid.
     /// @param amount The part of `B` the reserve took, base units (all of `B` from the recorded reserve).
+    /// @param shares The reserve's Hub shares `fund` reported for it.
     /// @custom:spec REQ-SWAP-027, SPEC-LIQ-022
     event DeficitSurplusFunded(
-        address indexed proxy, address indexed firstLossReserve, address indexed debtAsset, uint256 amount
+        address indexed proxy,
+        address indexed firstLossReserve,
+        address indexed debtAsset,
+        uint256 amount,
+        uint256 shares
     );
 
     /// @notice Emitted when `deleverage` took and repaid a flash loan of the debt asset through the chain's

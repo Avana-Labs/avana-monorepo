@@ -201,7 +201,8 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
     }
 
     /// @notice A reserve that returns a huge buffer cannot make the deficit call revert: LPVaultSwap copies no return
-    /// data from `fund`, so each call settles within a gas limit that the 2 MiB copy alone would exceed.
+    /// data beyond the 32-byte shares word from `fund`, so each call settles within 16M gas, which the reserve's own
+    /// 8.6M of memory, a liquidation and a 2 MiB copy (about 8.8M more) together would exceed, unoptimized builds included.
     // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-027
     function test_TEST_216_hugeReserveReturnDoesNotBlockTheSettlement() public {
         HugeReturnReserve reserve = new HugeReturnReserve(IERC20(address(usdc)));
@@ -217,7 +218,7 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
             usdc.mint(keeper, p.debtToCover + p.maxShortfall);
             vm.startPrank(keeper);
             usdc.approve(address(lvs), p.debtToCover + p.maxShortfall);
-            LiquidationResult memory r = lvs.liquidate{gas: 12_000_000}(p);
+            LiquidationResult memory r = lvs.liquidate{gas: 16_000_000}(p);
             vm.stopPrank();
             if (_deficit() > deficitBefore) {
                 assertEq(usdc.balanceOf(address(reserve)), heldBefore + r.borrowerSurplus, "reserve took B");

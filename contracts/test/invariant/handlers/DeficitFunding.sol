@@ -19,7 +19,10 @@ library DeficitFunding {
             if (
                 logs[i].emitter == lvs && logs[i].topics.length != 0
                     && logs[i].topics[0] == ILPVaultSwapEvents.DeficitSurplusFunded.selector
-            ) amount += abi.decode(logs[i].data, (uint256));
+            ) {
+                (uint256 taken,) = abi.decode(logs[i].data, (uint256, uint256));
+                amount += taken;
+            }
         }
     }
 }
