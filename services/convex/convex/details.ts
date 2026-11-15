@@ -75,7 +75,9 @@ export function readRiskParameters(w: World, scope: PageScope, slug: string) {
   const m = row as MarketDoc;
   const head = headlineReserve(w.reserves.filter((r) => r.chainId === m.chainId), m.spoke);
   const asset = head ? w.assetsByKey.get(hubAssetKey(head)) : undefined;
-  return poolRiskParameters(slug, m, asset?.drawnRateRay ?? null);
+  const room = readPoolBorrowables(w, slug).map((b) => b.availableNowUsd);
+  const borrowRoomUsd = room.length > 0 && room.every((x) => x !== null) ? room.reduce<number>((acc, x) => acc + (x ?? 0), 0) : null;
+  return poolRiskParameters(slug, m, asset?.drawnRateRay ?? null, borrowRoomUsd);
 }
 
 /** The premium card: a collateral market's own premium. Supply markets and debt reserves have none (card hidden). */

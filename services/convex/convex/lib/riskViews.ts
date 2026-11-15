@@ -13,6 +13,15 @@ import type { Cashflow, LiquidationRisk, RiskAssessment, RiskLevel, RiskParamete
 const PAUSE = ["None", "Frozen", "Paused"] as const;
 const PRICE = ["Live", "Drifting", "Cached", "Expired"] as const;
 const cap = (whole: string) => (BigInt(whole) === MAX_SPOKE_CAP ? "Unlimited" : Number(whole).toLocaleString("en-US"));
+const usd8 = (v: string) => compactUsd(Number(BigInt(v)) / 1e8);
+const wadHf = (v: string) => (Number(BigInt(v)) / 1e18).toFixed(2);
+
+/**
+ * The detail pages' Risk Parameters grid has eight slots with these ids on every page type. Each page fills the slots
+ * that mean something for its scope and leaves the rest out (the app shows "—"); its own extra rows follow the slots.
+ */
+export const RISK_SLOTS = ["collateralFactor", "collateralRisk", "depositCapacity", "liquidationPenalty", "borrowCapacity", "targetHealthFactor", "liquidationThreshold", "oracle"] as const;
+export type RiskSlot = (typeof RISK_SLOTS)[number];
 
 export function lendRiskParameters(slug: string, asset: HubAssetRow, slices: readonly HubAssetSpokeRow[], symbol: string): RiskParameters {
   // A Hub asset may have several Lend Spokes: the supply cap is theirs together, unlimited if any one is.
@@ -27,6 +36,9 @@ export function lendRiskParameters(slug: string, asset: HubAssetRow, slices: rea
     slug,
     kind: "lend",
     parameters: [
+      p("depositCapacity", "Deposit capacity", lends.length > 0 ? `${cap(supplyCap)} ${symbol}` : "—", "Most the Lend Spokes accept together on this Hub asset."),
+      p("borrowCapacity", "Borrow capacity", ex ? `${tokens(ex.line, asset.decimals).toLocaleString("en-US")} ${symbol}` : "—", "Most the CDP Spokes may draw together: the Hub's credit line for this asset."),
+      p("oracle", "Oracle source", "Aave oracle", "Aave V4's price for the asset, read by the Hub and the Spokes."),
       p("supplyCap", "Supply cap", lends.length > 0 ? `${cap(supplyCap)} ${symbol}` : "—", "Most the Lend Spokes accept together on this Hub asset."),
       p("reserveFactor", "Reserve factor", pct(bpsToPct(asset.liquidityFeeBps)), "Share of interest kept by the Hub as fees."),
       p("creditLine", "Credit line", ex ? `${tokens(ex.line, asset.decimals).toLocaleString("en-US")} ${symbol}` : "—", "Most the CDP Spokes may draw together."),
@@ -49,6 +61,8 @@ export function assetRiskParameters(slug: string, reserve: SpokeReserveRow, slic
     slug,
     kind: "asset",
     parameters: [
+      { id: "borrowCapacity", label: "Borrow capacity", value: `${cap(slice.drawCap)} ${symbol}`, description: "This Spoke's draw cap on the Hub asset." },
+      { id: "oracle", label: "Oracle source", value: reserve.fixedPrice ? "Fixed price" : "Aave oracle", description: "Price of the debt asset used in health factors." },
       { id: "drawCap", label: "Draw cap (this Spoke)", value: `${cap(slice.drawCap)} ${symbol}` },
       { id: "capUsed", label: "Cap used", value: used === null ? "—" : pct(used), description: "Owed plus reported deficit over the draw cap." },
       { id: "headroom", label: "Available to borrow", value: `${tokens(spokeHeadroom(slice, asset), asset.decimals).toLocaleString("en-US")} ${symbol}`, description: "The smaller of the cap room and the Hub's liquidity." },
@@ -64,17 +78,44 @@ export function assetRiskParameters(slug: string, reserve: SpokeReserveRow, slic
   };
 }
 
-export function poolRiskParameters(slug: string, market: MarketRow, headRateRay: string | null): RiskParameters {
+/** Liquidation bonus range: Aave V4 scales from `maxBonus × bonusFactor` near HF 1 to `maxBonus` at the max-bonus HF. */
+export function liquidationPenaltyRange(maxBonusBps: number, bonusFactorBps: number | null): string {
+  if (bonusFactorBps === null) return pct(bpsToPct(maxBonusBps));
+  const min = Math.floor((maxBonusBps * bonusFactorBps) / 10_000);
+  return min === maxBonusBps ? pct(bpsToPct(maxBonusBps)) : `${pct(bpsToPct(min))} – ${pct(bpsToPct(maxBonusBps))}`;
+}
+
+/** Room the market has to borrow now in USD, summed over its debt reserves' borrow speeds (BOR-024). */
+export type BorrowRoomUsd = number | null;
+
+export function poolRiskParameters(slug: string, market: MarketRow, headRateRay: string | null, borrowRoomUsd: BorrowRoomUsd = null): RiskParameters {
   const liq = market.liquidation;
+  const caps = (market as Partial<MarketRow>).caps;
+  const used = caps ? BigInt(caps.marketUsdCap8) - BigInt(market.marketHeadroomUsd8) : null;
   return {
     slug,
     kind: "pool",
     parameters: [
       { id: "collateralFactor", label: "Collateral factor", value: pct(bpsToPct(market.collateralFactorBps)), description: "Aave V4 liquidates below a health factor of 1.00 computed with this factor." },
+      { id: "collateralRisk", label: "Collateral risk", value: pct(bpsToPct(market.collateralRiskBps)), description: "Borrowers of this market pay the base rate × (1 + this premium)." },
+      ...(caps
+        ? [{ id: "depositCapacity", label: "Deposit capacity", value: `${usd8(used !== null && used > 0n ? used.toString() : "0")} / ${usd8(caps.marketUsdCap8)}`, description: "Pledged value counted against the market's USD cap, and the cap." }]
+        : []),
+      { id: "liquidationPenalty", label: "Liquidation penalty", value: liquidationPenaltyRange(market.maxLiquidationBonusBps, liq?.liquidationBonusFactorBps ?? null), description: "Bonus a liquidator receives, from near a health factor of 1.00 to the max-bonus health factor." },
+      ...(borrowRoomUsd !== null ? [{ id: "borrowCapacity", label: "Borrow capacity", value: compactUsd(borrowRoomUsd), description: "What the market's borrowers can draw now, within the market and debt speed limits." }] : []),
+      ...(liq ? [{ id: "targetHealthFactor", label: "Target health factor", value: wadHf(liq.targetHealthFactorWad) }] : []),
+      ...(caps ? [{ id: "liquidationThreshold", label: "Liquidation threshold", value: pct(bpsToPct(caps.liquidationThresholdBps)) }] : []),
+      { id: "oracle", label: "Oracle source", value: `Avana LP oracle ${market.lpOracle.slice(0, 6)}…${market.lpOracle.slice(-4)}`, description: "Prices the vault token from the pool's token feeds and its TWAP." },
       { id: "maxBonus", label: "Max liquidation bonus", value: pct(bpsToPct(market.maxLiquidationBonusBps)) },
-      { id: "collateralRisk", label: "Collateral risk premium", value: pct(bpsToPct(market.collateralRiskBps)), description: "Borrowers of this market pay the base rate × (1 + this premium)." },
       ...(headRateRay ? [{ id: "borrowRate", label: "Borrow APR (this market)", value: pct(rayToAprPct(marketBorrowRateRay(headRateRay, market.collateralRiskBps))) }] : []),
-      ...(liq ? [{ id: "targetHf", label: "Target health factor", value: (Number(BigInt(liq.targetHealthFactorWad)) / 1e18).toFixed(2) }] : []),
+      ...(caps
+        ? [
+            { id: "topUpSlice", label: "Top-up slice", value: usd8(caps.topUpSliceUsd8) },
+            { id: "depositorCap", label: "Per-depositor cap", value: usd8(caps.depositorUsdCap8) },
+            { id: "liquidationFee", label: "Liquidation fee", value: pct(bpsToPct(caps.liquidationFeeBps)), description: "Share of the bonus kept by the protocol." },
+            { id: "hardHealthFloor", label: "Hard health floor", value: BigInt(caps.hardHealthFloorWad) === 0n ? "Off" : wadHf(caps.hardHealthFloorWad) },
+          ]
+        : []),
       { id: "capHeadroom", label: "Cap headroom", value: compactUsd(Number(BigInt(market.marketHeadroomUsd8)) / 1e8) },
       { id: "price", label: "Vault token price", value: `$${(Number(BigInt(market.acceptedPrice)) / 1e8).toFixed(4)} (${PRICE[market.priceState] ?? market.priceState})` },
       { id: "hubPause", label: "Hub", value: PAUSE[market.pauseState] ?? String(market.pauseState) },

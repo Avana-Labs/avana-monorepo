@@ -90,6 +90,7 @@ interface DecodedMarket {
   suppliedUnits: bigint;
   suppliedUsd: bigint;
   collateralFactorBps: bigint;
+  liquidationThresholdBps: bigint;
   maxLiquidationBonusBps: bigint;
   marketHeadroomUsd: bigint;
   sliceHeadroomUsd: bigint;
@@ -448,6 +449,16 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
       addHeadroom: s(m.addHeadroom),
       pauseState: Number(m.pauseState),
       breakerReasons: Number(m.breakerReasons),
+      caps: {
+        liquidationThresholdBps: Number(m.liquidationThresholdBps),
+        liquidationFeeBps: Number(m.liquidationFeeBps),
+        hardHealthFloorWad: s(m.hardHealthFloor),
+        marketUsdCap8: s(m.marketUsdCap),
+        topUpSliceUsd8: s(m.topUpSliceUsd),
+        depositorUsdCap8: s(m.depositorUsdCap),
+        tokenUsdCaps8: m.tokenUsdCaps.map(s),
+        addCap: s(m.addCap),
+      },
       borrow: borrowOf(i),
       pledgeSpeed: speeds[borrowKeys.length + i] ? speedRow(speeds[borrowKeys.length + i] as DecodedSpeed) : null,
       blockNumber: block,

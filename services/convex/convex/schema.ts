@@ -200,6 +200,19 @@ export default defineSchema({
     addHeadroom: dec,
     pauseState: v.number(),
     breakerReasons: v.number(),
+    /** Avana's caps (USD 8 decimals) and the risk configuration beside them (Lens `MarketView`, REQ-LENS-057). */
+    caps: v.optional(
+      v.object({
+        liquidationThresholdBps: v.number(),
+        liquidationFeeBps: v.number(),
+        hardHealthFloorWad: dec,
+        marketUsdCap8: dec,
+        topUpSliceUsd8: dec,
+        depositorUsdCap8: dec,
+        tokenUsdCaps8: v.array(dec),
+        addCap: dec,
+      }),
+    ),
     /** Each debt reserve of the market's Spoke: the market's borrow rate and what it can borrow now (BOR-024). */
     borrow: v.array(
       v.object({
