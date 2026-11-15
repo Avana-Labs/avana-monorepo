@@ -124,6 +124,16 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         emit RouteDepthThresholdSet(marketId, token, debtAsset, kind, old, depthThreshold);
     }
 
+    /// @dev One loosening step of a USD cap (REQ-RISK-043): at most ×1.5 of the old value, or up to
+    /// `USD_CAP_REOPEN_BASE` ($1,000) whatever the old value, so a cap tightened to 0 can reopen. Example: from 0 the
+    /// first loosening reaches at most $1,000, the next at most $1,500.
+    function _capStepOk(
+        uint256 old,
+        uint256 value
+    ) private pure returns (bool) {
+        return value <= USD_CAP_REOPEN_BASE || value * BPS <= old * CAP_STEP_BPS;
+    }
+
     /// @inheritdoc IParameterStoreLoosen
     /// @custom:spec REQ-RISK-043, REQ-RISK-044, REQ-PSTORE-017, SPEC-CAP-006
     function loosenMarketUsdCap(
@@ -135,7 +145,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         uint256 old = _s().marketUsdCap[marketId];
         if (value <= old) revert NotLooser();
         if (value > USD_CAP_MAX) revert OutOfBounds();
-        _step(value * BPS <= old * CAP_STEP_BPS, "marketUsdCap", bytes32(marketId));
+        _step(_capStepOk(old, value), "marketUsdCap", bytes32(marketId));
         _requireAddCap(m, value, _s().topUpSliceUsd[marketId], _s().stressFloorUsd[marketId]);
         _spaceLoosening("marketUsdCap", bytes32(marketId));
         _s().marketUsdCap[marketId] = value;
@@ -175,7 +185,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         bytes32 scope = _pair(hub, token);
         if (value <= old) revert NotLooser();
         if (value > USD_CAP_MAX) revert OutOfBounds();
-        _step(value * BPS <= old * CAP_STEP_BPS, "tokenUsdCap", scope);
+        _step(_capStepOk(old, value), "tokenUsdCap", scope);
         _spaceLoosening("tokenUsdCap", scope);
         _s().tokenUsdCap[hub][token] = value;
         emit CapLoosened("tokenUsdCap", scope, old, value, msg.sender);

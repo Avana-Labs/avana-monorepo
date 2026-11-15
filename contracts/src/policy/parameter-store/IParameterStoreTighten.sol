@@ -103,8 +103,9 @@ interface IParameterStoreTighten {
     ) external;
 
     /// @notice Lowers a market's `marketUsdCap`; existing records are unaffected.
-    /// @dev Reverts `NotStricter` unless below the current value and `OutOfBounds` below $10,000
-    /// (`USD_CAP_TIGHTEN_FLOOR`, 1,000,000,000,000 in 8-decimal USD) or below `topUpSliceUsd`.
+    /// @dev Reverts `NotStricter` unless below the current value; 0 is allowed. A zero cap refuses every regular pledge
+    /// and re-credit; exits, repay, liquidation and rescue top-ups within `topUpSliceUsd` stay open. The cap may go
+    /// below the slice: the slice only admits top-ups of indebted accounts below `rescueHealthFactor`.
     /// @param marketId Market identifier.
     /// @param value New cap, 8-decimal USD.
     /// @custom:spec REQ-RISK-042, REQ-RISK-044
@@ -123,8 +124,8 @@ interface IParameterStoreTighten {
     ) external;
 
     /// @notice Lowers a token's `tokenUsdCap(hub, token)`.
-    /// @dev Reverts `NotStricter` unless below the current value and `OutOfBounds` below $10,000
-    /// (`USD_CAP_TIGHTEN_FLOOR`).
+    /// @dev Reverts `NotStricter` unless below the current value; 0 is allowed and refuses every pledge's regular part
+    /// that holds the token.
     /// @param hub The Hub the cap is keyed by; every CDP Spoke and market of that Hub on the chain shares it.
     /// @param token Underlying pool token.
     /// @param value New cap, 8-decimal USD.

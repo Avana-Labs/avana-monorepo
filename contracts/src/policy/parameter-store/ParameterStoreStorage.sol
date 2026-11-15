@@ -90,9 +90,10 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
     uint32 internal constant SEQUENCER_GRACE_MIN = 600;
     uint32 internal constant SEQUENCER_GRACE_MAX = 7200;
     uint256 internal constant USD_CAP_MAX = type(uint128).max;
-    /// @dev The lowest value `tightenMarketUsdCap` and `tightenTokenUsdCap` may set, $10,000 in 8-decimal USD
-    /// (REQ-RISK-042): a tightening cannot shut a market or token to dust; closing one is an offboarding.
-    uint256 internal constant USD_CAP_TIGHTEN_FLOOR = 10_000e8;
+    /// @dev The value a `marketUsdCap` or `tokenUsdCap` below it may be loosened to in one step, $1,000 in 8-decimal USD
+    /// (REQ-RISK-043): a cap tightened to 0 (or to dust) reopens to at most $1,000 and then grows by the normal
+    /// ×1.5 steps, since a step from 0 alone could never leave 0.
+    uint256 internal constant USD_CAP_REOPEN_BASE = 1_000e8;
     uint16 internal constant SECOND_SOURCE_TOLERANCE_MAX_BPS = 500;
     uint16 internal constant MIN_LIQUIDATION_BONUS_FLOOR = 200;
     uint16 internal constant MAX_QUOTE_CHANGE_BPS = 100;

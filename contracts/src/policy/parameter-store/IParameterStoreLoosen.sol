@@ -59,7 +59,8 @@ interface IParameterStoreLoosen {
         uint256 depthThreshold
     ) external;
 
-    /// @notice Raises a market's `marketUsdCap`.
+    /// @notice Raises a market's `marketUsdCap`, to at most 1.5 times the current value or `USD_CAP_REOPEN_BASE`
+    /// ($1,000), whichever is higher, so a zero cap can reopen.
     /// @dev Reverts `AddCapTooSmall` unless SPEC-CAP-006 still holds with the new value; at most 1.5 times the current
     /// value.
     /// @param marketId Market identifier.
@@ -81,7 +82,8 @@ interface IParameterStoreLoosen {
         uint256 value
     ) external;
 
-    /// @notice Raises a token's `tokenUsdCap(hub, token)`, to at most 1.5 times the current value.
+    /// @notice Raises a token's `tokenUsdCap(hub, token)`, to at most 1.5 times the current value or
+    /// `USD_CAP_REOPEN_BASE` ($1,000), whichever is higher.
     /// @param hub The Hub the cap is keyed by; every CDP Spoke and market of that Hub on the chain shares it.
     /// @param token Underlying pool token.
     /// @param value New cap, 8-decimal USD.
