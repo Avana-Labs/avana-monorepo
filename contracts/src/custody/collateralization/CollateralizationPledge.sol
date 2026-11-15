@@ -12,6 +12,7 @@ import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {CollateralizationLedger} from "./CollateralizationLedger.sol";
 import {ICollateralizationAdapter} from "./ICollateralizationAdapter.sol";
 import {BackingRecord} from "./types/BackingRecord.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 // Every external call in this file goes to the market's registered LPVault, the vault token, the VaultTokenFactory, the
@@ -181,9 +182,8 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
     ) private pure returns (uint16) {
         if (rebased == 0) return WINDOW_BPS;
         uint256 windowed = current * bps / WINDOW_BPS + (charge.rescue ? 0 : charge.usdCharge);
-        // windowed <= rebased, so the share is at most WINDOW_BPS and fits uint16.
-        // forge-lint: disable-next-line(unsafe-typecast)
-        return uint16(windowed * WINDOW_BPS / rebased);
+        // windowed <= rebased, so the share is at most WINDOW_BPS and fits uint16; `rebased` is non-zero here.
+        return SafeCast.toUint16(Math.mulDiv(windowed, WINDOW_BPS, rebased));
     }
 
     /// @notice Start of `recredit`: caller and lock, vault token, the open record naming `proxy` and `depositor` in

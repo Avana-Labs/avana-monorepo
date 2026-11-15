@@ -319,6 +319,14 @@ contract LiqWorld {
         return 1;
     }
 
+    /// @notice The Spoke's deficit on this Hub, which rises when a liquidation books one (REQ-SWAP-027 reads it).
+    function getSpokeDeficitRay(
+        uint256,
+        address
+    ) external view returns (uint256) {
+        return deficit;
+    }
+
     // ─── MarketRegistry ───
 
     function getMarket(

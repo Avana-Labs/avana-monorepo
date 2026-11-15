@@ -488,15 +488,22 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
     function _clearStanding(
         Watch memory w
     ) private {
-        for (uint256 i = 0; i < w.count; ++i) {
+        // The recipient is read only when a credit stands, and once, outside the claim loop.
+        uint256 k = 0;
+        while (k < w.count && w.credits[k] == 0) {
+            ++k;
+        }
+        if (k == w.count) return;
+        address to = _standingRecipient();
+        if (to == address(0)) return;
+        for (uint256 i = k; i < w.count; ++i) {
             if (w.credits[i] == 0) continue;
-            address to = _standingRecipient();
-            if (to == address(0)) return;
-            // Bounded by the watch list: at most 8 market tokens and their routes' intermediates.
+            // Bounded by the watch list: at most 8 market tokens and their routes' intermediates. `claim` pays the
+            // whole credit, so what still stands is the credit less the amount it reports.
             // forge-lint: disable-next-line(calls-loop)
-            try IPayoutEscrow(w.escrow).claim(w.tokens[i], to) {} catch {}
-            // forge-lint: disable-next-line(calls-loop)
-            w.credits[i] = IPayoutEscrow(w.escrow).claimable(w.tokens[i], address(this));
+            try IPayoutEscrow(w.escrow).claim(w.tokens[i], to) returns (uint256 claimed) {
+                w.credits[i] -= claimed;
+            } catch {}
         }
     }
 

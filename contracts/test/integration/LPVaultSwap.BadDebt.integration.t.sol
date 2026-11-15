@@ -7,6 +7,7 @@ import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -45,6 +46,15 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
     function setUp() public override {
         super.setUp();
         (proxy,) = _bobAccount();
+    }
+
+    /// @dev Records `reserve` as the USDC debt reserve's First-Loss Reserve, as the MarketRegistry's record would.
+    function _recordReserve(
+        address reserve
+    ) internal {
+        DebtReserveDef memory d = registry.getDebtReserve(aave.cdpSpoke, usdcReserveId);
+        d.firstLossReserve = reserve;
+        registry.setDebtReserve(aave.cdpSpoke, usdcReserveId, d, true);
     }
 
     function _deficit() internal view returns (uint256) {
@@ -141,7 +151,7 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
     /// no code (its `fund` moves nothing and returns no data), the deficit call settles and pays `B` to the borrower.
     // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-027
     function test_TEST_216_unusableReserveLeavesTheSurplusWithTheBorrower() public {
-        registry.setAvanaFirstLossReserve(aave.hub, address(usdc), makeAddr("codelessReserve"));
+        _recordReserve(makeAddr("codelessReserve"));
         lpOracle.setAnswer(int256(100_000_000));
         uint256 deficitSurplus = 0;
         for (uint256 i = 0; i < 30 && _suppliedUnits(proxy) != 0; ++i) {
@@ -167,7 +177,7 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
     // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-027
     function test_TEST_216_hugeReserveReturnDoesNotBlockTheSettlement() public {
         HugeReturnReserve reserve = new HugeReturnReserve(IERC20(address(usdc)));
-        registry.setAvanaFirstLossReserve(aave.hub, address(usdc), address(reserve));
+        _recordReserve(address(reserve));
         lpOracle.setAnswer(int256(100_000_000));
         uint256 funded = 0;
         for (uint256 i = 0; i < 30 && _suppliedUnits(proxy) != 0; ++i) {
