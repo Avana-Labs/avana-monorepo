@@ -157,6 +157,10 @@ contract LPVaultSwapInvariantTest is LPVaultSwapUnitBase, HandlerReach {
         invariant_TEST_092_lpVaultSwapHoldsOnlyDonations();
     }
 
+    /// @dev Share of the runs (percent) that must book a deficit: the deep steer (one seed in eight) and then a
+    /// liquidation of the whole debt.
+    uint256 internal constant DEFICIT_REACH = 15;
+
     // TEST-082 verifies: TEST-007
     /// @notice The handler does real work: over 32 fixed-seed runs of 32 calls from this suite's set-up state, each
     /// action succeeds in at least 30 % of its calls (a liquidation counts only when it completes; `settlePending` at
@@ -167,10 +171,6 @@ contract LPVaultSwapInvariantTest is LPVaultSwapUnitBase, HandlerReach {
     /// LPOracle price above the unwind's value, about $2.11, with the account still below HF 1 there, so mostly Bob's
     /// first liquidation), and a liquidation that books a deficit, where `B` funds the First-Loss Reserve, in 15 %
     /// (6 of 32 at these seeds).
-    /// @dev Share of the runs (percent) that must book a deficit: the deep steer (one seed in eight) and then a
-    /// liquidation of the whole debt.
-    uint256 internal constant DEFICIT_REACH = 15;
-
     function test_TEST_082_handlerReach() public {
         string[] memory names = new string[](7);
         (names[0], names[1], names[2], names[3]) = ("liquidate", "movePause", "movePrice", "moveRoutes");
