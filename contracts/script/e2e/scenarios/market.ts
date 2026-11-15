@@ -11,6 +11,8 @@ import {
   type Address,
   type Hex,
   type TransactionReceipt,
+  encodeAbiParameters,
+  encodePacked,
   formatUnits,
   keccak256,
   maxUint256,
@@ -69,6 +71,22 @@ const SLIP_NPM = parseAbi([
   "function mint(MintParams params) payable returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1)",
   "function increaseLiquidity(IncreaseLiquidityParams params) payable returns (uint128 liquidity, uint256 amount0, uint256 amount1)",
 ]);
+// Uniswap v4: the LPVault's market binding, the StateView's slot0, Permit2's allowance and the PositionManager batch.
+const V4_VAULT = parseAbi([
+  "struct PoolKey { address currency0; address currency1; uint24 fee; int24 tickSpacing; address hooks; }",
+  "struct V4Market { PoolKey key; address referencePool; }",
+  "function v4Market(uint256 marketId) view returns (V4Market)",
+]);
+const V4_STATE_VIEW = parseAbi(["function getSlot0(bytes32 poolId) view returns (uint160 sqrtPriceX96, int24 tick, uint24 protocolFee, uint24 lpFee)"]);
+const PERMIT2 = parseAbi(["function approve(address token, address spender, uint160 amount, uint48 expiration)"]);
+const V4_POSM = parseAbi(["function modifyLiquidities(bytes unlockData, uint256 deadline) payable"]);
+/** PositionManager actions (v4-periphery `Actions`) and `ActionConstants.MSG_SENDER`. */
+const V4_MINT_POSITION = 0x02;
+const V4_SETTLE_PAIR = 0x0d;
+const V4_SWEEP = 0x14;
+const V4_MSG_SENDER = "0x0000000000000000000000000000000000000001";
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const Q96 = 1n << 96n;
 const UNI_ROUTER = parseAbi([
   "struct ExactInputSingleParams { address tokenIn; address tokenOut; uint24 fee; address recipient; uint256 deadline; uint256 amountIn; uint256 amountOutMinimum; uint160 sqrtPriceLimitX96; }",
   "function exactInputSingle(ExactInputSingleParams params) payable returns (uint256 amountOut)",
@@ -136,6 +154,26 @@ const WALLETS = {
   drillSlipstream: "0x1000000000000000000000000000000000000c12",
 } as const satisfies Record<string, Address>;
 
+// ─── Concentrated-liquidity math ───
+
+/** √(1.0001^tick) in Q64.96, in floating point (relative error near 1e-15; callers keep a margin). */
+function sqrtAtTick(tick: number): bigint {
+  return BigInt(Math.floor(Math.sqrt(Math.pow(1.0001, tick)) * 2 ** 96));
+}
+
+/** The most liquidity `a0` and `a1` buy on [lower, upper] at `sqrtP` (Q64.96), as `LiquidityAmounts` computes it. */
+export function v4Liquidity(sqrtP: bigint, lower: number, upper: number, a0: bigint, a1: bigint): bigint {
+  const sa = sqrtAtTick(lower);
+  const sb = sqrtAtTick(upper);
+  const for0 = (lo: bigint) => (a0 * ((lo * sb) / Q96)) / (sb - lo);
+  const for1 = (hi: bigint) => (a1 * Q96) / (hi - sa);
+  if (sqrtP <= sa) return for0(sa);
+  if (sqrtP >= sb) return for1(sb);
+  const l0 = for0(sqrtP);
+  const l1 = for1(sqrtP);
+  return l0 < l1 ? l0 : l1;
+}
+
 // ─── Types ───
 
 /** One market of listing-markets.json. */
@@ -147,6 +185,8 @@ export interface Market {
   readonly spoke: Address;
   readonly hub: Address;
   readonly pool: Address;
+  /** The Uniswap v4 PoolId (`pool` is then the zero address); zero for a pool-contract market. */
+  readonly poolId: Hex;
   readonly token0: Address;
   readonly token1: Address;
   readonly tickLower: number;
@@ -248,6 +288,7 @@ export class Env {
       spoke: m.spoke,
       hub: m.hub,
       pool: m.pool,
+      poolId: (m.poolId ?? toHex(0, { size: 32 })) as Hex,
       token0: m.token0,
       token1: m.token1,
       tickLower: Number(m.tickLower),
@@ -301,6 +342,11 @@ export class Env {
     return v ? v.kind === "slipstream" : m.name.startsWith("slip");
   }
 
+  isUniswapV4(m: Market): boolean {
+    const v = (this.ctx.manifest.avana.lpVaults as { address: string; kind: string }[]).find((x) => eq(x.address, m.lpVault));
+    return v ? v.kind === "uniswap-v4" : !/^0x0+$/.test(m.poolId);
+  }
+
   generation(m: Market): number {
     const cfg = (this.ctx.config.listing.markets as { name: string; generation?: number }[]).find((x) => x.name === m.name);
     return cfg?.generation ?? 0;
@@ -311,7 +357,7 @@ export class Env {
   }
 
   /** Sends and throws a StepError naming `step` on any failure. */
-  async must(step: string, from: Address, to: Address, abi: readonly unknown[], fn: string, args: readonly unknown[], opts: { gas?: bigint } = {}) {
+  async must(step: string, from: Address, to: Address, abi: readonly unknown[], fn: string, args: readonly unknown[], opts: { gas?: bigint; value?: bigint } = {}) {
     const r = await this.ctx.send(from, to, withErrors(abi), fn, args, opts);
     if (!r.ok) throw new StepError(`${step}: ${r.error}`);
     return r;
@@ -466,6 +512,7 @@ export class Env {
 
   /** Mints an exact-range position of the market, worth about `usdEach` of each token, and approves the LPVault. */
   async mintPosition(m: Market, owner: Address, usdEach: bigint): Promise<Position> {
+    if (this.isUniswapV4(m)) return this.mintV4Position(m, owner, usdEach);
     const a0 = this.amountForUsd(m.token0, usdEach);
     const a1 = this.amountForUsd(m.token1, usdEach);
     const slip = this.isSlipstream(m);
@@ -500,6 +547,75 @@ export class Env {
     const key = toHex(slip ? (BigInt(gen) << 248n) | tokenId : tokenId, { size: 32 });
     await this.must("approve the LPVault", owner, npm, NFT, "approve", [m.lpVault, tokenId]);
     return { tokenId, key, npm, ref: { integrationId: m.integrationId, positionKey: key }, amounts: [used[2]!, used[3]!] };
+  }
+
+  /**
+   * Uniswap v4: mints through the PositionManager (MINT_POSITION, SETTLE_PAIR, and SWEEP of the ether left for a native
+   * pool), paid through Permit2 or by value for native ETH, and approves the LPVault. The liquidity is the most both
+   * amounts buy at the pool's price, less 1 % for the floating-point tick prices, so the maxima are never exceeded.
+   */
+  async mintV4Position(m: Market, owner: Address, usdEach: bigint): Promise<Position> {
+    const posm = this.ctx.world.uniswapV4PositionManager as Address;
+    const permit2 = this.ctx.world.permit2 as Address;
+    const stateView = this.ctx.world.uniswapV4StateView as Address;
+    if (!posm || !permit2 || !stateView) throw new StepError(`no Uniswap v4 world for ${m.name}`);
+    const { key } = (await this.read(m.lpVault, V4_VAULT, "v4Market", [m.marketId])) as {
+      key: { currency0: Address; currency1: Address; fee: number; tickSpacing: number; hooks: Address };
+    };
+    const native = eq(key.currency0, ZERO_ADDRESS);
+    const a0 = this.amountForUsd(m.token0, usdEach);
+    const a1 = this.amountForUsd(m.token1, usdEach);
+    await this.gasFor(owner);
+    if (native) await this.rpc("anvil_setBalance", [owner, toHex(a0 + 1_000n * 10n ** 18n)]);
+    const expiry = (await this.now()) + 86_400n;
+    for (const [c, a] of [
+      [key.currency0, a0],
+      [key.currency1, a1],
+    ] as const) {
+      if (eq(c, ZERO_ADDRESS)) continue;
+      await this.mint(c, owner, a);
+      await this.approve(owner, c, permit2, a);
+      await this.must(`Permit2 approve ${this.sym(c)}`, owner, permit2, PERMIT2, "approve", [c, posm, a, Number(expiry)]);
+    }
+    const [sqrtP] = (await this.read(stateView, V4_STATE_VIEW, "getSlot0", [m.poolId])) as readonly [bigint, number];
+    const liquidity = (v4Liquidity(sqrtP, m.tickLower, m.tickUpper, a0, a1) * 99n) / 100n;
+    if (liquidity === 0n) throw new StepError(`${m.name}: no liquidity for ${usdEach} USD of each token`);
+    const mintParams = encodeAbiParameters(
+      [
+        { type: "tuple", components: [{ type: "address" }, { type: "address" }, { type: "uint24" }, { type: "int24" }, { type: "address" }] },
+        { type: "int24" },
+        { type: "int24" },
+        { type: "uint256" },
+        { type: "uint128" },
+        { type: "uint128" },
+        { type: "address" },
+        { type: "bytes" },
+      ],
+      [[key.currency0, key.currency1, key.fee, key.tickSpacing, key.hooks], m.tickLower, m.tickUpper, liquidity, a0, a1, owner, "0x"],
+    );
+    const pair = encodeAbiParameters([{ type: "address" }, { type: "address" }], [key.currency0, key.currency1]);
+    const actions: number[] = [V4_MINT_POSITION, V4_SETTLE_PAIR];
+    const params: Hex[] = [mintParams, pair];
+    if (native) {
+      actions.push(V4_SWEEP);
+      params.push(encodeAbiParameters([{ type: "address" }, { type: "address" }], [ZERO_ADDRESS, V4_MSG_SENDER]));
+    }
+    const unlockData = encodeAbiParameters([{ type: "bytes" }, { type: "bytes[]" }], [encodePacked(actions.map(() => "uint8"), actions), params]);
+    const held = () =>
+      Promise.all([native ? this.ctx.client.getBalance({ address: owner }) : this.balance(key.currency0, owner), this.balance(key.currency1, owner)]);
+    const before = await held();
+    const r = await this.must("Uniswap v4 mint", owner, posm, V4_POSM, "modifyLiquidities", [unlockData, await this.deadline()], {
+      value: native ? a0 : undefined,
+    });
+    const tokenId = this.mintedTokenId(r.receipt!, posm, owner);
+    if (tokenId === undefined) throw new StepError(`${m.name}: no PositionManager Transfer to ${owner}`);
+    const after = await held();
+    const gasPaid = native ? r.receipt!.gasUsed * r.receipt!.effectiveGasPrice : 0n;
+    const used: [bigint, bigint] = [before[0] - after[0] - gasPaid, before[1] - after[1]];
+    // PositionRef key: bytes32(tokenId), as for Uniswap v3.
+    const k = toHex(tokenId, { size: 32 });
+    await this.must("approve the LPVault", owner, posm, NFT, "approve", [m.lpVault, tokenId]);
+    return { tokenId, key: k, npm: posm, ref: { integrationId: m.integrationId, positionKey: k }, amounts: used };
   }
 
   mintedTokenId(receipt: TransactionReceipt, npm: Address, owner: Address): bigint | undefined {

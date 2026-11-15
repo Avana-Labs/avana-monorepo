@@ -49,6 +49,8 @@ const W = {
   volBorrower: "0x1000000000000000000000000000000000000d03",
   slipBorrower: "0x1000000000000000000000000000000000000d04",
   deficit: "0x1000000000000000000000000000000000000d06",
+  v4Borrower: "0x1000000000000000000000000000000000000d07",
+  v4StableBorrower: "0x1000000000000000000000000000000000000d08",
   anyone: "0x1000000000000000000000000000000000000d0f",
 } as const satisfies Record<string, Address>;
 
@@ -56,6 +58,9 @@ const M1 = "uni-USDC-USDT-100";
 const M2 = "uni-WETH-USDC-500";
 const M4 = "slip-WETH-USDC-cl100";
 const M6 = "uni-USDC-USDT-500-growth";
+/** Uniswap v4: native ETH/USDC on the volatile Hub, USDC/USDT paid through Permit2 on the stable Hub. */
+const M7 = "univ4-ETH-USDC-500";
+const M8 = "univ4-USDC-USDT-100";
 
 class NotRun extends Error {}
 
@@ -71,6 +76,8 @@ interface State {
   borrower: Holder;
   volBorrower: Holder;
   slipBorrower: Holder;
+  v4Borrower: Holder;
+  v4StableBorrower: Holder;
   pledger: { readonly market: string; readonly owner: Address; readonly position: Position };
 }
 
@@ -227,11 +234,13 @@ async function setup(e: Env, c: Checks) {
     borrower: await holder(e, M1, W.borrower, 20_000n, 2_000n),
     volBorrower: await holder(e, M2, W.volBorrower, 20_000n, 2_000n),
     slipBorrower: await holder(e, M4, W.slipBorrower, 20_000n, 2_000n),
+    v4Borrower: await holder(e, M7, W.v4Borrower, 20_000n, 2_000n),
+    v4StableBorrower: await holder(e, M8, W.v4StableBorrower, 20_000n, 2_000n),
     pledger: { market: M1, owner: W.pledger, position: await e.mintPosition(e.market(M1), W.pledger, 150_000n) },
   };
   mkdirSync(RECORDS, { recursive: true });
   writeFileSync(STATE, JSON.stringify(s, big, 2));
-  for (const [k, h] of Object.entries({ borrower: s.borrower, volBorrower: s.volBorrower, slipBorrower: s.slipBorrower })) {
+  for (const [k, h] of Object.entries(holders(s))) {
     const m = e.market(h.market);
     c.that(`${k} on ${h.market}`, true, `proxy ${h.account.proxy} debt ${await e.debt(m, h.account)} HF ${await e.healthFactor(m, h.account)}`);
   }
@@ -246,7 +255,7 @@ async function setup(e: Env, c: Checks) {
 async function teardown(e: Env, c: Checks) {
   const s = loadState();
   await e.settle();
-  for (const [k, h] of Object.entries({ borrower: s.borrower, volBorrower: s.volBorrower, slipBorrower: s.slipBorrower })) {
+  for (const [k, h] of Object.entries(holders(s))) {
     const m = e.market(h.market);
     const debt = await e.debt(m, h.account);
     if (debt > 0n) {
@@ -262,12 +271,22 @@ async function teardown(e: Env, c: Checks) {
   }
 }
 
+/** The drill accounts that borrow, by name. */
+const holders = (s: State) => ({
+  borrower: s.borrower,
+  volBorrower: s.volBorrower,
+  slipBorrower: s.slipBorrower,
+  v4Borrower: s.v4Borrower,
+  v4StableBorrower: s.v4StableBorrower,
+});
+type HolderName = keyof ReturnType<typeof holders>;
+
 // ─── Drills ───
 
 type Drill = (e: Env, c: Checks, log: string[]) => Promise<void>;
 
 /** A guardian or timelock switch whose forward refuses a borrow (and optionally a pledge) and whose backward reopens it. */
-function switchDrill(forward: string, backward: string, want: RegExp, opts: { pledge?: RegExp; holder?: keyof Pick<State, "borrower" | "volBorrower">; extra?: (keyof Pick<State, "borrower" | "volBorrower" | "slipBorrower">)[] } = {}): Drill {
+function switchDrill(forward: string, backward: string, want: RegExp, opts: { pledge?: RegExp; holder?: keyof Pick<State, "borrower" | "volBorrower">; extra?: HolderName[] } = {}): Drill {
   return async (e, c, log) => {
     const s = loadState();
     const h = s[opts.holder ?? "borrower"];
@@ -323,7 +342,7 @@ const DRILLS: Record<string, Drill> = {
   "hub-pause": switchDrill("hub-pause-forward.json", "hub-pause-back.json", /ApplicationPaused|NotRescueTopUp/, { pledge: /ApplicationPaused|NotRescueTopUp/ }),
 
   // pauseAll by the guardian; every Hub unpaused by one timelock operation (normal delay).
-  "pause-all": switchDrill("pause-all-forward.json", "pause-all-back.json", /ApplicationPaused|NotRescueTopUp/, { extra: ["volBorrower", "slipBorrower"] }),
+  "pause-all": switchDrill("pause-all-forward.json", "pause-all-back.json", /ApplicationPaused|NotRescueTopUp/, { extra: ["volBorrower", "slipBorrower", "v4Borrower", "v4StableBorrower"] }),
 
   // freezeAddress by the guardian; unfreezeAddress only through the timelock (normal delay).
   "freeze-address": switchDrill("freeze-address-forward.json", "freeze-address-back.json", /AddressIsFrozen/),

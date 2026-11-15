@@ -69,7 +69,7 @@ export interface SendResult {
 /**
  * Sends a transaction as `from` (unlocked) and waits; returns the receipt status, gas, the simulated return value and
  * the receipt, or the revert. `opts.gas` replaces the padded estimate (for a call with a gas floor at entry, such as
- * `poke()` with its `pokeMinGas`).
+ * `poke()` with its `pokeMinGas`); `opts.value` is the ether sent with the call.
  */
 export async function send(
   from: Address,
@@ -77,16 +77,17 @@ export async function send(
   abi: readonly unknown[],
   fn: string,
   args: readonly unknown[],
-  opts: { gas?: bigint } = {},
+  opts: { gas?: bigint; value?: bigint } = {},
 ): Promise<SendResult> {
+  const value = opts.value;
   try {
-    const { request, result } = await client.simulateContract({ account: from, address: to, abi: abi as any, functionName: fn, args: args as any });
+    const { request, result } = await client.simulateContract({ account: from, address: to, abi: abi as any, functionName: fn, args: args as any, value });
     // eth_estimateGas runs in the latest block's second; mined one second later, every Aave V4 Hub accrual writes its
     // index and timestamp and costs more (Lend Spoke withdraw: 31,185 vs 35,837 gas, AaveV4.LendSpokeWithdrawGas
     // integration test). The limit is padded so a call estimated in one block still fits in the next.
     let gas = opts.gas;
     if (gas === undefined) {
-      const estimate = await client.estimateContractGas({ account: from, address: to, abi: abi as any, functionName: fn, args: args as any });
+      const estimate = await client.estimateContractGas({ account: from, address: to, abi: abi as any, functionName: fn, args: args as any, value });
       gas = (estimate * 13n) / 10n + 25_000n;
     }
     const hash = await wallet.writeContract({ ...(request as any), account: from, chain: null, gas });
@@ -94,7 +95,7 @@ export async function send(
     if (r.status === "success") return { ok: true, gas: r.gasUsed, error: "", result, receipt: r };
     // Mined but reverted: replay the call at the block before to name the error.
     const why = await client
-      .simulateContract({ account: from, address: to, abi: abi as any, functionName: fn, args: args as any, blockNumber: r.blockNumber - 1n })
+      .simulateContract({ account: from, address: to, abi: abi as any, functionName: fn, args: args as any, value, blockNumber: r.blockNumber - 1n })
       .then(() => "reverted on chain, succeeds one block earlier")
       .catch((e: Error) => e.message.split("\n").slice(0, 2).join(" "));
     return { ok: false, gas: r.gasUsed, error: `mined reverted (gas ${r.gasUsed}): ${why}`, receipt: r };

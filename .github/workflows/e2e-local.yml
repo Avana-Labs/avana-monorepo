@@ -8,7 +8,7 @@ name: e2e-local
 # contracts/script/e2e/e2e-local.sh records each step as pass, fail or not-run; a not-run step (a missing tool or
 # build) is reported as a warning annotation and in the job summary,
 # never as a pass, and fails the job only when E2E_REQUIRE_ALL is true (the manual input). A failed step fails the job.
-# Runs nightly, on release tags and by hand.
+# Runs nightly, on release tags and by hand; a manual run may name the steps and drills to run.
 
 on:
   schedule:
@@ -21,6 +21,14 @@ on:
         description: "Fail the job when any step is not run"
         type: boolean
         default: false
+      steps:
+        description: "Steps to run (E2E_STEPS, space-separated); empty runs every step"
+        type: string
+        default: ""
+      drills:
+        description: "Drills to run (E2E_DRILLS, space-separated); empty runs every drill"
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -82,6 +90,9 @@ jobs:
 
       - name: Rehearsal
         id: e2e
+        env:
+          E2E_STEPS: ${{ inputs.steps }}
+          E2E_DRILLS: ${{ inputs.drills }}
         run: script/e2e/e2e-local.sh
 
       - name: Summary
