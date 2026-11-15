@@ -1333,6 +1333,7 @@ async function failoverDrill(e: Env) {
   const { tmpdir } = await import("node:os");
   const { join: joinPath, resolve } = await import("node:path");
   const n = e.numbers;
+  const breakerFaults: string[] = [];
   const keystore = process.env.E2E_DRILL_KEYSTORE;
   const passwordFile = process.env.E2E_DRILL_KEYSTORE_PASSWORD_FILE;
   if (!keystore || !passwordFile) return { ok: false, detail: "not run: no drill signer keystore (E2E_DRILL_KEYSTORE, made by e2e-local.sh)" };
@@ -1469,9 +1470,13 @@ async function failoverDrill(e: Env) {
     keeper.kill();
     await e.rpc("evm_setAutomine", [true]).catch(() => undefined);
     // The keeper's breaker pokes during the crash record a breach on these markets: a latched reason is reset, as the
-    // Aave Protocol Guardian would, and the breach keeps the breaker TEMPORARY for the recovery time after it, which
-    // the clock then passes, so the scenarios after this one pledge on these markets again.
+    // Aave Protocol Guardian would, and the breach keeps the breaker TEMPORARY for the recovery time after it. The
+    // closed gate is recorded, the clock then passes the recovery time, and the gate must be open again, so the
+    // scenarios after this one pledge on these markets again.
     const recovery = BigInt(e.ctx.config.parameters?.globals?.gateRecoverySeconds ?? 1800);
+    const riskModule = e.ctx.manifest.avana.riskModule.address as Address;
+    const status = async (marketId: bigint) =>
+      (await e.read(riskModule, riskModuleAbi, "getBreakerStatus", [marketId])) as readonly [number, bigint];
     for (const m of [um, sm]) {
       const [latched, lastBreach] = (await e.read(e.registry, marketRegistryAbi, "marketBreaker", [m.marketId])) as readonly [number, bigint];
       const notes: string[] = [];
@@ -1482,11 +1487,15 @@ async function failoverDrill(e: Env) {
       }
       const now = (await e.ctx.client.getBlock()).timestamp;
       if (lastBreach !== 0n && now < lastBreach + recovery) {
+        const [closed, reopensAt] = await status(m.marketId);
+        notes.push(`breach at ${lastBreach}: gate closed with reasons ${closed}, reopening at ${reopensAt}`);
+        if (Number(closed) === 0) breakerFaults.push(`${m.name}: gate open within the recovery after the breach at ${lastBreach}`);
         await e.advance(Number(lastBreach + recovery - now) + 1);
-        notes.push(`breach at ${lastBreach}: clock moved past the ${recovery} s recovery`);
+        notes.push(`clock moved past the ${recovery} s recovery`);
       }
-      const live = await e.read(e.ctx.manifest.avana.riskModule.address as Address, riskModuleAbi, "liveBreakerReasons", [m.marketId]).catch((err: Error) => `unread (${err.message.split("\n")[0]})`);
-      notes.push(`live reasons now ${live}`);
+      const [open, reopensAt] = await status(m.marketId);
+      notes.push(`reasons now ${open}`);
+      if (Number(open) !== 0) breakerFaults.push(`${m.name}: breaker reasons ${open} still set after the recovery (reopening at ${reopensAt})`);
       n[`${m.name}.breaker`] = notes.join("; ");
     }
     rmSync(dir, { recursive: true, force: true });
@@ -1521,6 +1530,10 @@ async function failoverDrill(e: Env) {
     } else {
       detail.push(`${x.label}: sent ${(age - 1) * BLOCK_SECONDS} s after HF 1, mined at +${age * BLOCK_SECONDS} s`);
     }
+  }
+  if (breakerFaults.length > 0) {
+    ok = false;
+    detail.push(...breakerFaults);
   }
   if (!ok) detail.push(`keeper log tail: ${log.slice(-3).join(" | ").slice(0, 600)}`);
   return { ok, detail: detail.join("; ") };
