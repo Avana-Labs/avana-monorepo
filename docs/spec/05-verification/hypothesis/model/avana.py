@@ -578,6 +578,9 @@ class System(SwapMixin):
         R, S = self.counters_regular.get(m, 0), self.counters_slice.get(m, 0)
         room = max(0, self.p.cap_market_usd - R)
         if eligible:
+            # The regular room of an eligible top-up is the smallest of the market and token rooms (SPEC-CAP-002).
+            for t in (mk.t0, mk.t1):
+                room = min(room, max(0, self.p.cap_token_usd - self.counters_token.get(t, 0)))
             sl = max(0, c - room)
             self._rm(S + sl <= self.p.topup_slice_usd, "CapExceeded(SLICE)")
             self._rm(sl <= restore, "SliceAboveRestore")

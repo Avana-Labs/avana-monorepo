@@ -55,7 +55,10 @@ computed('MATH-AR-45e', 'SPEC-CAP-001 example (d = 6)',
 # There is no depositor cap or counter; K and tokenCap may be 0 after a tightening (REQ-RISK-042).
 R, S, T0, K, Z, c, tc, Sall = Ints('R S T0 K Z c tokenCap sliceAllMarkets')
 room = If(K > R, K - R, 0)
-sl_e = If(c > room, c - room, 0)
+# An eligible top-up's regular room is the smaller of the market room and the token room; the slice takes the rest.
+troom = If(tc > T0, tc - T0, 0)
+room_e = If(troom < room, troom, room)
+sl_e = If(c > room_e, c - room_e, 0)
 b46 = [R >= 0, S >= 0, T0 >= 0, K >= 0, Z >= 0, c >= 1, tc >= 0, Sall >= S]
 new_ok = And(c <= room, T0 + c <= tc)
 # The token test applies to a regular part above 0 only: a slice-only top-up skips it.
@@ -63,8 +66,9 @@ top_ok = And(S + sl_e <= Z, Or(c - sl_e == 0, T0 + (c - sl_e) <= tc))
 # MATH-AR-46 verifies: SPEC-CAP-002, INV-028
 prove('MATH-AR-46a', 'new-account pledge passes  =>  R + c <= K (regular budget never exceeded)',
       b46 + [new_ok], R + c <= K)
-prove('MATH-AR-46b', 'eligible top-up passes  =>  regular part c - slice <= room, S + slice <= Z, slice <= c',
-      b46 + [top_ok], And(c - sl_e <= room, S + sl_e <= Z, sl_e <= c, sl_e >= 0))
+prove('MATH-AR-46b', 'eligible top-up passes  =>  regular part c - slice <= min(market room, token room), '
+      'S + slice <= Z, slice <= c',
+      b46 + [top_ok], And(c - sl_e <= room, c - sl_e <= troom, S + sl_e <= Z, sl_e <= c, sl_e >= 0))
 prove('MATH-AR-46c', 'R <= K and S <= Z are kept by every booking (new pledge or eligible top-up)',
       b46 + [R <= K, S <= Z, Or(new_ok, top_ok)],
       And(R + (c - If(new_ok, 0, sl_e)) <= K, S + If(new_ok, 0, sl_e) <= Z))
@@ -72,13 +76,15 @@ prove('MATH-AR-46d', 'token counter exceeds its cap by at most the slice booked:
       b46 + [T0 <= tc + Sall, top_ok], T0 + c <= tc + Sall + sl_e)
 # MATH-AR-46 verifies: SPEC-CAP-002, REQ-RISK-042
 prove('MATH-AR-46f', 'zero caps: with K = 0 or tokenCap = 0 no new-account pledge passes, and a top-up that passes '
-      'with K = 0 and tokenCap = 0 books its whole charge to the slice (only a rescue top-up within Z)',
+      'with K = 0 or tokenCap = 0 books its whole charge to the slice (only a rescue top-up within Z)',
       b46, And(Implies(Or(K == 0, tc == 0), Not(new_ok)),
-               Implies(And(K == 0, tc == 0, top_ok), And(sl_e == c, S + c <= Z))))
-prove('MATH-AR-46g', 'a slice-only top-up (no regular room, S + c <= Z) passes whatever the token counter holds, '
-      'a cap tightened to 0 included; with T0 >= tokenCap any pledge with a regular part is refused',
-      b46, And(Implies(And(room == 0, S + c <= Z), top_ok),
-               Implies(T0 >= tc, And(Not(new_ok), Implies(top_ok, sl_e == c)))))
+               Implies(And(Or(K == 0, tc == 0), top_ok), And(sl_e == c, S + c <= Z))))
+prove('MATH-AR-46g', 'with the token counter at or above its cap (a zero cap included), an eligible top-up within the '
+      'slice passes and is all slice whatever the market room, a new-account pledge is refused, and a top-up larger '
+      'than the regular room plus the slice room is refused',
+      b46 + [S <= Z], And(Implies(And(T0 >= tc, S + c <= Z), And(top_ok, sl_e == c)),
+                          Implies(T0 >= tc, Not(new_ok)),
+                          Implies(c > room_e + (Z - S), Not(top_ok))))
 r_ex = 99_000_000_000_000; c_ex = 2_000_000_000_000
 room_ex = max(100_000_000_000_000 - r_ex, 0)
 sl_ex = c_ex - room_ex if c_ex > room_ex else 0
