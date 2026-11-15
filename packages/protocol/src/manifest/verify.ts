@@ -7,7 +7,18 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { type Address, type Hex, type PublicClient, getAddress, keccak256, parseAbi, parseAbiItem, stringToBytes, zeroHash } from "viem";
+import {
+  type Address,
+  type Hex,
+  type PublicClient,
+  encodeAbiParameters,
+  getAddress,
+  keccak256,
+  parseAbi,
+  parseAbiItem,
+  stringToBytes,
+  zeroHash,
+} from "viem";
 import { adminOf, codeHash, implementationOf } from "./chain.ts";
 import type { Immutable, ReleaseManifest, Upgradeable } from "./types.ts";
 
@@ -19,6 +30,19 @@ export interface Check {
 }
 
 const ROLE = (s: string) => keccak256(stringToBytes(s));
+const V4_MARKET = parseAbi([
+  "struct PoolKey { address currency0; address currency1; uint24 fee; int24 tickSpacing; address hooks; }",
+  "struct V4Market { PoolKey key; address referencePool; }",
+  "function v4Market(uint256 marketId) view returns (V4Market)",
+]);
+const V4_KEY = [{ type: "address" }, { type: "address" }, { type: "uint24" }, { type: "int24" }, { type: "address" }] as const;
+interface V4Key {
+  readonly currency0: Address;
+  readonly currency1: Address;
+  readonly fee: number;
+  readonly tickSpacing: number;
+  readonly hooks: Address;
+}
 const ROLES: Record<string, Hex> = {
   DEFAULT_ADMIN_ROLE: zeroHash,
   APPLICATION_ADMIN: ROLE("APPLICATION_ADMIN"),
@@ -224,6 +248,13 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
     for (const [i, r] of mk.routes.entries()) await compare(`market ${mk.marketId} route ${i}`, r.address, r.codeHash, r.artifact);
     const cl = m.avana.clOracles.find((x) => x.integrationId === mk.integrationId);
     add(`market ${mk.marketId} LPOracle implementation`, !!cl && (await implementationOf(client, mk.lpOracle.address)) === cl.address, mk.lpOracle.implementation);
+    // A Uniswap v4 market: the PoolKey its LPVault bound hashes to the recorded PoolId.
+    const vault = m.avana.lpVaults.find((x) => x.integrationId === mk.integrationId);
+    if (vault?.kind === "uniswap-v4") {
+      const k = ((await client.readContract({ address: vault.address, abi: V4_MARKET, functionName: "v4Market", args: [BigInt(mk.marketId)] })) as { key: V4Key }).key;
+      const id = keccak256(encodeAbiParameters(V4_KEY, [k.currency0, k.currency1, k.fee, k.tickSpacing, k.hooks]));
+      add(`market ${mk.marketId} PoolId`, !!mk.poolId && id === mk.poolId.toLowerCase(), id);
+    }
   }
   for (const d of m.debtReserves) {
     if (d.debtOracle) add(`DebtOracle ${d.asset} implementation`, (await implementationOf(client, d.debtOracle.address)) === d.debtOracle.implementation, d.debtOracle.implementation);

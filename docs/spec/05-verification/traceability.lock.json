@@ -15408,9 +15408,13 @@
     ]
   },
   "REQ-AMM-V4-001": {
-    "hash": "d2124f9aae1b434a",
+    "hash": "57a355ba47fcedaa",
     "checks": [
-      "IAmmIntegrationHooks"
+      "IAmmIntegrationHooks",
+      "IUniswapV4Integration",
+      "LPOracleV4Module",
+      "TEST-331",
+      "UniswapV4Integration"
     ]
   },
   "REQ-AMM-V4-002": {
@@ -15418,22 +15422,41 @@
     "checks": []
   },
   "REQ-AMM-V4-003": {
-    "hash": "2b18484da5277572",
+    "hash": "90488182770af966",
     "checks": [
-      "ILPVaultErrors"
+      "ILPVaultErrors",
+      "IUniswapV4Integration",
+      "LPOracleV4Module",
+      "TEST-331",
+      "UniswapV4Integration",
+      "UniswapV4State"
     ]
   },
   "REQ-AMM-V4-004": {
-    "hash": "2dcd6f130405a6f4",
-    "checks": []
+    "hash": "5974451dece2c2aa",
+    "checks": [
+      "IUniswapV4Integration",
+      "TEST-331",
+      "UniswapV4Integration"
+    ]
   },
   "REQ-AMM-V4-005": {
-    "hash": "a9e484cebbd4bd49",
-    "checks": []
+    "hash": "f19d1cc4c9f2cfb7",
+    "checks": [
+      "IUniswapV4Integration",
+      "LPOracleV4",
+      "LPOracleV4Module",
+      "LPOracleV4ModuleLogic",
+      "TEST-331",
+      "UniswapV4Integration"
+    ]
   },
   "REQ-AMM-V4-006": {
-    "hash": "d64ff90a4c0d52e9",
-    "checks": []
+    "hash": "ab271a074d2330ab",
+    "checks": [
+      "TEST-331",
+      "UniswapV4Integration"
+    ]
   },
   "REQ-ARCH-001": {
     "hash": "db82fc075ad6cde5",

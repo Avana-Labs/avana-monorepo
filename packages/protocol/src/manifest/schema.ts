@@ -130,18 +130,23 @@ export const releaseManifestSchema: Schema = {
     upgradeable: obj(upgradeableProps),
     labelledUpgradeable: obj({ ...upgradeableProps, label: { type: "string" } }),
     hub: obj({ ...upgradeableProps, label: { type: "string" }, tier: { type: "integer", minimum: 1, maximum: 3 } }),
-    market: obj({
-      marketId: decimal,
-      integrationId: { type: "integer", minimum: 1 },
-      spoke: address,
-      vaultToken: ref("immutable"),
-      lpOracle: ref("upgradeable"),
-      reserveId: decimal,
-      pool: address,
-      tokens: arr(address),
-      feeds: feedList,
-      routes: arr(ref("immutable")),
-    }),
+    // `poolId` is optional: only a Uniswap v4 market has one (its `pool` is address(0)).
+    market: (() => {
+      const props: Record<string, Schema> = {
+        marketId: decimal,
+        integrationId: { type: "integer", minimum: 1 },
+        spoke: address,
+        vaultToken: ref("immutable"),
+        lpOracle: ref("upgradeable"),
+        reserveId: decimal,
+        pool: address,
+        poolId: hash,
+        tokens: arr(address),
+        feeds: feedList,
+        routes: arr(ref("immutable")),
+      };
+      return obj(props, { required: Object.keys(props).filter((k) => k !== "poolId") });
+    })(),
     debtReserve: obj({
       spoke: address,
       debtReserveId: decimal,

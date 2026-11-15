@@ -68,7 +68,10 @@ export interface Market {
   readonly vaultToken: Immutable;
   readonly lpOracle: Upgradeable;
   readonly reserveId: string;
+  /** The pool contract; address(0) for a Uniswap v4 market, whose pool is a key in the PoolManager. */
   readonly pool: Address;
+  /** Uniswap v4 only: the PoolId, `keccak256(abi.encode(PoolKey))`, of the key the LPVault bound the market to. */
+  readonly poolId?: Hex;
   readonly tokens: readonly Address[];
   readonly feeds: readonly { readonly feed: Address; readonly heartbeatSeconds: number }[];
   readonly routes: readonly Immutable[];

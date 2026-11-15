@@ -431,6 +431,7 @@ async function listedMarkets(
       reserveId: String(reserveId),
       // address(0) for a Uniswap v4 market, whose pool is a key in the PoolManager.
       pool: getAddress(m.pool as string),
+      ...(m.poolId && !/^0x0+$/.test(m.poolId as string) ? { poolId: (m.poolId as string).toLowerCase() as Hex } : {}),
       tokens,
       feeds: tokens.flatMap(feedsOf),
       routes: await Promise.all((m.routes as string[]).map((r) => imm(r, "DexPathRoute.sol:DexPathRoute"))),
