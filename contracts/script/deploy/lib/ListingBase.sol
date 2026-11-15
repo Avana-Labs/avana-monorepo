@@ -65,12 +65,12 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
         release = vm.parseJsonString(avanaJson, ".release");
         string[2] memory lists = ["tokens", "debtAssets"];
         for (uint256 l = 0; l < 2; ++l) {
-            uint256 n = _count(cfg, string.concat(".listing.", lists[l]));
+            uint256 n = _cfgCount(string.concat(".listing.", lists[l]));
             for (uint256 i = 0; i < n; ++i) {
                 string memory k = _at(lists[l], i);
                 entrySymbols.push(keccak256(bytes(_str(string.concat(k, ".symbol")))));
                 entryKeys.push(k);
-                entryTokens.push(_addr(cfg, string.concat(k, ".address")));
+                entryTokens.push(_cfgAddr(string.concat(k, ".address")));
             }
             if (l == 0) poolTokenEntries = n;
         }
@@ -78,22 +78,77 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
 
     // ─── Config and outputs ───
 
+    // The config readers below run thousands of times in one listing. Each read copies `cfg` (tens of kilobytes) out of
+    // storage and ABI-encodes it for the cheatcode, and memory is never freed within a script run, so a ten-market
+    // listing reached forge's memory limit. Each reader frees that scratch memory before it returns: a value result
+    // resets the free memory pointer, a string result is moved down to where the scratch began.
+
     function _str(
         string memory path
-    ) internal view returns (string memory) {
-        return vm.parseJsonString(cfg, path);
+    ) internal view returns (string memory s) {
+        uint256 mark = _memoryMark();
+        s = _keepString(mark, vm.parseJsonString(cfg, path));
     }
 
     function _uint(
         string memory path
-    ) internal view returns (uint256) {
-        return vm.parseJsonUint(cfg, path);
+    ) internal view returns (uint256 v) {
+        uint256 mark = _memoryMark();
+        v = vm.parseJsonUint(cfg, path);
+        _freeTo(mark);
     }
 
     function _bool(
         string memory path
-    ) internal view returns (bool) {
-        return vm.parseJsonBool(cfg, path);
+    ) internal view returns (bool v) {
+        uint256 mark = _memoryMark();
+        v = vm.parseJsonBool(cfg, path);
+        _freeTo(mark);
+    }
+
+    /// @notice `_addr` on the config (a literal address or a `$<file>:<path>` reference).
+    function _cfgAddr(
+        string memory path
+    ) internal view returns (address a) {
+        uint256 mark = _memoryMark();
+        a = _addr(cfg, path);
+        _freeTo(mark);
+    }
+
+    /// @notice `_count` on the config.
+    function _cfgCount(
+        string memory path
+    ) internal view returns (uint256 n) {
+        uint256 mark = _memoryMark();
+        n = _count(cfg, path);
+        _freeTo(mark);
+    }
+
+    function _memoryMark() internal pure returns (uint256 mark) {
+        assembly ("memory-safe") {
+            mark := mload(0x40)
+        }
+    }
+
+    function _freeTo(
+        uint256 mark
+    ) internal pure {
+        assembly ("memory-safe") {
+            mstore(0x40, mark)
+        }
+    }
+
+    /// @notice Moves `s`, allocated after `mark`, down to `mark` and frees everything after it.
+    function _keepString(
+        uint256 mark,
+        string memory s
+    ) internal pure returns (string memory kept) {
+        assembly ("memory-safe") {
+            let size := add(0x20, mload(s))
+            mcopy(mark, s, size)
+            kept := mark
+            mstore(0x40, and(add(add(mark, size), 0x1f), not(0x1f)))
+        }
     }
 
     function _at(
@@ -134,17 +189,17 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
         string memory symbol,
         string memory role
     ) internal view returns (address) {
-        return _addr(cfg, string.concat(_symbolKey(symbol), ".feeds.", role));
+        return _cfgAddr(string.concat(_symbolKey(symbol), ".feeds.", role));
     }
 
     /// @notice An Avana Hub by its config label (`aave.hubs[].label`).
     function _hub(
         string memory label
     ) internal view returns (address) {
-        uint256 n = _count(cfg, ".aave.hubs");
+        uint256 n = _cfgCount(".aave.hubs");
         for (uint256 i = 0; i < n; ++i) {
             string memory k = string.concat(".aave.hubs[", vm.toString(i), "]");
-            if (_eq(_str(string.concat(k, ".label")), label)) return _addr(cfg, string.concat(k, ".hub"));
+            if (_eq(_str(string.concat(k, ".label")), label)) return _cfgAddr(string.concat(k, ".hub"));
         }
         revert(string.concat("no aave.hubs entry for ", label));
     }
@@ -153,7 +208,7 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
     function _spokeAddr(
         string memory label
     ) internal view returns (address) {
-        return _addr(cfg, string.concat(_spokeKey(label), ".spoke"));
+        return _cfgAddr(string.concat(_spokeKey(label), ".spoke"));
     }
 
     /// @notice The implementation behind a Spoke's ERC-1967 proxy, read from the chain.
@@ -170,7 +225,7 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
     function _spokeKey(
         string memory label
     ) internal view returns (string memory) {
-        uint256 n = _count(cfg, ".listing.spokes");
+        uint256 n = _cfgCount(".listing.spokes");
         for (uint256 i = 0; i < n; ++i) {
             if (_eq(_str(string.concat(_at("spokes", i), ".label")), label)) return _at("spokes", i);
         }
@@ -187,7 +242,7 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
     function _pool(
         string memory name
     ) internal view returns (address) {
-        return _addr(cfg, string.concat(".listing.pools['", name, "']"));
+        return _cfgAddr(string.concat(".listing.pools['", name, "']"));
     }
 
     /// @notice The current 8-decimal answer of a token's primary feed (the listing valuation price).
@@ -202,7 +257,7 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
         address token
     ) internal view returns (address) {
         for (uint256 i = 0; i < poolTokenEntries; ++i) {
-            if (entryTokens[i] == token) return _addr(cfg, string.concat(entryKeys[i], ".feeds.primary"));
+            if (entryTokens[i] == token) return _cfgAddr(string.concat(entryKeys[i], ".feeds.primary"));
         }
         revert("token is not a listed pool token");
     }

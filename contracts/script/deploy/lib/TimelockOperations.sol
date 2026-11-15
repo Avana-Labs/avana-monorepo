@@ -104,7 +104,7 @@ abstract contract TimelockOperations is DeployInputs {
     function _operationId(
         address timelock,
         Operation memory op
-    ) internal view returns (bytes32) {
+    ) internal pure returns (bytes32) {
         return ITimelockOps(timelock).hashOperationBatch(op.targets, op.values, op.payloads, op.predecessor, op.salt);
     }
 
