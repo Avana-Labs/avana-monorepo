@@ -177,4 +177,333 @@ contract LPOracleRecoveryEdgesUnitTest is LPOracleFixture {
         assertEq(n, 1, "phase-4 time of 2^64");
         assertEq(rec, BACK);
     }
+
+    // TEST-042 verifies: SPEC-ORC-014, REQ-ORACLE-032, REQ-ORACLE-033, Q-129, Q-272
+    /// @notice Evidence needs a both-stale interval of at least `cachedWindow` (3,600 s): token B's routes recovering
+    /// after gaps of 3,599 s open no grace; after gaps of exactly 3,600 s grace opens at their end.
+    function test_TEST_042_evidenceNeedsTheWholeCachedWindow() public {
+        uint256 snap = vm.snapshotState();
+        for (uint256 k = 0; k < 2; ++k) {
+            uint256 back = T0 + MAX_AGE + 1 + 3599 + k;
+            oracle.poke();
+            pA.push(int256(ONE), T0 + 80_000);
+            aA.push(int256(ONE), T0 + 80_000);
+            vm.warp(back + 60);
+            pA.push(int256(ONE), back + 60);
+            aA.push(int256(ONE), back + 60);
+            sA.push(int256(ONE), back + 60);
+            sB.push(int256(ONE), back + 60);
+            pB.push(int256(ONE), back);
+            aB.push(int256(ONE), back);
+            (uint256 n, uint64 rec) = _graces();
+            assertEq(n, k, k == 0 ? "3,599 s: no evidence" : "3,600 s: grace opens");
+            assertEq(rec, k == 0 ? 0 : back, "recoveredAt");
+            vm.revertToState(snap);
+        }
+    }
+
+    // TEST-042 verifies: SPEC-ORC-014, REQ-ORACLE-075, REQ-ORACLE-032, Q-129, Q-272
+    /// @notice Every token is searched for evidence, the first one included: the same outage on token A (index 0)
+    /// while token B keeps publishing opens grace at `BACK`.
+    function test_TEST_042_evidenceOnTheFirstToken() public {
+        oracle.poke();
+        pB.push(int256(ONE), T0 + 80_000);
+        aB.push(int256(ONE), T0 + 80_000);
+        vm.warp(BACK + 60);
+        pB.push(int256(ONE), BACK + 60);
+        aB.push(int256(ONE), BACK + 60);
+        sA.push(int256(ONE), BACK + 60);
+        sB.push(int256(ONE), BACK + 60);
+        pA.push(int256(ONE), BACK);
+        aA.push(int256(ONE), BACK);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 1, "grace opens");
+        assertEq(rec, BACK, "recoveredAt");
+    }
+
+    // ─── Recovery evidence: intervals, routes and previous rounds (mutation-gate triage, run 43492416937) ───
+
+    /// @dev Token B's alternate becomes the two-leg route `aB x xB` (both 8-decimal legs at 1.00); returns `xB`.
+    function _twoLegAlternate() internal returns (OracleFeedMock xB) {
+        xB = _feed("xB");
+        registry.setRoutes(address(tokenB), _one(address(pB)), _two(address(aB), address(xB)), RouteSlot.None);
+    }
+
+    /// @dev Keeps token A and both second sources fresh up to `at`, then warps to `at`.
+    function _freshAAt(
+        uint256 at
+    ) internal {
+        pA.push(int256(ONE), T0 + 80_000);
+        aA.push(int256(ONE), T0 + 80_000);
+        vm.warp(at);
+        pA.push(int256(ONE), at);
+        aA.push(int256(ONE), at);
+        sA.push(int256(ONE), at);
+        sB.push(int256(ONE), at);
+    }
+
+    // TEST-042 verifies: SPEC-ORC-014, REQ-ORACLE-032, REQ-ORACLE-033, Q-129, Q-272
+    /// @notice Overlapping leg gaps of a two-leg route join into one interval: one leg is stale over
+    /// `[T0 + 88,201, T0 + 95,401)` and the other over `[T0 + 93,201, T0 + 100,000)`, so the alternate was stale over
+    /// `[T0 + 88,201, T0 + 100,000)`; with the primary's gap `[T0 + 88,201, T0 + 96,000)` both routes were stale
+    /// together for 7,799 s and grace opens at `T0 + 96,000`. Either gap alone would give less than `cachedWindow` or
+    /// another end. Checked with the legs in both orders.
+    function test_TEST_042_overlappingLegGapsJoin() public {
+        uint256 snap = vm.snapshotState();
+        for (uint256 k = 0; k < 2; ++k) {
+            OracleFeedMock xB = _twoLegAlternate();
+            oracle.poke();
+            (OracleFeedMock early, OracleFeedMock late) = k == 0 ? (aB, xB) : (xB, aB);
+            late.push(int256(ONE), T0 + 5000);
+            early.push(int256(ONE), T0 + 95_401);
+            late.push(int256(ONE), T0 + 100_000);
+            pB.push(int256(ONE), T0 + 96_000);
+            _freshAAt(T0 + 100_060);
+            (uint256 n, uint64 rec) = _graces();
+            assertEq(n, 1, "grace opens");
+            assertEq(rec, T0 + 96_000, "recoveredAt = the primary's end");
+            vm.revertToState(snap);
+        }
+    }
+
+    // TEST-042 verifies: SPEC-ORC-014, REQ-ORACLE-032, REQ-ORACLE-033, Q-129, Q-272
+    /// @notice Disjoint leg gaps are not joined: the alternate's interval is the gap with the later end
+    /// (`[T0 + 108,201, T0 + 115,401)`, on either leg), so with the primary stale over `[T0 + 88,201, T0 + 110,000)`
+    /// the routes were stale together for only 1,799 s and no grace opens (their union would give 21,799 s). The same
+    /// holds for gaps that only touch (`[T0 + 88,201, T0 + 95,401)` and `[T0 + 95,401, T0 + 102,000)`, primary to
+    /// `T0 + 98,000`: 2,599 s).
+    function test_TEST_042_disjointLegGapsAreNotJoined() public {
+        uint256 snap = vm.snapshotState();
+        for (uint256 k = 0; k < 2; ++k) {
+            OracleFeedMock xB = _twoLegAlternate();
+            oracle.poke();
+            (OracleFeedMock early, OracleFeedMock late) = k == 0 ? (aB, xB) : (xB, aB);
+            early.push(int256(ONE), T0 + 88_250);
+            late.push(int256(ONE), T0 + 20_000);
+            late.push(int256(ONE), T0 + 115_401);
+            pB.push(int256(ONE), T0 + 110_000);
+            _freshAAt(T0 + 115_461);
+            (uint256 n, uint64 rec) = _graces();
+            assertEq(n, 0, "the later gap alone overlaps the primary's for 1,799 s");
+            assertEq(rec, 0);
+            vm.revertToState(snap);
+        }
+        OracleFeedMock x = _twoLegAlternate();
+        oracle.poke();
+        aB.push(int256(ONE), T0 + 95_401);
+        x.push(int256(ONE), T0 + 7200);
+        x.push(int256(ONE), T0 + 102_000);
+        pB.push(int256(ONE), T0 + 98_000);
+        _freshAAt(T0 + 102_060);
+        (uint256 m, uint64 r) = _graces();
+        assertEq(m, 0, "touching gaps keep the later one");
+        assertEq(r, 0);
+    }
+
+    // TEST-042 verifies: SPEC-ORC-014, REQ-ORACLE-032, REQ-ORACLE-033, Q-129, Q-272
+    /// @notice The both-stale interval is the intersection `[max start, min end)`: a primary stale over
+    /// `[T0 + 108,201, T0 + 115,401)` and an alternate over `[T0 + 88,201, T0 + 110,000)` were stale together for
+    /// 1,799 s, so no grace opens; and a primary stale over `[T0 + 88,201, T0 + 88,300)` with an alternate over
+    /// `[T0 + 108,201, T0 + 115,401)` were never stale together (no grace, and the poke does not revert).
+    function test_TEST_042_bothStaleIsTheIntersection() public {
+        uint256 snap = vm.snapshotState();
+        oracle.poke();
+        pB.push(int256(ONE), T0 + 20_000);
+        pB.push(int256(ONE), T0 + 115_401);
+        aB.push(int256(ONE), T0 + 110_000);
+        _freshAAt(T0 + 115_461);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 0, "1,799 s together");
+        assertEq(rec, 0);
+        vm.revertToState(snap);
+        oracle.poke();
+        pB.push(int256(ONE), T0 + 88_300);
+        aB.push(int256(ONE), T0 + 20_000);
+        aB.push(int256(ONE), T0 + 115_401);
+        _freshAAt(T0 + 115_461);
+        (n, rec) = _graces();
+        assertEq(n, 0, "never stale together");
+        assertEq(rec, 0);
+    }
+
+    // TEST-042 verifies: SPEC-ORC-014, REQ-ORACLE-032, REQ-ORACLE-033, Q-129, Q-272
+    /// @notice With evidence on both tokens, `recoveredAt` is the latest end over the tokens, whichever token comes
+    /// first: token A recovers at `T0 + 115,401` and token B at `T0 + 100,000`, so grace opens at `T0 + 115,401`.
+    function test_TEST_042_latestEndOverEveryToken() public {
+        oracle.poke();
+        pA.push(int256(ONE), T0 + 115_401);
+        aA.push(int256(ONE), T0 + 115_401);
+        pB.push(int256(ONE), T0 + 100_000);
+        aB.push(int256(ONE), T0 + 100_000);
+        vm.warp(T0 + 115_461);
+        sA.push(int256(ONE), T0 + 115_461);
+        sB.push(int256(ONE), T0 + 115_461);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 1, "grace opens");
+        assertEq(rec, T0 + 115_401, "the later of the two ends");
+    }
+
+    // TEST-042 verifies: SPEC-ORC-014, REQ-ORACLE-075, REQ-ORACLE-032, Q-129, Q-272
+    /// @notice A route that is still Stale at the poke is stale over `[staleFrom, now)`: token B's alternate never
+    /// publishes again, its primary recovers at `BACK` after the usual gap, and grace opens at `BACK`. When the
+    /// alternate's last round is later (`T0 + 20,000`, so `staleFrom = T0 + 108,201`) and the primary recovers at
+    /// `T0 + 109,900`, the routes were stale together for 1,699 s and no grace opens.
+    function test_TEST_042_staleRouteSpansFromStaleFromToNow() public {
+        uint256 snap = vm.snapshotState();
+        _outage();
+        pB.push(int256(ONE), BACK);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 1, "Stale alternate: grace at BACK");
+        assertEq(rec, BACK);
+        vm.revertToState(snap);
+        oracle.poke();
+        aB.push(int256(ONE), T0 + 20_000);
+        pB.push(int256(ONE), T0 + 109_900);
+        _freshAAt(T0 + 110_000);
+        (n, rec) = _graces();
+        assertEq(n, 0, "1,699 s together");
+        assertEq(rec, 0);
+    }
+
+    // TEST-042 verifies: SPEC-ORC-014, REQ-ORACLE-075, REQ-ORACLE-032, Q-129, Q-272
+    /// @notice An Invalid route gives the token no evidence, even when its leg has a gap: token B's alternate returns
+    /// at `BACK` with an answer above its `maxAnswer`, so no grace opens although both B feeds were silent for the
+    /// same 7,200 s.
+    function test_TEST_042_invalidRouteGivesNoEvidence() public {
+        _outage();
+        pB.push(int256(ONE), BACK);
+        aB.push(2e12, BACK);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 0, "Invalid alternate");
+        assertEq(rec, 0);
+    }
+
+    // TEST-042 verifies: SPEC-ORC-014, REQ-ORACLE-075, REQ-ORACLE-032, Q-129, Q-272
+    /// @notice Two-leg alternate `aB x xB`: when only the first leg's `getRoundData` reverts, the route gives no
+    /// evidence (no grace), even though the second leg has a usable gap. When the first leg has no gap at all (its
+    /// round is within `feedMaxAge` of the recorded one) no lookup is made for it, so its reverting `getRoundData` does
+    /// not matter and grace opens from the second leg's gap.
+    function test_TEST_042_firstLegLookupOfATwoLegRoute() public {
+        uint256 snap = vm.snapshotState();
+        OracleFeedMock xB = _twoLegAlternate();
+        _outage();
+        aB.push(int256(ONE), BACK);
+        xB.push(int256(ONE), BACK);
+        pB.push(int256(ONE), BACK);
+        aB.setMode(aB.getRoundData.selector, ReadMode.Revert);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 0, "first leg's lookup reverts");
+        assertEq(rec, 0);
+        vm.revertToState(snap);
+        xB = _twoLegAlternate();
+        _outage();
+        aB.push(int256(ONE), T0 + 80_000);
+        xB.push(int256(ONE), BACK);
+        pB.push(int256(ONE), BACK);
+        aB.setMode(aB.getRoundData.selector, ReadMode.Revert);
+        (n, rec) = _graces();
+        assertEq(n, 1, "no gap on the first leg: no lookup");
+        assertEq(rec, BACK);
+    }
+
+    // TEST-042 verifies: REQ-ORACLE-089, REQ-ORACLE-075, SPEC-ORC-014, Q-272
+    /// @notice The first round of phase 0 or 1 has no previous phase to read: the gap starts at the recorded round and
+    /// grace opens at `BACK`, even when the proxy names a phase-0 aggregator (which is not read).
+    function test_TEST_042_firstRoundOfPhaseZeroOrOne() public {
+        uint256 snap = vm.snapshotState();
+        _outage();
+        aB.push(int256(ONE), BACK);
+        pB.setRound(1, int256(ONE), BACK, BACK);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 1, "phase 0, round 1");
+        assertEq(rec, BACK);
+        vm.revertToState(snap);
+        _outage();
+        aB.push(int256(ONE), BACK);
+        OracleFeedMock phase0 = new OracleFeedMock(8, 1, 1e12);
+        phase0.setRound(7, int256(ONE), BACK - 100, BACK - 100);
+        pB.setPhaseAggregator(0, address(phase0));
+        pB.setRound(uint80((uint256(1) << 64) | 1), int256(ONE), BACK, BACK);
+        (n, rec) = _graces();
+        assertEq(n, 1, "phase 1, round 1: phase 0 is never read");
+        assertEq(rec, BACK);
+    }
+
+    // TEST-042 verifies: REQ-ORACLE-089, REQ-ORACLE-075, SPEC-ORC-014, ATTACK-150, Q-272
+    /// @notice A previous-phase time not before the current round (`BACK + 100`, or `BACK` itself), or one beyond 32
+    /// bits (`2^40`), is unusable: the gap starts at the recorded round and grace opens at `BACK`.
+    function test_TEST_042_previousPhaseTimeNotBeforeTheRound() public {
+        uint256[3] memory times = [BACK + 100, BACK, uint256(1) << 40];
+        uint256 snap = vm.snapshotState();
+        for (uint256 k = 0; k < times.length; ++k) {
+            _outage();
+            aB.push(int256(ONE), BACK);
+            OracleFeedMock phase4 = new OracleFeedMock(8, 1, 1e12);
+            phase4.setRound(7, int256(ONE), times[k], times[k]);
+            pB.setPhaseAggregator(4, address(phase4));
+            pB.setRound(uint80((uint256(5) << 64) | 1), int256(ONE), BACK, BACK);
+            (uint256 n, uint64 rec) = _graces();
+            assertEq(n, 1, "falls back to the recorded round");
+            assertEq(rec, BACK);
+            vm.revertToState(snap);
+        }
+    }
+
+    // TEST-042 verifies: REQ-ORACLE-089, REQ-ORACLE-075, SPEC-ORC-014, ATTACK-150, Q-272
+    /// @notice A previous phase that gives no usable time (no aggregator, or one reporting time 0) falls back to the
+    /// recorded round, never to time 0: with the primary recorded at `T0 + 5,000` and switching to phase 5 at
+    /// `T0 + 96,201` its gap is 3,000 s, so no grace opens (a gap from time 0 would overlap the alternate's 8,000 s).
+    function test_TEST_042_previousPhaseWithoutATimeUsesTheRecordedRound() public {
+        uint256 back2 = T0 + 96_201;
+        uint256 snap = vm.snapshotState();
+        for (uint256 k = 0; k < 2; ++k) {
+            oracle.poke();
+            vm.warp(T0 + 5000);
+            pA.push(int256(ONE), T0 + 5000);
+            aA.push(int256(ONE), T0 + 5000);
+            pB.push(int256(ONE), T0 + 5000);
+            sA.push(int256(ONE), T0 + 5000);
+            sB.push(int256(ONE), T0 + 5000);
+            oracle.poke();
+            if (k == 1) {
+                OracleFeedMock phase4 = new OracleFeedMock(8, 1, 1e12);
+                phase4.setRound(7, int256(ONE), 0, 0);
+                pB.setPhaseAggregator(4, address(phase4));
+            }
+            pB.setRound(uint80((uint256(5) << 64) | 1), int256(ONE), back2, back2);
+            aB.push(int256(ONE), back2);
+            vm.warp(back2 + 60);
+            pA.push(int256(ONE), back2 + 60);
+            aA.push(int256(ONE), back2 + 60);
+            sA.push(int256(ONE), back2 + 60);
+            sB.push(int256(ONE), back2 + 60);
+            (uint256 n, uint64 rec) = _graces();
+            assertEq(n, 0, k == 0 ? "no phase-4 aggregator" : "phase-4 time 0");
+            assertEq(rec, 0);
+            vm.revertToState(snap);
+        }
+    }
+
+    // TEST-042 verifies: REQ-ORACLE-089, REQ-ORACLE-075, SPEC-ORC-014, Q-272
+    /// @notice A leg recorded with time 0 (a decoded round reporting `updatedAt = 0`) has no recorded time to fall
+    /// back to: when it later returns on the first round of a phase with no readable previous phase, its route gives
+    /// no evidence and no grace opens; the poke does not revert.
+    function test_TEST_042_recordedTimeZeroIsNoFallback() public {
+        oracle.poke();
+        vm.warp(T0 + 1000);
+        pB.setRound(7, int256(ONE), 0, 0);
+        oracle.poke();
+        pA.push(int256(ONE), T0 + 80_000);
+        aA.push(int256(ONE), T0 + 80_000);
+        vm.warp(BACK + 60);
+        pA.push(int256(ONE), BACK + 60);
+        aA.push(int256(ONE), BACK + 60);
+        sA.push(int256(ONE), BACK + 60);
+        sB.push(int256(ONE), BACK + 60);
+        aB.push(int256(ONE), BACK);
+        pB.setRound(uint80((uint256(5) << 64) | 1), int256(ONE), BACK, BACK);
+        (uint256 n, uint64 rec) = _graces();
+        assertEq(n, 0, "no usable previous time");
+        assertEq(rec, 0);
+    }
 }

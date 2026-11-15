@@ -65,6 +65,15 @@ contract LPVaultSwapFundingUnitTest is LPVaultSwapUnitBase {
         _liquidateAs(keeper, _params(proxy, 1950e6));
     }
 
+    /// @notice A funding pull after which LPVaultSwap holds less than before (the token burns more from the receiver
+    /// than it delivered, while LPVaultSwap held a balance) is `FundingMismatch`, not an arithmetic panic.
+    // TEST-048 verifies: REQ-SWAP-011, REQ-SWAP-098, REQ-SWAP-108
+    function test_TEST_048_balanceFallOnFundingRefused() public {
+        usdc.mint(address(lvs), 10e6);
+        usdc.setDrain(1950e6 + 1);
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.FundingMismatch.selector));
+    }
+
     /// @notice A token that returns `false` on the caller's `transferFrom` reverts the call (SafeERC20), and a caller
     /// without allowance or balance reverts in the token.
     // TEST-048 verifies: REQ-SWAP-011, REQ-SWAP-064

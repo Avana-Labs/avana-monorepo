@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {MockCLPool} from "../utils/mocks/SwapRouteMocks.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapDeleverageGhoUnitTest
@@ -108,5 +109,21 @@ contract LPVaultSwapDeleverageGhoUnitTest is LPVaultSwapUnitBase {
         adapter.repayWithCollateral(proxy, _position(key), 1000e6, ghoReserveId, new uint256[](2), 0);
         assertEq(_debtOf(proxy, ghoReserveId), debt, "nothing repaid");
         assertEq(gho.balanceOf(address(flashSource)), sourceBefore, "source unchanged");
+    }
+
+    /// @notice A residue of the first pool token (USDC, index 0, not the settlement asset here) goes to the wallet like
+    /// any other: a partial fill of the USDC leg leaves 25 raw USDC, which the wallet receives; LPVaultSwap keeps none.
+    // TEST-239 verifies: REQ-SWAP-106, REQ-SWAP-121, REQ-SWAP-024
+    function test_TEST_239_ghoResidueOfFirstTokenToWallet() public {
+        (uint256 a0,) = _released(1000e6);
+        MockCLPool partialFill = _clPool(usdc, gho, 1e12, 1);
+        partialFill.setMaxIn(a0 - 25);
+        registry.setRoute(
+            MARKET_ID, address(usdc), address(gho), 0, address(_route(address(usdc), address(gho), partialFill)), true
+        );
+        uint256 walletUsdc = usdc.balanceOf(alice);
+        _repayGho(1000e6, 0);
+        assertEq(usdc.balanceOf(alice), walletUsdc + 25, "USDC residue to the wallet");
+        assertEq(usdc.balanceOf(address(lvs)), 0, "no USDC kept");
     }
 }

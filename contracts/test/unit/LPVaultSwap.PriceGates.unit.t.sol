@@ -164,6 +164,16 @@ contract LPVaultSwapPriceGatesUnitTest is LPVaultSwapUnitBase {
         _liquidateAs(keeper, _params(proxy, 1950e6));
     }
 
+    /// @notice REQ-SWAP-009: the grace refusal holds for every `HF >= graceHealthFactor`, not only at equality: with
+    /// the bound 1 below the account's health factor the liquidation still reverts `GraceHealthFactor`.
+    // TEST-049 verifies: REQ-SWAP-009, REQ-SWAP-051
+    function test_TEST_049_graceHealthFactorAboveBound() public {
+        lpOracle.setFlags(false, false, false, true);
+        uint256 hf = _hf(proxy);
+        store.setGraceHealthFactor(hf - 1);
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.GraceHealthFactor.selector));
+    }
+
     /// @notice SPEC-LIQ-004: `Pc` is the smaller of the AaveOracle price and the LPOracle's served price, `Pdebt` the
     /// larger of the AaveOracle price and the DebtOracle's. With the AaveOracle at $1.00 for USDC and the DebtOracle at
     /// $1.01, Aave seizes at $1.00 and LPVaultSwap values the seizure at $1.01; with the AaveOracle at $2.00 for the

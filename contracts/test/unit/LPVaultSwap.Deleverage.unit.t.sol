@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {DeleverageRequest} from "../../src/liquidation/lp-vault-swap/types/DeleverageRequest.sol";
@@ -302,5 +303,119 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
             );
         assertFalse(ok, "reverts");
         assertEq(bytes4(ret), ILPVaultSwapErrors.FlashRepayShort.selector, "FlashRepayShort");
+    }
+
+    /// @notice The loop stops at four transfers exactly: with a 1 % fee the source is 20 raw USDC short after four
+    /// transfers and a fifth would clear it, so the call reverts `FlashRepayShort(balance, owed)` with the balance
+    /// after the fourth transfer.
+    // TEST-239 verifies: REQ-SWAP-122, REQ-SWAP-124
+    function test_TEST_239_noFifthRepayTransfer() public {
+        LVSLyingRoute feeSwitch = new LVSLyingRoute(address(usdt), address(usdc));
+        uint256 out = uint256(1_036_000_000) * 9995 / 10_000;
+        usdc.mint(address(feeSwitch), out);
+        feeSwitch.setOut(out);
+        feeSwitch.setReenter(address(usdc), abi.encodeCall(PayoutToken.setFeeBps, (100)));
+        registry.setRoute(MARKET_ID, address(usdt), address(usdc), 0, address(feeSwitch), true);
+        uint256 x = 2_075_924_073;
+        uint256 owed = x + (x * 5 + 5000) / 10_000;
+        // The source's balance after each of four transfers of `owed - balance` at a 1 % floor-rounded fee.
+        uint256 held = usdc.balanceOf(address(flashSource));
+        for (uint256 k = 0; k < 4; ++k) {
+            uint256 send = owed - held;
+            held += send - send * 100 / 10_000;
+        }
+        assertEq(owed - held, 20, "20 raw USDC short after four transfers");
+        assertEq(held + 20 - 20 * 100 / 10_000, owed, "a fifth transfer would clear it");
+        vm.prank(alice);
+        (bool ok, bytes memory ret) = address(adapter)
+            .call(
+                abi.encodeCall(
+                    adapter.repayWithCollateral,
+                    (proxy, _position(key), uint128(1000e6), usdcReserveId, new uint256[](2), 0)
+                )
+            );
+        assertFalse(ok, "reverts");
+        assertEq(ret, abi.encodeWithSelector(ILPVaultSwapErrors.FlashRepayShort.selector, held, owed), "exact data");
+    }
+
+    /// @notice A source already holding more than `x + φ` (a donation) needs no transfer: the loop stops at once and
+    /// the repay with collateral completes with `assetOut = R − x − φ`.
+    // TEST-239 verifies: REQ-SWAP-122, REQ-SWAP-123, REQ-SWAP-108, Q-390
+    function test_TEST_239_sourceAboveOwedNeedsNoTransfer() public {
+        uint256 x = 2_075_924_073;
+        uint256 phi = (x * 5 + 5000) / 10_000;
+        usdc.mint(address(flashSource), x + phi + 1e6);
+        uint256 recovered = _routedRecovery(1000e6);
+        vm.recordLogs();
+        (uint256 repaid, uint256 out) = _repay(1000e6, 0);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 transferSig = keccak256("Transfer(address,address,uint256)");
+        for (uint256 i = 0; i < logs.length; ++i) {
+            if (logs[i].emitter != address(usdc) || logs[i].topics[0] != transferSig) continue;
+            assertFalse(
+                address(uint160(uint256(logs[i].topics[1]))) == address(lvs)
+                    && address(uint160(uint256(logs[i].topics[2]))) == address(flashSource),
+                "no transfer to the source"
+            );
+        }
+        assertEq(repaid, x, "x");
+        assertEq(out, recovered - x - phi, "assetOut = R - x - phi");
+    }
+
+    /// @notice `R` is measured over the release and the swaps only, and the principal over the loan only: a debt-asset
+    /// balance LPVaultSwap already held is neither counted as `R` (the event's `recovered`) nor as the principal
+    /// received, and stays where it is.
+    // TEST-239 verifies: SPEC-LIQ-020, REQ-SWAP-106, REQ-SWAP-122, REQ-SWAP-123, REQ-SWAP-108
+    function test_TEST_239_heldBalanceNotCounted() public {
+        uint256 held = 123e6;
+        usdc.mint(address(lvs), held);
+        uint256 x = 2_075_924_073;
+        uint256 phi = (x * 5 + 5000) / 10_000;
+        uint256 recovered = _routedRecovery(1000e6);
+        vm.expectEmit(true, true, true, true, address(lvs));
+        emit Deleveraged(proxy, MARKET_ID, usdcReserveId, 1000e6, x, recovered, phi, recovered - x - phi);
+        (uint256 repaid, uint256 out) = _repay(1000e6, 0);
+        assertEq(repaid, x, "x");
+        assertEq(out, recovered - x - phi, "assetOut = R - x - phi");
+        assertEq(usdc.balanceOf(address(lvs)), held, "the held balance stays");
+    }
+
+    /// @notice `R = x + φ` exactly is enough (`DeleverageShortfall` only below it): the repay completes with
+    /// `assetOut = 0`, and nothing of zero amount is transferred (the wallet payout and the zero residues are skipped,
+    /// so a token that reverts on zero transfers does not block it).
+    // TEST-239 verifies: SPEC-LIQ-020, REQ-SWAP-106, REQ-SWAP-121
+    function test_TEST_239_recoveryExactlyOwed() public {
+        (uint256 a0,) = _released(1000e6);
+        uint256 x = 2_075_924_073;
+        uint256 phi = (x * 5 + 5000) / 10_000;
+        LVSLyingRoute exact = new LVSLyingRoute(address(usdt), address(usdc));
+        usdc.mint(address(exact), x + phi - a0);
+        exact.setOut(x + phi - a0);
+        registry.setRoute(MARKET_ID, address(usdt), address(usdc), 0, address(exact), true);
+        usdc.setRevertOnZero(true);
+        usdt.setRevertOnZero(true);
+        uint256 wallet = usdc.balanceOf(alice);
+        vm.expectEmit(true, true, true, true, address(lvs));
+        emit Deleveraged(proxy, MARKET_ID, usdcReserveId, 1000e6, x, x + phi, phi, 0);
+        (uint256 repaid, uint256 out) = _repay(1000e6, 0);
+        assertEq(repaid, x, "x");
+        assertEq(out, 0, "nothing left for the wallet");
+        assertEq(usdc.balanceOf(alice), wallet, "wallet unchanged");
+    }
+
+    /// @notice The borrower's release minimums reach the unwind (`BelowMinimum` from the LPVault when one is not met),
+    /// and an empty `minAmounts` is sent as zeros of the market's token count.
+    // TEST-239 verifies: REQ-SWAP-106, REQ-SWAP-116
+    function test_TEST_239_releaseMinimums() public {
+        (uint256 a0,) = _released(1000e6);
+        uint256[] memory mins = new uint256[](2);
+        mins[0] = a0 + 1;
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultErrors.BelowMinimum.selector, 0, a0, a0 + 1));
+        adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, mins, 0);
+        DeleverageRequest memory r = _request(1000e6);
+        r.minAmounts = new uint256[](0);
+        (uint256 repaid,) = adapter.deleverageRaw(r);
+        assertEq(repaid, 2_075_924_073, "x with empty minimums");
     }
 }
