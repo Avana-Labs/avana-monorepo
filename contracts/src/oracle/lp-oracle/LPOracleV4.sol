@@ -53,9 +53,9 @@ contract LPOracleV4 is LPOracleCL, LPOracleV4Module {
 
     function _initMarket(
         bytes calldata marketData,
-        address[] memory tokens
+        address[] memory tokenList
     ) internal override(LPOracleStorage, LPOracleCLModule, LPOracleV4Module) returns (bool) {
-        return LPOracleV4Module._initMarket(marketData, tokens);
+        return LPOracleV4Module._initMarket(marketData, tokenList);
     }
 
     function _poolCheck(
