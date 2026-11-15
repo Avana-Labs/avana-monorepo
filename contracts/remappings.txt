@@ -31,3 +31,4 @@ dependencies/uniswap-v4-periphery-ea2bf2e/:@openzeppelin/contracts/=dependencies
 external/permit2/:permit2/=dependencies/permit2-cc56ad0/
 dependencies/permit2-cc56ad0/:solmate/=dependencies/solmate-4b47a19/
 dependencies/uniswap-v4-core-e50237c/:solmate/=dependencies/solmate-4b47a19/
+@uniswap/v4-core/=dependencies/uniswap-v4-core-e50237c/

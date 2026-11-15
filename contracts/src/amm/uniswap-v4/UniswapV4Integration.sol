@@ -565,8 +565,14 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     ) private view {
         if (ref == address(0) || ref.code.length == 0) revert InvalidPool();
         (address a, address b) = t0 < t1 ? (t0, t1) : (t1, t0);
+        uint24 fee;
+        try IUniswapV3Pool(ref).fee() returns (uint24 f) {
+            fee = f;
+        } catch {
+            revert InvalidPool();
+        }
         IUniswapV3Pool p = IUniswapV3Pool(ref);
-        if (p.token0() != a || p.token1() != b || IUniswapV3Factory(_REF_FACTORY).getPool(a, b, p.fee()) != ref) {
+        if (IUniswapV3Factory(_REF_FACTORY).getPool(a, b, fee) != ref || p.token0() != a || p.token1() != b) {
             revert InvalidPool();
         }
     }
