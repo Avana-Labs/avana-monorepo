@@ -33666,7 +33666,7 @@
     ]
   },
   "SPEC-ORC-018": {
-    "hash": "93c4006d4b7f25aa",
+    "hash": "bf6b7a5c746b071d",
     "checks": [
       "DebtEvaluation",
       "DebtOracle",
