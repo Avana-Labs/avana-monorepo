@@ -271,4 +271,17 @@ contract DebtOracleTimersUnitTest is DebtOracleFixture {
         emit log_named_uint("worst-case DebtOracle poke gas", used);
         assertTrue(_view().inGrace);
     }
+
+    // TEST-219 verifies: SPEC-ORC-013, REQ-ORACLE-027
+    /// @notice With both routes Stale the failure starts at the later route's stale time, and a two-leg route goes
+    /// stale with its earliest stale leg: primary from T0 + 88,101, alternate from its USDC/ETH leg at T0 + 98,201 (not
+    /// its ETH/USD leg at T0 + 155,401), so the failure starts at T0 + 98,201.
+    function test_TEST_219_failureStartFromLaterRouteAndEarliestLeg() public {
+        aEth.push(USDC_ETH, T0 + 10_000);
+        ethUsd.push(ETH_USD, T0 + 150_000);
+        vm.warp(T0 + 200_000);
+        DebtPriceView memory v = _view();
+        assertEq(uint8(v.state), uint8(PriceState.Expired));
+        assertEq(v.failureStart, T0 + 98_201);
+    }
 }

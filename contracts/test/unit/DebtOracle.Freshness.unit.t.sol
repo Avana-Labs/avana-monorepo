@@ -268,4 +268,15 @@ contract DebtOracleFreshnessUnitTest is DebtOracleFixture {
         ethUsd.setCurrent(ETH_USD, 1);
         assertTrue(uint8(_view().state) != uint8(PriceState.Live), "stale everywhere");
     }
+
+    // TEST-276 verifies: SPEC-ORC-020, REQ-ORACLE-100
+    /// @notice A second-source tolerance above 255 bps (300, within the ParameterStore's 500 bps bound) is read whole:
+    /// the evaluation does not revert and the second source confirms.
+    function test_TEST_276_secondSourceToleranceAbove255() public {
+        SecondSource memory s = _oracleNetwork(address(second));
+        s.toleranceBps = 300;
+        store.setSecondSource(usdc, s);
+        DebtPriceView memory v = _view();
+        assertEq(v.reasons & BIT_SECOND, 0, "confirmed");
+    }
 }

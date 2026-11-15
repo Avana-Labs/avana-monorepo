@@ -9,6 +9,7 @@ import {PriceStateView} from "../../src/types/PriceStateView.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 import {OracleFeedMock, ReadMode} from "../utils/mocks/LPOracleMocks.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 /// @notice Route disagreement: the stored first observation, the pause and its expiry, the lower-route price and the
 /// route-version restart of the LPOracle base (2.10).
@@ -219,5 +220,59 @@ contract LPOracleDisagreementUnitTest is LPOracleFixture {
         assertEq(failedSince, T1, "a version change never resets failedSince");
         vm.warp(T1 + 3600);
         assertEq(uint8(_state().state), uint8(PriceState.Expired), "Expired on the original schedule");
+    }
+
+    // TEST-044 verifies: REQ-ORACLE-022, REQ-ORACLE-086, SPEC-ORC-017
+    /// @notice Each token is served at its own lower route: token A's primary (0.97) is below its alternate (1.00),
+    /// token B's alternate (0.975) below its primary, so the answer is `price8(0.97, 0.975)`.
+    function test_TEST_044_lowerRoutePerTokenInBothDirections() public {
+        pA.push(97_000_000, T1);
+        aA.push(100_000_000, T1);
+        PriceStateView memory v = _state();
+        assertEq(uint8(v.state), uint8(PriceState.Drifting));
+        assertEq(v.answer, int256(96_999_903 + 97_499_902), "token A at its primary, token B at its alternate");
+        assertEq(v.tokens[0].legFeeds[0], address(pA), "token A's lower route is its primary");
+        assertEq(v.tokens[1].legFeeds[0], address(aB), "token B's lower route is its alternate");
+    }
+
+    // TEST-231 verifies: REQ-ORACLE-095, REQ-ORACLE-028
+    /// @notice A version change names only the changed token with its stored previous version (1 to 2), and with no
+    /// stored disagreement it clears nothing.
+    function test_TEST_231_versionChangeEventsNameOnlyTheChangedToken() public {
+        aB.push(int256(ONE), T1);
+        registry.bumpVersion(address(tokenB));
+        oracle.poke();
+        registry.bumpVersion(address(tokenB));
+        vm.warp(T1 + 12);
+        vm.roll(block.number + 1);
+        vm.recordLogs();
+        oracle.poke();
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        uint256 observed = 0;
+        for (uint256 i = 0; i < logs.length; ++i) {
+            bytes32 topic = logs[i].topics[0];
+            assertTrue(topic != ILPOracleEvents.DisagreementCleared.selector, "no disagreement to clear");
+            if (topic != ILPOracleEvents.PriceRouteVersionObserved.selector) continue;
+            ++observed;
+            (uint8 token, uint64 previous, uint64 current) = abi.decode(logs[i].data, (uint8, uint64, uint64));
+            assertEq(token, 1, "token B");
+            assertEq(previous, 1, "the stored version");
+            assertEq(current, 2);
+        }
+        assertEq(observed, 1, "one event, for the changed token");
+    }
+
+    // TEST-231 verifies: REQ-ORACLE-095, REQ-ORACLE-028
+    /// @notice A version change observed while token B disagrees records the disagreement with its route values.
+    function test_TEST_231_versionChangeWhileDisagreeingRecordsTheDisagreement() public {
+        registry.bumpVersion(address(tokenB));
+        uint256[] memory primary = new uint256[](2);
+        uint256[] memory alternate = new uint256[](2);
+        (primary[0], primary[1], alternate[0], alternate[1]) = (ONE, ONE, ONE, 97_500_000);
+        vm.expectEmit(address(oracle));
+        emit ILPOracleEvents.PriceRouteVersionObserved(1, 0, 1);
+        vm.expectEmit(address(oracle));
+        emit ILPOracleEvents.DisagreementRecorded(uint64(T1), primary, alternate);
+        oracle.poke();
     }
 }

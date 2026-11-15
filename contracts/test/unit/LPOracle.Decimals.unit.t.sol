@@ -306,4 +306,26 @@ contract LPOracleDecimalsUnitTest is LPOracleFixture {
         assertEq(since, T0 + 180, "a new disagreement start");
         assertEq(uint8(_state().state), uint8(PriceState.Drifting));
     }
+
+    // TEST-294 verifies: REQ-ORACLE-107
+    /// @notice With two tokens changed, the poke records the first one in pool order.
+    function test_TEST_294_firstMismatchingTokenIsRecorded() public {
+        tokenA.setDecimals(18);
+        tokenB.setDecimals(8);
+        _advance(T0 + 60);
+        vm.expectEmit(address(oracle));
+        emit ILPOracleEvents.TokenDecimalsMismatch(0, 6, 18, true);
+        oracle.poke();
+    }
+
+    // TEST-294 verifies: REQ-ORACLE-107, REQ-ORACLE-017
+    /// @notice A stored mismatch and a failed configuration read in the same evaluation still report reason bit 1.
+    function test_TEST_294_mismatchAndFailedConfigurationReadKeepBit1() public {
+        tokenA.setDecimals(18);
+        _pokeAt(T0 + 60);
+        store.setMode(store.getOracleInputs.selector, ReadMode.Revert);
+        PriceStateView memory v = _state();
+        assertEq(uint8(v.state), uint8(PriceState.Cached));
+        assertTrue(_has(v.reasons, 1), "two failed reads set bit 1");
+    }
 }

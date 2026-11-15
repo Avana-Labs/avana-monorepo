@@ -221,4 +221,39 @@ contract LPOracleInputsUnitTest is LPOracleFixture {
         assertTrue(sawOutOfGas, "a starved view logic reverts InsufficientGas");
         assertTrue(sawBound, "a read's pre-call bound reverts InsufficientGas");
     }
+
+    // TEST-040 verifies: REQ-ORACLE-017, REQ-ORACLE-083
+    /// @notice Inputs served for another market (a market id above or below this feed's) are a failed read.
+    function test_TEST_040_inputsOfAnotherMarketFailTheMarket() public {
+        _serveHead(0, MARKET + 1);
+        _assertFailedRead("market id above this feed's");
+        _serveHead(0, MARKET - 1);
+        _assertFailedRead("market id below this feed's");
+        vm.clearMockedCalls();
+        _assertLive("control");
+    }
+
+    // TEST-040 verifies: REQ-ORACLE-017, REQ-ORACLE-083, REQ-ORACLE-042
+    /// @notice Words that fit their type keep their value: a consistency tolerance and an agreement tolerance of 300 bps
+    /// (above 8 bits) and a cached window of 86,400 s (above 16 bits).
+    function test_TEST_040_wordsWiderThanEightOrSixteenBitsKeepTheirValue() public {
+        _serveHead(2, 300);
+        assertEq(_state().consistencyToleranceBps, 300, "consistency tolerance above 255");
+        _serve(0, 0, 300);
+        assertEq(_state().tokens[0].feedAgreementToleranceBps, 300, "agreement tolerance above 255");
+        _serveHead(5, 86_400);
+        oracle.setCompositionFails(true);
+        assertEq(_state().cachedUntil, block.timestamp + 86_400, "cached window above 65,535 s");
+    }
+
+    // TEST-040 verifies: REQ-ORACLE-014, REQ-ORACLE-083, REQ-ORACLE-103
+    /// @notice The pool check receives the served TWAP window and consistency tolerance unchanged, including a window
+    /// above 65,535 s (allowed on a 12-second chain).
+    function test_TEST_040_poolCheckReceivesTheConfiguredWindowAndTolerance() public {
+        oracle.setExpectedPoolCheckArgs(1800, 50);
+        _assertLive("window 1,800 s and tolerance 50 bps reach the module");
+        oracle.setExpectedPoolCheckArgs(70_000, 50);
+        _serveHead(1, 70_000);
+        _assertLive("a window of 70,000 s reaches the module unchanged");
+    }
 }

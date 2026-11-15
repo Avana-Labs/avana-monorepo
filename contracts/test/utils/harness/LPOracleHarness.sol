@@ -36,6 +36,10 @@ abstract contract LPOracleHarnessModule is LPOracleStorage {
         // A composition at a price of token `failIndex` below `failBelow` fails (0: never).
         uint256 failIndex;
         uint256 failBelow;
+        // When set, the consistency check is unavailable unless `_poolCheck` receives exactly these arguments.
+        bool poolArgsChecked;
+        uint32 expectedWindow;
+        uint16 expectedTolerance;
     }
 
     bytes32 private constant MODULE_SLOT = keccak256("avana.test.LPOracleHarnessModule");
@@ -77,13 +81,16 @@ abstract contract LPOracleHarnessModule is LPOracleStorage {
     function _poolCheck(
         uint256[] memory,
         uint256[] memory,
-        uint32,
-        uint16
+        uint32 window,
+        uint16 toleranceBps
     ) internal view override returns (PoolCheck memory p) {
         ModuleState storage m = _m();
         (p.readOk, p.locked) = (!m.lockReadFails, m.locked);
         (p.available, p.pass, p.deviationBps, p.clamped) =
         (!m.consistencyUnavailable, !m.consistencyFails, m.deviation, m.clamped);
+        if (m.poolArgsChecked && (window != m.expectedWindow || toleranceBps != m.expectedTolerance)) {
+            p.available = false;
+        }
     }
 
     function _poolTwapPrice(
@@ -172,6 +179,15 @@ contract LPOracleHarness is LPOracle, LPOracleHarnessModule {
         uint256[] calldata c
     ) external {
         _m().coefficients = c;
+    }
+
+    /// @notice Makes the consistency check unavailable unless the pool check receives `window` and `toleranceBps`.
+    function setExpectedPoolCheckArgs(
+        uint32 window,
+        uint16 toleranceBps
+    ) external {
+        ModuleState storage m = _m();
+        (m.poolArgsChecked, m.expectedWindow, m.expectedTolerance) = (true, window, toleranceBps);
     }
 
     function setCompositionFails(

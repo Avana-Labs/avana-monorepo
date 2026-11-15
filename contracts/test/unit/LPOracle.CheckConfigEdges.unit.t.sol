@@ -187,4 +187,16 @@ contract LPOracleCheckConfigEdgesUnitTest is LPOracleFixture {
         registry.setMarketOf(address(oracle), MARKET + 1, m);
         assertEq(_check(_config()), LPOracleCodes.CHECK_MARKET);
     }
+
+    // TEST-219 verifies: REQ-ORACLE-046, REQ-ORACLE-049, REQ-ORACLE-017
+    /// @notice The seed evaluation accepts a two-leg route and refuses a route of no leg: the two-leg alternate quotes
+    /// (CHECK_QUOTES clear), and a primary with `legCount = 0` fails the seed (CHECK_QUOTES) besides CHECK_ROUTE_RANGE.
+    function test_TEST_219_seedRouteLegCountBounds() public {
+        assertEq(_check(_twoLeg(1e4, 1e12)) & LPOracleCodes.CHECK_QUOTES, 0, "a two-leg route seeds");
+        OracleConfig memory c = _config();
+        c.tokens[0].routes[0].legCount = 0;
+        uint256 failed = _check(c);
+        assertTrue(failed & LPOracleCodes.CHECK_ROUTE_RANGE != 0, "no leg: route range");
+        assertTrue(failed & LPOracleCodes.CHECK_QUOTES != 0, "no leg: the seed evaluation fails");
+    }
 }

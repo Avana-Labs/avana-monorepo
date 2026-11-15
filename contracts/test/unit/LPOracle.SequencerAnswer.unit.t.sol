@@ -151,4 +151,16 @@ contract LPOracleSequencerAnswerUnitTest is LPOracleFixture {
         assertEq(v.answer, before.answer);
         assertTrue(v.borrowAllowed);
     }
+
+    // TEST-275 verifies: SPEC-ORC-021, REQ-ORACLE-099, REQ-ORACLE-061
+    /// @notice A round reporting the sequencer down with a `startedAt` beyond 64 bits never reverts a view: the market
+    /// reports the sequencer down and pauses liquidation.
+    function test_TEST_275_downRoundWithAStartBeyond64BitsNeverReverts() public {
+        _answer(abi.encode(uint80(1), int256(1), uint256(type(uint64).max) + 1, T0 - 7200, uint80(1)));
+        PriceStateView memory v = _state();
+        assertTrue(_has(v.reasons, SEQUENCER_DOWN_BIT), "down");
+        assertTrue(v.liquidationPaused, "down pauses liquidation");
+        assertFalse(v.borrowAllowed);
+        assertEq(uint8(v.state), uint8(PriceState.Live));
+    }
 }

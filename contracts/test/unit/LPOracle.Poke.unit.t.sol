@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
 import {ILPOracleEvents} from "../../src/oracle/lp-oracle/ILPOracleEvents.sol";
+import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {PriceStateView} from "../../src/types/PriceStateView.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
@@ -274,5 +275,170 @@ contract LPOraclePokeUnitTest is LPOracleFixture {
         pA.push(answer, at);
         aA.push(answer, at);
         sA.push(answer, at);
+    }
+
+    function _count(
+        Vm.Log[] memory logs,
+        bytes32 topic
+    ) private view returns (uint256 n) {
+        for (uint256 i = 0; i < logs.length; ++i) {
+            if (logs[i].emitter == address(oracle) && logs[i].topics[0] == topic) ++n;
+        }
+    }
+
+    // TEST-042 verifies: REQ-ORACLE-035, REQ-ORACLE-059, REQ-ORACLE-103
+    /// @notice `initialize` stored the routes, state and rounds the first poke reads, so a poke over the same rounds
+    /// writes no event.
+    function test_TEST_042_firstPokeAfterInitializeEmitsNothing() public {
+        vm.warp(T0 + 60);
+        vm.roll(block.number + 1);
+        vm.recordLogs();
+        assertEq(uint8(oracle.poke()), uint8(PriceState.Live));
+        assertEq(vm.getRecordedLogs().length, 0, "no event");
+    }
+
+    // TEST-042 verifies: REQ-ORACLE-027, REQ-ORACLE-103
+    /// @notice A poke made while the pool's lock is held reports the failed state and writes nothing.
+    function test_TEST_042_pokeInsideThePoolLockWritesNothing() public {
+        oracle.setLock(false, true);
+        vm.warp(T0 + 60);
+        vm.roll(block.number + 1);
+        vm.recordLogs();
+        assertEq(uint8(oracle.poke()), uint8(PriceState.Cached), "reports the failed state");
+        assertEq(vm.getRecordedLogs().length, 0, "no event");
+        (uint64 failedSince,,,) = oracle.storedTimers();
+        assertEq(failedSince, 0, "no failure timer from inside a callback");
+    }
+
+    // TEST-042 verifies: REQ-ORACLE-030, REQ-ORACLE-065
+    /// @notice With both tokens' routes stale for the cached window, the latch is recorded once, for token A, and a
+    /// later poke while latched records nothing.
+    function test_TEST_042_latchRecordedOnce() public {
+        uint256 t = T0 + MAX_AGE + 1 + 3600;
+        vm.warp(t);
+        vm.roll(block.number + 1);
+        vm.recordLogs();
+        oracle.poke();
+        assertEq(_count(vm.getRecordedLogs(), ILPOracleEvents.OutageExpiredLatched.selector), 1, "one latch event");
+        vm.warp(t + 60);
+        vm.roll(block.number + 1);
+        vm.recordLogs();
+        oracle.poke();
+        assertEq(_count(vm.getRecordedLogs(), ILPOracleEvents.OutageExpiredLatched.selector), 0, "already latched");
+    }
+
+    // TEST-042 verifies: REQ-ORACLE-031
+    /// @notice A leg whose round cannot be read keeps the last decodable round it recorded.
+    function test_TEST_042_unreadableLegKeepsItsSeenRound() public {
+        vm.warp(T0 + 60);
+        vm.roll(block.number + 1);
+        _pushAll(int256(ONE), T0 + 60);
+        oracle.poke();
+        uint80 round = pA.roundId();
+        pA.setMode(pA.latestRoundData.selector, ReadMode.Revert);
+        vm.roll(block.number + 1);
+        oracle.poke();
+        (address feed, uint80 roundId, uint64 seenAt) = oracle.storedSeen(0, 0, 0);
+        assertEq(feed, address(pA));
+        assertEq(roundId, round, "the last decodable round");
+        assertEq(seenAt, T0 + 60);
+    }
+
+    // TEST-252 verifies: REQ-ORACLE-032, REQ-ORACLE-095, Q-264
+    /// @notice The mirror of `graceAtNowOnStandbySwitchWhileLatched` with every round in use older than the poke: grace
+    /// still starts at the observing poke, not at the newest round.
+    function test_TEST_252_graceAtNowOnStandbySwitchWithOlderRounds() public {
+        uint256 t = T0 + MAX_AGE + 1 + 3600;
+        vm.warp(t);
+        _keepOthersFresh(t);
+        oracle.poke();
+        OracleFeedMock standby = _feed("standby");
+        standby.push(int256(ONE), t - 3000);
+        registry.setRoutes(address(tokenB), _one(address(standby)), _one(address(aB)), RouteSlot.Primary);
+        registry.bumpVersion(address(tokenB));
+        vm.warp(t + 12);
+        _keepOthersFresh(t + 5);
+        oracle.poke();
+        (,,, uint64 recoveredAt) = oracle.storedTimers();
+        assertEq(recoveredAt, t + 12, "grace starts at the poke that observes the switch");
+    }
+
+    // TEST-252 verifies: REQ-ORACLE-032, Q-264
+    /// @notice The mirror of `graceAtNewestLegWhenNoInterval`: the newest leg in use is token A's (t + 60), though
+    /// token B comes later in pool order.
+    function test_TEST_252_graceAtNewestLegOfAnyToken() public {
+        uint256 t = T0 + MAX_AGE + 1 + 3600;
+        vm.warp(t);
+        _keepOthersFresh(t);
+        oracle.poke();
+        OracleFeedMock np = _feed("newPrimary");
+        OracleFeedMock na = _feed("newAlternate");
+        np.push(int256(ONE), t + 50);
+        na.push(int256(ONE), t + 20);
+        registry.setRoutes(address(tokenB), _one(address(np)), _one(address(na)), RouteSlot.None);
+        vm.warp(t + 70);
+        pA.push(int256(ONE), t + 60);
+        aA.push(int256(ONE), t + 60);
+        oracle.poke();
+        (,,, uint64 recoveredAt) = oracle.storedTimers();
+        assertEq(recoveredAt, t + 60, "the newest leg over every token");
+    }
+
+    // TEST-042 verifies: REQ-ORACLE-088
+    /// @notice The hourly checkpoint emits `PriceCheckpointed` with the copied price and the block time.
+    function test_TEST_042_checkpointEmitsItsCopy() public {
+        vm.warp(T0 + 3600);
+        vm.roll(block.number + 1);
+        vm.expectEmit(address(oracle));
+        emit ILPOracleEvents.PriceCheckpointed(SEEDED, uint64(T0 + 3600));
+        oracle.poke();
+    }
+
+    // TEST-042 verifies: REQ-ORACLE-035
+    /// @notice `PriceStateChanged` is emitted once per change, with the previous and current state, the reasons and
+    /// the served timestamp.
+    function test_TEST_042_stateChangeEventsOncePerChange() public {
+        pB.setMode(pB.latestRoundData.selector, ReadMode.Revert);
+        aB.setMode(aB.latestRoundData.selector, ReadMode.Revert);
+        vm.warp(T0 + 60);
+        vm.roll(block.number + 1);
+        vm.expectEmit(address(oracle));
+        emit ILPOracleEvents.PriceStateChanged(
+            PriceState.Live, PriceState.Cached, LPOracleCodes.ANY_TOKEN_NO_ROUTE, uint64(T0)
+        );
+        oracle.poke();
+        vm.warp(T0 + 120);
+        vm.roll(block.number + 1);
+        vm.recordLogs();
+        oracle.poke();
+        assertEq(_count(vm.getRecordedLogs(), ILPOracleEvents.PriceStateChanged.selector), 0, "still Cached");
+        pB.setMode(pB.latestRoundData.selector, ReadMode.Normal);
+        aB.setMode(aB.latestRoundData.selector, ReadMode.Normal);
+        vm.warp(T0 + 180);
+        vm.roll(block.number + 1);
+        vm.expectEmit(address(oracle));
+        emit ILPOracleEvents.PriceStateChanged(PriceState.Cached, PriceState.Live, 0, uint64(T0));
+        oracle.poke();
+    }
+
+    // TEST-042 verifies: REQ-ORACLE-035, REQ-ORACLE-007
+    /// @notice `RouteChanged` is emitted once per change: on the failover, not again while on the alternate, and on the
+    /// return to the primary.
+    function test_TEST_042_routeChangeEventsOncePerChange() public {
+        vm.warp(T0 + 60);
+        vm.roll(block.number + 1);
+        pA.setMode(pA.latestRoundData.selector, ReadMode.Revert);
+        vm.expectEmit(address(oracle));
+        emit ILPOracleEvents.RouteChanged(0, 1, 2);
+        oracle.poke();
+        vm.roll(block.number + 1);
+        vm.recordLogs();
+        oracle.poke();
+        assertEq(_count(vm.getRecordedLogs(), ILPOracleEvents.RouteChanged.selector), 0, "still on the alternate");
+        pA.setMode(pA.latestRoundData.selector, ReadMode.Normal);
+        vm.roll(block.number + 1);
+        vm.expectEmit(address(oracle));
+        emit ILPOracleEvents.RouteChanged(0, 2, 1);
+        oracle.poke();
     }
 }

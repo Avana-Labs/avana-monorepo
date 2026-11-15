@@ -156,4 +156,24 @@ contract ParameterStoreSpeedRulesUnitTest is AvanaTest {
         if (bNoLooser && bStricter) assertFalse(aNoLooser || aStricter, "a tightening reversed is a loosening");
         if (bNoLooser && aNoLooser) assertEq(keccak256(abi.encode(a)), keccak256(abi.encode(b)), "equal both ways");
     }
+
+    // TEST-325 verifies: REQ-PSTORE-036
+    /// @notice Window looseness keeps every second apart up to the longest window: 604,799 s is looser than 604,800 s,
+    /// and 604,800 s is tighter than 604,799 s, for markets and debt assets.
+    function test_TEST_325_rulesWindowOneSecondApartAtTheTop() public pure {
+        MarketSpeedLimits memory slow = _m();
+        slow.window = R.SPEED_WINDOW_MAX;
+        MarketSpeedLimits memory faster = _m();
+        faster.window = R.SPEED_WINDOW_MAX - 1;
+        (bool noLooser, bool stricter) = R.compareMarket(slow, faster);
+        assertFalse(noLooser, "one second shorter is looser");
+        (noLooser, stricter) = R.compareMarket(faster, slow);
+        assertTrue(noLooser && stricter, "one second longer is tighter");
+        SpeedLimit memory d = _d();
+        d.window = R.SPEED_WINDOW_MAX;
+        SpeedLimit memory e = _d();
+        e.window = R.SPEED_WINDOW_MAX - 1;
+        (noLooser,) = R.compareDebt(d, e);
+        assertFalse(noLooser);
+    }
 }
