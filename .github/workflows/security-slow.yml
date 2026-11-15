@@ -7,7 +7,7 @@ name: security-slow
 # hevm target (each harness's assertion entry points, each src/ contract), and one per group of eight src/ contracts
 # for Mythril; every other job has at most 4 hours. A new harness, Halmos test or src/ contract gets its own job on the
 # next run. `slow-gate` passes only when every job passed; a Halmos check that does not complete within its budget
-# fails its job (see the halmos job). By hand, `tools: halmos` runs only the Halmos jobs (of `halmos_contracts`).
+# fails its job (see the halmos job). By hand, `tools: halmos` runs only the Halmos jobs (of `halmos_contracts` and `halmos_checks`).
 # By hand, `campaign` runs the pre-audit fuzzing campaign of one layer instead: every harness of the layer gets 24
 # hours of Echidna per mode and 24 hours of Medusa, as eight parallel 3-hour jobs per harness and mode, each with a
 # fresh seed and starting from the stored corpus; `campaign-merge` then joins the eight corpora of each harness and
@@ -44,6 +44,11 @@ on:
         required: false
         type: string
         default: ""
+      halmos_checks:
+        description: "Halmos check functions to run, space-separated (empty: all of the selected contracts)"
+        required: false
+        type: string
+        default: ""
 
 concurrency:
   # A newer run waits for the running slow tier instead of cancelling it; a campaign has its own group.
@@ -67,6 +72,7 @@ env:
   CAMPAIGN: ${{ inputs.campaign || 'none' }}
   TOOLS: ${{ inputs.tools || 'all' }}
   HALMOS_ONLY_CONTRACTS: ${{ inputs.halmos_contracts || '' }}
+  HALMOS_ONLY_CHECKS: ${{ inputs.halmos_checks || '' }}
 
 defaults:
   run:
@@ -153,8 +159,8 @@ jobs:
           # Each list is computed before it is written, so a failing listing fails this job.
           out() { echo "$1=$2" | tee -a "$GITHUB_OUTPUT"; }
           if [ "$CAMPAIGN" = none ]; then
-            # By hand, `tools: halmos` runs the Halmos jobs alone, and `halmos_contracts` keeps those of the named
-            # test contracts.
+            # By hand, `tools: halmos` runs the Halmos jobs alone, `halmos_contracts` keeps those of the named test
+            # contracts and `halmos_checks` those of the named check functions.
             for t in echidna medusa hevm mythril; do
               if [ "$TOOLS" = halmos ]; then out "$t" '[]'; else legs=$(python3 script/ci-shards.py "$t" "$B"); out "$t" "$legs"; fi
             done
@@ -162,6 +168,10 @@ jobs:
             if [ -n "$HALMOS_ONLY_CONTRACTS" ]; then
               legs=$(echo "$legs" | jq -c --arg names "$HALMOS_ONLY_CONTRACTS"                 '($names | split(" ") | map(select(. != ""))) as $n | map(select(.contract as $c | $n | index($c)))')
               [ "$legs" != '[]' ] || { echo "no Halmos check in: $HALMOS_ONLY_CONTRACTS"; exit 1; }
+            fi
+            if [ -n "$HALMOS_ONLY_CHECKS" ]; then
+              legs=$(echo "$legs" | jq -c --arg names "$HALMOS_ONLY_CHECKS"                 '($names | split(" ") | map(select(. != ""))) as $n | map(select(.check as $c | $n | index($c)))')
+              [ "$legs" != '[]' ] || { echo "no Halmos check named: $HALMOS_ONLY_CHECKS"; exit 1; }
             fi
             out halmos "$legs"
             for t in campaign-harnesses campaign-echidna campaign-medusa; do out "$t" '[]'; done
