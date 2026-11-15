@@ -7,8 +7,8 @@ import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 import {CollWorld, CollateralizationHandler} from "./handlers/CollateralizationHandler.sol";
-import {VaultTokenAttackerHandler} from "./handlers/VaultTokenAttackerHandler.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";
+import {VaultTokenAttackerHandler} from "./handlers/VaultTokenAttackerHandler.sol";
 
 /// @title VaultTokenInvariantTest
 /// @notice Hub-side and holder invariants of the real vault token on the real local Aave V4 and the real
@@ -72,7 +72,8 @@ contract VaultTokenInvariantTest is CollateralizationFixture, HandlerReach {
         (bytes4[] memory actions, string[] memory names,) = _reachActions();
         address[] memory own = new address[](2);
         (own[0], own[1]) = (address(handler), address(this));
-        Reach memory r = _replayLanded(address(handler), actions, CollateralizationHandler.Skipped.selector, 32, 50, 0, own, true);
+        Reach memory r =
+            _replayLanded(address(handler), actions, CollateralizationHandler.Skipped.selector, 32, 50, 0, own, true);
         _check(r, names, new string[](0), _floors(10, 0), new uint256[](0));
     }
 
@@ -81,7 +82,11 @@ contract VaultTokenInvariantTest is CollateralizationFixture, HandlerReach {
     }
 
     /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
-    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
         (actions, names, kinds) = (new bytes4[](10), new string[](10), new int16[][](10));
         (actions[0], names[0]) = (CollateralizationHandler.pledge.selector, "pledge");
         kinds[0] = new int16[](2);
@@ -126,7 +131,10 @@ contract VaultTokenInvariantTest is CollateralizationFixture, HandlerReach {
         kinds[9][2] = 256;
     }
 
-    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
         (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
         for (uint256 k = 0; k < actions.length; ++k) {
             if (actions[k] == selector) return _typed(selector, kinds[k], seed);

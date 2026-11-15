@@ -6,9 +6,9 @@ pragma solidity 0.8.28;
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwapLiquidation} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
 import {LPVaultSwapLiquidationLogic} from "../../../src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol";
+import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
 import {LiquidationParams} from "../../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
 import {RouteMode} from "../../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
 import {PayoutEscrow} from "../../../src/liquidation/payout-escrow/PayoutEscrow.sol";
 import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
@@ -699,7 +699,11 @@ contract LPVaultSwapLiquidationProperties {
         uint256 t = target & 7;
         uint256 hf = t == 0
             ? 7000
-            : (t == 1 ? 8500 : (t == 2 ? 9000 : (t == 3 ? 9500 : (t == 4 ? 9900 : (t == 5 ? 10_200 : (t == 6 ? 12_000 : 16_000))))));
+            : (t == 1
+                    ? 8500
+                    : (t == 2
+                            ? 9000
+                            : (t == 3 ? 9500 : (t == 4 ? 9900 : (t == 5 ? 10_200 : (t == 6 ? 12_000 : 16_000))))));
         _setHealth(i, hf);
     }
 
@@ -860,7 +864,8 @@ contract LPVaultSwapLiquidationProperties {
             && s1.world - s0.world == res.debtRepaid && s1.routesOut - s0.routesOut + res.amountsOut[0] == res.recovered
             && s1.fee + s1.escrowFee - s0.fee - s0.escrowFee == res.avanaFee
             && s1.wallet + s1.escrowWallet - s0.wallet - s0.escrowWallet == res.borrowerSurplus
-            && USDC.balanceOf(address(this)) == 0 && XT.balanceOf(address(this)) == 0 && VT.balanceOf(address(this)) == 0;
+            && USDC.balanceOf(address(this)) == 0 && XT.balanceOf(address(this)) == 0
+            && VT.balanceOf(address(this)) == 0;
         _ensure(BAD_MEASURE, good);
         // INV-030 with 2.11: the caller nets at most the keeper reward, which is at most the oracle gain G = V − D.
         // V = mulDiv(c, Pc × 10^6, 10^18 × Pdebt) with Pdebt = 1e8 (SettlementMath.seizedValue), exact here.

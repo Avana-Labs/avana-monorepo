@@ -8,8 +8,8 @@ import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
 import {ProxyManager} from "../../src/proxy/proxy-manager/ProxyManager.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {FreezeRegistryMock} from "../utils/mocks/ProxyMocks.sol";
-import {ProxyManagerHandler} from "./handlers/ProxyManagerHandler.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";
+import {ProxyManagerHandler} from "./handlers/ProxyManagerHandler.sol";
 
 /// @title ProxyManagerInvariantTest
 /// @notice ProxyManager and PositionProxy half of TEST-089: random deployments by the Adapter (frozen wallets
@@ -47,7 +47,8 @@ contract ProxyManagerInvariantTest is AvanaTest, HandlerReach {
         (bytes4[] memory actions, string[] memory names,) = _reachActions();
         address[] memory own = new address[](2);
         (own[0], own[1]) = (address(handler), address(this));
-        Reach memory r = _replayLanded(address(handler), actions, ProxyManagerHandler.Skipped.selector, 32, 50, 0, own, true);
+        Reach memory r =
+            _replayLanded(address(handler), actions, ProxyManagerHandler.Skipped.selector, 32, 50, 0, own, true);
         _check(r, names, new string[](0), _floors(5, 0), new uint256[](0));
     }
 
@@ -56,7 +57,11 @@ contract ProxyManagerInvariantTest is AvanaTest, HandlerReach {
     }
 
     /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
-    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
         (actions, names, kinds) = (new bytes4[](5), new string[](5), new int16[][](5));
         (actions[0], names[0]) = (ProxyManagerHandler.deploy.selector, "deploy");
         kinds[0] = new int16[](1);
@@ -79,7 +84,10 @@ contract ProxyManagerInvariantTest is AvanaTest, HandlerReach {
         kinds[4][1] = 1;
     }
 
-    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
         (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
         for (uint256 k = 0; k < actions.length; ++k) {
             if (actions[k] == selector) return _typed(selector, kinds[k], seed);

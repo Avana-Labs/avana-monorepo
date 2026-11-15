@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {TimelockFixture} from "../utils/fixtures/TimelockFixture.sol";
-import {TimelockHandler} from "./handlers/TimelockHandler.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";
+import {TimelockHandler} from "./handlers/TimelockHandler.sol";
 
 /// @title AvanaTimelockInvariantTest
 /// @notice TEST-212: random sequences of scheduling (short, normal, mixed, role-change, restoring and
@@ -50,7 +50,8 @@ contract AvanaTimelockInvariantTest is TimelockFixture, HandlerReach {
         (bytes4[] memory actions, string[] memory names,) = _reachActions();
         address[] memory own = new address[](2);
         (own[0], own[1]) = (address(handler), address(this));
-        Reach memory r = _replayLanded(address(handler), actions, TimelockHandler.Skipped.selector, 32, 50, 0, own, true);
+        Reach memory r =
+            _replayLanded(address(handler), actions, TimelockHandler.Skipped.selector, 32, 50, 0, own, true);
         _check(r, names, new string[](0), _floors(5, 0), new uint256[](0));
     }
 
@@ -59,7 +60,11 @@ contract AvanaTimelockInvariantTest is TimelockFixture, HandlerReach {
     }
 
     /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
-    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
         (actions, names, kinds) = (new bytes4[](5), new string[](5), new int16[][](5));
         (actions[0], names[0]) = (TimelockHandler.schedule.selector, "schedule");
         kinds[0] = new int16[](4);
@@ -85,7 +90,10 @@ contract AvanaTimelockInvariantTest is TimelockFixture, HandlerReach {
         kinds[4][0] = 256;
     }
 
-    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
         (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
         for (uint256 k = 0; k < actions.length; ++k) {
             if (actions[k] == selector) return _typed(selector, kinds[k], seed);

@@ -5,9 +5,9 @@ pragma solidity 0.8.28;
 
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
 import {RegistryRouteMock} from "../utils/mocks/MarketRegistryMocks.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 import {MarketRegistryRoutesHandler} from "./handlers/MarketRegistryRoutesHandler.sol";
 import {Test} from "forge-std/Test.sol";
-import {HandlerReach} from "./handlers/HandlerReach.sol";
 
 /// @title MarketRegistryRoutesInvariantTest
 /// @notice Swap-route slots under random set, disable and restore calls by the timelock and a guardian: every outcome
@@ -48,7 +48,11 @@ contract MarketRegistryRoutesInvariantTest is Test, HandlerReach {
     }
 
     /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
-    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
         (actions, names, kinds) = (new bytes4[](3), new string[](3), new int16[][](3));
         (actions[0], names[0]) = (MarketRegistryRoutesHandler.setRoute.selector, "setRoute");
         kinds[0] = new int16[](3);
@@ -66,7 +70,10 @@ contract MarketRegistryRoutesInvariantTest is Test, HandlerReach {
         kinds[2][2] = 1;
     }
 
-    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
         (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
         for (uint256 k = 0; k < actions.length; ++k) {
             if (actions[k] == selector) return _typed(selector, kinds[k], seed);

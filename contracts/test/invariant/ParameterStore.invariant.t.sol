@@ -11,8 +11,8 @@ import {SecondSource} from "../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
-import {ParameterStoreHandler} from "./handlers/ParameterStoreHandler.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";
+import {ParameterStoreHandler} from "./handlers/ParameterStoreHandler.sol";
 
 /// @title ParameterStoreInvariantTest
 /// @notice TEST-225 governance drift on the real ParameterStore: random tightenings (timelock and Joint Configuration
@@ -69,7 +69,11 @@ contract ParameterStoreInvariantTest is ParameterStoreFixture, HandlerReach {
     }
 
     /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
-    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
         (actions, names, kinds) = (new bytes4[](33), new string[](33), new int16[][](33));
         (actions[0], names[0]) = (ParameterStoreHandler.gateRecovery.selector, "gateRecovery");
         kinds[0] = new int16[](3);
@@ -192,7 +196,10 @@ contract ParameterStoreInvariantTest is ParameterStoreFixture, HandlerReach {
         kinds[32][0] = 256;
     }
 
-    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
         (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
         for (uint256 k = 0; k < actions.length; ++k) {
             if (actions[k] == selector) return _typed(selector, kinds[k], seed);

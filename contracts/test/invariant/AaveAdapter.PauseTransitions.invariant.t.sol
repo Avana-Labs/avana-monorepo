@@ -69,7 +69,8 @@ contract AaveAdapterPauseTransitionsInvariantTest is AaveAdapterFixture, Handler
         (bytes4[] memory actions, string[] memory names,) = _reachActions();
         address[] memory own = new address[](2);
         (own[0], own[1]) = (address(handler), address(this));
-        Reach memory r = _replayLanded(address(handler), actions, AaveAdapterPauseHandler.Skipped.selector, 32, 50, 0, own, true);
+        Reach memory r =
+            _replayLanded(address(handler), actions, AaveAdapterPauseHandler.Skipped.selector, 32, 50, 0, own, true);
         _check(r, names, new string[](0), _floors(11, 0), new uint256[](0));
     }
 
@@ -78,7 +79,11 @@ contract AaveAdapterPauseTransitionsInvariantTest is AaveAdapterFixture, Handler
     }
 
     /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
-    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
         (actions, names, kinds) = (new bytes4[](11), new string[](11), new int16[][](11));
         (actions[0], names[0]) = (AaveAdapterPauseHandler.setPause.selector, "setPause");
         kinds[0] = new int16[](1);
@@ -121,7 +126,10 @@ contract AaveAdapterPauseTransitionsInvariantTest is AaveAdapterFixture, Handler
         kinds[10][0] = 8;
     }
 
-    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
         (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
         for (uint256 k = 0; k < actions.length; ++k) {
             if (actions[k] == selector) return _typed(selector, kinds[k], seed);

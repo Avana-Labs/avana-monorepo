@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {AvanaFirstLossReserveHandler} from "./handlers/AvanaFirstLossReserveHandler.sol";
-import {Test} from "forge-std/Test.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";
+import {Test} from "forge-std/Test.sol";
 
 /// @title AvanaFirstLossReserveInvariantTest
 /// @notice Coverage side of TEST-094 on the real local Aave V4 Hub: under random sequences of recorded deficits on
@@ -59,7 +59,11 @@ contract AvanaFirstLossReserveInvariantTest is Test, HandlerReach {
     }
 
     /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
-    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
         (actions, names, kinds) = (new bytes4[](5), new string[](5), new int16[][](5));
         (actions[0], names[0]) = (AvanaFirstLossReserveHandler.reportDeficit.selector, "reportDeficit");
         kinds[0] = new int16[](2);
@@ -82,7 +86,10 @@ contract AvanaFirstLossReserveInvariantTest is Test, HandlerReach {
         kinds[4][1] = 1;
     }
 
-    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
         (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
         for (uint256 k = 0; k < actions.length; ++k) {
             if (actions[k] == selector) return _typed(selector, kinds[k], seed);

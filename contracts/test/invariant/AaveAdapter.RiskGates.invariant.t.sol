@@ -85,7 +85,11 @@ contract AaveAdapterRiskGatesInvariantTest is AaveAdapterRiskFixture, HandlerRea
     }
 
     /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
-    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
         (actions, names, kinds) = (new bytes4[](12), new string[](12), new int16[][](12));
         (actions[0], names[0]) = (AaveAdapterRiskHandler.setPrice.selector, "setPrice");
         kinds[0] = new int16[](1);
@@ -128,7 +132,10 @@ contract AaveAdapterRiskGatesInvariantTest is AaveAdapterRiskFixture, HandlerRea
         kinds[11][0] = 8;
     }
 
-    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
         (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
         for (uint256 k = 0; k < actions.length; ++k) {
             if (actions[k] == selector) return _typed(selector, kinds[k], seed);

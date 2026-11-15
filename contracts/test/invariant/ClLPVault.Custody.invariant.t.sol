@@ -6,8 +6,8 @@ pragma solidity 0.8.28;
 import {IClIntegration} from "../../src/amm/IClIntegration.sol";
 import {ClLPVaultBase, ClLPVaultSlipstreamHooks, ClLPVaultUniswapHooks} from "../unit/ClLPVault.Base.sol";
 import {ClLPVaultCustodyHandler, IClCustodySource} from "./handlers/ClLPVaultCustodyHandler.sol";
-import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 /// @title ClLPVaultCustodyInvariants
 /// @notice Custody of a concentrated-liquidity LPVault under random sequences of every actor that reaches it
@@ -158,7 +158,11 @@ contract UniswapV3IntegrationCustodyInvariantTest is ClLPVaultUniswapHooks, ClLP
     }
 
     /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
-    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
         (actions, names, kinds) = (new bytes4[](12), new string[](12), new int16[][](12));
         (actions[0], names[0]) = (ClLPVaultCustodyHandler.accrue.selector, "accrue");
         kinds[0] = new int16[](3);
@@ -214,7 +218,10 @@ contract UniswapV3IntegrationCustodyInvariantTest is ClLPVaultUniswapHooks, ClLP
         kinds[11][0] = 256;
     }
 
-    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
         (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
         for (uint256 k = 0; k < actions.length; ++k) {
             if (actions[k] == selector) return _typed(selector, kinds[k], seed);

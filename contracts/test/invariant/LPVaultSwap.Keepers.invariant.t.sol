@@ -8,11 +8,11 @@ import {LPVaultSwap} from "../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
 import {LPVaultSwapImmutables} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
 import {LPVaultSwapLogics} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapLogics.sol";
 import {LVSMarketRegistryMock} from "../utils/mocks/LPVaultSwapMocks.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 import {LPVaultSwapKeeperHandler} from "./handlers/LPVaultSwapKeeperHandler.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Test} from "forge-std/Test.sol";
-import {HandlerReach} from "./handlers/HandlerReach.sol";
 
 /// @title LPVaultSwapKeepersInvariantTest
 /// @notice The committed-operator registry under random sequences of timelock adds and removes, MarketRegistry
@@ -66,7 +66,8 @@ contract LPVaultSwapKeepersInvariantTest is Test, HandlerReach {
         (bytes4[] memory actions, string[] memory names,) = _reachActions();
         address[] memory own = new address[](2);
         (own[0], own[1]) = (address(handler), address(this));
-        Reach memory r = _replayLanded(address(handler), actions, LPVaultSwapKeeperHandler.Skipped.selector, 32, 50, 0, own, true);
+        Reach memory r =
+            _replayLanded(address(handler), actions, LPVaultSwapKeeperHandler.Skipped.selector, 32, 50, 0, own, true);
         _check(r, names, new string[](0), _floors(4, 0), new uint256[](0));
     }
 
@@ -75,7 +76,11 @@ contract LPVaultSwapKeepersInvariantTest is Test, HandlerReach {
     }
 
     /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
-    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
         (actions, names, kinds) = (new bytes4[](4), new string[](4), new int16[][](4));
         (actions[0], names[0]) = (LPVaultSwapKeeperHandler.add.selector, "add");
         kinds[0] = new int16[](1);
@@ -93,7 +98,10 @@ contract LPVaultSwapKeepersInvariantTest is Test, HandlerReach {
         kinds[3][0] = 256;
     }
 
-    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
         (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
         for (uint256 k = 0; k < actions.length; ++k) {
             if (actions[k] == selector) return _typed(selector, kinds[k], seed);

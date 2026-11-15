@@ -118,9 +118,8 @@ abstract contract HandlerReach is CommonBase {
     ) private returns (Reach memory r) {
         vm.pauseGasMetering();
         uint256 n = selectors.length;
-        (r.ok, r.skipped, r.failed, r.reached, r.runs, r.noop) = (
-            new uint256[](n), new uint256[](n), new uint256[](n), new uint256[](targets), runs, new uint256[](n)
-        );
+        (r.ok, r.skipped, r.failed, r.reached, r.runs, r.noop) =
+        (new uint256[](n), new uint256[](n), new uint256[](n), new uint256[](targets), runs, new uint256[](n));
         uint256 snapshot = vm.snapshotState();
         // Each step allocates its calldata, return data and state diff, and none of it is read after the step, so the
         // free memory pointer goes back to this mark after every step; otherwise a replay of 1,600 calls with state

@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {SlipstreamIntegrationFixture} from "../utils/fixtures/SlipstreamIntegrationFixture.sol";
-import {SlipstreamFeesHandler} from "./handlers/SlipstreamFeesHandler.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";
+import {SlipstreamFeesHandler} from "./handlers/SlipstreamFeesHandler.sol";
 
 /// @title SlipstreamIntegrationFeesInvariantTest
 /// @notice TEST-091 on the Slipstream LPVault: random sequences of pledges of market 1 positions by two depositors, fee
@@ -41,7 +41,8 @@ contract SlipstreamIntegrationFeesInvariantTest is SlipstreamIntegrationFixture,
         (bytes4[] memory actions, string[] memory names,) = _reachActions();
         address[] memory own = new address[](2);
         (own[0], own[1]) = (address(handler), address(this));
-        Reach memory r = _replayLanded(address(handler), actions, SlipstreamFeesHandler.Skipped.selector, 32, 50, 0, own, true);
+        Reach memory r =
+            _replayLanded(address(handler), actions, SlipstreamFeesHandler.Skipped.selector, 32, 50, 0, own, true);
         _check(r, names, new string[](0), _floors(5, 0), new uint256[](0));
     }
 
@@ -50,7 +51,11 @@ contract SlipstreamIntegrationFeesInvariantTest is SlipstreamIntegrationFixture,
     }
 
     /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
-    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
         (actions, names, kinds) = (new bytes4[](5), new string[](5), new int16[][](5));
         (actions[0], names[0]) = (SlipstreamFeesHandler.pledge.selector, "pledge");
         kinds[0] = new int16[](2);
@@ -74,7 +79,10 @@ contract SlipstreamIntegrationFeesInvariantTest is SlipstreamIntegrationFixture,
         kinds[4][1] = 256;
     }
 
-    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
         (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
         for (uint256 k = 0; k < actions.length; ++k) {
             if (actions[k] == selector) return _typed(selector, kinds[k], seed);

@@ -11,8 +11,8 @@ import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
-import {StdInvariant} from "forge-std/StdInvariant.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";
+import {StdInvariant} from "forge-std/StdInvariant.sol";
 
 /// @title LensInvariantTest
 /// @notice Random pledges, borrows of both debt reserves, price moves, donations, time and liquidations sized by the
@@ -64,7 +64,11 @@ contract LensInvariantTest is StdInvariant, LensFixture, HandlerReach {
     }
 
     /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
-    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
         (actions, names, kinds) = (new bytes4[](6), new string[](6), new int16[][](6));
         (actions[0], names[0]) = (LensInvariantTest.actBorrow.selector, "actBorrow");
         kinds[0] = new int16[](3);
@@ -91,7 +95,10 @@ contract LensInvariantTest is StdInvariant, LensFixture, HandlerReach {
         kinds[5][0] = 256;
     }
 
-    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
         (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
         for (uint256 k = 0; k < actions.length; ++k) {
             if (actions[k] == selector) return _typed(selector, kinds[k], seed);

@@ -53,7 +53,8 @@ contract AaveAdapterWithdrawProperties is AaveAdapterPathHarness {
             Layout storage l = _s();
             l.proxyOf[wallet][MARKET] = p;
             l.walletOf[p] = wallet;
-            l.accountOf[p] = AdapterAccount({spoke: address(W), marketId: MARKET, vaultToken: address(VT), reserveId: 0});
+            l.accountOf[p] =
+                AdapterAccount({spoke: address(W), marketId: MARKET, vaultToken: address(VT), reserveId: 0});
         }
         uint256 d = hfBps == 0 ? 0 : units * W.price() / 1e18 * 8000 / (hfBps * 100);
         bytes32 key = keccak256(abi.encode(i, ++keyNonce));

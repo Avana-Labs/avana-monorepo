@@ -7,8 +7,8 @@ import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
 import {SpeedLimit} from "../../src/policy/parameter-store/types/SpeedLimit.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
-import {ParameterStoreSpeedHandler} from "./handlers/ParameterStoreSpeedHandler.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";
+import {ParameterStoreSpeedHandler} from "./handlers/ParameterStoreSpeedHandler.sol";
 
 /// @title ParameterStoreSpeedInvariantTest
 /// @notice TEST-325 under random sequences: speed-limit tightenings and loosenings by the timelock, the Joint
@@ -37,7 +37,8 @@ contract ParameterStoreSpeedInvariantTest is ParameterStoreFixture, HandlerReach
         (bytes4[] memory actions, string[] memory names,) = _reachActions();
         address[] memory own = new address[](2);
         (own[0], own[1]) = (address(handler), address(this));
-        Reach memory r = _replayLanded(address(handler), actions, ParameterStoreSpeedHandler.Skipped.selector, 32, 50, 0, own, true);
+        Reach memory r =
+            _replayLanded(address(handler), actions, ParameterStoreSpeedHandler.Skipped.selector, 32, 50, 0, own, true);
         _check(r, names, new string[](0), _floors(2, 0), new uint256[](0));
     }
 
@@ -46,7 +47,11 @@ contract ParameterStoreSpeedInvariantTest is ParameterStoreFixture, HandlerReach
     }
 
     /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
-    function _reachActions() internal pure returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds) {
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
         (actions, names, kinds) = (new bytes4[](2), new string[](2), new int16[][](2));
         (actions[0], names[0]) = (ParameterStoreSpeedHandler.debt.selector, "debt");
         kinds[0] = new int16[](3);
@@ -60,7 +65,10 @@ contract ParameterStoreSpeedInvariantTest is ParameterStoreFixture, HandlerReach
         kinds[1][2] = 1;
     }
 
-    function _calldata(bytes4 selector, uint256 seed) internal pure override returns (bytes memory) {
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
         (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
         for (uint256 k = 0; k < actions.length; ++k) {
             if (actions[k] == selector) return _typed(selector, kinds[k], seed);
