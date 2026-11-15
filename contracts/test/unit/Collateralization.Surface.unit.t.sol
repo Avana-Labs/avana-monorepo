@@ -236,11 +236,14 @@ contract CollateralizationSurfaceUnitTest is CollateralizationFixture {
             assertTrue(ok, "call to an address outside the market's neighbours");
             if (a.account == address(riskModule)) {
                 ++riskReads;
-                // `checkPledge` is reached by a plain CALL: it charges the market's pledge-speed window when
-                // Collateralization calls (REQ-RISK-006, REQ-RISK-095); it is the only RiskModule call Collateralization makes.
-                assertTrue(a.kind == VmSafe.AccountAccessKind.Call, "checkPledge reached by a plain call");
-                assertEq(
-                    bytes4(a.data), IRiskModuleChecks.checkPledge.selector, "Collateralization calls only checkPledge"
+                // `checkPledge` and `creditWithdraw` are reached by a plain CALL: they charge and credit the market's
+                // pledge-speed window when Collateralization calls (REQ-RISK-006, REQ-RISK-093, REQ-RISK-095); they are
+                // the only RiskModule calls Collateralization makes.
+                assertTrue(a.kind == VmSafe.AccountAccessKind.Call, "the RiskModule reached by a plain call");
+                bytes4 sel = bytes4(a.data);
+                assertTrue(
+                    sel == IRiskModuleChecks.checkPledge.selector || sel == IRiskModuleChecks.creditWithdraw.selector,
+                    "Collateralization calls only checkPledge and creditWithdraw"
                 );
             }
         }

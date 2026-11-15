@@ -263,6 +263,47 @@ export const riskModuleAbi = [
   },
   {
     "type": "function",
+    "name": "creditRepay",
+    "inputs": [
+      {
+        "name": "proxy",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "debtReserveId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "creditWithdraw",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "usd",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "debtValueUsd",
     "inputs": [
       {
@@ -676,6 +717,57 @@ export const riskModuleAbi = [
           },
           {
             "name": "unavailable",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getSpeedWindow",
+    "inputs": [
+      {
+        "name": "scope",
+        "type": "uint8",
+        "internalType": "enum SpeedScope"
+      },
+      {
+        "name": "key",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "window",
+        "type": "tuple",
+        "internalType": "struct SpeedWindow",
+        "components": [
+          {
+            "name": "start",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "prev",
+            "type": "uint96",
+            "internalType": "uint96"
+          },
+          {
+            "name": "curr",
+            "type": "uint96",
+            "internalType": "uint96"
+          },
+          {
+            "name": "base",
+            "type": "uint248",
+            "internalType": "uint248"
+          },
+          {
+            "name": "opened",
             "type": "bool",
             "internalType": "bool"
           }
@@ -1346,6 +1438,17 @@ export const riskModuleAbi = [
         "name": "restoreBooked",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "NotSpeedWriter",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
       }
     ]
   },

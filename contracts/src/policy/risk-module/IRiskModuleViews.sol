@@ -5,7 +5,9 @@ pragma solidity 0.8.28;
 
 import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
 import {PledgePreview} from "../../types/PledgePreview.sol";
+import {SpeedScope} from "./types/SpeedScope.sol";
 import {SpeedView} from "./types/SpeedView.sol";
+import {SpeedWindow} from "./types/SpeedWindow.sol";
 
 /// @title IRiskModuleViews
 /// @notice Non-reverting previews, formula views, the health floor and the implementation immutables of the RiskModule.
@@ -189,4 +191,17 @@ interface IRiskModuleViews {
     function getPledgeSpeed(
         uint256 marketId
     ) external view returns (SpeedView memory pledge);
+
+    /// @notice A speed window as stored, not rolled to now: bucket start, net charges of the previous and current
+    /// buckets, and the window-start base written with the current bucket's first charge (SPEC-CAP-011, SPEC-CAP-012).
+    /// @dev `RiskModuleSpeedLogic` reads the windows through this view; the app reads `getBorrowSpeed` and
+    /// `getPledgeSpeed`.
+    /// @param scope The window kind.
+    /// @param key `bytes32(marketId)` for a market window, `keccak256(abi.encode(hub, asset))` for a debt window.
+    /// @return window The stored window.
+    /// @custom:spec REQ-RISK-095, REQ-RISK-097, SPEC-CAP-011
+    function getSpeedWindow(
+        SpeedScope scope,
+        bytes32 key
+    ) external view returns (SpeedWindow memory window);
 }

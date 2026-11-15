@@ -1523,6 +1523,22 @@ export const aaveAdapterAbi = [
   },
   {
     "type": "error",
+    "name": "InsufficientGas",
+    "inputs": [
+      {
+        "name": "gasLeft",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "required",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "IntegrationMismatch",
     "inputs": [
       {

@@ -133,11 +133,12 @@ abstract contract LensMarket is LensBase, ILensMarket {
         c.poolShareBps = _poolShareBps(marketId, m.integration, k.poolUnits);
         // forge-lint: disable-next-line(unused-return)
         (uint256 accepted,) = ILPOracle(m.lpOracle).lastAcceptedPrice();
-        // A pledge is booked at min(fresh, accepted) (REQ-RISK-026); a failed market's fresh price is 0.
+        // A pledge's cap charge is booked at the fresh price (REQ-RISK-026); a failed market's fresh price is 0 and
+        // keeps the accepted price.
         int256 fresh = ILPOracle(m.lpOracle).getPriceState().freshAnswer;
         // A positive int256 is cast.
         // forge-lint: disable-next-line(unsafe-typecast)
-        if (fresh > 0 && uint256(fresh) < accepted) accepted = uint256(fresh);
+        if (fresh > 0) accepted = uint256(fresh);
         uint256 floor = _store().stressFloorUsd(marketId);
         c.chargePricePerWholeToken = Math.max(accepted, floor);
         c.vaultTokenAddHeadroom = _addHeadroom(m);

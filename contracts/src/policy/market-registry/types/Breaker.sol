@@ -44,4 +44,19 @@ library BreakerReasons {
     uint32 internal constant TEMPORARY = ORACLE | POOL_SHARE | POOL_DEPTH;
     /// @notice The security-freeze reasons a poke can latch.
     uint32 internal constant SECURITY = ISSUER | CONFIG_DRIFT | DEFICIT;
+
+    /// @notice The key under which the MarketRegistry keeps the breach time of one temporary reason of breaker `key`
+    /// (per-reason breach times, so a recovery reopens only the reasons actually recorded).
+    /// @dev `lastBreachAt(key)` keeps the latest breach of any temporary reason; `lastBreachAt(breachKey(key, r))` the
+    /// latest of `r` alone. A hash of the key and the reason bit cannot collide with a market or debt key in practice.
+    /// @param key Breaker key.
+    /// @param reason One temporary reason bit (`ORACLE`, `POOL_SHARE` or `POOL_DEPTH`).
+    /// @return The per-reason key.
+    /// @custom:spec REQ-MREG-025, SPEC-BRK-007
+    function breachKey(
+        bytes32 key,
+        uint32 reason
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encode(key, reason));
+    }
 }

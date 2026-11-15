@@ -2352,6 +2352,27 @@
       "reason": "MarketRegistry.getMarket and the Spoke reads of _minLb are views (STATICCALL), so nothing can re-enter; the market's status and smallest liquidation bonus must be read before the allowance is written, so that an active market keeps the Avana fee intact at that bonus (LIQ-I1, REQ-CONFIG-071). Covered by TEST-245 (floorRaiseRechecksLiveness: 175 bps refused at f = 2,000, admitted at f = 0).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: the approved ParameterStoreListingLogic.setInitialMarketParams entry b5234e90fba60cdc (MarketRegistry.getMarket read before the parameters are written)"
+    },
+    {
+      "fingerprint": "0aaa23a8fc28d7fc",
+      "check": "state-change-without-event",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "creditRepay",
+      "reason": "A repay credit changes only the speed windows, which have no event: the charges of preBorrowCheck and checkPledge emit none either, and getBorrowSpeed and getSpeedWindow report the windows (REQ-RISK-095, REQ-RISK-097). The repay itself emits Repaid. Covered by TEST-321, TEST-326."
+    },
+    {
+      "fingerprint": "3bb42fb2c7989a9e",
+      "check": "state-change-without-event",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "creditWithdraw",
+      "reason": "As creditRepay: a withdrawal credit changes only the pledge window, reported by getPledgeSpeed and getSpeedWindow; the withdrawal emits CollateralReleased or RecordReduced. Covered by TEST-322, TEST-018."
+    },
+    {
+      "fingerprint": "261839fbbca8f9ff",
+      "check": "unchecked-return",
+      "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
+      "function": "pokeOracles",
+      "reason": "Aderyn form of unused-return: the LPOracle and DebtOracle pokes store observations, and the breaker conditions read the price state themselves (REQ-RISK-091). Covered by TEST-228."
     }
   ]
 }

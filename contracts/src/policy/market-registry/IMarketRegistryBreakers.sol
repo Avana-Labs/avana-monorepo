@@ -18,8 +18,9 @@ interface IMarketRegistryBreakers {
     /// @notice Records the reasons a `pokeBreakers` call observed for one key.
     /// @dev RiskModule only (`NotRiskModule`). ORs the security-freeze reasons of `reasons` (`DEFICIT`, `ISSUER`,
     /// `CONFIG_DRIFT`) into `latched[key]` and emits `BreakerLatched` when a new reason is added; sets
-    /// `lastBreachAt[key] = block.timestamp` and emits `GateBreached` when `reasons` holds `ORACLE`, `POOL_SHARE` or
-    /// `POOL_DEPTH`. Never clears a latch or shortens a recovery. Example: `reasons = POOL_SHARE` at `t = 1,000` sets
+    /// `lastBreachAt[key] = block.timestamp`, and `lastBreachAt[BreakerReasons.breachKey(key, r)]` for each temporary
+    /// reason `r` it holds, and emits `GateBreached` when `reasons` holds `ORACLE`, `POOL_SHARE` or `POOL_DEPTH`. Never
+    /// clears a latch or shortens a recovery. Example: `reasons = POOL_SHARE` at `t = 1,000` sets
     /// `lastBreachAt = 1,000`; with `gateRecoverySeconds = 1,800` the gate reopens at 2,800 if the share stays below
     /// `poolShareMaxBpsOf(poolKey)` (default 10,000 bps (off); per-pool cap optional, Q-403) until then.
     /// @param key Breaker key.
@@ -92,7 +93,9 @@ interface IMarketRegistryBreakers {
     ) external view returns (uint32 latchedReasons, uint64 lastBreach);
 
     /// @notice Latest time `pokeBreakers` recorded a temporary gate breached for `key`, 0 if never. Never reverts.
-    /// @param key Breaker key.
+    /// @dev With `key = BreakerReasons.breachKey(breakerKey, r)`, the latest time it recorded reason `r` alone; the
+    /// RiskModule reads these per-reason times for the recovery of each temporary gate (SPEC-BRK-007).
+    /// @param key Breaker key, or a per-reason key.
     /// @return at Block timestamp, seconds.
     /// @custom:spec REQ-MREG-025, SPEC-BRK-007, Q-399
     function lastBreachAt(

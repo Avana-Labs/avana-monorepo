@@ -87,9 +87,9 @@ interface IRiskModuleChecks {
     /// no debt breaker of `debtReserveId` (`BreakerTripped`, `DebtBreakerTripped`): no temporary gate holding or inside
     /// `gateRecoverySeconds` of its last breach, and no security freeze holding or latched (Q-399); last, the borrow-speed
     /// windows of the market (charged `⌈amount × price8 / 10^dec⌉` USD) and of the reserve's (funding Hub, asset)
-    /// (charged `amount`), each against `clamp(rate × (base − used), min, max)` (`BorrowSpeedExceeded`,
-    /// `DebtSpeedExceeded`); only the AaveAdapter's call adds the charges (REQ-RISK-092, REQ-RISK-095). Reads no pause
-    /// state or freeze.
+    /// (charged `amount`), each net of repays and against `clamp(rate × windowStartBase, min, max)`
+    /// (`BorrowSpeedExceeded`, `DebtSpeedExceeded`); only the AaveAdapter's call adds the charges (REQ-RISK-092,
+    /// REQ-RISK-095). Reads no pause state or freeze.
     /// @param proxy The account.
     /// @param debtReserveId The reserve being borrowed; added to the debt scope.
     /// @param amount Amount being borrowed, base units of the reserve's asset; charged to the speed windows (there is no
@@ -99,6 +99,37 @@ interface IRiskModuleChecks {
         address proxy,
         uint256 debtReserveId,
         uint256 amount
+    ) external;
+
+    /// @notice Gives room back in the borrow-speed windows after a repay (REQ-RISK-092): the market window by the
+    /// repaid amount's USD value at the reserve's AaveOracle price, rounded down, and the (funding Hub, asset) window by
+    /// `amount`; each taken from the current bucket first, then from the bucket before while it counts, never below
+    /// zero.
+    /// @dev Only the AaveAdapter (`NotSpeedWriter` otherwise), after every repay step it runs (repay, repay-all and
+    /// repay with collateral). The Adapter calls it with a fixed gas stipend inside a try/catch, so a failure here never
+    /// stops a repay (REQ-RISK-005); a starved stipend reverts the repay instead (`InsufficientGas` in the Adapter).
+    /// Liquidations give no room back.
+    /// @param proxy The account repaid.
+    /// @param debtReserveId The reserve repaid.
+    /// @param amount Base units the repay took.
+    /// @custom:spec REQ-RISK-005, REQ-RISK-092, REQ-RISK-095, SPEC-CAP-011
+    function creditRepay(
+        address proxy,
+        uint256 debtReserveId,
+        uint256 amount
+    ) external;
+
+    /// @notice Gives room back in a market's pledge-speed window after a withdrawal (REQ-RISK-093): `usd`, the booked
+    /// value the withdrawal released, taken from the current bucket first, then from the bucket before while it counts,
+    /// never below zero.
+    /// @dev Only Collateralization (`NotSpeedWriter` otherwise), on a withdrawal, a partial removal and a deleverage
+    /// release, never on a seizure. It calls with a fixed gas stipend inside a try/catch (REQ-RISK-005).
+    /// @param marketId The market.
+    /// @param usd Booked value released, 8-decimal USD.
+    /// @custom:spec REQ-RISK-005, REQ-RISK-093, REQ-RISK-095, SPEC-CAP-011
+    function creditWithdraw(
+        uint256 marketId,
+        uint256 usd
     ) external;
 
     /// @notice Pre-withdrawal gate for an account with debt.
@@ -162,7 +193,9 @@ interface IRiskModuleChecks {
     ) external returns (DriftReason reason);
 
     /// @notice Records the breaker conditions of a market and of every enabled debt reserve of its Spoke.
-    /// @dev Anyone; Avana's keeper calls it every block. Evaluates from live state the market's `ORACLE`,
+    /// @dev Anyone; Avana's keeper calls it every block. First pokes the market's LPOracle and the DebtOracle of every
+    /// debt reserve of its Spoke without a fixed-price source, as the pre-checks do, so a lapsed decimals check or a
+    /// stale stored state is refreshed before it is judged; then evaluates from live state the market's `ORACLE`,
     /// `POOL_SHARE`, `POOL_DEPTH`, `ISSUER` and `CONFIG_DRIFT`, and `DEFICIT` and `ISSUER` of each enabled debt reserve,
     /// then calls `MARKET_REGISTRY.recordBreach(key, reasons)` once per key with any reason holding (temporary reasons
     /// set `lastBreachAt`, SPEC-BRK-007; security reasons latch, SPEC-BRK-008) and emits `BreakersPoked`. Never clears

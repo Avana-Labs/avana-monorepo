@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralizationViews} from "../../../src/custody/collateralization/ICollateralizationViews.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
+import {BreakerReasons} from "../../../src/policy/market-registry/types/Breaker.sol";
 import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
 import {SpokeDef} from "../../../src/policy/market-registry/types/SpokeDef.sol";
@@ -109,6 +110,10 @@ contract AdapterRegistryMock {
     ) external {
         latched[key] = reasons;
         lastBreachAt[key] = at;
+        // A breach set here stands for every temporary reason, each with its own breach time.
+        lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.ORACLE)] = at;
+        lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_SHARE)] = at;
+        lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_DEPTH)] = at;
     }
 
     function setImplementationStale(
@@ -212,7 +217,17 @@ contract AdapterRegistryMock {
     ) external {
         _ok();
         latched[key] |= reasons;
-        lastBreachAt[key] = uint64(block.timestamp);
+        uint32 temp = reasons & BreakerReasons.TEMPORARY;
+        if (temp == 0) return;
+        uint64 at = uint64(block.timestamp);
+        lastBreachAt[key] = at;
+        if (temp & BreakerReasons.ORACLE != 0) lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.ORACLE)] = at;
+        if (temp & BreakerReasons.POOL_SHARE != 0) {
+            lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_SHARE)] = at;
+        }
+        if (temp & BreakerReasons.POOL_DEPTH != 0) {
+            lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_DEPTH)] = at;
+        }
     }
 
     function crossHubLinesEnabled() external view returns (bool) {
