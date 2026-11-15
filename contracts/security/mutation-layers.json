@@ -6,17 +6,17 @@
       {"src": "src/lock/lock", "tests": "test/unit/Lock.*"},
       {"src": "src/governance/timelock", "tests": "test/unit/AvanaTimelock*"},
       {"src": "src/oracle/lp-oracle", "files": ["LPPriceMath"], "tests": "test/{unit,fuzz}/LPPriceMath.*"},
-      {"src": "src/oracle/lp-oracle", "files": ["LPOracle*"], "tests": "test/{unit,fuzz}/LPOracle.*"},
+      {"src": "src/oracle/lp-oracle", "files": ["LPOracle*"], "tests": "test/{unit,fuzz}/LPOracle*"},
       {"src": "src/oracle/debt-oracle", "tests": "test/{unit,fuzz,integration}/DebtOracle.*"},
       {"src": "src/liquidation/lp-vault-swap", "tests": "test/{unit,fuzz,integration}/{SettlementMath,LPVaultSwap}*"},
-      {"src": "src/policy/parameter-store", "tests": "test/unit/ParameterStore*"},
+      {"src": "src/policy/parameter-store", "tests": "test/{unit,fuzz}/ParameterStore*"},
       {"src": "src/policy/market-registry", "tests": "test/unit/MarketRegistry*"},
       {"src": "src/vault-token/vault-token", "tests": "test/{unit,integration}/VaultToken.*"},
       {"src": "src/vault-token/vault-token-factory", "tests": "test/{unit,fuzz}/VaultTokenFactory.*"},
       {"src": "src/custody/collateralization", "tests": "test/{unit,fuzz}/Collateralization*"}
     ],
     "2.2": [
-      {"src": "src/amm/concentrated-liquidity", "files": ["ClPriceMath", "ClTickMath"], "tests": "test/unit/ClPriceMath.*"},
+      {"src": "src/amm/concentrated-liquidity", "files": ["ClPriceMath", "ClTickMath"], "tests": "test/{unit,fuzz}/ClPriceMath.*"},
       {"src": "src/amm/concentrated-liquidity", "files": ["ClLPVault*"], "tests": "test/{unit,integration}/{UniswapV3Integration,SlipstreamIntegration}.*"},
       {"src": "src/amm/uniswap-v3", "tests": "test/{unit,integration}/UniswapV3Integration.*"},
       {"src": "src/amm/slipstream", "tests": "test/unit/SlipstreamIntegration.*"}
@@ -31,7 +31,7 @@
     "2.5": [
       {"src": "src/liquidation/settlement-routes", "tests": "test/{unit,fuzz}/{DexPathRoute,PegModuleRoute,WrapperThenDexRoute,RouteMath,RouteReads,DexHops,SwapRouteBase,SwapRoutes}*"},
       {"src": "src/liquidation/payout-escrow", "tests": "test/unit/PayoutEscrow.*"},
-      {"src": "src/policy/aave-adapter", "tests": "test/unit/AaveAdapter*"},
+      {"src": "src/policy/aave-adapter", "tests": "test/{unit,fuzz}/AaveAdapter*"},
       {"src": "src/policy/risk-module", "files": ["SpeedLimitMath", "RiskModuleSpeed", "RiskModuleSpeedLogic"], "tests": "test/{unit,fuzz,invariant}/{SpeedLimitMath,RiskModule.Speed,RiskModule.SpeedScopes}.*"},
       {"src": "src/coverage/first-loss-reserve", "tests": "test/unit/{AvanaFirstLossReserve,DaoDeficitOffset}*"}
     ],
