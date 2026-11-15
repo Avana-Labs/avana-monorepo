@@ -1468,14 +1468,26 @@ async function failoverDrill(e: Env) {
   } finally {
     keeper.kill();
     await e.rpc("evm_setAutomine", [true]).catch(() => undefined);
-    // The keeper's breaker pokes during the crash latch the markets' breakers: reset them, as the Aave Protocol
-    // Guardian would, so the scenarios after this one pledge on these markets again.
+    // The keeper's breaker pokes during the crash record a breach on these markets: a latched reason is reset, as the
+    // Aave Protocol Guardian would, and the breach keeps the breaker TEMPORARY for the recovery time after it, which
+    // the clock then passes, so the scenarios after this one pledge on these markets again.
+    const recovery = BigInt(e.ctx.config.parameters?.globals?.gateRecoverySeconds ?? 1800);
     for (const m of [um, sm]) {
-      const [latched] = (await e.read(e.registry, marketRegistryAbi, "marketBreaker", [m.marketId])) as readonly [number, bigint];
-      if (Number(latched) === 0) continue;
-      await e.gasFor(e.ctx.actors.aaveProtocolGuardian!);
-      await e.must("reset breaker", e.ctx.actors.aaveProtocolGuardian!, e.registry, marketRegistryAbi, "resetMarketBreaker", [m.marketId]);
-      n[`${m.name}.breaker`] = `latched reasons ${latched}, reset by the Aave Protocol Guardian`;
+      const [latched, lastBreach] = (await e.read(e.registry, marketRegistryAbi, "marketBreaker", [m.marketId])) as readonly [number, bigint];
+      const notes: string[] = [];
+      if (Number(latched) !== 0) {
+        await e.gasFor(e.ctx.actors.aaveProtocolGuardian!);
+        await e.must("reset breaker", e.ctx.actors.aaveProtocolGuardian!, e.registry, marketRegistryAbi, "resetMarketBreaker", [m.marketId]);
+        notes.push(`latched reasons ${latched} reset by the Aave Protocol Guardian`);
+      }
+      const now = (await e.ctx.client.getBlock()).timestamp;
+      if (lastBreach !== 0n && now < lastBreach + recovery) {
+        await e.advance(Number(lastBreach + recovery - now) + 1);
+        notes.push(`breach at ${lastBreach}: clock moved past the ${recovery} s recovery`);
+      }
+      const live = await e.read(e.ctx.manifest.avana.riskModule.address as Address, riskModuleAbi, "liveBreakerReasons", [m.marketId]).catch((err: Error) => `unread (${err.message.split("\n")[0]})`);
+      notes.push(`live reasons now ${live}`);
+      n[`${m.name}.breaker`] = notes.join("; ");
     }
     rmSync(dir, { recursive: true, force: true });
     // The whole keeper log, kept for reading after a failure.
