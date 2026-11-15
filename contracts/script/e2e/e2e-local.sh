@@ -428,10 +428,17 @@ drill() { # name
   node script/e2e/drills.ts --network anvil --drill "$1" > "$log" 2>&1
   rc=$?
   case $rc in
-    0) record "$name" pass "$(tail -1 "$log" | sed 's/^PASS //' | cut -c1-400)" ;;
-    3) record "$name" not-run "$(tail -1 "$log" | sed 's/^NOT-RUN //' | cut -c1-400)" ;;
-    *) record "$name" fail "see $log: $(tail -1 "$log" | sed 's/^FAIL //' | cut -c1-400)" ;;
+    0) record "$name" pass "$(drill_line "$log" PASS)" ;;
+    3) record "$name" not-run "$(drill_line "$log" NOT-RUN)" ;;
+    *) record "$name" fail "see $log: $(drill_line "$log" FAIL)" ;;
   esac
+}
+# The drill's own outcome line: node's warnings on stderr can follow it in the log.
+drill_line() { # log outcome
+  local l
+  l="$(grep -E "^$2 " "$1" | tail -1)"
+  [ -n "$l" ] || l="$(tail -1 "$1")"
+  printf '%s' "${l#"$2 "}" | cut -c1-400
 }
 if [[ " $STEPS " == *" drills "* ]]; then
   if [ -f "$OUT/manifest.json" ]; then
