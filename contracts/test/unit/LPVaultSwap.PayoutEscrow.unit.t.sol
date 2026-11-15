@@ -157,4 +157,41 @@ contract LPVaultSwapPayoutEscrowUnitTest is LPVaultSwapUnitBase {
         assertEq(r.avanaFee, 0, "no fee");
         assertEq(r.borrowerSurplus, 0, "no surplus");
     }
+
+    /// @notice A completing liquidation can leave the caller nothing: a 0.9 USDC dust repayment seizes 450,000 raw
+    /// units (V = 945,000, so `minRec = max(0, 935,550 - 2 - 1e6) = 0`) and the unwind returns no token (`R = 0`), so
+    /// `R_f = 0 < D` gives `A = kr = B = 0`, `g = 0`, no shortfall, and `keeperOut = Kf - D = 900,000 - 900,000 = 0`.
+    /// The zero `keeperOut` is skipped, not attempted, so a debt asset that reverts on zero transfers settles.
+    // TEST-179 verifies: REQ-SWAP-077, REQ-SWAP-026, SPEC-LIQ-010
+    function test_TEST_179_zeroKeeperOutSkipped() public {
+        uint256 kf = 900_000;
+        lpVault.bind(MARKET_ID, pool, _pair(address(usdc), address(usdt)), new uint256[](2));
+        usdc.setRevertOnZero(true);
+        usdt.setRevertOnZero(true);
+        Snap memory s0 = _snap(keeper);
+        LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, kf));
+        assertEq(r.callerFunds, kf, "Kf");
+        assertEq(r.debtRepaid, kf, "Aave consumed all of Kf");
+        assertGt(r.unitsSeized, 0, "something seized");
+        uint256 v = _valueOf(r.unitsSeized, P_VAULT, PRICE_UNIT, 6);
+        assertEq(
+            _floorOf(
+                v, _slippageOf(10_500, SLIPPAGE_BPS), _unitsOf(true, 6, PRICE_UNIT), FLOOR_ROUNDING_ALLOWANCE_USDC
+            ),
+            0,
+            "model: dust seizure has no floor"
+        );
+        assertEq(r.amountsOut[0], 0, "no USDC released");
+        assertEq(r.amountsOut[1], 0, "no USDT released");
+        assertEq(r.recovered, 0, "R = 0");
+        assertEq(r.minOut, 0, "minRec = 0");
+        assertEq(r.shortfall, 0, "no shortfall pull");
+        assertEq(r.avanaFee, 0, "A = 0");
+        assertEq(r.keeperReward, 0, "kr = 0");
+        assertEq(r.borrowerSurplus, 0, "B = 0");
+        assertEq(r.keeperOut, 0, "keeperOut = Kf - D = 0");
+        assertEq(usdc.balanceOf(keeper), s0.callerUsdc, "caller gets back nothing beyond its spent funding");
+        assertEq(usdc.balanceOf(address(escrow)), s0.escrowUsdc, "nothing escrowed");
+        _assertNeutral(s0);
+    }
 }

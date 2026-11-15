@@ -218,4 +218,31 @@ contract ParameterStoreOracleInputsUnitTest is ParameterStoreFixture {
             w := mload(add(add(raw, 0x20), mul(i, 0x20)))
         }
     }
+
+    // TEST-250 verifies: REQ-PSTORE-033, REQ-ORACLE-056
+    /// @notice A market whose first token is not a USD stable gets no band, as one whose second token is not.
+    function test_TEST_250_noBandWhenFirstTokenIsNotStable() public {
+        registry.setUsdStable(usdc, false);
+        registry.setStatus(M, MarketStatus.Registered);
+        vm.prank(address(timelock));
+        store.setInitialMarketParams(M, _defaultMarketParams());
+        uint256[] memory w = store.getOracleInputs(address(lpOracle), list, false);
+        assertEq(w[3], 0, "no band low");
+        assertEq(w[4], type(uint256).max, "no band high");
+    }
+
+    // TEST-250 verifies: REQ-PSTORE-033, REQ-ORACLE-094
+    /// @notice A two-leg route serves both legs in order, the second `LEG_WORDS` after the first.
+    function test_TEST_250_twoLegRouteServesBothLegs() public {
+        MockAggregator ethUsd = new MockAggregator(8, 1e6, 1e12);
+        vm.prank(address(timelock));
+        store.setFeed(address(ethUsd), _feedDef(3600, 1800));
+        address[] memory primary = new address[](2);
+        (primary[0], primary[1]) = (address(fUsdc), address(ethUsd));
+        registry.setActiveRoutes(usdc, primary, _one(address(fUsdcAlt)));
+        uint256[] memory w = store.getOracleInputs(address(lpOracle), list, false);
+        assertEq(w[H + 3], 2, "primary leg count");
+        _assertLeg(w, H + 5, address(fUsdc));
+        _assertLeg(w, H + 5 + L, address(ethUsd));
+    }
 }

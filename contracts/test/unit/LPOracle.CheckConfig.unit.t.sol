@@ -140,4 +140,14 @@ contract LPOracleCheckConfigUnitTest is LPOracleFixture {
         registry.setMarketOf(address(oracle), MARKET, m);
         assertEq(_check(_config()), LPOracleCodes.CHECK_MARKET, "token order differs");
     }
+
+    // TEST-219 verifies: REQ-ORACLE-046, REQ-ORACLE-049, REQ-ORACLE-002
+    /// @notice The seed evaluation pins each leg's `minAnswer`: answers equal to it (1) are Invalid on both of token A's
+    /// routes, so the current quotes cannot be read.
+    function test_TEST_219_seedLegsKeepTheirPinnedMinAnswer() public {
+        vm.warp(T0 + 60);
+        pA.push(1, T0 + 60);
+        aA.push(1, T0 + 60);
+        assertTrue(_check(_config()) & LPOracleCodes.CHECK_QUOTES != 0, "answers at minAnswer are Invalid in the seed");
+    }
 }

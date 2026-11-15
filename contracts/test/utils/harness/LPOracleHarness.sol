@@ -36,6 +36,10 @@ abstract contract LPOracleHarnessModule is LPOracleStorage {
         // A composition at a price of token `failIndex` below `failBelow` fails (0: never).
         uint256 failIndex;
         uint256 failBelow;
+        // When set, the consistency check is unavailable unless `_poolCheck` receives exactly these arguments.
+        bool poolArgsChecked;
+        uint32 expectedWindow;
+        uint16 expectedTolerance;
     }
 
     bytes32 private constant MODULE_SLOT = keccak256("avana.test.LPOracleHarnessModule");
@@ -79,7 +83,7 @@ abstract contract LPOracleHarnessModule is LPOracleStorage {
         uint256[] memory,
         uint32,
         uint16
-    ) internal view override returns (PoolCheck memory p) {
+    ) internal view virtual override returns (PoolCheck memory p) {
         ModuleState storage m = _m();
         (p.readOk, p.locked) = (!m.lockReadFails, m.locked);
         (p.available, p.pass, p.deviationBps, p.clamped) =
@@ -111,8 +115,37 @@ abstract contract LPOracleHarnessModule is LPOracleStorage {
     }
 }
 
+/// @notice The harness module with the argument check of `setExpectedPoolCheckArgs`: the consistency check is
+/// unavailable when the pool check receives other arguments than the expected ones.
+abstract contract LPOracleHarnessPoolArgsModule is LPOracleHarnessModule {
+    function _poolCheck(
+        uint256[] memory amounts,
+        uint256[] memory prices,
+        uint32 window,
+        uint16 toleranceBps
+    ) internal view override returns (PoolCheck memory p) {
+        p = super._poolCheck(amounts, prices, window, toleranceBps);
+        ModuleState storage m = _m();
+        if (m.poolArgsChecked && (window != m.expectedWindow || toleranceBps != m.expectedTolerance)) {
+            p.available = false;
+        }
+    }
+}
+
+/// @notice The harness module's poke logic without the pool-check argument check, for the halmos and echidna targets
+/// built on it (the halmos target is within a few bytes of the EIP-170 size limit).
+contract LPOracleHarnessPokeLogicBase is LPOraclePokeLogic, LPOracleHarnessModule {
+    constructor(
+        address timelock,
+        uint32 chainBlockTime,
+        uint32 pokeMinGasFloor,
+        uint32 pokeMinGasCeiling,
+        bool hasSequencer
+    ) LPOracleLogicBase(timelock, chainBlockTime, pokeMinGasFloor, pokeMinGasCeiling, hasSequencer) {}
+}
+
 /// @notice The harness module's poke logic.
-contract LPOracleHarnessPokeLogic is LPOraclePokeLogic, LPOracleHarnessModule {
+contract LPOracleHarnessPokeLogic is LPOraclePokeLogic, LPOracleHarnessPoolArgsModule {
     constructor(
         address timelock,
         uint32 chainBlockTime,
@@ -123,7 +156,7 @@ contract LPOracleHarnessPokeLogic is LPOraclePokeLogic, LPOracleHarnessModule {
 }
 
 /// @notice The harness module's listing logic.
-contract LPOracleHarnessListingLogic is LPOracleListingLogic, LPOracleHarnessModule {
+contract LPOracleHarnessListingLogic is LPOracleListingLogic, LPOracleHarnessPoolArgsModule {
     constructor(
         address timelock,
         uint32 chainBlockTime,
@@ -134,7 +167,7 @@ contract LPOracleHarnessListingLogic is LPOracleListingLogic, LPOracleHarnessMod
 }
 
 /// @notice The harness module's view logic.
-contract LPOracleHarnessViewLogic is LPOracleViewLogic, LPOracleHarnessModule {
+contract LPOracleHarnessViewLogic is LPOracleViewLogic, LPOracleHarnessPoolArgsModule {
     constructor(
         address timelock,
         uint32 chainBlockTime,
@@ -147,7 +180,7 @@ contract LPOracleHarnessViewLogic is LPOracleViewLogic, LPOracleHarnessModule {
 /// @title LPOracleHarness
 /// @notice Minimal concrete LPOracle implementation for the base's tests, with the harness module and its two logic
 /// contracts, plus module switches and storage getters.
-contract LPOracleHarness is LPOracle, LPOracleHarnessModule {
+contract LPOracleHarness is LPOracle, LPOracleHarnessPoolArgsModule {
     constructor(
         address timelock,
         uint32 chainBlockTime,
@@ -172,6 +205,15 @@ contract LPOracleHarness is LPOracle, LPOracleHarnessModule {
         uint256[] calldata c
     ) external {
         _m().coefficients = c;
+    }
+
+    /// @notice Makes the consistency check unavailable unless the pool check receives `window` and `toleranceBps`.
+    function setExpectedPoolCheckArgs(
+        uint32 window,
+        uint16 toleranceBps
+    ) external {
+        ModuleState storage m = _m();
+        (m.poolArgsChecked, m.expectedWindow, m.expectedTolerance) = (true, window, toleranceBps);
     }
 
     function setCompositionFails(

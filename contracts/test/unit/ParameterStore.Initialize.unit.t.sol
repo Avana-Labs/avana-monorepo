@@ -9,7 +9,13 @@ import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterS
 import {IParameterStoreChain} from "../../src/policy/parameter-store/IParameterStoreChain.sol";
 import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
 import {ParameterStore} from "../../src/policy/parameter-store/ParameterStore.sol";
+import {ParameterStoreAdminOracleLogic} from "../../src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol";
+import {ParameterStoreAdminRiskLogic} from "../../src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol";
+import {ParameterStoreListingLogic} from "../../src/policy/parameter-store/ParameterStoreListingLogic.sol";
+import {ParameterStoreLoosenLogic} from "../../src/policy/parameter-store/ParameterStoreLoosenLogic.sol";
+import {ParameterStoreTightenLogic} from "../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
 import {GlobalParams} from "../../src/policy/parameter-store/types/GlobalParams.sol";
+import {ParameterStoreLogics} from "../../src/policy/parameter-store/types/ParameterStoreLogics.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -312,5 +318,39 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         _tl();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         store.initialize(address(timelock), _defaultGlobals(), 0, 10_000);
+    }
+
+    // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-050, REQ-CONFIG-052
+    /// @notice Values past the far side of each bound are refused too: a grace health factor above 1, a band low above
+    /// $1 and a band high below $1.
+    function test_TEST_242_valuesPastTheEdgesRefused() public {
+        GlobalParams memory g = _defaultGlobals();
+        g.graceHealthFactor = 1.01e18;
+        _refused(g, live);
+        g = _defaultGlobals();
+        g.usdBandLow = 1.01e8;
+        _refused(g, oob);
+        g = _defaultGlobals();
+        g.usdBandHigh = 0.99e8;
+        _refused(g, oob);
+    }
+
+    // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-056
+    /// @notice `initialize` runs before the MarketRegistry holds code: the registry probes of the fee recipient check
+    /// are skipped and the store initializes with the recipient recorded.
+    function test_TEST_242_initializeBeforeRegistryHasCode() public {
+        address noCode = makeAddr("registryNotYetDeployed");
+        address tl = address(timelock);
+        ParameterStoreLogics memory l = ParameterStoreLogics({
+            tighten: address(new ParameterStoreTightenLogic(tl, noCode, BLOCK_TIME, false)),
+            loosen: address(new ParameterStoreLoosenLogic(tl, noCode, BLOCK_TIME, false)),
+            listing: address(new ParameterStoreListingLogic(tl, noCode, BLOCK_TIME, false)),
+            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, noCode, BLOCK_TIME, false)),
+            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, noCode, BLOCK_TIME, false))
+        });
+        ParameterStore early = new ParameterStore(tl, noCode, BLOCK_TIME, false, l);
+        bytes memory data = abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _defaultGlobals(), 0, 10_000));
+        IParameterStore s = IParameterStore(address(new ERC1967Proxy(address(early), data)));
+        assertEq(s.feeRecipient(), feeRecipient);
     }
 }

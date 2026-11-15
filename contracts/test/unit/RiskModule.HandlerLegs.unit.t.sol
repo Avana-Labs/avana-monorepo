@@ -7,9 +7,10 @@ import {RiskModuleHandler} from "../invariant/handlers/RiskModuleHandler.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @title RiskModuleHandlerLegsUnitTest
-/// @notice Replays the withdraw calls of the two shrunk sequences that failed `invariant_TEST_095_noGateBypassed` in
-/// contracts run 43653564553 (commit `48864ef`, ci shard 9/30 and the deep campaign). In both the fuzzer first called
-/// the handler's `setLegs` setup helper with leg feeds 0; then `withdraw(2)` or `withdraw(3235)` opened every gate and
+/// @notice Replays the withdraw calls of the shrunk sequences that failed `invariant_TEST_095_noGateBypassed` in
+/// contracts run 43653564553 (commit `48864ef`, ci shard 9/30 and the deep campaign) and run 43692185561 (commit
+/// `adc7673`, ci shard 9/30, seed 0x6af96a6f). In each the fuzzer first called the handler's `setLegs` setup helper with
+/// leg feeds 0; then `withdraw(2)`, `withdraw(3235)` or `withdraw(31200000000000000000000000000)` opened every gate and
 /// closed the stale-feed gate by warping past the feed age. The RiskModule skips a leg whose feed is address 0 (an
 /// unused second leg, 2.7 step (5)), so its pre-check passed while the handler counted the gate closed. The handler now
 /// takes the legs in its constructor and has no setter; with the market's own feeds the stale-feed gate refuses both
@@ -41,11 +42,14 @@ contract RiskModuleHandlerLegsUnitTest is RiskModuleFixture {
     }
 
     function test_TEST_095_staleFeedRefusesTheFailingSeeds() public {
-        // Seeds 2 and 3235 both open every gate and then close gate 2, a feed older than its borrowPriceMaxAge.
+        // Seeds 2, 3235 and 3.12e28 each open every gate and then close gate 2, a feed older than its
+        // borrowPriceMaxAge.
         vm.expectRevert(RiskModuleHandler.Skipped.selector);
         handler.withdraw(2);
         vm.expectRevert(RiskModuleHandler.Skipped.selector);
         handler.withdraw(3235);
+        vm.expectRevert(RiskModuleHandler.Skipped.selector);
+        handler.withdraw(31_200_000_000_000_000_000_000_000_000);
         assertEq(handler.withdrawals(), 0, "a stale-feed pre-check passed");
         assertEq(handler.violations(), 0, "a pre-check passed with a gate closed");
         assertEq(handler.refusedWhileClear(), 0, "a pre-check refused with every gate open");

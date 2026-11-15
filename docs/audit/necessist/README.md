@@ -35,3 +35,18 @@ Triage, at `fda9bed`: [contracts/security/necessist-triage.json](../../../contra
 | not triaged | 4,514 |
 
 Not triaged: statements that change state (setup calls, assignments, pranks not followed by an expected revert, warps, mocks, snapshots, helpers that act), which need each test read. By test family: `LPOracle*` 628, `LPVaultSwap*` 498, `MarketRegistry*` 487, `Lens*` 486, `ParameterStore*` 404, `DebtOracle*` 379, `AaveAdapter*` 269, `Collateralization*` 245, `SlipstreamIntegration*` 126, `UniswapV3Integration*` 119, `FlashLiquidator*` 98, `VaultToken*` 84, `SettlementMath*` 79, `LPPriceMath*` 59, `RiskModule*` 59, `VaultTokenFactory*` 54, `CoverageSpoke*` 51, `PegModuleRoute*` 38, `AvanaTimelock*` 36, `DexHops*` 35, `Lock*` 35, `PayoutEscrow*` 32, `WrapperThenDexRoute*` 31, `DexPathRoute*` 29, `AaveV3FlashSource*` 28, `RouteReads*` 28, `SwapRoutes*` 26, `PositionProxy*` 23, `ProxyManager*` 20, `SwapRouteBase*` 19, `ClPriceMath*` 7, `RouteMath*` 2. The JSON lists the count per test file.
+
+### Second triage pass (2026-11-15, at `6805212`)
+
+The 4,520 state-changing removals of the first pass's "not triaged" class (4,514 by its count; 6 multi-line `vm.assume` rows had been matched by truncated text) are classed by pattern in [contracts/security/necessist-triage.json](../../../contracts/security/necessist-triage.json) (`NE-007` onward), after reading each pattern group in its test files. Each real gap and each removal that needs a re-run is a row of [findings-register.md](../findings-register.md) section 2.2; the other classes are one row per pattern.
+
+| Class | Removals (both passes) |
+|---|---|
+| equivalent or harmless | 3,723 |
+| noise | 2,092 |
+| real test gap (the test checks less than its name says; `strengthen` names the fix) | 158 |
+| needs a re-run (the reported pass contradicts the test code; 131 are fuzz tests at 256 runs under a 300 s timeout) | 135 |
+| not triaged | 0 |
+| **All** | **6,108** |
+
+The real gaps are open: each entry names the assertion or input change that closes it. Examples: `test_TEST_108_constructorFailsClosed` (SlipstreamIntegration) builds its seven bad configurations from one shared array, so they are not seven independent cases; `pokeReturnsTheReportedState` (LPOracle.StateMachine) never compares the returned state.

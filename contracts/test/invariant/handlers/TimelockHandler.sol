@@ -110,7 +110,10 @@ contract TimelockHandler is CommonBase, StdUtils {
         bool jumpToReady
     ) external {
         if (ops.length == 0) revert Skipped();
-        if (jumpToReady) {
+        // Steered: three calls in four also jump to a live operation's ready time (with the proposer when execution is
+        // not public), so executions land; the rest keep the fuzzer's caller and clock for the early, late and
+        // unauthorised attempts.
+        if (jumpToReady || uint160(caller) % 4 != 0) {
             idx = _live(idx);
             uint256 at = TL.getTimestamp(ids[idx % ops.length]);
             if (at > block.timestamp) vm.warp(at);
@@ -148,6 +151,9 @@ contract TimelockHandler is CommonBase, StdUtils {
         address stranger
     ) external {
         if (ids.length == 0) revert Skipped();
+        // Steered: three calls in four pick a pending operation (`_live`), so the cancel rules are checked on
+        // operations that can still be cancelled; the rest keep the fuzzer's index.
+        if ((who / 5) % 4 != 0) idx = _live(idx);
         bytes32 id = ids[idx % ids.length];
         address caller = who % 5 == 4 ? stranger : cancellers[who % 5];
         bool roleChange = TL.isRoleChangeOperation(id);
@@ -168,7 +174,15 @@ contract TimelockHandler is CommonBase, StdUtils {
         uint256 idx
     ) external {
         if (ids.length == 0) revert Skipped();
-        try TL.cleanupExpiredOperation(ids[idx % ids.length]) {} catch {}
+        // Steered: start from the first expired operation at or after `idx`, if there is one.
+        uint256 n = ids.length;
+        for (uint256 j = 0; j < n; ++j) {
+            if (TL.isOperationExpired(ids[(idx + j) % n])) {
+                idx = (idx + j) % n;
+                break;
+            }
+        }
+        try TL.cleanupExpiredOperation(ids[idx % n]) {} catch {}
     }
 
     function warp(

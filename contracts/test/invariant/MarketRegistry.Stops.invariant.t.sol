@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
+import {HandlerReach} from "./handlers/HandlerReach.sol";
 import {MarketRegistryStopsHandler} from "./handlers/MarketRegistryStopsHandler.sol";
 import {Test} from "forge-std/Test.sol";
 
@@ -12,7 +13,7 @@ import {Test} from "forge-std/Test.sol";
 /// @notice Address freezes and breakers under random guardian, admin, stranger and RiskModule calls with time warps:
 /// every outcome matches the model, no caller ever holds more than 20 freezes in its 24 hour buckets, no protected
 /// address is ever frozen, latches hold only security and manual reasons, and the breach time is never in the future.
-contract MarketRegistryStopsInvariantTest is Test {
+contract MarketRegistryStopsInvariantTest is Test, HandlerReach {
     MarketRegistryStopsHandler internal handler;
     MarketRegistry internal registry;
 
@@ -33,6 +34,81 @@ contract MarketRegistryStopsInvariantTest is Test {
         actions[8] = MarketRegistryStopsHandler.reset.selector;
         actions[9] = MarketRegistryStopsHandler.warp.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
+    }
+
+    // TEST-082 verifies: TEST-007
+    /// @notice What the handler does: over 32 fixed-seed runs of 50 calls from set-up, counts per action the calls that
+    /// changed the state of a contract other than the handler and this test, the skipped and failed calls and the
+    /// calls that returned without changing anything; each action must change the state in at least its floor of
+    /// calls (`forge test -vv` prints the table).
+    function test_TEST_082_handlerReach() public {
+        (bytes4[] memory actions, string[] memory names,) = _reachActions();
+        address[] memory own = new address[](2);
+        (own[0], own[1]) = (address(handler), address(this));
+        Reach memory r = _replayLanded(address(handler), actions, bytes4(0), 32, 50, 0, own, true);
+        // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
+        uint256[] memory floors = new uint256[](7);
+        bool[] memory check = new bool[](7);
+        floors[0] = 20; // freezeAddress
+        floors[2] = 60; // recordBreach
+        floors[3] = 25; // trip
+        floors[4] = 80; // setLive
+        floors[5] = 15; // reset
+        floors[6] = 80; // warp
+        check[6] = true; // warp
+        _check(r, names, new string[](0), floors, new uint256[](0), check);
+    }
+
+    function _reached() internal pure override returns (bool[] memory hit) {
+        hit = new bool[](0);
+    }
+
+    /// @dev The targeted actions, their names and the type of each of their parameters (see `_typed`).
+    function _reachActions()
+        internal
+        pure
+        returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
+    {
+        (actions, names, kinds) = (new bytes4[](7), new string[](7), new int16[][](7));
+        (actions[0], names[0]) = (MarketRegistryStopsHandler.freezeAddress.selector, "freezeAddress");
+        kinds[0] = new int16[](3);
+        kinds[0][0] = 256;
+        kinds[0][1] = 256;
+        kinds[0][2] = 1;
+        (actions[1], names[1]) = (MarketRegistryStopsHandler.unfreezeAddress.selector, "unfreezeAddress");
+        kinds[1] = new int16[](2);
+        kinds[1][0] = 256;
+        kinds[1][1] = 256;
+        (actions[2], names[2]) = (MarketRegistryStopsHandler.recordBreach.selector, "recordBreach");
+        kinds[2] = new int16[](2);
+        kinds[2][0] = 1;
+        kinds[2][1] = 32;
+        (actions[3], names[3]) = (MarketRegistryStopsHandler.trip.selector, "trip");
+        kinds[3] = new int16[](2);
+        kinds[3][0] = 256;
+        kinds[3][1] = 1;
+        (actions[4], names[4]) = (MarketRegistryStopsHandler.setLive.selector, "setLive");
+        kinds[4] = new int16[](2);
+        kinds[4][0] = 1;
+        kinds[4][1] = 32;
+        (actions[5], names[5]) = (MarketRegistryStopsHandler.reset.selector, "reset");
+        kinds[5] = new int16[](2);
+        kinds[5][0] = 256;
+        kinds[5][1] = 1;
+        (actions[6], names[6]) = (MarketRegistryStopsHandler.warp.selector, "warp");
+        kinds[6] = new int16[](1);
+        kinds[6][0] = 256;
+    }
+
+    function _calldata(
+        bytes4 selector,
+        uint256 seed
+    ) internal pure override returns (bytes memory) {
+        (bytes4[] memory actions,, int16[][] memory kinds) = _reachActions();
+        for (uint256 k = 0; k < actions.length; ++k) {
+            if (actions[k] == selector) return _typed(selector, kinds[k], seed);
+        }
+        return abi.encodePacked(selector);
     }
 
     // TEST-229 verifies: REQ-MREG-019, REQ-MREG-020, REQ-MREG-022, INV-085, ATTACK-139, Q-242

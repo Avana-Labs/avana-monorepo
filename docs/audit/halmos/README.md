@@ -38,6 +38,7 @@ Contract gate (every `check_` of the contract passes) and the slow tier at each 
 | LPPriceMath | 2026-11-10 20:31 | `PROP-024` ceiling passes; `PROP-023`, `PROP-024` symmetry and `PROP-026` time out (1,113 s, 182 s, 117 s); their fuzz twins pass at 10,000 runs |
 | SettlementMath | 2026-11-10 20:51 | 2 / 14 pass under machine load; `PROP-015` gap and three `PROP-018` checks hit the 240 s wall clock; fuzz twins pass at 10,000 runs |
 | CoverageSpoke | 2026-11-10 | The two `PROP-039` checks time out on the RAY division; fuzz twins carry them |
+| SettlementMath `PROP-019` leg slippage | 2026-11-15 | `check_PROP_019_legSlippage` ran out of its 5-hour budget in security-slow run 43677588077 with no counterexample (the symbolic divisor of `Math.mulDiv`); it is split into six checks with no symbolic divisor (`NoRelax`, `Wide`, and `QuotientV3`, `V10000`, `VPrime`, `VMax` at literal values). All six pass: locally (Halmos 0.3.3, loop 16) in 109 s in total, and in security-slow run 43708786168 |
 
 The slow-tier Halmos step of 2026-11-10 16:01 failed to build (`TimelockFixture.sol` imported `AvanaTimelock.sol` while the timelock was being merged); its output is kept as is.
 
