@@ -125,7 +125,15 @@ if [ $ready -eq 1 ]; then
   (cd "$CONVEX_DIR" && CONVEX_AGENT_MODE=anonymous "$REPO/node_modules/.bin/convex" dev --codegen disable --typecheck disable \
     --tail-logs always > "$WORK/convex.log" 2>&1) &
   PIDS="$PIDS $!"
-  for _ in $(seq 1 90); do grep -q "Convex functions ready" "$WORK/convex.log" 2>/dev/null && break; sleep 2; done
+  convex_wait() { for _ in $(seq 1 90); do grep -qE "Convex functions ready|$1" "$WORK/convex.log" 2>/dev/null && break; sleep 2; done; }
+  convex_wait "SIWE_JWT_ISSUER is used in auth config"
+  # The auth config names the SIWE JWT issuer, a deployment variable the CLI requires before it pushes. A fresh local
+  # deployment has none: set the web app's local origin and touch the file so `convex dev` pushes again.
+  if ! grep -q "Convex functions ready" "$WORK/convex.log" && grep -q "SIWE_JWT_ISSUER is used in auth config" "$WORK/convex.log"; then
+    (cd "$CONVEX_DIR" && CONVEX_AGENT_MODE=anonymous "$REPO/node_modules/.bin/convex" env set SIWE_JWT_ISSUER http://127.0.0.1:3000) \
+      >> "$WORK/convex.log" 2>&1 && touch "$CONVEX_DIR/convex/auth.config.ts"
+    convex_wait "Convex functions ready"
+  fi
   if grep -q "Convex functions ready" "$WORK/convex.log"; then
     RPC_ANVIL="$RPC" E2E_EXPORT_URL="http://127.0.0.1:${INDEXER_PORT}" E2E_EXPORT_KEY_ID="$EXPORT_KEY_ID" \
       E2E_EXPORT_SECRET="$EXPORT_SECRET" E2E_LISTING_CONTENT_URL="http://127.0.0.1:${CONTENT_PORT}" \

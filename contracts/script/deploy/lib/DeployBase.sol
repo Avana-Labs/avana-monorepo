@@ -49,6 +49,80 @@ abstract contract DeployBase is DeployInputs {
         return create3.predict(deployer, _salt(name));
     }
 
+    /// @notice The release record of the release workflow (`release.json`, docs/release.md) for this run, when there
+    /// is one: `AVANA_RELEASE_RECORD` (a path from `contracts/`), else `deployments-local/<network>/release.json`.
+    /// Empty when neither is set or present.
+    function _releaseRecordPath() internal view returns (string memory) {
+        string memory p = vm.envOr("AVANA_RELEASE_RECORD", string(""));
+        if (bytes(p).length != 0) return p;
+        p = string.concat(OUTPUT_DIR, "/", _network(), "/release.json");
+        return vm.exists(string.concat(vm.projectRoot(), "/", p)) ? p : "";
+    }
+
+    /// @notice Checks this run against a release record: the same release, the same commit as HEAD (when `head` is
+    /// given, off anvil), the same CREATE3 factory, and each recorded salt and, for a record made for this deployer,
+    /// each predicted address. Run with `create3`, `deployer` and `release` set.
+    function _checkReleaseRecord(
+        string memory path,
+        bytes memory head
+    ) internal view {
+        string memory json = vm.readFile(string.concat(vm.projectRoot(), "/", path));
+        string memory r = vm.parseJsonString(json, ".release");
+        require(_eq(r, release), string.concat("release record is for ", r, ", not ", release));
+        if (head.length != 0) {
+            bytes memory commit = vm.parseBytes(string.concat("0x", vm.parseJsonString(json, ".commit")));
+            require(
+                keccak256(commit) == keccak256(head),
+                string.concat("release record commit ", vm.toString(commit), " is not HEAD ", vm.toString(head))
+            );
+        }
+        address f = vm.parseJsonAddress(json, ".create3Factory");
+        require(
+            f == address(create3),
+            string.concat(
+                "release record names CREATE3 factory ", vm.toString(f), ", not ", vm.toString(address(create3))
+            )
+        );
+        bool forDeployer;
+        try vm.parseJsonAddress(json, ".deployer") returns (address d) {
+            require(
+                d == deployer,
+                string.concat("release record predicts for deployer ", vm.toString(d), ", not ", vm.toString(deployer))
+            );
+            forDeployer = true;
+        } catch {}
+        uint256 n = _count(json, ".salts");
+        for (uint256 i = 0; i < n; ++i) {
+            string memory k = string.concat(".salts[", vm.toString(i), "]");
+            string memory name = vm.parseJsonString(json, string.concat(k, ".name"));
+            bytes32 s = vm.parseJsonBytes32(json, string.concat(k, ".salt"));
+            require(
+                s == _salt(name),
+                string.concat(
+                    "release record salt of ",
+                    name,
+                    " is ",
+                    vm.toString(s),
+                    "; this run's is ",
+                    vm.toString(_salt(name))
+                )
+            );
+            if (!forDeployer) continue;
+            address a = vm.parseJsonAddress(json, string.concat(k, ".address"));
+            require(
+                a == _predict(name),
+                string.concat(
+                    "release record puts ",
+                    name,
+                    " at ",
+                    vm.toString(a),
+                    "; this run predicts ",
+                    vm.toString(_predict(name))
+                )
+            );
+        }
+    }
+
     /// @notice Deploys `initCode` at `_predict(name)` and checks the address.
     function _deploy3(
         string memory name,

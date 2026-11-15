@@ -12,8 +12,8 @@
 # Usage, from contracts/:   script/e2e/e2e-local.sh            (all steps)
 #                           E2E_STEPS="deploy manifest" script/e2e/e2e-local.sh
 #                           E2E_STEPS="deploy day2 exotic manifest services scenarios" script/e2e/e2e-local.sh
-# Steps: deploy (rehearsal 00), day2 (01-05), exotic (08: exotic pools and borrowable assets on the day-2 config, as two
-# releases recorded exotic:<step> and exotic2:<step>), the rerun of every step with nothing new (06, after day2 or
+# Steps: deploy (rehearsal 00), day2 (01-05), exotic (08: exotic pools and borrowable assets on the day-2 config, one
+# release of ten markets whose listing batch is split by gas, recorded exotic:<step>), the rerun of every step with nothing new (06, after day2 or
 # exotic), hostile (07, on the latest config), manifest, services and scenarios. compose (not in the default list; it
 # needs Docker) runs the services' container images against the run's node: E2E_STEPS="deploy manifest compose".
 # Needs: anvil, forge, cast, node >= 22.12 with the workspace installed (npm ci at the repo root), and the builds
@@ -252,7 +252,7 @@ fi
 # on what the config adds. Day 2 (script/e2e/day2-additions.ts: a Hub with its Spokes, a lend asset, a borrowable asset
 # on a listed Spoke, a collateral token and two markets), then the exotic pass (script/e2e/exotic-additions.ts: a Hub
 # lending a meme coin, a governance token, an 8-decimals token and USDC against meme, governance, WBTC-type and thin
-# pools on Uniswap v3 and Slipstream, five markets per release). After the last one, every step once more, which must do
+# pools on Uniswap v3 and Slipstream, ten markets in one release). After the last one, every step once more, which must do
 # nothing. Later steps read the last config.
 grow() { # phase "generator [args]" config
   # shellcheck disable=SC2086 # the generator and its arguments, split on purpose
@@ -284,6 +284,30 @@ grow() { # phase "generator [args]" config
   PHASE=""
   return $ok
 }
+# The listing batch of a phase was split into operations under the gas budget, each executed in order and each
+# within the block gas limit (09_ListMarkets._proposeInParts, 05_ExecuteOperations).
+listing_split() { # phase
+  local detail
+  if detail="$(node -e '
+    const fs = require("fs"), out = process.argv[1];
+    const parts = [];
+    for (let k = 1; ; k++) {
+      const f = `${out}/operation-listing-markets${k === 1 ? "" : "." + k}.json`;
+      if (!fs.existsSync(f)) break;
+      const op = JSON.parse(fs.readFileSync(f, "utf8"));
+      if (k > 1 && op.predecessor !== parts[k - 2].id) break;
+      parts.push(op);
+    }
+    if (parts.length < 2) { console.log(`one listing operation (${parts[0]?.targets.length ?? 0} calls), not split`); process.exit(1); }
+    const over = parts.filter((p) => !(p.gasEstimate > 0 && p.gasEstimate <= 60000000));
+    if (over.length) { console.log(`estimate missing or above the block: ${over.map((p) => p.name).join(", ")}`); process.exit(1); }
+    console.log(parts.map((p) => `${p.name}: ${p.targets.length} calls, ~${(p.gasEstimate / 1e6).toFixed(1)}M gas`).join("; "));
+  ' "$OUT" 2>&1)"; then
+    record "$1:listing-split" pass "$detail"
+  else
+    record "$1:listing-split" fail "$detail"; return 1
+  fi
+}
 GREW=""
 GROW_FAILED=""
 if [[ " $STEPS " == *" day2 "* ]]; then
@@ -293,10 +317,9 @@ if [[ " $STEPS " == *" exotic "* ]]; then
   if [ -n "$GROW_FAILED" ]; then
     record exotic not-run "the day2 phase failed"
   elif [ -f "$OUT/config-day2.json" ]; then
-    # Two releases: one listing batch of all ten markets would not fit in a block (exotic-additions.ts).
-    { grow exotic "script/e2e/exotic-additions.ts --part 1" deployments-local/anvil/config-exotic.json &&
-      grow exotic2 "script/e2e/exotic-additions.ts --part 2" deployments-local/anvil/config-exotic.json && GREW=1; } ||
-      GROW_FAILED=exotic
+    # One release of ten markets: one listing batch would not fit in a block, so 09-listing-markets splits it.
+    { grow exotic script/e2e/exotic-additions.ts deployments-local/anvil/config-exotic.json &&
+      listing_split exotic && GREW=1; } || GROW_FAILED=exotic
   else
     record exotic not-run "needs the day-2 config (run day2 first)"
   fi
@@ -439,10 +462,17 @@ drill() { # name
   node script/e2e/drills.ts --network anvil --drill "$1" > "$log" 2>&1
   rc=$?
   case $rc in
-    0) record "$name" pass "$(tail -1 "$log" | sed 's/^PASS //' | cut -c1-400)" ;;
-    3) record "$name" not-run "$(tail -1 "$log" | sed 's/^NOT-RUN //' | cut -c1-400)" ;;
-    *) record "$name" fail "see $log: $(tail -1 "$log" | sed 's/^FAIL //' | cut -c1-400)" ;;
+    0) record "$name" pass "$(drill_line "$log" PASS)" ;;
+    3) record "$name" not-run "$(drill_line "$log" NOT-RUN)" ;;
+    *) record "$name" fail "see $log: $(drill_line "$log" FAIL)" ;;
   esac
+}
+# The drill's own outcome line: node's warnings on stderr can follow it in the log.
+drill_line() { # log outcome
+  local l
+  l="$(grep -E "^$2 " "$1" | tail -1)"
+  [ -n "$l" ] || l="$(tail -1 "$1")"
+  printf '%s' "${l#"$2 "}" | cut -c1-400
 }
 if [[ " $STEPS " == *" drills "* ]]; then
   if [ -f "$OUT/manifest.json" ]; then
