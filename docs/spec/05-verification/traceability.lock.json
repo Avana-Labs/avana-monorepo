@@ -14851,10 +14851,10 @@
     ]
   },
   "REQ-AMM-CORE-011": {
-    "hash": "05c99aaec699b894",
+    "hash": "f655b1bbc3db558c",
     "checks": [
       "ClLPVaultCustody",
-      "ClLPVaultMarkets",
+      "ClNfpmLPVault",
       "FeeMode",
       "IAmmIntegration",
       "IAmmIntegrationHooks",
@@ -14864,7 +14864,8 @@
       "IntegrationCapabilities",
       "TEST-017",
       "TEST-116",
-      "TEST-238"
+      "TEST-238",
+      "TEST-331"
     ]
   },
   "REQ-AMM-CORE-012": {
@@ -15411,7 +15412,7 @@
     ]
   },
   "REQ-AMM-V4-001": {
-    "hash": "57a355ba47fcedaa",
+    "hash": "257450daa7cbef08",
     "checks": [
       "IAmmIntegrationHooks",
       "IUniswapV4Integration",
@@ -15425,7 +15426,7 @@
     "checks": []
   },
   "REQ-AMM-V4-003": {
-    "hash": "90488182770af966",
+    "hash": "fd71346096bc5c6c",
     "checks": [
       "ILPVaultErrors",
       "IUniswapV4Integration",
@@ -15436,7 +15437,7 @@
     ]
   },
   "REQ-AMM-V4-004": {
-    "hash": "5974451dece2c2aa",
+    "hash": "4c232bc3a889a27f",
     "checks": [
       "IUniswapV4Integration",
       "TEST-331",
@@ -16861,7 +16862,7 @@
     ]
   },
   "REQ-COLL-037": {
-    "hash": "c0b6081079417506",
+    "hash": "693d46d24032855e",
     "checks": [
       "ClLPVaultCustody",
       "CollateralizationPledge",
@@ -23075,13 +23076,14 @@
     ]
   },
   "REQ-ORACLE-105": {
-    "hash": "9654c44936c74153",
+    "hash": "520698c1c1fd9f85",
     "checks": [
       "HYP-AMM-05",
       "LPOracleCLListingLogic",
       "LPOracleCLModule",
       "LPOracleCLModuleCaller",
       "LPOracleCLModuleLogic",
+      "LPOracleV4Module",
       "LPPriceMath",
       "MATH-UO-10",
       "MATH-UO-75",
@@ -23089,6 +23091,7 @@
       "TEST-264",
       "TEST-279",
       "TEST-306",
+      "TEST-331",
       "TEST-332"
     ]
   },
@@ -29316,16 +29319,19 @@
     ]
   },
   "REQ-VAULT-064": {
-    "hash": "32a1d8cc76c7792d",
+    "hash": "a441f62537f1e05f",
     "checks": [
       "ClLPVaultCustody",
+      "ClNfpmLPVault",
       "IAmmIntegration",
       "ICollateralizationUser",
       "ILPVaultErrors",
       "TEST-010",
       "TEST-017",
       "TEST-091",
-      "TEST-130"
+      "TEST-130",
+      "TEST-331",
+      "UniswapV4Integration"
     ]
   },
   "REQ-VAULT-065": {
@@ -29576,7 +29582,7 @@
     ]
   },
   "REQ-VAULT-088": {
-    "hash": "fa32b18ac362144a",
+    "hash": "9610e6326c6205bf",
     "checks": [
       "CollateralizationBase",
       "CollateralizationLedger",

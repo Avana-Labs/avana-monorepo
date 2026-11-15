@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ClMarketConfig} from "../../../src/amm/types/ClMarketConfig.sol";
 import {IUniswapV4Integration} from "../../../src/amm/uniswap-v4/IUniswapV4Integration.sol";
 import {UniswapV4PoolKey} from "../../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
@@ -30,13 +31,15 @@ import {UniswapV4WorldFixture} from "./UniswapV4WorldFixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 
-/// @notice The integration views the v4 LPOracle reads: unit exponent, rate providers and the market's reference pool.
+/// @notice The integration views the v4 LPOracle reads: unit exponent, rate providers, the market's PoolKey and
+/// reference pool, and its concentrated-liquidity configuration (PoolManager and range).
 contract V4IntegrationStub {
     error MarketBinding(uint256 marketId);
 
     bool public bound;
     uint8 public unitExp;
     IUniswapV4Integration.V4Market internal _market;
+    ClMarketConfig internal _cl;
 
     function setBound(
         bool b
@@ -50,6 +53,21 @@ contract V4IntegrationStub {
         uint8 k
     ) external {
         (_market.key, _market.referencePool, unitExp) = (key, ref, k);
+    }
+
+    function setClMarket(
+        address poolManager,
+        int24 tickLower,
+        int24 tickUpper
+    ) external {
+        (_cl.factory, _cl.tickLower, _cl.tickUpper) = (poolManager, tickLower, tickUpper);
+    }
+
+    function clMarket(
+        uint256 marketId
+    ) external view returns (ClMarketConfig memory) {
+        if (!bound) revert MarketBinding(marketId);
+        return _cl;
     }
 
     function rateProviders(
@@ -123,6 +141,7 @@ abstract contract LPOracleV4Fixture is UniswapV4WorldFixture {
         (price0, price1) = (ETH, USD);
         integration = new V4IntegrationStub();
         integration.setMarket(_v4Key(), address(ref), 0);
+        integration.setClMarket(address(pm), LOWER, UPPER);
         registry = new OracleRegistryMock();
         store = new OracleStoreMock();
         store.setRegistry(registry);

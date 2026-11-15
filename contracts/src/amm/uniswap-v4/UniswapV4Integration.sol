@@ -307,8 +307,8 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     /// @inheritdoc IAmmIntegrationHooks
     /// @dev `SPEC-AMM-V4-002`: the larger of the spot gate `|tickSpot - tickRef|` and the reference pool's
     /// `|tickTwap - tickRef|`, the mean tick negated when the reference pool orders the tokens the other way.
-    /// Unavailable for a zero window, a reference cardinality below `ceil(window / blockTime) + 1` or a failed
-    /// `observe`.
+    /// Unavailable for a zero window, while the PoolManager is unlocked (`REQ-AMM-V4-003`), for a reference cardinality
+    /// below `ceil(window / blockTime) + 1` or a failed `observe`.
     /// @custom:spec REQ-AMM-CORE-009, REQ-AMM-V4-005, SPEC-AMM-V4-002, SPEC-ORC-010, SPEC-ORC-022
     function consistencyDeviation(
         uint256 marketId,
@@ -317,7 +317,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     ) external view override returns (uint256 deviationBps, bool available) {
         Market storage m = _market(marketId);
         (uint256 p0, uint256 p1) = _prices(prices);
-        if (window == 0) return (0, false);
+        if (window == 0 || UniswapV4State.isUnlocked(_PM)) return (0, false);
         address ref = _v4Pools[m.poolRef].referencePool;
         // Only the observation cardinality is read.
         // forge-lint: disable-next-line(unused-return)
@@ -420,8 +420,13 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     }
 
     /// @dev `REQ-AMM-V4-004`: the amounts of `SPEC-AMM-V4-003` at the pool's `slot0`, checked against the minimums, then
-    /// one batch: the fee step to `depositor` and the principal step to `recipient`.
-    /// @custom:spec REQ-AMM-V4-004, SPEC-AMM-V4-003, SPEC-BACK-008
+    /// one batch: the fee step to `depositor` and the principal step to `recipient`. When `recipient` is not the
+    /// depositor (a seizure, a deleverage release or a reconciliation) and that batch reverts, for example because a
+    /// token refuses the depositor's address, a second batch takes the principal and the fees together to `recipient`
+    /// and the returned amounts include the fees (`REQ-AMM-V4-013`), so a token that blocks the depositor cannot block
+    /// the removal. Forcing the second batch by gas is not possible: the first call receives 63/64 of the gas left, so
+    /// a first call that runs out leaves too little for the second.
+    /// @custom:spec REQ-AMM-V4-004, REQ-AMM-V4-013, SPEC-AMM-V4-003, SPEC-BACK-008
     function _removePrincipal(
         Market storage m,
         bytes32 positionKey,
@@ -438,9 +443,24 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         UniswapV4PoolKey storage key = _v4Pools[m.poolRef].key;
         _decrease(b, positionKey, 0, 0, 0);
         _takeTo(b, key, depositor);
-        _decrease(b, positionKey, liquidity, SafeCast.toUint128(minAmounts[0]), SafeCast.toUint128(minAmounts[1]));
+        uint128 min0 = SafeCast.toUint128(minAmounts[0]);
+        uint128 min1 = SafeCast.toUint128(minAmounts[1]);
+        _decrease(b, positionKey, liquidity, min0, min1);
         _takeTo(b, key, recipient);
-        _run(b);
+        if (recipient == depositor) {
+            _run(b);
+            return amounts;
+        }
+        try _POSM.modifyLiquidities(_payload(b), block.timestamp) {}
+        catch {
+            (uint256 fee0, uint256 fee1,) = _feesOwed(m, positionKey);
+            Batch memory all = _batch(5);
+            _decrease(all, positionKey, liquidity, min0, min1);
+            _takeTo(all, key, recipient);
+            _run(all);
+            amounts[0] += fee0;
+            amounts[1] += fee1;
+        }
     }
 
     /// @dev `SPEC-AMM-V4-003`: the amounts removing `liquidity` credits at the pool's `slot0`, rounded down.
@@ -466,16 +486,28 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         bytes32 positionKey,
         address depositor
     ) internal override returns (uint256 amount0, uint256 amount1) {
+        uint128 liquidity;
+        (amount0, amount1, liquidity) = _feesOwed(m, positionKey);
+        if (liquidity == 0) return (0, 0);
+        Batch memory b = _batch(5);
+        _decrease(b, positionKey, 0, 0, 0);
+        _takeTo(b, _v4Pools[m.poolRef].key, depositor);
+        _run(b);
+    }
+
+    /// @dev The fees the PoolManager credits the position on its next liquidity change, with unchecked fee growth
+    /// (`REQ-AMM-V4-010`), and the position's liquidity; no fees for a position without liquidity.
+    function _feesOwed(
+        Market storage m,
+        bytes32 positionKey
+    ) private view returns (uint256 amount0, uint256 amount1, uint128 liquidity) {
         bytes32 poolId = m.poolRef;
         bytes32 id = UniswapV4State.positionId(address(_POSM), m.cfg.tickLower, m.cfg.tickUpper, positionKey);
         UniswapV4State.PositionState memory p = UniswapV4State.position(_PM, poolId, id);
-        if (p.liquidity == 0) return (0, 0);
+        liquidity = p.liquidity;
+        if (liquidity == 0) return (0, 0, 0);
         (uint256 in0, uint256 in1) = UniswapV4State.feeGrowthInside(_PM, poolId, m.cfg.tickLower, m.cfg.tickUpper);
         (amount0, amount1) = UniswapV4State.feesOwed(p, in0, in1);
-        Batch memory b = _batch(5);
-        _decrease(b, positionKey, 0, 0, 0);
-        _takeTo(b, _v4Pools[poolId].key, depositor);
-        _run(b);
     }
 
     // ─── Internal ───
@@ -534,6 +566,13 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     function _run(
         Batch memory b
     ) private {
+        _POSM.modifyLiquidities(_payload(b), block.timestamp);
+    }
+
+    /// @dev The `unlockData` of `b`: its actions and their parameters, the array shrunk to the actions pushed.
+    function _payload(
+        Batch memory b
+    ) private pure returns (bytes memory) {
         bytes[] memory params = b.params;
         uint256 n = b.n;
         // Shrinks the array to the actions pushed.
@@ -541,7 +580,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         assembly ("memory-safe") {
             mstore(params, n)
         }
-        _POSM.modifyLiquidities(abi.encode(b.actions, params), block.timestamp);
+        return abi.encode(b.actions, params);
     }
 
     /// @dev The market's configuration from a PoolKey checked at listing; reverts `InvalidPool`.

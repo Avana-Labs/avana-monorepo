@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {ClPriceMath} from "../../amm/concentrated-liquidity/ClPriceMath.sol";
 import {ClUnitMath} from "../../amm/concentrated-liquidity/ClUnitMath.sol";
+import {IClIntegration} from "../../amm/IClIntegration.sol";
 import {IUniswapV4Integration} from "../../amm/uniswap-v4/IUniswapV4Integration.sol";
 import {UniswapV4State} from "../../amm/uniswap-v4/UniswapV4State.sol";
 import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.sol";
@@ -39,6 +40,9 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
     uint256 internal constant V4_CHECK_POOL = 1 << 8;
     /// @notice Listing bit: the integration's reference pool of the market is not the module's (`REQ-AMM-V4-007`).
     uint256 internal constant V4_CHECK_REFERENCE = 1 << 9;
+    /// @notice Listing bit: the integration's market is not the module's market: another `PoolId`, PoolManager or range
+    /// (`REQ-AMM-V4-007`).
+    uint256 internal constant V4_CHECK_MARKET = 1 << 10;
 
     /// @dev keccak256(abi.encode(uint256(keccak256("avana.storage.LPOracleV4")) - 1)) & ~bytes32(uint256(0xff)).
     bytes32 private constant _V4_SLOT = 0xe8667b9ac72eb16e19c1ef126cfd84d293b85d6b77c13d77a23b929b113ec400;
@@ -218,7 +222,8 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         return !ClPriceMath.isUsableRange(c.tickLower, c.tickUpper, c.tickSpacing);
     }
 
-    /// @dev The concentrated-liquidity checks on the reference pool, plus `V4_CHECK_POOL` and `V4_CHECK_REFERENCE`.
+    /// @dev The concentrated-liquidity checks on the reference pool, plus `V4_CHECK_POOL`, `V4_CHECK_REFERENCE` and
+    /// `V4_CHECK_MARKET`.
     /// @custom:spec REQ-ORACLE-105, REQ-AMM-V4-007
     function _clListingChecks(
         ClListingInputs memory x,
@@ -228,6 +233,7 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         (bool okP, uint160 sqrtPriceX96,) = _pmSlot0();
         if (!okP || sqrtPriceX96 == 0) failed |= V4_CHECK_POOL;
         if (!_referenceMatches()) failed |= V4_CHECK_REFERENCE;
+        if (!_marketMatches()) failed |= V4_CHECK_MARKET;
     }
 
     /// @dev The report of `getClPriceState()` with the reference pool's mean tick in the v4 pool's token order and the
@@ -277,6 +283,36 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         if (!ok) return !_bound();
         (bool okW, uint256 word) = LPOracleCalls.wordAt(ret, 5 * 32);
         return ret.length == 6 * 32 && okW && word == uint256(uint160(_cl().pool));
+    }
+
+    /// @dev The integration's market is the module's: `v4Market(marketId).key` hashes to the stored `PoolId`, and
+    /// `clMarket(marketId)` names the stored PoolManager (its `factory` field) and range. Before the integration binds
+    /// the market the reads revert and are not counted; from the MarketRegistry's registration on, a failed or malformed
+    /// read or any difference fails the check.
+    /// @custom:spec REQ-AMM-V4-007, REQ-ORACLE-046, REQ-ORACLE-105
+    function _marketMatches() internal view returns (bool) {
+        Layout storage $ = _s();
+        (bool okK, bytes memory key) = LPOracleCalls.staticRead(
+            $.integration, CONFIG_CALL_GAS, abi.encodeCall(IUniswapV4Integration.v4Market, ($.marketId)), 6 * 32 + 1
+        );
+        (bool okM, bytes memory cfg) = LPOracleCalls.staticRead(
+            $.integration, CONFIG_CALL_GAS, abi.encodeCall(IClIntegration.clMarket, ($.marketId)), 10 * 32 + 1
+        );
+        if (!okK || !okM) return !_bound();
+        if (key.length != 6 * 32 || cfg.length != 10 * 32) return false;
+        bytes32 poolId;
+        // The first five words are the PoolKey, hashed as the module hashed its own encoding at `initialize`.
+        // solhint-disable-next-line no-inline-assembly
+        assembly ("memory-safe") {
+            poolId := keccak256(add(key, 32), 160)
+        }
+        V4Layout storage v = _v4();
+        ClLayout storage c = _cl();
+        (bool ok2, uint256 manager) = LPOracleCalls.wordAt(cfg, 2 * 32);
+        (bool ok7, uint256 lower) = LPOracleCalls.wordAt(cfg, 7 * 32);
+        (bool ok8, uint256 upper) = LPOracleCalls.wordAt(cfg, 8 * 32);
+        return ok2 && ok7 && ok8 && poolId == v.poolId && manager == uint256(uint160(v.poolManager))
+            && lower == uint256(int256(c.tickLower)) && upper == uint256(int256(c.tickUpper));
     }
 
     /// @dev The PoolManager's `IS_UNLOCKED` transient slot through `exttload`.

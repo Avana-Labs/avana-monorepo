@@ -19,6 +19,7 @@ import {V4TestSubscriber} from "../utils/fixtures/UniswapV4WorldFixture.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @notice Unit suite of the Uniswap v4 LPVault on the local v4 world: binding guards, custody, the fees-first removal
 /// batch on an ERC-20 pool and a native-ETH pool, the read guard, consistency, depth and wrapped fee growth.
@@ -171,6 +172,16 @@ contract UniswapV4IntegrationUnitTest is UniswapV4IntegrationFixture {
         assertEq(bytes4(ret), PoolLocked.selector);
         RiskMetadata memory meta = vault.riskMetadata(M1, bytes32(0));
         assertTrue(meta.readSafe, "safe outside unlock");
+        // Review S7: the consistency read is unavailable inside an unlock and available outside it.
+        _observe(ethRef, 10);
+        (ok, ret) = v4Actor.callInside(
+            address(vault), abi.encodeCall(vault.consistencyDeviation, (M2, 60, _vec(ETH_PRICE, ONE)))
+        );
+        assertTrue(ok);
+        (, bool available) = abi.decode(ret, (uint256, bool));
+        assertFalse(available, "unavailable while the PoolManager is unlocked");
+        (, available) = vault.consistencyDeviation(M2, 60, _vec(ETH_PRICE, ONE));
+        assertTrue(available, "available outside the unlock");
     }
 
     // ─── Removal ───
@@ -189,6 +200,89 @@ contract UniswapV4IntegrationUnitTest is UniswapV4IntegrationFixture {
         (uint256 b0, uint256 b1) = _balances(M1, alice);
         assertGt(b0 - a0 + b1 - a1, 0, "fees to depositor");
         assertEq(vault.unitsOf(key), units - units / 2, "units left");
+    }
+
+    // TEST-331 verifies: REQ-AMM-V4-013, REQ-AMM-V4-004, REQ-AMM-V4-010
+    /// @notice Review V4-01: a token that refuses the depositor's address cannot block a removal to another recipient:
+    /// the first batch reverts at the depositor's fee transfer, the second takes the principal and the fees to the
+    /// recipient, and the returned amounts are the principal plus the fees.
+    function test_TEST_331_refusedDepositorFeesGoToTheRecipient() public {
+        bytes32 key = _mintFor(alice, stableKey, M1_LOWER, M1_UPPER, 1e15);
+        uint128 units = _receive(M1, alice, key);
+        _washV4(stableKey, 1e12);
+        (uint256 f0, uint256 f1) = _feesNow(stableKey, key, M1_LOWER, M1_UPPER);
+        assertGt(f0, 0, "token0 fees accrued");
+        assertGt(f1, 0, "token1 fees accrued");
+        uint256 snap = vm.snapshotState();
+        uint256[] memory principal = _unwind(key, units, _zeros(), lpVaultSwap);
+        vm.revertToState(snap);
+        (uint256 a0, uint256 a1) = _balances(M1, alice);
+        vm.mockCallRevert(address(usdc), abi.encodeWithSelector(IERC20.transfer.selector, alice), bytes("blocklisted"));
+        uint256[] memory amounts = _unwind(key, units, _zeros(), lpVaultSwap);
+        vm.clearMockedCalls();
+        assertEq(amounts[0], principal[0] + f0, "token0: principal plus fees");
+        assertEq(amounts[1], principal[1] + f1, "token1: principal plus fees");
+        (uint256 r0, uint256 r1) = _balances(M1, lpVaultSwap);
+        assertEq(r0, amounts[0], "token0 delivered as returned");
+        assertEq(r1, amounts[1], "token1 delivered as returned");
+        (uint256 b0, uint256 b1) = _balances(M1, alice);
+        assertEq(b0, a0, "the depositor received no token0");
+        assertEq(b1, a1, "the depositor received no token1");
+        assertEq(vault.unitsOf(key), 0, "every unit removed");
+    }
+
+    // TEST-331 verifies: REQ-AMM-V4-013, REQ-AMM-V4-004
+    /// @notice A removal to the depositor runs one batch: a token that refuses the depositor reverts it.
+    function test_TEST_331_refusedDepositorBlocksOnlyTheirOwnRelease() public {
+        bytes32 key = _mintFor(alice, stableKey, M1_LOWER, M1_UPPER, 1e15);
+        uint128 units = _receive(M1, alice, key);
+        _washV4(stableKey, 1e12);
+        vm.mockCallRevert(address(usdc), abi.encodeWithSelector(IERC20.transfer.selector, alice), bytes("blocklisted"));
+        _lock();
+        vm.prank(coll);
+        vm.expectRevert();
+        vault.releaseToDepositor(key, units / 2, _zeros());
+        _unlock();
+        vm.clearMockedCalls();
+        assertEq(vault.unitsOf(key), units, "nothing removed");
+    }
+
+    // TEST-331 verifies: REQ-AMM-V4-004, REQ-AMM-V4-013
+    /// @notice A depositor that can receive keeps the fee step: the recipient gets the principal and the depositor
+    /// exactly the accrued fees.
+    function test_TEST_331_acceptedDepositorFeesStayWithTheDepositor() public {
+        bytes32 key = _mintFor(alice, stableKey, M1_LOWER, M1_UPPER, 1e15);
+        uint128 units = _receive(M1, alice, key);
+        _washV4(stableKey, 1e12);
+        (uint256 f0, uint256 f1) = _feesNow(stableKey, key, M1_LOWER, M1_UPPER);
+        (uint256 a0, uint256 a1) = _balances(M1, alice);
+        uint256[] memory amounts = _unwind(key, units, _zeros(), lpVaultSwap);
+        (uint256 r0, uint256 r1) = _balances(M1, lpVaultSwap);
+        assertEq(r0, amounts[0], "token0 principal");
+        assertEq(r1, amounts[1], "token1 principal");
+        (uint256 b0, uint256 b1) = _balances(M1, alice);
+        assertEq(b0 - a0, f0, "token0 fees to the depositor");
+        assertEq(b1 - a1, f1, "token1 fees to the depositor");
+    }
+
+    // TEST-331 verifies: REQ-AMM-V4-014, REQ-AMM-CORE-011
+    /// @notice Review V4-02: only the NFT's owner, the LPVault, may add liquidity to a pledged v4 position, so neither
+    /// the depositor nor anyone else can, and the LPVault offers no top-up.
+    function test_TEST_331_pledgedPositionCannotTakeMoreLiquidity() public {
+        bytes32 key = _mintFor(alice, stableKey, M1_LOWER, M1_UPPER, 1e15);
+        uint128 units = _receive(M1, alice, key);
+        bytes memory increase = _increaseData(stableKey, uint256(key), 1e15);
+        vm.prank(alice);
+        vm.expectRevert();
+        posm.modifyLiquidities(increase, block.timestamp);
+        vm.expectRevert();
+        posm.modifyLiquidities(increase, block.timestamp);
+        _lock();
+        vm.prank(coll);
+        vm.expectRevert(TopUpNotSupported.selector);
+        vault.topUpPosition(key, alice, hex"01");
+        _unlock();
+        assertEq(vault.unitsOf(key), units, "nothing to re-credit");
     }
 
     // TEST-331 verifies: REQ-AMM-V4-004, REQ-AMM-CORE-010
@@ -335,5 +429,33 @@ contract UniswapV4IntegrationUnitTest is UniswapV4IntegrationFixture {
     // TEST-331 verifies: REQ-AMM-V4-012, REQ-AMM-CORE-020
     function test_TEST_331_recordCapIsTwelve() public view {
         assertEq(vault.maxRecordsPerAccountMarket(), 12);
+    }
+
+    /// @dev The fees the PoolManager would credit a PositionManager position now (`Position.update`).
+    function _feesNow(
+        PoolKey memory k,
+        bytes32 positionKey,
+        int24 lower,
+        int24 upper
+    ) internal view returns (uint256 f0, uint256 f1) {
+        IUniswapV4PoolManager m = IUniswapV4PoolManager(address(pm));
+        bytes32 id = _poolId(k);
+        UniswapV4State.PositionState memory p =
+            UniswapV4State.position(m, id, UniswapV4State.positionId(address(posm), lower, upper, positionKey));
+        (uint256 in0, uint256 in1) = UniswapV4State.feeGrowthInside(m, id, lower, upper);
+        (f0, f1) = UniswapV4State.feesOwed(p, in0, in1);
+    }
+
+    /// @dev `INCREASE_LIQUIDITY(tokenId, liquidity, max, max, "")` then `SETTLE_PAIR`.
+    function _increaseData(
+        PoolKey memory k,
+        uint256 tokenId,
+        uint128 liquidity
+    ) internal pure returns (bytes memory) {
+        bytes memory actions = abi.encodePacked(uint8(0x00), A_SETTLE_PAIR);
+        bytes[] memory params = new bytes[](2);
+        params[0] = abi.encode(tokenId, uint256(liquidity), type(uint128).max, type(uint128).max, bytes(""));
+        params[1] = abi.encode(k.currency0, k.currency1);
+        return abi.encode(actions, params);
     }
 }

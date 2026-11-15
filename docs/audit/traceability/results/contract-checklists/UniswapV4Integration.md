@@ -4,7 +4,7 @@ Spec pages: 19-amm-integration-interface.md, 23-uniswap-v4-integration.md. CVL s
 
 Run results: none given (links only); recorded prover results and Halmos logs are read. [x] verified (ran and passed), [!] failed, [~] not run (linked, no result), [ ] unlinked (no counting check).
 
-## REQ / SPEC on the page (37: 0 verified, 0 failed, 37 not run, 0 unlinked)
+## REQ / SPEC on the page (39: 0 verified, 0 failed, 39 not run, 0 unlinked)
 
 - [~] `REQ-AMM-CORE-001` (19-amm-integration-interface.md:68) Every AMM integration MUST implement the functions above with these signatures, and the AMM-neutral core MUST  — PROP-099, TEST-024, TEST-108
 - [~] `REQ-AMM-CORE-002` (19-amm-integration-interface.md:69) Each chain MUST have at most one LPVault per AMM protocol, registered write-once in the VaultTokenFactory as ` — TEST-058, TEST-108, TEST-279
@@ -16,7 +16,7 @@ Run results: none given (links only); recorded prover results and Halmos logs ar
 - [~] `REQ-AMM-CORE-008` (19-amm-integration-interface.md:75) `unwind(positionKey, units, minAmounts, recipient)` and `releaseToDepositor(positionKey, units, minAmounts)` M — TEST-047, TEST-058, TEST-264, TEST-265, TEST-331
 - [~] `REQ-AMM-CORE-009` (19-amm-integration-interface.md:76) `unitsOf(positionKey)` MUST return the position's live units in the AMM protocol and revert with `NotInCustody — TEST-016, TEST-108, TEST-222, TEST-223, TEST-264, TEST-265
 - [~] `REQ-AMM-CORE-010` (19-amm-integration-interface.md:77) **Fees.** Where the AMM protocol keeps fees apart from principal (`capabilities().feeMode == Separate`: Uniswa — TEST-017, TEST-020, TEST-091, TEST-223, TEST-264, TEST-331
-- [~] `REQ-AMM-CORE-011` (19-amm-integration-interface.md:78) **Top-up hook.** Collateralization's `recredit` takes a `bytes topUp` argument and calls `topUpPosition` only  — TEST-017, TEST-116, TEST-238
+- [~] `REQ-AMM-CORE-011` (19-amm-integration-interface.md:78) **Top-up hook.** Collateralization's `recredit` takes a `bytes topUp` argument and calls `topUpPosition` only  — TEST-017, TEST-116, TEST-238, TEST-331
 - [~] `REQ-AMM-CORE-012` (19-amm-integration-interface.md:79) `composition(marketId, units, prices)` MUST compute the amounts per `SPEC-AMM-CORE-001` from `prices`, `units` — TEST-264, TEST-266, TEST-279
 - [~] `REQ-AMM-CORE-013` (19-amm-integration-interface.md:80) `riskMetadata(marketId, positionKey)` MUST report `inRange` from the pool's current price against the market's — TEST-264, TEST-265, TEST-331
 - [~] `REQ-AMM-CORE-014` (19-amm-integration-interface.md:81) **Quote-change cap.** The LPOracle implementation of every AMM protocol MUST cap the change of its per-unit qu — TEST-219, TEST-264, TEST-283, TEST-331
@@ -33,16 +33,18 @@ Run results: none given (links only); recorded prover results and Halmos logs ar
 - [~] `REQ-AMM-V4-003` (23-uniswap-v4-integration.md:56) Every v4 quote and custody read MUST require the PoolManager to be locked (not inside an `unlock` callback), r — TEST-331
 - [~] `REQ-AMM-V4-004` (23-uniswap-v4-integration.md:60) The v4 unwind, release and fee collection MUST each be one `PositionManager.modifyLiquidities` call (which run — TEST-331
 - [~] `REQ-AMM-V4-010` (23-uniswap-v4-integration.md:66) Every fee read of a v4 position (the Lens's uncollected-fee view, `ILensV4FeeReads`) MUST compute `feeGrowthIn — TEST-331
-- [~] `REQ-AMM-V4-005` (23-uniswap-v4-integration.md:70) v4 pools have no built-in TWAP. A v4 market's consistency check MUST combine two reads: a spot gate on the poo — TEST-331
-- [~] `REQ-AMM-V4-007` (23-uniswap-v4-integration.md:71) A v4 market's reference pool MUST be the canonical Uniswap v3 pool of the market's two tokens (`factory.getPoo — TEST-331
-- [~] `REQ-AMM-V4-008` (23-uniswap-v4-integration.md:72) The pool-share cap's depth for a v4 market (`riskStatus`, `SPEC-CAP-005`) MUST be the reference pool's harmoni — TEST-331
-- [~] `REQ-AMM-V4-009` (23-uniswap-v4-integration.md:81) A v4 market MUST NOT be listed unless both of its tokens report `totalSupply() < 2^127` at `bindMarket` (the w — TEST-331
-- [~] `REQ-AMM-V4-012` (23-uniswap-v4-integration.md:82) The v4 LPVault's `maxRecordsPerAccountMarket()` MUST return 12 (`REQ-AMM-CORE-020`): an account holds at most  — TEST-331
-- [~] `SPEC-AMM-V4-001` (23-uniswap-v4-integration.md:88) **v4 composition.** Identical to `SPEC-AMM-V3-001` over the position's `(tickLower, tickUpper)` and the `PoolK — TEST-331
-- [~] `SPEC-AMM-V4-002` (23-uniswap-v4-integration.md:89) **v4 consistency deviation.** With `tickRef = tickAtSqrtRatio(SPEC-ORC-009(q0, q1))` of the uncapped quotes in — TEST-331
-- [~] `SPEC-AMM-V4-003` (23-uniswap-v4-integration.md:90) **v4 removal amounts.** With the pool's `slot0` `(sqrtPriceX96, tick)`, the range's `sa = sqrtRatioAtTick(tick — TEST-331
-- [~] `REQ-AMM-V4-006` (23-uniswap-v4-integration.md:110) A hook with a bit of `HOOK_MASK`, a non-allowlisted hook, a hook whose code hash changed, or a position with a — TEST-331
-- [~] `REQ-AMM-V4-011` (23-uniswap-v4-integration.md:111) The PoolManager is unlocked (a read inside an `unlock` callback), the v4 pool is uninitialized, or a token's s — TEST-331
+- [~] `REQ-AMM-V4-013` (23-uniswap-v4-integration.md:67) When the recipient of a removal is not the depositor of record (a seizure to LPVaultSwap, a deleverage release — TEST-331
+- [~] `REQ-AMM-V4-005` (23-uniswap-v4-integration.md:71) v4 pools have no built-in TWAP. A v4 market's consistency check MUST combine two reads: a spot gate on the poo — TEST-331
+- [~] `REQ-AMM-V4-007` (23-uniswap-v4-integration.md:72) A v4 market's reference pool MUST be the canonical Uniswap v3 pool of the market's two tokens (`factory.getPoo — TEST-331
+- [~] `REQ-AMM-V4-008` (23-uniswap-v4-integration.md:73) The pool-share cap's depth for a v4 market (`riskStatus`, `SPEC-CAP-005`) MUST be the reference pool's harmoni — TEST-331
+- [~] `REQ-AMM-V4-014` (23-uniswap-v4-integration.md:82) A pledged v4 position MUST be treated as unable to take more liquidity: `topUpPosition` reverts `TopUpNotSuppo — TEST-331
+- [~] `REQ-AMM-V4-009` (23-uniswap-v4-integration.md:86) A v4 market MUST NOT be listed unless both of its tokens report `totalSupply() < 2^127` at `bindMarket` (the w — TEST-331
+- [~] `REQ-AMM-V4-012` (23-uniswap-v4-integration.md:87) The v4 LPVault's `maxRecordsPerAccountMarket()` MUST return 12 (`REQ-AMM-CORE-020`): an account holds at most  — TEST-331
+- [~] `SPEC-AMM-V4-001` (23-uniswap-v4-integration.md:93) **v4 composition.** Identical to `SPEC-AMM-V3-001` over the position's `(tickLower, tickUpper)` and the `PoolK — TEST-331
+- [~] `SPEC-AMM-V4-002` (23-uniswap-v4-integration.md:94) **v4 consistency deviation.** With `tickRef = tickAtSqrtRatio(SPEC-ORC-009(q0, q1))` of the uncapped quotes in — TEST-331
+- [~] `SPEC-AMM-V4-003` (23-uniswap-v4-integration.md:95) **v4 removal amounts.** With the pool's `slot0` `(sqrtPriceX96, tick)`, the range's `sa = sqrtRatioAtTick(tick — TEST-331
+- [~] `REQ-AMM-V4-006` (23-uniswap-v4-integration.md:115) A hook with a bit of `HOOK_MASK`, a non-allowlisted hook, a hook whose code hash changed, or a position with a — TEST-331
+- [~] `REQ-AMM-V4-011` (23-uniswap-v4-integration.md:116) The PoolManager is unlocked (a read inside an `unlock` callback), the v4 pool is uninitialized, or a token's s — TEST-331
 
 ## TEST rows (45: 0 verified, 0 failed, 1 not run, 44 unlinked)
 

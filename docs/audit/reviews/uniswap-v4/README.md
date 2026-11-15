@@ -70,6 +70,29 @@ TAKE_PAIR(currency0, currency1, LPVaultSwap)
 - How LPVaultSwap's recovery floor handles a v4 pool pushed off-price inside the liquidation transaction (the removal amounts follow `slot0`) was not reviewed; the LPVaultSwap review covers the floor and the shortfall pull.
 - The same oracle–integration cross-check gap (V4-03) in `LPOracleCLModule` for Uniswap v3 and Slipstream was noted, not tested.
 
+## Fix status
+
+Decided by Josue on 2026-11-15. Regression tests are in `contracts/test/unit/` (`UniswapV4IntegrationUnitTest`, `LPOracleV4UnitTest`).
+
+| ID | Status | Fix | Regression tests |
+|---|---|---|---|
+| V4-01 | Fixed | `UniswapV4Integration._removePrincipal`: a removal to someone other than the depositor tries the one batch; if it reverts, one more batch takes the principal and the fees to the recipient and returns the principal plus the fees owed (`REQ-AMM-V4-013`). LPVaultSwap measures the seizure by balance delta, so the fees join the liquidation proceeds and any surplus reaches the borrower through the PayoutEscrow. A removal to the depositor keeps the one batch. The review's suggestion (fees through LPVaultSwap to the PayoutEscrow) would change `IAmmIntegration.unwind` and LPVaultSwap; this fix stays inside the v4 LPVault and adds no gas on the normal path | `test_TEST_331_refusedDepositorFeesGoToTheRecipient`, `test_TEST_331_refusedDepositorBlocksOnlyTheirOwnRelease`, `test_TEST_331_acceptedDepositorFeesStayWithTheDepositor` |
+| V4-02 | Decided: documented | A pledged v4 position cannot take more liquidity; more collateral is a new position, and the app and Lens say so (`REQ-AMM-V4-014`, 2.19 `REQ-AMM-CORE-011`, 2.3 `REQ-COLL-037`). An LPVault-run top-up would make the LPVault pull and hold the depositor's tokens | `test_TEST_331_pledgedPositionCannotTakeMoreLiquidity` |
+| V4-03 | Fixed | `LPOracleV4Module._marketMatches`: module listing bit 10 (`V4_CHECK_MARKET`) requires, from `bindMarket` on, that `v4Market(marketId).key` hashes to the oracle's `PoolId` and that `clMarket(marketId)` names the oracle's PoolManager and range (`REQ-AMM-V4-007`, 2.10 `REQ-ORACLE-105`). The same check for the Uniswap v3 and Slipstream module is a separate change | `test_TEST_331_listingChecksTheIntegrationsMarketIsTheOracles` |
+| V4-04 | Decided: listing rule | Governance sets the `poolShareMaxBps` of every market drawing on one reference pool so that their sum stays within the cap for that pool's depth (`REQ-AMM-V4-008`); no code change | — |
+| V4-05 | Accepted, documented | `REQ-AMM-V4-004` states that a native-ETH step can deliver stray ETH or WETH held by the PositionManager | — |
+| V4-06 | Accepted, documented | `REQ-AMM-V4-004` and 2.3 `REQ-VAULT-088` state that v4 release deltas include the fees | — |
+| S1 | Fixed | 2.23 Purpose: units are `⌊L / 10^k⌋` | — |
+| S2 | Fixed | As V4-02 | — |
+| S3 | Fixed | `REQ-AMM-V4-001`: the first LPVault enforces `hooks == address(0)`; the mask and code-hash pin apply once an allowlist exists | — |
+| S4 | Fixed | 2.2 `REQ-VAULT-064` names v4 removals as the exception; `REQ-AMM-V4-013` keeps a blocklisted borrower liquidatable | as V4-01 |
+| S5 | Fixed | As V4-05 | — |
+| S6 | Fixed | `SPEC-AMM-V4-003` states the price-based form and the equivalence | — |
+| S7 | Fixed | `consistencyDeviation` reports unavailable while the PoolManager is unlocked; `REQ-AMM-V4-003` lists the guarded reads | `test_TEST_331_readsFailClosedWhileThePoolManagerIsUnlocked` |
+| S8 | Open | `REQ-AMM-V4-012` states the measured record state (no accrued fees); the worst case with fee-bearing records is not measured yet | — |
+| S9 | Fixed | As V4-03 | as V4-03 |
+| S10 | Fixed | As V4-04 | — |
+
 ## PoC tests
 
 [`poc/UniswapV4.Review.unit.t.sol`](poc/UniswapV4.Review.unit.t.sol), to be copied to `test/unit/` and run with `forge test -j 2 --match-path test/unit/UniswapV4.Review.unit.t.sol` (needs the `univ3`, `univ4` and `permit2` profile builds, as the v4 fixtures do). Status: not run yet.
