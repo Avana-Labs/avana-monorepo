@@ -2254,12 +2254,12 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Field | Value |
 |---|---|
 | Target | Collateralization cap counters, RiskModule |
-| Objective | Push a Hub's exposure to one token, depositor or pool above its cap by spreading pledges over several Spokes and markets |
+| Objective | Push a Hub's exposure to one token or pool above its cap by spreading pledges over several Spokes and markets |
 | Affected steps | `DEP` cap checks, top-up, re-credit |
 | Prerequisites | Several CDP Spokes or markets on one Hub sharing a token, for example USDC/USDT, USDT/DAI and USDT/GHO |
 | Attack approach | With `tokenUsdCap[USDT]` = $10M, pledge $10M of USDT exposure in each of three markets, or list one pool twice with two ranges to double the pool-share cap |
 | Impact | None: the fourth $10M is refused |
-| Expected protection | `INV-092`, `INV-027`, `INV-028`: the token and depositor counters live in the one per-chain ledger, keyed by Hub, and every pledge, top-up, re-credit and debit in every market of the Hub updates the same counter; the pool-share counter is keyed by pool and sums every market (every range or shape) of that pool on the chain, so k ranges of one pool share one `poolShareMaxBps` cap; token exposure is counted per funding Hub over every Spoke that draws from it; adding Spokes or markets never adds cap room (Source: Q-174, Q-363, Q-383) |
+| Expected protection | `INV-092`, `INV-027`, `INV-028`: the token counters live in the one per-chain ledger, keyed by Hub, and every pledge, top-up, re-credit and debit in every market of the Hub updates the same counter; the pool-share counter is keyed by pool and sums every market (every range or shape) of that pool on the chain, so k ranges of one pool share one `poolShareMaxBps` cap; token exposure is counted per funding Hub over every Spoke that draws from it; adding Spokes or markets never adds cap room (Source: Q-174, Q-363, Q-383) |
 | Result | Mitigated |
 | Checks | TEST-272, PROP-077, FINDING-205 |
 

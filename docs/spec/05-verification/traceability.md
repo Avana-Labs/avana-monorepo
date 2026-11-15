@@ -392,7 +392,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `DEP-POST-001` | The position is held by the LPVault of the market's AMM protocol with `depositorOf[positio… | — | `QNT-01`, `QNT-02` | — | — | — | Unlinked |
 | `DEP-POST-002` | The market's vault-token supply rose by exactly `units`, all of it held by the home Hub fo… | — | `QNT-03`, `QNT-06` | `HYP-44` | — | — | Unlinked |
 | `DEP-POST-003` | `P`'s supplied vault tokens in the reserve rose by `units` and the reserve is enabled as c… | — | — | — | — | — | Unlinked |
-| `DEP-POST-004` | The per-Hub token counters of every pool token and the depositor counter rose by the pledg… | — | — | `HYP-10`, `HYP-55` | — | — | Unlinked |
+| `DEP-POST-004` | The per-Hub token counters of every pool token rose by the pledge's full USD charge, the m… | — | — | `HYP-10`, `HYP-55` | — | — | Unlinked |
 | `DEP-POST-005` | `P` exists at `predictProxy(W, S, m)`, is bound to `(W, S, m)` in the Adapter and register… | — | `QNT-08` | — | — | — | Unlinked |
 | `DEP-POST-006` | The new record is inserted in `P`'s record list for the market before the first record wit… | — | — | `HYP-45` | — | — | Unlinked |
 | `DEP-POST-007` | No debt asset moved and `P`'s debt on every debt reserve is unchanged; the position's liqu… | — | — | — | — | — | Unlinked |
@@ -680,7 +680,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `INV-089` | Repay with collateral. Every `repayWithCollateral` that completes leaves the account's deb… | `MATH-AR-62`, `MATH-ST-123`, `SYM-150` | — | `HYP-79` | `PROP-065`°, `PROP-072`°, `TEST-198`°, `TEST-239`° | `IAaveAdapterCollateral` (decl.), `SettlementMath` | Not run |
 | `INV-090` | Timelock allowlists. `normalDelay ∈ [MIN_NORMAL_DELAY, MAX_DELAY]` = [345,600, 432,000] s;… | — | — | `HYP-88` | `PROP-073`, `PROP-073`°, `TEST-194`°, `TEST-212`°, `TEST-225`°, `TEST-244`° | `AvanaTimelock` | Verified |
 | `INV-091` | The Lock has exactly two members: the chain's AaveAdapter and LPVaultSwap, fixed as immuta… | — | — | — | `PROP-037`, `PROP-075`, `PROP-075`°, `TEST-011`°, `TEST-060`°, `TEST-270`° | `ClLPVaultBase`, `Collateralization`, `IAmmIntegration` (decl.), `ILPVault` (decl.), `Lock` | Verified |
-| `INV-092` | Caps keyed by Hub. The token and depositor counters of `INV-027` and `INV-028` live in the… | — | `QNT-TOPO-X2` | — | `TEST-272`° | `ICollateralizationViews` (decl.) | Not run |
+| `INV-092` | Caps keyed by Hub. The token counters of `INV-027` and `INV-028` live in the one Collatera… | — | `QNT-TOPO-X2` | — | `TEST-272`° | `ICollateralizationViews` (decl.) | Not run |
 | `INV-093` | Standard-Spoke settings. Every CDP Spoke is a standard, unmodified Aave V4 Spoke, and for … | — | `QNT-TOPO-02B`, `QNT-TOPO-03` | — | `PROP-078`°, `TEST-114`°, `TEST-185`°, `TEST-204`° | `IRiskModuleChecks` (decl.) | Not run |
 | `INV-094` | Cross-Hub credit lines. A debt reserve on a CDP Spoke whose funding Hub `F` is not the Spo… | — | `QNT-TOPO-05`, `QNT-TOPO-X1` | — | `TEST-274`° | — | Not run |
 | `INV-095` | Flash source rules. No liquidation takes a flash loan inside LPVaultSwap (Q-404): `liquida… | `MATH-ST-110`, `MATH-ST-112`, `MATH-ST-23` | — | `HYP-83` | `PROP-080`, `PROP-096`°, `PROP-097`°, `TEST-046`°, `TEST-052`°, `TEST-055`°, `TEST-104`°, `TEST-239`°, `TEST-267`°, `TEST-285`°, `TEST-287`°, `TEST-292`° | `AaveV3FlashSource`, `IFlashSource` (decl.), `ILPVaultSwapErrors` (decl.), `IMarketRegistryHubs` (decl.), `IMarketRegistryListing` (decl.), `MarketRegistryDebtChecks`, `MarketRegistryHubsLogic`, `MarketRegistryViews`, `MarketRegistry` | Verified |
@@ -1245,7 +1245,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `Q-292` | Position and market keys | Records, events and indexes use (`integrationId`, `positionKey`… | — | — | — | `PROP-002`° | — | Not run |
 | `Q-293` | Exact shape at pledge | Each market stores its pool and exact shape write-once in its LPVa… | — | — | — | `TEST-279`° | `ICollateralizationErrors` (decl.) | Not run |
 | `Q-294` | Record limit | At most 16 open records per account per market (`MAX_RECORDS_PER_ACCOUNT_MA… | — | — | — | `TEST-269`° | `IAmmIntegration` (decl.) | Not run |
-| `Q-295` | Hub-keyed counters in one ledger per chain | `tokenUsd`, `depositorUsd` and `poolUnits` ar… | — | — | — | `TEST-272`° | `IAmmIntegration` (decl.), `RiskStatus` | Not run |
+| `Q-295` | Hub-keyed counters in one ledger per chain | `tokenUsd`, `depositorUsd` (the per-depositor… | — | — | — | `TEST-272`° | `IAmmIntegration` (decl.), `RiskStatus` | Not run |
 | `Q-296` | Lock membership and routing in custody | Collateralization and every LPVault are not Lock … | — | — | — | `PROP-037`° | — | Not run |
 | `Q-297` | n-token amounts and hooks | Every amount array has one entry per market token (2 to 8, `MA… | — | — | — | — | `IAmmIntegration` (decl.) | Unlinked |
 | `Q-298` | Vault-token decimals by value | `d` is the smallest integer in [6, 18] with `10^d · v ≥ $1… | — | — | — | — | — | Unlinked |
@@ -3144,7 +3144,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-VAULT-031` | A record's `credited` MUST decrease only through debits in `settleSeizure`, reconciliation… | — | — | — | `TEST-237`°, `TEST-239`° | `BackingRecord`, `CollateralizationLedger`, `CollateralizationPledge`, `CollateralizationRelease`, `ICollateralizationAdapter` (decl.), `ICollateralization` (decl.) | Not run |
 | `REQ-VAULT-032` | Collateralization MUST keep each record's live units at or above its credited units (`SPEC… | — | — | — | `TEST-084`°, `TEST-237`° | `CollateralizationBase`, `CollateralizationPledge`, `CollateralizationRelease`, `ICollateralizationAdapter` (decl.), `ICollateralization` (decl.) | Not run |
 | `REQ-VAULT-033` | Closing a record MUST remove it from the seizure list if `inList`, else from the zero-cred… | — | — | — | `TEST-018`°, `TEST-124`° | `CollateralizationBase`, `CollateralizationLedger`, `CollateralizationRelease`, `ICollateralizationAdapter` (decl.), `ICollateralizationUser` (decl.) | Not run |
-| `REQ-VAULT-034` | Collateralization MUST hold the exposure counters `marketUsd[vaultToken][bucket]`, `tokenU… | — | — | — | `TEST-013`°, `TEST-097`°, `TEST-272`° | `CollateralizationBase`, `CollateralizationLedger`, `CounterKind`, `ICollateralizationAdapter` (decl.), `ICollateralizationViews` (decl.) | Not run |
+| `REQ-VAULT-034` | Collateralization MUST hold the exposure counters `marketUsd[vaultToken][bucket]` and `tok… | — | — | — | `TEST-013`°, `TEST-097`°, `TEST-272`° | `CollateralizationBase`, `CollateralizationLedger`, `CounterKind`, `ICollateralizationAdapter` (decl.), `ICollateralizationViews` (decl.) | Not run |
 | `REQ-VAULT-035` | The cap charge of a pledge is computed by the RiskModule at a price of at least `stressFlo… | — | — | — | `TEST-010`° | `ICollateralizationAdapter` (decl.) | Not run |
 | `REQ-VAULT-036` | Every exit (credited units leaving a record through `settleSeizure`, reconciliation, `rele… | — | — | — | `PROP-028`°, `TEST-014`°, `TEST-097`°, `TEST-097`‡, `TEST-237`°, `TEST-239`° | `CollateralizationBase`, `CollateralizationRelease`, `ICollateralizationAdapter` (decl.) | Not run |
 | `REQ-VAULT-037` | Exits MUST NOT call the RiskModule, the Adapter, the MarketRegistry or the ParameterStore,… | `MATH-UO-25` | — | — | `TEST-014`°, `TEST-018`°, `TEST-097`° | `CollateralizationBase`, `CounterKind`, `ICollateralizationEvents` (decl.) | Not run |
@@ -3564,7 +3564,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `WDR-POST-001` | The position is owned by the depositor of record and by no other address; it carries the f… | — | `QNT-35` | `HYP-19` | — | — | Unlinked |
 | `WDR-POST-002` | The record is deleted and no longer appears in the proxy's list; the remaining records kee… | — | — | — | — | — | Unlinked |
 | `WDR-POST-003` | The market's vault-token supply and the home Hub's vault-token balance both fell by exactl… | — | `QNT-03`, `QNT-06` | `HYP-44` | — | — | Unlinked |
-| `WDR-POST-004` | Every exposure counter of the account's budget part, every token counter of the market's n… | — | — | `HYP-10` | — | — | Unlinked |
+| `WDR-POST-004` | Every exposure counter of the account's budget part and every token counter of the market'… | — | — | `HYP-10` | — | — | Unlinked |
 | `WDR-POST-005` | If Aave reported `borrowCount == 0`, no pause state, circuit breaker, address freeze, sequ… | — | `QNT-15` | `HYP-18` | — | — | Unlinked |
 | `WDR-POST-006` | If debt remains, the rescue-excluded health factor held to the accepted price `hfB ≥ max(1… | — | `QNT-20`, `QNT-T19` | `HYP-20` | — | — | Unlinked |
 | `WDR-POST-007` | The vault-token reserve is disabled as collateral for `P` only when `P`'s supplied shares … | — | — | — | — | — | Unlinked |
