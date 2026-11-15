@@ -14,7 +14,8 @@
 #                           E2E_STEPS="deploy day2 exotic manifest services scenarios" script/e2e/e2e-local.sh
 # Steps: deploy (rehearsal 00), day2 (01-05), exotic (08: exotic pools and borrowable assets on the day-2 config, one
 # release of ten markets whose listing batch is split by gas, recorded exotic:<step>), the rerun of every step with nothing new (06, after day2 or
-# exotic), hostile (07, on the latest config), manifest, services and scenarios.
+# exotic), hostile (07, on the latest config), manifest, services and scenarios. compose (not in the default list; it
+# needs Docker) runs the services' container images against the run's node: E2E_STEPS="deploy manifest compose".
 # Needs: anvil, forge, cast, node >= 22.12 with the workspace installed (npm ci at the repo root), and the builds
 # `make build build-aave build-external` (the default and aave profiles, Uniswap v3, Slipstream, Aerodrome, Aave V3 and
 # the Chainlink OCR2 aggregator and proxy).
@@ -101,6 +102,16 @@ if cast wallet import drill-signer --keystore-dir "$KEYSTORE_DIR" --unsafe-passw
   export E2E_DRILL_KEYSTORE="$KEYSTORE_DIR/drill-signer" E2E_DRILL_KEYSTORE_PASSWORD_FILE="$KEYSTORE_DIR/password"
 fi
 unset KEYSTORE_PASSWORD
+# The compose step builds its images before the deploy, so a Docker problem shows here and not after the deploy; the
+# step is then recorded and dropped, and the other steps run.
+if [[ " $STEPS " == *" compose "* && " $STEPS " == *" deploy "* ]]; then
+  script/e2e/services-compose.sh --build > "$LOG/compose.log" 2>&1
+  case $? in
+    0) ;;
+    3) record compose not-run "$(tail -1 "$LOG/compose.log")"; STEPS="${STEPS/compose/}" ;;
+    *) record compose fail "see $LOG/compose.log: docker compose build failed"; STEPS="${STEPS/compose/}" ;;
+  esac
+fi
 # The chain state is saved to anvil-state.json when the node stops; a run without the deploy step reloads it, so the
 # manifest and scenario steps can be rerun on the same deployment (E2E_STEPS="manifest scenarios"). A reloaded node
 # holds only the latest state while the indexer reads contracts at past blocks (BlockOutOfRangeError), and anvil's
@@ -113,7 +124,11 @@ if cast block-number --rpc-url "$RPC_ANVIL" >/dev/null 2>&1; then
   for s in $STEPS; do record "$s" not-run "a node already answers on port $PORT: stop it or set E2E_PORT"; done
   exit 1
 fi
-anvil --port "$PORT" --chain-id 31337 --auto-impersonate --code-size-limit 49152 --gas-limit 60000000 \
+# The compose step's containers reach the node through host.docker.internal: Docker Desktop forwards that to the host's
+# loopback, while Linux maps it to the bridge gateway, so there the node listens on every interface.
+ANVIL_HOST=127.0.0.1
+[[ " $STEPS " == *" compose "* && "$(uname -s)" == Linux ]] && ANVIL_HOST=0.0.0.0
+anvil --host "$ANVIL_HOST" --port "$PORT" --chain-id 31337 --auto-impersonate --code-size-limit 49152 --gas-limit 60000000 \
   --timestamp 1794500000 --state "$STATE" > "$LOG/anvil.log" 2>&1 &
 ANVIL_PID=$!
 for _ in $(seq 1 50); do cast block-number --rpc-url "$RPC_ANVIL" >/dev/null 2>&1 && break; sleep 0.2; done
@@ -396,6 +411,25 @@ if [[ " $STEPS " == *" manifest "* ]]; then
     record manifest pass "$(tail -1 "$LOG/verify.log")"
   else
     record manifest fail "see $LOG/manifest.log and $LOG/verify.log: $(tail -1 "$LOG/verify.log" 2>/dev/null)"
+  fi
+fi
+
+# compose (opt-in, needs Docker): the services' container images on this run's node (script/e2e/services-compose.sh).
+if [[ " $STEPS " == *" compose "* ]]; then
+  if [[ " $STEPS " != *" deploy "* ]]; then
+    record compose not-run "the indexer replays past blocks, which a node reloaded from anvil-state.json does not hold: run it with the deploy step"
+  elif [ -f "$OUT/manifest.json" ]; then
+    script/e2e/services-compose.sh "$OUT/manifest.json" >> "$LOG/compose.log" 2>&1
+    rc=$?
+    case $rc in
+      0) record compose pass "$(grep -E '^(indexer|keeper|monitor):' "$LOG/compose.log" | tr '
+' ' ')" ;;
+      3) record compose not-run "$(tail -1 "$LOG/compose.log")" ;;
+      *) record compose fail "see $LOG/compose.log: $(grep -E 'FAIL|failed' "$LOG/compose.log" | head -3 | tr '
+' ' ')" ;;
+    esac
+  else
+    record compose not-run "no manifest"
   fi
 fi
 
