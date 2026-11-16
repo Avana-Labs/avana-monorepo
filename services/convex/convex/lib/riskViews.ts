@@ -5,7 +5,7 @@
 // debt reserve shows its Spoke's draw cap and price status; a collateral market shows its collateral factor, bonus,
 // collateral risk and caps.
 
-import { type HubAssetRow, type HubAssetSpokeRow, type MarketRow, type SpokeReserveRow, MAX_SPOKE_CAP, bpsToPct, capRoom, marketBorrowRateRay, rayToAprPct, spokeHeadroom, tokens, usd } from "@avana/services-common/views";
+import { type HubAssetRow, type HubAssetSpokeRow, type MarketRow, type SpokeReserveRow, MAX_SPOKE_CAP, bpsToPct, capRoom, marketBorrowRateRay, rayToApyPct, rayToAprPct, spokeHeadroom, tokens, usd } from "@avana/services-common/views";
 import { type Values } from "./charts.ts";
 import { compactUsd, liquidationBonusBps, pct } from "./format.ts";
 import type { Cashflow, LiquidationRisk, PageRisk, RiskAssessment, RiskLevel, RiskParameters } from "./uiTypes.ts";
@@ -144,6 +144,69 @@ export function contentRiskAssessment(risk: PageRisk | undefined, headline: stri
   if (!risk) return null;
   const lvl = worst(risk.factors.map((x) => x.level));
   return { premiumBps: 0, level: lvl, score: LEVEL_RANK[lvl] * 25 + 10, headline, summary: risk.summary, breakdown: factorRows(risk), metrics: [] };
+}
+
+/**
+ * The collateral premiums a Borrow asset's borrowers pay: the `collateralRisk` of every market whose CDP Spoke lists the
+ * asset as borrowable on the same Hub. Null when no market can borrow it.
+ */
+export function debtPremiumRange(
+  reserve: { chainId: number; hub: string; assetId: string },
+  reserves: readonly SpokeReserveRow[],
+  markets: readonly MarketRow[],
+): { min: number; max: number } | null {
+  const spokes = new Set(
+    reserves.filter((r) => r.chainId === reserve.chainId && r.hub === reserve.hub && r.assetId === reserve.assetId && r.borrowable).map((r) => r.spoke),
+  );
+  const bps = markets.filter((m) => m.chainId === reserve.chainId && spokes.has(m.spoke)).map((m) => m.collateralRiskBps);
+  return bps.length > 0 ? { min: Math.min(...bps), max: Math.max(...bps) } : null;
+}
+
+const pctRange = (r: { min: number; max: number }) => (r.min === r.max ? pct(bpsToPct(r.min)) : `${pct(bpsToPct(r.min))}–${pct(bpsToPct(r.max))}`);
+
+/** A Borrow asset page's premium card: the premiums of the markets that can borrow it, one value when they all match. */
+export function debtRiskAssessment(range: { min: number; max: number }, symbol: string, risk?: PageRisk): RiskAssessment {
+  const lvl = level(range.max);
+  return {
+    premiumBps: range.min,
+    ...(range.max !== range.min ? { premiumMaxBps: range.max } : {}),
+    level: lvl,
+    score: Math.min(100, Math.round(range.max / 20)),
+    headline: `${pctRange(range)} collateral risk premium`,
+    summary: risk?.summary ?? `Borrowers of ${symbol} pay the Hub's base rate plus their collateral's premium (${pctRange(range)}), set by the Aave DAO for each collateral.`,
+    breakdown: [
+      { id: "collateralRisk", label: "Collateral risk", bps: range.max, level: lvl, description: "Aave V4 collateral risk of the markets that can borrow this asset." },
+      ...(risk ? factorRows(risk) : []),
+    ],
+    metrics: [],
+  };
+}
+
+/**
+ * The part of a Lend asset's supply rate paid by borrowers' collateral premiums, as an APY in basis points:
+ * drawnRate × premium × (10⁴ − liquidityFee) / (added × 10⁴), the supply rate less its drawn-only part.
+ */
+export function lendPremiumYieldBps(a: Pick<HubAssetRow, "drawnRateRay" | "premium" | "added" | "liquidityFeeBps">): number {
+  const added = BigInt(a.added);
+  if (added === 0n) return 0;
+  const rate = (BigInt(a.drawnRateRay) * BigInt(a.premium) * (10_000n - BigInt(a.liquidityFeeBps))) / (added * 10_000n);
+  return Math.round(rayToApyPct(rate) * 100);
+}
+
+/** A Lend asset page's premium card: the yield lenders earn above the base rate from borrowers' collateral premiums. */
+export function lendRiskAssessment(a: Pick<HubAssetRow, "drawnRateRay" | "premium" | "added" | "liquidityFeeBps">, symbol: string, risk?: PageRisk): RiskAssessment {
+  const bps = lendPremiumYieldBps(a);
+  const listed = risk ? factorRows(risk) : [];
+  const lvl = listed.length > 0 ? worst(listed.map((x) => x.level)) : level(bps);
+  return {
+    premiumBps: bps,
+    level: lvl,
+    score: LEVEL_RANK[lvl] * 25 + 10,
+    headline: `${pct(bpsToPct(bps))} premium yield`,
+    summary: risk?.summary ?? `${symbol} lenders earn ${pct(bpsToPct(bps))} a year above the base rate from the premiums borrowers pay for their collateral.`,
+    breakdown: [{ id: "premiumYield", label: "Premium yield", bps, level: level(bps), description: "The part of the supply APY paid by borrowers' collateral premiums." }, ...listed],
+    metrics: [],
+  };
 }
 
 /** The pool page's premium card: the market's `collateralRisk`, the one premium every borrower of it pays. */

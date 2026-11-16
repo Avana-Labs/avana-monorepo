@@ -136,6 +136,8 @@ export type RiskMetric = {
 export type RiskAssessment = {
   /** Total risk premium in basis points (sum of breakdown items). */
   premiumBps: number
+  /** The highest premium when the card covers several markets (a Borrow asset); `premiumBps` is then the lowest. */
+  premiumMaxBps?: number
   /** Qualitative bucket derived from `premiumBps`. */
   level: RiskLevel
   /** Score 0..100 used to position the gauge needle. */

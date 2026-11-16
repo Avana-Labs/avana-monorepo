@@ -8,7 +8,7 @@ import { type Values, combineSources, filledBuckets } from "./lib/charts.ts";
 import { aboutContractRows } from "./lib/aboutContracts.ts";
 import { chainSlug } from "./lib/format.ts";
 import { hubAssetKey, interestRateModel, marketAllocation, poolBorrowables, headlineReserve } from "./lib/pages.ts";
-import { assetRiskParameters, atRisk, cashflow, contentRiskAssessment, lendRiskParameters, liquidationRisk, poolRiskAssessment, poolRiskParameters, type LiquidationWindow } from "./lib/riskViews.ts";
+import { assetRiskParameters, atRisk, cashflow, contentRiskAssessment, debtPremiumRange, debtRiskAssessment, lendRiskAssessment, lendRiskParameters, liquidationRisk, poolRiskAssessment, poolRiskParameters, type LiquidationWindow } from "./lib/riskViews.ts";
 import type { ChangelogRow, ContractAddressRow, PageScope } from "./lib/uiTypes.ts";
 import { type World, bySlug, contentOf, lendKey, reserveKey, scopePoints, sliceOf, symbolOf } from "./model.ts";
 import { liquidationTotals } from "./lib/rollups.ts";
@@ -101,6 +101,15 @@ export function readRisk(w: World, scope: PageScope, slug: string) {
   if (scope === "pool") {
     const m = bySlug(w, "pool", slug) as MarketDoc | null;
     return m ? poolRiskAssessment(m, c?.risk) : null;
+  }
+  if (scope === "asset") {
+    const r = bySlug(w, "asset", slug) as SpokeReserveDoc | null;
+    const range = r ? debtPremiumRange(r, w.reserves, w.markets) : null;
+    if (r && range) return debtRiskAssessment(range, c?.symbol ?? symbolOf(w, r.chainId, r.asset), c?.risk);
+  }
+  if (scope === "lend") {
+    const a = bySlug(w, "lend", slug) as HubAssetDoc | null;
+    if (a) return lendRiskAssessment(a, c?.symbol ?? symbolOf(w, a.chainId, a.underlying), c?.risk);
   }
   return contentRiskAssessment(c?.risk, `${c?.name ?? slug} risk`);
 }
