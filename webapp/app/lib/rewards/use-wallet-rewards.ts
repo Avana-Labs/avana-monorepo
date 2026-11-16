@@ -15,9 +15,11 @@ export type WalletRewards = {
   /** Points earned in total: tenure, quests and fees. */
   earnedPoints: number
   completedQuests: ReadonlySet<string>
+  /** Whether the wallet's older history was read, so its first activity and quests are complete. */
+  historyChecked: boolean
 }
 
-const NO_REWARDS: WalletRewards = { earnedPoints: 0, completedQuests: new Set() }
+const NO_REWARDS: WalletRewards = { earnedPoints: 0, completedQuests: new Set(), historyChecked: true }
 
 export function useWalletRewards(walletId: string | null | undefined): WalletRewards | undefined {
   // `hasConvexClient` is a build-time constant, so every render takes the same branch.
@@ -34,7 +36,11 @@ function useLiveWalletRewards(walletId: string | null | undefined): WalletReward
         ? NO_REWARDS
         : summary === undefined
           ? undefined
-          : { earnedPoints: summary.earnedPoints, completedQuests: new Set(summary.completedQuests) },
+          : {
+              earnedPoints: summary.earnedPoints,
+              completedQuests: new Set(summary.completedQuests),
+              historyChecked: summary.historyChecked,
+            },
     [wallet, summary],
   )
 }

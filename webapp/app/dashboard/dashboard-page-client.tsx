@@ -10,6 +10,7 @@ import {
   type QuestDialog,
 } from "@/app/lib/data/rewards/quests"
 import { useWalletRewards } from "@/app/lib/rewards/use-wallet-rewards"
+import { useHistoryBackfill } from "@/app/lib/rewards/use-history-backfill"
 import { pinMarket, recordClientQuest } from "@/app/lib/rewards/record-client-quest"
 import {
   RewardsEducationDialog,
@@ -98,6 +99,7 @@ export function DashboardPageClient() {
   }, [searchTab])
 
   const rewards = useWalletRewards(walletId)
+  useHistoryBackfill(walletId, rewards)
   const questsByTab = useMemo(
     () =>
       buildQuestsByTab({ comingSoon: t("Coming soon"), earned: t("Earned") }, rewards?.completedQuests ?? new Set()),

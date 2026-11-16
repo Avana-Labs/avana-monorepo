@@ -101,7 +101,7 @@ export function SwapAssetPickerDialog({
                     {amount.toLocaleString(undefined, { maximumFractionDigits: 6 })} {asset.symbol}
                   </span>
                   <span className="block font-data text-[12px] text-muted-foreground">
-                    {exact(amount * (canonicalPriceFor(asset.symbol) ?? asset.priceUsd))}
+                    {exact(amount * (canonicalPriceFor(asset.symbol) ?? Number.NaN))}
                   </span>
                 </span>
                 {asset.id === selectedAssetId ? <span className="sr-only">{t("Selected")}</span> : null}

@@ -50,7 +50,8 @@ describe("transaction-display", () => {
     resetCanonicalPrices()
   })
 
-  it("derives frozen For from USD using seed fixture price", () => {
+  it("derives frozen For from USD using the live price", () => {
+    setCanonicalPrices({ GHO: 1 })
     const row = baseRow({
       amountLabel: "$37.50K",
       amountUsd: 37_500,
@@ -83,6 +84,7 @@ describe("transaction-display", () => {
   })
 
   it("falls back to embedded amountLabel token pairs", () => {
+    setCanonicalPrices({ GHO: 1 })
     const row = baseRow({
       amountLabel: "+1200.0000 GHO",
       tokenSymbol: "GHO",
@@ -131,7 +133,15 @@ describe("transaction-display", () => {
     resetCanonicalPrices()
   })
 
+  it("shows an unknown token amount and no USD value without a price", () => {
+    resetCanonicalPrices()
+    const row = baseRow({ amountLabel: "$37.50K", amountUsd: 37_500, tokenSymbol: "GHO" })
+    expect(resolveTransactionTokenDisplay(row)).toEqual({ amount: "—", symbol: "GHO" })
+    expect(resolveTransactionUsdValue(baseRow({ amountLabel: "+1200.0000 GHO", tokenSymbol: "GHO" }))).toBeNull()
+  })
+
   it("keeps withdrawal USD negative from FOR × live price", () => {
+    setCanonicalPrices({ GHO: 1 })
     const row = baseRow({
       kind: "withdraw",
       amountLabel: "-$1.2K",
