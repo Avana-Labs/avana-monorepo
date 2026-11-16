@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import type { RewardsPromoTabId, RewardsQuest } from "@/app/lib/data/rewards/catalog"
 import { questHref, questsByTab as buildQuestsByTab } from "@/app/lib/data/rewards/quests"
 import { useWalletRewards } from "@/app/lib/rewards/use-wallet-rewards"
+import { recordClientQuest } from "@/app/lib/rewards/record-client-quest"
 import { useAvanaSessions } from "@/app/lib/avana-session/avana-sessions-provider"
 import { PortfolioStatCards } from "@/app/dashboard/portfolio-stat-cards"
 import { PortfolioRewardsCards } from "@/app/dashboard/_rewards-components/rewards-balance-hero"
@@ -93,6 +94,11 @@ export function DashboardPageClient() {
       buildQuestsByTab({ comingSoon: t("Coming soon"), earned: t("Earned") }, rewards?.completedQuests ?? new Set()),
     [t, rewards],
   )
+  // Being signed in on the dashboard completes the first quest; Convex awards it once.
+  const connectDone = rewards?.completedQuests.has("connect-wallet")
+  useEffect(() => {
+    if (rewards && !connectDone) void recordClientQuest("connect-wallet")
+  }, [rewards, connectDone])
   // A quest's button opens the page where it is done; quests that are not live have no action.
   const openQuest = useCallback(
     async (questId: string) => {
