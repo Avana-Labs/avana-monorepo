@@ -77,7 +77,7 @@ async function snapshot24hAgo(ctx: QueryCtx, w: World, scope: PageScope, slug: s
     const s = sliceOf(w, r);
     if (!a || !s) return null;
     const [pa, ps] = [await hour("hubAsset", hubAssetKey(a)), await hour("hubAssetSpoke", `${hubAssetKey(a)}:${r.spoke}`)];
-    return pa && ps ? assetSnapshot(r, { ...s, ...ps }, { ...a, ...pa }, null, "", "") : null;
+    return pa && ps ? assetSnapshot(r, { ...s, ...ps }, { ...a, ...pa }, null, "") : null;
   }
   const m = row as MarketDoc;
   const pm = await hour("market", `${m.chainId}:${m.marketId}`);
@@ -143,7 +143,7 @@ export const getAssetHeroSeries = query({
     const a = r ? w.assetsByKey.get(hubAssetKey(r)) : undefined;
     const s = r ? sliceOf(w, r) : undefined;
     if (!r || !a || !s) return null;
-    const live = assetSnapshot(r, s, a, null, "", "");
+    const live = assetSnapshot(r, s, a, null, "");
     const hub = await days(ctx, "hubAsset", hubAssetKey(a));
     const id = `${slug}:hero:${metric}:${range}`;
     if (metric === "borrow") {
@@ -207,7 +207,7 @@ async function supplyBorrow(ctx: QueryCtx, w: World, scope: "lend" | "asset", sl
   const a = r ? w.assetsByKey.get(hubAssetKey(r)) : undefined;
   const s = r ? sliceOf(w, r) : undefined;
   if (!r || !a || !s) return null;
-  const live = assetSnapshot(r, s, a, null, "", "");
+  const live = assetSnapshot(r, s, a, null, "");
   const hub = await days(ctx, "hubAsset", hubAssetKey(a));
   const slice = await days(ctx, "hubAssetSpoke", `${hubAssetKey(a)}:${r.spoke}`);
   const now = nowSeconds();
