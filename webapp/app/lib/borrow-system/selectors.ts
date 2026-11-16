@@ -26,6 +26,30 @@ export function resolveBorrowAprPct(baseBorrowAprWad: bigint, riskPremiumWad: bi
   return fixedToNumber(baseBorrowAprWad + riskPremiumWad, 18) * 100
 }
 
+/**
+ * The borrow APR a market's borrowers pay on chain: the base rate × (1 + the market's collateral risk). Each market has
+ * one collateral reserve, so Aave V4's risk premium of every account in it is that reserve's `collateralRisk`
+ * (Lens `_riskConfig`, REQ-LENS-057), before and after any borrow.
+ */
+export function marketBorrowAprPct(baseBorrowAprWad: bigint, premiumBps: number): number {
+  return fixedToNumber(baseBorrowAprWad, 18) * 100 * (1 + premiumBps / 10_000)
+}
+
+/**
+ * The APR a debt of `market` pays: from the market's on-chain collateral risk when services/convex reports it, else the
+ * local credit model's premium for the Spoke.
+ */
+export function debtBorrowAprPct(
+  baseBorrowAprWad: bigint,
+  market: { listPremiumBps?: number } | null | undefined,
+  modelRiskPremiumWad: () => bigint,
+): number {
+  const premiumBps = market?.listPremiumBps
+  return premiumBps != null && Number.isFinite(premiumBps)
+    ? marketBorrowAprPct(baseBorrowAprWad, premiumBps)
+    : resolveBorrowAprPct(baseBorrowAprWad, modelRiskPremiumWad())
+}
+
 function visualToUi(visual: BorrowSystemState["markets"][string]["display"]["visuals"][number]): BorrowAssetVisual {
   return {
     symbol: visual.symbol,
@@ -169,7 +193,8 @@ export function selectBorrowableAssets(
         symbol: asset.symbol,
         name: asset.display.name,
         subtitle: asset.display.subtitle,
-        borrowApr: resolveBorrowAprPct(asset.borrowConfig.baseBorrowAprWad, scopedMetrics.riskPremiumWad),
+        // In a market, the rate the borrow will pay: that market's premium, not another position's.
+        borrowApr: debtBorrowAprPct(asset.borrowConfig.baseBorrowAprWad, market, () => scopedMetrics.riskPremiumWad),
         totalBorrowedUsd: fixedToNumber(asset.snapshot.totalBorrowedUsd6, 6),
         utilization,
         availableUsd: fixedToNumber(asset.snapshot.availableLiquidityUsd6, 6),

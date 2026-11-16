@@ -10,7 +10,7 @@ import {
 } from "@/app/lib/borrow-system/model"
 import type { DebtRowContext, SupplyRowContext } from "@/app/lib/data/borrow-position-types"
 import {
-  resolveBorrowAprPct,
+  debtBorrowAprPct,
   selectAllAvailableCollateralPools,
   selectBorrowCollateralPools,
   selectInitialBorrowDebts,
@@ -96,15 +96,16 @@ export function selectPortfolioDebtRows(state: BorrowSystemState, walletId: stri
     const pool = position.marketId ? poolById.get(position.marketId) : undefined
     if (!pool) continue
     const borrowedUsd = fixedToNumber(currentDebtValueUsd6(position), 6)
-    // Single-source the borrow APR to the current market rate (base + risk premium) via the
-    // shared resolveBorrowAprPct helper — the SAME source the borrow list and action page use —
+    // Single-source the borrow APR to the current market rate (base × (1 + the market's premium)) via the
+    // shared debtBorrowAprPct helper — the SAME source the borrow list and action page use —
     // instead of the stored position rate, so the three surfaces can never disagree (C2).
     const asset = state.assets[position.assetId]
     const borrowApr =
       asset != null
-        ? resolveBorrowAprPct(
+        ? debtBorrowAprPct(
             asset.borrowConfig.baseBorrowAprWad,
-            calculateSpokeCreditMetrics(state, walletId, position.spokeId).riskPremiumWad,
+            position.marketId ? state.markets[position.marketId] : undefined,
+            () => calculateSpokeCreditMetrics(state, walletId, position.spokeId).riskPremiumWad,
           )
         : fixedToNumber(position.borrowRateWad, 18) * 100
     rows.push({
