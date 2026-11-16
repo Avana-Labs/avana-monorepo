@@ -5,7 +5,7 @@
 //
 //   produce --network <n> --rpc-env <VAR> [--release vX.Y.Z] [--commit <sha>] [--out <file>]
 //       Writes the manifest of the deployment the scripts made on <n>. Default output: deployments/<n>/<release>.json
-//       for ethereum, base and sepolia; contracts/deployments-local/<n>/manifest.json for anvil.
+//       for ethereum, base and sepolia; contracts/deployments-local/<n>/manifest.json for a local chain (31337, 31338).
 //   verify --manifest <file> --rpc-env <VAR>
 //       Checks the manifest against the chain; exits 1 on any failed check, prints pending ones.
 //   table --manifest <file> [--explorer <url>] [--out <file>]
@@ -38,6 +38,9 @@ import { verifyManifest } from "./verify.ts";
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 const CONTRACTS = join(REPO, "contracts");
 const LEARNING = /-(local|test|learn)(\.|$)/;
+// A local node's chain (the rehearsal's anvil and the local stack's Ethereum and Base, whatever their network names)
+// writes under deployments-local and is never published.
+const LOCAL_CHAIN_IDS = new Set([31337, 31338]);
 
 const [command, ...rest] = process.argv.slice(2);
 const opt = (name: string): string | undefined => {
@@ -83,7 +86,7 @@ async function main() {
         commit: opt("commit") ?? readGitCommit(REPO),
         ...(opt("release") ? { release: opt("release")! } : {}),
       });
-      const local = network === "anvil";
+      const local = network === "anvil" || LOCAL_CHAIN_IDS.has(manifest.chainId);
       const out = opt("out") ?? (local ? join(CONTRACTS, "deployments-local", network, "manifest.json") : join(REPO, "deployments", network, `${manifest.release}.json`));
       write(out, `${JSON.stringify(manifest, null, 2)}\n`);
       break;
@@ -103,7 +106,7 @@ async function main() {
     case "publish": {
       const path = need("manifest");
       const m = parseManifest(readFileSync(path, "utf8"), path);
-      if (m.network === "anvil" || LEARNING.test(m.release)) throw new Error(`${m.release} on ${m.network} is a learning deployment; it is never published`);
+      if (m.network === "anvil" || LOCAL_CHAIN_IDS.has(m.chainId) || LEARNING.test(m.release)) throw new Error(`${m.release} on ${m.network} is a learning deployment; it is never published`);
       if (!(await verify(path))) throw new Error("verification has failed or pending checks; nothing published");
       const verified = join(REPO, "deployments", "verified", `${m.network}-${m.release}.json`);
       mkdirSync(dirname(verified), { recursive: true });

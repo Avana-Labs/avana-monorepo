@@ -42,8 +42,10 @@ describe("risk parameter slots", () => {
   });
 
   it("shows the liquidation bonus as a range only when the factor scales it", () => {
-    expect(liquidationPenaltyRange(500, 5_000)).toBe("2.50% – 5.00%");
-    expect(liquidationPenaltyRange(500, 10_000)).toBe("5.00%");
-    expect(liquidationPenaltyRange(500, null)).toBe("5.00%");
+    // Aave V4's maxLiquidationBonus is 10,000-based: 10,500 is a 5 % bonus.
+    expect(liquidationPenaltyRange(10_500, 5_000)).toBe("2.50% – 5.00%");
+    expect(liquidationPenaltyRange(10_500, 10_000)).toBe("5.00%");
+    expect(liquidationPenaltyRange(10_500, null)).toBe("5.00%");
+    expect(liquidationPenaltyRange(10_000, 5_000)).toBe("0.00%");
   });
 });

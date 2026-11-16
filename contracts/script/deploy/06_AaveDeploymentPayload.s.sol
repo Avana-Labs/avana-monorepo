@@ -156,9 +156,27 @@ contract AaveDeploymentPayload is AavePayloads {
             l.feeReceiver = _addr(cfg, ".aave.treasurySpoke");
             l.liquidityFee = 0;
             l.irStrategy = _addr(cfg, string.concat(".aave.irStrategies.", label));
-            l.irData = AInterestRateData(9000, 0, 400, 6000);
+            l.irData = _rateModel(i, label);
             _assetListing(b, l);
         }
+    }
+
+    /// @notice The asset's rate curve on Hub `label`, in bps: `.aavePayload.debtAssets[i].rateModelByHub.<label>`, else
+    /// its `.rateModel`, else 90 % optimal usage, 0 base, 4 % and 60 % growth. Applied when the asset is listed on the
+    /// Hub; an asset listed earlier keeps its curve (a change is an 11-changes rate change).
+    function _rateModel(
+        uint256 i,
+        string memory label
+    ) private view returns (AInterestRateData memory) {
+        string memory k = string.concat(_ak(i), ".rateModelByHub.", label);
+        if (!vm.keyExistsJson(cfg, k)) k = string.concat(_ak(i), ".rateModel");
+        if (!vm.keyExistsJson(cfg, k)) return AInterestRateData(9000, 0, 400, 6000);
+        return AInterestRateData(
+            uint16(vm.parseJsonUint(cfg, string.concat(k, ".optimalUsageBps"))),
+            uint32(vm.parseJsonUint(cfg, string.concat(k, ".baseDrawnRateBps"))),
+            uint32(vm.parseJsonUint(cfg, string.concat(k, ".rateGrowthBeforeOptimalBps"))),
+            uint32(vm.parseJsonUint(cfg, string.concat(k, ".rateGrowthAfterOptimalBps")))
+        );
     }
 
     /// @notice The Lend Spoke and the CDP Spokes of one Hub on every debt asset, their reserves and the CDP liquidation

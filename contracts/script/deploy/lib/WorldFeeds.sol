@@ -53,7 +53,7 @@ abstract contract WorldFeeds is DeployBase {
         string memory network,
         address link
     ) internal {
-        bool local = _eq(network, "anvil");
+        bool local = _isLocalChain(block.chainid);
         ocrOracles = vm.envAddress("AVANA_OCR_ORACLES", ",");
         require(ocrOracles.length == OCR_ORACLES, "AVANA_OCR_ORACLES must name four oracles");
         for (uint256 i = 0; i < OCR_ORACLES; ++i) {

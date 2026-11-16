@@ -4,7 +4,7 @@
 #
 # Starts the indexer and the keeper (observe mode) on a local rehearsal chain with the given release manifest and checks
 # that each one loaded it: the indexer reaches `/ready`, indexes from the manifest's start blocks to the chain head
-# (PGlite store, INDEXER_NETWORK_SET=local) and, once stopped, holds every Hub and every Lend, CDP and First-Loss Reserve of
+# (PGlite store, INDEXER_DATABASE=pglite) and, once stopped, holds every Hub and every Lend, CDP and First-Loss Reserve of
 # the manifest (indexer-check.ts); the keeper loads the manifest, reads its operator helper on chain, backfills the
 # AaveAdapter's proxies and serves `keeper_mode{chain="anvil",mode="observe"}` on its metrics port. Then a local Convex
 # deployment of services/convex (anonymous, no account) imports the indexer's export and samples the chain, and every
@@ -42,13 +42,14 @@ trap 'stop_all; rm -rf "$WORK" "$CONVEX_DIR/.convex" "$CONVEX_DIR/.env.local" $C
 for t in node openssl curl; do command -v "$t" >/dev/null || { echo "not run: $t missing"; exit 3; }; done
 [ -x "$REPO/node_modules/.bin/ponder" ] && [ -x "$REPO/node_modules/.bin/tsx" ] && [ -x "$REPO/node_modules/.bin/convex" ] || { echo "not run: npm ci at the repo root first"; exit 3; }
 
-export AVANA_MANIFEST="$MANIFEST" RPC_ANVIL="$RPC" RPC_ANVIL_FALLBACK="$RPC" RPC_ANVIL_WS="${RPC/http/ws}"
+# The services run on the production set with the node standing in for Ethereum (CHAIN_ID_MAINNET).
+export AVANA_MANIFEST="$MANIFEST" CHAIN_ID_MAINNET=31337 RPC_MAINNET="$RPC" RPC_MAINNET_FALLBACK="$RPC" RPC_MAINNET_WS="${RPC/http/ws}"
 
 # Indexer: PGlite store in services/indexer/.ponder/pglite (ponder.config.ts), emptied first so no earlier run's rows
 # can pass the check.
 PGLITE="$REPO/services/indexer/.ponder/pglite"
 rm -rf "$PGLITE"
-(cd "$REPO/services/indexer" && INDEXER_NETWORK_SET=local DATABASE_SCHEMA=e2e PONDER_TELEMETRY_DISABLED=true \
+(cd "$REPO/services/indexer" && INDEXER_NETWORK_SET=production INDEXER_DATABASE=pglite DATABASE_SCHEMA=e2e PONDER_TELEMETRY_DISABLED=true \
   INDEXER_EXPORT_KEYS="$EXPORT_KEY_ID:$EXPORT_SECRET" \
   "$REPO/node_modules/.bin/ponder" start --port "$INDEXER_PORT" > "$WORK/indexer.log" 2>&1) &
 PIDS="$PIDS $!"
@@ -80,7 +81,7 @@ fi
 # MSYS2_ARG_CONV_EXCL: Git Bash on Windows would rewrite the subject "/CN=localhost" as a Windows path and openssl would
 # reject it; the variable is ignored elsewhere.
 MSYS2_ARG_CONV_EXCL="/CN=" openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost" -keyout "$WORK/key.pem"   -out "$WORK/cert.pem" > "$WORK/openssl.log" 2>&1 || { echo "keeper: openssl could not make the kill switch certificate"; tail -5 "$WORK/openssl.log"; }
-(cd "$REPO/services/keeper" && KEEPER_NETWORK_SET=local KEEPER_MODE=observe KEEPER_ROLE=primary KEEPER_SHARD=0 \
+(cd "$REPO/services/keeper" && KEEPER_NETWORK_SET=production KEEPER_MODE=observe KEEPER_ROLE=primary KEEPER_SHARD=0 \
   KEEPER_SHARD_COUNT=1 KEEPER_KILL_SWITCH_PORT="$KILL_PORT" KEEPER_KILL_SWITCH_TLS_CERT="$WORK/cert.pem" \
   KEEPER_KILL_SWITCH_TLS_KEY="$WORK/key.pem" KEEPER_KILL_SWITCH_CLIENT_CA="$WORK/cert.pem" \
   KEEPER_HALT_STATE_PATH="$WORK/halt" KEEPER_METRICS_PORT="$METRICS_PORT" KEEPER_INDEXER_URL="http://127.0.0.1:${INDEXER_PORT}" \
@@ -135,7 +136,7 @@ if [ $ready -eq 1 ]; then
     convex_wait "Convex functions ready"
   fi
   if grep -q "Convex functions ready" "$WORK/convex.log"; then
-    RPC_ANVIL="$RPC" E2E_EXPORT_URL="http://127.0.0.1:${INDEXER_PORT}" E2E_EXPORT_KEY_ID="$EXPORT_KEY_ID" \
+    RPC_ANVIL="$RPC" CHAIN_ID_MAINNET=31337 E2E_EXPORT_URL="http://127.0.0.1:${INDEXER_PORT}" E2E_EXPORT_KEY_ID="$EXPORT_KEY_ID" \
       E2E_EXPORT_SECRET="$EXPORT_SECRET" E2E_LISTING_CONTENT_URL="http://127.0.0.1:${CONTENT_PORT}" \
       node "$(dirname "$0")/convex-check.ts" "$MANIFEST" "$REPO" > "$WORK/convex-check.log" 2>&1 && pages=1
     cat "$WORK/convex-check.log"

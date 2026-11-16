@@ -13,8 +13,7 @@ import {
   loadManifest,
   optionalEnv,
   requireEnv,
-  rpcEnvName,
-} from "@avana/services-common";
+  rpcEnvName, isDevChain } from "@avana/services-common";
 import { ABI_HASH } from "@avana/protocol/abis";
 import type { Address } from "viem";
 import { type FeePolicy, GWEI, paysL1DataFee } from "./chain/gas.ts";
@@ -84,14 +83,15 @@ export function discoveryPageSeconds(env: NodeJS.ProcessEnv): number {
 
 /**
  * KEEPER_LOCAL_KEYSTORE_<CHAIN>: the path of an encrypted keystore (`cast wallet import`), with its password in the file
- * KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE. Refused outside the `local` network set, so no published or test-network keeper
- * signs with a local key (Q-245); no raw key is ever read from the environment.
+ * KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE. Refused unless the chain is a development node (CHAIN_ID_<SUFFIX> 31337 or
+ * 31338), so no published or test-network keeper signs with a local key (Q-245); no raw key is ever read from the
+ * environment.
  */
 export function localKeystore(env: NodeJS.ProcessEnv, chain: ChainInfo): LocalKeystore | undefined {
   const name = `KEEPER_LOCAL_KEYSTORE_${chain.envSuffix}`;
   const path = optionalEnv(env, name);
   if (path === undefined) return undefined;
-  if (chain.networkSet !== "local") throw new Error(`${name} is accepted only on the local network set; sign through the KMS`);
+  if (!isDevChain(chain)) throw new Error(`${name} is accepted only on a development node; sign through the KMS`);
   const passwordFile = optionalEnv(env, "KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE");
   if (passwordFile === undefined) throw new Error(`${name} needs KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE, the file holding its password`);
   return { path, passwordFile };
