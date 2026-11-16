@@ -214,7 +214,7 @@ export function SwapPageClient({ initialFrom, initialTo, origin = "wallet", retu
         },
         { id: "provider", label: t("Provider"), value: quote.provider },
       ],
-      networkFeeLabel: exact(quote.networkFeeUsd),
+      platformFeeLabel: exact(quote.feeAmount * inputPriceUsd),
       risk:
         quote.priceImpactPct >= 3
           ? {
@@ -319,7 +319,7 @@ export function SwapPageClient({ initialFrom, initialTo, origin = "wallet", retu
           marketValue: executionQuote.provider,
           // Carry the real quote fee so the inline receipt matches the estimate
           // and the permalink receipt instead of a hash-derived amount.
-          networkFeeUsd: executionQuote.networkFeeUsd,
+          platformFeeUsd: executionQuote.feeAmount * inputPriceUsd,
         },
       })
       setStage("success")

@@ -21,7 +21,7 @@ import {
   usd,
 } from "@avana/services-common/views";
 import { feeTierLabel } from "./format.ts";
-import type { MarketSnapshotRow, PageContent, PoolBorrowable, AllocationRow, InterestRateModel } from "./uiTypes.ts";
+import type { MarketSnapshotRow, PageContent, PoolBorrowable, AllocationRow, InterestRateModel, Visual } from "./uiTypes.ts";
 
 export type WithSlug<T> = T & { readonly slug: string };
 
@@ -74,7 +74,6 @@ export function assetSnapshot(
   asset: HubAssetRow,
   content: PageContent | null,
   symbol: string,
-  spokeSlug: string,
   hubLabel?: string,
 ): MarketSnapshotRow {
   const price = asset.priceUsd8;
@@ -84,7 +83,8 @@ export function assetSnapshot(
     scope: "asset",
     chainId: reserve.chainId,
     ...identity(content, { name: symbol, symbol }),
-    spokeId: spokeSlug,
+    // The Spoke's address, the key pool rows carry too, so the app can join a market to its debt reserves.
+    spokeId: reserve.spoke,
     hubId: asset.hub,
     ...(hubLabel ? { hubLabel } : {}),
     reserveFactorPct: bpsToPct(asset.liquidityFeeBps),
@@ -124,10 +124,12 @@ export function headlineReserve(reserves: readonly SpokeReserveRow[], spoke: str
 export function poolSnapshot(
   market: WithSlug<MarketRow>,
   debts: readonly MarketReserveDebtRow[],
-  reserves: readonly SpokeReserveRow[],
+  reserves: readonly WithSlug<SpokeReserveRow>[],
   assets: ReadonlyMap<string, HubAssetRow>,
   pool24h: { volumeUsd: number; feesUsd: number; lpFeeAprPct?: number },
   content: PageContent | null,
+  hubLabel?: string,
+  tokenVisuals?: readonly Visual[],
 ): MarketSnapshotRow {
   const collateralUsd = Number(BigInt(market.suppliedUsd8)) / 1e8;
   const debtUsd = marketDebtUsd(debts, reserves, assets);
@@ -138,13 +140,18 @@ export function poolSnapshot(
     scope: "pool",
     chainId: market.chainId,
     ...identity(content, { name: market.name, symbol: market.symbol }),
+    // The pair's icons from its tokens' listing entries when the market's own entry gives none.
+    ...(!content?.visuals && tokenVisuals ? { visuals: tokenVisuals } : {}),
     spokeId: market.spoke,
+    hubId: market.hub,
+    ...(hubLabel ? { hubLabel } : {}),
     feeTier: feeTierLabel(market.feeTier),
     maxLtvPct: bpsToPct(market.collateralFactorBps),
     premiumBps: market.collateralRiskBps,
     suppliedUsd: collateralUsd,
     borrowedUsd: debtUsd,
-    availableUsd: Number(BigInt(market.marketHeadroomUsd8)) / 1e8,
+    // What the market can borrow now: Σ over its Spoke's debt reserves of Lens.getBorrowSpeed's availableNow (not the cap headroom).
+    availableUsd: poolBorrowables(market, reserves, assets, () => "").reduce((acc, b) => acc + (b.availableNowUsd ?? 0), 0),
     utilizationPct: collateralUsd > 0 ? Math.min(100, (debtUsd / collateralUsd) * 100) : 0,
     // The LP fee APR of the market's range over the last 24 h (lib/windows.ts); 0 before the pool's first swap.
     supplyApyPct: pool24h.lpFeeAprPct ?? 0,

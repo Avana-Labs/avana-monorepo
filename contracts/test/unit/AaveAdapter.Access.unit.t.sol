@@ -31,7 +31,7 @@ import {VmSafe} from "forge-std/Vm.sol";
 /// @title AaveAdapterAccessUnitTest
 /// @notice The Adapter's form and powers: UUPS behind ERC-1967 with the upgrade gated by `APPLICATION_ADMIN`, admin
 /// roles only for the timelock, the constructor checks of the router and its logic contracts, the views, the selector
-/// inventory, and the fixed target and selector set of every call a proxy makes (the PositionManagerApproved proof).
+/// inventory, and the fixed target and selector set of every call a proxy makes (no position-manager approval).
 /// forge-config: default.isolate = false
 contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
     using BytecodeInspector for bytes;
@@ -310,7 +310,7 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
     }
 
     // TEST-031 verifies: REQ-PROXY-008, REQ-ADAPTER-006, REQ-ADAPTER-099, REQ-RISK-088, INV-063, ATTACK-022, ATTACK-156
-    // Sources: Wave 2 review decision (PositionManagerApproved: selector allowlist)
+    // Sources: Wave 2 review decision (no position-manager approval: selector allowlist)
     /// @notice No code of the Adapter (router and every logic contract) holds a selector that approves, activates or
     /// renounces an Aave position manager, refreshes an account on Aave's behalf, liquidates, batches or permits.
     function test_TEST_031_noPositionManagerSelectorInAnyCode() public view {
@@ -337,7 +337,7 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
     }
 
     // TEST-031 verifies: REQ-PROXY-008, REQ-PROXY-010, REQ-ADAPTER-006, REQ-ADAPTER-099, INV-016, INV-063, ATTACK-022
-    // Sources: Wave 2 review decision (PositionManagerApproved: selector allowlist, dynamic)
+    // Sources: Wave 2 review decision (no position-manager approval: selector allowlist, dynamic)
     /// @notice Across every entry point (pledge, borrow, repay, repay-all, withdraw, partial removal, re-credit, repay
     /// with collateral, repayAllAndWithdraw, fee collection, a liquidation's burn, the debt mark), every call a proxy
     /// makes goes to its own Spoke with `supply`, `setUsingAsCollateral`, `borrow`, `repay` or `withdraw` naming

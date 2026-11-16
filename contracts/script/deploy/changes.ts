@@ -566,7 +566,8 @@ async function buildAave(c: AaveChange, prior: Json | undefined, actions: AaveAc
       hubConfigurator: getAddress(aave.hubConfigurator),
       hub,
       underlying: asset,
-      liquidityFee: KEEP,
+      // The Hub asset's liquidity fee (its reserve factor, bps) may change with the curve: `set.liquidityFee`.
+      liquidityFee: set.liquidityFee === undefined ? KEEP : BigInt(set.liquidityFee as number),
       feeReceiver: KEEP_ADDRESS,
       irStrategy: KEEP_ADDRESS,
       irData: {
@@ -596,7 +597,7 @@ function rateCurve(cur: Json, set: Record<string, unknown>): RateCurve {
     next[k] = v === undefined ? now : v && typeof v === "object" && "add" in (v as Json) ? now + Number((v as Json).add) : Number(v);
     if (!Number.isInteger(next[k]) || next[k] < 0) throw new Refused(`rate field ${k}: ${show(v)} gives ${next[k]}`);
   }
-  for (const k of Object.keys(set)) if (!(RATE_FIELDS as readonly string[]).includes(k)) throw new Error(`unknown rate field ${k}`);
+  for (const k of Object.keys(set)) if (!(RATE_FIELDS as readonly string[]).includes(k) && k !== "liquidityFee") throw new Error(`unknown rate field ${k}`);
   return next;
 }
 

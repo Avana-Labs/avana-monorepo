@@ -16,8 +16,9 @@ import {Vm} from "forge-std/Vm.sol";
 
 /// @title PayoutEscrowUnitTest
 /// @notice The payout escrow on its own (2.18) with the real Lock and a stand-in LPVaultSwap: deposits only from
-/// LPVaultSwap under the Lock and only of the measured amount, claims only by the credited account, of the whole credit,
-/// to the recipient it names, outside the Lock; the reentrancy flag; conservation; the worked examples of 2.18.
+/// LPVaultSwap under the Lock and only of the measured amount, claims only by the credited account, of the whole credit
+/// or of an amount up to it, to the recipient it names, outside the Lock; the reentrancy flag; conservation; the worked
+/// examples of 2.18.
 /// @dev Escrow side of TEST-179 (the liquidation side joins with LPVaultSwap), TEST-177, TEST-229, TEST-080, TEST-032
 /// and TEST-061. Isolation is off so the calls of one test share a transaction, as one Avana call tree does: a later
 /// call in the same transaction then also shows the transient flag was cleared by the earlier one.
@@ -25,6 +26,10 @@ import {Vm} from "forge-std/Vm.sol";
 contract PayoutEscrowUnitTest is AvanaTest {
     /// @notice ERC-7201 id of the reentrancy flag (2.18 Storage).
     bytes32 internal constant REENTRANCY_SLOT = 0xa75fff4cb584554d1fc59956357ed91e22a866262ee7022db6d589f2ebdb4400;
+
+    /// @notice The two `claim` overloads, which `IPayoutEscrow.claim.selector` cannot name apart.
+    bytes4 internal constant CLAIM_ALL = bytes4(keccak256("claim(address,address)"));
+    bytes4 internal constant CLAIM_AMOUNT = bytes4(keccak256("claim(address,address,uint256)"));
 
     Lock internal lock;
     PayoutEscrow internal escrow;
@@ -119,14 +124,14 @@ contract PayoutEscrowUnitTest is AvanaTest {
         }
     }
 
-    /// @notice The escrow answers only its six selectors: no fallback, `receive`, sweep, rescue or admin entry.
+    /// @notice The escrow answers only its seven selectors: no fallback, `receive`, sweep, rescue or admin entry.
     // TEST-032 verifies: REQ-ESCROW-001, INV-053, Q-124, Q-214, REQ-ACCESS-066, REQ-ACCESS-022, REQ-ACCESS-113
     function testFuzz_TEST_032_onlyInterfaceSelectors(
         bytes4 selector,
         bytes calldata tail
     ) public {
         vm.assume(
-            selector != IPayoutEscrow.deposit.selector && selector != IPayoutEscrow.claim.selector
+            selector != IPayoutEscrow.deposit.selector && selector != CLAIM_ALL && selector != CLAIM_AMOUNT
                 && selector != IPayoutEscrow.claimable.selector && selector != IPayoutEscrow.totalClaimable.selector
                 && selector != IPayoutEscrow.LP_VAULT_SWAP.selector && selector != IPayoutEscrow.LOCK.selector
         );
@@ -135,8 +140,10 @@ contract PayoutEscrowUnitTest is AvanaTest {
         vm.deal(address(this), 1 ether);
         (ok,) = address(escrow).call{value: 1}("");
         assertFalse(ok, "ETH accepted");
-        (ok,) = address(escrow).call{value: 1}(abi.encodeCall(IPayoutEscrow.claim, (address(usdc), bob)));
+        (ok,) = address(escrow).call{value: 1}(abi.encodeWithSelector(CLAIM_ALL, address(usdc), bob));
         assertFalse(ok, "payable claim");
+        (ok,) = address(escrow).call{value: 1}(abi.encodeWithSelector(CLAIM_AMOUNT, address(usdc), bob, 1));
+        assertFalse(ok, "payable amount-limited claim");
     }
 
     // ─── deposit ───
@@ -448,6 +455,160 @@ contract PayoutEscrowUnitTest is AvanaTest {
         assertEq(escrow.totalClaimable(address(usdc)), 312_000_000);
         vm.prank(feeRecipient);
         assertEq(escrow.claim(address(usdc), bob), 312_000_000);
+    }
+
+    // ─── Amount-limited claim ───
+
+    /// @notice An amount equal to the credit pays all of it and clears the credit, as the whole-credit claim does.
+    // TEST-179 verifies: REQ-ESCROW-020, REQ-ESCROW-004, REQ-ESCROW-006, INV-061, Q-214
+    function test_TEST_179_claimAmountExactCredit() public {
+        _deposit(usdc, alice, 4_500_000);
+        _deposit(usdc, bob, 1_000_000);
+        vm.prank(alice);
+        vm.expectEmit(address(escrow));
+        emit IPayoutEscrow.RemainderClaimed(address(usdc), alice, carol, 4_500_000);
+        assertEq(escrow.claim(address(usdc), carol, 4_500_000), 4_500_000, "pays the amount");
+        assertEq(usdc.balanceOf(carol), 4_500_000, "recipient paid");
+        assertEq(escrow.claimable(address(usdc), alice), 0, "credit cleared");
+        assertEq(escrow.claimable(address(usdc), bob), 1_000_000, "other credit untouched");
+        assertEq(escrow.totalClaimable(address(usdc)), 1_000_000, "total lowered by the amount");
+        assertEq(usdc.balanceOf(address(escrow)), 1_000_000, "balance lowered by the amount");
+        vm.prank(alice);
+        vm.expectRevert(IPayoutEscrow.NothingToClaim.selector);
+        escrow.claim(address(usdc), carol, 1);
+    }
+
+    /// @notice A part of the credit pays only that part and leaves the rest standing for a later claim of either kind.
+    // TEST-179 verifies: REQ-ESCROW-020, REQ-ESCROW-004, REQ-ESCROW-006, INV-061, Q-214
+    function test_TEST_179_claimAmountPartialLeavesTheRest() public {
+        _deposit(usdc, alice, 800_000);
+        vm.prank(alice);
+        assertEq(escrow.claim(address(usdc), carol, 300_000), 300_000);
+        assertEq(usdc.balanceOf(carol), 300_000);
+        assertEq(escrow.claimable(address(usdc), alice), 500_000, "the rest stands");
+        assertEq(escrow.totalClaimable(address(usdc)), 500_000);
+        vm.prank(alice);
+        assertEq(escrow.claim(address(usdc), carol, 200_000), 200_000);
+        vm.prank(alice);
+        assertEq(escrow.claim(address(usdc), bob), 300_000, "the whole-credit claim takes the remainder");
+        assertEq(escrow.claimable(address(usdc), alice), 0);
+        assertEq(escrow.totalClaimable(address(usdc)), 0);
+        assertEq(usdc.balanceOf(address(escrow)), 0);
+    }
+
+    /// @notice An amount above the caller's credit reverts `AmountExceedsCredit` and changes nothing, even when the
+    /// escrow holds enough of other accounts' credits to pay it.
+    // TEST-179 verifies: REQ-ESCROW-020, REQ-ESCROW-021, REQ-ESCROW-005, ATTACK-118, INV-061, Q-214
+    function testFuzz_TEST_179_claimAmountAboveCreditReverts(
+        uint256 credit,
+        uint256 amount
+    ) public {
+        credit = bound(credit, 1, 1e30);
+        amount = bound(amount, credit + 1, type(uint256).max);
+        _deposit(usdc, alice, credit);
+        _deposit(usdc, bob, 1e30);
+        vm.prank(alice);
+        vm.expectRevert(IPayoutEscrow.AmountExceedsCredit.selector);
+        escrow.claim(address(usdc), carol, amount);
+        assertEq(escrow.claimable(address(usdc), alice), credit, "credit kept");
+        assertEq(escrow.claimable(address(usdc), bob), 1e30, "other credit kept");
+        assertEq(escrow.totalClaimable(address(usdc)), credit + 1e30, "total kept");
+        assertEq(usdc.balanceOf(carol), 0, "nothing paid");
+    }
+
+    /// @notice An account without a credit cannot take another account's credit with an amount, and a credit in one
+    /// token cannot be claimed in another; a zero or self recipient is refused before the amount is read.
+    // TEST-179 verifies: REQ-ESCROW-020, REQ-ESCROW-005, REQ-ESCROW-013, REQ-ESCROW-014, ATTACK-118, Q-214
+    function testFuzz_TEST_179_claimAmountWrongAccountOrRecipient(
+        address caller,
+        uint256 amount
+    ) public {
+        vm.assume(caller != alice);
+        amount = bound(amount, 1, 1e30);
+        _deposit(usdc, alice, amount);
+        vm.prank(caller);
+        vm.expectRevert(IPayoutEscrow.NothingToClaim.selector);
+        escrow.claim(address(usdc), bob, amount);
+        vm.prank(alice);
+        vm.expectRevert(IPayoutEscrow.NothingToClaim.selector);
+        escrow.claim(address(usdt), alice, amount);
+        vm.prank(alice);
+        vm.expectRevert(IPayoutEscrow.InvalidRecipient.selector);
+        escrow.claim(address(usdc), address(0), amount);
+        vm.prank(alice);
+        vm.expectRevert(IPayoutEscrow.InvalidRecipient.selector);
+        escrow.claim(address(usdc), address(escrow), amount);
+        assertEq(escrow.claimable(address(usdc), alice), amount, "credit untouched");
+    }
+
+    /// @notice A zero amount reverts `ZeroAmount` before the credit is read, never calls the token, and leaves the
+    /// credit as it was.
+    // TEST-177 verifies: REQ-ESCROW-021, INV-021, Q-217
+    function test_TEST_177_claimAmountZeroReverts() public {
+        _deposit(usdc, alice, 100);
+        usdc.setRevertOnZero(true);
+        vm.expectCall(address(usdc), abi.encodeWithSelector(IERC20.transfer.selector), 0);
+        vm.prank(alice);
+        vm.expectRevert(IPayoutEscrow.ZeroAmount.selector);
+        escrow.claim(address(usdc), bob, 0);
+        // No credit at all: still ZeroAmount, the first failing check.
+        vm.prank(attacker);
+        vm.expectRevert(IPayoutEscrow.ZeroAmount.selector);
+        escrow.claim(address(usdc), bob, 0);
+        assertEq(escrow.claimable(address(usdc), alice), 100);
+    }
+
+    /// @notice The amount-limited claim checks in the order LockHeld, InvalidRecipient, ZeroAmount, NothingToClaim,
+    /// AmountExceedsCredit, and reverts while either member holds the Lock.
+    // TEST-179 verifies: REQ-ESCROW-021, REQ-ESCROW-007, REQ-ESCROW-012, REQ-ESCROW-014, INV-054, Q-148
+    function test_TEST_179_claimAmountCheckOrderAndLock() public {
+        _deposit(usdc, address(actor), 100);
+        bytes memory call = abi.encodeCall(PayoutActor.claimAmount, (escrow, address(usdc), address(0), 0));
+        vm.expectRevert(IPayoutEscrow.LockHeld.selector);
+        swap.callUnderLock(address(actor), call);
+        call = abi.encodeCall(PayoutActor.claimAmount, (escrow, address(usdc), bob, 40));
+        (bool ok, bytes memory ret) = adapter.acquireCallRelease(address(actor), call);
+        assertFalse(ok, "claim under the Adapter's lock");
+        assertEq(ret, abi.encodeWithSelector(IPayoutEscrow.LockHeld.selector));
+        vm.prank(attacker);
+        vm.expectRevert(IPayoutEscrow.InvalidRecipient.selector);
+        escrow.claim(address(usdc), address(0), 0);
+        vm.prank(attacker);
+        vm.expectRevert(IPayoutEscrow.ZeroAmount.selector);
+        escrow.claim(address(usdc), bob, 0);
+        vm.expectRevert(IPayoutEscrow.AmountExceedsCredit.selector);
+        actor.claimAmount(escrow, address(usdc), bob, 101);
+        assertEq(actor.claimAmount(escrow, address(usdc), bob, 40), 40, "Lock free again: the account claims");
+        assertEq(escrow.claimable(address(usdc), address(actor)), 60);
+    }
+
+    /// @notice A token callback during an amount-limited claim cannot claim again, by either overload.
+    // TEST-179 verifies: REQ-ESCROW-020, REQ-ESCROW-007, REQ-ESCROW-016, ATTACK-118, Q-148
+    function test_TEST_179_claimAmountReentryReverts() public {
+        _deposit(usdc, address(actor), 100);
+        usdc.setHook(address(actor), abi.encodeCall(PayoutActor.claimAmount, (escrow, address(usdc), bob, 10)));
+        vm.expectRevert(IPayoutEscrow.Reentrancy.selector);
+        actor.claimAmount(escrow, address(usdc), carol, 50);
+        usdc.setHook(address(actor), abi.encodeCall(PayoutActor.claim, (escrow, address(usdc), bob)));
+        vm.expectRevert(IPayoutEscrow.Reentrancy.selector);
+        actor.claimAmount(escrow, address(usdc), carol, 50);
+        assertEq(escrow.claimable(address(usdc), address(actor)), 100, "credit kept");
+    }
+
+    /// @notice A token that takes a fee from the sender on top of the amount reverts the amount-limited claim too, so
+    /// no claim is paid out of other credits.
+    // TEST-179 verifies: REQ-ESCROW-020, REQ-ESCROW-011, INV-061, Q-271
+    function test_TEST_179_claimAmountSenderFeeReverts() public {
+        _deposit(usdc, alice, 1000);
+        _deposit(usdc, bob, 1000);
+        usdc.setSenderFeeBps(100);
+        vm.prank(alice);
+        vm.expectRevert(IPayoutEscrow.TransferMismatch.selector);
+        escrow.claim(address(usdc), carol, 500);
+        assertEq(escrow.claimable(address(usdc), alice), 1000, "credit kept");
+        usdc.setSenderFeeBps(0);
+        vm.prank(alice);
+        assertEq(escrow.claim(address(usdc), carol, 500), 500);
     }
 
     // ─── Conservation and donations ───

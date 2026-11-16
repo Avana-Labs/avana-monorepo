@@ -7,7 +7,7 @@
 // shown twice on one page.
 
 import type { ExportRecord } from "@avana/services-common/export";
-import { compactUsd, shortHash, shortWallet } from "./format.ts";
+import { compactUsd, liquidationBonusBps, shortHash, shortWallet } from "./format.ts";
 import type { DetailTxKind, DetailTxRow } from "./uiTypes.ts";
 
 type Args = Readonly<Record<string, unknown>>;
@@ -174,7 +174,7 @@ export async function decodeRecord(r: ExportRecord, at: number, res: Resolver): 
       if (market) {
         const config = args.config as Args;
         await change("pool", market, "Collateral factor", `${Number(config.collateralFactor) / 100}%`);
-        await change("pool", market, "Max liquidation bonus", `${Number(config.maxLiquidationBonus) / 100}%`);
+        await change("pool", market, "Max liquidation bonus", `${liquidationBonusBps(Number(config.maxLiquidationBonus)) / 100}%`);
       }
       return { log: { ...base, ...(market ? { marketKey: market } : {}) }, changes };
     }

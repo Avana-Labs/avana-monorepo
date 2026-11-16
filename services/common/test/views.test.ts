@@ -122,7 +122,7 @@ describe("snapshot reader", () => {
     tokenDecimals: [6], feeTier: 100, tickLower: -10, tickUpper: 10, integrationId: 1, ammProtocol: `0x${"00".repeat(31)}01`,
     vaultToken: "0xBBBB000000000000000000000000000000000001", name: "USDC/USDT", symbol: "av-1", lpOracle: "0xCCCC000000000000000000000000000000000001",
     hub: HUB, spoke: FIXTURE_U, reserveId: 3n, hubAssetId: 0n, acceptedPrice: 200_000_000n, priceState: 0, suppliedUnits: 10n ** 22n,
-    suppliedUsd: 2n * 10n ** 12n, collateralFactorBps: 8_000n, liquidationThresholdBps: 8_000n, maxLiquidationBonusBps: 500n, marketHeadroomUsd: 0n,
+    suppliedUsd: 2n * 10n ** 12n, collateralFactorBps: 8_000n, liquidationThresholdBps: 8_000n, maxLiquidationBonusBps: 10_500n, marketHeadroomUsd: 0n,
     sliceHeadroomUsd: 0n, addHeadroom: 0n, pauseState: 0, breakerReasons: 0, collateralRiskBps: 500n, liquidationFeeBps: 1_000n,
     targetHealthFactor: 11n * 10n ** 17n, healthFactorForMaxBonus: 95n * 10n ** 16n, liquidationBonusFactorBps: 5_000n, hardHealthFloor: 0n, marketUsdCap: 0n,
     topUpSliceUsd: 0n, tokenUsdCaps: [0n], addCap: 0n, debtReserveIds: [1n], borrowRatesRay: [63n * 10n ** 24n],

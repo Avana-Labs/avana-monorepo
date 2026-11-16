@@ -8,10 +8,11 @@
 
 import { categorizeMarket, CATEGORY_CHIPS, type MarketCategory } from "@/app/lib/markets/category"
 import { tokenDisplayName } from "@/app/lib/markets/token-names"
+import { chainKey, type ChainKey } from "@/app/lib/chains"
 
 // ----- Chains ----------------------------------------------------------------
 
-export type ChainId = "ethereum" | "base" | "local"
+export type ChainId = ChainKey
 
 export type FilterOption<Id extends string = string> = {
   id: Id
@@ -27,43 +28,31 @@ export type FilterOption<Id extends string = string> = {
 export const CHAIN_OPTIONS: ReadonlyArray<FilterOption<ChainId>> = [
   { id: "ethereum", label: "Ethereum", brand: true, iconSrc: "/asset-icons/eth.png" },
   { id: "base", label: "Base", brand: true },
-  { id: "local", label: "Local" },
 ]
 
 /**
  * List rows do not carry their chain yet, so every row matches every chain option. Derive the
  * chain per row from services/convex `chainId` when the rows carry it.
  */
-export const MARKET_CHAINS: readonly ChainId[] = ["ethereum", "base", "local"]
+export const MARKET_CHAINS: readonly ChainId[] = ["ethereum", "base"]
 
-/** The chain filter id of an EVM chain id. */
+/** The chain filter id of an EVM chain id (chain ids per network from env, `app/lib/chains.ts`). */
 export function chainFilterId(chainId: number | undefined): ChainId | null {
-  if (chainId === 1) return "ethereum"
-  if (chainId === 8453) return "base"
-  if (chainId === 31337) return "local"
-  return null
+  return chainKey(chainId)
 }
 
 // ----- Hubs ------------------------------------------------------------------
 
-export type HubId = "stable" | "correlated" | "volatile"
-
-export const HUB_OPTIONS: ReadonlyArray<FilterOption<HubId>> = [
-  { id: "stable", label: "Stable" },
-  { id: "correlated", label: "Correlated" },
-  { id: "volatile", label: "Volatile" },
-]
-
 /**
- * Risk hub from the market's tokens. Stable: every token is a stablecoin. Correlated: every token
- * tracks the same asset (the ETH family or the BTC family). Volatile: anything else.
+ * The Hubs filter lists the Hubs the page's rows belong to, by Hub address, with the label
+ * services/convex gives each Hub ("Avana Ethereum Hub"). Hub names are proper nouns.
  */
-export function hubForSymbols(symbols: readonly string[]): HubId {
-  const families = symbols.map((symbol) => categorizeMarket(symbol))
-  if (families.length === 0) return "volatile"
-  if (families.every((family) => family === "forex")) return "stable"
-  if (families.every((family) => family === "eth") || families.every((family) => family === "btc")) return "correlated"
-  return "volatile"
+export function hubFilterOptions(items: readonly FilterableItem[]): FilterOption[] {
+  const byId = new Map<string, FilterOption>()
+  for (const item of items) {
+    if (item.hub && !byId.has(item.hub)) byId.set(item.hub, { id: item.hub, label: item.hubLabel || item.hub, brand: true })
+  }
+  return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label, "en"))
 }
 
 // ----- Markets ---------------------------------------------------------------
@@ -82,6 +71,26 @@ export const BORROW_MARKET_OPTIONS: ReadonlyArray<FilterOption<BorrowMarketId>> 
   { id: "uniswap-v3", label: "Uniswap V3", brand: true, iconSrc: "/asset-icons/uni.png" },
   { id: "aerodrome-slipstream", label: "Aerodrome Slipstream", brand: true, iconSrc: "/asset-icons/aero.png" },
 ]
+
+/**
+ * The Borrow Markets filter lists every CDP Spoke the page's rows come from, by Spoke address,
+ * one option per Spoke even when several share a venue. The label is the Spoke's listing name,
+ * else its venue; the icon is the venue's.
+ */
+export function borrowSpokeOptions(
+  pools: ReadonlyArray<{ spoke: string; spokeName?: string; venue?: string; dexId?: string }>,
+): FilterOption[] {
+  const byId = new Map<string, FilterOption>()
+  for (const pool of pools) {
+    const id = pool.spoke.toLowerCase()
+    if (!id || byId.has(id)) continue
+    const venue = borrowMarketForSpoke(pool.dexId ?? pool.venue ?? "")
+    const iconSrc = BORROW_MARKET_OPTIONS.find((option) => option.id === venue)?.iconSrc
+    const label = pool.spokeName?.trim() || pool.venue?.trim() || pool.spoke
+    byId.set(id, { id, label, brand: true, ...(iconSrc ? { iconSrc } : {}) })
+  }
+  return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label, "en") || a.id.localeCompare(b.id))
+}
 
 /** The DEX market of a row, from its DEX label or Spoke id. */
 export function borrowMarketForSpoke(spokeOrDex: string): BorrowMarketId | null {
@@ -134,7 +143,9 @@ export type FacetId = "chains" | "hubs" | "markets" | "assets"
 
 export type FilterableItem = {
   chains: readonly string[]
+  /** The row's Hub address ("" when unknown) and its label. */
   hub: string
+  hubLabel?: string
   markets: readonly string[]
   /** Uppercase token symbols. */
   assets: readonly string[]
@@ -184,10 +195,12 @@ export function activeFilterCount(state: MarketFilterState): number {
 
 // ----- Row adapters ----------------------------------------------------------
 
-export function lendFilterItem(symbol: string): FilterableItem {
+export function lendFilterItem(row: { symbol: string; hub: string; hubLabel?: string }): FilterableItem {
+  const { symbol } = row
   return {
     chains: MARKET_CHAINS,
-    hub: hubForSymbols([symbol]),
+    hub: row.hub,
+    ...(row.hubLabel ? { hubLabel: row.hubLabel } : {}),
     markets: [categorizeMarket(symbol)],
     assets: [symbol.toUpperCase()],
   }
@@ -211,16 +224,19 @@ export function borrowPoolSymbols(pool: {
 
 export function borrowPoolFilterItem(pool: {
   spoke: string
+  hubId?: string
+  hubLabel?: string
   dexId?: string
   visuals: ReadonlyArray<{ symbol: string }>
   constituents?: ReadonlyArray<{ symbol: string }>
 }): FilterableItem {
   const symbols = borrowPoolSymbols(pool)
-  const market = borrowMarketForSpoke(pool.dexId ?? pool.spoke)
   return {
     chains: MARKET_CHAINS,
-    hub: hubForSymbols(symbols),
-    markets: market ? [market] : [],
+    hub: pool.hubId ?? "",
+    ...(pool.hubLabel ? { hubLabel: pool.hubLabel } : {}),
+    // The row's Spoke, the id `borrowSpokeOptions` lists it under.
+    markets: pool.spoke ? [pool.spoke.toLowerCase()] : [],
     assets: symbols.map((symbol) => symbol.toUpperCase()),
   }
 }

@@ -50,15 +50,17 @@ writeFileSync(path, encrypt(key, password));
 writeFileSync(passwordFile, `${password}\n`, { mode: 0o600 });
 
 describe("local rehearsal keystore", () => {
-  it("is read on the local network set, with its password file", () => {
-    expect(localKeystore({ KEEPER_LOCAL_KEYSTORE_ANVIL: path, KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE: passwordFile }, CHAINS.anvil)).toEqual({ path, passwordFile });
-    expect(localKeystore({}, CHAINS.anvil)).toBeUndefined();
-    expect(() => localKeystore({ KEEPER_LOCAL_KEYSTORE_ANVIL: path }, CHAINS.anvil)).toThrow(/PASSWORD_FILE/);
+  // A development node standing in for Ethereum (CHAIN_ID_MAINNET=31337).
+  const dev = { ...CHAINS.mainnet, id: 31337 };
+  it("is read on a development node, with its password file", () => {
+    expect(localKeystore({ KEEPER_LOCAL_KEYSTORE_MAINNET: path, KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE: passwordFile }, dev)).toEqual({ path, passwordFile });
+    expect(localKeystore({}, dev)).toBeUndefined();
+    expect(() => localKeystore({ KEEPER_LOCAL_KEYSTORE_MAINNET: path }, dev)).toThrow(/PASSWORD_FILE/);
   });
 
   it("is refused on production and test networks", () => {
     for (const chain of [CHAINS.mainnet, CHAINS.base, CHAINS.sepolia, CHAINS.baseSepolia]) {
-      expect(() => localKeystore({ [`KEEPER_LOCAL_KEYSTORE_${chain.envSuffix}`]: path, KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE: passwordFile }, chain)).toThrow(/only on the local network set/);
+      expect(() => localKeystore({ [`KEEPER_LOCAL_KEYSTORE_${chain.envSuffix}`]: path, KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE: passwordFile }, chain)).toThrow(/only on a development node/);
     }
   });
 
@@ -71,7 +73,9 @@ describe("local rehearsal keystore", () => {
   it("refuses a wrong password or a changed file", async () => {
     await expect(decryptKeystore(encrypt(key, password), "wrong")).rejects.toThrow(/MAC mismatch/);
     const changed = JSON.parse(encrypt(key, password));
-    changed.crypto.ciphertext = `${changed.crypto.ciphertext.slice(0, -2)}00`;
+    // Change the last byte to a value it does not already have (setting it to 00 changes nothing 1 time in 256).
+    const last = changed.crypto.ciphertext.slice(-2);
+    changed.crypto.ciphertext = `${changed.crypto.ciphertext.slice(0, -2)}${last === "00" ? "01" : "00"}`;
     await expect(decryptKeystore(JSON.stringify(changed), password)).rejects.toThrow(/MAC mismatch/);
   });
 });

@@ -13,9 +13,9 @@ import {
   ASSET_TABS,
   CHAIN_OPTIONS,
   EMPTY_MARKET_FILTERS,
-  HUB_OPTIONS,
   activeFilterCount,
   facetCounts,
+  hubFilterOptions,
   type AssetOption,
   type AssetTabId,
   type FacetId,
@@ -515,6 +515,7 @@ export function MarketFiltersBar({
   const set = (facet: FacetId) => (update: (current: readonly string[]) => string[]) =>
     onChange((current) => ({ ...current, [facet]: update(current[facet]) }))
 
+  const hubOptions = useMemo(() => hubFilterOptions(items), [items])
   const counts = useMemo(
     () => ({
       chains: facetCounts(items, value, "chains"),
@@ -574,7 +575,7 @@ export function MarketFiltersBar({
         facet="hubs"
         heading={t("Hubs")}
         searchPlaceholder={t("Search hubs")}
-        options={HUB_OPTIONS}
+        options={hubOptions}
         selected={value.hubs}
         counts={counts.hubs}
         onChange={set("hubs")}

@@ -63,6 +63,11 @@ export type BorrowMarketRecord = {
   }
   /** List/Explore overlay from Convex `premiumBps` when snapshots carry it. */
   listPremiumBps?: number
+  /** The Hub the market's Spoke borrows from (address), and its label: the Hubs filter lists these. */
+  hubId?: string
+  hubLabel?: string
+  /** The Spoke's name from its listing entry, when it has one: the Borrow Markets filter lists it. */
+  spokeName?: string
   /** Reserve factor as a percentage (0–100). Overlaid from Convex when the snapshot
    *  carries it; detail QuickStats prefer this over the isStablePool heuristic. */
   reserveFactorPct?: number

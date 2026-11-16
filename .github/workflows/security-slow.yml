@@ -79,6 +79,10 @@ env:
   # Wall clock per hevm run (one entry point of a harness, or one src/ contract): past it the entry point fails as
   # timed out (a src/ contract is reported, as when explored partially). See script/security-slow.sh hevm_symbolic.
   HEVM_ENTRY_TIMEOUT: "5400"
+  # Entry points whose timeout is reported, not failed. CollateralizationProperties.pledge (three uint64 inputs) needs
+  # about 3 h 45 min and has never given a proof (its counterexamples were all spurious); Certora, the Collateralization
+  # invariant tests and echidna/medusa carry the pledge rules.
+  HEVM_TIMEOUT_REPORTED: "CollateralizationProperties.pledge"
   # hevm targets per run go to this many jobs (script/hevm-batches.py, by the times in script/hevm-timings.json).
   HEVM_BATCHES: "6"
   HALMOS_LOOP: "16"
@@ -119,7 +123,10 @@ jobs:
           path: contracts/dependencies
           key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
 
-      - run: forge soldeer install
+      - name: Install dependencies and the pinned solc versions
+        run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
 
       - name: Build src/, test/ and script/ with build info
         # The strict pass and the build-info build serve Echidna, Medusa, hevm and Mythril; a run of the Halmos jobs
@@ -285,7 +292,7 @@ jobs:
           BINARIES: echidna
         run: |
           forge soldeer install
-          script/install-security-tools.sh --binaries --python
+          script/install-security-tools.sh --solc --binaries --python
 
       - name: Reuse the build job's output
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -365,7 +372,7 @@ jobs:
           BINARIES: medusa
         run: |
           forge soldeer install
-          script/install-security-tools.sh --binaries --python
+          script/install-security-tools.sh --solc --binaries --python
 
       - name: Reuse the build job's output
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -436,7 +443,7 @@ jobs:
         # Bitwuzla: the pinned solver of the checks annotated `--solver bitwuzla`; Halmos finds it on PATH (tools/bin).
         run: |
           forge soldeer install
-          BINARIES=bitwuzla script/install-security-tools.sh --python --binaries
+          BINARIES=bitwuzla script/install-security-tools.sh --solc --python --binaries
 
       - name: Reuse the build job's output
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -516,7 +523,7 @@ jobs:
           BINARIES: hevm
         run: |
           forge soldeer install
-          script/install-security-tools.sh --binaries --python
+          script/install-security-tools.sh --solc --binaries --python
 
       - name: Reuse the build job's output
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -581,7 +588,7 @@ jobs:
       - name: Install dependencies and pinned tools
         run: |
           forge soldeer install
-          script/install-security-tools.sh --python
+          script/install-security-tools.sh --solc --python
 
       - name: Reuse the build job's output
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -653,7 +660,7 @@ jobs:
           BINARIES: echidna
         run: |
           forge soldeer install
-          script/install-security-tools.sh --binaries --python
+          script/install-security-tools.sh --solc --binaries --python
 
       - name: Reuse the build job's output
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -739,7 +746,7 @@ jobs:
           BINARIES: echidna
         run: |
           forge soldeer install
-          script/install-security-tools.sh --binaries --python
+          script/install-security-tools.sh --solc --binaries --python
 
       - name: Reuse the build job's output
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -825,7 +832,7 @@ jobs:
           BINARIES: medusa
         run: |
           forge soldeer install
-          script/install-security-tools.sh --binaries --python
+          script/install-security-tools.sh --solc --binaries --python
 
       - name: Reuse the build job's output
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0

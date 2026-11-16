@@ -3,20 +3,40 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AaveGuardianRole} from "./lib/AaveGuardianRole.sol";
 import {
     AAssetListing,
     ADynamicReserveConfig,
+    AFlags,
     AInterestRateData,
     ALiquidationConfigUpdate,
     AReserveConfig,
     AReserveListing,
+    ARoleMembership,
+    ARoleUpdate,
     ASpokeAssetConfig,
     ASpokeConfig,
     ASpokeToAssetsAddition,
+    ATargetFunctionRoleUpdate,
     AavePayloads,
     IAaveHubLimits,
     IAaveListedViews
 } from "./lib/AavePayloads.sol";
+
+/// @notice The Aave AccessManager's views the Guardian grant reads, so a rerun adds only what is missing.
+interface IGuardianAccessViews {
+    function isRoleLabeled(
+        uint64 roleId
+    ) external view returns (bool);
+    function hasRole(
+        uint64 roleId,
+        address account
+    ) external view returns (bool isMember, uint32 executionDelay);
+    function getTargetFunctionRole(
+        address target,
+        bytes4 selector
+    ) external view returns (uint64);
+}
 
 interface IFlashAcl {
     function addFlashBorrower(
@@ -137,6 +157,51 @@ contract AaveDeploymentPayload is AavePayloads {
             _hubAssets(b, h);
             _hubSpokes(b, h);
         }
+        _guardianRole(b);
+    }
+
+    /// @notice REQ-ACCESS-070: the Aave Protocol Guardian's one-way `freezeReserve` and `pauseReserve` on the
+    /// chain's SpokeConfigurator, in a role of their own that the Guardian and the Domain Admin (the executor) hold.
+    function _guardianRole(
+        Builder memory b
+    ) private view {
+        address am = _addr(cfg, ".aave.accessManager");
+        address configurator = _addr(cfg, ".aave.spokeConfigurator");
+        address guardian = _addr(cfg, ".governance.aaveProtocolGuardian");
+        uint64 role = uint64(vm.parseJsonUint(cfg, ".aavePayload.guardianRole"));
+        // Outside Aave V4's role ranges (0-499, aave-v4 Roles.sol) and apart from Avana's loss-layer roles.
+        require(
+            role >= 500 && role != vm.parseJsonUint(cfg, ".aavePayload.lossLayerRoles.coverageRole")
+                && role != vm.parseJsonUint(cfg, ".aavePayload.lossLayerRoles.reserveAdminRole"),
+            "aavePayload.guardianRole: outside 0-499 and not a loss-layer role"
+        );
+        IGuardianAccessViews v = IGuardianAccessViews(am);
+        if (!v.isRoleLabeled(role)) {
+            _roleUpdate(
+                b,
+                ARoleUpdate({
+                    authority: am,
+                    roleId: role,
+                    admin: AFlags.KEEP_CURRENT_UINT64,
+                    guardian: AFlags.KEEP_CURRENT_UINT64,
+                    grantDelay: AFlags.KEEP_CURRENT_UINT32,
+                    label: AaveGuardianRole.LABEL,
+                    labelUpdate: false
+                })
+            );
+        }
+        bytes4[] memory sel = AaveGuardianRole.selectors();
+        if (
+            v.getTargetFunctionRole(configurator, sel[0]) != role
+                || v.getTargetFunctionRole(configurator, sel[1]) != role
+        ) {
+            _targetFunctionRole(b, ATargetFunctionRoleUpdate(am, configurator, sel, role));
+        }
+        address[2] memory holders = [guardian, executor];
+        for (uint256 i = 0; i < holders.length; ++i) {
+            (bool member,) = v.hasRole(role, holders[i]);
+            if (!member) _roleMembership(b, ARoleMembership(am, role, holders[i], true, 0));
+        }
     }
 
     /// @notice The debt assets on one Hub: the asset listing, its rate curve, the treasury as fee receiver.
@@ -154,11 +219,42 @@ contract AaveDeploymentPayload is AavePayloads {
             l.hub = _hub(label);
             l.underlying = token;
             l.feeReceiver = _addr(cfg, ".aave.treasurySpoke");
-            l.liquidityFee = 0;
+            l.liquidityFee = _liquidityFee(i, label);
             l.irStrategy = _addr(cfg, string.concat(".aave.irStrategies.", label));
-            l.irData = AInterestRateData(9000, 0, 400, 6000);
+            l.irData = _rateModel(i, label);
             _assetListing(b, l);
         }
+    }
+
+    /// @notice The asset's liquidity fee (its reserve factor, bps) on Hub `label`:
+    /// `.aavePayload.debtAssets[i].liquidityFeeByHub.<label>`, else its `.liquidityFeeBps`, else 0. Applied when the
+    /// asset is listed on the Hub.
+    function _liquidityFee(
+        uint256 i,
+        string memory label
+    ) private view returns (uint256) {
+        string memory k = string.concat(_ak(i), ".liquidityFeeByHub.", label);
+        if (vm.keyExistsJson(cfg, k)) return vm.parseJsonUint(cfg, k);
+        k = string.concat(_ak(i), ".liquidityFeeBps");
+        return vm.keyExistsJson(cfg, k) ? vm.parseJsonUint(cfg, k) : 0;
+    }
+
+    /// @notice The asset's rate curve on Hub `label`, in bps: `.aavePayload.debtAssets[i].rateModelByHub.<label>`, else
+    /// its `.rateModel`, else 90 % optimal usage, 0 base, 4 % and 60 % growth. Applied when the asset is listed on the
+    /// Hub; an asset listed earlier keeps its curve (a change is an 11-changes rate change).
+    function _rateModel(
+        uint256 i,
+        string memory label
+    ) private view returns (AInterestRateData memory) {
+        string memory k = string.concat(_ak(i), ".rateModelByHub.", label);
+        if (!vm.keyExistsJson(cfg, k)) k = string.concat(_ak(i), ".rateModel");
+        if (!vm.keyExistsJson(cfg, k)) return AInterestRateData(9000, 0, 400, 6000);
+        return AInterestRateData(
+            uint16(vm.parseJsonUint(cfg, string.concat(k, ".optimalUsageBps"))),
+            uint32(vm.parseJsonUint(cfg, string.concat(k, ".baseDrawnRateBps"))),
+            uint32(vm.parseJsonUint(cfg, string.concat(k, ".rateGrowthBeforeOptimalBps"))),
+            uint32(vm.parseJsonUint(cfg, string.concat(k, ".rateGrowthAfterOptimalBps")))
+        );
     }
 
     /// @notice The Lend Spoke and the CDP Spokes of one Hub on every debt asset, their reserves and the CDP liquidation

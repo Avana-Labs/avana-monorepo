@@ -66,8 +66,13 @@ export type BorrowPoolRow = {
   tvlUsd: number
   change24hPct?: number
   spoke: BorrowSpokeId
+  /** The Hub the row's Spoke borrows from (address) and its label, for the Hubs filter. */
+  hubId?: string
+  hubLabel?: string
   /** Display label of the row's Spoke and of the DEX its LP positions come from. */
   spokeLabel: string
+  /** The Spoke's listing name, when it has one (the Borrow Markets filter's option label). */
+  spokeName?: string
   dexId: BorrowDexId
   dexLabel: string
   /** Chain label of the market ("Ethereum", "Base", "Local"). */

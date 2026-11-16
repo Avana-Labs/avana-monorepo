@@ -55,6 +55,35 @@ export const payoutEscrowAbi = [
   },
   {
     "type": "function",
+    "name": "claim",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "recipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "paid",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "claimable",
     "inputs": [
       {
@@ -174,6 +203,11 @@ export const payoutEscrowAbi = [
       }
     ],
     "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AmountExceedsCredit",
+    "inputs": []
   },
   {
     "type": "error",

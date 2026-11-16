@@ -16,6 +16,9 @@
 # release of seven markets whose listing batch is split by gas, recorded exotic:<step>), the rerun of every step with nothing new (06, after day2 or
 # exotic), hostile (07, on the latest config), manifest, services and scenarios. compose (not in the default list; it
 # needs Docker) runs the services' container images against the run's node: E2E_STEPS="deploy manifest compose".
+# replay (not in the default list) indexes the run from the manifest on, replays the index into a local Convex
+# deployment after the last step and checks it against the chain (services/REPLAY.md):
+# E2E_STEPS="deploy day2 exotic manifest replay drills scenarios".
 # Needs: anvil, forge, cast, node >= 22.12 with the workspace installed (npm ci at the repo root), and the builds
 # `make build build-aave build-external` (the default and aave profiles, Uniswap v3, Slipstream, Aerodrome, Aave V3 and
 # the Chainlink OCR2 aggregator and proxy).
@@ -85,6 +88,7 @@ stop_anvil() {
   wait "$ANVIL_PID" 2>/dev/null
 }
 cleanup() {
+  [[ " $STEPS " == *" replay "* ]] && script/e2e/services-replay.sh stop >/dev/null 2>&1
   [ -n "$ANVIL_PID" ] && stop_anvil
   [ -n "${SERVICE_PIDS:-}" ] && kill $SERVICE_PIDS 2>/dev/null
   true
@@ -526,6 +530,25 @@ if [[ " $STEPS " == *" services "* ]]; then
   fi
 fi
 
+# replay (opt-in; services/REPLAY.md): the indexer starts here on the manifest and follows the chain through the
+# drills and the scenarios; after them (below) it is replayed from its sync store into a local Convex deployment,
+# which must match the chain (script/e2e/services-replay.sh, replay-check.ts).
+REPLAY_LIVE=""
+if [[ " $STEPS " == *" replay "* ]]; then
+  if [[ " $STEPS " != *" deploy "* ]]; then
+    record replay not-run "the indexer reads past blocks, which a node reloaded from anvil-state.json does not hold: run it with the deploy step"
+  elif [ -f "$OUT/manifest.json" ]; then
+    if script/e2e/services-replay.sh start "$OUT/manifest.json" > "$LOG/replay-start.log" 2>&1; then
+      REPLAY_LIVE=1
+      record replay:start pass "$(grep -E '^indexer' "$LOG/replay-start.log" | tr '\n' ' ')"
+    else
+      record replay:start fail "see $LOG/replay-start.log: $(tail -2 "$LOG/replay-start.log" | tr '\n' ' ')"
+    fi
+  else
+    record replay not-run "no manifest"
+  fi
+fi
+
 # Rehearsals 09 and 10 (script/e2e/drills.ts): each backward or emergency drill and each rate change runs its forward
 # change through `11-changes <file>` (script/e2e/drills/), checks on chain that it took effect, runs the backward
 # change and checks the action works again; each is recorded as drill:<name>. Then teardown repays and withdraws the
@@ -533,6 +556,9 @@ fi
 # (between setup and teardown). They run after the services step, whose indexer reads the deployment's early blocks,
 # which anvil no longer serves once the drills have added a few thousand more.
 DRILL_LIST="${E2E_DRILLS:-caps aave-caps-zero market-breaker debt-breaker hub-freeze hub-pause pause-all freeze-address aave-freeze oracle-standby keeper-kill-switch deficit-coverage remove-debt-reserve offboard-close cancel-registration retire-spoke rate-aip rate-role}"
+# These drills put the chain back with evm_snapshot and evm_revert. The replay step's live indexer cannot follow anvil
+# back: it is still reading blocks the revert removed, and fails on them. With the replay step they are not run.
+REWINDING_DRILLS="offboard-close cancel-registration retire-spoke"
 drill() { # name
   local name="drill:$1" log="$LOG/drill-$1.log" rc
   skipped "$name" && return 0
@@ -559,7 +585,13 @@ if [[ " $STEPS " == *" drills "* ]]; then
     done
     [ -z "$RESUME" ] && rm -rf "$OUT/drills"
     drill setup
-    for d in $DRILL_LIST; do drill "$d"; done
+    for d in $DRILL_LIST; do
+      if [ -n "$REPLAY_LIVE" ] && [[ " $REWINDING_DRILLS " == *" $d "* ]]; then
+        record "drill:$d" not-run "rewinds the chain (evm_revert), which the replay step's live indexer cannot follow: run it without the replay step"
+      else
+        drill "$d"
+      fi
+    done
     drill teardown
     if (cd "$REPO/packages/protocol" && node src/manifest/cli.ts verify --manifest "$OUT/manifest.json" --rpc-env RPC_ANVIL) > "$LOG/drills-verify.log" 2>&1; then
       record drills:manifest-verify pass "after the drills: $(tail -1 "$LOG/drills-verify.log")"
@@ -581,6 +613,15 @@ if [[ " $STEPS " == *" scenarios "* ]]; then
   else
     record scenarios not-run "no manifest"
   fi
+fi
+
+if [ -n "$REPLAY_LIVE" ]; then
+  script/e2e/services-replay.sh finish "$OUT/manifest.json" > "$LOG/replay.log" 2>&1
+  case $? in
+    0) record replay pass "$(grep -E '^replay: [0-9]|^indexer \(replay\)' "$LOG/replay.log" | tr '\n' ' ')" ;;
+    3) record replay not-run "$(tail -1 "$LOG/replay.log")" ;;
+    *) record replay fail "see $LOG/replay.log: $(grep -E 'FAIL|not ready|did not' "$LOG/replay.log" | head -3 | cut -c1-300 | tr '\n' ' ')" ;;
+  esac
 fi
 
 cat "$STATUS"

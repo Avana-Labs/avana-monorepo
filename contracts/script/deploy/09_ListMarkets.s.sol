@@ -540,7 +540,8 @@ contract ListMarkets is ListingBase {
             mstore(starts, newMarkets)
         }
         if (op.targets.length != 0) op.salt = _listingMetadataHash(first);
-        if (op.targets.length != 0) vm.writeJson(json, _outputPath("listing-markets"));
+        // A listing with calls but no market (debt assets only) has no market entry to record.
+        if (op.targets.length != 0 && bytes(json).length != 0) vm.writeJson(json, _outputPath("listing-markets"));
     }
 
     // ─── listing batch gas ───
@@ -1149,9 +1150,7 @@ contract ListMarkets is ListingBase {
         string memory key =
             kind == 1 && vm.keyExistsJson(cfg, backupKey) ? backupKey : string.concat(rk, ".depthThreshold");
         if (!vm.keyExistsJson(cfg, key)) {
-            require(
-                keccak256(bytes(_network())) == keccak256("anvil"), string.concat("route without depthThreshold: ", rk)
-            );
+            require(_isLocalChain(block.chainid), string.concat("route without depthThreshold: ", rk));
             return;
         }
         uint256 value = _uint(key) * 10 ** IDecimals(asset).decimals();

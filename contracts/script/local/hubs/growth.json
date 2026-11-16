@@ -1,0 +1,66 @@
+{
+  "hub": {
+    "label": "growth",
+    "tier": 3,
+    "name": "Growth Hub",
+    "description": "A volatile-tier Hub for LINK liquidity: lenders supply USDC and GHO, borrowers pledge Uniswap v3 and Slipstream positions."
+  },
+  "lendSpoke": "lendGrowth",
+  "spokes": [
+    {
+      "label": "uniV3Growth",
+      "integration": "uniswap-v3"
+    },
+    {
+      "label": "slipGrowth",
+      "integration": "slipstream"
+    }
+  ],
+  "lendAssets": [
+    {
+      "symbol": "USDC",
+      "category": "stable"
+    },
+    {
+      "symbol": "GHO",
+      "category": "stable"
+    }
+  ],
+  "borrowable": {
+    "uniV3Growth": [
+      "GHO",
+      "USDC"
+    ],
+    "slipGrowth": [
+      "USDC"
+    ]
+  },
+  "collateral": [
+    {
+      "symbol": "USDC"
+    },
+    {
+      "symbol": "USDT"
+    },
+    {
+      "symbol": "WETH"
+    },
+    {
+      "symbol": "LINK"
+    }
+  ],
+  "markets": [
+    {
+      "pool": "LINK-USDC-3000",
+      "spoke": "uniV3Growth"
+    },
+    {
+      "pool": "USDC-USDT-500",
+      "spoke": "uniV3Growth"
+    },
+    {
+      "pool": "LINK-WETH-cl200-g2",
+      "spoke": "slipGrowth"
+    }
+  ]
+}
