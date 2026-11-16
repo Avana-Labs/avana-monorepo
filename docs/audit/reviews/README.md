@@ -23,7 +23,7 @@ Every contract gets an independent adversarial review as soon as it compiles. Th
 | Uniswap v4 LPVault and LPOracle module (UniswapV4Integration, UniswapV4State, LPOracleV4) | [uniswap-v4](uniswap-v4/) | 2026-11-15 | 0 | 0 | 2 (V4-01, V4-02) | 2 (V4-03, V4-04) | V4-05, V4-06; spec S1–S10 | fixed or decided, S8 open |
 | DebtOracle | [DebtOracle](DebtOracle/) | 2026-11-11 | 0 | 0 | 0 | 0 | DO-01, DO-02, DO-03; spec S1–S7 | fixed (re-checked on main 2026-11-14) |
 | Flash liquidation helper (FlashLiquidator, OperatorFlashLiquidator) | [FlashLiquidator](FlashLiquidator/) | 2026-11-11 | 0 | 0 | 2 (FL-01, FL-02) | 1 (FL-03) | spec S1–S5 | fixed (re-checked on main 2026-11-14) |
-| Whole protocol, fresh adversarial audit (main `a024490`); PoCs on branch `claude/fresh-audit-pocs` | [fresh-audit-2026-11-15](fresh-audit-2026-11-15/REPORT.md) | 2026-11-15 | 0 | 0 | 1 (M-01) | 4 (L-01–L-04) | I-01, I-02 | open |
+| Whole protocol, fresh adversarial audit (main `a024490`); PoCs on branch `claude/fresh-audit-pocs` | [fresh-audit-2026-11-15](fresh-audit-2026-11-15/REPORT.md) | 2026-11-15 | 0 | 0 | 1 (M-01) | 5 (L-01–L-04, I-01) | I-02 | decided (M-01 in #71; the rest in #80) |
 
 "Decided" means the decision is recorded; this table does not yet record the code, spec and test changes as re-checked by the contract gate (tests, Halmos, fast tier, traceability).
 

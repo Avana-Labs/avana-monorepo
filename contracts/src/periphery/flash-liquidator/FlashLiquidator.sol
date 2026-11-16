@@ -71,6 +71,13 @@ contract FlashLiquidator is FlashLiquidatorBase {
         if (recipient == address(0)) revert InvalidFeeRecipient();
     }
 
+    /// @notice A standing credit is cleared to `feeRecipient`, as `claimEscrowed` would pay it; none while it is 0.
+    /// @return recipient `ParameterStore.feeRecipient()`.
+    /// @custom:spec REQ-HELPER-010
+    function _standingRecipient() internal view override returns (address recipient) {
+        recipient = IParameterStoreViews(PARAMETER_STORE).feeRecipient();
+    }
+
     /// @notice The request's `maxTopUp` alone bounds the top-up.
     /// @param maxTopUp The request's bound.
     /// @return bound `maxTopUp`.

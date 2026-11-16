@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILens} from "../../../src/lens/lens/ILens.sol";
 import {LiquidationPreview} from "../../../src/lens/lens/types/LiquidationPreview.sol";
@@ -23,6 +24,7 @@ import {PauseState} from "../../../src/types/PauseState.sol";
 import {PositionRef} from "../../../src/types/PositionRef.sol";
 import {ClTestToken} from "../../utils/fixtures/ClPoolFixture.sol";
 import {MockAaveV3Pool} from "../../utils/mocks/AaveV3PoolMocks.sol";
+import {DeficitFunding} from "./DeficitFunding.sol";
 import {Held, IntegrationBalanceChecks} from "./IntegrationBalanceChecks.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
@@ -122,6 +124,9 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
     /// @notice Liquidations whose result (direct) or `FlashLiquidated` event (helper) does not report the balance
     /// changes.
     uint256 public reportBreaks;
+    /// @notice Direct liquidations that booked a deficit (REQ-SWAP-027's branch). The USDT floor bounds the steering
+    /// above it here; the branch is reached in LPVaultSwap.invariant and pinned by IntegrationBalanceChecks.unit.
+    uint256 public deficitLiquidations;
     uint256 public livenessFailures;
     uint256 public exitFailures;
     uint256 public exitBlockedByStop;
@@ -375,6 +380,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         uint256 loans = env.v3Pool.flashLoanCalls();
         uint256 supply = ClTestToken(env.vt).totalSupply();
         Held memory before = _held(asset, caller, wallet);
+        vm.recordLogs();
         vm.prank(caller);
         try env.lvs.liquidate(p.params) returns (LiquidationResult memory r) {
             ++liquidations;
@@ -425,9 +431,11 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         Held memory a,
         LiquidationResult memory r
     ) internal {
-        (bool conserved, bool reported) = IntegrationBalanceChecks.direct(b, a, r);
+        (bool conserved, bool reported) =
+            IntegrationBalanceChecks.direct(b, a, r, DeficitFunding.funded(vm.getRecordedLogs(), address(env.lvs)));
         if (!conserved) ++conservationBreaks;
         if (!reported) ++reportBreaks;
+        if (a.deficit > b.deficit) ++deficitLiquidations;
     }
 
     /// @dev TEST-104 on balances through the helper, with its `FlashLiquidated` report (IntegrationBalanceChecks.viaHelper).
@@ -479,6 +487,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         b.lender = asset.balanceOf(env.v3Pool.getReserveAToken(address(asset)));
         b.helper = asset.balanceOf(env.helper);
         b.helperEscrowed = env.escrow.claimable(address(asset), env.helper);
+        b.deficit = IAaveV4Hub(env.hub).getSpokeDeficitRay(IAaveV4Hub(env.hub).getAssetId(address(asset)), env.spoke);
         address[] memory sources = asset == env.gho ? env.ghoSources : env.usdcSources;
         for (uint256 i = 0; i < sources.length; ++i) {
             b.sources += asset.balanceOf(sources[i]);

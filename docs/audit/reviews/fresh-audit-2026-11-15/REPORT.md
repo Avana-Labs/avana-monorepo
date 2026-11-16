@@ -6,20 +6,20 @@ Method: a manual review of every state-changing entry point, traced into the rea
 
 ## 1. Result
 
-**Security score: 88 / 100.**
+**Security score: 87 / 100.** (88 when first published; lowered by one point when I-01 was re-measured as a Low, see below.)
 
-No Critical or High finding. No path was found by which an attacker can take user, LP or protocol funds. The score is lowered by one Medium finding, which blocks the rescue mechanism in exactly the stress conditions it is meant for, and by four Low findings: a small leak from deficit coverage, a bypass of a speed control, a fee-bound gap, and a public-helper residue leak.
+No Critical or High finding. No path was found by which an attacker can take user, LP or protocol funds. The score is lowered by one Medium finding, which blocks the rescue mechanism in exactly the stress conditions it is meant for, and by five Low findings: a small leak from deficit coverage (an accepted design decision, since amended), a bypass of a speed control, a fee-bound gap, a public-helper residue leak, and an oracle gas cap that a full observation buffer can exceed.
 
 The core money paths held up under every attack class tried: custody, units-to-vault-token backing, seizure accounting, payout identity and oracle valuation. Each is enforced by balance-delta checks and exact postconditions rather than by assumptions.
 
 | ID | Severity | Contract · function | Title | PoC (branch `claude/fresh-audit-pocs`) |
 |---|---|---|---|---|
 | M-01 | Medium | `RiskModulePledgeLogic._caps` | A rescue top-up made entirely from the slice is refused once a token (or depositor) counter is at or above its cap | `M01_RescueTopUpTokenCap.audit.t.sol` (3 pass on main, 2 pass on PR #71) |
-| L-01 | Low | `LPVaultSwapLiquidationLogic._waterfall` | Borrower surplus is paid out of a liquidation that books a deficit for the First-Loss Reserve to cover | n/a (Low) |
+| L-01 | Low (design decision Q-337, amended) | `LPVaultSwapLiquidationLogic._waterfall` | Borrower surplus is paid out of a liquidation that books a deficit for the First-Loss Reserve to cover | n/a (Low) |
 | L-02 | Low | `RiskModule.creditWithdraw` via `CollateralizationRelease` | Pledge-speed window is credited for rescue charges it never charged | n/a |
 | L-03 | Low | `ParameterStoreAdminRiskLogic.setAvanaFeeShareBps` | Raising the fee share does not re-check the liquidation fee bound on live markets | n/a |
 | L-04 | Low | `FlashLiquidatorBase._forwardTokens` | A standing escrow credit captures later public callers' residues | n/a |
-| I-01 | Info | `LPOracleCLPool._meanTick` (`POOL_CALL_GAS`) | `observe` at maximum cardinality uses 90–93k of the 100k cap (measured) | `I01_ObserveGasAtMaxCardinality.audit.t.sol` |
+| I-01 | Low (first reported as Info) | `LPOracleCLPool._meanTick` (`POOL_CALL_GAS`) | `observe` at maximum cardinality can exceed the 100k cap: up to 103,120 gas measured on a Slipstream clone | `I01_ObserveGasAtMaxCardinality.audit.t.sol` |
 | I-02 | Info | docs | Spec and lifecycle text that contradicts the code | n/a |
 
 ## 2. Findings
@@ -67,7 +67,7 @@ The core money paths held up under every attack class tried: custody, units-to-v
 - **Fix:**
   - In `_seize`, record whether the account still had debt and no supplied shares after `liquidationCall` (a deficit was reported).
   - In that case, pay `B` to the First-Loss Reserve of the (Hub, asset) pair with `fund`, or add it to the keeper reward, and never to the borrower.
-- **Prior coverage:** none found. SPEC-LIQ-022 defines `B` without a deficit case.
+- **Prior coverage (corrected):** this report first called L-01 new, which was wrong. `Q-337` and `SPEC-LIQ-022` had accepted paying `B` to the borrower even on a deficit, as a design decision. On 2026-11-15 the decision was changed to fund the reserve: `Q-337`, `SPEC-LIQ-022`, `REQ-SWAP-026` and `REQ-SWAP-027` are amended and the fix is in PR #80. A deficit is detected as a rise of the funding Hub's deficit for the repaid asset over the call, or, for an account with several debts, as no debt left after it. The reserve is the debt reserve's recorded `firstLossReserve`, its part is measured by LPVaultSwap's balance, and the borrower receives any part it does not take (all of `B` when no reserve is recorded, the address has no code or `fund` reverts), so the reserve cannot block a liquidation.
 
 ### L-02 (Low): the pledge-speed window is credited for rescue charges it never charged
 
@@ -102,8 +102,9 @@ The core money paths held up under every attack class tried: custody, units-to-v
   3. Anyone can then call `claimEscrowed(T)`, which sends the whole credit to the claim recipient (`feeRecipient` on the public helper).
 - **Impact in funds:** later callers of the public helper lose their dust and route residues in `T`. It is hard to cause on purpose.
 - **Fix:** record the credit at the start of the call and claim only the increase, or keep credits per caller.
+- **Fixed in PR #80, with an accepted remainder:** each call first claims any standing credit to `claimEscrowed`'s recipient (after its context opens), so a later caller's residue is never merged into an earlier one and no caller receives another's. Claiming only the increase needs an amount-limited `PayoutEscrow.claim`, a recorded follow-up. Until then one case remains: a token that blocks both the helper and `feeRecipient`. There the standing claim fails, the caller's new credit joins it, and the whole credit goes only to `feeRecipient` through `claimEscrowed`, never to another caller (REQ-HELPER-010; pinned by `test_TEST_174_unclearableStandingCreditNeverGoesToTheCaller`).
 
-### I-01 (Info): `observe` at maximum cardinality fits the 100k cap with 7–10% margin
+### I-01 (Low, first reported as Info): `observe` at maximum cardinality can exceed the 100k cap
 
 - **Where:** `LPOracleStorage.sol:83` (`POOL_CALL_GAS = 100_000`), used by `LPOracleCLPool._meanTick`.
 - **Concern raised:** anyone can raise a pool's observation buffer to 65,535 slots, and the buffer never shrinks. If `observe` then needed more than 100k gas, the consistency check would read as unavailable for good. The market would stay Drifting, blocking borrowing, withdraw-with-debt and every ParameterStore setter for that market.
@@ -111,9 +112,10 @@ The core money paths held up under every attack class tried: custody, units-to-v
   - Setup: a full 65,535-slot buffer of initialized observations, storage cooled, `observe([1800, 0])`.
   - Uniswap v3 pool: 90,173 gas.
   - Slipstream v1 and main pools (real EIP-1167 clones from the pinned factories, implementation cooled): 93,023 gas.
-  - These totals include the outer call's cold-account cost. All succeed under the 100k cap.
-- **Result:** not exploitable today. The margin is small enough that a future rise in cold-access costs, or a pool fork with a heavier oracle, would break it.
-- **Recommendation:** give `observe` its own constant of about 150k, with `POKE_MIN_GAS_FLOOR` adjusted to match, and keep this measurement as a regression test.
+  - These totals include the outer call's cold-account cost and are for `secondsAgo = 1800` at one ring position.
+  - **Re-measured over the whole ring** (corrected): the binary search depth depends on where the target falls, so `secondsAgo` was swept across all 65,535 slots, each read cold. Worst case: 100,142 gas on the Uniswap v3 pool and 103,120 on a Slipstream main clone. Both exceed the 100k cap.
+- **Result (corrected):** the first version called this not exploitable. In fact, once a pool's buffer is grown to 65,535 slots, some reads fail under the 100k cap as the ring rotates. Each failure reads as "consistency check unavailable", which keeps the market Drifting and blocks borrowing, withdraw-with-debt and that market's ParameterStore setters. Growing the buffer is permissionless, and once grown it never shrinks. No funds are at risk, so this is a Low.
+- **Fix:** PR #80 gives `observe` its own `OBSERVE_CALL_GAS = 160,000`. The measured worst case is then about 64% of the allowance, and the existing `POKE_MIN_GAS_FLOOR` still covers it. The regression test sweeps the ring on Uniswap v3 and on both Slipstream builds, and fails at 100k and 150k.
 
 ### I-02 (Info): documentation that contradicts the code
 
@@ -163,7 +165,7 @@ All borrower and liquidation entry points run under the transient Lock (`Lock.so
 | T10 | Anyone not frozen → `LPVaultSwap.liquidate` | Spoke liquidation; seized units burned; records debited oldest-largest first; liquidity unwound; legs swapped; payouts | HF < 1 (grace HF); fresh, agreeing prices; `Kf` measured; seizure snapshot (`beginSeizure`/`_checkDrops`: shares and supply drops exactly equal units); leg minimums from oracle prices; recovery floor; escrow fallback for blocklisted payees. **L-01**: surplus on deficit. |
 | T11 | Any LPVaultSwap or Adapter path → `_reconcile` / `settlePending` | Unsettled shortfall moved to pending | Only reachable when supplied < credited (a seizure not settled). Booked amounts are capped by the removed amounts. |
 | T12 | Adapter/LPVaultSwap → `markIndebted` / `markDebtFree`; anyone → `refreshDebtMark` | `indebtedCount` | A stuck mark blocks only `closeMarket`; anyone can clear it. A starved Spoke read re-raises `InsufficientGas`. |
-| T13 | Anyone → `LPOracle.poke` / `DebtOracle.poke` | First observation, accepted price, checkpoint, latch | Written only from Live evaluations or round history. A poke inside the pool lock writes nothing. **I-01**: gas margin on `observe`. |
+| T13 | Anyone → `LPOracle.poke` / `DebtOracle.poke` | First observation, accepted price, checkpoint, latch | Written only from Live evaluations or round history. A poke inside the pool lock writes nothing. **I-01**: `observe` can exceed its old gas cap. |
 | T14 | Governance (Timelock, steward) → MarketRegistry listing, activation, offboarding, `closeMarket`; ParameterStore tighten/loosen/admin; pause/freeze | Market lifecycle and parameters | Role checks verified on every setter. Tighten paths only tighten. Loosen paths are spaced and stepped. **L-03**: fee-share bound. **M-01** worsened by tighten to 0 in PR #71. |
 | T15 | Coverage → `AvanaFirstLossReserve.coverDeficit`, `fund`, withdrawal queue | Reserve balances | `coverDeficit` covers only reported Hub deficits for allowed Spokes; withdrawals are timelocked and keep the reserve minimum. |
 | T16 | Keeper → `FlashLiquidator` | Flash loan, liquidate, repay, forward residues | Callback bound to the initiator; single-use context. **L-04** residue capture. |
@@ -195,7 +197,7 @@ All borrower and liquidation entry points run under the transient Lock (`Lock.so
 | Inflate the valuation by moving spot or flash-swapping | No effect; the oracle price is used, and spot only makes the position worth more at fair price. |
 | Re-enter through a pool token or callback | Lock held; pool-lock check. |
 | Front-run a proxy creation | Deploy is adapter-only; an Aave account cannot be pre-filled. |
-| Grow cardinality to DoS the oracle | Measured within budget (**I-01**). |
+| Grow cardinality to DoS the oracle | Possible under the old 100k cap: the worst read over the ring exceeds it (**I-01**, fixed in PR #80). |
 | Wash withdrawals to reset the pledge-speed window | Possible only with rescue exemptions (**L-02**). |
 | Self-sandwich legs | Bounded by `s` (known). |
 
@@ -209,7 +211,7 @@ All borrower and liquidation entry points run under the transient Lock (`Lock.so
 - **Gas starvation:**
   - Speed credits and debt-mark reads are wrapped with gas floors that re-raise `InsufficientGas` rather than record a false failure.
   - Oracle reads check the gas guard before each call.
-  - Observation-buffer growth fits the cap (**I-01**).
+  - Observation-buffer growth could exceed the old cap (**I-01**). PR #80 gives `observe` its own 160k allowance.
 
 ## 8. Improvements by priority
 
@@ -223,7 +225,7 @@ All borrower and liquidation entry points run under the transient Lock (`Lock.so
 - **L-02:** credit the pledge-speed window only with charged USD, and update REQ-RISK-095.
 - **L-03:** re-check the fee bound over live markets when the fee share rises, and reconcile REQ-PSTORE-010 with REQ-ROLE-117.
 - **L-04:** claim only this call's increase of the escrow credit in the public FlashLiquidator.
-- **I-01:** give `observe` its own gas constant (about 150k), with `POKE_MIN_GAS_FLOOR` adjusted to match.
+- **I-01:** give `observe` its own gas constant. Done in PR #80 at 160k, because the ring sweep measured more than the first estimate.
 - **I-02:** correct the overview's `repayWithCollateral` gating and the DebtOracle lifecycle text.
 
 ## 9. Where each fix and regression test lives
@@ -233,9 +235,9 @@ The proof-of-concept tests on `claude/fresh-audit-pocs` show the defects and pas
 | ID | Fix | Regression test |
 |---|---|---|
 | M-01 | PR #71 (`contracts/decisions-rest`) | Ported from `M01_RescueTopUpTokenCap.audit.t.sol` in PR #71 |
-| L-01 | Audit-fixes PR (pending) | Pending |
-| L-02 | Audit-fixes PR (pending) | Pending |
-| L-03 | Audit-fixes PR (pending) | Pending |
-| L-04 | Audit-fixes PR (pending) | Pending |
-| I-01 | Audit-fixes PR (pending) | Ported from `I01_ObserveGasAtMaxCardinality.audit.t.sol` |
-| I-02 | Audit-fixes PR (pending) | n/a (documentation) |
+| L-01 | PR #80 (`claude/audit-fixes-lows`) | `LPVaultSwap.BadDebt.integration.t.sol`: `test_TEST_216_deficitSurplusFundsTheFirstLossReserve`, `test_TEST_216_unusableReserveLeavesTheSurplusWithTheBorrower` |
+| L-02 | PR #80 | `Collateralization.SpeedCredit.unit.t.sol`: `test_TEST_018_rescueChargeIsNotCreditedBack`, `test_TEST_237_mixedRecordCreditsOnlyItsChargedShare` |
+| L-03 | PR #80 | `ParameterStore.Bounds.unit.t.sol`: `test_TEST_064_feeShareRiseKeepsTheFeeBound` |
+| L-04 | PR #80 | `FlashLiquidator.Residues.unit.t.sol`: `test_TEST_174_standingCreditClearedBeforeTheCall`, `test_TEST_174_unclearableStandingCreditNeverGoesToTheCaller` |
+| I-01 | PR #80 | `LPOracleCL.ObserveGas.gas.t.sol` (TEST-042), ported from `I01_ObserveGasAtMaxCardinality.audit.t.sol` and extended to sweep the ring |
+| I-02 | PR #80 | n/a (documentation) |

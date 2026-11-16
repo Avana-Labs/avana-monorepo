@@ -3,7 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
+import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILock} from "../../lock/lock/ILock.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
@@ -62,6 +64,11 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         uint256[] amounts;
         uint8[] routeUsed;
         Tracked t;
+        uint256 deficitBefore;
+        uint256 funded;
+        uint256 fundedShares;
+        bool otherDebt;
+        bool deficit;
     }
 
     /// @notice Fixes the implementation immutables; they must equal the implementation's.
@@ -116,7 +123,10 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         _requireSharesEqualAssets(c.m.hub, c.m.hubAssetId);
         bool inGrace = _checkCollateralPrice(c.m.lpOracle);
         _checkDebtPrice(c.d, p.debtReserveId);
-        c.hf = IAaveV4Spoke(c.m.spoke).getUserAccountData(p.proxy).healthFactor;
+        IAaveV4Spoke.UserAccountData memory account = IAaveV4Spoke(c.m.spoke).getUserAccountData(p.proxy);
+        c.hf = account.healthFactor;
+        // Debt in more than one reserve; nothing before `liquidationCall` changes it (the Lock is held).
+        c.otherDebt = account.borrowCount > 1;
         if (c.hf >= _HF_ONE) revert NotLiquidatable();
         if (inGrace && c.hf >= IParameterStore(_PARAMETER_STORE).graceHealthFactor()) revert GraceHealthFactor();
     }
@@ -137,7 +147,10 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
 
     /// @dev Bonus, fee and prices; `beginSeizure`; `liquidationCall(collateral, debt, proxy, Kf, false)` with an exact
     /// allowance reset to 0; `D` and `c` as deltas (`NothingSeized` if `c == 0`).
-    /// @custom:spec REQ-SWAP-015, REQ-SWAP-016, REQ-SWAP-017, REQ-SWAP-090, SPEC-LIQ-001, SPEC-LIQ-004
+    /// Also records whether the call booked a deficit (REQ-SWAP-027): the funding Hub's deficit of the repaid asset for
+    /// the Spoke rose over it, or an account with debt in several reserves has none left, which only a deficit clears
+    /// (a liquidation repays one reserve).
+    /// @custom:spec REQ-SWAP-015, REQ-SWAP-016, REQ-SWAP-017, REQ-SWAP-027, REQ-SWAP-090, SPEC-LIQ-001, SPEC-LIQ-004
     function _seize(
         Liq memory c,
         LiquidationParams calldata p
@@ -154,6 +167,9 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         IERC20 vt = IERC20(c.m.vaultToken);
         uint256 units0 = vt.balanceOf(address(this));
         uint256 debt0 = asset.balanceOf(address(this));
+        // Aave reports a deficit on every remaining debt when the call empties the account's last collateral while
+        // debt remains (LiquidationLogic `_evaluateDeficit`); under the Lock only this call can raise it (L-01).
+        c.deficitBefore = _spokeDeficit(c.d, address(spoke));
         asset.forceApprove(address(spoke), c.kf);
         spoke.liquidationCall(collateralReserve, p.debtReserveId, p.proxy, c.kf, false);
         asset.forceApprove(address(spoke), 0);
@@ -162,6 +178,17 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         c.units = units1 > units0 ? units1 - units0 : 0;
         c.debtRepaid = debt0 > debt1 ? debt0 - debt1 : 0;
         if (c.units == 0) revert NothingSeized();
+        c.deficit = _spokeDeficit(c.d, address(spoke)) > c.deficitBefore
+            || (c.otherDebt && spoke.getUserAccountData(p.proxy).borrowCount == 0);
+    }
+
+    /// @dev The Spoke's deficit of the debt asset on its funding Hub (ray).
+    /// @custom:spec REQ-SWAP-027
+    function _spokeDeficit(
+        DebtReserveDef memory d,
+        address spoke
+    ) private view returns (uint256) {
+        return IAaveV4Hub(d.fundingHub).getSpokeDeficitRay(d.hubAssetId, spoke);
     }
 
     /// @dev `burnSeized` and `settleSeizure` measured as deltas, then the legs and `R` over the burn, the release and
@@ -217,6 +244,35 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         });
     }
 
+    /// @dev A liquidation that booked a deficit pays its borrower surplus `B` into the First-Loss Reserve of the debt
+    /// asset's funding Hub (`c.d.firstLossReserve`, the MarketRegistry's `firstLossReserveOf(fundingHub, asset)`, which
+    /// it accepts only for a reserve whose `HUB`, `ASSET` and `ASSET_ID` match and never changes) rather than to the
+    /// defaulted borrower (REQ-SWAP-027): exact allowance, `fund(amount)`, allowance reset to 0. Records in `c.funded`
+    /// the fall of LPVaultSwap's balance over the call, at most `amount` (0 when no reserve is recorded, the address
+    /// holds no code, `fund` reverts or the reserve takes nothing), and in `c.fundedShares` the reserve shares `fund`
+    /// reports. The caller pays `amount - c.funded` to the borrower as for any liquidation and emits the event, so
+    /// nothing stays in LPVaultSwap. Only the 32-byte shares word is read from the return (via-IR, this file's release
+    /// pipeline, copies no more of a larger return) and the revert data is not decoded, so a revert inside `fund`
+    /// cannot revert the liquidation. A return shorter than 32 bytes fails decoding in this frame, outside the `catch`,
+    /// and does revert it; the recorded AvanaFirstLossReserve always returns a `uint256`.
+    /// @custom:spec REQ-SWAP-027, SPEC-LIQ-022
+    function _fundReserve(
+        Liq memory c,
+        uint256 amount
+    ) private {
+        address reserve = c.d.firstLossReserve;
+        if (reserve.code.length == 0) return;
+        IERC20 asset = IERC20(c.d.asset);
+        uint256 before = asset.balanceOf(address(this));
+        asset.forceApprove(reserve, amount);
+        try IAvanaFirstLossReserve(reserve).fund(amount) returns (uint256 shares) {
+            c.fundedShares = shares;
+        } catch {}
+        asset.forceApprove(reserve, 0);
+        uint256 balance = asset.balanceOf(address(this));
+        if (balance < before) c.funded = before - balance > amount ? amount : before - balance;
+    }
+
     /// @dev Floor, gap and shortfall pull; `keeperOut` and `minPayout`; payouts in order; the event.
     /// @custom:spec REQ-SWAP-025, REQ-SWAP-026, REQ-SWAP-027, REQ-SWAP-028, REQ-SWAP-075, REQ-SWAP-101, REQ-SWAP-112, SPEC-LIQ-008, SPEC-LIQ-009, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-LIQ-022
     function _waterfall(
@@ -246,10 +302,18 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         if (feeRecipient == address(0)) revert InvalidFeeRecipient();
         uint256[] memory residues = _residues(c.t);
         _deliver(address(asset), feeRecipient, pay.avanaFee);
-        if (pay.borrowerSurplus != 0) {
+        uint256 toWallet = pay.borrowerSurplus;
+        if (toWallet != 0 && c.deficit) {
+            _fundReserve(c, toWallet);
+            if (c.funded != 0) {
+                toWallet -= c.funded;
+                emit DeficitSurplusFunded(p.proxy, c.d.firstLossReserve, address(asset), c.funded, c.fundedShares);
+            }
+        }
+        if (toWallet != 0) {
             address wallet = IAaveAdapter(_AAVE_ADAPTER).walletOf(p.proxy);
-            bool escrowed = _deliver(address(asset), wallet, pay.borrowerSurplus);
-            emit BorrowerSurplusPaid(p.proxy, wallet, address(asset), pay.borrowerSurplus, escrowed);
+            bool escrowed = _deliver(address(asset), wallet, toWallet);
+            emit BorrowerSurplusPaid(p.proxy, wallet, address(asset), toWallet, escrowed);
         }
         if (keeperOut != 0) asset.safeTransfer(msg.sender, keeperOut);
         for (uint256 i = 0; i < c.t.count; ++i) {
