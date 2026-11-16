@@ -8,6 +8,7 @@
 //   node script/local/stack.ts up [--chains ethereum,base] [--no-activity] [--no-hubs] [--no-webapp]
 //   node script/local/stack.ts deploy [--chains ...]   the chains and their first release only, no services
 //   node script/local/stack.ts status
+//   node script/local/stack.ts secrets          store the fork RPC URLs, encrypted next to the keystores (prompted)
 //   node script/local/stack.ts check            re-check only: manifests, indexer at head, Convex against the chain
 //   node script/local/stack.ts replay           the indexer replay and replay-check.ts against the local Convex
 //   node script/local/stack.ts add-hub <hub.json> --chain ethereum|base
@@ -21,7 +22,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CHAINS, CONTRACTS, type LocalChain, PORTS, STACK, chainOf, manifestPath, outDir, rpcUrl } from "./lib/env.ts";
-import { FIRST_RELEASE, answers, blockNumber, currentConfig, fundSigners, miningMode, readStatus, runRelease, setMining, startNode, stopNode, writeBaseConfig } from "./lib/chain.ts";
+import { FIRST_RELEASE, answers, blockNumber, currentConfig, fundSigners, miningMode, placeL1FeeOracle, readStatus, runRelease, setMining, startNode, stopNode, writeBaseConfig } from "./lib/chain.ts";
 import { ensureKeys } from "./lib/keys.ts";
 import { names, record, running, start, stop } from "./lib/procs.ts";
 import {
@@ -58,6 +59,7 @@ async function upChain(c: LocalChain): Promise<void> {
   const node = await startNode(c);
   say(`${c.label} (${c.chainId}): node ${node} on ${rpcUrl(c)}`);
   await fundSigners(c);
+  await placeL1FeeOracle(c);
   const status = readStatus(c);
   const config = status.config ? currentConfig(c) : writeBaseConfig(c);
   const deployed = status.steps["first:manifest"]?.outcome === "pass";
@@ -230,6 +232,12 @@ async function main() {
       case "up":
         await up();
         break;
+      case "secrets": {
+        ensureKeys();
+        const { promptSecrets } = await import("./lib/secrets.ts");
+        await promptSecrets(say);
+        break;
+      }
       case "deploy":
         ensureKeys();
         for (const c of selected()) await upChain(c);
