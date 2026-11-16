@@ -46,10 +46,10 @@ interface IDebtOracle is IAaveV4PriceFeed, IAccessControl, IDebtOracleEvents, ID
     ) external;
 
     /// @notice Served debt price: USD price of one whole token of the asset, 8 decimals, always >= 1.
-    /// @dev Preserves: solvency; always a price. SPEC-ORC-018: the fresh quote when Live; `max(primary, alternate,
-    /// accepted)` while the routes disagree; the accepted price when Cached; `ceil(accepted * (1e4 + debtStressRiseBps) /
-    /// 1e4)` when Expired. Never capped; never below the accepted price unless Live. Never reverts except
-    /// `InsufficientGas`.
+    /// @dev Preserves: solvency; always a price. SPEC-ORC-018: the fresh quote when Live; `max(min(primary, alternate),
+    /// accepted)` while the routes disagree, the median of the three, or the accepted price when it is above both
+    /// routes; the accepted price when Cached; `ceil(accepted * (1e4 + debtStressRiseBps) / 1e4)` when Expired. Never
+    /// capped; never below the accepted price unless Live. Never reverts except `InsufficientGas`.
     /// @return answer Served price.
     /// @custom:spec REQ-ORACLE-093, SPEC-ORC-018, Q-247
     function latestAnswer() external view override returns (int256 answer);

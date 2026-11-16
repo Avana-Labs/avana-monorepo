@@ -1,0 +1,37 @@
+name: commit-messages
+
+# No AI credit in a pull request's own commits (merge commits included) or in its title and body
+# (contracts/script/check-ai-credit.sh, decision of 2026-11-16). Commits already on main are not checked. `edited`
+# reruns the check when the title or body changes.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: commit-messages-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ai-credit:
+    name: no AI credit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Commits, title and body
+        env:
+          # Through the environment, never interpolated into the script: the title and body are untrusted text.
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s\n\n%s\n' "$TITLE" "$BODY" >"$RUNNER_TEMP/pr.txt"
+          contracts/script/check-ai-credit.sh --range "$BASE..$HEAD" --text "$RUNNER_TEMP/pr.txt" "pull request title or body"

@@ -2,7 +2,7 @@
 
 Governance, New Market
 Author: @avana
-Created: 2026-11-04 · Updated: 2026-11-12
+Created: 2026-11-04 · Updated: 2026-11-15
 
 ## At a glance
 
@@ -17,7 +17,7 @@ Created: 2026-11-04 · Updated: 2026-11-12
 | Avana's revenue | No share of interest. The Avana app charges 10 bps on every app action (ceiling 25 bps without a new ARFC), and Avana's contracts take 20% of each liquidation's surplus. Both go to one timelocked fee recipient; neither changes an interest rate or the Aave DAO's revenue. |
 | Loss coverage | Two layers per Hub and debt asset: first the Avana First-Loss Reserve, funded by Avana and controlled by the DAO, then a DAO Deficit Offset funded by the Aave DAO treasury and spent only once the First-Loss Reserve is empty or deactivated by the DAO. A loss beyond both is disclosed, not shared. |
 | Governance | The Aave DAO owns and configures every Avana Hub and Spoke. Changes to Avana's own contracts go through a per-chain timelock (5 days, 12 hours for risk-reducing changes) that the Aave governance executor can propose to and cancel. |
-| Status | Specification, contract interfaces and formal models complete; interfaces compile. Contract implementations and independent audits come next. |
+| Status | Contracts implemented for Ethereum (Uniswap v3) and Base (Aerodrome Slipstream), with tests, formal checks and internal audits recorded under Verification. External audits, an audit contest and a bug bounty come next. |
 
 ## What this ARFC asks
 
@@ -78,7 +78,7 @@ The Aave DAO sets how much each CDP Spoke can draw. Each draw cap stays within t
 ### Initial scope
 
 - **Pools:** stablecoin pools that meet the listing rules, including USDC/USDT and pools containing GHO.
-- **Markets:** a market is one pool with one exact price range; a position must match it exactly. Slipstream positions must be unstaked.
+- **Markets:** a market is one pool with one exact price range; a position must match it exactly. Slipstream positions must be unstaked. Each chain lists at most 16 markets, closed ones included.
 - **Listing requirements per pool:** sufficient liquidity history, Chainlink price routes for each token, an independent second price source, and a primary and a backup swap route into each debt asset that never trade through the pool itself. Fee-on-transfer, rebasing and hook tokens are excluded.
 - **Later:** the core also supports Uniswap v2, Uniswap v4 and other AMM designs. Each needs its own integration, fork tests, gas measurements, risk review and governance approval before its first listing.
 
@@ -187,7 +187,7 @@ An account is liquidatable when its health factor falls below 1. Every liquidati
 2. **Standard liquidation.** Avana calls the CDP Spoke's `liquidationCall`; Aave sizes the repayment toward the target health factor and applies its dynamic bonus.
 3. **Unwind.** Exactly the seized liquidity is removed from the position. The borrower keeps the rest and all of its fees.
 4. **Swap.** Each token is sold into the debt asset over the market's primary or backup route, each leg with an oracle-based minimum output. Proceeds must reach the seized collateral's oracle value less at most 1% slippage. The caller can top up a small shortfall; otherwise the transaction reverts and nothing changes.
-5. **Payout.** Avana takes 20% of the surplus at oracle prices, capped by the realized surplus. Any recovery above the oracle value goes to the borrower; the rest goes to the caller.
+5. **Payout.** Avana takes 20% of the surplus at oracle prices, capped by the realized surplus. Any recovery above the oracle value goes to the borrower, except in a liquidation that leaves a deficit, where it funds the debt asset's First-Loss Reserve; the rest goes to the caller.
 
 Every liquidation is partial and settles in the debt asset, or reverts. A direct `liquidationCall` from any other address fails, because the vault token accepts seized collateral only to Avana's liquidation contract.
 
@@ -346,17 +346,83 @@ To offboard a market, a 12-hour timelock operation and an Aave reserve freeze st
 
 ## Verification
 
-These checks cover the specification and contract interfaces, not contract code. Contract code will be checked by Foundry, fuzz, fork and invariant tests and prover runs, then by independent audits of every contract.
+Avana's contracts are implemented and checked against the specification by tests, fuzzers, symbolic execution, a prover, static analysers, mutation testing and adversarial reviews. Every check has a folder under [docs/audit](../audit/README.md) with its command, configuration and recorded results, and every number below comes from the file or CI run named next to it. Tests run on a local deployment of the pinned Aave V4 release; Aave V4 is never mocked.
 
-| Check | What it covers | Result |
+### Results
+
+| Check | What it covers | Result | Source |
+|---|---|---|---|
+| Foundry unit, integration, fuzz and hostile-component tests | Happy paths, rejections, access control, bounds, formulas and rounding directions, and hostile Avana components installed through the timelock | 479 suites, 3,949 tests passed, 0 failed, 1 skipped | [CI run 43780021523](https://github.com/Avana-Labs/avana-monorepo/actions/runs/43780021523) on `main` at `5fbb1eb`, coverage job |
+| Foundry at CI depth, invariants included | The same tests with fuzzing at 10,000 runs and invariant campaigns at 10,000 × 100, in 30 shards | All 30 shards pass, 0 failed | [CI run 43780021523](https://github.com/Avana-Labs/avana-monorepo/actions/runs/43780021523) on `main` at `5fbb1eb`, `tests (ci profile)` jobs |
+| Branch coverage | Branch coverage of every file in `contracts/src`; CI fails any file below its own minimum, and no minimum is below 80% | 98.55% (2,653 of 2,692 branches) over 137 files; 0 files below their minimum | [CI run 43780021523](https://github.com/Avana-Labs/avana-monorepo/actions/runs/43780021523), `branch coverage (per-file minimums)`; minimums in `contracts/security/coverage-thresholds.json` |
+| Fork tests | Avana against the deployed Uniswap v3, Aerodrome Slipstream, Aave V3 Pool, peg-module routes and Chainlink feeds at pinned blocks | Configured per chain (Ethereum and Base) and run on each chain's fork before deployment | [fork-tests](../audit/fork-tests/README.md) |
+| Echidna and Medusa | Each invariant of a contract as a fuzzed property, with two independent fuzzers | 31 of 31 harnesses pass at 1,000,000 calls each (run 43595414156). Flash liquidation helper: Echidna 1,000,241 and 1,000,267 calls, Medusa 6 of 6 in 5,003,738 calls (run 43653574421). Two failures were wrong properties, not contract defects; both are corrected and replayed as unit tests (`SLOW-03`, `SLOW-04`) | [audit index](../audit/README.md#internal-verification), [echidna](../audit/echidna/README.md), [medusa](../audit/medusa/README.md) |
+| Halmos | Symbolic execution of each Halmos property over all inputs within its bounds | Lock 6, AvanaTimelock 7, ParameterStore 8, VaultToken 7 of 7 and AaveV3FlashSource 8 of 8 pass; the six split SettlementMath leg-slippage checks pass (run 43708786168). Checks that time out on wide arithmetic have fuzz twins that pass | [halmos](../audit/halmos/README.md) |
+| hevm | Harness assertions proved for all inputs; `src` runtime code free of assertion violations | LPPriceMath 44 of 44 and SettlementMath 18 of 18 entry points QED; ParameterStore 18 of 18 QED. The counterexamples reported for `setFeed` do not revert when replayed on the deployed harness. The two harness failures of run 43653574421 were tool and harness limits, fixed in the harnesses (`SLOW-06`, `SLOW-07`) | [hevm](../audit/hevm/README.md) |
+| Certora Prover | CVL rules and invariants over unbounded integers and all call sequences, with sanity checks | Every rule verified for Lock, VaultToken, VaultTokenFactory, PositionProxy, ProxyManager, ProxyManagerIsolation, PayoutEscrow, AvanaFirstLossReserve, FlashSource, DexPathRoute and PegModuleRoute; per-rule results for AvanaTimelock, ParameterStore, MarketRegistry, WrapperThenDexRoute and Collateralization. Methods check: 694 entries, 0 errors | `contracts/certora/RUNS.md` (2026-11-10/11), [certora](../audit/certora/README.md) |
+| Slither | Static analysis, gate at Informational | 1,258 findings, 0 blocking, 1,257 accepted with a stated reason | [CI run 43780021523](https://github.com/Avana-Labs/avana-monorepo/actions/runs/43780021523), `security (fast tier)` |
+| Aderyn | Static analysis, gate at Low | 425 findings, 0 blocking, 425 accepted with a stated reason | [CI run 43780021523](https://github.com/Avana-Labs/avana-monorepo/actions/runs/43780021523), `security (fast tier)` |
+| Semgrep | Smart-contract rule set, gate at Low | 785 findings, 0 blocking, 77 accepted at Low or above with a stated reason | [CI run 43780021523](https://github.com/Avana-Labs/avana-monorepo/actions/runs/43780021523), `security (fast tier)` |
+| Mythril | Bytecode symbolic analysis of every contract, 900 s per contract | Every finding of the recorded nightly runs is accepted with its reason in `contracts/security/mythril-triage.json` and approved; the gate passes with the triage file | [mythril](../audit/mythril/README.md) |
+| SMTChecker | Solidity's CHC model checker on the arithmetic properties | No counterexample (Lock gate, 2026-11-10) | [smtchecker](../audit/smtchecker/README.md) |
+| Necessist | Every test statement removed one at a time; a test that still passes checks less than it should | 6,108 removals classified, 0 unclassified: 3,723 equivalent or harmless, 2,092 noise, 158 real test gaps (each with the assertion that closes it), 135 to re-run | [necessist](../audit/necessist/README.md), [findings register](../audit/findings-register.md) section 2.2 |
+| Mutation testing | Faults injected into the code; a test must fail for each one | Kill rates below. Of 1,691 surviving mutants of the earlier run, 0 are untriaged: 388 real test gaps, each now with a test; 1,020 equivalent or harmless; 52 noise; 4 superseded; 227 left to the next run with corrected test sets | [mutation](../audit/mutation/README.md), [findings register](../audit/findings-register.md) section 2.2 |
+| Independent review per contract | Each contract reviewed from its spec page and code only, with a proof-of-concept test per finding | 1 High, 12 Medium, 33 Low found; each fixed or decided | [reviews](../audit/reviews/README.md), [audit index](../audit/README.md#internal-verification) |
+| Fresh adversarial audit | The whole protocol on `main` at `a024490`, traced into the pinned Aave V4, Uniswap v3 and Slipstream code | Security score 87/100 (88 when first published; lowered when I-01 was re-measured as a Low). No Critical or High finding; no path to take user, LP or protocol funds. One Medium (M-01, a rescue top-up refused once a token counter passes its cap) and five Low (L-01 to L-04, I-01), each fixed with a regression test; one Informational (I-02, documentation) corrected | [fresh audit report](../audit/reviews/fresh-audit-2026-11-15/REPORT.md) |
+| Traceability | Links each requirement to its checks, tests and Solidity; a changed requirement fails until its checks re-run | 3,562 requirements, 0 errors, 0 changed requirements awaiting re-verification. The committed matrix counts only recorded prover and Halmos passes: 121 verified, 1,879 with checks whose results it does not include, 1,562 with no counting check yet | [traceability matrix](../spec/05-verification/traceability.md) |
+| Z3 and SymPy | Every formula in exact integers at Solidity bit widths, each formula against the rule it implements, every worked example recomputed | Z3: 641 proved, 123 deliberate counterexamples, 131 computed, 0 mismatches. SymPy: 230 checks, 229 hold, 1 deliberate wrong reading | [z3](../audit/z3/README.md), [sympy](../audit/sympy/README.md) |
+| Hypothesis | Generated action sequences against an integer model of Avana, Aave V4 and Uniswap v3, with solvency per debt asset after every step | 82 tests, 82 pass | [hypothesis](../spec/05-verification/hypothesis/README.md) |
+| Quint | Cross-contract state machine with honest and hostile components, and a multi-Hub, multi-Spoke model | 58 of 58 properties hold, 8 of 8 combined runs hold, 50 of 50 scenarios pass | [quint](../audit/quint/README.md) |
+| Formal verification of the design | Custody, control (access, timelock, pauses, oracle, breakers) and liquidation | Custody 10, control 28 and liquidation 19 findings, all resolved in the specification; 1 custody and 5 control fixes await re-verification against the final text | [audit index](../audit/README.md#evidence-layout) |
+| 1,000-user simulation | 1,000 users and bots over 90 days, including six stress episodes | 572,608 invariant checks, 0 violations, 98 liquidations, $0 bad debt | [user simulation](../audit/user-simulation/report.md) |
+| Adversarial design review | Red team, flow walkthroughs, live-chain integration assumptions, gas and DoS | First draft: 6 Critical, 13 High, 22 Medium, 14 Low. All resolved except one Medium (an Aave-side halt stopping exits on a Spoke), accepted with an operating playbook. Final re-check: 96.5/100, then 99.0/100 after its fix pass | [final re-check](../audit/design-review/amm-neutral/final-recheck.md) |
+
+### Mutation testing
+
+Each mutant is a small change to a contract (a flipped condition, a removed check, a swapped operator), tested against the contract's test suites. Kill rate is killed / (killed + survived + inconclusive); mutants that do not compile are not counted. Latest recorded run: `mutation-gate` 43653570827 on `main` at `48864ef`.
+
+| Contract | Mutations | Killed | Survived | Inconclusive (timed out) | Kill rate |
+|---|---:|---:|---:|---:|---:|
+| Lock | 49 | 49 | 0 | 0 | 100.0% |
+| TimelockSelectors | 31 | 27 | 4 | 0 | 87.1% |
+| LPOracleCLInitLogic | 10 | 5 | 5 | 0 | 50.0% |
+| LPOracleCL | 10 | 2 | 8 | 0 | 20.0% |
+| LPOracleCLListingLogic | 1 | 0 | 1 | 0 | 0.0% |
+| **All** | **101** | **83** | **18** | **0** | **82.2%** |
+
+Source: [mutation results](../audit/mutation/results/README.md). The three LPOracleCL rows ran without some of their own test suites; their survivors are an upper bound, and the test sets are corrected for the next run.
+
+Every survivor is classified with a reason in `contracts/security/slither-mutate-triage.json` and a row of the [findings register](../audit/findings-register.md). Each real test gap gets a test that fails against the mutant and passes on the code. Examples:
+
+| Survivor | Test that now kills it |
+|---|---|
+| `SM-115`, LPVaultSwap deleverage: no test recovered exactly the amount owed, so the shortfall check at equality (`recovered <= owed`) survived | `test_TEST_239_recoveryExactlyOwed` |
+| `SM-304`, MarketRegistry: the funding Hub's consent check made always true, which refuses every cross-Hub debt reserve | `test_TEST_273_crossHubDrawCapWithinItsLine` |
+| `SM-305`, MarketRegistry: oracle activation went on to `checkConfig` after the ParameterStore's configuration read failed | `test_TEST_138_failedConfigReadRefusedWhateverTheOracleAnswers` |
+
+The triage also found one contract defect, `MUT-01`: a DebtOracle poke whose feed-definition read failed overwrote every leg record. It is fixed in code, and `test/unit/DebtOracle.SeenRecords.unit.t.sol` fails without the fix.
+
+### Triage policy
+
+A finding from a tool is either fixed or accepted. Every accepted Slither, Aderyn, Semgrep, Mythril, 4naly3er, Gambit, mutation, Necessist or gitleaks entry carries a written reason, and the static-analysis gates fail on an entry without one. The triage entries also record their approval by Avana Labs: one by one, or under an approved pattern once the independent review agrees; an entry not yet approved says so. The triage files are in `contracts/security/`, and the gitleaks entries are in `.gitleaksignore`.
+
+### Expected results of the final runs
+
+These are the targets the final runs must meet before deployment. They are requirements, not results; each run's result is recorded in its `docs/audit` folder when it completes. Scope counts are taken from the repository at `5fbb1eb`.
+
+| Run | Scope | Target before deployment |
 |---|---|---|
-| Traceability | Every requirement linked to the checks that verify it; any edit must be re-verified | 3,507 requirements traced, 0 errors |
-| Z3 and SymPy | Every formula in exact integers at Solidity bit widths, and each formula against the rule it implements; every worked example recomputed | Every result matches its recorded value |
-| Hypothesis | Generated action sequences against an integer model of Avana, Aave V4 and Uniswap v3, with solvency per debt asset after every step | 82 tests, 82 pass |
-| Quint | Cross-contract state machine with honest and hostile components, and a multi-Hub, multi-Spoke model | No invariant violation in the recorded runs |
-| Internal formal verification | Custody, control (access, timelock, pauses, oracle, breakers) and liquidation | Every check passes, 0 open findings |
-| 1,000-user simulation | 1,000 users and bots over 90 days, including six stress episodes | 572,608 invariant checks, 0 violations, 98 liquidations, $0 bad debt |
-| Adversarial design review | Red team, flow walkthroughs, live-chain integration assumptions, gas and DoS | First draft: 6 Critical, 13 High, 22 Medium, 14 Low. All resolved except one Medium (an Aave-side halt stopping exits on a Spoke), accepted with an operating playbook. Final re-check: 96.5/100, then 99.0/100 after its fix pass. |
+| Full Foundry mutation gate (`mutation-gate.yml`, every layer) | The 26 mutation targets of layers 2.1 to 2.6 in `contracts/security/mutation-layers.json`, with Gambit at up to 10 mutants per file in layer 2.1 and 20 in the others; the last full dispatch (run 43653570827) queued 746 jobs | Every mutant killed, or recorded as equivalent with a reason, published as the kill-rate table above |
+| Certora Prover | 292 rules and 39 invariants in 26 spec files (`contracts/certora/specs/`), run through 31 confs (`contracts/certora/conf/`) | Every rule and invariant proved with sanity checks on the release commit, with job ids in `contracts/certora/RUNS.md` |
+| Certora mutation (`certoraMutate`) | The 30 confs with a `mutations` section (every conf except `Hub.conf`, which verifies the unmodified Aave V4 Hub) | Every mutant caught by a rule, or explained with a reason |
+| Halmos | 169 `check_` functions in 30 files under `contracts/test/halmos/` | Every check runs to completion and passes; no check is accepted as bounded |
+| Slow suites (`security-slow.yml`, deep invariant campaigns) | 35 Echidna and Medusa property harnesses (`contracts/test/invariant/echidna/`), the hevm entry points of the same harnesses, the Halmos checks above, and 33 Foundry invariant suites (`contracts/test/invariant/`) | Every job green |
+| Fork tests | 16 fork test files (`contracts/test/fork/`) on Ethereum and Base forks at the blocks pinned in `ForkConstants.sol` | Every test passes on each chain's fork before that chain's deployment |
+| External audits, audit contest and bug bounty | Listed under What comes next | No open Critical or High finding at deployment |
+
+### What comes next
+
+Before mainnet, independent external firms audit Avana's core contracts, each AMM integration, the flash source, the two loss layers (the Avana First-Loss Reserve and the DAO Deficit Offset) and the flash liquidation helper. A public audit contest follows, and a bug bounty opens with a `SECURITY.md` disclosure policy. External reports and their fix commits are filed in [docs/audit/external](../audit/external/index.md).
 
 ## Next steps
 

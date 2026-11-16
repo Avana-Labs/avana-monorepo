@@ -923,7 +923,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Result | Mitigated; zero-unit residual accepted (`FINDING-098`) |
 | Checks | HYP-53 (holds with the Q-198 terms; zero-unit bound recorded in FINDING-098), TEST-160, TEST-161, TEST-196, FINDING-048, FINDING-098 |
 
-### ATTACK-064: Bad debt and reimbursement cost from sub-economic positions
+### ATTACK-064: Bad debt and keeper gas cost from sub-economic positions
 
 | Field | Value |
 |---|---|
@@ -1302,7 +1302,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Attack approach | Call `eliminateDeficit(assetId, amount, otherSpoke)`; the Hub checks only that the caller Spoke is active; or ask the First-Loss Reserve of another asset (GHO) to cover a USDC deficit |
 | Impact | Reserve depleted for non-Avana losses or for another asset's losses |
 | Expected protection | `INV-042`, `INV-071`: each First-Loss Reserve is registered on one `(Hub, asset)` and its `coverDeficit(borrowSpoke, maxAmount)` covers only CDP Spokes on its DAO-set allowlist, at most `min(maxAmount, recorded deficit, funded balance)`, in its own asset (`SpokeNotAllowlisted`); no First-Loss Reserve can cover a deficit in another asset (Source: Q-142, Q-190, Q-236) |
-| Result | Launch condition — Aave Labs confirms the coverage caller and its allowlist enforcement for every First-Loss Reserve before its asset's `drawCap` rises above 0 |
+| Result | Mitigated — `COVERAGE_ROLE` is held by the Emergency Guardian and the Aave Protocol Guardian (`Q-142`), and each First-Loss Reserve's `coverDeficit` enforces its allowlist and its asset |
 | Checks | MATH-ST-50, TEST-199 |
 
 ### ATTACK-091: Cap bypass or lockout through counter drift

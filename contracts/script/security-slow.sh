@@ -32,14 +32,16 @@
 #   mutate   slither-mutate on every implementation file of the layers in security/mutation-layers.json, each mutant
 #            run against its Foundry tests (`forge test -j 2 --match-path <tests>`) in an isolated copy of src/ and
 #            test/ under out-security/mutation/root; uncaught mutants are listed per layer in
-#            out-security/mutation/<layer>/survivors.txt and kept in out-security/mutation/<layer>/<Contract>/
+#            out-security/mutation/<layer>/survivors.txt (one line each, a multi-line mutant kept whole with its
+#            newlines written as \n) and kept in out-security/mutation/<layer>/<Contract>/
 #   gambit   script/security-gambit.sh: Gambit expression mutants of the same files (fixed seed, operators and per-file
 #            cap from the `gambit` object of security/mutation-layers.json), each run against the same tests with a
 #            per-mutant timeout in an isolated copy under out-security/gambit/root; survivors are listed in
 #            out-security/gambit/<layer>/survivors.txt, and any survived or timed-out mutant not accepted in
 #            security/gambit-triage.json fails the step
 #   necessist  Necessist (tools/bin/necessist) on the test files of the same layers, in the same kind of isolated copy;
-#            every statement whose removal leaves the tests passing is listed in out-security/necessist/<layer>.txt
+#            every statement whose removal leaves the tests passing is listed in out-security/necessist/<layer>.txt,
+#            one line each in the same way
 #
 # A step with nothing to run prints what it skipped and why and passes; a step whose targets exist fails on any
 # failed property, counterexample, unproven harness assertion, untriaged finding or tool error. Every step runs even
@@ -715,7 +717,11 @@ step_mutate() {
       echo "mutate: $name did not run (see $log)"
     fi
     grep -oE '(Revert|Comment|Tweak) mutants: .*|Zero (Revert|Comment|Tweak) mutants analyzed' "$log" | sed 's/^/  /' || true
-    grep 'UNCAUGHT' "$log" | sed "s|^|$name: |" >>"$dir/survivors.txt" || true
+    # One line per uncaught mutant, a multi-line mutant kept whole (script/mutation-records.py).
+    if ! "$PY" script/mutation-records.py survivors "$log" "$name: " >>"$dir/survivors.txt"; then
+      status=1
+      echo "mutate: could not read the survivors of $name from $log"
+    fi
     # The isolated copy must be unchanged after the campaign: slither-mutate restores every file it mutates.
     if ! diff -q "$file" "$root/$file" >/dev/null; then
       status=1
@@ -760,7 +766,11 @@ step_necessist() {
       status=1
       echo "necessist: layer $layer failed (see $OUT/necessist/$layer.log)"
     fi
-    grep -E ' passed$' "$OUT/necessist/$layer.log" >"$OUT/necessist/$layer.txt" || true
+    # One line per passing removal, a multi-line statement kept whole (script/mutation-records.py).
+    if ! "$PY" script/mutation-records.py necessist "$OUT/necessist/$layer.log" >"$OUT/necessist/$layer.txt"; then
+      status=1
+      echo "necessist: could not read the removals of layer $layer from $OUT/necessist/$layer.log"
+    fi
     echo "necessist: $(wc -l <"$OUT/necessist/$layer.txt" | tr -d ' ') removal(s) left the tests passing (see $OUT/necessist/$layer.txt)"
   done
   return $status

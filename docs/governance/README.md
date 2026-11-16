@@ -79,7 +79,7 @@ The payload carries the risk service providers' `marketUsdCap`, `tokenUsdCap` an
 | Collateral-factor raise | The Avana `poolRiskFactor` change (normal delay) executes first, then the AIP (`MKT-052`) |
 | Collateral-risk increase | Raises `riskPremiumThreshold` to the new top risk + 1 bps first, then raises `collateralRisk`, then refreshes users |
 | User refresh | The DAO's position-updater role calls `updateUserRiskPremium(proxy)` for every proxy listed from the indexer |
-| Credit-line change | Per (Hub, debt asset): raises the CDP Spoke `drawCap`s (or the source-Hub `drawCap`) with the line recorded in the MarketRegistry, each draw cap within flash liquidity, route depth and the Umbrella coverage bound; recall lowers the `drawCap`s to 0 |
+| Credit-line change | Per (Hub, debt asset): raises the CDP Spoke `drawCap`s (or the source-Hub `drawCap`) with the line recorded in the MarketRegistry, each draw cap within route depth and the Umbrella coverage bound; recall lowers the `drawCap`s to 0 |
 | Supply-cap change | Per (Hub, asset): sets the Lend Spoke `addCap`, the most all lenders together, public and the DAO's bootstrap supply, may supply; a cut below current supply stops new supply and moves no lender's funds |
 | Rate-curve change | Per (Hub, asset): `Hub.setInterestRateData` with the asset's new kinked-curve values; for GHO the DAO may keep the base rate at or above the Core Hub GHO base rate, which Avana monitoring checks (`SPEC-HUB-007`) |
 | Debt-reserve listing | A stable asset the Aave DAO approves: the reserve on the standard CDP Spoke with its price source (Aave's fixed source for GHO, its DebtOracle otherwise) and its utilization curve, the asset's Umbrella funded to its minimum and its DAO deficit offset funded to `daoDeficitOffset`, then the credit line; paired with the Avana `enableDebtReserve` operation (`MKT-044`, `MKT-057`) |
@@ -95,7 +95,7 @@ The three deployment operations add everything new (`REQ-ARCH-209`), each at the
 
 - `deployCdpSpoke` registers a standard Spoke and its AaveOracle, created by the Aave DAO payload of the same listing, as the CDP Spoke of (Hub, AMM protocol, risk tier); it reverts unless the Spoke's code is the canonical Aave V4 Spoke and the three required settings hold.
 - `listCollateralMarket` is one batch: the market's LPOracle, `VaultTokenFactory.deployVaultToken`, `listToken` for new tokens, `listCollateralMarket` (exact range, the integration's LPVault, the Spoke reserve), `setInitialMarketParams`, `setInitialMarketCaps`, `setInitialTokenCap` and the swap routes. `activateMarket` completes it at the short delay.
-- `enableDebtReserve` records the reserve's funding Hub and asset and enables borrowing; it reverts unless the draw caps fit the credit line, each draw cap fits the asset's flash liquidity and route depth, the asset's Umbrella lists the Spoke and holds its minimum, and every market of the Spoke has a usable swap route and passes the liveness bound.
+- `enableDebtReserve` records the reserve's funding Hub and asset and enables borrowing; it reverts unless the draw caps fit the credit line, the chain's flash source lends the asset within `maxFlashFeeBps`, the asset's Umbrella lists the Spoke and holds its minimum, and every market of the Spoke has a usable swap route and passes the liveness bound.
 
 | Operation | Delay |
 |---|---|

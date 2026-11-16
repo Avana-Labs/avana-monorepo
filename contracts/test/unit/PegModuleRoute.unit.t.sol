@@ -108,6 +108,18 @@ contract PegModuleRouteUnitTest is SwapRouteFixture {
         );
     }
 
+    /// @notice A wrapper that pulls less than the route approved leaves no allowance behind: the route resets it after
+    /// the deposit, and the input the wrapper left goes back to LPVaultSwap.
+    // TEST-054 verifies: REQ-ROUTE-016
+    function test_TEST_054_gsmWrapperPullingLessLeavesNoAllowance() public {
+        PegModuleRoute route = _gsmRoute();
+        stataUsdc.setShortPull(1);
+        assertEq(_swap(route, 1000e6, 1), 1000e18);
+        assertEq(usdc.allowance(address(route), address(stataUsdc)), 0, "allowance reset after a short pull");
+        assertEq(usdc.balanceOf(address(route)), 0);
+        assertEq(usdc.balanceOf(address(swapper)), 1, "the unpulled unit goes back");
+    }
+
     // TEST-054 verifies: REQ-ROUTE-011, REQ-ROUTE-026, Q-341
     function test_TEST_054_frozenSeizedOrCappedGsmReverts() public {
         PegModuleRoute route = _gsmRoute();
