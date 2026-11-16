@@ -248,8 +248,9 @@ contract DebtOracleHalmosTest is Test {
     // invalid answers (b = 0 or b >= 1e12) are `check_PROP_074_driftingTimestampFollowsAlternateInvalid`, which checks
     // the revert case too, so the four checks cover every uint40. Over all valid b in one check, with Halmos's default
     // solver, the proof did not complete within 1 hour (run 43777240448), and over the drift-below range alone it took
-    // 37 minutes (run 43766285060); each check here uses bitwuzla.
-    /// @custom:halmos --solver bitwuzla
+    // 37 minutes (run 43766285060). With bitwuzla, `AlternateDriftAbove` completed in 10 minutes and the other five
+    // did not within 1 hour (run 43806465033); each check states its solver options.
+    /// @custom:halmos --solver bitwuzla --solver-timeout-branching 10s
     function check_PROP_074_driftingTimestampsRevertOnlyForGasAlternateDriftBelow(
         uint32 bAnswer
     ) public {
@@ -259,7 +260,7 @@ contract DebtOracleHalmosTest is Test {
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
     // Sources: `check_PROP_074_driftingTimestampsRevertOnlyForGasAlternateDriftBelow` for the agreement range.
-    /// @custom:halmos --solver bitwuzla
+    /// @custom:halmos --solver yices --solver-timeout-branching 10s
     function check_PROP_074_driftingTimestampsRevertOnlyForGasAlternateAgree(
         uint32 bAnswer
     ) public {
@@ -282,7 +283,7 @@ contract DebtOracleHalmosTest is Test {
     // split as the alternate's: `DriftBelow` (p <= 92,909,535, the largest p with (0.95 − p) × 10⁴ > 225 × p),
     // `Agree` (up to 97,137,500 = 0.95 × 10,225 / 10⁴) and `DriftAbove`, with the invalid answers in
     // `check_PROP_074_driftingTimestampFollowsPrimaryOrAcceptedInvalid`.
-    /// @custom:halmos --solver bitwuzla
+    /// @custom:halmos --solver bitwuzla-abs
     function check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAcceptedDriftBelow(
         uint32 pAnswer
     ) public {
@@ -293,7 +294,7 @@ contract DebtOracleHalmosTest is Test {
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
     // Sources: `check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAcceptedDriftBelow` for the agreement
     // range.
-    /// @custom:halmos --solver bitwuzla
+    /// @custom:halmos --solver bitwuzla-abs --solver-timeout-branching 10s
     function check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAcceptedAgree(
         uint32 pAnswer
     ) public {
@@ -304,7 +305,7 @@ contract DebtOracleHalmosTest is Test {
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
     // Sources: `check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAcceptedDriftBelow` above the agreement
     // range.
-    /// @custom:halmos --solver bitwuzla
+    /// @custom:halmos --solver bitwuzla --solver-timeout-branching 60s
     function check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAcceptedDriftAbove(
         uint40 pAnswer
     ) public {
