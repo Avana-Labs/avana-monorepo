@@ -61,6 +61,19 @@ step_licence() { script/check-licence.sh; }
 step_lint() { forge lint -D notes 2>&1 | tee "$OUT/forge-lint.txt"; }
 
 step_build() {
+  # SECURITY_BUILD_CACHED=1: CI restored this build from a cache keyed on every input of it (src/, foundry.toml,
+  # soldeer.lock, remappings.txt, the Foundry version), so forge finds nothing to compile and the build-info files are
+  # those of a full build that passed. Any other case builds from scratch: an incremental build would leave build-info
+  # files of two compilations, which Slither would read as two compilation units of the same sources. If forge compiles
+  # anything after all, the restored build is discarded and the full build runs.
+  if [ "${SECURITY_BUILD_CACHED:-}" = 1 ] && [ -d "$BUILD/build-info" ]; then
+    echo "security build restored from the CI cache (same inputs)"
+    FOUNDRY_DYNAMIC_TEST_LINKING=false forge build src --build-info --extra-output storageLayout --sizes \
+      --skip test --skip script -D warnings --out "$BUILD" --cache-path "$BUILD-cache" 2>&1 | tee "$OUT/build-src.txt"
+    local rc=${PIPESTATUS[0]}
+    if grep -q 'No files changed, compilation skipped' "$OUT/build-src.txt"; then return "$rc"; fi
+    echo "forge compiled sources the restored build did not have: building from scratch"
+  fi
   rm -rf "$BUILD" "$BUILD-cache"
   # Dynamic test linking writes foundry-pp/DeployHelper sources that crytic-compile cannot resolve; the security
   # build needs none of them, so it is built without it. Only src/ is compiled: `--skip test` skips `.t.sol` files
@@ -111,11 +124,24 @@ step_upgradeability() {
     return 0
   fi
   mkdir -p "$OUT/upgradeability"
+  # The checks only read the build and each writes its own files, so they run side by side, UPGRADEABILITY_JOBS at a
+  # time (default: the number of cores, at most 4, since each loads the whole build); then each report is gated, in
+  # order.
+  local jobs=${UPGRADEABILITY_JOBS:-$(nproc 2>/dev/null || echo 2)} running=0
+  [ -n "${UPGRADEABILITY_JOBS:-}" ] || [ "$jobs" -le 4 ] || jobs=4
   for c in $contracts; do
-    echo "=== slither-check-upgradeability $c"
     rm -f "$OUT/upgradeability/$c.json"
     slither-check-upgradeability . "$c" --foundry-ignore-compile --foundry-out-directory "$BUILD" \
-      --json "$OUT/upgradeability/$c.json" >"$OUT/upgradeability/$c.log" 2>&1
+      --json "$OUT/upgradeability/$c.json" >"$OUT/upgradeability/$c.log" 2>&1 &
+    running=$((running + 1))
+    if [ "$running" -ge "$jobs" ]; then
+      wait -n || true
+      running=$((running - 1))
+    fi
+  done
+  wait
+  for c in $contracts; do
+    echo "=== slither-check-upgradeability $c"
     if [ ! -s "$OUT/upgradeability/$c.json" ]; then
       cat "$OUT/upgradeability/$c.log"
       echo "upgradeability: no report for $c" >&2

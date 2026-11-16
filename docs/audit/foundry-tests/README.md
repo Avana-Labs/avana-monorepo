@@ -12,7 +12,7 @@ From `contracts/`, Foundry 1.9.0:
 |---|---|
 | Local suite (unit, fuzz at 1,000 runs, integration, invariant at 64 × 64) | `forge test` |
 | One contract or one row | `forge test --match-path 'test/unit/Lock.unit.t.sol'`, `forge test --match-test 'TEST_057_'` |
-| CI depth (fuzz 10,000 runs, invariant 10,000 × 100, `TEST-007`) | `FOUNDRY_PROFILE=ci forge test` |
+| CI depth (fuzz 10,000 runs, invariant 1,000 × 100, `TEST-007`) | `FOUNDRY_PROFILE=ci forge test` |
 | Deep invariant campaign (2,000 × 400) | `FOUNDRY_PROFILE=invariant forge test` |
 | Differential against the Python reference (FFI, 2,000 runs) | `FOUNDRY_PROFILE=differential forge test` |
 
