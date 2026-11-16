@@ -1178,7 +1178,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
       "function": "LPVaultSwap",
       "reason": "The only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock) at the normal delay; the timelock never sends ETH with an upgrade, and LPVaultSwap has no receive, fallback or other payable function, so no ETH can arrive by an Avana call.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "afb5d2f3034eb7e9",
@@ -1186,7 +1186,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
       "function": "LPVaultSwap.removeKeeper",
       "reason": "Aderyn form of the reentrancy finding on removeKeeper: the only call before the registry write is MarketRegistry.isFrozenAddress (through activeKeeperCount), a view compiled to STATICCALL that cannot re-enter; the setter is timelock-only (APPLICATION_ADMIN).",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "411e367abceecc8c",
@@ -1441,7 +1441,7 @@
       "check": "delegate-call-unchecked-address",
       "file": "src/policy/aave-adapter/AaveAdapter.sol",
       "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
     },
     {
@@ -1449,7 +1449,7 @@
       "check": "delegate-call-unchecked-address",
       "file": "src/policy/aave-adapter/AaveAdapter.sol",
       "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
     },
     {
@@ -1457,7 +1457,7 @@
       "check": "delegate-call-unchecked-address",
       "file": "src/policy/aave-adapter/AaveAdapter.sol",
       "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
     },
     {
@@ -1465,7 +1465,7 @@
       "check": "delegate-call-unchecked-address",
       "file": "src/policy/aave-adapter/AaveAdapter.sol",
       "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
     },
     {
@@ -1473,7 +1473,7 @@
       "check": "delegate-call-unchecked-address",
       "file": "src/policy/aave-adapter/AaveAdapter.sol",
       "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
     },
     {
@@ -1481,7 +1481,7 @@
       "check": "delegate-call-unchecked-address",
       "file": "src/policy/aave-adapter/AaveAdapter.sol",
       "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
     },
     {
@@ -1489,7 +1489,7 @@
       "check": "delegate-call-unchecked-address",
       "file": "src/policy/aave-adapter/AaveAdapter.sol",
       "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
     },
     {
@@ -1497,7 +1497,7 @@
       "check": "delegate-call-unchecked-address",
       "file": "src/policy/aave-adapter/AaveAdapter.sol",
       "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
     },
     {
@@ -1505,7 +1505,7 @@
       "check": "delegate-call-unchecked-address",
       "file": "src/policy/aave-adapter/AaveAdapter.sol",
       "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
     },
     {
@@ -1513,7 +1513,7 @@
       "check": "delegate-call-unchecked-address",
       "file": "src/policy/aave-adapter/AaveAdapter.sol",
       "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
     },
     {
@@ -1521,7 +1521,7 @@
       "check": "delegate-call-unchecked-address",
       "file": "src/policy/aave-adapter/AaveAdapter.sol",
       "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
     },
     {
@@ -1529,7 +1529,7 @@
       "check": "delegate-call-unchecked-address",
       "file": "src/policy/aave-adapter/AaveAdapter.sol",
       "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
     },
     {
@@ -1537,7 +1537,7 @@
       "check": "delegate-call-unchecked-address",
       "file": "src/policy/aave-adapter/AaveAdapter.sol",
       "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
     },
     {
@@ -1545,7 +1545,7 @@
       "check": "delegate-call-unchecked-address",
       "file": "src/policy/aave-adapter/AaveAdapter.sol",
       "reason": "Each entry point forwards its unchanged calldata to one of the four logic contracts held in implementation immutables, checked at construction through logicConfig() (kind and hash of the nine dependency addresses, InvalidLogic otherwise) and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and each logic contract refuses a direct call (NotDelegated, REQ-ADAPTER-004). Covered by test_TEST_062_constructorChecks, test_TEST_062_logicContractsRefuseDirectCalls and every AaveAdapter suite.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Same reasoning as the ParameterStore files entry; the Adapter is a Lock member, so REQ-LOCK-030 (no delegatecall outside its own implementation) is the rule this rests on."
     },
     {
@@ -1739,7 +1739,7 @@
       "check": "yul-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1747,7 +1747,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1755,7 +1755,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1763,7 +1763,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1771,7 +1771,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1779,7 +1779,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1787,7 +1787,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1795,7 +1795,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1803,7 +1803,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1811,7 +1811,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1819,7 +1819,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1827,7 +1827,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1835,7 +1835,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1843,7 +1843,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1851,7 +1851,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1859,7 +1859,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1867,7 +1867,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1875,7 +1875,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1931,7 +1931,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1939,7 +1939,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1947,7 +1947,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1955,7 +1955,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1963,7 +1963,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1971,7 +1971,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -1979,7 +1979,7 @@
       "check": "redundant-statement",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {

@@ -2026,7 +2026,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
       "function": "LPVaultSwapPendingLogic._fundCoverage(LPVaultSwapPendingLogic.Pend)",
       "reason": "No balance read is stale across a re-entry: the function runs under the Lock (REQ-SWAP-002), so the oracle pokes, Collateralization, the AaveAdapter, routes and the First-Loss Reserve cannot re-enter LPVaultSwap (TEST-060: every re-entry reverts LockHeld(LPVaultSwap)); every amount is measured as a balance delta across the single call it measures (REQ-SWAP-108) and the First-Loss Reserve funding is checked as an exact balance fall right after fund (FundingMismatch). Covered by LPVaultSwap.Lock, LPVaultSwap.Routes.fuzz (testFuzz_TEST_060_reentryRefused), LPVaultSwap.Neutrality.fuzz and the invariant suite.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "79b43e3c5ee0acd5",
@@ -2034,7 +2034,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
       "function": "LPVaultSwapPendingLogic.settlePending(uint256,uint256)",
       "reason": "No balance read is stale across a re-entry: the function runs under the Lock (REQ-SWAP-002), so the oracle pokes, Collateralization, the AaveAdapter, routes and the First-Loss Reserve cannot re-enter LPVaultSwap (TEST-060: every re-entry reverts LockHeld(LPVaultSwap)); every amount is measured as a balance delta across the single call it measures (REQ-SWAP-108) and the First-Loss Reserve funding is checked as an exact balance fall right after fund (FundingMismatch). Covered by LPVaultSwap.Lock, LPVaultSwap.Routes.fuzz (testFuzz_TEST_060_reentryRefused), LPVaultSwap.Neutrality.fuzz and the invariant suite.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "f3b1bd793342b088",
@@ -2042,7 +2042,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
       "function": "LPVaultSwapLiquidationLogic._seize(LPVaultSwapLiquidationLogic.Liq,LiquidationParams)",
       "reason": "No balance read is stale across a re-entry: the function runs under the Lock (REQ-SWAP-002), so the oracle pokes, Collateralization, the AaveAdapter, routes and the First-Loss Reserve cannot re-enter LPVaultSwap (TEST-060: every re-entry reverts LockHeld(LPVaultSwap)); every amount is measured as a balance delta across the single call it measures (REQ-SWAP-108) and the First-Loss Reserve funding is checked as an exact balance fall right after fund (FundingMismatch). Covered by LPVaultSwap.Lock, LPVaultSwap.Routes.fuzz (testFuzz_TEST_060_reentryRefused), LPVaultSwap.Neutrality.fuzz and the invariant suite.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "d034c1d54586b688",
@@ -2050,7 +2050,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
       "function": "LPVaultSwapLiquidationLogic._seize(LPVaultSwapLiquidationLogic.Liq,LiquidationParams)",
       "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, the tracked-token array grows when full, and _seize records a deficit when an account that had debt in other reserves has no borrow left after the liquidation (borrowCount == 0, REQ-SWAP-027, audit finding L-01): under the Lock only this liquidationCall can change that count, and a liquidation repays one reserve, so only a deficit clears the rest. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "d856bf8653150704",
@@ -2058,7 +2058,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
       "function": "LPVaultSwapSettlement._swapLegs(LPVaultSwapSettlement.LegArgs,LPVaultSwapSettlement.Tracked)",
       "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "1acce985c8b9f8ed",
@@ -2066,7 +2066,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
       "function": "LPVaultSwapDeleverageLogic._checkCallback(address,uint256,bytes)",
       "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "c4a18374a1f41f38",
@@ -2074,7 +2074,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
       "function": "LPVaultSwapSettlement._checkCollateralPrice(address)",
       "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "86165b8ddfd49c01",
@@ -2082,7 +2082,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
       "function": "LPVaultSwapSettlement._swapLeg(LPVaultSwapSettlement.LegArgs,uint256,uint256,LPVaultSwapSettlement.Tracked)",
       "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "c8b9a8eb40cd5abe",
@@ -2090,7 +2090,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
       "function": "LPVaultSwapSettlement._track(LPVaultSwapSettlement.Tracked,address)",
       "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "3deb47455775f5df",
@@ -2098,7 +2098,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
       "function": "LPVaultSwapPendingLogic._preLock(uint256,uint256)",
       "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "7ac1c9a6bc6f8efa",
@@ -2106,7 +2106,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
       "function": "LPVaultSwapSettlement._deliver(address,address,uint256)",
       "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "83959b32c462e6c0",
@@ -2122,7 +2122,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
       "function": "LPVaultSwapSettlement._checkCollateralPrice(address)",
       "reason": "The call's other return values are not needed: poke() results are read back through getPriceState() together with the flags and leg ages, and getTokenPrices() is read for its prices only (decimals come from the market record, the timestamp from getPriceState). Covered by LPVaultSwap.PriceGates and LPVaultSwap.PriceGates.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "0333e6ca889eebee",
@@ -2130,7 +2130,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
       "function": "LPVaultSwapSettlement._checkDebtPrice(DebtReserveDef,uint256)",
       "reason": "The call's other return values are not needed: poke() results are read back through getPriceState() together with the flags and leg ages, and getTokenPrices() is read for its prices only (decimals come from the market record, the timestamp from getPriceState). Covered by LPVaultSwap.PriceGates and LPVaultSwap.PriceGates.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "7a64ffb8744ec543",
@@ -2170,7 +2170,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
       "function": "LPVaultSwapPendingLogic._legArgs(LPVaultSwapPendingLogic.Pend,uint256,uint256)",
       "reason": "The call's other return values are not needed: poke() results are read back through getPriceState() together with the flags and leg ages, and getTokenPrices() is read for its prices only (decimals come from the market record, the timestamp from getPriceState). Covered by LPVaultSwap.PriceGates and LPVaultSwap.PriceGates.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "7172227c07308d49",
@@ -2186,7 +2186,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
       "function": "LPVaultSwapDeleverageLogic._prepare(DeleverageRequest)",
       "reason": "The call's other return values are not needed: poke() results are read back through getPriceState() together with the flags and leg ages, and getTokenPrices() is read for its prices only (decimals come from the market record, the timestamp from getPriceState). Covered by LPVaultSwap.PriceGates and LPVaultSwap.PriceGates.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "75897c32ae003149",
@@ -2194,7 +2194,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
       "function": "LPVaultSwapLiquidationLogic._legArgs(LPVaultSwapLiquidationLogic.Liq,LiquidationParams)",
       "reason": "The call's other return values are not needed: poke() results are read back through getPriceState() together with the flags and leg ages, and getTokenPrices() is read for its prices only (decimals come from the market record, the timestamp from getPriceState). Covered by LPVaultSwap.PriceGates and LPVaultSwap.PriceGates.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "1afef8b66bd0bf94",
@@ -2282,7 +2282,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
       "function": "LPVaultSwapSettlement._tryRoute(LPVaultSwapSettlement.LegArgs,uint256,address,uint256,LPVaultSwapSettlement.Tracked,bool)",
       "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "3782064e5cdca394",
@@ -2290,7 +2290,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
       "function": "LPVaultSwapDeleverageLogic._settleLoan(LPVaultSwapDeleverageLogic.FlashContext,uint256,uint256)",
       "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "b4155a5d5e33d6e1",
@@ -2298,7 +2298,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
       "function": "LPVaultSwapDeleverageLogic._runFlash(LPVaultSwapDeleverageLogic.FlashContext)",
       "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "a972ea768678f909",
@@ -2306,7 +2306,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
       "function": "LPVaultSwapLiquidationLogic._unwindAndSwap(LPVaultSwapLiquidationLogic.Liq,LiquidationParams)",
       "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "a6c84151493f9f93",
@@ -2314,7 +2314,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
       "function": "LPVaultSwapPendingLogic.settlePending(uint256,uint256)",
       "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "5a85941a1ac118df",
@@ -2322,7 +2322,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
       "function": "LPVaultSwapDeleverageLogic.onFlashLoan(address,uint256,uint256,bytes)",
       "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "e53a290da66d886f",
@@ -2330,7 +2330,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
       "function": "LPVaultSwapLiquidationLogic._waterfall(LPVaultSwapLiquidationLogic.Liq,LiquidationParams)",
       "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "402ba69ee3a53b13",
@@ -2338,7 +2338,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
       "function": "LPVaultSwapLiquidationLogic.liquidate(LiquidationParams)",
       "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "5a4afd87dcb74dc4",
@@ -2346,7 +2346,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
       "function": "LPVaultSwapPendingLogic._releaseAndSwap(LPVaultSwapPendingLogic.Pend,uint256,uint256)",
       "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "0ccfdd0e7a6822a9",
@@ -2354,7 +2354,7 @@
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
       "function": "LPVaultSwapDeleverageLogic._releaseAndSwap(LPVaultSwapDeleverageLogic.FlashContext)",
       "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "5a0ebb103c3aa872",
@@ -2569,35 +2569,35 @@
       "check": "arbitrary-send-erc20",
       "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
       "reason": "`payer` is never chosen by a caller: `repay` and `repayAllAndWithdraw` pass `msg.sender` (the payer approves the Adapter itself, REQ-PROXY-029) and `deleverageRepay` passes the immutable LP_VAULT_SWAP after checking msg.sender == LP_VAULT_SWAP and that the Adapter holds the Lock (REQ-ADAPTER-081). Covered by TEST-175 (thirdPartyRepay pulls only from the caller), TEST-239 and TEST-060 (callbacksOutsideSession).",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "a95cc5705b52eae9",
       "check": "reentrancy-balance",
       "file": "src/policy/aave-adapter/AaveAdapterUserLogic.sol",
       "reason": "Balance-delta measurement by design (REQ-PROXY-013, Q-124, Q-271): the step reads the proxy's balance, makes the one Spoke or token call it measures and reads it again; every amount it forwards or checks is that delta, never an absolute balance, so a donation or a balance change by a callee can only fail the step's equality check, never move value. The call runs under the Adapter's Lock (REQ-PROXY-048) and only the Adapter can make the proxy act. Covered by TEST-027 (donatedDustIgnored, shortDeliveryReverts), TEST-029 (donationIgnored, pullDeliveringNothingReverts), TEST-010, TEST-018 and AaveAdapter.Failures.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "907a1fde6a9568d8",
       "check": "reentrancy-balance",
       "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
       "reason": "Balance-delta measurement by design (REQ-PROXY-013, Q-124, Q-271): the step reads the proxy's balance, makes the one Spoke or token call it measures and reads it again; every amount it forwards or checks is that delta, never an absolute balance, so a donation or a balance change by a callee can only fail the step's equality check, never move value. The call runs under the Adapter's Lock (REQ-PROXY-048) and only the Adapter can make the proxy act. Covered by TEST-027 (donatedDustIgnored, shortDeliveryReverts), TEST-029 (donationIgnored, pullDeliveringNothingReverts), TEST-010, TEST-018 and AaveAdapter.Failures.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "44eadaba9e94e876",
       "check": "reentrancy-balance",
       "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
       "reason": "Balance-delta measurement by design (REQ-PROXY-013, Q-124, Q-271): the step reads the proxy's balance, makes the one Spoke or token call it measures and reads it again; every amount it forwards or checks is that delta, never an absolute balance, so a donation or a balance change by a callee can only fail the step's equality check, never move value. The call runs under the Adapter's Lock (REQ-PROXY-048) and only the Adapter can make the proxy act. Covered by TEST-027 (donatedDustIgnored, shortDeliveryReverts), TEST-029 (donationIgnored, pullDeliveringNothingReverts), TEST-010, TEST-018 and AaveAdapter.Failures.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "333045b60e80c4f6",
       "check": "reentrancy-balance",
       "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
       "reason": "Balance-delta measurement by design (REQ-PROXY-013, Q-124, Q-271): the step reads the proxy's balance, makes the one Spoke or token call it measures and reads it again; every amount it forwards or checks is that delta, never an absolute balance, so a donation or a balance change by a callee can only fail the step's equality check, never move value. The call runs under the Adapter's Lock (REQ-PROXY-048) and only the Adapter can make the proxy act. Covered by TEST-027 (donatedDustIgnored, shortDeliveryReverts), TEST-029 (donationIgnored, pullDeliveringNothingReverts), TEST-010, TEST-018 and AaveAdapter.Failures.",
-      "approval": "pending (Josue)"
+      "approval": "approved (Josue, 2026-11-16)"
     },
     {
       "fingerprint": "83d5e4902f77c795",
@@ -2998,7 +2998,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3006,7 +3006,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3014,7 +3014,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3022,7 +3022,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3030,7 +3030,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3038,7 +3038,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3046,7 +3046,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3054,7 +3054,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3062,7 +3062,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3070,7 +3070,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3078,7 +3078,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3086,7 +3086,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3094,7 +3094,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3102,7 +3102,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3110,7 +3110,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3118,7 +3118,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3126,7 +3126,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3134,7 +3134,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3142,7 +3142,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3150,7 +3150,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3158,7 +3158,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3166,7 +3166,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3174,7 +3174,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3182,7 +3182,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3190,7 +3190,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3671,7 +3671,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3679,7 +3679,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3687,7 +3687,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3695,7 +3695,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3703,7 +3703,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3711,7 +3711,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3719,7 +3719,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3727,7 +3727,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3735,7 +3735,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3743,7 +3743,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3751,7 +3751,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3759,7 +3759,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3767,7 +3767,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3775,7 +3775,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3783,7 +3783,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3791,7 +3791,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3799,7 +3799,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3807,7 +3807,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3815,7 +3815,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3823,7 +3823,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3831,7 +3831,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3839,7 +3839,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3847,7 +3847,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3855,7 +3855,7 @@
       "check": "incorrect-return",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3951,7 +3951,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3959,7 +3959,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3967,7 +3967,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3975,7 +3975,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3983,7 +3983,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3991,7 +3991,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -3999,7 +3999,7 @@
       "check": "redundant-statements",
       "file": "src/lens/lens/Lens.sol",
       "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
@@ -4017,7 +4017,7 @@
       "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
       "function": "FlashLiquidatorBase._watch(uint256,address[],address)",
       "reason": "Only the route address of getRoute is needed: a slot whose route is not usable is still read, since LPVaultSwap may have swapped through it in an earlier state and the helper only watches its intermediates for residues (REQ-HELPER-001, REQ-HELPER-008). forge-lint suppression on the line with the same reason. Covered by TEST-174 (FlashLiquidator.Residues).",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "fixmed (adversarial-review fixes 2026-11-12); new site"
     },
     {
@@ -4026,7 +4026,7 @@
       "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
       "function": "FlashLiquidatorBase._forwardTokens(address,FlashLiquidatorBase.Watch)",
       "reason": "PayoutEscrow.claim pays the helper's whole credit of the token to the recipient and returns the amount; the helper reads nothing back, since the credit was 0 when the call started and the escrow pays it straight to the caller (REQ-HELPER-010). The claim runs in try/catch so a recipient that cannot receive leaves the credit for claimEscrowed. Covered by TEST-174 (escrowedIntermediateClaimedToTheCaller, standingCreditClearedBeforeTheCall), TEST-289.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "fixmed (adversarial-review fixes 2026-11-12); new site"
     },
     {
