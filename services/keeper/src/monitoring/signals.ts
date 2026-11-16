@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Monitoring signals M-01 to M-30 (services/README.md, Monitoring and alerting). The keeper evaluates the ones it
+// Monitoring signals M-01 to M-34 (services/README.md, Monitoring and alerting). The keeper evaluates the ones it
 // already reads each block; the rest run on their stated cadence from indexer events or a daily fork simulation.
 // Every page is confirmed on a second RPC provider at a known block before it is sent (EMG-075).
 
@@ -58,4 +58,8 @@ export const SIGNALS: readonly SignalDef[] = [
   { id: "M-28", name: "Liquidity leaving a listed pool", cadence: "block", inputs: ["pool liquidity()", "pool liquidity around the current price"], warn: "−20 % in 1 h", page: "−40 % in 1 h", responder: "risk service providers, guardians", playbook: "P-04 (EMG-078)" },
   { id: "M-29", name: "Rate curve per lend asset", cadence: "block", inputs: ["Hub interest-rate data", "Hub drawn rate", "GHO baseDrawnRate", "Core Hub GHO base rate"], warn: "any change of a curve's values", page: "GHO baseDrawnRate below the Core Hub GHO base rate", responder: "Aave DAO, risk service providers", playbook: "P-10 (EMG-084)" },
   { id: "M-30", name: "Keeper discovery mismatch", cadence: "block", inputs: ["indexer stream UserProxyCreated", "RPC UserProxyCreated logs on both providers", "KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS"], warn: "any account one source holds and the other lacks", page: "one-sided for KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS (1 h by default)", responder: "keeper on-call", playbook: "P-08 (EMG-082)" },
+  { id: "M-31", name: "Keeper gas spend anomaly", cadence: "block", inputs: ["keeper spend log (gasUsed, effective gas price, L1 fee per included transaction)", "KEEPER_GAS_DAILY_SPEND_WEI"], warn: "rolling 24 h spend > 3x the 7-day median daily spend", page: "> 5x", responder: "Avana Labs, keeper on-call", playbook: "P-08 (EMG-082)" },
+  { id: "M-32", name: "Keeper class budget reached", cadence: "block", inputs: ["keeper spend log by fee class", "KEEPER_DAILY_BUDGET_WEI_{SCHEDULED,LAZY}"], warn: "—", page: "a scheduled or lazy class reaches its rolling 24 h budget and stops", responder: "keeper on-call, Avana Labs", playbook: "P-08 (EMG-082)" },
+  { id: "M-33", name: "Standby keeper signer below its minimum balance", cadence: "block", inputs: ["standby signer balance", "KEEPER_STANDBY_MIN_BALANCE_WEI"], warn: "standby balance < its minBalance", page: "—", responder: "Avana Labs", playbook: "P-08 (EMG-082)" },
+  { id: "M-34", name: "Oracle poke overdue", cadence: "block", inputs: ["LPOracle.priceCheckpoint().at, read by the monitor from the chain"], warn: "—", page: "priceCheckpoint().at older than 7,200 s on any market", responder: "keeper on-call, operators", playbook: "P-08 (EMG-082)" },
 ];

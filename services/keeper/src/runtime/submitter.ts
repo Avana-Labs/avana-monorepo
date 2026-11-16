@@ -6,7 +6,7 @@
 
 import { type Address, type Hex, type PublicClient, erc20Abi, keccak256 } from "viem";
 import type { ChainConfig } from "../config.ts";
-import { type UnsignedTx, aboveCeiling, bumpFees, gasLimit, maxFee, priorityFee, worstCaseCost } from "../chain/gas.ts";
+import { type FeePolicy, type UnsignedTx, URGENT_ONLY, aboveCeiling, bumpFees, classFees, gasLimit, worstCaseCost } from "../chain/gas.ts";
 import { NonceManager } from "../chain/nonce.ts";
 import type { TxSigner } from "../chain/signer.ts";
 import { type Pending, followUp, sendPrivate } from "../chain/submit.ts";
@@ -14,7 +14,7 @@ import { logAttempt, stringifyParams } from "../failureLog.ts";
 import { decodeRevert, revertData } from "../jobs/failureReasons.ts";
 import type { InventoryBook } from "../inventory.ts";
 import type { Simulation } from "../pipeline.ts";
-import type { BlockContext, JobKind, TxPlan } from "../types.ts";
+import type { BlockContext, JobClass, JobKind, SkipReason, TxPlan } from "../types.ts";
 
 export async function simulate(client: PublicClient, from: Address, plan: Pick<TxPlan, "to" | "data">): Promise<Simulation> {
   try {
@@ -28,11 +28,50 @@ export async function simulate(client: PublicClient, from: Address, plan: Pick<T
   }
 }
 
-async function fees(client: PublicClient) {
+/** The last 5 blocks' 90th-percentile priority fees and the next block's base fee. */
+async function feeHistory(client: PublicClient) {
   const history = await client.getFeeHistory({ blockCount: 5, rewardPercentiles: [90], blockTag: "latest" });
-  const tip = priorityFee((history.reward ?? []).map((r) => r[0] ?? 0n));
-  const base = history.baseFeePerGas[history.baseFeePerGas.length - 1] ?? 0n;
-  return { maxPriorityFeePerGas: tip, maxFeePerGas: maxFee(base, tip) };
+  return { rewards: (history.reward ?? []).map((r) => r[0] ?? 0n), base: history.baseFeePerGas[history.baseFeePerGas.length - 1] ?? 0n };
+}
+
+/** An included transaction's cost, from its receipt, and the market and Hub its subject is attributed to. */
+export interface IncludedSpend {
+  readonly plan: TxPlan;
+  readonly txHash: Hex;
+  readonly blockNumber: bigint;
+  /** Unix seconds of the head the transaction was seen included at. */
+  readonly at: bigint;
+  readonly gasUsed: bigint;
+  readonly effectiveGasPrice: bigint;
+  /** The L1 data fee the receipt reports (Base); 0 elsewhere. */
+  readonly l1Fee: bigint;
+  /** gasUsed × effectiveGasPrice + l1Fee. */
+  readonly costWei: bigint;
+  readonly market: string | null;
+  readonly hub: Address | null;
+  readonly logs: readonly { readonly address: Address; readonly topics: readonly Hex[]; readonly data: Hex }[];
+}
+
+/** Where included spend goes: the spend log and budgets (runtime/budget.ts) and the small-account metric. */
+export interface SpendSink {
+  /** The market and Hub of a plan's subject (market → CDP Spoke → Hub). */
+  attribute(plan: TxPlan): Promise<{ readonly market: string | null; readonly hub: Address | null }>;
+  record(spend: IncludedSpend): void;
+}
+
+/** The L1 data fee of an OP Stack receipt (`l1Fee`, hex or bigint); 0 when the receipt has none. */
+export function l1FeeOf(receipt: unknown): bigint {
+  const raw = (receipt as { l1Fee?: unknown }).l1Fee;
+  if (typeof raw === "bigint") return raw;
+  if (typeof raw === "string" && /^(0x[0-9a-fA-F]+|[0-9]+)$/.test(raw)) return BigInt(raw);
+  return 0n;
+}
+
+/** A transaction the fee rule holds back: a lazy one waiting for a low base fee, or a class at its daily budget. */
+export class NotSent extends Error {
+  constructor(readonly reason: Extract<SkipReason, "lazyBaseFeeHigh" | "budgetReached">, readonly detail: string) {
+    super(reason);
+  }
 }
 
 /** The per-chain fee ceiling (services/README.md, Submission > Gas): it only stops a fault from draining the gas wallet. */
@@ -43,6 +82,12 @@ export interface GasPolicy {
   readonly l1Fee: ((tx: UnsignedTx) => Promise<bigint>) | null;
   /** Pages the on-call engineer (M-17) when a send or a replacement would pass the ceiling. */
   onCeiling(detail: Readonly<Record<string, string>>): void;
+  /** Tips and the lazy base-fee gate per class; without one, every class pays urgent fees (today's rule). */
+  readonly fees?: FeePolicy;
+  /** The rolling 24 h class budgets (runtime/budget.ts `SpendBook`); without one, no class is limited. */
+  readonly budget?: { allows(jobClass: JobClass, now: bigint): boolean };
+  /** Receives each included transaction's spend. */
+  readonly spend?: SpendSink;
 }
 
 export class AboveGasCeiling extends Error {
@@ -88,8 +133,81 @@ export class Submitter {
     throw new AboveGasCeiling(cost, this.gas.ceilingWei);
   }
 
+  /** Lazy subjects waiting for a low base fee: when each first fell due, and when it was last seen due. */
+  readonly #lazySince = new Map<string, { since: bigint; last: bigint }>();
+  /** Every transaction signed at a nonce, with its plan, so the one that was mined is found from its receipt. */
+  readonly #signed = new Map<number, { hash: Hex; plan: TxPlan }[]>();
+
+  #sign(nonce: number, hash: Hex, plan: TxPlan): void {
+    this.#signed.set(nonce, [...(this.#signed.get(nonce) ?? []), { hash, plan }]);
+  }
+
+  /** Seconds a lazy subject has waited since it first fell due; a subject not seen due for `lazyMaxWait` starts again. */
+  #lazyWaited(plan: TxPlan, now: bigint, policy: FeePolicy): bigint {
+    if (plan.jobClass !== "lazy") return 0n;
+    const w = this.#lazySince.get(plan.subject);
+    if (!w || now - w.last > policy.lazyMaxWaitSeconds) {
+      this.#lazySince.set(plan.subject, { since: now, last: now });
+      return 0n;
+    }
+    w.last = now;
+    return now - w.since;
+  }
+
+  /**
+   * The fees of a first send by the plan's class (chain/gas.ts `classFees`); throws NotSent when the class is at its
+   * daily budget (urgent never is) or a lazy plan must keep waiting for a low base fee.
+   */
+  async #classFees(ctx: BlockContext, plan: TxPlan): Promise<Pending["fees"]> {
+    if (this.gas.budget && !this.gas.budget.allows(plan.jobClass, ctx.blockTimestamp)) {
+      throw new NotSent("budgetReached", `${plan.jobClass} spent its daily budget in the last 24 h`);
+    }
+    const policy = this.gas.fees ?? URGENT_ONLY;
+    const { rewards, base } = await feeHistory(this.client);
+    const d = classFees(plan.jobClass, rewards, base, policy, this.#lazyWaited(plan, ctx.blockTimestamp, policy));
+    if (!d.send) throw new NotSent("lazyBaseFeeHigh", `base fee ${d.baseFee} wei above ${policy.lazyBaseFeeMax}; waited ${d.waitedSeconds} of ${policy.lazyMaxWaitSeconds} s`);
+    return { maxFeePerGas: d.maxFeePerGas, maxPriorityFeePerGas: d.maxPriorityFeePerGas };
+  }
+
+  /**
+   * The spend of the transaction mined at `nonce`: the receipt of each transaction signed there (newest first) until
+   * one is found, attributed and handed to the spend sink. Null when no receipt is found.
+   */
+  async #included(ctx: BlockContext, nonce: number): Promise<IncludedSpend | null> {
+    const signed = this.#signed.get(nonce) ?? [];
+    this.#signed.delete(nonce);
+    for (const s of [...signed].reverse()) {
+      let receipt;
+      try {
+        receipt = await this.client.getTransactionReceipt({ hash: s.hash });
+      } catch {
+        continue;
+      }
+      const l1Fee = l1FeeOf(receipt);
+      const unknown = { market: null, hub: null };
+      const who = this.gas.spend ? await this.gas.spend.attribute(s.plan).catch(() => unknown) : unknown;
+      const spend: IncludedSpend = {
+        plan: s.plan,
+        txHash: s.hash,
+        blockNumber: receipt.blockNumber,
+        at: ctx.blockTimestamp,
+        gasUsed: receipt.gasUsed,
+        effectiveGasPrice: receipt.effectiveGasPrice,
+        l1Fee,
+        costWei: receipt.gasUsed * receipt.effectiveGasPrice + l1Fee,
+        market: who.market,
+        hub: who.hub,
+        logs: receipt.logs.map((l) => ({ address: l.address, topics: l.topics as readonly Hex[], data: l.data })),
+      };
+      this.gas.spend?.record(spend);
+      return spend;
+    }
+    return null;
+  }
+
   /** First send of a plan; a subject whose earlier transaction expired while still due reuses that nonce. */
   async submit(ctx: BlockContext, plan: TxPlan, sim: Simulation): Promise<Hex> {
+    const f = await this.#classFees(ctx, plan);
     const balances = new Map<string, bigint>();
     for (const r of plan.reservations) {
       const balance = await this.client.readContract({ address: r.asset, abi: erc20Abi, functionName: "balanceOf", args: [this.fundingSafe], blockNumber: ctx.blockNumber });
@@ -100,7 +218,6 @@ export class Submitter {
     const reused = this.reusable.get(plan.subject);
     this.reusable.delete(plan.subject);
     try {
-      const f = await fees(this.client);
       const gas = gasLimit(sim.gasEstimate);
       if (plan.job === "liquidation" && !reused) {
         const hash = await this.preempt(ctx, plan, gas, f);
@@ -112,6 +229,8 @@ export class Submitter {
         await sendPrivate(this.cfg.rpc.privateSend, raw, this.post);
         const hash = keccakOf(raw);
         this.pending.set(plan.subject, { plan, nonce, hash, sentBlock: ctx.blockNumber, fees: f, replacements: 0 });
+        this.#sign(nonce, hash, plan);
+        this.#lazySince.delete(plan.subject);
         return hash;
       }, reused?.nonce);
     } catch (err) {
@@ -161,6 +280,7 @@ export class Submitter {
     this.pending.delete(key);
     this.inventory.release(this.cfg.chain.id, key);
     this.pending.set(plan.subject, { plan, nonce: p.nonce, hash, sentBlock: ctx.blockNumber, fees: f, replacements: 0 });
+    this.#sign(p.nonce, hash, plan);
     logAttempt({ at: new Date().toISOString(), chainId: this.cfg.chain.id, blockNumber: ctx.blockNumber.toString(10), job: p.plan.job, subject: key, outcome: "preempted", reason: `nonce taken by the liquidation of ${plan.subject}`, txHash: p.hash, nonce: p.nonce, params: stringifyParams(p.plan.params) });
     this.preempted(p.plan);
     return hash;
@@ -223,8 +343,14 @@ export class Submitter {
     for (const [subject, p] of this.pending) {
       const sim = await simulate(this.client, this.signer.address, p.plan);
       const next = followUp(p, { blockNumber: ctx.blockNumber, timestamp: ctx.blockTimestamp }, confirmed > p.nonce, sim.ok, await stillDue(p.plan));
-      const log = (outcome: "included" | "replaced" | "cancelled" | "expired") =>
-        logAttempt({ at: new Date().toISOString(), chainId: this.cfg.chain.id, blockNumber: ctx.blockNumber.toString(10), job: p.plan.job, subject, outcome, txHash: p.hash, nonce: p.nonce, params: stringifyParams(p.plan.params) });
+      const log = (outcome: "included" | "replaced" | "cancelled" | "expired", spend?: IncludedSpend | null) =>
+        logAttempt({
+          at: new Date().toISOString(), chainId: this.cfg.chain.id, blockNumber: ctx.blockNumber.toString(10), job: p.plan.job, jobClass: p.plan.jobClass, subject, outcome,
+          txHash: spend?.txHash ?? p.hash, nonce: p.nonce, params: stringifyParams(p.plan.params),
+          ...(spend
+            ? { spend: { gasUsed: spend.gasUsed.toString(10), effectiveGasPrice: spend.effectiveGasPrice.toString(10), l1Fee: spend.l1Fee.toString(10), costWei: spend.costWei.toString(10), market: spend.market ?? "", hub: spend.hub ?? "" } }
+            : {}),
+        });
       const record = { job: p.plan.job, subject, nonce: p.nonce, txHash: p.hash, params: stringifyParams(p.plan.params) };
       if (next.action === "wait") continue;
       if (next.action === "done") {
@@ -232,7 +358,7 @@ export class Submitter {
         this.mined.set(`${p.plan.subject}@${p.nonce}`, { ...p, minedBlock: ctx.blockNumber });
         this.inventory.release(this.cfg.chain.id, subject);
         onDone(p.plan);
-        log("included");
+        log("included", await this.#included(ctx, p.nonce));
       } else if (next.action === "replace") {
         const f = bumpFees(p.fees);
         const gas = gasLimit(sim.gasEstimate);
@@ -247,6 +373,7 @@ export class Submitter {
         const raw = await this.nonces.withNonce((n) => this.sign(p.plan, n, gas, f), p.nonce);
         if (await refused(() => sendPrivate(this.cfg.rpc.privateSend, raw, this.post), record, "replacement")) continue;
         this.pending.set(subject, { ...p, hash: keccakOf(raw), fees: f, replacements: p.replacements + 1 });
+        this.#sign(p.nonce, keccakOf(raw), p.plan);
         log("replaced");
       } else {
         // rebuild or cancel: the expired transaction can no longer execute. A rebuild hands the nonce back to the
@@ -258,6 +385,7 @@ export class Submitter {
           if (await refused(() => sendPrivate(this.cfg.rpc.privateSend, raw, this.post), record, "cancellation")) continue;
           this.pending.delete(subject);
           this.inventory.release(this.cfg.chain.id, subject);
+          this.#signed.delete(p.nonce);
           log("cancelled");
         } else {
           this.pending.delete(subject);

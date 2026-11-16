@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// M-16 and M-17, read every block (services/README.md, Monitoring and alerting):
+// M-16, M-17 and M-33, read every block (services/README.md, Monitoring and alerting):
 // - M-16, the keeper's debt-asset float per chain and asset: the funding Safe's balance less every open reservation
 //   (InventoryBook.free), against the largest single debtToCover the chain's caps allow: below 150 % warns, below
 //   100 % pages (REQ-SWAP-014: each committed operator holds at least that much).
 // - M-17, the Aave V3 Pool's idle liquidity per debt asset as the helper can borrow it (`maxFlashLoan`): below 2x the
 //   largest single debtToCover warns, below 1x pages (REQ-FLASH-008); and the signer's gas balance: below 3 days of
 //   its median daily spend warns, below 1 day pages.
+// - M-33, the standby instance's signer on this chain: its gas balance below its minimum (KEEPER_STANDBY_MIN_BALANCE_WEI,
+//   3 days of the expected daily spend unless set) warns, so the standby is never found empty when it must take over.
+//   Each chain needs two funded signers on different providers.
 // The largest single debtToCover is configuration (KEEPER_LARGEST_DEBT_TO_COVER_<CHAIN>), set from each listing's
 // REQ-FLASH-008 sizing; a debt asset without one warns until it is set. A page is sent only when the same read on the
 // second provider at the same block agrees (`raise`).
@@ -38,6 +41,11 @@ export function m17GasLevel(balance: bigint, dailySpend: bigint): Level {
   if (balance < dailySpend) return "page";
   if (balance < dailySpend * 3n) return "warn";
   return "ok";
+}
+
+/** M-33: the standby signer below its minimum balance warns; it never pages (the primary is still sending). */
+export function m33Level(balance: bigint, minBalance: bigint): Level {
+  return balance < minBalance ? "warn" : "ok";
 }
 
 /**
@@ -106,9 +114,11 @@ export interface FundingDeps {
   readonly free: (asset: Address, safeBalance: bigint) => bigint;
   /** The signer and its daily-spend floor (KEEPER_GAS_DAILY_SPEND_WEI_<CHAIN>); null in observe-only mode. */
   readonly gas: { readonly signer: Address; readonly dailyFloorWei: bigint; readonly spend: SpendTracker } | null;
+  /** The standby instance's signer and its minimum balance (M-33); null when not configured. */
+  readonly standby?: { readonly signer: Address; readonly minBalanceWei: bigint } | null;
 }
 
-/** Reads and judges M-16 and M-17 at one block; sends each non-ok level, a page only once confirmed. */
+/** Reads and judges M-16, M-17 and M-33 at one block; sends each non-ok level, a page only once confirmed. */
 export function fundingCheck(d: FundingDeps) {
   const balanceOf = (c: PublicClient, asset: Address, blockNumber: bigint) =>
     c.readContract({ address: asset, abi: erc20Abi, functionName: "balanceOf", args: [d.fundingSafe], blockNumber });
@@ -156,6 +166,14 @@ export function fundingCheck(d: FundingDeps) {
           { signal: "M-17", level, subject: `gas:${g.signer}`, detail: { signer: g.signer, balanceWei: balance.toString(10), dailySpendWei: daily.toString(10), measuredMedianWei: measured.toString(10), playbook: "P-08" } },
           async () => m17GasLevel(await d.fallback.getBalance({ address: g.signer, blockNumber: at }), daily) === "page",
         );
+      }
+    }
+
+    if (d.standby) {
+      const s = d.standby;
+      const balance = await d.primary.getBalance({ address: s.signer, blockNumber: at });
+      if (m33Level(balance, s.minBalanceWei) !== "ok") {
+        await d.alerts.send({ signal: "M-33", level: "warn", chainId: d.chainId, blockNumber: at, subject: `standby:${s.signer}`, detail: { signer: s.signer, balanceWei: balance.toString(10), minBalanceWei: s.minBalanceWei.toString(10), playbook: "P-08" } });
       }
     }
   };

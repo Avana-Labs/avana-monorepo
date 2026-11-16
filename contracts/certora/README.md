@@ -300,6 +300,15 @@ To also generate the Gambit mutants locally (Gambit compiles each file with the 
 - **Summaries**: tokens by `Erc20Model`, with the escrow's own payouts and pulls recorded; the Lock by `LockModel`.
 - **Loop bound**: 1.
 
+### AvanaGasVault.spec — `AvanaGasVault.conf`
+
+- **Contracts**: `src/periphery/gas-vault/AvanaGasVault.sol:AvanaGasVault` (keeper gas, 2.23), against `IAvanaGasVault`.
+- **Covers**: `PROP-113`; `INV-111`. Rules `periodCapNeverExceeded`, `periodCapNeverExceededByTopUpAll`, `topUpNeverAboveTarget`, `onlyAllowlistedReceive`, `guardianOnlyTightens`, `withdrawOnlyToTreasury`, `noExternalCallButEthSend`, and the witness `topUpIsReachable`.
+- **Ghosts and hooks**: `CALL` and `DELEGATECALL` hooks flag any call the vault makes with calldata, or any delegatecall; native balances are the prover's `nativeBalances`.
+- **Assumptions**: ETH transfers (empty calldata) do not change the vault's state (`optimistic_fallback`): the reentrancy guard closes every state-changing entry point a recipient could reach except `fund`/`receive`, which only add ETH (TEST-333 shows both re-entries refused).
+- **Loop bound**: 4: `_window` walks its four send slots exactly; `topUpAll` is checked with up to four listed signers (eight in TEST-333 and TEST-335).
+- **Where it runs**: only on the local WSL prover queue, never in GitHub Actions or a hosted prover.
+
 ### SettlementRoute.spec — `PegModuleRoute.conf`, `DexPathRoute.conf`, `WrapperThenDexRoute.conf`
 
 - **Contracts**: swap route types 0–2 under `src/liquidation/settlement-routes/` (`PegModuleRoute`, `DexPathRoute`, `WrapperThenDexRoute`), bound through `ISettlementRoute`; each compiles with its abstract bases `SwapRouteBase` and (types 1 and 2) `DexHops`, the library `RouteMath` (type 0) and the structs in `types/`, pulled in through imports (abstract contracts and struct-only files have no deployable contract to list in a scene).

@@ -37,6 +37,7 @@
     ],
     "2.6": [
       {"src": "src/periphery/flash-liquidator", "tests": "test/{unit,fuzz,integration}/{FlashLiquidator.,LPVaultSwap.FlashHelper}*"},
+      {"src": "src/periphery/gas-vault", "tests": "test/{unit,fuzz,invariant}/AvanaGasVault.*"},
       {"src": "src/lens/lens", "tests": "test/{unit,fuzz,integration}/Lens.*"}
     ]
   },

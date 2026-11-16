@@ -45,6 +45,8 @@ export function breakerPokeJob(): Job<Target, Target> {
       const job: JobKind = t.kind === "market" ? "breakerPoke" : "configPoke";
       return {
         job,
+        // Sent only on a non-zero simulated result: a breach or a drift to record now.
+        jobClass: "urgent",
         subject: t.kind === "market" ? `${ctx.config.chain.id}:market:${t.marketId}` : `${ctx.config.chain.id}:${t.spoke}`,
         to: rm.address,
         data: calldata(t),

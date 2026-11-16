@@ -106,18 +106,21 @@ describe.skipIf(!RPC_MAINNET)(`fork: Ethereum at block ${ETHEREUM_BLOCK} (not ru
     it("pokes on first sight, waits while the round is unchanged and pokes again on the next round", async () => {
       const book = new PokeBook();
       const job = oraclePokeJob(book);
-      const target = { oracle: "0x00000000000000000000000000000000000000a1" as Address, implementation: "0x0000000000000000000000000000000000000001" as Address, feeds: [{ feed: ETH_USD, heartbeatSeconds: 3_600 }] };
+      const target = { oracle: "0x00000000000000000000000000000000000000a1" as Address, implementation: "0x0000000000000000000000000000000000000001" as Address, kind: "lp" as const, feeds: [{ feed: ETH_USD, heartbeatSeconds: 3_600 }] };
+      // The target is a stand-in address with no oracle code: its price state is read as Live, so only the feed decides.
+      const live = (c: typeof ctx) => ({ ...c, reader: { ...c.reader, oracleState: async () => 0 } });
+      const decision = { target, jobClass: "scheduled", state: 0 };
 
-      expect(await job.check(ctx, target)).toEqual({ act: true, decision: target });
-      await job.build(ctx, target);
-      expect(await job.check(ctx, target)).toEqual({ act: false, reason: "notDue" });
+      expect(await job.check(live(ctx), target)).toEqual({ act: true, decision });
+      await job.build(live(ctx), { target, jobClass: "scheduled", state: 0 });
+      expect(await job.check(live(ctx), target)).toEqual({ act: false, reason: "notDue" });
 
       // 300 blocks (an hour) later the feed has a new round.
       const later = ETHEREUM_BLOCK + 300n;
       const { timestamp } = await client.getBlock({ blockNumber: later });
       const laterCtx = blockContext("mainnet", createChainReader(client, NO_AVANA_MANIFEST, later), later, timestamp);
       expect((await laterCtx.reader.feedRound(ETH_USD))[0]).toBe(129_127_208_515_966_896_951n);
-      expect(await job.check(laterCtx, target)).toEqual({ act: true, decision: target });
+      expect(await job.check(live(laterCtx), target)).toEqual({ act: true, decision });
     });
   });
 
