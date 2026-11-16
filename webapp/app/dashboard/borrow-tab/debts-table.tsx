@@ -47,6 +47,7 @@ type DebtsTableProps = {
     averageHf: number | null
     accruedInterest: number
     dailyInterest: number
+    liquidationThresholdPct?: number
   }
   onRepay: (context: DebtRowContext) => void
   showBalance?: boolean
@@ -120,6 +121,7 @@ export function DebtsPanel({
           showBalance={showBalance}
           dailyInterestUsd={totals.dailyInterest}
           accruedInterestUsd={totals.accruedInterest}
+          liquidationThresholdPct={totals.liquidationThresholdPct}
         />
       ) : null}
       {showHeading ? (

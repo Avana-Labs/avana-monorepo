@@ -1,5 +1,6 @@
 "use client"
 
+import { accountLiquidationThresholdPct } from "@/app/lib/borrow-system/dashboard-selectors"
 import { lazy, useMemo } from "react"
 import { detailSectionStackClass } from "@/app/components/detail-page-primitives"
 import { useAvanaIdentity, useBorrowSessionContext } from "@/app/lib/avana-session/avana-sessions-provider"
@@ -107,6 +108,10 @@ export function BorrowAccountSection({ returnHref = "/dashboard" }: { returnHref
             borrowedUsd={borrowSnapshot.totalBorrowedUsd}
             collateralUsd={borrowSnapshot.totalCollateralUsd}
             showBalance={showDollarAmounts}
+            liquidationThresholdPct={accountLiquidationThresholdPct(
+              borrowSnapshot.liquidationThresholdUsd,
+              borrowSnapshot.totalCollateralUsd,
+            )}
           />
         </div>
       </div>
