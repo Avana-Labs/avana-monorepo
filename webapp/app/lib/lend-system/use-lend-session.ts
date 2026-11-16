@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
 import type { LendAction, LendSystemState } from "@/app/lib/lend-system/model"
 import type {
   LendReadAdapter,
@@ -12,6 +12,10 @@ import type {
 } from "./contracts"
 import { ProductionLendReadAdapter } from "./production-read-adapter"
 import { ProductionLendTransactionAdapter } from "./production-transaction-adapter"
+import { executeLendOnChain } from "./chain-execution"
+import { lendHubAssets } from "./chain-lend-refs"
+import { chainBorrowRefs } from "@/app/lib/borrow-system/chain-refs"
+import { connectedBorrowWallet, viemBorrowChain } from "@/app/lib/borrow-system/chain-execution-viem"
 import { emptyLendSystemState, mergeConvexLendSnapshots, type LendConvexSnapshot } from "./market-hydration"
 
 export { emptyLendSystemState }
@@ -34,9 +38,25 @@ export function useLendSession({
   const [transactionHistory] = useState<LendTransactionHistoryItem[]>([])
   const [transactionReceipts] = useState<LendTransactionResult[]>([])
   const [isPending, setIsPending] = useState(false)
+  const stateRef = useRef(state)
+  stateRef.current = state
 
   const transactionAdapter = useMemo(
-    () => injectedTransactionAdapter ?? new ProductionLendTransactionAdapter(),
+    () =>
+      injectedTransactionAdapter ??
+      new ProductionLendTransactionAdapter({
+        executeTransaction: (intent) =>
+          executeLendOnChain(
+            {
+              hubAssets: lendHubAssets,
+              lens: (wallet, chainId) => chainBorrowRefs(wallet)?.lenses.find((l) => l.chainId === chainId)?.lens,
+              chain: viemBorrowChain,
+              wallet: connectedBorrowWallet,
+              state: () => stateRef.current,
+            },
+            intent,
+          ),
+      }),
     [injectedTransactionAdapter],
   )
   const readAdapter = useMemo(() => injectedReadAdapter ?? new ProductionLendReadAdapter(), [injectedReadAdapter])
