@@ -32,6 +32,7 @@ const CONTRACTS = [
   ["aaveAdapterAbi", "avana", "IAaveAdapter"],
   ["aaveV4HubAbi", "aave", "IHub"],
   ["aaveV4SpokeAbi", "aave", "ISpoke"],
+  ["avanaGasVaultAbi", "avana", "IAvanaGasVault"],
   ["avanaTimelockAbi", "avana", "AvanaTimelock"],
   ["collateralizationAbi", "avana", "ICollateralization"],
   ["firstLossReserveAbi", "avana", "AvanaFirstLossReserve"],

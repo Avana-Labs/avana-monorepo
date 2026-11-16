@@ -32,6 +32,17 @@ describe("release manifest schema", () => {
     expect(validate(m).map((e) => e.path)).toEqual(["$.network", "$.release"]);
   });
 
+  it("takes the gas vault with its immutables, or null before step 12-gas-vault", () => {
+    const m = structuredClone(sampleManifest()) as Record<string, any>;
+    expect(validate(m)).toEqual([]);
+    m.avana.gasVault = null;
+    expect(validate(m)).toEqual([]);
+    m.avana.gasVault = { ...sampleManifest().avana.gasVault, maxSigners: 9 };
+    expect(validate(m).map((e) => e.path)).toEqual(["$.avana.gasVault"]);
+    delete m.avana.gasVault;
+    expect(validate(m).map((e) => e.path)).toEqual(["$.avana.gasVault"]);
+  });
+
   it("parseManifest throws with the list of failures", () => {
     expect(() => parseManifest(JSON.stringify({ schemaVersion: 2 }))).toThrow(/schemaVersion/);
   });

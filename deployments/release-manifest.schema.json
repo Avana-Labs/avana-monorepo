@@ -771,6 +771,68 @@
         "proxyCreationCodeHash": {
           "type": "string",
           "pattern": "^0x[0-9a-f]{64}$"
+        },
+        "gasVault": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "pattern": "^0x[0-9a-fA-F]{40}$"
+                },
+                "codeHash": {
+                  "type": "string",
+                  "pattern": "^0x[0-9a-f]{64}$"
+                },
+                "startBlock": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "artifact": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "treasury": {
+                  "type": "string",
+                  "pattern": "^0x[0-9a-fA-F]{40}$"
+                },
+                "timelock": {
+                  "type": "string",
+                  "pattern": "^0x[0-9a-fA-F]{40}$"
+                },
+                "guardian": {
+                  "type": "string",
+                  "pattern": "^0x[0-9a-fA-F]{40}$"
+                },
+                "maxSigners": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 8
+                }
+              },
+              "required": [
+                "address",
+                "codeHash",
+                "startBlock",
+                "artifact",
+                "treasury",
+                "timelock",
+                "guardian",
+                "maxSigners"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -796,7 +858,8 @@
         "daoDeficitOffsets",
         "debtOracleImplementation",
         "clOracles",
-        "proxyCreationCodeHash"
+        "proxyCreationCodeHash",
+        "gasVault"
       ],
       "additionalProperties": false
     },
