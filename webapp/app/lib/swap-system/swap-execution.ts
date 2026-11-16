@@ -1,5 +1,6 @@
 import { encodeFunctionData, maxUint256, parseAbi, parseUnits, type Address, type Hex } from "viem"
 import { buildActionBatch, sendActionBatch, type BatchChain, type BatchWallet, type Call } from "@/app/lib/fees/fee-batch"
+import { recordSentHashes, recordSubmittedIntent, type IntentRecorder } from "@/app/lib/intents/record-intent"
 import { frontendFeeAmount, frontendFeeRules, type FeeRules } from "@/app/lib/fees/front-end-fee"
 import type { SwapAsset } from "./contracts"
 import type { SwapContracts } from "./onchain-config"
@@ -105,6 +106,8 @@ export type SwapExecutionDeps = {
   rules?: FeeRules
   now?: () => number
   newId?: (prefix: string) => string
+  /** Reports each sent transaction to Convex; defaults to `recordSubmittedIntent`, which does nothing without a session. */
+  recordIntent?: IntentRecorder
 }
 
 export type SwapApprovalResult = {
@@ -254,11 +257,16 @@ export async function sendSwap(deps: SwapExecutionDeps, quote: SwapQuote, wallet
 
     let hash: Hex | null = null
     let ok = true
+    const recorder = deps.recordIntent ?? recordSubmittedIntent
+    const recordSent = (hashes: readonly (Hex | null)[]) =>
+      recordSentHashes(recorder, { chainId: deps.contracts.chainId, wallet: wallet.account, kind: "swap", hashes })
     if (sent.kind === "batch") {
       const result = await wallet.waitForCalls(sent.id)
       ok = result.status === "success"
       hash = result.hash
+      recordSent([hash])
     } else {
+      recordSent(sent.hashes)
       for (const h of sent.hashes) {
         hash = h
         if ((await deps.chain.waitForReceipt(h)) !== "success") {

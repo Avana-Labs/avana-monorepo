@@ -139,6 +139,22 @@ describe("executeBorrowOnChain", () => {
     expect(onConfirmed).toHaveBeenCalledTimes(1)
   })
 
+  it("reports the sent transaction to Convex with the action's kind: the batch hash, or each hash without batching", async () => {
+    const recordIntent = vi.fn(async (_args: { chainId: number; wallet: string; txHash: `0x${string}`; kind: string }) => {})
+    const alone = harness()
+    await executeBorrowOnChain({ ...alone.deps, recordIntent }, intent({ marketId: "weth-usdc-30", assetId: "usdc-a", amountUsd6: 1_200_000_000n }))
+    expect(recordIntent.mock.calls.map((c) => c[0])).toEqual([
+      expect.objectContaining({ wallet: WALLET, txHash: `0x${"ab".repeat(32)}`, kind: "borrow" }),
+    ])
+
+    recordIntent.mockClear()
+    const batched = harness({ atomic: true })
+    await executeBorrowOnChain({ ...batched.deps, recordIntent }, intent({ marketId: "weth-usdc-30", assetId: "usdc-a", amountUsd6: 1_200_000_000n }))
+    expect(recordIntent.mock.calls.map((c) => c[0])).toEqual([
+      expect.objectContaining({ wallet: WALLET, txHash: `0x${"cd".repeat(32)}`, kind: "borrow" }),
+    ])
+  })
+
   it("repays everything owed with a buffer and repayAll when the amount covers the debt", async () => {
     const { deps, sent } = harness()
     const r = await executeBorrowOnChain(
