@@ -273,6 +273,24 @@
       "reason": "Equivalent: Lens.previewMaxWithdraw forwards with _forward, which copies the module's return data and ends the call with an assembly `return`, so the named return variable is never what the function returns. The `sizing;` expression statement only references it to silence solc warning 5667 (unused named return); replacing it changes no returned value.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "7db53a773faf9b94",
+      "check": "DeleteExpressionMutation",
+      "file": "src/lens/lens/LensLiquidationSizing.sol",
+      "function": "LensLiquidationSizing.size",
+      "reason": "Equivalent: s.wholeDebt is read only by LensLiquidation._params, which margins debtToCover when wholeDebt, allCollateral or nearDust holds. Aave liquidates the whole premium before any drawn share, so when every drawn share is liquidated debtRepaid (drawn shares times the index rounded up plus the premium rounded up) is at least getUserTotalDebt; the remainder is 0, nearDust is true and the margined branch is taken without wholeDebt. Whole-debt margining covered by test_TEST_069_wholeDebtIsMarginedAndStaysValidLater and test_TEST_069_wholeDebtSizingIncludesThePremium.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "local Gambit rerun of LensLiquidationSizing with the fixed harness (CI run 43816627319 misread its mutants), equivalent mutant"
+    },
+    {
+      "fingerprint": "914f77f062aac0d5",
+      "check": "AssignmentMutation",
+      "file": "src/lens/lens/LensLiquidationSizing.sol",
+      "function": "LensLiquidationSizing.size",
+      "reason": "Equivalent: s.wholeDebt = false is unobservable for the reason of fingerprint 7db53a773faf9b94: a whole-debt liquidation leaves no remainder, so LensLiquidation._params takes the margined branch through nearDust whatever wholeDebt holds.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "local Gambit rerun of LensLiquidationSizing with the fixed harness (CI run 43816627319 misread its mutants), equivalent mutant"
     }
   ]
 }
