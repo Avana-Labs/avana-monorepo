@@ -14,6 +14,7 @@ import {IPayoutEscrow} from "../../../src/liquidation/payout-escrow/IPayoutEscro
 import {LVSLPOracleMock, LVSMarketRegistryMock} from "../../utils/mocks/LPVaultSwapMocks.sol";
 import {PayoutToken} from "../../utils/mocks/PayoutToken.sol";
 import {MockCLPool} from "../../utils/mocks/SwapRouteMocks.sol";
+import {DeficitFunding} from "./DeficitFunding.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
@@ -74,6 +75,8 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
         uint256 escrow;
         uint256 sources;
         uint256 parked;
+        // The Spoke's USDC deficit on the Hub (ray): a rise marks a call that booked a deficit (SPEC-LIQ-022).
+        uint256 deficit;
     }
 
     /// @dev A route rate at or above this (per 10,000) meets the per-leg minimum at the fixture's 1 % slippage
@@ -96,6 +99,9 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
     uint256 public unregisteredLiquidations;
     uint256 public shortfallLiquidations;
     uint256 public surplusLiquidations;
+    /// @notice Completed liquidations that booked a deficit (the Spoke's USDC deficit rose), the branch where a
+    /// borrower surplus funds the First-Loss Reserve (REQ-SWAP-027).
+    uint256 public deficitLiquidations;
     uint256 public settlements;
     /// @notice Vault-token units an earlier implementation seized and kept, that LPVaultSwap still holds (set-up seeds
     /// them; `settlePending` burns them once a liquidation of the account has reconciled them into pending).
@@ -145,6 +151,7 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
         vm.prank(caller);
         env.usdc.approve(address(env.lvs), debtToCover + maxShortfall);
         Usdc memory before = _usdc(caller, env.wallets[i]);
+        vm.recordLogs();
         vm.prank(caller);
         try env.lvs.liquidate(p) returns (LiquidationResult memory r) {
             _checkBalances(before, _usdc(caller, env.wallets[i]), r, p);
@@ -307,7 +314,9 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
     // ─── Steering ───
 
     /// @dev The first account from `i` with HF < 1 and debt; when there is none, lowers the LPOracle price so account
-    /// `i` sits at a health factor of 0.85 to 0.99 (HF is linear in the collateral price; USDC debt is priced at $1).
+    /// `i` sits at a health factor of 0.85 to 0.99 (HF is linear in the collateral price; USDC debt is priced at $1),
+    /// or for one seed in eight at 0.30 to 0.60, where the collateral at the bonus is worth less than the debt and a
+    /// liquidation of the whole debt books a deficit.
     function _steerToLiquidatable(
         uint256 i,
         uint256 seed
@@ -325,7 +334,8 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
             address proxy = env.proxies[(i + j) % n];
             if (spoke.getUserTotalDebt(env.usdcReserveId, proxy) == 0) continue;
             uint256 hf = spoke.getUserAccountData(proxy).healthFactor;
-            uint256 price = uint256(env.lpOracle.latestAnswer()) * bound(seed, 85, 99) * 1e16 / hf;
+            uint256 target = seed % 8 == 0 ? bound(seed >> 3, 30, 60) : bound(seed, 85, 99);
+            uint256 price = uint256(env.lpOracle.latestAnswer()) * target * 1e16 / hf;
             // At most 0.99 / HF times the current price, far below 2^255.
             // forge-lint: disable-next-line(unsafe-typecast)
             env.lpOracle.setAnswer(int256(price));
@@ -362,6 +372,7 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
         b.sources = usdc.balanceOf(env.lpVault) + usdc.balanceOf(address(env.primaryPool))
             + usdc.balanceOf(address(env.backupPool));
         b.parked = usdc.balanceOf(env.coll);
+        b.deficit = IAaveV4Hub(env.hub).getSpokeDeficitRay(env.usdcAssetId, env.spoke);
     }
 
     /// @dev TEST-093 conservation on balances. With `in = caller's fall + sources' fall` and `out = rise of the Hub,
@@ -369,7 +380,9 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
     /// reconcile, held for `settlePending`)`: `in == out`, LPVaultSwap's USDC is
     /// unchanged and the escrow's rise is exactly the escrowed credit, so no USDC appeared or vanished. The result must
     /// report what the balances show: `D` the Hub's rise, `A` the fee recipient's, `B` the borrower's, `R` the sources'
-    /// fall less Collateralization's rise and `keeperOut − Kf − shortfall` the caller's change. Floor: `R + shortfall >= minOut` and `D <= Kf <=
+    /// fall less Collateralization's rise and `keeperOut − Kf − shortfall` the caller's change. The part of `B` a deficit
+    /// liquidation paid into the First-Loss Reserve (`DeficitSurplusFunded`) reaches the Hub, not the borrower; it is
+    /// all of `B` on a call that raised the Spoke's deficit and 0 on any other call (REQ-SWAP-027). Floor: `R + shortfall >= minOut` and `D <= Kf <=
     /// debtToCover`, `shortfall <= maxShortfall`.
     function _checkBalances(
         Usdc memory b,
@@ -384,17 +397,20 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
         int256 toFee = int256(a.fee + a.feeEscrowed) - int256(b.fee + b.feeEscrowed);
         int256 toBorrower = int256(a.wallet + a.walletEscrowed) - int256(b.wallet + b.walletEscrowed);
         int256 escrowed = int256(a.feeEscrowed + a.walletEscrowed) - int256(b.feeEscrowed + b.walletEscrowed);
+        uint256 funded = DeficitFunding.funded(vm.getRecordedLogs(), address(env.lvs));
+        if (a.deficit > b.deficit) ++deficitLiquidations;
         if (
             callerIn + recovered != toHub + toFee + toBorrower || a.lvs != b.lvs || parked < 0
                 || int256(a.escrow) - int256(b.escrow) != escrowed
         ) ++conservationBreaks;
         if (
-            toHub != int256(r.debtRepaid) || toFee != int256(r.avanaFee) || toBorrower != int256(r.borrowerSurplus)
-                || recovered != int256(r.recovered)
+            toHub != int256(r.debtRepaid + funded) || toFee != int256(r.avanaFee)
+                || toBorrower != int256(r.borrowerSurplus) - int256(funded)
+                || funded != (a.deficit > b.deficit ? r.borrowerSurplus : 0) || recovered != int256(r.recovered)
                 || -callerIn != int256(r.keeperOut) - int256(r.callerFunds) - int256(r.shortfall)
         ) ++reportBreaks;
         if (
-            recovered + int256(r.shortfall) < int256(r.minOut) || toHub > int256(r.callerFunds)
+            recovered + int256(r.shortfall) < int256(r.minOut) || toHub - int256(funded) > int256(r.callerFunds)
                 || r.callerFunds > p.debtToCover || r.shortfall > p.maxShortfall
         ) ++floorBreaks;
     }

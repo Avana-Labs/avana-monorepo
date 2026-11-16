@@ -81,6 +81,9 @@ abstract contract CollateralizationBase is ICollateralizationEvents, ICollateral
     /// @dev Charges are stored as `uint64`; a charge must be below `2^64` (REQ-VAULT-015).
     uint256 internal constant CHARGE_BOUND = 2 ** 64;
 
+    /// @dev `BackingRecord.windowedBps` of a charge the pledge window took in full (`REQ-RISK-095`).
+    uint16 internal constant WINDOW_BPS = 10_000;
+
     /// @notice Gas that must be left after a failed `markDebtFree` read for the failure to count as the read's own
     /// (REQ-COLL-040): a call that ran out of gas leaves at most 1/64 of what it was given, so 50,000 left means the read
     /// had at least 63 × 50,000 = 3,150,000 gas, above the worst-case `getUserAccountData` of a CDP account.

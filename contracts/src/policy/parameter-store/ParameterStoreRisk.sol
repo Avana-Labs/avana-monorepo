@@ -127,6 +127,25 @@ abstract contract ParameterStoreRisk is ParameterStoreOracle {
         if (!ok) revert LivenessBound();
     }
 
+    /// @dev LIQ-I1's fee bound (`_feeBoundHolds`) with fee share `f` for every Active or Offboarding market of every CDP
+    /// Spoke, at the market's `slippageAllowanceBps` and smallest bonus; reverts `OutOfBounds` if any market fails.
+    /// @custom:spec REQ-PSTORE-010, REQ-CONFIG-071
+    function _requireFeeBoundEverywhere(
+        uint256 f
+    ) internal view {
+        address[] memory spokes = _REGISTRY.getSpokes();
+        bool ok = true;
+        for (uint256 s = 0; s < spokes.length; ++s) {
+            uint256[] memory ids = _REGISTRY.marketsOfSpoke(spokes[s]);
+            for (uint256 i = 0; i < ids.length; ++i) {
+                Market memory m = _REGISTRY.getMarket(ids[i]);
+                if (!_live(m.status)) continue;
+                if (!_feeBoundHolds(_minLb(m), _s().market[ids[i]].slippageAllowanceBps, f)) ok = false;
+            }
+        }
+        if (!ok) revert OutOfBounds();
+    }
+
     /// @dev SPEC-CAP-006 for an Active or Offboarding market: `addCap ≥ ⌈(max(cap, R) + max(slice, S)) / floor⌉`
     /// whole vault tokens, or `addCap == MAX_ALLOWED_SPOKE_CAP`, with `R`, `S` the market's booked counters. A
     /// Registered market has no Hub asset yet; `activateMarket` checks the bound. Reverts `AddCapTooSmall`, also for a
