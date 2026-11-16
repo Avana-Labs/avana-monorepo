@@ -458,6 +458,16 @@ contract LensLiquidationUnitTest is LensFixture {
         assertEq(p.minOutPerWholeToken, _ceilDiv(v * 9900, 10_000) - 2e12 - 1e18, "one whole token at $2.00");
     }
 
+    // TEST-069 verifies: REQ-LENS-016, SPEC-LIQ-004, SPEC-LIQ-005
+    /// @dev `Pc` is the smaller of the AaveOracle price and the LPOracle's answer: with the LPOracle at $1.50 under
+    /// Aave's $2.00, the whole-token floor is priced at $1.50.
+    function test_TEST_069_minOutPerWholeTokenAtTheLowerCollateralPrice() public {
+        lpo.setAnswer(true, 150_000_000);
+        LiquidationPreview memory p = lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE);
+        uint256 v = 1.5e18;
+        assertEq(p.minOutPerWholeToken, _ceilDiv(v * 9900, 10_000) - 2e12 - 1e18, "one whole token at $1.50");
+    }
+
     // TEST-069 verifies: REQ-LENS-007, REQ-LENS-016
     function test_TEST_069_expiredMarketNeverReverts() public {
         _borrow(aliceProxy, 15_000e18);
