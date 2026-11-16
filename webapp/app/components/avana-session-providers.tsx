@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react"
 import { AvanaSessionsProvider } from "@/app/lib/avana-session/avana-sessions-provider"
 import { ConvexMarketSnapshotHydrators } from "@/app/lib/avana-session/convex-market-snapshot-hydrators"
+import { ChainBorrowPositionsHydrator } from "@/app/lib/avana-session/chain-borrow-positions-hydrator"
 import { resolveProductRuntimeScope } from "@/app/lib/avana-session/product-runtime-scope"
 import { hasConvexClient } from "@/app/lib/convex/has-convex-client"
 import { getSiweConvexClient, SiweConvexProvider } from "@/app/lib/convex/siwe-convex-provider"
@@ -33,6 +34,7 @@ function SessionTree({ walletId, live, children }: { walletId: string; live: boo
   return (
     <AvanaSessionsProvider walletId={walletId}>
       {live ? <ConvexMarketSnapshotHydrators scope={scope} /> : null}
+      {live ? <ChainBorrowPositionsHydrator walletId={walletId} /> : null}
       {children}
     </AvanaSessionsProvider>
   )
