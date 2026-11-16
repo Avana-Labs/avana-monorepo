@@ -1,6 +1,7 @@
 import { encodeFunctionData, parseAbi, zeroAddress, type Address, type Hex } from "viem"
 import { quoteFee } from "@/convex/lib/fees"
 import { buildActionBatch, sendActionBatch, type BatchChain, type BatchWallet, type Call } from "@/app/lib/fees/fee-batch"
+import { recordSentHashes, recordSubmittedIntent, type IntentRecorder } from "@/app/lib/intents/record-intent"
 import { frontendFeeAmount, frontendFeeRules, type FeeAction, type FeeRules } from "@/app/lib/fees/front-end-fee"
 import { isUserRejection } from "@/app/lib/swap-system/swap-execution"
 import type { ChainBorrowRefs, PledgeableLp } from "@/app/lib/borrow-system/chain-refs"
@@ -64,6 +65,8 @@ export type BorrowExecutionDeps = {
   onConfirmed?(): void
   rules?: FeeRules
   now?: () => number
+  /** Reports each sent transaction to Convex; defaults to `recordSubmittedIntent`, which does nothing without a session. */
+  recordIntent?: IntentRecorder
 }
 
 /** A chain call of one action: where it runs, its calls, and the fee leg it pays. */
@@ -453,11 +456,14 @@ export async function executeBorrowOnChain(deps: BorrowExecutionDeps, intent: Tr
 
     let hash: Hex | null = null
     let ok = true
+    const recorder = deps.recordIntent ?? recordSubmittedIntent
     if (sent.kind === "batch") {
       const r = await wallet.waitForCalls(sent.id)
       ok = r.status === "success"
       hash = r.hash
+      recordSentHashes(recorder, { chainId, wallet: wallet.account, kind: plan.feeAction, hashes: [hash] })
     } else {
+      recordSentHashes(recorder, { chainId, wallet: wallet.account, kind: plan.feeAction, hashes: sent.hashes })
       for (const h of sent.hashes) {
         hash = h
         if ((await chain.waitForReceipt(h)) !== "success") {

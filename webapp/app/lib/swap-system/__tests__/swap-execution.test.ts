@@ -143,6 +143,22 @@ describe("sending a swap", () => {
     expect(record).toMatchObject({ status: "confirmed", swapTransactionHash: "0xbatch", approvalTransactionHash: "0xbatch", outputAmount: 0.333 })
   })
 
+  it("reports the sent swap to Convex, once for a batch and per hash without batching, and ignores a failing report", async () => {
+    const recordIntent = vi.fn(async (_args: { chainId: number; wallet: string; txHash: Hex; kind: string }) => {})
+    await sendSwap({ ...deps(fakeChain(0n), fakeWallet(true)), recordIntent }, quote(), "w")
+    expect(recordIntent.mock.calls.map((c) => c[0])).toEqual([{ chainId: 31337, wallet: USER, txHash: "0xbatch", kind: "swap" }])
+
+    recordIntent.mockClear()
+    await sendSwap({ ...deps(fakeChain(999_000_000n), fakeWallet(false)), recordIntent }, quote(), "w", "0xapprove")
+    expect(recordIntent.mock.calls.map((c) => c[0])).toEqual([{ chainId: 31337, wallet: USER, txHash: "0xswap", kind: "swap" }])
+
+    const failing = vi.fn(async () => {
+      throw new Error("down")
+    })
+    const record = await sendSwap({ ...deps(fakeChain(0n), fakeWallet(true)), recordIntent: failing }, quote(), "w")
+    expect(record).toMatchObject({ status: "confirmed" })
+  })
+
   it("skips the approval when the allowance covers the route amount", async () => {
     const wallet = fakeWallet(true)
     await sendSwap(deps(fakeChain(999_000_000n), wallet), quote(), "w")
