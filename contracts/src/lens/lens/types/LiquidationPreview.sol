@@ -25,7 +25,8 @@ import {RouteStatus} from "./RouteStatus.sol";
 /// `recoveryFloor` (the floor for that seizure), `expectedPayout` (keeperOut for caller funding `params.debtToCover`
 /// with every swap at the oracle value), `expectedNetPayout` (`max(0, expectedPayout - params.debtToCover)`, the keeper
 /// reward beyond the returned funding, Q-345), `expectedAvanaFee` and `expectedBorrowerSurplus` are in debt-asset base
-/// units. `expectedCallerLoss = max(0, D - Rv)`, with `Rv` the oracle value of the unwound tokens, is the amount the
+/// units; `expectedBorrowerSurplus` is the full `B`, of which a liquidation that books a deficit pays the First-Loss
+/// Reserve's take there instead of to the wallet (REQ-SWAP-027). `expectedCallerLoss = max(0, D - Rv)`, with `Rv` the oracle value of the unwound tokens, is the amount the
 /// caller's payout can fall below its funding at oracle prices (REQ-LENS-029, SPEC-SET-005); a helper's caller sets its
 /// top-up bound to at least `max(0, premium + expectedCallerLoss - expectedNetPayout)`. There is no remaining-capacity
 /// view (Q-397). A USD-band breach alone is never reported as blocking.

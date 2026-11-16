@@ -10433,7 +10433,7 @@
     ]
   },
   "Q-337": {
-    "hash": "9282cb7682b40126",
+    "hash": "82f97812ba30f73c",
     "checks": [
       "ILPVaultSwapEvents",
       "MATH-ST-101",
@@ -19058,7 +19058,7 @@
     ]
   },
   "REQ-HELPER-008": {
-    "hash": "1dee655241d2cdcb",
+    "hash": "e6e44d8d1f5ca340",
     "checks": [
       "FV-LIQ-01",
       "FV-LIQ-06",
@@ -19098,7 +19098,7 @@
     ]
   },
   "REQ-HELPER-010": {
-    "hash": "86ba4a7fe88d8d84",
+    "hash": "aacdf0ae762e5f20",
     "checks": [
       "FlashLiquidator",
       "FlashLiquidatorBase",
@@ -24396,12 +24396,13 @@
     ]
   },
   "REQ-PSTORE-010": {
-    "hash": "97abb6bc01abe894",
+    "hash": "956010f423b48b1c",
     "checks": [
       "AvanaRoles",
       "IParameterStoreAdmin",
       "ParameterStoreAdminRiskLogic",
       "ParameterStoreForwardAdmin",
+      "ParameterStoreRisk",
       "ParameterStoreRouter",
       "ParameterStoreViews",
       "TEST-061",
@@ -25878,8 +25879,10 @@
     ]
   },
   "REQ-RISK-093": {
-    "hash": "106150124cce3009",
+    "hash": "367eb8bfd29a1aca",
     "checks": [
+      "CollateralizationRelease",
+      "ICollateralizationErrors",
       "IRiskModuleChecks",
       "IRiskModuleErrors",
       "IRiskModuleSpeedLogic",
@@ -25890,6 +25893,11 @@
       "RiskModule",
       "RiskModuleSpeed",
       "RiskModuleSpeedLogic",
+      "SpeedLimitMath",
+      "SpeedScope",
+      "TEST-018",
+      "TEST-237",
+      "TEST-239",
       "TEST-322",
       "TEST-323",
       "TEST-324"
@@ -25905,12 +25913,19 @@
     ]
   },
   "REQ-RISK-095": {
-    "hash": "8931a4381a0d6efe",
+    "hash": "e6b491a8b9991d82",
     "checks": [
+      "BackingRecord",
       "IRiskModuleChecks",
+      "IRiskModuleErrors",
+      "IRiskModuleSpeedLogic",
+      "IRiskModuleViews",
       "RiskModule",
       "RiskModuleSpeed",
+      "RiskModuleSpeedLogic",
       "SpeedWindow",
+      "TEST-018",
+      "TEST-237",
       "TEST-321",
       "TEST-322",
       "TEST-323",
@@ -27376,7 +27391,7 @@
     ]
   },
   "REQ-SWAP-026": {
-    "hash": "f9cd0fdac086b2c7",
+    "hash": "0c7587f051cead8a",
     "checks": [
       "FV-LIQ-01",
       "FV-LIQ-03",
@@ -27399,7 +27414,7 @@
     ]
   },
   "REQ-SWAP-027": {
-    "hash": "19acda1c45c6f171",
+    "hash": "1f33fab927f6e864",
     "checks": [
       "FV-LIQ-01",
       "FV-LIQ-06",
@@ -27407,7 +27422,9 @@
       "ILPVaultSwapLiquidation",
       "LPVaultSwapLiquidationLogic",
       "TEST-051",
-      "TEST-179"
+      "TEST-104",
+      "TEST-179",
+      "TEST-216"
     ]
   },
   "REQ-SWAP-028": {
@@ -33170,11 +33187,12 @@
     ]
   },
   "SPEC-LIQ-022": {
-    "hash": "3868a4425b3db8c2",
+    "hash": "ca7d68af34e990b2",
     "checks": [
       "FV-LIQ-01",
       "FV-LIQ-04",
       "FV-LIQ-06",
+      "ILPVaultSwapEvents",
       "ILPVaultSwapLiquidation",
       "LPVaultSwapLiquidationLogic",
       "LensLiquidation",
@@ -33198,6 +33216,7 @@
       "TEST-104",
       "TEST-170",
       "TEST-198",
+      "TEST-216",
       "TEST-240"
     ]
   },
@@ -33816,7 +33835,7 @@
     ]
   },
   "SPEC-ORC-023": {
-    "hash": "c7425f2ce009c211",
+    "hash": "aad522a3e82e392b",
     "checks": [
       "DebtOracleReads",
       "ILPOracle",
