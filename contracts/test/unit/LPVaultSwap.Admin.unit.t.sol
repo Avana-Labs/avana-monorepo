@@ -12,6 +12,7 @@ import {LPVaultSwapImmutables} from "../../src/liquidation/lp-vault-swap/types/L
 import {LPVaultSwapLogics} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapLogics.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @notice A logic stand-in that reports a chosen kind and immutables hash.
@@ -74,6 +75,31 @@ contract LPVaultSwapAdminUnitTest is LPVaultSwapUnitBase {
         bad.keeperFloor = 33;
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, 33, 32));
         this.deployImplementation(bad, _logics());
+    }
+
+    /// @notice The keeper floor is the construction value: an implementation built with a floor of 2 reports it, and
+    /// its proxy's `initialize` refuses a single initial operator and accepts two.
+    // TEST-242 verifies: REQ-SWAP-040, REQ-SWAP-034
+    function test_TEST_242_keeperFloorIsTheConstructionValue() public {
+        LPVaultSwapImmutables memory im = immutables();
+        im.keeperFloor = 2;
+        LPVaultSwapLogics memory logics = LPVaultSwapLogics(
+            deployCode("LPVaultSwapLiquidationLogic.sol:LPVaultSwapLiquidationLogic", abi.encode(im)),
+            deployCode("LPVaultSwapPendingLogic.sol:LPVaultSwapPendingLogic", abi.encode(im)),
+            deployCode("LPVaultSwapDeleverageLogic.sol:LPVaultSwapDeleverageLogic", abi.encode(im))
+        );
+        LPVaultSwap impl = new LPVaultSwap(im, logics);
+        assertEq(impl.KEEPER_FLOOR(), 2, "KEEPER_FLOOR");
+        address[] memory one = new address[](1);
+        one[0] = keeper;
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, 1, 2));
+        new ERC1967Proxy(address(impl), abi.encodeCall(LPVaultSwap.initialize, (timelock, one)));
+        address[] memory two = new address[](2);
+        (two[0], two[1]) = (keeper, carol);
+        LPVaultSwap proxy = LPVaultSwap(
+            address(new ERC1967Proxy(address(impl), abi.encodeCall(LPVaultSwap.initialize, (timelock, two))))
+        );
+        assertEq(proxy.KEEPER_FLOOR(), 2, "proxy KEEPER_FLOOR");
     }
 
     /// @notice A logic contract of another kind, built with other immutables, swapped between slots or zero is refused.

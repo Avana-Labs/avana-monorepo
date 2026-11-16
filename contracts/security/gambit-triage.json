@@ -156,6 +156,60 @@
       "reason": "Equivalent in reachable states: the age term is evaluated only when the state is Live, where every served leg passed DebtOracleReads' checks (updatedAt <= block.timestamp and age <= its feedMaxAge, at most a few days). Then 0 <= block.timestamp - servedUpdatedAt < servedUpdatedAt for any timestamp above twice that age (after early 1970), so block.timestamp % servedUpdatedAt equals the difference. The borrow-age gate itself is covered by test_TEST_276_alternateHeldToItsBorrowAge and test_TEST_276_feedFreshUntilHeartbeatPlusMargin.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "c0b3380c64512cf9",
+      "check": "AssignmentMutation",
+      "file": "src/oracle/lp-oracle/LPOracleCLModule.sol",
+      "function": "LPOracleCLModule._listingChecks",
+      "reason": "Equivalent: this override runs in no deployed contract. LPOracleCL forwards checkConfig to its listing logic and runs initialize's market part in its init logic, so LPOracleListing._checkPrices never executes in the implementation; the listing and init logic contracts use LPOracleCLModuleCaller._listingChecks, which delegates to LPOracleCLModuleLogic.listingChecks, and that entry point calls _clListingChecks directly. The module's listing bits are covered through that path by test_TEST_306_moduleListingBits and test_TEST_306_unitExponentMismatchSetsOnlyItsBit.",
+      "approval": "pending",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "8485ad731642472b",
+      "check": "AssignmentMutation",
+      "file": "src/oracle/lp-oracle/LPOracleCLModule.sol",
+      "function": "LPOracleCLModule._clListingChecks",
+      "reason": "Equivalent: CL_CHECK_RANGE is 1 << 0, which is 1, so `failed |= 1` sets the same bit.",
+      "approval": "pending",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "d95f5c3dbcabf9ef",
+      "check": "DeleteExpressionMutation",
+      "file": "src/oracle/lp-oracle/LPOracle.sol",
+      "function": "LPOracle.initialize",
+      "reason": "Equivalent: __AccessControl_init has an empty body in OpenZeppelin Contracts Upgradeable 5.1.0 (access/AccessControlUpgradeable.sol line 82), so removing the call changes no state; the role grants that follow are covered by the LPOracle.Access suite.",
+      "approval": "pending",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "dcd8e624bf02e05a",
+      "check": "AssignmentMutation",
+      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "function": "LPOraclePoke._newestLegInUse",
+      "reason": "Equivalent in reachable states: _newestLegInUse runs only from _startGrace on an evaluation that is not failed, where every token's used route is Valid, and a route is Valid only when each of its legs is Valid, which requires updatedAt <= block.timestamp (LPOracleReads._classify). The maximum is therefore never above block.timestamp and the clamp to now never runs; it is kept as the min(..., now) of REQ-ORACLE-032 (c).",
+      "approval": "pending",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "0b6e79fc52d397e9",
+      "check": "BinaryOpMutation",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic._fundReserve",
+      "reason": "Equivalent in reachable states: the reserve is approved exactly `amount` and the allowance is reset after `fund`, with the Lock held, so LPVaultSwap's balance falls by at most `amount` and `before - balance > amount` is false. The balance after `fund` still holds keeperOut, which is positive (keeperOut >= Kf - A with A below D <= Kf), so balance > 0; then before % balance <= before - balance <= amount and the mutant also takes before - balance. Partial and full funding are covered by the TEST-216 suites of LPVaultSwap.BadDebt.",
+      "approval": "pending",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "9c6fbbcec4c0204b",
+      "check": "DeleteExpressionMutation",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._clear",
+      "reason": "Equivalent: the amount slot is read only in _checkCallback, after it requires the state slot to be _STATE_OPEN, and _runFlash writes the amount slot in the same step that opens the state; _clear resets the state to _STATE_NONE, so a stale amount from an earlier deleverage in the same transaction can never be read. No view or other code reads the slot.",
+      "approval": "pending",
+      "review": "mutation gate run 43816627319, equivalent mutant"
     }
   ]
 }
