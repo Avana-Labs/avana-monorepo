@@ -180,7 +180,6 @@ export function spokeBorrowableFromRecord(asset: BorrowAssetRecord): SpokeBorrow
     totalBorrowedUsd: borrowed,
     utilization: total > 0 ? (borrowed / total) * 100 : 0,
     availableUsd: available,
-    walletBalanceLabel: UNAVAILABLE,
     hasWalletBalance: false,
     visual: {
       symbol: asset.display.visual.symbol,

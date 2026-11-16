@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react"
 import { CHART_RANGE_LABELS, getChartTickIndexes } from "./chart-data"
+import { formatChartAxis, formatChartValue } from "./format"
 import { interpolateScrubSample, scrubRatioFromPointer, type HeroScrubSample } from "./hero-scrub"
 import type { ChartPoint, ChartRangeOption } from "./types"
 
@@ -194,9 +195,8 @@ export function HeroAreaChart({
   data,
   activeRange,
   height = 240,
-  formatValue = (value) =>
-    `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-  formatYAxis = (value) => `$${Math.round(value).toLocaleString()}`,
+  formatValue = (value) => formatChartValue("usd", value),
+  formatYAxis = (value) => formatChartAxis("usd", value),
   gradientId = "heroAreaChartFill",
   className,
   tone,

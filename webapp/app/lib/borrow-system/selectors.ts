@@ -173,9 +173,6 @@ export function selectBorrowableAssets(
   const account = state.accounts[walletId]
   const market = marketId ? state.markets[marketId] : null
   const supported = market ? new Set(market.relations.supportedBorrowAssetIds) : null
-  const walletBalanceLabel = account
-    ? `$${fixedToNumber(account.walletBalanceUsd6, 6).toLocaleString("en-US", { maximumFractionDigits: 0 })}`
-    : "$0"
 
   return Object.values(state.assets)
     .filter((asset) => !supported || supported.has(asset.id))
@@ -198,7 +195,6 @@ export function selectBorrowableAssets(
         totalBorrowedUsd: fixedToNumber(asset.snapshot.totalBorrowedUsd6, 6),
         utilization,
         availableUsd: fixedToNumber(asset.snapshot.availableLiquidityUsd6, 6),
-        walletBalanceLabel,
         hasWalletBalance: Boolean(account && account.walletBalanceUsd6 > 0n),
         visual: visualToUi(asset.display.visual),
         trendUp: asset.snapshot.priceChange24hWad >= 0n,

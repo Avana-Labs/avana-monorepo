@@ -9,7 +9,7 @@ import type { QuickStatsProduct } from "@/app/lib/detail-page/live-quick-stats"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { formatTokenPrice } from "@/app/lib/prices/format"
 import { useCanonicalPriceFor } from "@/app/lib/prices/token-prices-context"
-import { formatOraclePrice, formatPairRate } from "@/app/lib/borrow-detail/formatters"
+import { formatPairRate } from "@/app/lib/borrow-detail/formatters"
 import { cn } from "@/lib/utils"
 
 type QuickStatLike = {
@@ -119,6 +119,7 @@ function QuickStatsGridView({ detail, className, hideRisk = false, columns = 3 }
 
 export function QuickStatsGrid(props: Props) {
   const priceFor = useCanonicalPriceFor()
+  const { price: formatPrice } = useCurrency()
   const hero = props.detail.hero
   const heroSymbol =
     hero && typeof hero === "object" && "symbol" in hero && typeof hero.symbol === "string" ? hero.symbol : undefined
@@ -133,7 +134,7 @@ export function QuickStatsGrid(props: Props) {
     if (baseSymbol && quoteSymbol && pairRate !== undefined && basePrice !== undefined) {
       const value = `${formatPairRate(pairRate)} ${quoteSymbol}`
       const tooltip =
-        `1 ${baseSymbol} = ${formatPairRate(pairRate)} ${quoteSymbol} (${formatOraclePrice(basePrice)}) — the pair spot rate, ` +
+        `1 ${baseSymbol} = ${formatPairRate(pairRate)} ${quoteSymbol} (${formatPrice(basePrice)}) — the pair spot rate, ` +
         `P(${baseSymbol}) ÷ P(${quoteSymbol}) from the oracle, with the USD value of ${baseSymbol} shown in parentheses.`
       return props.detail.quickStats.map((stat) =>
         stat.id === "price" || stat.id === "oraclePrice" ? { ...stat, value, tooltip } : stat,
@@ -143,7 +144,7 @@ export function QuickStatsGrid(props: Props) {
     return props.detail.quickStats.map((stat) =>
       stat.id === "price" ? { ...stat, value: formatTokenPrice(price) } : stat,
     )
-  }, [basePrice, baseSymbol, pairRate, price, props.detail.quickStats, quoteSymbol])
+  }, [basePrice, baseSymbol, formatPrice, pairRate, price, props.detail.quickStats, quoteSymbol])
   const detail = quickStats === props.detail.quickStats ? props.detail : { ...props.detail, quickStats }
 
   // The shared reactive price source keeps detail-page stats aligned with market tables as oracle
