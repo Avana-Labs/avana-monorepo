@@ -1322,8 +1322,8 @@ const PAGE_AFTER_BLOCKS = 300 / BLOCK_SECONDS;
 /**
  * services/README.md: "a failover drill: stopping every primary lets the standby liquidate each
  * account within the M-09 warning window". Two accounts (a Uniswap v3 and a Slipstream market) fall below HF 1 with no
- * primary running; only a standby keeper runs, in active mode, signing as the operator helper's signer (anvil account
- * #7) from the encrypted keystore e2e-local.sh makes for the run (E2E_DRILL_KEYSTORE and E2E_DRILL_KEYSTORE_PASSWORD_FILE,
+ * primary running; only a standby keeper runs, in active mode, signing as the operator helper's signer (the drill
+ * signer e2e-local.sh generates for the deployment) from its encrypted keystore (E2E_DRILL_KEYSTORE and E2E_DRILL_KEYSTORE_PASSWORD_FILE,
  * passed as KEEPER_LOCAL_KEYSTORE_ANVIL, which the keeper refuses on every other network set). Blocks are mined 12 s apart. Pass: neither account is
  * liquidated before the standby's 60 s, and both are by 300 s (the M-09 page).
  */

@@ -9,15 +9,17 @@
 //      (8 decimals, $95,000), each with its DebtOracle. The exotic Hub lends USDC, PEPE, AAVE and WBTC; borrowing is
 //      mixed per Spoke: uniV3Exotic all four, slipExotic USDC and WBTC, and WBTC also on the volatile Hub's
 //      uniV3Volatile (its listed markets get routes into WBTC);
-//   3. seven collateral tokens (PEPE, AAVE, UNI, WBTC, THIN, AERO, cbBTC) and ten markets: Uniswap v3 PEPE/WETH 1 %,
-//      PEPE/USDC 1 %, AAVE/WETH, UNI/WETH, AAVE/UNI 0.3 %, WBTC/PEPE 1 % (the widest decimals and price gap),
-//      WBTC/USDC 0.3 %, THIN/USDC 1 % (a $20k pool), and Slipstream AERO/USDC (tick spacing 200) and cbBTC/USDC (100).
+//   3. seven collateral tokens (PEPE, AAVE, UNI, WBTC, THIN, AERO, cbBTC) and seven markets: Uniswap v3 PEPE/USDC 1 %,
+//      AAVE/UNI 0.3 %, WBTC/PEPE 1 % (the widest decimals and price gap), WBTC/USDC 0.3 %, THIN/USDC 1 % (a $20k pool),
+//      and Slipstream AERO/USDC (tick spacing 200) and cbBTC/USDC (100). Seven, so that with the eight markets of the
+//      first deployment and day 2 the chain holds 15 of its `maxMarketCount` of 16, and the hostile cases and the
+//      cancel-registration drill still have an identifier to list under.
 // Each market's collateral factor is min(token collateral factors) x its pool risk factor (SPEC-CF-001); its slippage
 // allowance is the largest the fee bound allows at its minimum liquidation bonus (LIQ-I1); its routes, from each pool
 // token into each asset its Spoke lends, are found by search (routes.ts).
-// The pass is one release of all ten markets. Executing them as one listing batch would take about 80M gas, above a
-// block (60M on the rehearsal's anvil), so `09-listing-markets` splits the batch into operations within the operation
-// gas budget (40M by default), which execute in order; the rehearsal checks that it did.
+// The pass is one release of all seven markets. Executing them as one listing batch would take about 56M gas, above
+// the operation gas budget (40M by default), so `09-listing-markets` splits the batch into operations within that
+// budget, which execute in order; the rehearsal checks that it did.
 //
 // Usage, from contracts/:  node script/e2e/exotic-additions.ts --network anvil
 
@@ -228,10 +230,7 @@ type MarketSpec = {
   kind: string;
 };
 const MARKETS: MarketSpec[] = [
-  { pool: "PEPE-WETH-10000", spoke: UNI, poolRiskFactorBps: 3000, maxLiquidationBonus: 11500, consistencyToleranceBps: 300, marketUsdCap: "25000", topUpSliceUsd: "10000", kind: "a meme coin" },
   { pool: "PEPE-USDC-10000", spoke: UNI, poolRiskFactorBps: 4000, maxLiquidationBonus: 11500, consistencyToleranceBps: 300, marketUsdCap: "1000000", topUpSliceUsd: "250000", kind: "a meme coin" },
-  { pool: "AAVE-WETH-3000", spoke: UNI, poolRiskFactorBps: 4000, maxLiquidationBonus: 10800, consistencyToleranceBps: 100, marketUsdCap: "1000000", topUpSliceUsd: "250000", kind: "a governance token" },
-  { pool: "UNI-WETH-3000", spoke: UNI, poolRiskFactorBps: 4000, maxLiquidationBonus: 10800, consistencyToleranceBps: 100, marketUsdCap: "1000000", topUpSliceUsd: "250000", kind: "a governance token" },
   { pool: "AAVE-UNI-3000", spoke: UNI, poolRiskFactorBps: 4000, maxLiquidationBonus: 10800, consistencyToleranceBps: 100, marketUsdCap: "500000", topUpSliceUsd: "100000", kind: "two governance tokens" },
   { pool: "WBTC-PEPE-10000", spoke: UNI, poolRiskFactorBps: 3000, maxLiquidationBonus: 11500, consistencyToleranceBps: 300, marketUsdCap: "500000", topUpSliceUsd: "100000", kind: "8- and 18-decimal tokens nine orders of magnitude apart in price" },
   { pool: "WBTC-USDC-3000", spoke: UNI, poolRiskFactorBps: 4000, maxLiquidationBonus: 10800, consistencyToleranceBps: 100, marketUsdCap: "2000000", topUpSliceUsd: "500000", kind: "an 8-decimal token" },

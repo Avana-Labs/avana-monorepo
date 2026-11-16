@@ -32,8 +32,9 @@ struct LiquidationResult {
     uint256 keeperReward;
     // Debt asset paid to the caller: the unused funding, the recovered principal and kr.
     uint256 keeperOut;
-    // B (SPEC-LIQ-022), always the full borrower surplus. In a liquidation that books a deficit the First-Loss Reserve
-    // takes DeficitSurplusFunded.amount of it and the wallet receives the rest (BorrowerSurplusPaid.amount).
+    // B (SPEC-LIQ-022), always the full borrower surplus. In a liquidation of an underwater account or one that books a
+    // deficit the First-Loss Reserve takes DeficitSurplusFunded.amount of it and the wallet receives the rest
+    // (BorrowerSurplusPaid.amount).
     uint256 borrowerSurplus;
     // Caller funds pulled to cover recovery below the floor (0 when none).
     uint256 shortfall;

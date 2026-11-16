@@ -3,8 +3,9 @@
 // OCR2 transmitter for the test-network feeds (script/deploy/lib/WorldFeeds.sol): builds a report the way Chainlink's
 // OCR2 aggregator (libocr 199a6f1, contract2/OCR2Aggregator.sol) decodes it, has f + 1 of the four local oracles sign
 // keccak256(abi.encode(keccak256(report), reportContext)) and sends `transmit` from oracle 0. Prices move only this
-// way, so round IDs, `updatedAt` and staleness are the aggregator's own. Oracle keys: AVANA_OCR_MNEMONIC at indices
-// 10–13 (the public anvil test mnemonic on anvil).
+// way, so round IDs, `updatedAt` and staleness are the aggregator's own. Oracle keys: the encrypted Foundry keystores
+// ocr-0 … ocr-3 and the password file in AVANA_OCR_KEYSTORE_DIR, which script/e2e/e2e-local.sh generates for each fresh
+// deployment; they are decrypted in memory only.
 
 import {
   type Address,
@@ -16,9 +17,11 @@ import {
   parseAbi,
   parseSignature,
 } from "viem";
-import { mnemonicToAccount } from "viem/accounts";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { type PrivateKeyAccount, privateKeyToAccount } from "viem/accounts";
+import { decryptKeystore } from "../../../../services/keeper/src/adapters/localKeystore.ts";
 
-const ANVIL_MNEMONIC = "test test test test test test test test test test test junk";
 const F = 1;
 const ORACLES = 4;
 
@@ -29,8 +32,19 @@ export const OCR2_ABI = parseAbi([
   "function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)",
 ]);
 
-export function oracleAccounts(mnemonic = process.env.AVANA_OCR_MNEMONIC ?? ANVIL_MNEMONIC) {
-  return Array.from({ length: ORACLES }, (_, i) => mnemonicToAccount(mnemonic, { addressIndex: 10 + i }));
+let cachedOracles: Promise<PrivateKeyAccount[]> | undefined;
+
+/** The four oracles, decrypted once per process from the keystores in AVANA_OCR_KEYSTORE_DIR. */
+export function oracleAccounts(): Promise<PrivateKeyAccount[]> {
+  const dir = process.env.AVANA_OCR_KEYSTORE_DIR;
+  if (!dir) throw new Error("AVANA_OCR_KEYSTORE_DIR is not set: the oracle keystores script/e2e/e2e-local.sh generates");
+  cachedOracles ??= (async () => {
+    const password = readFileSync(join(dir, "password"), "utf8").replace(/\r?\n$/, "");
+    return Promise.all(
+      Array.from({ length: ORACLES }, async (_, i) => privateKeyToAccount(await decryptKeystore(readFileSync(join(dir, `ocr-${i}`), "utf8"), password))),
+    );
+  })();
+  return cachedOracles;
 }
 
 /**
@@ -38,7 +52,7 @@ export function oracleAccounts(mnemonic = process.env.AVANA_OCR_MNEMONIC ?? ANVI
  * time. Returns the transaction hash. A later call always uses a later epoch, as a live OCR2 network does.
  */
 export async function transmit(client: PublicClient, wallet: WalletClient, aggregator: Address, answer: bigint): Promise<Hex> {
-  const oracles = oracleAccounts();
+  const oracles = await oracleAccounts();
   const [, digest, epoch] = (await client.readContract({ address: aggregator, abi: OCR2_ABI, functionName: "latestConfigDigestAndEpoch" })) as [
     boolean,
     Hex,
