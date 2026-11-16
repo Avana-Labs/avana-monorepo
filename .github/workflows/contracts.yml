@@ -109,7 +109,7 @@ jobs:
       - name: Script tests (script/*.test.sh)
         # Each runs its script on fixtures, with stand-ins on PATH for the tools it calls: check-sizes.test.sh,
         # mutation-records.test.sh (multi-line mutants and Necessist removals kept whole), security-gate.test.sh
-        # (the triage's reviewed-file hashes), and
+        # (the triage's reviewed-file hashes), check-ai-credit.test.sh (AI credit in commit messages), and
         # upgrade-operation.test.sh, the slow-tier gate of every timelock upgrade (TEST-263) with a stand-in `gh`.
         run: for t in script/*.test.sh; do echo "== $t"; "$t"; done
 
