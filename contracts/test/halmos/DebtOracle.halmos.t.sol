@@ -265,7 +265,7 @@ contract DebtOracleHalmosTest is Test {
     ) public {
         vm.assume(bAnswer > 0 && bAnswer <= ALT_DRIFT_BELOW);
         // b < A: min(p, b) = b, and Drifting serves max(b, A) = A.
-        _driftRevertOnlyForGas(uint40(A), uint40(bAnswer), bAnswer, true);
+        _driftRevertOnlyForGas(uint40(A), uint40(bAnswer), bAnswer);
     }
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
@@ -276,7 +276,7 @@ contract DebtOracleHalmosTest is Test {
     ) public {
         vm.assume(bAnswer > ALT_DRIFT_BELOW && bAnswer < A);
         // b < A: min(p, b) = b; the routes agree, so the quote p = A is served.
-        _driftRevertOnlyForGas(uint40(A), uint40(bAnswer), bAnswer, false);
+        _driftRevertOnlyForGas(uint40(A), uint40(bAnswer), bAnswer);
     }
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
@@ -287,7 +287,7 @@ contract DebtOracleHalmosTest is Test {
     ) public {
         vm.assume(bAnswer >= A && bAnswer <= ALT_DRIFT_ABOVE);
         // b >= A: min(p, b) = A (b itself when b = A); the routes agree, so the quote p = A is served.
-        _driftRevertOnlyForGas(uint40(A), uint40(bAnswer), A, false);
+        _driftRevertOnlyForGas(uint40(A), uint40(bAnswer), A);
     }
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
@@ -312,7 +312,7 @@ contract DebtOracleHalmosTest is Test {
     ) public {
         vm.assume(pAnswer > 0 && pAnswer <= PRI_DRIFT_BELOW);
         // p < b: min(p, b) = p, and Drifting serves max(p, A) = A.
-        _driftRevertOnlyForGas(uint40(pAnswer), B_FIXED, pAnswer, true);
+        _driftRevertOnlyForGas(uint40(pAnswer), B_FIXED, pAnswer);
     }
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
@@ -324,7 +324,7 @@ contract DebtOracleHalmosTest is Test {
     ) public {
         vm.assume(pAnswer > PRI_DRIFT_BELOW && pAnswer < B_FIXED);
         // p < b: min(p, b) = p; the routes agree, so the quote p is served.
-        _driftRevertOnlyForGas(uint40(pAnswer), B_FIXED, pAnswer, false);
+        _driftRevertOnlyForGas(uint40(pAnswer), B_FIXED, pAnswer);
     }
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
@@ -336,7 +336,7 @@ contract DebtOracleHalmosTest is Test {
     ) public {
         vm.assume(pAnswer >= B_FIXED && pAnswer <= PRI_DRIFT_ABOVE);
         // p >= b: min(p, b) = b (p itself when p = b); the routes agree, so the quote p is served.
-        _driftRevertOnlyForGas(uint40(pAnswer), B_FIXED, B_FIXED, false);
+        _driftRevertOnlyForGas(uint40(pAnswer), B_FIXED, B_FIXED);
     }
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
@@ -348,7 +348,7 @@ contract DebtOracleHalmosTest is Test {
     ) public {
         vm.assume(pAnswer > PRI_DRIFT_ABOVE && pAnswer < MAX_ANSWER);
         // p > b: min(p, b) = b, and Drifting serves max(b, A) = A.
-        _driftRevertOnlyForGas(pAnswer, B_FIXED, B_FIXED, true);
+        _driftRevertOnlyForGas(pAnswer, B_FIXED, B_FIXED);
     }
 
     /// @dev With the drift checks' routes and timestamps, `getPriceState()` reverts only with `InsufficientGas`, with
@@ -357,10 +357,11 @@ contract DebtOracleHalmosTest is Test {
     /// uninterpreted functions; a non-gas revert guarded by such a term is then satisfiable in the abstract query, and
     /// the refined query with 256-bit `bvmul`/`bvudiv` is what ran past the budget (dumped queries of run 43828867901).
     /// The facts:
-    /// - `min(p, b) = low` and, while Drifting, `max(max(low, low), A) = A`, as OpenZeppelin's branchless
-    ///   `b ^ ([condition] × (a ^ b))`; the caller's range fixes the ordering of p, b and A (A exceeds the lower route
-    ///   in every drift range). The served price (A, or the quote p when the routes agree), below 2^40, is unchanged by
-    ///   the `min` with `2^255 − 1` in `DebtOracle._answer`. The DebtOracle build multiplies the condition and the xor
+    /// - `min(p, b) = low` and the Drifting price `max(max(low, low), A) = A`, as OpenZeppelin's branchless
+    ///   `b ^ ([condition] × (a ^ b))`; the caller's range fixes the ordering of p, b and A, and low <= A in every
+    ///   range. Both served prices, A and the quote p, below 2^40, are unchanged by the `min` with `2^255 − 1` in
+    ///   `DebtOracle._answer`. Both hold whatever the state: Halmos also follows the state branch that the range makes
+    ///   infeasible, and its query needs them as much as the feasible one's. The DebtOracle build multiplies the condition and the xor
     ///   in either order depending on the call site, and Halmos does not treat its uninterpreted `mul` as commutative,
     ///   so each fact is stated for both orders, at each level of nesting.
     /// - `x / x = 1` for each route answer x > 0: the overflow check of `a * 10 ** 0` in `LPPriceMath.normalizeAnswer`
@@ -374,24 +375,20 @@ contract DebtOracleHalmosTest is Test {
     function _driftRevertOnlyForGas(
         uint40 pAnswer,
         uint40 bAnswer,
-        uint256 low,
-        bool drifting
+        uint256 low
     ) internal {
         uint256 p = pAnswer;
         uint256 b = bAnswer;
         uint256[2] memory lows = _mins(p, b, low);
-        if (drifting) {
-            for (uint256 i = 0; i < 2; ++i) {
-                uint256[2] memory inner = _maxs(lows[i], lows[i], low);
-                for (uint256 j = 0; j < 2; ++j) {
-                    uint256[2] memory served = _maxs(inner[j], A, A);
-                    _mins(served[0], INT256_MAX, A);
-                    _mins(served[1], INT256_MAX, A);
-                }
+        for (uint256 i = 0; i < 2; ++i) {
+            uint256[2] memory inner = _maxs(lows[i], lows[i], low);
+            for (uint256 j = 0; j < 2; ++j) {
+                uint256[2] memory served = _maxs(inner[j], A, A);
+                _mins(served[0], INT256_MAX, A);
+                _mins(served[1], INT256_MAX, A);
             }
-        } else {
-            _mins(p, INT256_MAX, p);
         }
+        _mins(p, INT256_MAX, p);
         vm.assume(_div(p, p) == 1);
         vm.assume(_div(b, b) == 1);
         _toleranceFacts(p, b, ROUTE_TOLERANCE_BPS);
