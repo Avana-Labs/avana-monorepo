@@ -30,11 +30,16 @@
 #            src/ contract and library with its address immutables filled (no assertion violation), and `hevm test`
 #            on every `prove_` function in test/symbolic/
 #   mythril  script/security-mythril.sh on the runtime code of every src/ contract and library
-#   mutate   slither-mutate on every implementation file of the layers in security/mutation-layers.json, each mutant
-#            run against its Foundry tests (`forge test -j 2 --match-path <tests>`) in an isolated copy of src/ and
-#            test/ under out-security/mutation/root; uncaught mutants are listed per layer in
+#   mutate   slither-mutate's mutants (script/mutation-slither.py: the mutators of ci-shards.py SLITHER_MUTATORS) of
+#            every implementation file of the layers in security/mutation-layers.json, or of one shard of them
+#            (MUTATE_SHARD=k/n), each run against its Foundry tests by script/mutation-test.py (`forge test -j 2
+#            --fail-fast --match-path <tests>` in the `mutation` profile) in an isolated copy of src/ and test/ under
+#            out-security/mutation/root; the mutants come from the lists in MUTATE_LISTS (a folder written by
+#            `mutation-slither.py list`, as the CI `mutants` job does), else this step lists them first (one Slither
+#            run over the copy); each mutant is killed, survived, timeout or invalid
+#            (out-security/mutation/<layer>/<Contract>/shard-<k>.tsv); survivors and timeouts are listed per layer in
 #            out-security/mutation/<layer>/survivors.txt (one line each, a multi-line mutant kept whole with its
-#            newlines written as \n) and kept in out-security/mutation/<layer>/<Contract>/
+#            newlines written as \n)
 #   gambit   script/security-gambit.sh: Gambit expression mutants of the same files (fixed seed, operators and per-file
 #            cap from the `gambit` object of security/mutation-layers.json), each run against the same tests with a
 #            per-mutant timeout in an isolated copy under out-security/gambit/root; survivors are listed in
@@ -58,8 +63,12 @@
 # SECURITY_MEMORY_MAX (empty: no cap) bounds the memory of each hevm and Halmos run (see `capped`);
 # BUILD_CHUNK=60 files per strict build group;
 # MUTATE_LAYERS and MUTATE_CONTRACTS (space-separated; empty: every layer and contract of
-# security/mutation-layers.json), MUTATE_TIMEOUT=300 seconds per mutant test run, MUTATE_FUZZ_RUNS=256,
-# MUTATE_MUTATORS (comma-separated slither-mutate mutators; empty: all), NECESSIST_TIMEOUT=300 seconds per removal.
+# security/mutation-layers.json), MUTATE_SHARD (k/n: the mutants whose index i has i mod n = k - 1; empty: all),
+# MUTATE_LISTS (a folder of mutation-slither.py lists; empty: the step lists the mutants first),
+# MUTATE_TIMEOUT=600 seconds per mutant (its compile and tests), MUTATE_OPTIMIZED_TIMEOUT=1800 seconds for the
+# default-profile run of the optimized-only tests on a survivor, MUTATE_FUZZ_RUNS=256, MUTATE_MUTATORS
+# (comma-separated slither-mutate mutators; empty: ci-shards.py SLITHER_MUTATORS), NECESSIST_TIMEOUT=300 seconds per
+# removal. The mutate, gambit and necessist steps build in the `mutation` profile of foundry.toml (FOUNDRY_PROFILE).
 # GAMBIT_TIMEOUT=300 seconds per Gambit mutant test run, GAMBIT_FUZZ_RUNS (default MUTATE_FUZZ_RUNS).
 # Selectors (environment, space-separated; empty: every target, as above), used by CI to run one target per job:
 # ECHIDNA_HARNESSES and ECHIDNA_MODES (default "property assertion"), MEDUSA_HARNESSES, HALMOS_CONTRACTS (exact
@@ -667,9 +676,12 @@ step_mythril() {
   MYTHRIL_CONTRACTS="${MYTHRIL_CONTRACTS:-}" script/security-mythril.sh "$BUILD"
 }
 
-MUTATE_TIMEOUT=${MUTATE_TIMEOUT:-300}
+MUTATE_TIMEOUT=${MUTATE_TIMEOUT:-600}
+MUTATE_OPTIMIZED_TIMEOUT=${MUTATE_OPTIMIZED_TIMEOUT:-1800}
 MUTATE_FUZZ_RUNS=${MUTATE_FUZZ_RUNS:-256}
 NECESSIST_TIMEOUT=${NECESSIST_TIMEOUT:-300}
+# The prebuilt dependency outputs the test fixtures deploy from (vm.getCode / deployCode of out-<name>/...).
+DEP_OUTS="out-aave out-univ3 out-univ3-periphery out-slipstream-v1 out-slipstream-main out-aerodrome"
 
 # solc_bin: the solc of foundry.toml's solc_version, from Foundry's svm cache (macOS or Linux) or tools/bin.
 solc_bin() {
@@ -691,46 +703,57 @@ isolated_root() {
   solc=$(solc_bin) || return 1
   rm -rf "$root" && mkdir -p "$root/bin"
   cp -R src test "$root/"
-  for f in dependencies foundry.toml remappings.txt out-aave out-univ3; do
+  for f in dependencies foundry.toml remappings.txt $DEP_OUTS; do
     [ -e "$f" ] && ln -s "$ROOT/$f" "$root/$f"
   done
   ln -s "$solc" "$root/bin/solc"
 }
 
 step_mutate() {
-  require slither-mutate forge || return 1
-  local list status=0 layer name file tests root="$OUT/mutation/root" dir log remaps mutators=()
+  require forge || return 1
+  local list lists status=0 layer name file tests root="$OUT/mutation/root" dir shard=1 shards=1 mutators=()
+  if [ -n "${MUTATE_SHARD:-}" ]; then
+    shard=${MUTATE_SHARD%/*} shards=${MUTATE_SHARD#*/}
+  fi
   list=$("$PY" script/mutation-targets.py contracts --layers "${MUTATE_LAYERS:-}" --contracts "${MUTATE_CONTRACTS:-}") || return 1
   if [ -z "$list" ]; then
     echo "mutate: skipped, no implementation file in the selected layers of security/mutation-layers.json"
     return 0
   fi
   isolated_root "$root" || return 1
-  remaps=$(tr '\n' ' ' <remappings.txt)
-  [ -n "${MUTATE_MUTATORS:-}" ] && mutators=(--mutators-to-run "$MUTATE_MUTATORS")
+  [ -n "${MUTATE_MUTATORS:-}" ] && mutators=(--mutators "$MUTATE_MUTATORS")
+  lists=${MUTATE_LISTS:-}
+  if [ -z "$lists" ]; then
+    lists="$ROOT/$OUT/mutation/lists"
+    echo "=== listing the slither-mutate mutants (see $OUT/mutation/list.log)"
+    if ! (cd "$root" && PATH="$PWD/bin:$PATH" FOUNDRY_PROFILE=mutation "$PY" "$ROOT/script/mutation-slither.py" list \
+      "$lists" --layers "${MUTATE_LAYERS:-}" --contracts "${MUTATE_CONTRACTS:-}" ${mutators[@]+"${mutators[@]}"} \
+      >"$ROOT/$OUT/mutation/list.log" 2>&1); then
+      echo "mutate: listing the mutants failed (see $OUT/mutation/list.log)"
+      return 1
+    fi
+  fi
+  case $lists in /*) ;; *) lists="$ROOT/$lists" ;; esac
   while IFS=$'\t' read -r layer name file tests; do
-    dir="$ROOT/$OUT/mutation/$layer"
+    dir="$ROOT/$OUT/mutation/$layer/$name"
     mkdir -p "$dir"
-    log="$dir/$name.log"
-    echo "=== slither-mutate $name ($file), layer $layer, tests $tests"
-    if ! (cd "$root" && PATH="$PWD/bin:$PATH" FOUNDRY_FUZZ_RUNS="$MUTATE_FUZZ_RUNS" slither-mutate "$file" \
-      --contract-names "$name" --solc "$PWD/bin/solc" --solc-remaps "$remaps" --timeout "$MUTATE_TIMEOUT" \
-      --test-cmd "forge test -j 2 --match-path '$tests'" --output-dir "$dir/$name" ${mutators[@]+"${mutators[@]}"} \
-      >"$log" 2>&1); then
+    echo "=== slither-mutate mutants of $name ($file), shard $shard of $shards, layer $layer, tests $tests"
+    if [ ! -f "$lists/$layer/$name.json" ]; then
       status=1
-      echo "mutate: slither-mutate failed on $name (see $log)"
+      echo "mutate: no mutant list for $name in $lists"
+      continue
     fi
-    if grep -qE 'Test suite fails|Cannot find contracts|Traceback|too short for tests' "$log"; then
+    if ! (cd "$root" && PATH="$PWD/bin:$PATH" FOUNDRY_PROFILE=mutation FOUNDRY_FUZZ_RUNS="$MUTATE_FUZZ_RUNS" \
+      "$PY" "$ROOT/script/mutation-slither.py" run "$lists/$layer/$name.json" "$dir" --shard "$shard" \
+      --shards "$shards" --timeout "$MUTATE_TIMEOUT" --optimized-timeout "$MUTATE_OPTIMIZED_TIMEOUT"); then
       status=1
-      echo "mutate: $name did not run (see $log)"
+      echo "mutate: $name did not run to the end (see $dir/shard-$shard.log)"
     fi
-    grep -oE '(Revert|Comment|Tweak) mutants: .*|Zero (Revert|Comment|Tweak) mutants analyzed' "$log" | sed 's/^/  /' || true
-    # One line per uncaught mutant, a multi-line mutant kept whole (script/mutation-records.py).
-    if ! "$PY" script/mutation-records.py survivors "$log" "$name: " >>"$dir/survivors.txt"; then
-      status=1
-      echo "mutate: could not read the survivors of $name from $log"
-    fi
-    # The isolated copy must be unchanged after the campaign: slither-mutate restores every file it mutates.
+    # One line per surviving or timed-out mutant, its texts escaped as in script/mutation-records.py.
+    [ -f "$dir/shard-$shard.tsv" ] && awk -F'\t' -v n="$name" 'NR > 1 && ($5 == "survived" || $5 == "timeout") {
+      printf "%s: [%s] Line %s: '\''%s'\'' ==> '\''%s'\'' --> %s\n", n, $2, $4, $7, $8, ($5 == "survived" ? "UNCAUGHT" : "TIMEOUT")
+    }' "$dir/shard-$shard.tsv" >>"$ROOT/$OUT/mutation/$layer/survivors.txt"
+    # The isolated copy must be unchanged after the run: every mutant is written back to the original.
     if ! diff -q "$file" "$root/$file" >/dev/null; then
       status=1
       echo "mutate: $file was not restored in the isolated copy; recreating it"
@@ -738,7 +761,7 @@ step_mutate() {
     fi
   done <<<"$list"
   for dir in "$OUT"/mutation/*; do
-    [ -f "$dir/survivors.txt" ] && echo "survivors: $(wc -l <"$dir/survivors.txt" | tr -d ' ') in $dir/survivors.txt"
+    [ -f "$dir/survivors.txt" ] && echo "survivors and timeouts: $(wc -l <"$dir/survivors.txt" | tr -d ' ') in $dir/survivors.txt"
   done
   return $status
 }
@@ -764,16 +787,33 @@ step_necessist() {
     return 0
   fi
   mkdir -p "$OUT/necessist"
+  # Test files that declare a test the `mutation` profile leaves out (its no_match_test: tests of the release build's
+  # gas) run in the default profile, so their statements are removed under the build those tests check.
+  local optimized group profile f
+  optimized=$(sed -nE 's/^no_match_test *= *"(.*)"$/\1/p' foundry.toml)
   for layer in $(cut -f1 <<<"$list" | sort -u); do
     files=$(awk -F'\t' -v l="$layer" '$1 == l {print $2}' <<<"$list")
     isolated_root "$root" || return 1
     echo "=== necessist, layer $layer: $(wc -l <<<"$files" | tr -d ' ') test file(s)"
-    # shellcheck disable=SC2086
-    if ! (cd "$root" && PATH="$PWD/bin:$PATH" FOUNDRY_FUZZ_RUNS="$MUTATE_FUZZ_RUNS" necessist --framework foundry \
-      --timeout "$NECESSIST_TIMEOUT" --no-sqlite $files -- -j 2 >"$ROOT/$OUT/necessist/$layer.log" 2>&1); then
-      status=1
-      echo "necessist: layer $layer failed (see $OUT/necessist/$layer.log)"
-    fi
+    : >"$OUT/necessist/$layer.log"
+    for profile in mutation default; do
+      group=""
+      for f in $files; do
+        if [ -n "$optimized" ] && grep -qE "function ($optimized)\(" "$f"; then
+          [ $profile = default ] && group+=" $f"
+        else
+          [ $profile = mutation ] && group+=" $f"
+        fi
+      done
+      [ -n "$group" ] || continue
+      # shellcheck disable=SC2086
+      if ! (cd "$root" && PATH="$PWD/bin:$PATH" FOUNDRY_PROFILE=$profile FOUNDRY_FUZZ_RUNS="$MUTATE_FUZZ_RUNS" \
+        necessist --framework foundry --timeout "$NECESSIST_TIMEOUT" --no-sqlite $group -- -j 2 \
+        >>"$ROOT/$OUT/necessist/$layer.log" 2>&1); then
+        status=1
+        echo "necessist: layer $layer failed in the $profile profile (see $OUT/necessist/$layer.log)"
+      fi
+    done
     # One line per passing removal, a multi-line statement kept whole (script/mutation-records.py).
     if ! "$PY" script/mutation-records.py necessist "$OUT/necessist/$layer.log" >"$OUT/necessist/$layer.txt"; then
       status=1

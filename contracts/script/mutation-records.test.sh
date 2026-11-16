@@ -8,7 +8,12 @@
 #      is the whole mutant (first line to "--> UNCAUGHT"); a caught multi-line mutant is left out.
 #   2. necessist: a one-line and a multi-line passing removal each give one line, the multi-line one whole; a
 #      failed removal is left out.
-#   3. mutation-report.py lists the multi-line survivor and removal with their first and last lines.
+#   3. mutation-report.py lists the multi-line survivor (from a shard report of script/mutation-slither.py) and
+#      removal with their first and last lines.
+#   4. A timed-out mutant is its own outcome: mutation-report.py counts it as timed out, never as killed, and lists
+#      it with the survivors; script/mutation-test.py names a run past its budget `timeout`, a compiler error in a
+#      src/ file `invalid` and one only in a test file `killed` (with --test-compile-kills, as slither-mutate counted
+#      it), `invalid` without.
 #
 # Usage, from contracts/:  script/mutation-records.test.sh
 
@@ -98,13 +103,20 @@ check "necessist: one line per passing removal, failed one left out" lines_are "
 check "necessist: one-line removal as logged" grep -qxF 'test/Foo.t.sol:5:9-5:20: `vm.prank(a);` passed' "$TMP/necessist.txt"
 check "necessist: multi-line removal whole" read_back "$TMP/necessist.txt" 2 "$TMP/want-removal"
 
-# mutation-report.py on a run of one slither-mutate job and one Necessist job.
-mkdir -p "$TMP/art/mutate-2.1-Foo-1/2.1" "$TMP/art/necessist-2.1-Foo.t/"
-cp "$TMP/mutate.log" "$TMP/art/mutate-2.1-Foo-1/2.1/Foo.log"
+# mutation-report.py on a run of one slither-mutate shard and one Necessist job. The shard report holds one mutant of
+# each outcome; its texts are escaped as script/mutation-slither.py writes them (backslash, newline, tab).
+mkdir -p "$TMP/art/mutate-2.1-Foo-1/2.1/Foo" "$TMP/art/necessist-2.1-Foo.t/"
+{
+  printf 'index\tmutator\tkind\tline\toutcome\tseconds\toriginal\treplacement\n'
+  printf '%s\n' '0	CR	comment	20	survived	1.0	require(\n            x > 0,\n            "bad\\n"\n        )	//require(\n            x > 0,\n            "bad\\n"\n        )'
+  printf '%s\n' '1	RR	revert	30	killed	1.0	{ emit Done(1); }	{ revert(); }'
+  printf '%s\n' '2	MIA	tweak	40	timeout	600.0	a > b	true'
+  printf '%s\n' '3	LIR	tweak	50	invalid	0.5	1	0'
+} >"$TMP/art/mutate-2.1-Foo-1/2.1/Foo/shard-1.tsv"
 cp "$TMP/necessist.log" "$TMP/art/necessist-2.1-Foo.t/2.1.log"
 cat >"$TMP/jobs.json" <<'JSON'
 {"jobs": [
-  {"name": "mutate 2.1 Foo (group 1)", "status": "completed", "conclusion": "success"},
+  {"name": "mutate 2.1 Foo (shard 1 of 1)", "status": "completed", "conclusion": "success"},
   {"name": "necessist 2.1 test/Foo.t.sol", "status": "completed", "conclusion": "success"}
 ]}
 JSON
@@ -117,5 +129,38 @@ check "mutation-report: multi-line removal listed whole" \
   grep -qE '^\| 2\.1 \| `test/Foo\.t\.sol:7:9-9:11` \| `vm\.expectRevert\( +abi\.encodeWithSelector\(E\.selector\) +\);` \|$' \
   "$TMP/report/survivors.md"
 check "mutation-report: two survivors, two removals" grep -qF '| 2.1 | `test/Foo.t.sol` | 3 | 2 |' "$TMP/report/README.md"
+check "mutation-report: the timed-out mutant listed as timeout" \
+  grep -qF '| slither-mutate | 2.1 | Foo | line 40 (MIA) | `a > b` → `true` | timeout |' "$TMP/report/survivors.md"
+# Contract, layer, counted (killed + survived + timed out), killed, survived, timed out, not compiled, kill rate.
+check "mutation-report: a timeout counts as timed out, not killed" \
+  grep -qF '| Foo | 2.1 | 3 | 1 | 1 | 1 | 1 | 33.3 % |' "$TMP/report/README.md"
+# The same with the job list left out (`-`): every report folder counts as a finished job.
+python3 script/mutation-report.py "$TMP/art" - 1 0000000 "$TMP/report2" >/dev/null
+check "mutation-report: without a job list" grep -qF '| Foo | 2.1 | 3 | 1 | 1 | 1 | 1 | 33.3 % |' "$TMP/report2/README.md"
+
+# script/mutation-test.py outcomes from forge's exit code and output.
+outcomes() {
+  python3 - <<'PY'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("mt", "script/mutation-test.py")
+mt = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mt)
+test_err = "Compiler run failed:\nError (9582): Member not found\n  --> test/unit/Foo.t.sol:12:9:\n"
+src_err = "Compiler run failed:\nError (7576): Undeclared identifier\n  --> src/Foo.sol:3:5:\n"
+cases = [
+    ((None, "", True), "timeout"),
+    ((None, "", False), "timeout"),
+    ((0, "Suite result: ok", True), "survived"),
+    ((1, "[FAIL: assertion failed] test_x()", True), "killed"),
+    ((1, test_err, True), "killed"),
+    ((1, test_err, False), "invalid"),
+    ((1, src_err, True), "invalid"),
+    ((1, src_err + test_err, True), "invalid"),
+]
+bad = [f"{args[:2]!r} -> {mt.classify(*args)}, want {want}" for args, want in cases if mt.classify(*args) != want]
+sys.exit("\n".join(bad) if bad else 0)
+PY
+}
+check "mutation-test: timeout, survived, killed and invalid outcomes" outcomes
 
 exit $fail
