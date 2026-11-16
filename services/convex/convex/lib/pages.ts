@@ -74,7 +74,6 @@ export function assetSnapshot(
   asset: HubAssetRow,
   content: PageContent | null,
   symbol: string,
-  spokeSlug: string,
   hubLabel?: string,
 ): MarketSnapshotRow {
   const price = asset.priceUsd8;
@@ -84,7 +83,8 @@ export function assetSnapshot(
     scope: "asset",
     chainId: reserve.chainId,
     ...identity(content, { name: symbol, symbol }),
-    spokeId: spokeSlug,
+    // The Spoke's address, the key pool rows carry too, so the app can join a market to its debt reserves.
+    spokeId: reserve.spoke,
     hubId: asset.hub,
     ...(hubLabel ? { hubLabel } : {}),
     reserveFactorPct: bpsToPct(asset.liquidityFeeBps),

@@ -4,6 +4,8 @@ import { Info } from "@/app/components/icons"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
+import { fillFeeRate, statedFeeBps } from "@/app/lib/fees/front-end-fee"
+import { useFrontendFeeRules } from "@/app/lib/fees/front-end-fee-sync"
 
 // useLayoutEffect warns during SSR; positioning only ever runs client-side after an open.
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect
@@ -11,7 +13,10 @@ const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffec
 type Coords = { top: number; left: number; placement: "top" | "bottom" }
 
 export function ActionMetricHelp({ text, topic }: { text: string; topic?: string }) {
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
+  const feeRules = useFrontendFeeRules()
+  // The fee sentence states the configured rate ({bps}, {pct}); other help texts are unchanged.
+  const helpText = text.includes("{bps}") ? fillFeeRate(t(text), statedFeeBps(feeRules), language) : t(text)
   const ariaLabel = topic ? t("More information about {topic}").replace("{topic}", t(topic)) : t("More information")
   const [open, setOpen] = useState(false)
   const [pinned, setPinned] = useState(false)
@@ -118,7 +123,7 @@ export function ActionMetricHelp({ text, topic }: { text: string; topic?: string
               }}
               className="pointer-events-none z-[100] w-max max-w-64 rounded-radius-sm border border-border bg-background px-3 py-2 text-left text-xs font-normal leading-5 text-foreground shadow-elev-2"
             >
-              {t(text)}
+              {helpText}
             </span>,
             document.body,
           )

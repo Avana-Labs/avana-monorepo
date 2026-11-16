@@ -1,5 +1,7 @@
 "use client"
 
+import { feeActionForKind } from "@/app/lib/fees/front-end-fee"
+import { useFrontendFeeRules } from "@/app/lib/fees/front-end-fee-sync"
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { parseFixed, currentDebtValueUsd6, usd6ToNumber, wadToPercent } from "@/app/lib/borrow-system/model"
@@ -86,6 +88,8 @@ export function BorrowActionPageClient({
   initialDebtId?: string
 }) {
   const descriptor = getActionDescriptor("borrow", kind)
+  // Re-render the fee rows when the front-end fee rules load from Convex.
+  useFrontendFeeRules()
   const router = useRouter()
   const { walletId } = useAvanaIdentity()
   const session = useBorrowSessionContext()
@@ -844,6 +848,7 @@ export function BorrowActionPageClient({
         primaryCtaLabel: successDashboardCtaLabel("borrow"),
         preview: previewUi,
         verb: descriptor.primaryVerb,
+        feeAction: feeActionForKind(kind),
       }),
     )
     setStage("success")
@@ -1061,6 +1066,7 @@ export function BorrowActionPageClient({
           primaryCtaLabel: successDashboardCtaLabel("borrow"),
           preview: executedPreview,
           verb: descriptor.primaryVerb,
+          feeAction: feeActionForKind(kind),
         }),
       )
       setStage("success")

@@ -1,5 +1,6 @@
 "use client"
 
+import { accountLiquidationThresholdPct } from "@/app/lib/borrow-system/dashboard-selectors"
 import { useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { detailSectionStackClass } from "@/app/components/detail-page-primitives"
@@ -64,7 +65,9 @@ export function DashboardBorrowTab({
     const accruedInterest = debtsRows.reduce((sum, row) => sum + row.accruedInterestUsd, 0)
     const averageHf = aggregateHealthFactor(debtsRows)
     const dailyInterest = debtsRows.reduce((sum, row) => sum + row.dailyInterestUsd, 0)
-    return { totalBorrowed, totalCollateral, accruedInterest, averageHf, dailyInterest }
+    const liquidationValue = debtsRows.reduce((sum, row) => sum + row.liquidationThresholdUsd, 0)
+    const liquidationThresholdPct = accountLiquidationThresholdPct(liquidationValue, totalCollateral)
+    return { totalBorrowed, totalCollateral, accruedInterest, averageHf, dailyInterest, liquidationThresholdPct }
   }, [debtsRows])
 
   const handleDebtRepay = useCallback(
@@ -87,6 +90,7 @@ export function DashboardBorrowTab({
                 showBalance={showDollarAmounts}
                 dailyInterestUsd={debtTotals.dailyInterest}
                 accruedInterestUsd={debtTotals.accruedInterest}
+                liquidationThresholdPct={debtTotals.liquidationThresholdPct}
               />
             </div>
           ) : null}
