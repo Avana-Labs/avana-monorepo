@@ -320,6 +320,8 @@ export async function startKeeper(): Promise<void> {
     env[`RPC_${c.envSuffix}_PRIVATE`] = rpcUrl(c);
     env[`KEEPER_LOCAL_KEYSTORE_${c.envSuffix}`] = keystorePath("keeper");
     env[`KEEPER_GAS_CEILING_WEI_${c.envSuffix}`] = "1000000000000000000";
+    // The expected daily gas spend D (docs/keeper-gas.md): a local figure, 0.1 ETH; the budgets and warnings follow it.
+    env[`KEEPER_GAS_DAILY_SPEND_WEI_${c.envSuffix}`] = "100000000000000000";
     env[`KEEPER_MONITOR_INSTANCE_${c.envSuffix}`] = `keeper-${c.key}`;
     env[`KEEPER_MONITOR_TOKEN_${c.envSuffix}`] = secret(`keeper-token-${c.key}`);
   }
