@@ -11,6 +11,7 @@ The chains, contracts and services the webapp runs on locally, started by one co
 | Convex | One anonymous local deployment of `services/convex` (no account), fed by the indexer export; `convex-driver.ts` runs its chain jobs on the local chains |
 | Keeper | Active on both chains, signing from the `keeper` keystore |
 | Monitor | Both chains, every alert to its log |
+| Faucet | `services/faucet` in fork mode on both chains, port 42080, its tokens and prices from each chain's manifest; the webapp gets `FAUCET_URL` |
 | Activity | One loop per chain: lends, borrows, repays and swaps (`activity.ts`) |
 | Webapp | Started from `webapp/scripts/local-stack.mjs` when that file exists (the webapp's own entry, which reads `stack.env`) |
 

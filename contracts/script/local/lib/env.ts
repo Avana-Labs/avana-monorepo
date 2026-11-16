@@ -95,6 +95,7 @@ export const PORTS = {
   keeperMetrics: int("STACK_KEEPER_METRICS_PORT", 9464),
   keeperKill: int("STACK_KEEPER_KILL_PORT", 9465),
   monitor: int("STACK_MONITOR_PORT", 9470),
+  faucet: int("STACK_FAUCET_PORT", 42080),
   webapp: int("STACK_WEBAPP_PORT", 3000),
 };
 
