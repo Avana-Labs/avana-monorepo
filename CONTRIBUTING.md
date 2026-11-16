@@ -23,6 +23,8 @@ FOUNDRY_PROFILE=aave forge build
 
 The pre-commit hook ([`lefthook.yml`](lefthook.yml)) runs `forge fmt --check` and the file-size check on staged Solidity, the licence-header check on staged Solidity, Python, JavaScript, shell and JSON files, and `trace.py` on changes to the specification, sources, tests or Certora specs. CI repeats every check.
 
+Commit messages and pull request text carry no AI credit (no AI co-author trailer, no "Generated with" line). The `commit-msg` hook, installed by the same `lefthook install`, runs [`contracts/script/check-ai-credit.sh`](contracts/script/check-ai-credit.sh) on each message, and the `commit-messages` workflow checks a pull request's own commits, title and body.
+
 ## Build and test
 
 From `contracts/`:
