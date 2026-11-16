@@ -540,7 +540,8 @@ contract ListMarkets is ListingBase {
             mstore(starts, newMarkets)
         }
         if (op.targets.length != 0) op.salt = _listingMetadataHash(first);
-        if (op.targets.length != 0) vm.writeJson(json, _outputPath("listing-markets"));
+        // A listing with calls but no market (debt assets only) has no market entry to record.
+        if (op.targets.length != 0 && bytes(json).length != 0) vm.writeJson(json, _outputPath("listing-markets"));
     }
 
     // ─── listing batch gas ───
