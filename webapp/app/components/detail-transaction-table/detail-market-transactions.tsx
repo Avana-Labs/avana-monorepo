@@ -55,6 +55,7 @@ export function DetailMarketTransactions({
       counterpartyLabel: row.counterpartyLabel,
       walletLabel: row.walletLabel,
       txHashShort: row.txHashShort,
+      txHash: row.txHash,
     }),
   })
 

@@ -11,6 +11,7 @@ import { useAmountDisplayPreferences } from "@/app/components/display-preference
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { openExternal } from "@/app/lib/safe-links"
 import { useWalletActivity } from "@/app/lib/activity/use-wallet-activity"
+import { withoutIndexedSessionRows } from "@/app/lib/activity/indexed-session-rows"
 import { cn } from "@/lib/utils"
 
 const MASK = "••••"
@@ -155,10 +156,18 @@ function logicalActivityKey(row: PortfolioActivityRow) {
   return `${row.txHash}\u0000${row.product}\u0000${row.kind}\u0000${row.marketId ?? ""}`
 }
 
-/** Dedupe rows by id and by logical action, newest first. */
-function mergeActivityRows(rows: PortfolioActivityRow[]): PortfolioActivityRow[] {
+/**
+ * The indexed rows and the session's rows no indexed row covers (indexed-session-rows), deduped by id and by logical
+ * action, newest first.
+ */
+function mergeActivityRows(
+  indexedRows: readonly PortfolioActivityRow[],
+  sessionRows: readonly PortfolioActivityRow[],
+): PortfolioActivityRow[] {
   const byAction = new Map<string, PortfolioActivityRow>()
-  for (const row of rows) byAction.set(logicalActivityKey(row), row)
+  for (const row of [...indexedRows, ...withoutIndexedSessionRows(sessionRows, indexedRows)]) {
+    byAction.set(logicalActivityKey(row), row)
+  }
   return [...byAction.values()].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
 }
 
@@ -197,7 +206,7 @@ export function RecentActivity({
   const isLoadingMore = false
   const hasMore = activity.hasMore
 
-  const sortedRows = React.useMemo(() => mergeActivityRows([...activity.rows, ...seedRows]), [activity.rows, seedRows])
+  const sortedRows = React.useMemo(() => mergeActivityRows(activity.rows, seedRows), [activity.rows, seedRows])
 
   const loadMore = React.useCallback(() => {
     if ((!hasMore && sortedRows.length <= limit) || isLoadingMore) return

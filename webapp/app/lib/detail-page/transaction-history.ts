@@ -11,6 +11,7 @@ import {
 import type { TxHistoryRow } from "@/app/lib/borrow-detail"
 import type { LendTransactionHistoryItem } from "@/app/lib/lend-system/contracts"
 import type { TransactionHistoryItem } from "@/app/lib/borrow-system/contracts"
+import { withoutIndexedSessionRows } from "@/app/lib/activity/indexed-session-rows"
 
 /** Shared row shape for detail-page transaction tables. */
 export type DetailTransactionRow = {
@@ -30,6 +31,8 @@ export type DetailTransactionRow = {
   walletLabel?: string
   walletHref?: string
   txHashShort: string
+  /** The full transaction hash, when known: a session row an indexed row covers is dropped (indexed-session-rows). */
+  txHash?: string
 }
 
 export function formatWalletLabel(walletAddress?: string): string | undefined {
@@ -90,7 +93,7 @@ export function mergeTransactionRows(
 ): DetailTransactionRow[] {
   const seen = new Set<string>()
   const merged: DetailTransactionRow[] = []
-  for (const row of [...sessionRows, ...convexRows, ...seedRows]) {
+  for (const row of [...withoutIndexedSessionRows(sessionRows, convexRows), ...convexRows, ...seedRows]) {
     if (seen.has(row.id)) continue
     seen.add(row.id)
     merged.push(row)
@@ -147,6 +150,7 @@ export function mapLendSessionRows(
         tokenSymbol: assetSymbol,
         walletLabel: formatWalletLabel(walletAddress),
         txHashShort: item.hash.slice(0, 10),
+        txHash: item.hash,
       }
     })
 }
@@ -202,6 +206,7 @@ export function mapBorrowSessionRows(
         tokenSymbol: symbol,
         walletLabel: formatWalletLabel(walletAddress),
         txHashShort: item.hash.slice(0, 10),
+        txHash: item.hash,
       }
     })
 }

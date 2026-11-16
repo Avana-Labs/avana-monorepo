@@ -22,6 +22,7 @@ type ConvexDetailTx = {
   counterpartyLabel?: string
   walletLabel?: string
   txHashShort: string
+  txHash?: string
   source?: "wallet" | "seed"
 }
 
