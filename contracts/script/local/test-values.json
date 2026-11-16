@@ -89,7 +89,13 @@
       "collateralFactorBps": 3000,
       "maxLiquidationBonus": 10800,
       "consistencyToleranceBps": 100,
-      "slippageAllowanceBps": 300
+      "slippageAllowanceBps": 300,
+      "riskFactorBps": {
+        "pairVolatility": 150,
+        "liquidityDepth": 50,
+        "oracle": 25,
+        "expectedIl": 100
+      }
     },
     "uni-wstETH-WETH-100": {
       "collateralFactorBps": 3400,
