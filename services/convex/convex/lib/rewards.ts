@@ -11,6 +11,7 @@ export const QUEST_POINTS: Readonly<Record<string, number>> = {
   "first-lend-deposit": 40,
   "first-borrow": 50,
   "first-repay": 30,
+  "supply-500-lend": 100,
   "pledge-uniswap-v3-position": 60,
 };
 
@@ -22,6 +23,20 @@ export const QUEST_OF_LOG: Readonly<Record<string, string>> = {
   "AaveAdapter.RepaidWithCollateral": "first-repay",
   "AaveAdapter.CollateralAdded": "pledge-uniswap-v3-position",
 };
+
+/** The quest a confirmed app transaction completes, by intent kind (a first deposit, borrow, repay or pledge). */
+export const QUEST_OF_INTENT_KIND: Readonly<Record<string, string>> = {
+  supply: "first-lend-deposit",
+  borrow: "first-borrow",
+  repay: "first-repay",
+  repayWithCollateral: "first-repay",
+  pledge: "pledge-uniswap-v3-position",
+  addCollateral: "pledge-uniswap-v3-position",
+};
+
+/** Lend supply that completes the volume quest, in USD. */
+export const SUPPLY_QUEST_USD = 500;
+const SUPPLY_QUEST_ID = "supply-500-lend";
 
 export const TENURE_POINTS_PER_PERIOD = 100;
 export const TENURE_PERIOD_DAYS = 30;
@@ -64,4 +79,33 @@ export async function awardQuestForLog(ctx: Pick<MutationCtx, "db">, wallet: str
   const questId = QUEST_OF_LOG[kind];
   if (!questId || !Number.isFinite(at) || at <= 0) return;
   await awardPoints(ctx, { wallet, kind: "quest", key: `quest:${questId}`, points: QUEST_POINTS[questId]!, at, questId });
+}
+
+/** Completes the quest of an intent kind, once per wallet, when the transaction is on chain; nothing for other kinds. */
+export async function awardQuestForIntent(ctx: Pick<MutationCtx, "db">, wallet: string, kind: string, at: number): Promise<void> {
+  const questId = QUEST_OF_INTENT_KIND[kind];
+  if (!questId || !Number.isFinite(at) || at <= 0) return;
+  await awardPoints(ctx, { wallet, kind: "quest", key: `quest:${questId}`, points: QUEST_POINTS[questId]!, at, questId });
+}
+
+/** USD value of a Lend supply log's amount at the Hub asset's price now; 0 when the asset or amount is unknown. */
+export async function supplyUsdOfLog(ctx: Pick<MutationCtx, "db">, log: { kind: string; hubAssetKey?: string; args: unknown }): Promise<number> {
+  if (log.kind !== "AaveSpoke.Supply" || !log.hubAssetKey) return 0;
+  const [chain, hub, assetId] = log.hubAssetKey.split(":");
+  const raw = (log.args as { suppliedAmount?: unknown } | null)?.suppliedAmount;
+  if (!chain || !hub || assetId === undefined || raw === undefined || !/^\d+$/.test(String(raw))) return 0;
+  const asset = await ctx.db.query("hubAssets").withIndex("by_key", (q) => q.eq("chainId", Number(chain)).eq("hub", hub).eq("assetId", assetId)).unique();
+  if (!asset || !/^\d+$/.test(asset.priceUsd8)) return 0;
+  return Number((BigInt(String(raw)) * BigInt(asset.priceUsd8)) / 10n ** BigInt(asset.decimals)) / 1e8;
+}
+
+/** Adds a supply to the wallet's total; the volume quest is awarded once the total reaches $500. */
+export async function addSupplyVolume(ctx: Pick<MutationCtx, "db">, wallet: string, usd: number, at: number): Promise<void> {
+  if (!Number.isFinite(usd) || usd <= 0) return;
+  const w = wallet.toLowerCase();
+  const totals = await ctx.db.query("rewardTotals").withIndex("by_wallet", (q) => q.eq("wallet", w)).unique();
+  const supplyUsd = (totals?.supplyUsd ?? 0) + usd;
+  if (totals) await ctx.db.patch(totals._id, { supplyUsd, updatedAt: Date.now() });
+  else await ctx.db.insert("rewardTotals", { wallet: w, questPoints: 0, feePoints: 0, questIds: [], supplyUsd, updatedAt: Date.now() });
+  if (supplyUsd >= SUPPLY_QUEST_USD) await awardPoints(ctx, { wallet: w, kind: "quest", key: `quest:${SUPPLY_QUEST_ID}`, points: QUEST_POINTS[SUPPLY_QUEST_ID]!, at, questId: SUPPLY_QUEST_ID });
 }

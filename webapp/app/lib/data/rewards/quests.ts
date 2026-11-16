@@ -116,6 +116,7 @@ const QUESTS: Record<RewardsPromoTabId, PlaceholderQuest[]> = {
 const QUEST_ACTIONS: Record<string, { href: string; cta: string }> = {
   "connect-wallet": { href: "/dashboard", cta: "Connect Wallet" },
   "first-lend-deposit": { href: "/lend", cta: "Deposit" },
+  "supply-500-lend": { href: "/lend", cta: "Deposit" },
   "first-borrow": { href: "/borrow", cta: "Borrow" },
   "first-repay": { href: "/borrow", cta: "Repay" },
   "pledge-uniswap-v3-position": { href: "/borrow", cta: "Pledge" },
@@ -127,9 +128,9 @@ export function questHref(questId: string): string | undefined {
 }
 
 /**
- * The quests of each Rewards tab, ready for the quest cards. The four with a source (first deposit, borrow, repay and
- * pledge, detected from the wallet's own on-chain activity) show "Earned" once completed and otherwise open the page
- * where they are done; every other quest is "Coming soon".
+ * The quests of each Rewards tab, ready for the quest cards. The five with a source (first deposit, borrow, repay,
+ * pledge and $500 supplied, detected from the wallet's own on-chain activity) show "Earned" once completed and
+ * otherwise open the page where they are done; every other quest is "Coming soon".
  */
 export function questsByTab(
   labels: { comingSoon: string; earned: string },

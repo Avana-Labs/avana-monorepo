@@ -9,7 +9,7 @@ const all = (completed: string[]) => Object.values(questsByTab(labels, new Set(c
 const byId = (completed: string[], id: string) => all(completed).find((q) => q.id === id)!
 
 describe("rewards quests", () => {
-  it("shows the Convex points of the four real quests", () => {
+  it("shows the Convex points of the real quests", () => {
     for (const [id, points] of Object.entries(QUEST_POINTS)) {
       expect(byId([], id).reward, id).toBe(`${points} pts`)
     }
@@ -24,6 +24,8 @@ describe("rewards quests", () => {
 
   it("opens the page of a real quest that is not done and marks a done one Earned", () => {
     expect(byId([], "first-lend-deposit")).toMatchObject({ status: "available", cta: "Deposit" })
+    expect(byId([], "supply-500-lend")).toMatchObject({ status: "available", cta: "Deposit" })
+    expect(byId(["supply-500-lend"], "supply-500-lend")).toMatchObject({ status: "claimed", cta: "Earned" })
     expect(byId([], "first-borrow")).toMatchObject({ status: "available", cta: "Borrow" })
     expect(byId([], "first-repay")).toMatchObject({ status: "available", cta: "Repay" })
     expect(byId([], "pledge-uniswap-v3-position")).toMatchObject({ status: "available", cta: "Pledge" })
