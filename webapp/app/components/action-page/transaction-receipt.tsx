@@ -37,7 +37,7 @@ export type TransactionReceiptData = {
   marketValue?: string | null
   quoteId?: string | null
   /** Raw USD network fee; rendered as a currency-reactive "Avana Platform Fee" row when present. */
-  networkFeeUsd?: number | null
+  platformFeeUsd?: number | null
   block?: number | string | null
   /** Epoch ms; rendered as a localized date row when present. */
   dateMs?: number | null
@@ -142,8 +142,8 @@ export function TransactionReceipt({ data, className }: { data: TransactionRecei
               <ActionInfoRow label={data.rateLabel} value={data.rateValue} tooltip="rate" />
             ) : null}
             {data.marketValue ? <ActionInfoRow label="Market" value={data.marketValue} tooltip="market" /> : null}
-            {typeof data.networkFeeUsd === "number" ? (
-              <ActionInfoRow label="Avana Platform Fee" value={exact(data.networkFeeUsd)} tooltip="fee" />
+            {typeof data.platformFeeUsd === "number" ? (
+              <ActionInfoRow label="Avana Platform Fee" value={exact(data.platformFeeUsd)} tooltip="fee" />
             ) : null}
             {data.block != null ? <ActionInfoRow label="Block" value={String(data.block)} /> : null}
             {data.dateMs != null ? (

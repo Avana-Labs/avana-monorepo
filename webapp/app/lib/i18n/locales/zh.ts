@@ -1038,8 +1038,8 @@ const dict: TranslationDictionary = {
   "Confirming on-chain": "正在链上确认",
   Value: "价值",
   "Avana Platform Fee": "Avana 平台费用",
-  "A 15 bps (0.15%) upfront Avana interface fee applies to transactions initiated through the Avana platform. Interest rates, returns, and other transaction costs may vary depending on the market, position, and execution route.":
-    "通过 Avana 平台发起的交易将预先收取 15 个基点(0.15%)的 Avana 接口费。利率、收益和其他交易成本可能因市场、持仓和执行路径而异。",
+  "A {bps} bps ({pct}%) upfront Avana interface fee applies to transactions initiated through the Avana platform. Interest rates, returns, and other transaction costs may vary depending on the market, position, and execution route.":
+    "通过 Avana 平台发起的交易将预先收取 {bps} 个基点({pct}%)的 Avana 接口费。利率、收益和其他交易成本可能因市场、持仓和执行路径而异。",
   Block: "区块",
   Explorer: "区块浏览器",
   "Transaction date": "交易日期",

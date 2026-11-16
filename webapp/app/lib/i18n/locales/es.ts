@@ -1077,8 +1077,8 @@ const dict: TranslationDictionary = {
   "Confirming on-chain": "Confirmando en la cadena",
   Value: "Valor",
   "Avana Platform Fee": "Comisión de la plataforma Avana",
-  "A 15 bps (0.15%) upfront Avana interface fee applies to transactions initiated through the Avana platform. Interest rates, returns, and other transaction costs may vary depending on the market, position, and execution route.":
-    "Se aplica una comisión de interfaz de Avana del 15 pbs (0.15%) por adelantado a las transacciones iniciadas a través de la plataforma Avana. Las tasas de interés, los rendimientos y otros costos de transacción pueden variar según el mercado, la posición y la ruta de ejecución.",
+  "A {bps} bps ({pct}%) upfront Avana interface fee applies to transactions initiated through the Avana platform. Interest rates, returns, and other transaction costs may vary depending on the market, position, and execution route.":
+    "Se aplica una comisión de interfaz de Avana del {bps} pbs ({pct}%) por adelantado a las transacciones iniciadas a través de la plataforma Avana. Las tasas de interés, los rendimientos y otros costos de transacción pueden variar según el mercado, la posición y la ruta de ejecución.",
   Block: "Bloque",
   Explorer: "Explorador",
   "Transaction date": "Fecha de transacción",
