@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { NOT_PREVIEWED, previewBorrowOnChain, PREVIEWS_UNAVAILABLE, type BorrowPreviewDeps } from "../chain-preview"
+import { previewBorrowOnChain, PREVIEWS_UNAVAILABLE, type BorrowPreviewDeps } from "../chain-preview"
 import type { ChainBorrowRefs } from "../chain-refs"
 import type { TransactionIntent } from "../contracts"
 import type { BorrowSystemState } from "../model"
@@ -59,7 +59,9 @@ function deps(answers: Record<string, unknown>, debtUsd6 = 0n, calls: Call[] = [
       latestBlockTimestamp: async () => 1_000n,
       readContract: async ({ functionName, args }) => {
         calls.push({ functionName, args })
-        const answer = answers[functionName]
+        const entry = answers[functionName]
+        // A function answers per call (one LP position per preview).
+        const answer = typeof entry === "function" ? (entry as (a?: readonly unknown[]) => unknown)(args) : entry
         if (answer instanceof Error) throw answer
         return answer
       },
@@ -184,6 +186,7 @@ describe("previewBorrowOnChain", () => {
 
 const KEY = `0x${"0".repeat(62)}07` as const
 const KEY_2 = `0x${"0".repeat(62)}08` as const
+const KEY_3 = `0x${"0".repeat(62)}09` as const
 const withMarkets = (d: BorrowPreviewDeps): BorrowPreviewDeps => ({
   ...d,
   refs: () => ({ ...refs, markets: [{ chainId: 31337, marketId: "3", spoke: "0xspoke", poolSlug: "weth-usdc" }] }),
@@ -198,25 +201,38 @@ const withMarkets = (d: BorrowPreviewDeps): BorrowPreviewDeps => ({
       lpVault: "0xvault",
       valueUsd6: 400_000_000n,
     },
+    {
+      chainId: 31337,
+      marketId: "3",
+      integrationId: 1,
+      positionKey: KEY_2,
+      npm: "0xnpm",
+      tokenId: 8n,
+      lpVault: "0xvault",
+      valueUsd6: 500_000_000n,
+    },
   ],
 })
 
 describe("pledge and withdrawal previews", () => {
-  const lens = {
-    amount: 1n,
+  /** Lens answers at USD 400 per unit with USD 300 of debt: `units` held after the action. */
+  const at = (units: bigint, amount: bigint, unitUsd6 = 400_000_000n, hfPerUnit = WAD) => ({
+    amount,
     healthFactorBefore: 2n * WAD,
-    healthFactorAfter: 3n * WAD,
-    collateralValueAfter: value(1_200_000_000n),
+    healthFactorAfter: units * hfPerUnit,
+    collateralValueAfter: value(units * unitUsd6),
     debtValueAfterRay: value(300_000_000n) * 10n ** 27n,
-  }
+  })
+  const held = (...units: bigint[]) =>
+    units.map((u, i) => ({ integrationId: 1, positionKey: [KEY, KEY_2, KEY_3][i]!, creditedAfterReconcile: u }))
 
-  it("previews the pledge of the intent's LP NFT, the collateral before less that NFT's value", async () => {
+  it("previews the pledge of the intent's LP NFT", async () => {
     const calls: Call[] = []
     const preview = await previewBorrowOnChain(
-      withMarkets(deps({ previewPledgeAfter: lens }, 0n, calls)),
+      withMarkets(deps({ getRecords: held(2n), previewPledgeAfter: at(3n, 1n) }, 0n, calls)),
       intent({ actionType: "deposit", positionKey: KEY, amountUsd6: 400_000_000n }),
     )
-    expect(calls[0]).toEqual({ functionName: "previewPledgeAfter", args: [WALLET, 3n, KEY] })
+    expect(calls.find((c) => c.functionName === "previewPledgeAfter")?.args).toEqual([WALLET, 3n, KEY])
     expect(preview.allowed).toBe(true)
     expect(preview.before.collateralValueUsd6).toBe(800_000_000n)
     expect(preview.after.collateralValueUsd6).toBe(1_200_000_000n)
@@ -224,19 +240,23 @@ describe("pledge and withdrawal previews", () => {
     expect([preview.before.healthFactorWad, preview.after.healthFactorWad]).toEqual([2n * WAD, 3n * WAD])
   })
 
-  it("allows a pledge of several NFTs without a health factor preview", async () => {
+  it("combines the single previews of a pledge of several NFTs", async () => {
     const calls: Call[] = []
+    const perKey = (args?: readonly unknown[]) => (args?.[2] === KEY ? at(3n, 1n) : at(4n, 2n))
     const preview = await previewBorrowOnChain(
-      withMarkets(deps({}, 0n, calls)),
+      withMarkets(deps({ getRecords: held(2n), previewPledgeAfter: perKey }, 0n, calls)),
       intent({ actionType: "deposit", amountUsd6: 900_000_000n }),
     )
-    expect(calls).toEqual([])
-    expect(preview).toMatchObject({ allowed: true, warnings: [NOT_PREVIEWED] })
+    expect(calls.filter((c) => c.functionName === "previewPledgeAfter").map((c) => c.args?.[2])).toEqual([KEY_2, KEY])
+    // 2 units held + 1 + 2 pledged = 5 units at USD 400.
+    expect(preview).toMatchObject({ allowed: true, warnings: [] })
+    expect(preview.before.collateralValueUsd6).toBe(800_000_000n)
+    expect(preview.after.collateralValueUsd6).toBe(2_000_000_000n)
+    expect(preview.after.healthFactorWad).toBe(5n * WAD)
   })
 
   it("previews withdrawing the one record the executor would withdraw, and refuses one below a health factor of 1", async () => {
     const calls: Call[] = []
-    const records = [{ integrationId: 1, positionKey: KEY, creditedAfterReconcile: 5n }]
     const removeAll = intent({
       actionType: "withdraw",
       positionId: "collateral:31337:3",
@@ -244,23 +264,41 @@ describe("pledge and withdrawal previews", () => {
       payload: { type: "removeCollateral", walletId: WALLET, positionId: "collateral:31337:3", percentBps: 10_000 },
     })
     const ok = await previewBorrowOnChain(
-      deps({ getRecords: records, previewWithdrawAfter: lens }, 0n, calls),
+      deps({ getRecords: held(5n), previewWithdrawAfter: { ...at(0n, 5n), healthFactorAfter: MAX_UINT } }, 0n, calls),
       removeAll,
     )
     expect(calls.map((c) => c.functionName)).toEqual(["getRecords", "previewWithdrawAfter"])
     expect(calls[1]?.args).toEqual([WALLET, 3n, KEY])
     expect(ok.allowed).toBe(true)
+    expect(ok.after.healthFactorWad).toBeNull()
 
     const unsafe = await previewBorrowOnChain(
-      deps({ getRecords: records, previewWithdrawAfter: { ...lens, healthFactorAfter: WAD / 2n } }),
+      deps({ getRecords: held(5n), previewWithdrawAfter: { ...at(0n, 5n), healthFactorAfter: WAD / 2n } }),
       removeAll,
     )
     expect(unsafe.allowed).toBe(false)
+  })
 
-    const several = await previewBorrowOnChain(
-      deps({ getRecords: [...records, { integrationId: 1, positionKey: KEY_2, creditedAfterReconcile: 5n }] }),
-      removeAll,
+  it("combines the single previews of a withdrawal of several records, and refuses it below a health factor of 1", async () => {
+    // 20 units at USD 100 with a health factor of 0.1 per unit: each record alone leaves at least 1.0, both leave 0.5.
+    const perKey = (args?: readonly unknown[]) =>
+      args?.[2] === KEY_3 ? at(10n, 10n, 100_000_000n, WAD / 10n) : at(15n, 5n, 100_000_000n, WAD / 10n)
+    const preview = await previewBorrowOnChain(
+      deps({ getRecords: held(5n, 5n, 10n), previewWithdrawAfter: perKey }),
+      intent({
+        actionType: "withdraw",
+        positionId: "collateral:31337:3",
+        amountUsd6: 0n,
+        payload: { type: "removeCollateral", walletId: WALLET, positionId: "collateral:31337:3", percentBps: 6_000 },
+      }),
     )
-    expect(several).toMatchObject({ allowed: true, warnings: [NOT_PREVIEWED] })
+    expect(preview.before.collateralValueUsd6).toBe(2_000_000_000n)
+    expect(preview.after.collateralValueUsd6).toBe(500_000_000n)
+    expect(preview.after.healthFactorWad).toBe(WAD / 2n)
+    expect(preview).toMatchObject({
+      allowed: false,
+      warnings: [],
+      validationErrors: ["This withdrawal would leave the position below a health factor of 1."],
+    })
   })
 })

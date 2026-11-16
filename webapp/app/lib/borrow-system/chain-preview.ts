@@ -9,16 +9,20 @@ import type {
 } from "@/app/lib/borrow-system/contracts"
 import type { BorrowSystemState } from "@/app/lib/borrow-system/model"
 import { currentCollateralValueUsd6, currentDebtValueUsd6 } from "@/app/lib/borrow-system/model"
-import { ACTION_DEADLINE_SECONDS, pickCovering, type BorrowChain } from "@/app/lib/borrow-system/chain-execution"
+import {
+  ACTION_DEADLINE_SECONDS,
+  pickCovering,
+  selectPledgeLps,
+  type BorrowChain,
+} from "@/app/lib/borrow-system/chain-execution"
 import { lensAccountAbi } from "@/app/lib/borrow-system/lens-account-abi"
 
 /**
  * Previews of a borrow, a repay, a pledge or a collateral withdrawal from the Lens at the latest block
  * (`previewBorrowAfter`, `previewRepayAfter`, `previewBorrowMax`, `previewPledgeAfter`, `previewWithdrawAfter`), in the
  * shape the action pages already read. The account, reserve, market and Lens come from the same references the chain
- * executor uses (`chainBorrowRefs`), and a withdrawal previews the record the executor would withdraw. A pledge or a
- * withdrawal spanning several LP positions is allowed without a health factor preview (the Lens previews one position
- * per call). Other actions answer "not available yet".
+ * executor uses (`chainBorrowRefs`); a pledge or a withdrawal previews the LP positions the executor would send, one Lens
+ * call per position, combined (`combinePreviews`). Other actions answer "not available yet".
  */
 
 export const LENS_PREVIEW_ABI = parseAbi([
@@ -47,8 +51,6 @@ export type BorrowPreviewDeps = {
 }
 
 export const PREVIEWS_UNAVAILABLE = "Previews are not available yet."
-/** Shown when the action spans several LP positions: the Lens previews one position per call. */
-export const NOT_PREVIEWED = "The health factor after this action is not previewed."
 /** Records read per account, as the executor reads them. */
 const MAX_RECORDS = 16n
 
@@ -269,31 +271,57 @@ function parseCollateralId(id: string): { chainId: number; marketId: string } | 
   return m ? { chainId: Number(m[1]), marketId: m[2]! } : null
 }
 
-/** The account as it is now (the session's chain-read positions), for an action the Lens does not preview. */
-function unpreviewed(
-  deps: BorrowPreviewDeps,
-  intent: TransactionIntent,
-  poolSlug: string | null | undefined,
-): TransactionPreview {
-  const state = deps.state()
-  const account = state.accounts[intent.walletId]
-  const market = poolSlug ? state.markets[poolSlug] : undefined
-  const collateral = market
-    ? (account?.collateralPositions ?? [])
-        .filter((p) => p.marketId === poolSlug)
-        .reduce((sum, p) => sum + currentCollateralValueUsd6(p, market), 0n)
-    : 0n
-  const debt = (account?.debtPositions ?? []).reduce((sum, d) => sum + currentDebtValueUsd6(d), 0n)
-  const cf = collateralFactorWad(deps, poolSlug)
-  const now = snapshot(collateral, debt, cf, (collateral * cf) / WAD - debt, null)
+type RecordViewLike = { positionKey: `0x${string}`; creditedAfterReconcile: bigint }
+
+/** The account's records with credited units, as the executor reads them. */
+async function readRecords(chain: Resolved["chain"], lens: Address, proxy: string): Promise<readonly RecordViewLike[]> {
+  const records = (await chain.readContract({
+    address: lens,
+    abi: lensAccountAbi,
+    functionName: "getRecords",
+    args: [proxy as Address, 0n, MAX_RECORDS],
+  })) as readonly RecordViewLike[]
+  return records.filter((r) => r.creditedAfterReconcile > 0n)
+}
+
+/**
+ * The single-position previews of one action (`previewPledgeAfter` or `previewWithdrawAfter` per LP position, each
+ * against the account as it is now) combined into the preview of the whole action, with the collateral value before
+ * (USD 6 decimals). `unitsBefore` is the account's credited units, `sign` 1 for a pledge and −1 for a withdrawal.
+ *
+ * An account (one PositionProxy per market) has one collateral reserve, the vault token (LensAccountMath), so its
+ * collateral value and health factor are linear in its units at a fixed collateral factor and debt: one preview's
+ * after-values, scaled by the units after the whole action over the units after that preview, are the action's. The
+ * reference preview carries the collateral factor the action ends with (the Lens refreshes it on a pledge that turns
+ * the collateral on and on a withdrawal), which `HF_before × C_after / C_before` would miss. The liquidation price
+ * (`liqBefore × units_before / units_after`) is not part of the page's snapshot, so it is not combined.
+ *
+ * Rounding: the Lens floors each value and the scaling floors again, and the account's Hub assets can differ from its
+ * credited units by the Hub's share rounding, so the result can differ from a single preview of the same action by a
+ * few base units. Null when no preview leaves units to scale from (a withdrawal of the whole account in one record).
+ */
+export function combinePreviews(
+  previews: readonly ActionPreviewView[],
+  unitsBefore: bigint,
+  sign: 1n | -1n,
+): { view: ActionPreviewView; collateralBeforeUsd6: bigint } | null {
+  const ref = previews.find((p) => unitsBefore + sign * p.amount > 0n)
+  if (!ref) return null
+  const moved = previews.reduce((sum, p) => sum + p.amount, 0n)
+  const refUnits = unitsBefore + sign * ref.amount
+  const left = unitsBefore + sign * moved
+  const unitsAfter = left > 0n ? left : 0n
+  const scale = (x: bigint) => (x * unitsAfter) / refUnits
   return {
-    intent,
-    allowed: true,
-    warnings: [NOT_PREVIEWED],
-    validationErrors: [],
-    riskLabel: "safe",
-    before: now,
-    after: now,
+    view: {
+      amount: moved,
+      healthFactorBefore: ref.healthFactorBefore,
+      // No debt stays no debt (∞).
+      healthFactorAfter: ref.healthFactorAfter === MAX_UINT ? MAX_UINT : scale(ref.healthFactorAfter),
+      collateralValueAfter: scale(ref.collateralValueAfter),
+      debtValueAfterRay: ref.debtValueAfterRay,
+    },
+    collateralBeforeUsd6: (ref.collateralValueAfter * unitsBefore) / refUnits / AAVE_VALUE_PER_USD6,
   }
 }
 
@@ -331,23 +359,40 @@ async function previewPledge(deps: BorrowPreviewDeps, intent: TransactionIntent,
   const chain = market ? deps.chain(market.chainId) : null
   if (!market || !lens || !chain) return blocked(intent, "This market cannot take collateral here.")
   if (intent.amountUsd6 <= 0n) return blocked(intent, "Enter an amount to pledge.")
-  // No single position key: the pledge sends several NFTs, and the Lens previews one position per call.
-  const key = intent.positionKey
-  if (!key) return unpreviewed(deps, intent, intent.marketId)
-  const preview = (await chain.readContract({
-    address: lens,
-    abi: LENS_PREVIEW_ABI,
-    functionName: "previewPledgeAfter",
-    args: [intent.walletId as Address, BigInt(market.marketId), key],
-  })) as ActionPreviewView
-  const lp = deps.lps?.(intent.walletId).find((l) => l.positionKey.toLowerCase() === key.toLowerCase())
-  const collateralAfter = preview.collateralValueAfter / AAVE_VALUE_PER_USD6
-  const added = lp?.valueUsd6 ?? 0n
-  const before = collateralAfter > added ? collateralAfter - added : 0n
-  return fromLens(intent, preview, collateralFactorWad(deps, intent.marketId), before, [])
+  // The NFTs the executor pledges: the intent's one, or whole NFTs covering the amount (the executor's messages).
+  let keys: readonly `0x${string}`[]
+  if (intent.positionKey) {
+    keys = [intent.positionKey]
+  } else {
+    const lps = deps.lps?.(intent.walletId) ?? []
+    if (!lps.some((lp) => lp.chainId === market.chainId && lp.marketId === market.marketId)) {
+      return blocked(intent, "Your wallet has no LP position for this market.")
+    }
+    const picked = selectPledgeLps(lps, market, intent.amountUsd6)
+    if (!picked) return blocked(intent, "Your LP positions in this market are worth less than this amount.")
+    keys = picked.map((lp) => lp.positionKey)
+  }
+  const account = refs.accounts.find((a) => a.chainId === market.chainId && a.marketId === market.marketId)
+  const [records, previews] = await Promise.all([
+    account ? readRecords(chain, lens, account.proxy) : Promise.resolve([]),
+    Promise.all(
+      keys.map(
+        (key) =>
+          chain.readContract({
+            address: lens,
+            abi: LENS_PREVIEW_ABI,
+            functionName: "previewPledgeAfter",
+            args: [intent.walletId as Address, BigInt(market.marketId), key],
+          }) as Promise<ActionPreviewView>,
+      ),
+    ),
+  ])
+  const unitsBefore = records.reduce((sum, r) => sum + r.creditedAfterReconcile, 0n)
+  const combined = combinePreviews(previews, unitsBefore, 1n)
+  const cf = collateralFactorWad(deps, intent.marketId)
+  // Null only when nothing is held and nothing is pledged: no collateral before.
+  return fromLens(intent, combined?.view ?? previews[0]!, cf, combined?.collateralBeforeUsd6 ?? 0n, [])
 }
-
-type RecordViewLike = { positionKey: `0x${string}`; creditedAfterReconcile: bigint }
 
 async function previewWithdraw(deps: BorrowPreviewDeps, intent: TransactionIntent, refs: ChainBorrowRefs) {
   const id = intent.positionId ? parseCollateralId(intent.positionId) : null
@@ -357,14 +402,7 @@ async function previewWithdraw(deps: BorrowPreviewDeps, intent: TransactionInten
     : undefined
   const chain = account ? deps.chain(account.chainId) : null
   if (!account || !lens || !chain) return blocked(intent, "This collateral cannot be withdrawn here.")
-  const records = (
-    (await chain.readContract({
-      address: lens,
-      abi: lensAccountAbi,
-      functionName: "getRecords",
-      args: [account.proxy as Address, 0n, MAX_RECORDS],
-    })) as readonly RecordViewLike[]
-  ).filter((r) => r.creditedAfterReconcile > 0n)
+  const records = await readRecords(chain, lens, account.proxy)
   const totalUnits = records.reduce((sum, r) => sum + r.creditedAfterReconcile, 0n)
   if (totalUnits === 0n) return blocked(intent, "This account has no collateral to withdraw.")
 
@@ -383,22 +421,27 @@ async function previewWithdraw(deps: BorrowPreviewDeps, intent: TransactionInten
     bps >= 10_000n
       ? records
       : (pickCovering(records, (r) => r.creditedAfterReconcile, (totalUnits * bps) / 10_000n) ?? records)
-  const record = picked.length === 1 ? picked[0]! : null
-  if (!record) return unpreviewed(deps, intent, account.poolSlug)
 
-  const preview = (await chain.readContract({
-    address: lens,
-    abi: LENS_PREVIEW_ABI,
-    functionName: "previewWithdrawAfter",
-    args: [intent.walletId as Address, BigInt(account.marketId), record.positionKey],
-  })) as ActionPreviewView
-  const collateralAfter = preview.collateralValueAfter / AAVE_VALUE_PER_USD6
-  const removed = (valueUsd6 * record.creditedAfterReconcile) / totalUnits
-  const hfAfter = healthFactor(preview.healthFactorAfter)
+  const previews = await Promise.all(
+    picked.map(
+      (record) =>
+        chain.readContract({
+          address: lens,
+          abi: LENS_PREVIEW_ABI,
+          functionName: "previewWithdrawAfter",
+          args: [intent.walletId as Address, BigInt(account.marketId), record.positionKey],
+        }) as Promise<ActionPreviewView>,
+    ),
+  )
+  const combined = combinePreviews(previews, totalUnits, -1n)
+  // Null only for the whole account in one record: nothing is left, the collateral before is the position's value.
+  const view = combined?.view ?? previews[0]!
+  const before = combined?.collateralBeforeUsd6 ?? valueUsd6
+  const hfAfter = healthFactor(view.healthFactorAfter)
   // The executor sends a withdrawal with Aave's health factor floor (1.0): below it the chain refuses it.
   const errors =
     hfAfter !== null && hfAfter < WAD ? ["This withdrawal would leave the position below a health factor of 1."] : []
-  return fromLens(intent, preview, collateralFactorWad(deps, account.poolSlug), collateralAfter + removed, errors)
+  return fromLens(intent, view, collateralFactorWad(deps, account.poolSlug), before, errors)
 }
 
 /**
