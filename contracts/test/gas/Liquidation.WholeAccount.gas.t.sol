@@ -123,7 +123,9 @@ contract LiquidationWholeAccountGasTest is RealStackVolatile, GasCalibration {
         emit log_named_uint(string.concat("whole-account liquidate, ", k), used);
         emit log_named_uint(string.concat("getUserAccountData (cold), ", k), accountData);
         emit log_named_uint("liquidation gas budget of SPEC-CHAIN-001", LIQUIDATION_GAS_BUDGET);
-        assertLe(used, LIQUIDATION_GAS_BUDGET, "within the liquidation gas budget");
+        // The budget is that of the 16-record seizure; those cases are excluded from the unoptimized coverage run
+        // (script/check-coverage.sh), whose instrumented gas is not the deployed cost.
+        if (records == 16) assertLe(used, LIQUIDATION_GAS_BUDGET, "within the liquidation gas budget");
         assertLt(used, TX_GAS_CAP / 2, "within half the per-transaction gas limit");
         assertLt(accountData, DEBT_MARK_READ_BOUND, "63 x DEBT_MARK_GAS_FLOOR covers the read");
     }
