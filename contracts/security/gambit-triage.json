@@ -149,6 +149,15 @@
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
+      "fingerprint": "f80dd4503c494eae",
+      "check": "DeleteExpressionMutation",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._clearContext",
+      "reason": "Equivalent: LENDER_SLOT is read only in the lender callback, in the same condition as STATE_SLOT == STATE_OPEN, and in _repay and _payOut, which run only inside a flashLiquidate call after _openContext has written the slot for that call; with STATE_SLOT reset to STATE_NONE, a stale lender from an earlier call in the same transaction is never read.",
+      "approval": "pending",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
       "fingerprint": "767fffb6f2c6c3f9",
       "check": "BinaryOpMutation",
       "file": "src/oracle/debt-oracle/DebtOracleEvaluation.sol",
