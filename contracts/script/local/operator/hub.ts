@@ -146,6 +146,9 @@ export interface TestValues {
   debtAssets?: Record<string, DebtAssetValues>;
   tokens?: Record<string, TokenValues>;
   markets?: Record<string, MarketValues>;
+  /** Per CDP Spoke, between the market default and the market's own values: one collateral risk premium for all the
+   *  Spoke's collateral, for example. */
+  spokes?: Record<string, MarketValues>;
 }
 export interface CollateralInput {
   symbol: string;
@@ -505,9 +508,12 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
       c.listing.uniswapV4Pools ??= {};
       c.listing.uniswapV4Pools[mi.pool] = { currency0: `${w}.currency0`, currency1: `${w}.currency1`, fee: p.fee, tickSpacing: p.tickSpacing, referencePool: `${w}.referencePool` };
     } else c.listing.pools[mi.pool] = slip ? `$world:.slipstreamPools['${mi.pool}']` : `$world:.uniswapPools['${mi.pool}']`;
-    const mv: MarketValues = { ...tv.markets?.default, ...tv.markets?.[name] };
+    const mv: MarketValues = { ...tv.markets?.default, ...tv.spokes?.[s.label], ...tv.markets?.[name] };
     if (mv.poolRiskFactorBps === undefined || mv.maxLiquidationBonus === undefined || mv.consistencyToleranceBps === undefined || !mv.marketUsdCap || !mv.topUpSliceUsd)
       throw new Error(`market ${name}: test values have no poolRiskFactorBps, maxLiquidationBonus, consistencyToleranceBps, marketUsdCap and topUpSliceUsd for it`);
+    // The collateral risk premium (Aave V4 collateralRisk, bps) the DAO sets on the reserve: borrowers pay it on top of
+    // the base rate and lenders earn it, so every listed reserve carries one.
+    if (!mv.collateralRisk) throw new Error(`market ${name}: test values set no collateralRisk above 0 for it (spokes.${s.label} or markets)`);
     // Unless the test values set them: the collateral factor min(token factors) x pool risk factor (SPEC-CF-001), and
     // the largest slippage allowance s with s x minLB <= (1e4 - f)(minLB - 1e4), minLB the smallest bonus (LIQ-I1).
     const cf = mv.collateralFactorBps ?? Math.floor((Math.min(tokenCf(p.a), tokenCf(p.b)) * mv.poolRiskFactorBps) / 1e4);

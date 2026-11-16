@@ -165,13 +165,41 @@
       "tokenCapUsd": "5000000"
     }
   },
+  "spokes": {
+    "uniV3Stable": {
+      "collateralRisk": 20
+    },
+    "uniV4Stable": {
+      "collateralRisk": 20
+    },
+    "uniV3CorrelatedEth": {
+      "collateralRisk": 50
+    },
+    "uniV4CorrelatedBtc": {
+      "collateralRisk": 75
+    },
+    "uniV3BlueChip": {
+      "collateralRisk": 100
+    },
+    "slipBlueChip": {
+      "collateralRisk": 100
+    },
+    "uniV3GovDefi": {
+      "collateralRisk": 200
+    },
+    "slipGovDefi": {
+      "collateralRisk": 200
+    },
+    "slipStocks": {
+      "collateralRisk": 300
+    }
+  },
   "markets": {
     "default": {
       "poolRiskFactorBps": 4000,
       "consistencyToleranceBps": 100,
       "maxLiquidationBonus": 10800,
       "slippageAllowanceMinBps": 50,
-      "collateralRisk": 0,
       "minPledgeUsd": "10",
       "stressFloorUsd": "1",
       "marketUsdCap": "5000000",
