@@ -118,7 +118,7 @@ contract ClModuleCallerProbe is LPOracleCLModuleCaller {
 /// the pool hook, the `PoolTwap` hook and the report on a missing quote, `SPEC-ORC-009`'s clamp to a square-root bound,
 /// the shock check on an invalid quote, the TWAP quote above the `uint128` root, the mean tick of a zero window, the
 /// logic contracts' hook caller on a refused composition and a short quote vector, the module contract refusing
-/// every direct call, and the module's own listing-checks override refusing every call.
+/// every direct call, and the module's own listing-checks override failing closed.
 contract LPOracleCLModuleEdgesTest is LPOracleCLFixture {
     ClModuleProbe internal probe;
 
@@ -354,11 +354,11 @@ contract LPOracleCLModuleEdgesTest is LPOracleCLFixture {
 
     // TEST-306 verifies: REQ-ORACLE-105
     /// @notice The module's own listing-checks override runs in no deployed contract (the listing checks run only
-    /// delegated, through the logic contracts' hook caller), so reached on the module's code it reverts NotDelegated.
-    function test_TEST_306_moduleOwnListingChecksRevert() public {
+    /// delegated, through the logic contracts' hook caller), so reached on the module's code it fails closed: every
+    /// module check bit set.
+    function test_TEST_306_moduleOwnListingChecksFailClosed() public {
         probe = new ClModuleProbe();
         OracleConfig memory c;
-        vm.expectRevert(ILPOracleErrors.NotDelegated.selector);
-        probe.listingChecks(c, _pair(1e8, 1e8));
+        assertEq(probe.listingChecks(c, _pair(1e8, 1e8)), type(uint256).max, "every check fails");
     }
 }
