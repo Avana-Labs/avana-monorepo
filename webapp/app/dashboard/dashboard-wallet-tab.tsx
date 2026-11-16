@@ -12,6 +12,7 @@ import {} from "@/app/components/market-card-primitives"
 import { TokenIcon } from "@/app/components/token-icon"
 import { DesktopTableSurface, ScrollableTable } from "@/app/components/market-table-primitives"
 import { getTokenIconMeta } from "@/app/lib/token-icons"
+import { fillFeeRate } from "@/app/lib/fees/front-end-fee"
 import { borrowMarketDetailPath } from "@/app/lib/borrow-routes"
 import { useBorrowSessionContextOptional } from "@/app/lib/avana-session/avana-sessions-context"
 import {
@@ -411,7 +412,7 @@ export function sumWalletValueUsd(rows: ReadonlyArray<{ valueUsd: number; source
 export function DashboardWalletTab({ walletId, balances }: { walletId: string; balances?: UserAssetBalance[] }) {
   const { showDollarAmounts } = useAmountDisplayPreferences()
   const { exact, price } = useCurrency()
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
   const borrowSession = useBorrowSessionContextOptional()
   // The Wallet tab shows unallocated/free funds plus product buckets that are available again
   // after a withdrawal. Prefer the canonical liquid row when a product also mirrors that asset,
@@ -430,7 +431,7 @@ export function DashboardWalletTab({ walletId, balances }: { walletId: string; b
   const walletPnl = sumWalletPnl(rows, basisFor)
   const onboarding = useConvexWalletOnboardingSummary(balances === undefined ? walletId : null)
   const memberSince = typeof onboarding?.sinceMs === "number" ? formatMemberSince(onboarding.sinceMs) : null
-  const boost = typeof onboarding?.boost === "number" ? onboarding.boost : null
+  const discountBps = typeof onboarding?.discountBps === "number" ? onboarding.discountBps : null
   const m = (value: string) => (showDollarAmounts ? value : MASK)
   // Masking a colored P/L would leak the sign through the tone, so a hidden P/L falls back to neutral.
   const pnlSign = walletPnl && walletPnl.pnlUsd > 0 ? "+" : walletPnl && walletPnl.pnlUsd < 0 ? "-" : ""
@@ -462,9 +463,9 @@ export function DashboardWalletTab({ walletId, balances }: { walletId: string; b
             description="Change in your wallet tokens' value since onboarding: current live value minus the granted cost basis."
           />
           <WalletMetric
-            label={t("Avana Boost")}
-            value={boost != null ? `${boost.toFixed(2)}x` : DASH}
-            description="Your Avana rank — a per-wallet standing that boosts your edge across Lend, Borrow, and Swap. The higher it climbs, the more it unlocks."
+            label={t("Fee discount")}
+            value={discountBps != null ? fillFeeRate(t("{bps} bps off"), discountBps, language) : DASH}
+            description="Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days."
           />
           <WalletMetric
             label={t("Member since")}

@@ -1277,6 +1277,9 @@ const dict: TranslationDictionary = {
   "View wallet": "Wallet bekijken",
   "Wallet balances": "Walletsaldi",
   "Wallet Value": "Walletwaarde",
+  "Fee discount": "Kostenkorting",
+  "{bps} bps off": "{bps} bps korting",
+  "Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days.": "De Avana-kosten dalen met de duur van het lidmaatschap: 1 bps korting na 30 dagen, 2 na 90 dagen en 3 na 180 dagen.",
   "What assets can be borrowed with {name} as collateral.":
     "Welke activa kunnen worden geleend met {name} als onderpand.",
   "What-if: price move": "Wat-als: prijsbeweging",

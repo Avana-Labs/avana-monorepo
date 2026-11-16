@@ -51,6 +51,11 @@ export interface FeeRules {
   readonly exemptActions: readonly string[];
   /** Largest fee in USD per action; null for no cap. */
   readonly maxFeeUsd: number | null;
+  /**
+   * Bps taken off every rate for one wallet's membership (`tenureDiscountBps`), never below 0 bps. Absent for a wallet
+   * with no membership. Not stored in `feeConfig`: Convex computes it per wallet and the app adds it to the rules.
+   */
+  readonly memberDiscountBps?: number;
 }
 
 export interface GasInputs {
@@ -119,11 +124,33 @@ export function checkFeeRules(rules: Pick<FeeRules, "defaultBps" | "actionBps">)
   for (const [action, bps] of Object.entries(rules.actionBps)) if (bps !== undefined) checkBps(bps, action);
 }
 
-/** The rate that applies to an action: 0 when fees are off or the action is exempt. Rules above the ceiling throw. */
+/** Membership tiers by days since the wallet's first interaction: the bps taken off the fee rate. Longest first. */
+export const TENURE_DISCOUNT_TIERS: readonly { readonly minDays: number; readonly bps: number }[] = [
+  { minDays: 180, bps: 3 },
+  { minDays: 90, bps: 2 },
+  { minDays: 30, bps: 1 },
+];
+
+const DAY_MS = 86_400_000;
+
+/** The bps off the fee for a member since `sinceMs`: 0 under 30 days, 1 from 30, 2 from 90, 3 from 180 (10 → 9 → 8 → 7 at the default rate). */
+export function tenureDiscountBps(sinceMs: number, nowMs: number): number {
+  const days = (nowMs - sinceMs) / DAY_MS;
+  return TENURE_DISCOUNT_TIERS.find((t) => days >= t.minDays)?.bps ?? 0;
+}
+
+/** The rate after the member discount; at least 0. A discount outside 0..MAX_FEE_BPS or not whole throws. */
+function discounted(rate: number, rules: FeeRules): number {
+  const d = rules.memberDiscountBps ?? 0;
+  if (!Number.isInteger(d) || d < 0 || d > MAX_FEE_BPS) throw new Error(`member discount ${d} bps is outside 0..${MAX_FEE_BPS}`);
+  return Math.max(0, rate - d);
+}
+
+/** The rate that applies to an action: 0 when fees are off or the action is exempt, else the rate less the member discount. Rules above the ceiling throw. */
 export function feeBpsFor(rules: FeeRules, action: FeeAction): number {
   checkFeeRules(rules);
   if (!rules.enabled || rules.exemptActions.includes(action)) return 0;
-  return rules.actionBps[action] ?? rules.defaultBps;
+  return discounted(rules.actionBps[action] ?? rules.defaultBps, rules);
 }
 
 /**

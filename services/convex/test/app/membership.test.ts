@@ -53,7 +53,7 @@ describe("wallet membership", () => {
         preferences: { language: "ES" },
       });
     const got = await t.query(api.wallet.membership.get, { wallet: WALLET });
-    expect(got).toMatchObject({ source: "profile" });
+    expect(got).toMatchObject({ source: "profile", discountBps: 0 });
     expect(got!.sinceMs).toBeGreaterThan(0);
     const row = await t.run((ctx) => ctx.db.query("memberships").collect());
     expect(row).toMatchObject([
@@ -73,7 +73,7 @@ describe("wallet membership", () => {
     });
     expect(
       await t.query(api.wallet.membership.get, { wallet: WALLET }),
-    ).toEqual({ sinceMs: 1_000, source: "onchain" });
+    ).toEqual({ sinceMs: 1_000, source: "onchain", discountBps: 3 });
   });
 
   test("the stored row survives after the log it came from is pruned", async () => {
@@ -83,7 +83,7 @@ describe("wallet membership", () => {
     });
     expect(
       await t.query(api.wallet.membership.get, { wallet: WALLET }),
-    ).toEqual({ sinceMs: 2_000, source: "onchain" });
+    ).toEqual({ sinceMs: 2_000, source: "onchain", discountBps: 3 });
   });
 
   test("keeps the earliest time and ignores a missing time", async () => {
@@ -98,5 +98,19 @@ describe("wallet membership", () => {
     const rows = await t.run((ctx) => ctx.db.query("memberships").collect());
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ firstSeenAt: 2_500, source: "intent" });
+  });
+
+  test("the discount follows tenure: 0 for a new member, 2 bps at 90 days", async () => {
+    const t = convexTest(schema, modules);
+    const DAY = 86_400_000;
+    await t.run(async (ctx) => {
+      await noteFirstSeen(ctx, WALLET, Date.now() - 91 * DAY, "onchain");
+    });
+    expect(await t.query(api.wallet.membership.get, { wallet: WALLET })).toMatchObject({ discountBps: 2 });
+    const other = "0xAbC0000000000000000000000000000000000002";
+    await t.run(async (ctx) => {
+      await noteFirstSeen(ctx, other, Date.now() - DAY, "onchain");
+    });
+    expect(await t.query(api.wallet.membership.get, { wallet: other })).toMatchObject({ discountBps: 0 });
   });
 });

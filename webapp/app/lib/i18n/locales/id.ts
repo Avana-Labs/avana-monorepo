@@ -1291,6 +1291,9 @@ const dict: TranslationDictionary = {
   "View wallet": "Lihat dompet",
   "Wallet balances": "Saldo dompet",
   "Wallet Value": "Nilai Dompet",
+  "Fee discount": "Diskon biaya",
+  "{bps} bps off": "Diskon {bps} bps",
+  "Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days.": "Biaya Avana turun seiring lama keanggotaan: diskon 1 bps setelah 30 hari, 2 setelah 90 hari, dan 3 setelah 180 hari.",
   was: "sebelumnya",
   "What assets can be borrowed with {name} as collateral.":
     "Aset apa saja yang dapat dipinjam dengan {name} sebagai jaminan.",

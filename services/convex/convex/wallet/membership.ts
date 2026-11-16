@@ -6,26 +6,37 @@
 // timestamp of public chain activity or of the wallet's own first visit.
 
 import { v } from "convex/values";
-import { query } from "../_generated/server";
+import { query, type QueryCtx } from "../_generated/server";
+import { tenureDiscountBps } from "../lib/fees.ts";
 import type { MembershipSource } from "../lib/membership.ts";
 
+/** The earliest first sign of a wallet, or null when none is recorded. */
+export async function firstSeenOf(ctx: Pick<QueryCtx, "db">, wallet: string): Promise<{ sinceMs: number; source: MembershipSource } | null> {
+  const w = wallet.toLowerCase();
+  const [row, log, intent, profile] = await Promise.all([
+    ctx.db.query("memberships").withIndex("by_wallet", (q) => q.eq("wallet", w)).unique(),
+    ctx.db.query("ingestedLogs").withIndex("by_wallet", (q) => q.eq("wallet", w)).order("asc").first(),
+    ctx.db.query("intents").withIndex("by_wallet", (q) => q.eq("wallet", w)).order("asc").first(),
+    ctx.db.query("walletProfiles").withIndex("by_wallet", (q) => q.eq("wallet", w)).unique(),
+  ]);
+  const found: { sinceMs: number; source: MembershipSource }[] = [];
+  if (row) found.push({ sinceMs: row.firstSeenAt, source: row.source });
+  if (log && log.at > 0) found.push({ sinceMs: log.at, source: "onchain" });
+  if (intent) found.push({ sinceMs: intent.submittedAt, source: "intent" });
+  if (profile) found.push({ sinceMs: profile.createdAt, source: "profile" });
+  if (found.length === 0) return null;
+  return found.reduce((a, b) => (b.sinceMs < a.sinceMs ? b : a));
+}
+
+/**
+ * The wallet's membership and the fee discount it earns (`tenureDiscountBps`: 0 under 30 days, 1 bps from 30, 2 from 90,
+ * 3 from 180), or null when no first interaction is recorded. The discount is computed here, so a client never decides it.
+ */
 export const get = query({
   args: { wallet: v.string() },
-  handler: async (ctx, { wallet }): Promise<{ sinceMs: number; source: MembershipSource } | null> => {
+  handler: async (ctx, { wallet }): Promise<{ sinceMs: number; source: MembershipSource; discountBps: number } | null> => {
     if (!/^0x[0-9a-fA-F]{40}$/.test(wallet)) throw new Error("wallet is a 20-byte address");
-    const w = wallet.toLowerCase();
-    const [row, log, intent, profile] = await Promise.all([
-      ctx.db.query("memberships").withIndex("by_wallet", (q) => q.eq("wallet", w)).unique(),
-      ctx.db.query("ingestedLogs").withIndex("by_wallet", (q) => q.eq("wallet", w)).order("asc").first(),
-      ctx.db.query("intents").withIndex("by_wallet", (q) => q.eq("wallet", w)).order("asc").first(),
-      ctx.db.query("walletProfiles").withIndex("by_wallet", (q) => q.eq("wallet", w)).unique(),
-    ]);
-    const found: { sinceMs: number; source: MembershipSource }[] = [];
-    if (row) found.push({ sinceMs: row.firstSeenAt, source: row.source });
-    if (log && log.at > 0) found.push({ sinceMs: log.at, source: "onchain" });
-    if (intent) found.push({ sinceMs: intent.submittedAt, source: "intent" });
-    if (profile) found.push({ sinceMs: profile.createdAt, source: "profile" });
-    if (found.length === 0) return null;
-    return found.reduce((a, b) => (b.sinceMs < a.sinceMs ? b : a));
+    const m = await firstSeenOf(ctx, wallet);
+    return m ? { ...m, discountBps: tenureDiscountBps(m.sinceMs, Date.now()) } : null;
   },
 });
