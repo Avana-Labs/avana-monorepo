@@ -8,6 +8,7 @@ import {
   type BorrowVisual,
 } from "@/app/lib/borrow-system/model"
 import { getTokenIconMeta } from "@/app/lib/token-icons"
+import { chainName } from "@/app/lib/chains"
 
 /**
  * One Borrow row from services/convex `markets.listMarketSnapshots`: a collateral market
@@ -50,10 +51,8 @@ export type ConvexMarketSnapshot = {
   lpPriceUsd?: number
 }
 
-const CHAIN_LABELS: Record<number, string> = { 1: "Ethereum", 8453: "Base", 31337: "Local" }
-
 export function chainLabel(chainId: number | undefined): string {
-  return chainId !== undefined ? (CHAIN_LABELS[chainId] ?? `Chain ${chainId}`) : "—"
+  return chainId !== undefined ? (chainName(chainId) ?? `Chain ${chainId}`) : "—"
 }
 
 function usd6(value: number | undefined) {
