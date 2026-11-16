@@ -32,6 +32,12 @@ contract DebtOracleHalmosTest is Test {
     uint256 internal constant MAX_ANSWER = 1e12;
     /// @dev The alternate's fixed answer in the `driftingTimestampFollowsPrimaryOrAccepted` checks (0.95).
     uint40 internal constant B_FIXED = 95_000_000;
+    /// @dev Agreement bounds at tolerance 225 bps: the alternate disagrees with the primary at `A` for b <= 97,789,731
+    /// or b > 102,239,775, and the primary with the alternate at 0.95 for p <= 92,909,535 or p > 97,137,500.
+    uint256 internal constant ALT_DRIFT_BELOW = 97_789_731;
+    uint256 internal constant ALT_DRIFT_ABOVE = 102_239_775;
+    uint256 internal constant PRI_DRIFT_BELOW = 92_909_535;
+    uint256 internal constant PRI_DRIFT_ABOVE = 97_137_500;
 
     DebtOracle internal oracle;
     DebtRegistryMock internal reg;
@@ -169,7 +175,7 @@ contract DebtOracleHalmosTest is Test {
     // `Below` can only serve A (no legs), `Above` only the primary. The single check with b symbolic over all of
     // uint40 was cancelled at the 6-hour job limit in run 43492412351 with no result. `Below` and `Above` check the
     // drift assertions on every return and leave the revert case to
-    // `check_PROP_074_driftingTimestampsRevertOnlyForGasAlternate`, which proves over every uint40 that the call
+    // the `driftingTimestampsRevertOnlyForGasAlternate` checks, which prove over every valid b that the call
     // reverts only with `InsufficientGas`. Together they assert what one check with both parts asserts. With both
     // parts, `Below` and `Above` did not finish in 1 hour (run 43742353540); the drift assertions alone finish in
     // about 2 minutes (run 43766285060).
@@ -206,8 +212,8 @@ contract DebtOracleHalmosTest is Test {
     // served, the accepted timestamp and no legs when A is. Split by branch as the alternate checks, the three ranges
     // together being every uint40: `Invalid` (p = 0 or p >= 1e12), `Below` (0 < p < 0.95) and `Above`
     // (0.95 <= p < 1e12). The lower route is at most 0.95 < A in every case, so a disagreement always serves A.
-    // The revert case of `Below` and `Above` is `check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAccepted`,
-    // as for the alternate checks.
+    // The revert case of `Below` and `Above` is the `driftingTimestampsRevertOnlyForGasPrimaryOrAccepted` checks, as
+    // for the alternate checks.
     function check_PROP_074_driftingTimestampFollowsPrimaryOrAcceptedInvalid(
         uint40 pAnswer
     ) public {
@@ -235,27 +241,83 @@ contract DebtOracleHalmosTest is Test {
     }
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
-    // Sources: the revert case of `check_PROP_074_driftingTimestampFollowsAlternateBelow` and `...Above`, over every
-    // uint40 (it holds the ranges of `Invalid`, `Below` and `Above`): with the drift checks' routes and timestamps,
-    // `getPriceState()` reverts only with `InsufficientGas`. Over every uint40 there is no range assumption, as in
-    // `check_PROP_074_servedDebtPriceAgainstFixedPrimary`, which proves the same of `latestAnswer()`.
-    function check_PROP_074_driftingTimestampsRevertOnlyForGasAlternate(
-        uint40 bAnswer
+    // Sources: the revert case of `check_PROP_074_driftingTimestampFollowsAlternateBelow` and `...Above`: with the
+    // drift checks' routes and timestamps, `getPriceState()` reverts only with `InsufficientGas`. The alternate's valid
+    // answers 0 < b < 1e12 are split at the agreement bounds into three checks: `DriftBelow` (b <= 97,789,731, the
+    // largest b with (A − b) × 10⁴ > 225 × b), `Agree` (up to 102,239,775 = A × 10,225 / 10⁴) and `DriftAbove`. The
+    // invalid answers (b = 0 or b >= 1e12) are `check_PROP_074_driftingTimestampFollowsAlternateInvalid`, which checks
+    // the revert case too, so the four checks cover every uint40. Over all valid b in one check, with Halmos's default
+    // solver, the proof did not complete within 1 hour (run 43777240448), and over the drift-below range alone it took
+    // 37 minutes (run 43766285060); each check here uses bitwuzla.
+    /// @custom:halmos --solver bitwuzla
+    function check_PROP_074_driftingTimestampsRevertOnlyForGasAlternateDriftBelow(
+        uint32 bAnswer
     ) public {
-        _driftPush(uint40(A), bAnswer);
-        try oracle.getPriceState() returns (DebtPriceView memory) {}
-        catch (bytes memory err) {
-            _onlyGasRevert(err);
-        }
+        vm.assume(bAnswer > 0 && bAnswer <= ALT_DRIFT_BELOW);
+        _driftRevertOnlyForGas(uint40(A), uint40(bAnswer));
     }
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
-    // Sources: the revert case of `check_PROP_074_driftingTimestampFollowsPrimaryOrAcceptedBelow` and `...Above`, as
-    // `check_PROP_074_driftingTimestampsRevertOnlyForGasAlternate`.
-    function check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAccepted(
+    // Sources: `check_PROP_074_driftingTimestampsRevertOnlyForGasAlternateDriftBelow` for the agreement range.
+    /// @custom:halmos --solver bitwuzla
+    function check_PROP_074_driftingTimestampsRevertOnlyForGasAlternateAgree(
+        uint32 bAnswer
+    ) public {
+        vm.assume(bAnswer > ALT_DRIFT_BELOW && bAnswer <= ALT_DRIFT_ABOVE);
+        _driftRevertOnlyForGas(uint40(A), uint40(bAnswer));
+    }
+
+    // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
+    // Sources: `check_PROP_074_driftingTimestampsRevertOnlyForGasAlternateDriftBelow` above the agreement range.
+    /// @custom:halmos --solver bitwuzla
+    function check_PROP_074_driftingTimestampsRevertOnlyForGasAlternateDriftAbove(
+        uint40 bAnswer
+    ) public {
+        vm.assume(bAnswer > ALT_DRIFT_ABOVE && bAnswer < MAX_ANSWER);
+        _driftRevertOnlyForGas(uint40(A), bAnswer);
+    }
+
+    // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
+    // Sources: the revert case of `check_PROP_074_driftingTimestampFollowsPrimaryOrAcceptedBelow` and `...Above`,
+    // split as the alternate's: `DriftBelow` (p <= 92,909,535, the largest p with (0.95 − p) × 10⁴ > 225 × p),
+    // `Agree` (up to 97,137,500 = 0.95 × 10,225 / 10⁴) and `DriftAbove`, with the invalid answers in
+    // `check_PROP_074_driftingTimestampFollowsPrimaryOrAcceptedInvalid`.
+    /// @custom:halmos --solver bitwuzla
+    function check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAcceptedDriftBelow(
+        uint32 pAnswer
+    ) public {
+        vm.assume(pAnswer > 0 && pAnswer <= PRI_DRIFT_BELOW);
+        _driftRevertOnlyForGas(uint40(pAnswer), B_FIXED);
+    }
+
+    // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
+    // Sources: `check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAcceptedDriftBelow` for the agreement
+    // range.
+    /// @custom:halmos --solver bitwuzla
+    function check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAcceptedAgree(
+        uint32 pAnswer
+    ) public {
+        vm.assume(pAnswer > PRI_DRIFT_BELOW && pAnswer <= PRI_DRIFT_ABOVE);
+        _driftRevertOnlyForGas(uint40(pAnswer), B_FIXED);
+    }
+
+    // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
+    // Sources: `check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAcceptedDriftBelow` above the agreement
+    // range.
+    /// @custom:halmos --solver bitwuzla
+    function check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAcceptedDriftAbove(
         uint40 pAnswer
     ) public {
-        _driftPush(pAnswer, B_FIXED);
+        vm.assume(pAnswer > PRI_DRIFT_ABOVE && pAnswer < MAX_ANSWER);
+        _driftRevertOnlyForGas(pAnswer, B_FIXED);
+    }
+
+    /// @dev With the drift checks' routes and timestamps, `getPriceState()` reverts only with `InsufficientGas`.
+    function _driftRevertOnlyForGas(
+        uint40 pAnswer,
+        uint40 bAnswer
+    ) internal {
+        _driftPush(pAnswer, bAnswer);
         try oracle.getPriceState() returns (DebtPriceView memory) {}
         catch (bytes memory err) {
             _onlyGasRevert(err);

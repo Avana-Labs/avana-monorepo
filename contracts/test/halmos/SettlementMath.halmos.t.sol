@@ -237,15 +237,47 @@ contract SettlementMathHalmosTest is Test {
     // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-061, REQ-SWAP-062, Q-397, Q-404
     /// @notice The second case of `check_PROP_015_gapSettlesWithoutRevertPayouts`: for every `D`, `Kf − D`, `R` and
     /// `minRec` below 2^120 and every fee `A` and borrower surplus `B` with `A + B ≤ S = max(0, max(R, minRec) − D)`,
-    /// the gap is at most `max(0, minRec − R)` and `keeperPayout` with that top-up does not revert and balances
-    /// (`_anyPayouts`). Coverage: every input of the single check (`minRec ≤ V < 2^120`, share 2,000) is an input of the
-    /// `Payouts` case, which gives its `A`, `B` the bound `A + B ≤ S` with this `S`; `V` and the share reach the gap and
-    /// the payout only through `A` and `B`. So the `Payouts` case and the two `AnyPayouts` checks, split by `R ≥ minRec`
-    /// (no floor gap, `S = max(0, R − D)`) and `R < minRec` (gap `minRec − R`, `S = max(0, minRec − D)`), cover the
-    /// single check and extend it to every share ≤ 10⁴. Every term is a sum, a difference or a comparison; as one check
-    /// over both sides of `R ≥ minRec` it did not complete within 1 hour (run 43742353540), while each side completes
-    /// in about 2 minutes.
-    function check_PROP_015_gapSettlesWithoutRevertAnyPayoutsAboveFloor(
+    /// the gap is at most `max(0, minRec − R)` (the `Gap` checks) and `keeperPayout` with that top-up does not revert
+    /// and balances (the `Settles` checks). Coverage: every input of the single check (`minRec ≤ V < 2^120`, share
+    /// 2,000) is an input of the `Payouts` case, which gives its `A`, `B` the bound `A + B ≤ S` with this `S`; `V` and
+    /// the share reach the gap and the payout only through `A` and `B`. So the `Payouts` case and the four `AnyPayouts`
+    /// checks cover the single check and extend it to every share ≤ 10⁴. The four checks are the two assertions, each
+    /// split by `R ≥ minRec` (no floor gap, `S = max(0, R − D)`) and `R < minRec` (gap `minRec − R`,
+    /// `S = max(0, minRec − D)`): the two sides together are every input, and the two assertions together are what one
+    /// check asserts. Every term is a sum, a difference or a comparison. One check with both assertions did not
+    /// complete within 1 hour over both sides (run 43742353540) nor over either side (run 43777240448); each assertion
+    /// alone over both sides completed in about 1 minute (run 43755742247).
+    function check_PROP_015_gapSettlesWithoutRevertAnyPayoutsGapAboveFloor(
+        uint256 debt,
+        uint256 extraFunding,
+        uint256 minRec,
+        uint256 recovered,
+        uint256 fee,
+        uint256 surplusToBorrower
+    ) public pure {
+        vm.assume(recovered >= minRec);
+        _anyPayoutsGap(debt, extraFunding, minRec, recovered, fee, surplusToBorrower);
+    }
+
+    // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-061, REQ-SWAP-062, Q-397, Q-404
+    /// @notice The `Gap` assertion of `check_PROP_015_gapSettlesWithoutRevertAnyPayoutsGapAboveFloor` for a recovery
+    /// below the floor.
+    function check_PROP_015_gapSettlesWithoutRevertAnyPayoutsGapBelowFloor(
+        uint256 debt,
+        uint256 extraFunding,
+        uint256 minRec,
+        uint256 recovered,
+        uint256 fee,
+        uint256 surplusToBorrower
+    ) public pure {
+        vm.assume(recovered < minRec);
+        _anyPayoutsGap(debt, extraFunding, minRec, recovered, fee, surplusToBorrower);
+    }
+
+    // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-061, REQ-SWAP-062, Q-397, Q-404
+    /// @notice The `Settles` assertion of `check_PROP_015_gapSettlesWithoutRevertAnyPayoutsGapAboveFloor` for a
+    /// recovery at or above the floor.
+    function check_PROP_015_gapSettlesWithoutRevertAnyPayoutsSettlesAboveFloor(
         uint256 debt,
         uint256 extraFunding,
         uint256 minRec,
@@ -254,12 +286,13 @@ contract SettlementMathHalmosTest is Test {
         uint256 surplusToBorrower
     ) public {
         vm.assume(recovered >= minRec);
-        _anyPayouts(debt, extraFunding, minRec, recovered, fee, surplusToBorrower);
+        _anyPayoutsSettles(debt, extraFunding, minRec, recovered, fee, surplusToBorrower);
     }
 
     // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-061, REQ-SWAP-062, Q-397, Q-404
-    /// @notice `check_PROP_015_gapSettlesWithoutRevertAnyPayoutsAboveFloor` for a recovery below the floor.
-    function check_PROP_015_gapSettlesWithoutRevertAnyPayoutsBelowFloor(
+    /// @notice The `Settles` assertion of `check_PROP_015_gapSettlesWithoutRevertAnyPayoutsGapAboveFloor` for a
+    /// recovery below the floor.
+    function check_PROP_015_gapSettlesWithoutRevertAnyPayoutsSettlesBelowFloor(
         uint256 debt,
         uint256 extraFunding,
         uint256 minRec,
@@ -268,10 +301,27 @@ contract SettlementMathHalmosTest is Test {
         uint256 surplusToBorrower
     ) public {
         vm.assume(recovered < minRec);
-        _anyPayouts(debt, extraFunding, minRec, recovered, fee, surplusToBorrower);
+        _anyPayoutsSettles(debt, extraFunding, minRec, recovered, fee, surplusToBorrower);
     }
 
-    function _anyPayouts(
+    /// @dev The gap of the flows with `A`, `B` is at most the floor gap.
+    function _anyPayoutsGap(
+        uint256 debt,
+        uint256 extraFunding,
+        uint256 minRec,
+        uint256 recovered,
+        uint256 fee,
+        uint256 surplusToBorrower
+    ) internal pure {
+        (Flows memory c, SettlementMath.Payouts memory p, uint256 floorGap) =
+            _anyPayoutsInputs(debt, extraFunding, minRec, recovered, fee, surplusToBorrower);
+        assert(
+            SettlementMath.roundingGap(c.debt, p.avanaFee, p.borrowerSurplus, c.callerFunds, c.recovered) <= floorGap
+        );
+    }
+
+    /// @dev The call settles with the floor gap as its top-up.
+    function _anyPayoutsSettles(
         uint256 debt,
         uint256 extraFunding,
         uint256 minRec,
@@ -279,13 +329,29 @@ contract SettlementMathHalmosTest is Test {
         uint256 fee,
         uint256 surplusToBorrower
     ) internal {
+        (Flows memory c, SettlementMath.Payouts memory p, uint256 floorGap) =
+            _anyPayoutsInputs(debt, extraFunding, minRec, recovered, fee, surplusToBorrower);
+        c.shortfall = floorGap;
+        _checkSettles(c, p);
+    }
+
+    /// @dev The inputs of the `AnyPayouts` checks: the flows `(Kf, R, 0, D)`, `A` and `B` from `p`, and the floor gap
+    /// `max(0, minRec − R)`.
+    function _anyPayoutsInputs(
+        uint256 debt,
+        uint256 extraFunding,
+        uint256 minRec,
+        uint256 recovered,
+        uint256 fee,
+        uint256 surplusToBorrower
+    ) internal pure returns (Flows memory c, SettlementMath.Payouts memory p, uint256 floorGap) {
         vm.assume(debt < 2 ** 120 && extraFunding < 2 ** 120 && minRec < 2 ** 120 && recovered < 2 ** 120);
         uint256 surplus = _surplusOnFloor(minRec, recovered, debt);
         vm.assume(fee <= surplus && surplusToBorrower <= surplus - fee);
-        SettlementMath.Payouts memory p;
         p.avanaFee = fee;
         p.borrowerSurplus = surplusToBorrower;
-        _gapWithinFloorGap(Flows(debt + extraFunding, recovered, 0, debt), minRec, p);
+        c = Flows(debt + extraFunding, recovered, 0, debt);
+        floorGap = minRec > recovered ? minRec - recovered : 0;
     }
 
     /// @dev `S = max(0, R_f − D)` with `R_f = max(R, minRec)`.
@@ -296,20 +362,6 @@ contract SettlementMathHalmosTest is Test {
     ) internal pure returns (uint256) {
         uint256 rf = recovered > minRec ? recovered : minRec;
         return rf > debt ? rf - debt : 0;
-    }
-
-    /// @dev The gap of the flows `c` with `A`, `B` from `p` is at most the floor gap, and the call settles with the
-    /// floor gap as its top-up.
-    function _gapWithinFloorGap(
-        Flows memory c,
-        uint256 minRec,
-        SettlementMath.Payouts memory p
-    ) internal {
-        uint256 gap = SettlementMath.roundingGap(c.debt, p.avanaFee, p.borrowerSurplus, c.callerFunds, c.recovered);
-        uint256 floorGap = minRec > c.recovered ? minRec - c.recovered : 0;
-        assert(gap <= floorGap);
-        c.shortfall = floorGap;
-        _checkSettles(c, p);
     }
 
     function _checkSettles(
