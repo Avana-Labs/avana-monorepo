@@ -7,7 +7,9 @@ import { HomeWorkspaceCard } from "@/app/components/home/home-workspace-card"
 import { HomeSwapAction } from "@/app/components/home/home-swap-action"
 import { ActionSessionLoading } from "@/app/components/action-page/action-session-loading"
 import { HomeWorkspaceSkeleton } from "@/app/components/loading-states"
+import { RouteErrorFallback } from "@/app/components/route-error-fallback"
 import { AvanaSessionsProvider, useBorrowSessionContext } from "@/app/lib/avana-session/avana-sessions-provider"
+import { useMarketsLoadState } from "@/app/lib/avana-session/use-markets-load-state"
 
 // Swap is the initial mode. Fetch the other action forms only when selected,
 // keeping their configuration/picker graph off the initial workspace load.
@@ -37,11 +39,16 @@ export function HomePageWorkspaceRuntime({
 function HomePageWorkspace({ initialMode }: { initialMode: HomeMode }) {
   const session = useBorrowSessionContext()
   const [mode, setMode] = useState<HomeMode>(initialMode)
+  const [attempt, setAttempt] = useState(0)
 
   // Gate on the full available-pool list (always populated) rather than the
   // pledged pools — a freshly onboarded wallet with no positions still renders
   // the card instead of hanging on the loading skeleton forever.
-  if (session.availableCollateralPools.length === 0) {
+  const load = useMarketsLoadState(session.availableCollateralPools.length > 0, attempt)
+  if (load === "failed") {
+    return <RouteErrorFallback onRetry={() => setAttempt((n) => n + 1)} />
+  }
+  if (load === "loading") {
     return <HomeWorkspaceSkeleton />
   }
 
