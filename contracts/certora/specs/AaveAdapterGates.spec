@@ -37,9 +37,9 @@
  *    the enabled set equals the Spoke's borrowable reserves, Q-281).
  *  - PROP-067 (call order): `postHealthCheck` runs after every borrow, withdrawal that leaves debt and partial removal
  *    that leaves debt.
- *  - PositionManagerApproved by construction (REQ-PROXY-008, REQ-RISK-088): no Adapter method reaches a Spoke's
- *    `setUserPositionManager`, `setUserPositionManagersWithSig`, `renouncePositionManagerRole` or `multicall`, through a
- *    proxy or from the Adapter itself.
+ *  - PROP-114, no position-manager approval by construction (REQ-PROXY-008, REQ-RISK-088): no Adapter method
+ *    reaches a Spoke's `setUserPositionManager`, `setUserPositionManagersWithSig`, `renouncePositionManagerRole` or
+ *    `multicall`, through a proxy or from the Adapter itself.
  *
  * Storage: the Adapter's `borrowNonce`, `proxyOf` and `accountOf` are read through their views; no hooks.
  *
@@ -181,8 +181,8 @@ methods {
     function _.isSpokeListed(uint256, address) external => NONDET;
     function _.isUnderlyingListed(address) external => NONDET;
 
-    // Position-manager surface of the Spoke (PositionManagerApproved): any call that reaches one of these selectors is
-    // recorded. The Adapter never builds one; the rule `noPositionManagerApproval` proves no method reaches them.
+    // Position-manager surface of the Spoke (PROP-114): any call that reaches one of these selectors is recorded.
+    // The Adapter never builds one; the rule `noPositionManagerApproval` proves no method reaches them.
     function _.setUserPositionManager(address, bool) external => positionManagerCall() expect void;
     function _.setUserPositionManagersWithSig(IAaveV4SpokePositionManagers.SetUserPositionManagers, bytes) external => positionManagerCall() expect void;
     function _.renouncePositionManagerRole(address) external => positionManagerCall() expect void;
@@ -874,7 +874,7 @@ rule repayWithCollateralIsReachableWhileFrozen(AaveAdapter.RepayWithCollateralPa
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// PositionManagerApproved by construction (REQ-PROXY-008, REQ-RISK-088)
+// No position-manager approval by construction (PROP-114, REQ-PROXY-008, REQ-RISK-088)
 // ---------------------------------------------------------------------------------------------------------------------
 
 // No Adapter method, whatever its arguments and caller, reaches the Spoke's position-manager surface: every call a
@@ -883,6 +883,7 @@ rule repayWithCollateralIsReachableWhileFrozen(AaveAdapter.RepayWithCollateralPa
 // `positionManagerCall` and be counted. The struct of `setUserPositionManagersWithSig` comes into the scene through
 // `AaveAdapterSpokeTypesHarness`, a stateless contract that is never called. The selector-allowlist tests
 // (AaveAdapter.Access.unit.t.sol) check the same set on the compiled code and on every call a proxy makes.
+// PROP-114 verifies: REQ-PROXY-008, REQ-RISK-088, Q-352
 rule noPositionManagerApproval(method f) filtered { f -> f.contract == currentContract } {
     env e;
     calldataarg args;

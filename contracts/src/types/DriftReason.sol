@@ -7,7 +7,8 @@ pragma solidity 0.8.28;
 /// @dev Checked on the standard Aave V4 Spoke of every CDP Spoke; drift trips a breaker that stops new activity, never
 /// liquidation. `None` means no drift. Spoke-wide and debt-reserve reasons are reported with `marketId = 0`. Append only:
 /// existing ordinal values never change. The three standard-Spoke settings the listing sets and the drift check
-/// enforces are `ReceiveSharesOn`, `LiquidationFeeNonZero` and `ReinvestmentController`.
+/// enforces are `ReceiveSharesOn`, `LiquidationFeeNonZero` and `ReinvestmentController`. A position-manager approval on
+/// a proxy has no reason: it cannot happen, by construction (REQ-RISK-088, REQ-PROXY-008).
 /// @custom:spec REQ-ADAPTER-014, REQ-ADAPTER-022, REQ-ADAPTER-028, REQ-ADAPTER-029, REQ-ADAPTER-030, REQ-ADAPTER-031, REQ-ADAPTER-032, REQ-ADAPTER-033, REQ-ADAPTER-034, REQ-ADAPTER-035, REQ-ADAPTER-063, REQ-ADAPTER-064, REQ-RISK-063, REQ-RISK-069, Q-270, Q-281, Q-378
 enum DriftReason {
     None,
@@ -46,8 +47,5 @@ enum DriftReason {
     // The Spoke's liquidation target health factor differs from aaveTargetHealthFactor.
     LiquidationConfigChanged,
     // The home Hub reports the CDP Spoke inactive or halted, or an Avana reserve of it is paused (REQ-RISK-088, Q-351).
-    SpokeHalted,
-    // Reserved: no drift view returns it. That no proxy has an approved position manager is shown by construction
-    // (REQ-RISK-088, Q-352); the value is removed once the AaveAdapter's tests and formal rule complete the proof.
-    PositionManagerApproved
+    SpokeHalted
 }

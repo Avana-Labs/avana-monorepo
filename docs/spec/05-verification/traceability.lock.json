@@ -10536,7 +10536,7 @@
     "checks": []
   },
   "Q-349": {
-    "hash": "50ba41a3341c3c17",
+    "hash": "4019d1d5c1836569",
     "checks": []
   },
   "Q-350": {
@@ -10551,8 +10551,10 @@
     "checks": []
   },
   "Q-352": {
-    "hash": "fc0e3e54236e87b7",
-    "checks": []
+    "hash": "b73f3617853b3296",
+    "checks": [
+      "PROP-114"
+    ]
   },
   "Q-353": {
     "hash": "7d7aff12856764ba",
@@ -25830,18 +25832,20 @@
     ]
   },
   "REQ-RISK-088": {
-    "hash": "1814ba4d75e97d65",
+    "hash": "9081269fb971cab6",
     "checks": [
       "IMarketRegistryApprovals",
       "IRiskModuleDriftLogic",
       "MarketRegistryViews",
       "PROP-078",
+      "PROP-114",
       "RiskModuleDriftLogic",
       "TEST-031",
       "TEST-033",
       "TEST-181",
       "TEST-182",
-      "TEST-187"
+      "TEST-187",
+      "TEST-268"
     ]
   },
   "REQ-RISK-089": {
