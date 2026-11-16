@@ -23,7 +23,8 @@
 //
 // Usage, from contracts/:  node script/e2e/replay-check.ts <manifest.json> <repo root>
 //                          node script/e2e/replay-check.ts --indexer <repo root> <pglite dir> live replay
-// Environment (Convex mode): RPC_ANVIL, E2E_EXPORT_URL, E2E_EXPORT_KEY_ID, E2E_EXPORT_SECRET, E2E_SAMPLE_BLOCK.
+// Environment (Convex mode): RPC_ANVIL (the checked node), CHAIN_ID_<SUFFIX> (the chain it stands in for, e.g.
+// CHAIN_ID_MAINNET=31337), E2E_EXPORT_URL, E2E_EXPORT_KEY_ID, E2E_EXPORT_SECRET, E2E_SAMPLE_BLOCK.
 
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -131,8 +132,14 @@ async function convexMode() {
   const { readChainSnapshot } = await import("@avana/services-common/views");
 
   // ── Import ──
+  // The chain's own variables (RPC_MAINNET and CHAIN_ID_MAINNET for a node standing in for Ethereum, RPC_BASE and
+  // CHAIN_ID_BASE for Base), so a check of one chain never repoints Convex's reads of another. This process resolves
+  // the chain the same way: CHAIN_ID_<SUFFIX> in its environment.
+  const { chainById } = await import("@avana/services-common/chains");
+  const suffix = chainById(chainId).envSuffix;
   for (const [k, v] of Object.entries({
-    RPC_ANVIL: rpc,
+    [`RPC_${suffix}`]: rpc,
+    [`CHAIN_ID_${suffix}`]: String(chainId),
     INDEXER_EXPORT_URL: env("E2E_EXPORT_URL"),
     INDEXER_EXPORT_KEY_ID: env("E2E_EXPORT_KEY_ID"),
     INDEXER_EXPORT_SECRET: env("E2E_EXPORT_SECRET"),
@@ -149,7 +156,7 @@ async function convexMode() {
     firstLossReserves: manifest.avana.firstLossReserves.map((c: Json) => ({ address: c.address, asset: c.asset, hub: c.hub })),
     marketRegistry: manifest.avana.marketRegistry.address,
     timelock: manifest.avana.timelock.address,
-    explorerUrl: "http://127.0.0.1:8545",
+    explorerUrl: rpc,
     nativeUsdFeed: world.feeds.WETH.primary,
     release: manifest.release,
   };
