@@ -12,7 +12,10 @@ import { INTENT_KINDS, type IntentState, type IntentStatus, isFinal, nextIntentS
 import { explorerLinks } from "./lib/explorer.ts";
 import { noteFirstSeen } from "./lib/membership.ts";
 import { awardQuestForIntent } from "./lib/rewards.ts";
+import { awardFeePoints, feeTransfers, type ReceiptLog } from "./lib/feePoints.ts";
+import { FEE_ACTIONS } from "./lib/fees.ts";
 import { rpcClient } from "./lib/rpc.ts";
+import { parseAbi } from "viem";
 import { consumeWriteBudget } from "./writeRateLimit";
 import { requireWalletSession } from "./walletAuth";
 
@@ -107,6 +110,19 @@ export const apply = internalMutation({
   },
 });
 
+const LENS_STORE_ABI = parseAbi(["function PARAMETER_STORE() view returns (address)"]);
+const STORE_FEE_ABI = parseAbi(["function feeRecipient() view returns (address)"]);
+
+/**
+ * Awards fee points for a confirmed transaction: the ERC-20 transfers from the wallet to the ParameterStore's
+ * `feeRecipient` in its receipt, priced by Convex (lib/feePoints.ts). Internal: only the tracker calls it, with logs it
+ * read itself, so a client never sets an amount.
+ */
+export const awardFee = internalMutation({
+  args: { wallet: v.string(), chainId: v.number(), txHash: v.string(), transfers: v.array(v.object({ token: v.string(), amount: v.string() })) },
+  handler: async (ctx, { wallet, chainId, txHash, transfers }) => awardFeePoints(ctx, { wallet, chainId, txHash, transfers, at: Date.now() }),
+});
+
 /** One tracker run for a chain: reads the receipt, the canonical hash of the stored block and finality per open intent. */
 export const track = internalAction({
   args: { chainId: v.number() },
@@ -115,9 +131,14 @@ export const track = internalAction({
     if (intents.length === 0) return;
     const client = rpcClient(chainId);
     const finalized = await client.getBlock({ blockTag: "finalized" }).then((b) => b.number.toString(), () => null);
+    let feeRecipient: string | null | undefined;
     for (const i of intents) {
+      let logs: readonly ReceiptLog[] = [];
       const receipt = await client.getTransactionReceipt({ hash: i.txHash as `0x${string}` }).then(
-        (r) => ({ success: r.status === "success", blockNumber: r.blockNumber.toString(), blockHash: r.blockHash.toLowerCase() }),
+        (r) => {
+          logs = r.logs;
+          return { success: r.status === "success", blockNumber: r.blockNumber.toString(), blockHash: r.blockHash.toLowerCase() };
+        },
         () => null,
       );
       const canonicalHash = i.blockNumber ? await client.getBlock({ blockNumber: BigInt(i.blockNumber) }).then((b) => b.hash?.toLowerCase() ?? null, () => null) : null;
@@ -126,6 +147,20 @@ export const track = internalAction({
       const next = nextIntentState(state, { receipt, canonicalHash, indexed, finalizedBlock: finalized, now: Date.now() });
       const { submittedAt: _s, ...fields } = next;
       await ctx.runMutation(internal.intents.apply, { id: i._id, expected: i.status, next: next === state ? null : fields });
+      // The first time the transaction is seen on chain, its fee transfer earns points. A failure here never stops tracking.
+      if (receipt?.success && i.status === "pending" && (FEE_ACTIONS as readonly string[]).includes(i.kind)) {
+        try {
+          if (feeRecipient === undefined) {
+            const lens = (await ctx.runQuery(internal.ingest.apply.state, { chainId })).deployment?.lens;
+            const store = lens ? await client.readContract({ address: lens as `0x${string}`, abi: LENS_STORE_ABI, functionName: "PARAMETER_STORE" }) : null;
+            feeRecipient = store ? await client.readContract({ address: store, abi: STORE_FEE_ABI, functionName: "feeRecipient" }) : null;
+          }
+          const transfers = feeRecipient ? feeTransfers(logs, i.wallet, feeRecipient) : [];
+          if (transfers.length > 0) await ctx.runMutation(internal.intents.awardFee, { wallet: i.wallet, chainId, txHash: i.txHash, transfers });
+        } catch (e) {
+          console.error(`fee points ${chainId} ${i.txHash}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      }
     }
   },
 });
