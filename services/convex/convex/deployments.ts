@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Writes a chain's deployment row from its verified release manifest (`aave.hubs`, `aave.lendSpokes`,
-// `aave.borrowSpokes`, `avana.firstLossReserves`); run by an operator with each release (internal: no client can call it).
+// `aave.borrowSpokes`, `avana.firstLossReserves`, and optionally `avana.lpVaults`, `avana.riskModule` and each Spoke's
+// oracle for the About card); run by an operator with each release (internal: no client can call it).
 
 import { v } from "convex/values";
 import { internalMutation, query } from "./_generated/server";
@@ -21,6 +22,10 @@ export const setDeployment = internalMutation({
     explorerUrl: v.string(),
     nativeUsdFeed: v.string(),
     release: v.string(),
+    // The About card's contracts, from the manifest (`avana.lpVaults[]`, `avana.riskModule`, each Spoke's `ORACLE()`).
+    lpVaults: v.optional(v.array(v.object({ integrationId: v.number(), address: v.string() }))),
+    riskModule: v.optional(v.string()),
+    spokeOracles: v.optional(v.array(v.object({ spoke: v.string(), oracle: v.string() }))),
   },
   handler: async (ctx, a) => {
     if (a.hubs.length === 0 || a.lendSpokes.length === 0) throw new Error(`deployment of chain ${a.chainId} needs at least one Hub and one Lend Spoke`);
@@ -36,6 +41,9 @@ export const setDeployment = internalMutation({
       marketRegistry: lower(a.marketRegistry),
       timelock: lower(a.timelock),
       nativeUsdFeed: lower(a.nativeUsdFeed),
+      ...(a.lpVaults ? { lpVaults: a.lpVaults.map((x) => ({ integrationId: x.integrationId, address: lower(x.address) })) } : {}),
+      ...(a.riskModule ? { riskModule: lower(a.riskModule) } : {}),
+      ...(a.spokeOracles ? { spokeOracles: a.spokeOracles.map((x) => ({ spoke: lower(x.spoke), oracle: lower(x.oracle) })) } : {}),
     };
     const existing = await ctx.db.query("deployments").withIndex("by_chain", (q) => q.eq("chainId", a.chainId)).unique();
     if (existing) await ctx.db.replace(existing._id, row);
