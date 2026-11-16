@@ -35,6 +35,16 @@ contract AaveAdapterNetSpeedIntegrationTest is AaveAdapterRiskFixture {
         rstore.setDebtSpeed(aave.hub, address(debt), SpeedLimit(0, TAU, 5000e18, 5000e18));
     }
 
+    /// @dev The ABI-encoded arguments of revert data `data`: everything after its 4-byte selector.
+    function _args(
+        bytes memory data
+    ) internal pure returns (bytes memory args) {
+        args = new bytes(data.length - 4);
+        for (uint256 i = 0; i < args.length; ++i) {
+            args[i] = data[i + 4];
+        }
+    }
+
     function _repay(
         uint256 amount
     ) internal {
@@ -85,11 +95,13 @@ contract AaveAdapterNetSpeedIntegrationTest is AaveAdapterRiskFixture {
 
     // TEST-326 verifies: REQ-RISK-005, REQ-RISK-092
     /// @dev Over a range of gas limits a repay either reverts or has credited the window: a caller cannot pick a limit
-    /// that skips the credit. The low end reverts `InsufficientGas` at the floor.
+    /// that skips the credit. The low end reverts `InsufficientGas` at the floor, which is the stipend, the 1/64 the
+    /// call keeps back of it and 10,000 gas for the call itself: 250,000 + 3,968 + 10,000 = 263,968.
     function test_TEST_326_noGasLimitSkipsTheCredit() public {
         _borrowAs(alice, MARKET_ID, debtReserveId, 500e18);
         _fund(alice, debtReserveId, 500e18);
         uint256 deadline = _deadline();
+        uint256 floor = 263_968;
         bool sawFloor = false;
         bool sawSuccess = false;
         for (uint256 g = 300_000; g <= 1_500_000; g += 10_000) {
@@ -102,12 +114,13 @@ contract AaveAdapterNetSpeedIntegrationTest is AaveAdapterRiskFixture {
                 sawSuccess = true;
                 (, SpeedView memory d) = _views();
                 assertEq(d.used, 0, "a successful repay credited the window");
-            } else if (data.length >= 4 && bytes4(data) == IAaveAdapterErrors.InsufficientGas.selector) {
-                sawFloor = true;
+            } else if (data.length == 68 && bytes4(data) == IAaveAdapterErrors.InsufficientGas.selector) {
+                (, uint256 required) = abi.decode(_args(data), (uint256, uint256));
+                if (required == floor) sawFloor = true;
             }
             vm.revertToState(snap);
         }
-        assertTrue(sawFloor, "some limit stopped at the floor");
+        assertTrue(sawFloor, "some limit stopped at the floor of 263,968");
         assertTrue(sawSuccess, "some limit succeeded");
     }
 }

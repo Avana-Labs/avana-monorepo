@@ -6,6 +6,8 @@ pragma solidity 0.8.28;
 import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
 import {SpeedLimit} from "../../src/policy/parameter-store/types/SpeedLimit.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
+import {IRiskModuleSpeedLogic} from "../../src/policy/risk-module/IRiskModuleSpeedLogic.sol";
+import {BorrowSpeedInputs} from "../../src/policy/risk-module/types/BorrowSpeedInputs.sol";
 import {PledgeCharge} from "../../src/policy/risk-module/types/PledgeCharge.sol";
 import {SpeedScope} from "../../src/policy/risk-module/types/SpeedScope.sol";
 import {SpeedView} from "../../src/policy/risk-module/types/SpeedView.sol";
@@ -197,6 +199,53 @@ contract RiskModuleNetSpeedUnitTest is RiskModuleFixture {
         assertEq(w.start, block.timestamp);
         assertEq(w.curr, 10_000e6);
         assertEq(w.base, 2_400_000e6);
+    }
+
+    // TEST-321 verifies: REQ-RISK-092, REQ-RISK-093, REQ-RISK-097
+    /// @dev `opened` is set only by a charge: a repay or a withdrawal credit on windows no charge has opened stores them
+    /// unopened, and the first charge then opens them.
+    function test_TEST_321_aCreditNeverOpensAWindow() public {
+        bytes32 debtKey = keccak256(abi.encode(address(hub), address(usdc)));
+        _repay(10_000e6);
+        vm.prank(address(coll));
+        riskModule.creditWithdraw(mid, 5000e8);
+        assertFalse(riskModule.getSpeedWindow(SpeedScope.MarketBorrow, bytes32(mid)).opened, "market borrow");
+        assertFalse(riskModule.getSpeedWindow(SpeedScope.DebtBorrow, debtKey).opened, "debt borrow");
+        assertFalse(riskModule.getSpeedWindow(SpeedScope.MarketPledge, bytes32(mid)).opened, "market pledge");
+        _borrow(10_000e6);
+        assertTrue(riskModule.getSpeedWindow(SpeedScope.MarketBorrow, bytes32(mid)).opened, "opened by the borrow");
+        assertTrue(riskModule.getSpeedWindow(SpeedScope.DebtBorrow, debtKey).opened, "opened by the borrow");
+    }
+
+    // TEST-321 verifies: REQ-RISK-092, REQ-RISK-093, REQ-RISK-097
+    /// @dev The speed logic's input views: a borrow's market, keys, USD charge and limits; the same with no charge for
+    /// the market and reserve; and a market's pledge limits with its booked value `regularUsed + sliceUsed`.
+    function test_TEST_321_speedInputViews() public {
+        IRiskModuleSpeedLogic logic = IRiskModuleSpeedLogic(rmLogics.speed);
+        bytes32 debtKey = keccak256(abi.encode(address(hub), address(usdc)));
+        BorrowSpeedInputs memory b = logic.borrowInputs(address(proxy), USDC_RESERVE, 10_000e6);
+        assertEq(b.marketId, mid, "market of the proxy");
+        assertEq(b.debtKey, debtKey, "(funding Hub, asset) key");
+        assertEq(b.amountUsd, 10_000 * E8, "charge in USD");
+        assertEq(b.market.window, TAU, "market limits");
+        assertEq(b.debt.window, TAU, "debt limits");
+        b = logic.borrowInputsOf(mid, USDC_RESERVE);
+        assertEq(b.marketId, mid, "market");
+        assertEq(b.debtKey, debtKey, "key");
+        assertEq(b.amountUsd, 0, "no charge");
+        // The market reported is the one asked for: a second identifier, whose record the registry is set to answer
+        // with this market's, comes back as itself.
+        uint256 other = mid + 1;
+        vm.mockCall(address(registry), abi.encodeCall(registry.getMarket, (other)), abi.encode(registry.getMarket(mid)));
+        assertEq(logic.borrowInputsOf(other, USDC_RESERVE).marketId, other, "the market asked for");
+        vm.clearMockedCalls();
+        PledgeCounters memory k = _counters();
+        (k.regularUsed, k.sliceUsed) = (6_000_000e8, 250_000e8);
+        coll.setCounters(k);
+        (MarketSpeedLimits memory limits, uint256 booked) = logic.pledgeInputsOf(mid);
+        assertEq(limits.window, TAU, "pledge limits");
+        assertEq(limits.pledgeRateBps, 2500, "pledge rate");
+        assertEq(booked, 6_250_000e8, "booked value");
     }
 
     // ----------------------------------------------------------------------------------------- withdrawal credit
