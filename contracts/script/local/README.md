@@ -6,7 +6,7 @@ The chains, contracts and services the webapp runs on locally, started by one co
 |---|---|
 | Ethereum (local) | anvil, chain 31337, network name `ethereum`, a block every 12 s, port 8545 (`STACK_PORT_ETHEREUM`) |
 | Base (local) | anvil, chain 31338, network name `base`, a block every 2 s, port 8546 (`STACK_PORT_BASE`) |
-| Avana | The deploy steps of `script/deploy/step.sh` on each chain, from `script/deploy/config/anvil.json` with the chain's ID and block time |
+| Avana | The deploy steps of `script/deploy/step.sh` on each chain. The first release holds one Aave Hub per chain ("Avana Ethereum Hub", "Avana Base Hub", tier 3) with its Lend Spoke and debt assets; the chain's Hub file adds its CDP Spokes and markets. Protocol parameters come from `script/deploy/config/anvil.json`; the values the Aave DAO sets come from `test-values.json` |
 | Indexer | One Ponder process for both chains (PGlite), port 42070, reading each node through `script/e2e/rpc-recorder.ts` |
 | Convex | One anonymous local deployment of `services/convex` (no account), fed by the indexer export; `convex-driver.ts` runs its chain jobs on the local chains |
 | Keeper | Active on both chains, signing from the `keeper` keystore |
@@ -69,10 +69,11 @@ No key is written in clear, passed on a command line or kept in an env file. Eac
 
 | Keystore | Signs |
 |---|---|
-| `deployer` | Every deploy and release step on both chains |
-| `keeper` | The keeper's transactions; it is also the operator helper's signer in each chain's config |
+| `deployer` | Every deploy and release step on both chains; the test tokens' minter and the First-Loss Reserves' funder |
+| `keeper` | The liquidation bot's transactions; it is also the operator helper's signer in each chain's config |
+| `treasury` | The fee recipient (`ParameterStore.feeRecipient`): the liquidation fee share and the front-end fee. Never the deployer or the keeper: the stack refuses to start if any two of the three are one account |
 | `faucet` | The webapp's test funds |
-| `activity` | Transfers test tokens to the activity loop's simulated users |
+| `activity-funds` | Transfers test tokens to the activity loop's simulated users |
 | `ocr-0` … `ocr-3` | The four OCR2 oracles that sign every price report |
 
 The governance Safe, the guardians and the Aave governance executor stand in for multisigs and governance. They send through anvil's unlocked senders (`--auto-impersonate`), as in the rehearsal. So do the activity loop's simulated users, which are addresses with no key.
@@ -97,17 +98,23 @@ It runs three steps, each a plain function with JSON input and output in `operat
    Each step is recorded, and a rerun resumes at the failed one. The chain mines on every transaction meanwhile, then returns to its block time.
 3. **`addHub({ chain, hubFile })`** runs both and returns the Hub's listed markets.
 
-The indexer follows the new Hub, its CDP Spokes and its markets from their events (`HubRecorded`, `SpokeApproved`, `MarketRegistered`). Convex samples them from the chain and loads their names from the listing metadata the release commits to (scopes `hub`, `lend`, `asset` and `pool`). No Convex row is written by hand.
+The indexer follows the new Hub, its CDP Spokes and its markets from their events (`HubRecorded`, `SpokeApproved`, `MarketRegistered`). Convex samples them from the chain and loads their pages from the listing metadata the release commits to (version 2, scopes `hub`, `spoke`, `lend`, `asset`, `pool` and `token`). No Convex row is written by hand.
+
+A Hub file holds structure and page text; every number is in `test-values.json`. Page text is optional and generated where it is missing, except the risk text: on a chain that is not a development node (31337, 31338), every market, lend asset and borrowable asset needs `risk`, and `planHub` refuses the file without it.
 
 | Field | Contents |
 |---|---|
-| `hub` | `label` (config name), `tier` (1 stable, 2 correlated, 3 volatile), `name` and `description` (its page). A label already on the chain extends that Hub: only its new Spokes, assets and markets are added |
+| `hub` | `label` (config name), `tier` (1 stable, 2 correlated, 3 volatile), and its page: `name`, `description`, `faqs`, `links`, `iconUrl`, `disclosures` (`borrow`, `lend`: the risk disclosures of every borrow and lend page). A label already on the chain extends that Hub: only its new Spokes, assets and markets are added |
 | `lendSpoke` | The Hub's Lend Spoke label (default `lend<Label>`) |
-| `spokes` | CDP Spokes, many per venue: `label`, `integration` (`uniswap-v3` or `slipstream`), `category` (Stable, Volatile, Blue-chip, …), optional `name` (default `<venue> <category>`) and `description` (the Spoke's page) |
-| `lendAssets` | What the Hub lends: `symbol`, `category`. A token new to Aave on the chain also takes `new`: `drawCap`, `bootstrapSupply`, `coverageMinimum`, `offsetMinimum` (whole tokens), `stressRiseBps`, `floorRoundingAllowance` (base units, at most $1), optional `creditLineWhole`, `debtMinWhole`, `debtMaxWhole` |
+| `spokes` | CDP Spokes, many per venue: `label`, `integration` (`uniswap-v3` or `slipstream`), `category` (Stable, Volatile, Blue-chip, …), and its page: `name` (default `<venue> <category>`), `description`, `faqs`, `links`, `iconUrl` |
+| `lendAssets` | What the Hub lends: `symbol`, `category` (`stable`, `crypto` or `stock`), and its Lend page: `name`, `description`, `faqs`, `risk` |
+| `borrowAssets` | The page of each borrowable asset, used for its debt reserve on every CDP Spoke: `symbol`, `name`, `description`, `faqs`, `risk` |
+| `tokens` | Token pages: `symbol`, `name` (default the token's own), `iconUrl`, `links` (also the links and icon of the token's Lend and borrow pages) |
 | `borrowable` | Per CDP Spoke, the symbols it lends; the first is each market's default debt asset |
-| `collateral` | Pool tokens. A listed token only gains this Hub; a new one takes `deviationBps`, `collateralFactorBps`, `tokenCapUsd`, `isUsdStable` |
-| `markets` | `pool` (a pool of the chain's world), `spoke`, optional `tickLower` and `tickUpper` (full range when omitted), `poolRiskFactorBps`, `maxLiquidationBonus`, `consistencyToleranceBps`, `marketUsdCap`, `topUpSliceUsd`, optional `name`, `slug`, `category`, `description`. The market key is (integration, pool, range) on the whole chain: one pool on two Spokes needs two ranges |
+| `collateral` | Pool tokens: `symbol`, `isUsdStable`. A listed token only gains this Hub |
+| `markets` | `pool` (a pool of the chain's world), `spoke`, optional `tickLower` and `tickUpper` (full range when omitted), `name` (config name, the test values' key), `slug`, `category`, and its page: `description`, `longText`, `faqs`, `links`, `risk`. The market key is (integration, pool, range) on the whole chain: one pool on two Spokes needs two ranges |
+
+`links` is `{ website, x, docs, github, audits: [{ label, href }] }`, all https. `risk` is `{ summary, reviewedAt (YYYY-MM-DD), factors: [{ id (camelCase), label, level (low, moderate, elevated, high), text }] }`. The listing metadata adds `risk.dependencies` to each market (its pool and factory, route pools, every feed, its Hub and CDP Spoke), read from the config, and, on the local stack only, `risk.factors[].bps` from the test values' `markets.<name>.riskFactorBps`.
 
 The collateral factor, slippage allowance and routes are derived as the rehearsal does:
 - the collateral factor is min(token collateral factors) × the pool risk factor;
@@ -117,3 +124,7 @@ The collateral factor, slippage allowance and routes are derived as the rehearsa
 A debt asset with no `hubs` list in the config is lent on every Hub, a new one included.
 
 Tokens and pools a Hub file needs that the test world lacks go in `contracts/script/deploy/hubs/<chain>/world.json` (`tokens`, `uniswapPools`, `slipstreamPools`, as in the config's `world`). Step 02 deploys them with the rest of the world, so they must be there before the chain's first deploy.
+
+## Values the DAO sets
+
+Caps, credit lines, First-Loss Reserve and DAO offset amounts, and speed limits are set by the Aave DAO and governance on a real network, never by a release config or a Hub file. The local stack needs some to run: `test-values.json` holds them (per debt asset, per collateral token with a default, per market with a default), and the stack merges them into each chain's config. Hub files carry structure and page text only.

@@ -154,11 +154,24 @@ contract AaveDeploymentPayload is AavePayloads {
             l.hub = _hub(label);
             l.underlying = token;
             l.feeReceiver = _addr(cfg, ".aave.treasurySpoke");
-            l.liquidityFee = 0;
+            l.liquidityFee = _liquidityFee(i, label);
             l.irStrategy = _addr(cfg, string.concat(".aave.irStrategies.", label));
             l.irData = _rateModel(i, label);
             _assetListing(b, l);
         }
+    }
+
+    /// @notice The asset's liquidity fee (its reserve factor, bps) on Hub `label`:
+    /// `.aavePayload.debtAssets[i].liquidityFeeByHub.<label>`, else its `.liquidityFeeBps`, else 0. Applied when the
+    /// asset is listed on the Hub.
+    function _liquidityFee(
+        uint256 i,
+        string memory label
+    ) private view returns (uint256) {
+        string memory k = string.concat(_ak(i), ".liquidityFeeByHub.", label);
+        if (vm.keyExistsJson(cfg, k)) return vm.parseJsonUint(cfg, k);
+        k = string.concat(_ak(i), ".liquidityFeeBps");
+        return vm.keyExistsJson(cfg, k) ? vm.parseJsonUint(cfg, k) : 0;
     }
 
     /// @notice The asset's rate curve on Hub `label`, in bps: `.aavePayload.debtAssets[i].rateModelByHub.<label>`, else
