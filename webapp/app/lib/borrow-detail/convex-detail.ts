@@ -15,7 +15,8 @@ import type { PreloadedQuickStatRow } from "@/app/lib/detail-page/apply-preloade
 import { canonicalPriceMap } from "@/app/lib/prices/canonical"
 import { priceKey } from "@/app/lib/prices/format"
 import { formatOraclePrice, formatPairRate } from "@/app/lib/borrow-detail/formatters"
-import { allocationVenueLabel, formatBpsAsPct } from "@/app/lib/borrow-detail/allocation"
+import { allocationVenueLabel } from "@/app/lib/borrow-detail/allocation"
+import { formatRiskPremium } from "@/app/lib/borrow-market-rows"
 import { selectBorrowMarketSummaries } from "@/app/lib/borrow-system/selectors"
 import { buildAssetDetail, buildPoolDetail, spokeBorrowableFromRecord } from "@/app/lib/borrow-detail/detail-base"
 import { getTokenIconMeta } from "@/app/lib/token-icons"
@@ -112,7 +113,8 @@ export function injectPoolOraclePrice(
  * catalog row while risk is overlaid from Convex; without this they can disagree.
  */
 export function syncQuickStatsRiskPremium(quickStats: QuickStat[], premiumBps: number): QuickStat[] {
-  const value = formatBpsAsPct(premiumBps)
+  // The collateral premium is a share of the base rate, not APR points.
+  const value = formatRiskPremium(premiumBps)
   return quickStats.map((s) => (s.id === "riskPremium" ? { ...s, value } : s))
 }
 

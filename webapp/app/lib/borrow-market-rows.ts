@@ -193,10 +193,11 @@ export function aprRangeLabel(pool: BorrowPoolRow): string {
   return `${pool.aprMin.toFixed(1)}–${pool.aprMax.toFixed(1)}%`
 }
 
+/** A collateral premium: a share of the base rate (Aave V4 borrowers pay the base rate × (1 + premium)). */
 export function formatRiskPremium(bps: number): string {
   if (!Number.isFinite(bps)) return "—"
   const value = bps / 100
-  return `+${value.toFixed(2)}%`
+  return `${value.toFixed(2)}% of base rate`
 }
 
 export function formatCompactUsd(usdValue: number): string {

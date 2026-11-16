@@ -46,8 +46,15 @@ export function RiskSection({ detail }: Props) {
         <div className="flex flex-wrap items-center justify-between gap-6">
           <div className="min-w-0">
             <div className="flex items-baseline gap-2">
-              <SectionCardPrimaryMetric>{formatBpsAsPct(risk.premiumBps)}</SectionCardPrimaryMetric>
-              <SectionCardSupportingLabel>({risk.premiumBps} bps)</SectionCardSupportingLabel>
+              <SectionCardPrimaryMetric>
+                {risk.premiumMaxBps != null
+                  ? `${formatBpsAsPct(risk.premiumBps)}–${formatBpsAsPct(risk.premiumMaxBps)}`
+                  : formatBpsAsPct(risk.premiumBps)}
+              </SectionCardPrimaryMetric>
+              <SectionCardSupportingLabel>
+                ({risk.premiumMaxBps != null ? `${risk.premiumBps}–${risk.premiumMaxBps}` : risk.premiumBps} bps
+                {risk.premiumBasis === "baseRate" ? ` ${t("of the base rate")}` : ""})
+              </SectionCardSupportingLabel>
             </div>
           </div>
           <div className="flex flex-col items-center">

@@ -24,7 +24,7 @@ describe("formatter finite guards", () => {
 
   it("formatRiskPremium returns — for non-finite input", () => {
     expect(formatRiskPremium(Number.NaN)).toBe("—")
-    expect(formatRiskPremium(120)).toBe("+1.20%")
+    expect(formatRiskPremium(120)).toBe("1.20% of base rate")
   })
 
   it("aprRangeLabel returns — when either bound is non-finite", () => {
