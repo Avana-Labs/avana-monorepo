@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The chains the services run on, with the names that pick their environment variables: Ethereum and Base in
-// production, Sepolia and Base Sepolia for the public test deployment, and the local anvil network of the
-// deployment rehearsals (deployments/README.md), which are never published.
+// production, Sepolia and Base Sepolia for the public test deployment, and the local anvil networks of the
+// deployment rehearsals and the local stack (deployments/README.md), which are never published.
 
-export type ChainKey = "mainnet" | "base" | "sepolia" | "baseSepolia" | "anvil";
+export type ChainKey = "mainnet" | "base" | "sepolia" | "baseSepolia" | "anvil" | "anvilBase";
 
 /** Ethereum and Base in production; Sepolia and Base Sepolia for the public test deployment; anvil for
  * rehearsals. */
@@ -14,7 +14,7 @@ export interface ChainInfo {
   readonly key: ChainKey;
   readonly id: number;
   /** Suffix of every `RPC_<SUFFIX>` and `KEEPER_KMS_KEY_ID_<SUFFIX>` name, the same names as `contracts/.env.example`. */
-  readonly envSuffix: "MAINNET" | "BASE" | "SEPOLIA" | "BASE_SEPOLIA" | "ANVIL";
+  readonly envSuffix: "MAINNET" | "BASE" | "SEPOLIA" | "BASE_SEPOLIA" | "ANVIL" | "ANVIL_BASE";
   readonly networkSet: NetworkSet;
   /** Block time in seconds; sets the 3-block liquidation deadline (REQ-SWAP-074) and the M-09 block counts. */
   readonly blockTimeSeconds: number;
@@ -37,6 +37,9 @@ export const CHAINS: Readonly<Record<ChainKey, ChainInfo>> = {
   sepolia: { key: "sepolia", id: 11155111, envSuffix: "SEPOLIA", networkSet: "testnet", blockTimeSeconds: 12, hasSequencer: false, privateFlow: "builders" },
   baseSepolia: { key: "baseSepolia", id: 84532, envSuffix: "BASE_SEPOLIA", networkSet: "testnet", blockTimeSeconds: 2, hasSequencer: true, privateFlow: "sequencer" },
   anvil: { key: "anvil", id: 31337, envSuffix: "ANVIL", networkSet: "local", blockTimeSeconds: 12, hasSequencer: false, privateFlow: "builders" },
+  // The local stack's second node, a local Base (contracts/script/local/stack.sh): 2 s blocks. Its world has no
+  // sequencer-uptime feed yet, so it runs without one.
+  anvilBase: { key: "anvilBase", id: 31338, envSuffix: "ANVIL_BASE", networkSet: "local", blockTimeSeconds: 2, hasSequencer: false, privateFlow: "sequencer" },
 };
 
 export function chainsOf(set: NetworkSet): ChainInfo[] {

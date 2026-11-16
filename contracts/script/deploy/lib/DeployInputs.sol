@@ -47,8 +47,19 @@ abstract contract DeployInputs is Script {
         return string.concat(vm.projectRoot(), "/", OUTPUT_DIR, "/", _network(), "/", file, ".json");
     }
 
-    /// @notice Chain ID of anvil, the only chain that takes a learning tag or a checkout that is not the release tag.
+    /// @notice Chain IDs of the local anvil nodes, the only chains that take a learning tag or a checkout that is not the
+    /// release tag: 31337 (the rehearsal's node and the local stack's Ethereum) and 31338 (the local stack's Base, 2 s
+    /// blocks). The chain ID, not the network name, makes a run local: the local stack names its chains `ethereum` and
+    /// `base`, as on the real networks.
     uint256 internal constant ANVIL_CHAIN_ID = 31_337;
+    uint256 internal constant ANVIL_BASE_CHAIN_ID = 31_338;
+
+    /// @notice True on a local anvil chain.
+    function _isLocalChain(
+        uint256 chainId
+    ) internal pure returns (bool) {
+        return chainId == ANVIL_CHAIN_ID || chainId == ANVIL_BASE_CHAIN_ID;
+    }
 
     /// @notice What the release check compares with HEAD: the deployed sources and their build settings.
     string internal constant RELEASE_SOURCES = "src script/deploy foundry.toml soldeer.lock remappings.txt";
@@ -95,7 +106,7 @@ abstract contract DeployInputs is Script {
     ) internal returns (bytes memory head) {
         bytes memory tagCommit;
         bytes memory dirty;
-        if (block.chainid != ANVIL_CHAIN_ID && _isReleaseTag(release_) && !_isLearningRelease(release_)) {
+        if (!_isLocalChain(block.chainid) && _isReleaseTag(release_) && !_isLearningRelease(release_)) {
             head = _gitCommit("HEAD");
             tagCommit = _gitCommit(string.concat("refs/tags/", release_, "^{commit}"));
             bool ok;
@@ -121,7 +132,7 @@ abstract contract DeployInputs is Script {
             _isReleaseTag(release_),
             string.concat("AVANA_RELEASE ", release_, " is not a release tag vX.Y.Z or vX.Y.Z-<pre-release>")
         );
-        if (chainId == ANVIL_CHAIN_ID) return;
+        if (_isLocalChain(chainId)) return;
         require(
             !_isLearningRelease(release_),
             string.concat("AVANA_RELEASE ", release_, " is a learning tag, for anvil only")
