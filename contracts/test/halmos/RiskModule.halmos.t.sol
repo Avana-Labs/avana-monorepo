@@ -36,8 +36,10 @@ contract HalmosImplementationRegistry {
 /// @notice Symbolic checks of the RiskModule's formulas and decision steps, exactly the internal functions the pledge
 /// and health checks run: the minimum pledge and the rescue rule (PROP-062), the rescue-excluded health factor and its
 /// floor (PROP-067), and the stress-floor booking against the Hub `addCap` (PROP-030).
-/// @dev The checks call `RiskModuleMath` through a harness, so the code verified is the code `checkPledge` and
-/// `postHealthCheck` execute; the reads around them (accepted price, ParameterStore values, Spoke account data,
+/// @dev The checks call `RiskModuleMath` through a harness or directly as internal library code, so the code verified
+/// is the code `checkPledge` and `postHealthCheck` execute; where a product of two symbolic values made the solver
+/// hang, a check proves that the code equals a reference formula and a Z3 model in `docs/spec/05-verification/z3/`
+/// proves the formula's inequality (each such check names its model). The reads around them (accepted price, ParameterStore values, Spoke account data,
 /// Collateralization rescue units) are symbolic inputs, as the PROP rows allow. Inputs are bounded to the listing
 /// bounds (`L < 2^128`, `price8 < 2^64`, `d` 6 or 18, `minPledgeUsd <= 100,000e8`) so the nonlinear products stay
 /// tractable; the fuzz twins in `test/fuzz/RiskModule.fuzz.t.sol` cover the full ranges. The implementation binding of
@@ -162,13 +164,56 @@ contract RiskModuleHalmosTest is Test {
 
     // PROP-067 verifies: REQ-RISK-059, REQ-RISK-068, INV-082
     /// @notice `postHealthCheck` passes exactly when `hfEx >= max(1e18, hardHealthFloor, minHealthFactor)`: the required
-    /// level is that maximum.
-    function check_PROP_067_requiredIsMaximum(
-        uint128 hfEx,
-        uint128 hardFloor,
-        uint128 minHf
+    /// level is that maximum. The three `requiredIsMaximum` checks split the inputs by which of the three values is the
+    /// largest (a tie goes to the earlier one): `Wad` when neither input exceeds 1e18, `HardFloor` when the hard floor
+    /// exceeds 1e18 and is at least `minHealthFactor`, `MinHf` when `minHealthFactor` exceeds both. Every pair of inputs
+    /// falls in exactly one case, so together they cover every input below 2^256 (the check before the split took
+    /// uint128 inputs). This case: neither input exceeds 1e18 and the required level is 1e18.
+    /// @dev The check is linear (comparisons only); the split keeps each run to a few paths. The unsplit check was
+    /// cancelled at the 6-hour job limit in run 43492412351 with no result line.
+    function check_PROP_067_requiredIsMaximumWad(
+        uint256 hfEx,
+        uint256 hardFloor,
+        uint256 minHf
     ) public pure {
+        vm.assume(hardFloor <= 1e18 && minHf <= 1e18);
+        _requiredIsMaximum(hfEx, hardFloor, minHf, 1e18);
+    }
+
+    // PROP-067 verifies: REQ-RISK-059, REQ-RISK-068, INV-082
+    /// @notice `check_PROP_067_requiredIsMaximumWad` when the hard floor exceeds 1e18 and is at least `minHealthFactor`:
+    /// the required level is the hard floor.
+    function check_PROP_067_requiredIsMaximumHardFloor(
+        uint256 hfEx,
+        uint256 hardFloor,
+        uint256 minHf
+    ) public pure {
+        vm.assume(hardFloor > 1e18 && minHf <= hardFloor);
+        _requiredIsMaximum(hfEx, hardFloor, minHf, hardFloor);
+    }
+
+    // PROP-067 verifies: REQ-RISK-059, REQ-RISK-068, INV-082
+    /// @notice `check_PROP_067_requiredIsMaximumWad` when `minHealthFactor` exceeds both 1e18 and the hard floor: the
+    /// required level is `minHealthFactor`.
+    function check_PROP_067_requiredIsMaximumMinHf(
+        uint256 hfEx,
+        uint256 hardFloor,
+        uint256 minHf
+    ) public pure {
+        vm.assume(minHf > 1e18 && minHf > hardFloor);
+        _requiredIsMaximum(hfEx, hardFloor, minHf, minHf);
+    }
+
+    /// @dev The required level equals `largest`, is at least each of the three values, and a health factor that reaches
+    /// it reaches each of them.
+    function _requiredIsMaximum(
+        uint256 hfEx,
+        uint256 hardFloor,
+        uint256 minHf,
+        uint256 largest
+    ) internal pure {
         uint256 required = RiskModuleMath.requiredHealthFactor(hardFloor, minHf);
+        assert(required == largest);
         assert(required >= 1e18 && required >= hardFloor && required >= minHf);
         if (hfEx >= required) assert(hfEx >= 1e18 && hfEx >= hardFloor && hfEx >= minHf);
     }
@@ -188,30 +233,85 @@ contract RiskModuleHalmosTest is Test {
     }
 
     // PROP-067 verifies: SPEC-CF-005, INV-082
-    /// @notice `E = mulDiv(u * p, CF * 1e18, 10^d * 1e4, Ceil)` rounds up, at the CF of the 2.7 example; the example
-    /// gives `3.12e28` and `hfEx = 1.1688e18`.
-    function check_PROP_067_rescueValueRoundsUp(
+    /// @notice `E = mulDiv(u * p, CF * 1e18, 10^d * 1e4, Ceil)` rounds up, at the CF of the 2.7 example:
+    /// `E * 1e10 >= u * p * 3120 * 1e18` for every `u, p < 2^40` (d = 6); the example gives `3.12e28` and
+    /// `hfEx = 1.1688e18`.
+    /// @dev Proved in two parts over the same inputs. This check: the code's `E` is 0 when `u` or `p` is 0, and otherwise
+    /// equals `R = floor(q / 1e10) + (q mod 1e10 > 0 ? 1 : 0)` with `q = u * w`, `w = p * 3120 * 1e18`, the product the
+    /// code forms. MATH-AR-92 (`docs/spec/05-verification/z3/aave-risk/ar17_halmos_references.py`) proves
+    /// `R * 1e10 >= u * p * 3120 * 1e18`, and that no product here reaches `2^256 - 1`. Together they give the
+    /// inequality this check asserted before the split, which made the solver compare two differently grouped
+    /// products of symbolic values and ran out of its 5-hour budget (run 43492412351).
+    function check_PROP_067_rescueValueRoundsUpFormula(
         uint40 units,
         uint40 price8
     ) public view {
-        uint256 e = h.rescueValue(units, price8, 3120, 6);
-        assert(e * 1e10 >= uint256(units) * price8 * 3120 * 1e18);
+        uint256 u = units;
+        uint256 p = price8;
+        if (u == 0 || p == 0) {
+            assert(RiskModuleMath.rescueValue(u, p, 3120, 6) == 0);
+        } else {
+            uint256 w;
+            // p < 2^40, so w < 2^112 (MATH-AR-92b).
+            unchecked {
+                w = p * 3120 * 1e18;
+            }
+            _assumeExactProduct(u, w);
+            assert(RiskModuleMath.rescueValue(u, p, 3120, 6) == _ceilShape(u, w, 1e10));
+        }
         assert(h.rescueValue(5e8, 2e8, 3120, 6) == 3.12e28);
         assert(h.healthExcludingRescue(1.2e18, 3.12e28, 1e57) == 1.1688e18);
     }
 
     // PROP-030 verifies: SPEC-CAP-006, INV-028
     /// @notice One pledge booked at `max(price8, stressFloorUsd)`, rounded up, carries at least `units * floor` of
-    /// charge: `charge * 10^d >= units * stressFloorUsd`. Summed over every pledge of a budget `regular + slice` this
-    /// gives `units <= addCap * 10^d` for `addCap >= ceil((regular + slice) / stressFloorUsd)`; the fuzz twin
-    /// `testFuzz_TEST_125_budgetFitsAddCap` checks the two-pledge sum.
-    function check_PROP_030_chargeCoversFloor(
+    /// charge: `charge * 10^d >= units * stressFloorUsd` and `charge * 10^d >= units * price8`, for every
+    /// `units < 2^40` and `price8, stressFloorUsd < 2^32` (d = 6). Summed over every pledge of a budget
+    /// `regular + slice` this gives `units <= addCap * 10^d` for `addCap >= ceil((regular + slice) / stressFloorUsd)`;
+    /// the fuzz twin `testFuzz_TEST_125_budgetFitsAddCap` checks the two-pledge sum.
+    /// @dev Proved in two parts over the same inputs. This check: the code's charge equals
+    /// `R = floor(q / 1e6) + (q mod 1e6 > 0 ? 1 : 0)` with `q = units * max(price8, stressFloorUsd)`. MATH-AR-90
+    /// (`docs/spec/05-verification/z3/aave-risk/ar17_halmos_references.py`) proves `R * 1e6 >= units * stressFloorUsd`
+    /// and `R * 1e6 >= units * price8`, and that `q < 2^256 - 1`. Together they give the two assertions this check made
+    /// before the split; asserting them here made the solver compare two products of symbolic values, and the check ran
+    /// out of its 5-hour budget (run 43492412351).
+    function check_PROP_030_chargeCoversFloorFormula(
         uint40 units,
         uint32 price8,
         uint32 floorUsd
-    ) public view {
-        uint256 c = h.usdCharge(units, price8, floorUsd, 6);
-        assert(c * 1e6 >= uint256(units) * floorUsd);
-        assert(c * 1e6 >= uint256(units) * price8);
+    ) public pure {
+        uint256 u = units;
+        uint256 a = price8;
+        uint256 b = floorUsd;
+        uint256 p = a > b ? a : b;
+        _assumeExactProduct(u, p);
+        assert(RiskModuleMath.usdCharge(u, a, b, 6) == _ceilShape(u, p, 1e6));
+    }
+
+    /// @dev Assumes `mulmod(x, y, 2^256 - 1) == x * y` (and `== y * x`). Every caller passes `x * y < 2^256 - 1` by its
+    /// bit widths (MATH-AR-90b, MATH-AR-91d, MATH-AR-92b), where both sides are the exact product, so the assumption
+    /// removes no input. It states, without a multiplication, the fact `Math.mulDiv` tests first: the high word of the
+    /// 512-bit product is 0. The solver then rules out the 512-bit branch of `mulDiv` from this equality alone. Both
+    /// operand orders are given because the optimizer may emit either order for the code's `x * y`.
+    function _assumeExactProduct(
+        uint256 x,
+        uint256 y
+    ) internal pure {
+        unchecked {
+            vm.assume(mulmod(x, y, type(uint256).max) == x * y);
+            vm.assume(mulmod(x, y, type(uint256).max) == y * x);
+        }
+    }
+
+    /// @dev `ceil(x * y / s)` in the shape `Math.mulDiv(x, y, s, Ceil)` computes it when the product fits 256 bits: the
+    /// floor quotient, plus 1 when `mulmod` leaves a remainder. Called with `x * y < 2^256` and `s > 0`.
+    function _ceilShape(
+        uint256 x,
+        uint256 y,
+        uint256 s
+    ) internal pure returns (uint256) {
+        unchecked {
+            return x * y / s + (mulmod(x, y, s) > 0 ? 1 : 0);
+        }
     }
 }

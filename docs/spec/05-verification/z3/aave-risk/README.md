@@ -280,11 +280,28 @@ Borrow-speed and pledge-speed limits (`Q-411`). Launch values: τ = 21,600 s; bo
 | MATH-AR-86d | on the raw `D` a split would raise `L` inside the window (why the base is fixed when the bucket opens) | SPEC-CAP-012 | example values | COUNTEREXAMPLE (deliberate) |
 | MATH-AR-86f | on `D` less gross charges a borrow-and-repay would shrink `L` (why repays credit and the base is fixed) | SPEC-CAP-012 | example values | COUNTEREXAMPLE (deliberate) |
 | MATH-AR-86e | an unset scope refuses every positive charge | REQ-RISK-096 | — | PROVED |
+| MATH-AR-86g | `L(base + 1) ≥ L(base)` with `rate × (base + 1) = rate × base + rate`: the reference formula of the Halmos check `check_PROP_111_ownChargesNeverRaiseTheLimitBaseGrows`, which proves `SpeedLimitMath.limit` equals it (`PROP-111`) | SPEC-CAP-012 | rate ≤ 10^4; the product a fresh variable | PROVED |
 | MATH-AR-87a–c | the USD charge is the ceiling, less than one unit above the exact value, products below 2^192 | SPEC-CAP-013 | amounts `< 2^128`, prices `< 2^64` | PROVED |
+| MATH-AR-87d | `⌊P / 10^d⌋ + (P mod 10^d > 0 ? 1 : 0)` is at least `P / 10^d` and less than one unit above it, for `d` = 6 and 18: the reference formula of the Halmos checks `check_PROP_112_usdChargeIsTheCeilingDec6` and `Dec18`, which prove `SpeedLimitMath.usdOf` equals it (`PROP-112`) | SPEC-CAP-013 | `P < 2^192` | PROVED |
 | MATH-AR-88a–c | at `moreAt` the window holds exactly what it says; `moreAt` lies after the check and within 2τ | SPEC-CAP-011, REQ-RISK-097 | unbounded integers | PROVED |
 | MATH-AR-89a–c | the 2.7, 3.2 and pledge worked examples | SPEC-CAP-011, SPEC-CAP-012, SPEC-CAP-013, BOR-023 | exact integers | COMPUTED |
 
 Run on 2026-11-12: 18 PROVED, 2 COUNTEREXAMPLE (both deliberate), 3 COMPUTED, 0 mismatches; exit 0.
+
+### `ar17_halmos_references.py`
+
+The second part of three Halmos checks that are split in two. Each check proves that the Solidity code returns a reference formula `R = ⌊x y / s⌋ + (x y mod s > 0 ? 1 : 0)`, the shape `Math.mulDiv(x, y, s, Ceil)` computes when the product fits 256 bits, for every input in its bit widths; this script proves the property's inequalities on `R`. Asserted in Halmos directly, those inequalities made z3 compare products of two symbolic values, and the checks ran out of their 5-hour budget (run 43492412351). The inequalities are proved over unbounded naturals; the bit widths are used only for the no-wrap items, which also justify the checks' assumption `mulmod(x, y, 2^256 − 1) = x × y`.
+
+| ID | Statement | Verifies | Halmos check (part one) | Bounds | Result |
+|---|---|---|---|---|---|
+| MATH-AR-90a, c, d | `R(units, max(price8, floor), 10^6) × 10^6 ≥ units × floor` and `≥ units × price8`: `R` rounds up (a), the value at the booking price is at least the value at the floor and at the price (c), chained (d) | SPEC-CAP-001, SPEC-CAP-006, INV-028 | `RiskModule` `check_PROP_030_chargeCoversFloorFormula` | unbounded naturals | PROVED |
+| MATH-AR-90b | `units × max(price8, floor) < 2^256 − 1` and `R × 10^6 < 2^256` | SPEC-CAP-001 | same | `units < 2^40`, prices `< 2^32` | PROVED |
+| MATH-AR-91a–c | for `r2 ≤ r1 ≤ U0`: `R(V0, r2, U0) ≤ R(V0, r1, U0) ≤ V0`; `R` is 0 at `r = 0` and `V0` at `r = U0` | SPEC-BACK-005, SPEC-BACK-013, SPEC-CAP-004, INV-027 | `Collateralization` `check_PROP_028_exitChargeIndependentOfSplitFormula` | unbounded naturals, `U0 ≥ 1` | PROVED |
+| MATH-AR-91d | `V0 × r < 2^256 − 1` | SPEC-BACK-005 | same | `V0, U0 < 2^64` | PROVED |
+| MATH-AR-92a | `E × 10^10 ≥ units × price8 × 3,120 × 10^18`, with `E` 0 when `units` or `price8` is 0 and `R(units, price8 × 3,120 × 10^18, 10^10)` otherwise | SPEC-CF-005, INV-082 | `RiskModule` `check_PROP_067_rescueValueRoundsUpFormula` | unbounded naturals | PROVED |
+| MATH-AR-92b | `price8 × 3,120 × 10^18 < 2^112`, `units ×` that `< 2^256 − 1`, `E × 10^10 < 2^256` | SPEC-CF-005 | same | `units, price8 < 2^40` | PROVED |
+
+`MATH-AR-90a`, `c` and `d` are three queries because the single query of `d` without the two steps timed out at 120 s. Run on 2026-11-15: 10 PROVED, 0 COUNTEREXAMPLE, 0 TIMEOUT; exit 0.
 
 ### `ar14_rate_curve.py`
 
@@ -329,9 +346,11 @@ The other counterexamples are deliberate: wrong-reading checks (MATH-AR-17a, 22,
 | 2026-11-12 (loss order, `Q-410`: `ar15_loss_layers.py` added with `MATH-AR-51e` restated for the residual beyond both loss layers and `MATH-AR-51h`–`j`; `MATH-AR-51e` removed from `ar08_caps.py`) | `../../.venv/bin/python ar08_caps.py`, then `ar15_loss_layers.py` | Python 3.9.6, z3-solver 4.13.0 | 120 s per query | ar08 26, ar15 7 | 0 | ar08 9, ar15 2 | 0 | 0 | 0 |
 | 2026-11-12 (deactivated Umbrella, `Q-410` amended: `MATH-AR-51h`–`h3` take the Umbrella's `active` flag, `MATH-AR-51h5` added) | `../../.venv/bin/python ar15_loss_layers.py` | Python 3.9.6, z3-solver 4.13.0 | 120 s per query | ar15 8 | 0 | ar15 2 | 0 | 0 | 0 |
 | 2026-11-12 (booking price `min(fresh, accepted)` and a served price that can exceed it, `SPEC-ORC-017`, `REQ-RISK-026`: `MATH-AR-47b` holds when `served8 ≤ max(price8, floor)`, `47g` bounds every state, `47h` deliberate) | `../../.venv/bin/python ar08_caps.py` | Python 3.9.6, z3-solver 4.13.0 | 120 s per query | 27 | 1 (deliberate) | 9 | 0 | 0 | 0 |
+| 2026-11-15 (Halmos reference formulas: `ar17_halmos_references.py` added, `MATH-AR-90`–`92`, the second part of the split Halmos checks of `PROP-028`, `PROP-030` and `PROP-067`) | `python ar17_halmos_references.py` | Python 3.12, z3-solver 4.13.0 | 120 s per query | ar17 10 | 0 | 0 | 0 | 0 | 0 |
+| 2026-11-15 (Halmos reference formulas: `MATH-AR-86g` and `MATH-AR-87d` added) | `uv run --no-project --with z3-solver==4.13.0 python ar16_speed_limits.py` | Python 3.14.3, z3-solver 4.13.0 | 120 s per query | ar16 20 | 2 (both deliberate) | ar16 3 | 0 | 0 | 0 |
 | 2026-11-15 (liquidation gas budget 7,500,000 decided 2026-11-14: `MATH-CH-01` and `MATH-CAP-09b`/`09d` restated with the `TEST-269` calibration, `G(n) = 4,610,000 + 170,000 × n`) | `python ch01_gas_model.py`, `ar11_record_gas_credit_lines.py` | Python 3.14.3, z3-solver 4.13.0 | 120 s per query | ch01 2, ar11 13 | 0 | ch01 10, ar11 5 | 0 | 0 | 0 |
 
-Per script (proved / counterexample / computed / mismatch), latest run: ar01 14/0/5/0; ar02 11/1/3/0; ar03 15/2/5/0; ar04 12/1/2/0; ar05 12/3/2/0; ar06 6/1/2/0; ar07 7/1/2/0; ar08 27/1/9/0 (includes MATH-AR-47f, 47g, the deliberate 47h and MATH-AR-51c–d, f; re-run 2026-11-12); ar09 14/2/7/0 (includes MATH-AR-55d–f); ar10 14/1/6/0; ar11 13/0/5/0; ar12 5/0/1/0 (`MATH-AR-70`, the one-step offboarding target, re-run 2026-11-12); ar13 12/0/5/0 (`MATH-AR-71`–`73`, `MATH-AR-76`, `MATH-AR-77`, the Lens views); ar14 21/0/2/0 (`MATH-AR-74`, `MATH-AR-75`, the rate curve); ar15 8/0/2/0 (`MATH-AR-51e`, `MATH-AR-51h`–`j`, the loss layers and the deactivated-Umbrella case, 2026-11-12); ch01 2/0/7/0. Re-run of every script on 2026-11-11 (`../../.venv/bin/python <file>.py`, one at a time): 149 proved, 12 counterexamples (all deliberate), 55 computed, 0 mismatches, every script exits 0.
+Per script (proved / counterexample / computed / mismatch), latest run: ar01 14/0/5/0; ar02 11/1/3/0; ar03 15/2/5/0; ar04 12/1/2/0; ar05 12/3/2/0; ar06 6/1/2/0; ar07 7/1/2/0; ar08 27/1/9/0 (includes MATH-AR-47f, 47g, the deliberate 47h and MATH-AR-51c–d, f; re-run 2026-11-12); ar09 14/2/7/0 (includes MATH-AR-55d–f); ar10 14/1/6/0; ar11 13/0/5/0; ar12 5/0/1/0 (`MATH-AR-70`, the one-step offboarding target, re-run 2026-11-12); ar13 12/0/5/0 (`MATH-AR-71`–`73`, `MATH-AR-76`, `MATH-AR-77`, the Lens views); ar14 21/0/2/0 (`MATH-AR-74`, `MATH-AR-75`, the rate curve); ar15 8/0/2/0 (`MATH-AR-51e`, `MATH-AR-51h`–`j`, the loss layers and the deactivated-Umbrella case, 2026-11-12); ar17 10/0/0/0 (`MATH-AR-90`–`92`, the Halmos reference formulas, 2026-11-15); ch01 2/0/7/0. Re-run of every script on 2026-11-11 (`../../.venv/bin/python <file>.py`, one at a time): 149 proved, 12 counterexamples (all deliberate), 55 computed, 0 mismatches, every script exits 0.
 
 ## Assumptions common to all models
 

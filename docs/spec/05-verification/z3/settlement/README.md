@@ -25,11 +25,11 @@ Amounts are base units of the debt asset repaid (`Q-333`: every liquidation sett
 | `SPEC-LIQ-002` | no cost term in a liquidation: the former `costsBps` is 0 on every call (the models keep it as a parameter fixed at 0; `⌈φ·10⁴/F⌉` survives only as the deleverage and helper pre-loan quote of `SPEC-LIQ-015`) | — | st02, st11 |
 | `SPEC-LIQ-003`, `-016` | `s = min(allowance, ⌊10⁴(bNet − 10⁴)/bNet⌋)` when `bNet > 10⁴`, else 0, so `bNet(10⁴ − s) ≥ 10⁸`; liveness `minLB(10⁴ − smin) ≥ 10⁴(10⁴ + maxFlashFeeBps)` (st02 also checks the general `cBuy` form, of which this is `cBuy = 0`) | down | st02, st16 |
 | `SPEC-LIQ-004` | `V = mulDiv(c·Pc, 10^dd, 10^dv·Pdebt)` | down | st02, st14 |
-| `SPEC-LIQ-005` | `U = Σᵢ ⌈pᵢ·10^dd/(10^dᵢ·Pdebt)⌉`; `minRec = max(0, ⌈V(10⁴ − s)/10⁴⌉ − U − floorRoundingAllowance)`, tested on `R' = R + shortfall` | slippage term up, `U` up | st01, st02, st04 |
+| `SPEC-LIQ-005` | `U = Σᵢ ⌈pᵢ·10^dd/(10^dᵢ·Pdebt)⌉`; `minRec = max(0, ⌈V(10⁴ − s)/10⁴⌉ − U − floorRoundingAllowance)`, tested on `R' = R + shortfall` | slippage term up, `U` up | st01, st02, st04, st18 |
 | `SPEC-LIQ-006` | `R` = debt-asset balance change from just before `burnSeized` to after the last route call | exact | st01 |
 | `SPEC-LIQ-007` | no `φD` term: `G`, `S`, `A`, `kr`, `B` from `D` alone; a helper's or deleverage loan quote is `fee(x) = ⌈x·p/10⁴⌉` (V3.4 rounds half-up; the source's ceiling quote is the binding gate) | up | st03, st11 |
 | `SPEC-LIQ-008` | `S = max(0, R_f − D − φD)`, `R_f = max(R, minRec)` | exact | st03, st16 |
-| `SPEC-LIQ-009` | `A = min(⌊max(0, V − D − φD)·avanaFeeShareBps/10⁴⌋, S)` | down | st01, st03 |
+| `SPEC-LIQ-009` | `A = min(⌊max(0, V − D − φD)·avanaFeeShareBps/10⁴⌋, S)` | down | st01, st03, st18 |
 | `SPEC-LIQ-010` | `keeperOut = (K + F + R') − (D + F + φ + A + B)`, `InsufficientProceeds` if negative; with a transfer fee `K`, `F`, `F + φ` are the measured `Kr`, `Fr`, `P` and `τ = (F − Fr) + (P − F − φ)` falls on `keeperOut` | checked | st03, st16 |
 | `SPEC-LIQ-011`…`013` | no in-kind settlement: every liquidation settles in the debt asset over the swap routes, and a token with no usable route reverts `NoRouteAvailable`; the unwind at oracle prices is never below fair value | — | st05 |
 | `REQ-SWAP-076`, `REQ-ESCROW-*` | a payout is delivered or escrowed in full; `totalClaimable = Σ claimable ≤ balance`; a claim pays the whole credit once | exact | st05, st14 |
@@ -170,6 +170,7 @@ There is no settlement budget (`Q-397`). These checks keep their IDs and verify 
 | MATH-ST-48 | Coverage pays less than 1 wei above the exact deficit. | `SPEC-FLR-001` | PROVED |
 | MATH-ST-49 | Other suppliers' share price does not fall. | `SPEC-FLR-001`, `DEF-POST-001` | PROVED |
 | MATH-ST-114 | The Hub eliminates exactly the First-Loss Reserve's `amount` (`dE = amount`), so `totalCovered` can be written before the call. | `SPEC-FLR-001`, `REQ-FLR-018` | PROVED |
+| MATH-ST-130 | The reference terms of the First-Loss Reserve Halmos checks (`PROP-039`), over the full `uint256` range: OpenZeppelin's `Math.ceilDiv(x, RAY)` is `⌈x/RAY⌉` without wrapping, equals `(x + RAY − 1)/RAY` for `x ≤ 2²⁵⁶ − RAY` and is ≥ 1 for `x > 0`; the Halmos recording Hub's `eliminateDeficit` never wraps for a deficit `≤ 2²⁵⁶ − RAY` and any amount, so its unchecked form computes the checked values; `min(min(maxAmount, ⌈d/RAY⌉), funded) ≥ 1` when all three are ≥ 1 (5 checks). | `SPEC-FLR-001`, `REQ-FLR-018`, `REQ-FLR-019`, `REQ-FLR-031` | PROVED |
 | MATH-ST-50 | The Hub alone would accept coverage of any Spoke's deficit; the First-Loss Reserve's `COVERAGE_ROLE` and Spoke allowlist carry the restriction. | `SPEC-FLR-001`, `DEF-005` | COUNTEREXAMPLE (Hub only) |
 | MATH-ST-61 | A withdrawal of `min(request, fundedBalance())` burns at most the shares held. | `SPEC-FLR-003` | PROVED |
 | MATH-ST-62 | `fund(x)` raises `fundedBalance` by between `x − 2` and `x + 1` (two floors), share price between 1 and 2. | `SPEC-FLR-002` | PROVED |
@@ -272,6 +273,20 @@ The helper pulls the prefund `X − F + maxShortfall`, approves LPVaultSwap for 
 | MATH-ST-128 | 2.11 examples: the `SPEC-LIQ-019` floor case through the helper (shortfall 123.373998, `keeperOut` 12,297.373998, `u` 76.626002, payout 368 USDC; with `F = 1` USDC 12,372.9995); `need` 2,047.5 USDC; the review PoC loss 4,926.7 USDC; outlay bound 19.5 USDC; losses 50.975 and 10.975 USDC; top-up 101.02375 USDC; the GHO example from the Pool (premium 0.975, payout 69.825 GHO); `F < X` payout 167.325 and `minPayout` 166.5 USDC; the 98 USDC bound at `D = 9,800`. | `REQ-HELPER-006`, `REQ-HELPER-008`, `REQ-HELPER-011`, `REQ-HELPER-015`, `SPEC-LIQ-019` | COMPUTED (17) |
 | MATH-ST-129 | The operator's zero loan (`F = 0`, no premium): a: no top-up, payout `keeperOut + u`, net outlay `D + A + B − R`; b: a completed call costs the Safe at most `⌊D × b / 10⁴⌋` and `F ≤ need` holds; c: examples (Bob: payout 2,020.8 USDC, Safe gains 70.8; `R = 1,900`: net outlay 50 USDC, refused; `R = 1,940`: 10 USDC, settles; floor case: payout 12,374 USDC, net 174). MATH-ST-124 to -127 cover `0 ≤ F ≤ X`. | `REQ-HELPER-003`, `REQ-HELPER-004`, `REQ-HELPER-008`, `REQ-HELPER-011`, `SPEC-LIQ-019` | PROVED (2) / COMPUTED (7) |
 
+### `st18_halmos_reference_formulas.py`: reference formulas of the SettlementMath Halmos checks
+
+The Halmos checks `check_PROP_018_minRecoveryRoundingFormula`, `check_PROP_048_floorWithRoundingTermsFormula`, `check_PROP_069_feeMonotoneInValueFormula`, `check_PROP_018_unitAndPendingValuesUnit` and `check_PROP_018_unitAndPendingValuesLeg` (`contracts/test/halmos/SettlementMath.halmos.t.sol`) assert that SettlementMath returns a formula built from the same terms the code computes, so no Halmos query needs the semantics of a product of two symbolic values, a division or `mulmod`. These checks prove the inequalities of the earlier Halmos checks for those formulas in exact integers, and that every uint256 term of a formula is its exact integer value on the checks' bounds.
+
+| ID | Statement | Verifies | Result |
+|---|---|---|---|
+| MATH-ST-140 | `P = V(10⁴ − s) ≤ 10³⁰` for `V ≤ 10²⁶`, `s ≤ 10⁴`: no uint256 term of the floor wraps. | `SPEC-LIQ-005`, `INV-034`, `Q-159`, `Q-198` | PROVED |
+| MATH-ST-141 | OpenZeppelin 5.1.0 `Math.ceilDiv(P, 10⁴) = [P > 0]·(⌊(P − 1)/10⁴⌋ + 1)` is `⌈P/10⁴⌉` for every uint256 `P`, without wrapping, and `subFloor(g, 0, 0) = g`; wrong reading: the term rounded down falls below the exact net value (counterexample expected, `P = 1`). | `SPEC-LIQ-005`, `INV-034`, `Q-159`, `Q-198` | PROVED / COUNTEREXAMPLE (deliberate) |
+| MATH-ST-142 | `minRec = subFloor(gross, U, ε)` has `0 ≤ minRec ≤ gross ≤ minRec + U + ε` for every `U, ε ≥ 0`. | `SPEC-LIQ-005`, `INV-034`, `Q-159`, `Q-198` | PROVED |
+| MATH-ST-143 | With `U ≥ 1`, `ε ≥ 1`: `minRec × 10⁴ ≤ P`, and every `R` with `R × 10⁴ + U × 10⁴ ≥ P` has `R ≥ minRec`. | `SPEC-LIQ-005`, `INV-034`, `Q-159`, `Q-198` | PROVED |
+| MATH-ST-144 | `G × share < 2²⁵⁶` for `V, D < 2¹²⁸`, `share ≤ 10⁴`; `A = min(⌊max(0, V − D)·share/10⁴⌋, max(0, R' − D))` is non-decreasing in `V` for every share ≤ 10⁴. | `SPEC-LIQ-009`, `INV-036`, `INV-086`, `Q-256` | PROVED (2) |
+| MATH-ST-145 | Unit value, 6-decimal token, 18-decimal debt asset at $1, `1 ≤ p < 2⁶⁴`: `Y = p × 10¹⁸ < 2²⁵⁶ − 1` (so `mulmod(1, Y, 2²⁵⁶ − 1) = Y`, the Halmos check's assumption, excludes no price); `u = ⌊Y/10¹⁴⌋ + [Y mod 10¹⁴ > 0]` has `u ≥ 1`, `u × 10⁸ ≥ p × 10¹²`, `(u − 1) × 10⁸ < p × 10¹²`. | `SPEC-LIQ-005`, `SPEC-LIQ-018` | PROVED |
+| MATH-ST-146 | Leg and pending values, `a < 2⁶⁴`, `1 ≤ p < 2⁶⁴`: `a × Y < 2²⁵⁶ − 1` (so `mulmod(a, Y, 2²⁵⁶ − 1) = a × Y`, the Halmos check's assumption, excludes no input); `lv = ⌊aY/10¹⁴⌋` has `lv × 10⁸ ≤ a p 10¹² < (lv + 1) × 10⁸`, and `pv = lv + [aY mod 10¹⁴ > 0]` has `pv × 10⁸ ≥ a p 10¹²` and `pv ≤ lv + 1`. | `SPEC-LIQ-005`, `SPEC-LIQ-014`, `SPEC-LIQ-018` | PROVED (2) |
+
 ## Findings
 
 Four properties of the specification failed on 2026-11-10; all four are resolved in the spec text and their checks now pass (finding 1: `FINDING-195`; 2: `FINDING-199`; 3: `FINDING-190`; 4: `FINDING-167`, with `SPEC-FLR-005` changed to `× CF_t / 10⁴`). The other counterexamples are deliberate: wrong readings the specification rules out, out-of-bound states, or boundaries the specification states itself; the old texts of findings 3 and 4 are now kept as such wrong readings.
@@ -288,7 +303,7 @@ Two results describe the final text without changing it: the decrement in `SPEC-
 
 ## Results
 
-**315 checks after the removal of the settlement budget and of in-kind settlement, the flash-source cap rule, the LitePSM gem amount and the V3.4 half-up premium check (2026-11-10), 323 with the helper funding checks of st17 (2026-11-11), 326 with the operator's zero loan (MATH-ST-129, 2026-11-11): every script exits 0, 0 mismatches, 0 timeouts.** The table gives the re-run of every script on 2026-11-11 (one at a time, from `docs/spec/05-verification`): 290 checks, because st02 now reports 73 checks (49 proved, 24 deliberate counterexamples) plus 20 `[MAX]` searches after the option C rewrite removed the premium terms, and st03, st09 and st12 carry the checks added since (st09 `MATH-ST-114`).
+**315 checks after the removal of the settlement budget and of in-kind settlement, the flash-source cap rule, the LitePSM gem amount and the V3.4 half-up premium check (2026-11-10), 323 with the helper funding checks of st17 (2026-11-11), 326 with the operator's zero loan (MATH-ST-129, 2026-11-11), 331 with the reference terms of the First-Loss Reserve Halmos checks (st09 MATH-ST-130, 2026-11-15), 341 with the reference formulas of the SettlementMath Halmos checks (st18, MATH-ST-140…146, 2026-11-15): every script exits 0, 0 mismatches, 0 timeouts.** The table gives the re-run of every script on 2026-11-11 (one at a time, from `docs/spec/05-verification`): 290 checks, because st02 now reports 73 checks (49 proved, 24 deliberate counterexamples) plus 20 `[MAX]` searches after the option C rewrite removed the premium terms, and st03, st09 and st12 carry the checks added since (st09 `MATH-ST-114`); the st09 row and the total include the five `MATH-ST-130` checks of 2026-11-15, the st18 row and the total the ten st18 checks of 2026-11-15.
 
 | Script | Checks | Proved | Counterexample | Computed | Mismatch | Exit |
 |---|---|---|---|---|---|---|
@@ -300,7 +315,7 @@ Two results describe the final text without changing it: the decrement in `SPEC-
 | st06 | 5 | 4 | 1 | — | — | 0 |
 | st07 | 6 | 3 | 3 | — | — | 0 |
 | st08 | 11 | 10 | 1 | — | — | 0 |
-| st09 | 8 | 7 | 1 | — | — | 0 |
+| st09 | 13 | 12 | 1 | — | — | 0 |
 | st10 | 26 | 22 | 4 | — | — | 0 |
 | st11 | 11 | 8 | 2 | 1 | — | 0 |
 | st12 | 19 | 17 | 2 | — | — | 0 |
@@ -309,7 +324,8 @@ Two results describe the final text without changing it: the decrement in `SPEC-
 | st15 | 8 | 3 | 1 | 4 | — | 0 |
 | st16 | 46 | 29 | 8 | 9 | — | 0 |
 | st17 | 11 | 8 | 1 | 2 | — | 0 |
-| **Total** | **290** | **199** | **58** | **33** | **0** | **0** |
+| st18 | 10 | 9 | 1 | — | — | 0 |
+| **Total** | **305** | **213** | **59** | **33** | **0** | **0** |
 
 ### Run log
 
@@ -331,4 +347,6 @@ Two results describe the final text without changing it: the decrement in `SPEC-
 | 2026-11-11 | `../../.venv/bin/python st17_helper_funding.py`, from `docs/spec/05-verification/z3/settlement`, after the helper review fixes (FL-01 shortfall budget through the helper, FL-02 operator bounds on the debt repaid, GHO from the flash minter): st17 added with MATH-ST-124 to MATH-ST-128 | Python 3.9.6, z3-solver 4.13.0 | integers, `X`, `maxShortfall` below 2¹²⁸, `MAX_TOP_UP_BPS ≤ 10⁴`, premium rate ≤ 100 bps | st17: 8 checks (6 proved, 1 counterexample, deliberate, 1 computed); 0 differ from documented results; 1 s | 0 |
 | 2026-11-11 | `../../.venv/bin/python st17_helper_funding.py`, from `docs/spec/05-verification/z3/settlement`, after the operator helper accepted `F = 0` (2.11 `REQ-HELPER-003`, `-004`, `-011`): the flow allows `0 ≤ F ≤ X` with no premium at `F = 0`, MATH-ST-129 added | Python 3.9.6, z3-solver 4.13.0 | as above | st17: 11 checks (8 proved, 1 counterexample, deliberate, 2 computed); 0 differ from documented results; 1 s | 0 |
 | 2026-11-11 | `../../.venv/bin/python st17_helper_funding.py`, from `docs/spec/05-verification/z3/settlement`, after the helper moved GHO to the Aave V3 Pool, its only lender (2.11 `REQ-HELPER-015`, `REQ-FLASH-010`): the MATH-ST-128 GHO example is the Pool's 5 bps premium, half up (0.975 GHO), with the same payout of 69.825 GHO | Python 3.9.6, z3-solver 4.13.0 | as above | st17: 11 checks (8 proved, 1 counterexample, deliberate, 2 computed); 0 differ from documented results; 1 s | 0 |
+| 2026-11-15 | `python st09_deficit_coverage.py`, from `docs/spec/05-verification/z3/settlement`, after MATH-ST-130 was added (the reference terms of the First-Loss Reserve Halmos checks, `PROP-039`) | Python 3.14.3, z3-solver 4.13.0 | full `uint256` range for MATH-ST-130, otherwise as above | st09: 13 checks (12 proved, 1 counterexample, deliberate); 0 differ from documented results; 3 s | 0 |
+| 2026-11-15 | `python st18_halmos_reference_formulas.py`, from `docs/spec/05-verification/z3/settlement`, after st18 was added (MATH-ST-140…146, the reference formulas of the SettlementMath Halmos checks of `PROP-018`, `PROP-048`, `PROP-069`) | Python 3.14.3, z3-solver 4.13.0 | integers; `V ≤ 10²⁶`, `s ≤ 10⁴`, any `U`, `ε`, `R`; waterfall terms < 2¹²⁸; amounts and prices < 2⁶⁴; 120 s per query | st18: 10 checks (9 proved, 1 counterexample, deliberate); 0 differ from documented results; under 1 s | 0 |
 | 2026-11-15 | `python st16_payout_split_gates.py`, from `docs/spec/05-verification/z3/settlement`, after the liquidation gas budget of 7,500,000 (decided 2026-11-14): MATH-ST-108 restated with `G(n) = 4,610,000 + 170,000 × n` from the `TEST-269` calibration | Python 3.14.3, z3-solver 4.13.0 | as above | st16: 46 checks (29 proved, 8 counterexamples as documented, 9 computed), 0 differ from the documented result | 0 |

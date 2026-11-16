@@ -144,6 +144,17 @@ out = "out-lite"
 cache_path = "cache-lite"
 code_size_limit = 10_000_000
 
+[profile.halmos]
+# The Halmos build (FOUNDRY_PROFILE=halmos in the slow tier's build step and Halmos jobs): src/ and test/halmos/ with
+# what they import, and no scripts (the script directory is test/halmos/ too). Every compiler setting, compilation
+# restriction and additional compiler profile is the default profile's, so each contract compiles as in the default
+# build. Its own out/ and cache/ keep the default build warm; script/security-slow.sh reads the output directory from
+# `forge config`.
+test = "test/halmos"
+script = "test/halmos"
+out = "out-halmos"
+cache_path = "cache-halmos"
+
 [profile.ci]
 # Fresh seed per CI run (taken from the environment by the workflow) so coverage grows over time.
 [profile.ci.fuzz]
