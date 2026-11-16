@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { decodeFunctionResult, encodeFunctionData, formatUnits, getAddress, parseAbi, type Address, type Hex } from "viem";
 import type { Rpc } from "./chain.ts";
 import type { TokenGrant, TokenLine } from "./grants.ts";
+import type { PositionsManifest } from "./positions.ts";
 
 export interface ExternalEntry {
   readonly group: string;
@@ -19,6 +20,13 @@ export function loadExternal(path: string | undefined): ExternalEntry[] {
   if (!path) return [];
   const manifest = JSON.parse(readFileSync(path, "utf8")) as { external?: ExternalEntry[] };
   return manifest.external ?? [];
+}
+
+/** The manifest's contracts and markets for the starting positions; undefined without a manifest or without markets. */
+export function loadPositionsManifest(path: string | undefined): PositionsManifest | undefined {
+  if (!path) return undefined;
+  const manifest = JSON.parse(readFileSync(path, "utf8")) as Partial<PositionsManifest>;
+  return manifest.avana && manifest.markets?.length && manifest.aave ? (manifest as PositionsManifest) : undefined;
 }
 
 const feedAbi = parseAbi([

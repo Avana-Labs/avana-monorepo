@@ -5,7 +5,7 @@
 // 15,000 and WETH to 5). Tokens are named by symbol; their addresses come from the chain's release manifest (its
 // "token" group) when the grant runs. On Base the stablecoin and $12,500 lines are USD values, turned into tokens at
 // the token's "<SYMBOL> / USD (primary)" feed when the grant runs.
-// The starting positions (LP positions, the pledges and the debt, the lend supplies) are a later step.
+// The starting positions (LP positions, the pledges and the debt, the lend supplies) are positions.ts's STARTING_POSITIONS.
 
 import type { Address } from "viem";
 
