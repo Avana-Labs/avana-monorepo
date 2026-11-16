@@ -10,11 +10,31 @@ import { ChainRefused, checkLocalFork, fundToken, type Rpc } from "../src/chain.
 import { loadConfig } from "../src/config.ts";
 import { Faucet } from "../src/faucet.ts";
 import { GRANTS } from "../src/grants.ts";
+import type { ExternalEntry } from "../src/manifest.ts";
 import { forkStrategy, testnetStrategy } from "../src/setup.ts";
 import { GrantStore } from "../src/store.ts";
 
 const erc20 = parseAbi(["function balanceOf(address) view returns (uint256)", "function decimals() view returns (uint8)"]);
+const feedAbi = parseAbi(["function decimals() view returns (uint8)", "function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)"]);
 const WALLET = getAddress("0x00000000000000000000000000000000000a11ce");
+
+/** The manifest's token group (the fork's real addresses) and a USD feed per token, by `<SYMBOL> / USD (primary)`. */
+const TOKENS: Record<string, Address> = {
+  WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+  USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  USDT: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+  GHO: "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f",
+  WBTC: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+  LINK: "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+  AAVE: "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+};
+const PRICES_8: Record<string, bigint> = { WETH: 3_000n * 10n ** 8n, USDC: 10n ** 8n, USDT: 10n ** 8n, GHO: 10n ** 8n, WBTC: 65_000n * 10n ** 8n, LINK: 18n * 10n ** 8n, AAVE: 105n * 10n ** 8n };
+const feedOf = (symbol: string) => getAddress(`0x${(Object.keys(TOKENS).indexOf(symbol) + 1).toString(16).padStart(40, "f")}`);
+const EXTERNAL: ExternalEntry[] = Object.entries(TOKENS).flatMap(([symbol, address]) => [
+  { group: "token", name: symbol, address },
+  { group: "feed", name: `${symbol} / USD (primary)`, address: feedOf(symbol) },
+]);
+const symbolAtFeed = (address: Address) => Object.keys(TOKENS).find((s) => feedOf(s) === getAddress(address));
 
 /**
  * An in-memory anvil: native balances, ERC-20s whose balances live in a mapping at a given storage slot, and the
@@ -26,7 +46,7 @@ function fakeAnvil(opts: { chainId?: number; client?: string; deal?: boolean; ba
   const calls: string[] = [];
   const slotOf = (holder: Address) =>
     keccak256(encodeAbiParameters([{ type: "address" }, { type: "uint256" }], [holder, BigInt(opts.balanceSlot ?? 9)]));
-  const decimalsOf = (token: Address) => (GRANTS.ethereum.tokens.find((t) => t.address === token)?.symbol === "USDC" ? 6 : 18);
+  const decimalsOf = (token: Address) => (getAddress(token) === getAddress(TOKENS.USDC!) ? 6 : 18);
   const rpc: Rpc = {
     async request({ method, params = [] }) {
       calls.push(method);
@@ -55,6 +75,12 @@ function fakeAnvil(opts: { chainId?: number; client?: string; deal?: boolean; ba
         }
         case "eth_call": {
           const { to, data } = params[0] as { to: Address; data: Hex };
+          const feedSymbol = symbolAtFeed(to);
+          if (feedSymbol) {
+            const f = decodeFunctionData({ abi: feedAbi, data });
+            if (f.functionName === "decimals") return encodeFunctionResult({ abi: feedAbi, functionName: "decimals", result: 8 });
+            return encodeFunctionResult({ abi: feedAbi, functionName: "latestRoundData", result: [1n, PRICES_8[feedSymbol]!, 0n, 0n, 1n] });
+          }
           const call = decodeFunctionData({ abi: erc20, data });
           if (call.functionName === "decimals") return encodeFunctionResult({ abi: erc20, functionName: "decimals", result: decimalsOf(to) });
           const value = storage.get(`${to}:${slotOf(call.args[0])}`);
@@ -68,7 +94,7 @@ function fakeAnvil(opts: { chainId?: number; client?: string; deal?: boolean; ba
   return { rpc, native, storage, calls, slotOf };
 }
 
-const USDC = GRANTS.ethereum.tokens.find((t) => t.symbol === "USDC")!.address;
+const USDC = TOKENS.USDC!;
 
 describe("chain check", () => {
   it("accepts a local anvil fork chain", async () => {
@@ -102,7 +128,7 @@ describe("faucet", () => {
 
   it("sets gas and every wallet token on a fork, once per wallet", async () => {
     const anvil = fakeAnvil();
-    const faucet = new Faucet({ ethereum: forkStrategy(anvil.rpc, [31337]) }, store(), () => new Date("2026-11-16T00:00:00Z"));
+    const faucet = new Faucet({ ethereum: forkStrategy(anvil.rpc, [31337], EXTERNAL) }, store(), () => new Date("2026-11-16T00:00:00Z"));
     const first = await faucet.grant("ethereum", WALLET.toLowerCase());
     expect(first.ok).toBe(true);
     if (!first.ok) return;
@@ -121,7 +147,7 @@ describe("faucet", () => {
 
   it("stops at the chain check on a real network and funds nothing", async () => {
     const anvil = fakeAnvil({ chainId: 1 });
-    const faucet = new Faucet({ ethereum: forkStrategy(anvil.rpc, [31337]) }, store());
+    const faucet = new Faucet({ ethereum: forkStrategy(anvil.rpc, [31337], EXTERNAL) }, store());
     const result = await faucet.grant("ethereum", WALLET);
     expect(result).toMatchObject({ ok: false, status: 409, failedStep: "check chain" });
     expect(anvil.calls).not.toContain("anvil_setBalance");
@@ -129,10 +155,38 @@ describe("faucet", () => {
 
   it("names the step that failed", async () => {
     const anvil = fakeAnvil({ deal: false, balanceSlot: 999 });
-    const faucet = new Faucet({ ethereum: forkStrategy(anvil.rpc, [31337]) }, store());
+    const faucet = new Faucet({ ethereum: forkStrategy(anvil.rpc, [31337], EXTERNAL) }, store());
     const result = await faucet.grant("ethereum", WALLET);
     expect(result).toMatchObject({ ok: false, status: 500, failedStep: "token WETH" });
     expect(faucet.lookup("ethereum", WALLET)).toBeNull();
+  });
+
+  it("on Base, prices the USD lines at the primary feed when it grants", async () => {
+    const anvil = fakeAnvil({ chainId: 31338 });
+    const faucet = new Faucet({ base: forkStrategy(anvil.rpc, [31338], EXTERNAL) }, store());
+    const result = await faucet.grant("base", WALLET);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const detail = (symbol: string) => result.record.steps.find((s) => s.step === `token ${symbol}`)?.detail;
+    expect(detail("WETH")).toBe("5 WETH (5000000000000000000 units)");
+    expect(detail("USDC")).toBe("25000 USDC (25000000000 units)");
+    // $12,500 at $18.00 → 694.44444444 LINK (8 decimals, rounded down).
+    expect(detail("LINK")).toBe("694.44444444 LINK (694444444440000000000 units)");
+  });
+
+  it("fails only the line whose token or feed the manifest lacks, and names it", async () => {
+    const anvil = fakeAnvil({ chainId: 31338 });
+    const external = EXTERNAL.filter((e) => e.name !== "GHO" && e.name !== "LINK / USD (primary)");
+    const faucet = new Faucet({ base: forkStrategy(anvil.rpc, [31338], external) }, store());
+    const result = await faucet.grant("base", WALLET);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const failed = result.record.steps.filter((s) => s.failed).map((s) => [s.step, s.detail]);
+    expect(failed).toEqual([
+      ["token GHO", "no GHO token in the manifest"],
+      ["token LINK", 'no "LINK / USD (primary)" feed in the manifest'],
+    ]);
+    expect(result.record.steps.filter((s) => s.step.startsWith("token ") && !s.failed)).toHaveLength(GRANTS.base.tokens.length - 2);
   });
 
   it("rejects a bad chain or wallet, and refuses on a test network for now", async () => {
