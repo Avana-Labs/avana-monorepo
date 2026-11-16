@@ -21,6 +21,8 @@ import {LPVaultSwapHandler} from "./handlers/LPVaultSwapHandler.sol";
 /// keeps its floor; and while an account was solvent at the bonus a liquidation never lowered its health factor.
 /// forge-config: default.invariant.runs = 32
 /// forge-config: default.invariant.depth = 32
+/// forge-config: invariant.invariant.runs = 1000
+/// forge-config: invariant.invariant.depth = 400
 contract LPVaultSwapInvariantTest is LPVaultSwapUnitBase, HandlerReach {
     LPVaultSwapHandler internal handler;
 

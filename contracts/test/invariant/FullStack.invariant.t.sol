@@ -22,6 +22,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// forge-config: default.isolate = false
 /// forge-config: default.invariant.runs = 16
 /// forge-config: default.invariant.depth = 24
+/// forge-config: invariant.invariant.runs = 1000
+/// forge-config: invariant.invariant.depth = 400
 contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
     FullStackHandler internal handler;
     uint256 internal mA;

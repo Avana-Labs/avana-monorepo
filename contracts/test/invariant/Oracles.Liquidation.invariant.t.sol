@@ -26,6 +26,8 @@ import {HandlerReach} from "./handlers/HandlerReach.sol";
 /// routes that agree, a fresh and agreeing USDC route.
 /// forge-config: default.invariant.runs = 32
 /// forge-config: default.invariant.depth = 40
+/// forge-config: invariant.invariant.runs = 1000
+/// forge-config: invariant.invariant.depth = 400
 /// forge-config: default.invariant.fail-on-revert = true
 contract OraclesLiquidationInvariantTest is RealOraclesFixture, HandlerReach {
     OracleEnvHandler internal handler;

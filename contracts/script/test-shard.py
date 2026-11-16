@@ -13,7 +13,9 @@ seed, so together they run at least the campaign's runs at its depth, and each f
 measured CPU time in script/test-timings.json (measured at the ci
 profile); a file with no entry (a new file) weighs the median of the known files of its kind. When
 FOUNDRY_INVARIANT_RUNS or FOUNDRY_INVARIANT_DEPTH lowers the invariant work (the short check on a pull request), the
-invariant units are scaled by the ratio of runs x depth to the ci profile's 10,000 x 100. Units are taken heaviest
+invariant units are scaled by the ratio of runs x depth to the ci profile's (foundry.toml [profile.ci.invariant]).
+With TEST_SHARD_SKIP_INVARIANT=1 (nightly, release and manual runs, where the deep invariant job runs every file of
+test/invariant/ in the invariant profile) the shards leave test/invariant/ out, so each campaign runs once. Units are taken heaviest
 first and each goes to the shard with the least total so far (ties to the lower shard number), so the split is
 deterministic and every unit lands in exactly one shard.
 
@@ -31,7 +33,6 @@ import statistics
 import sys
 
 TIMINGS = os.path.join("script", "test-timings.json")
-CI_INVARIANT_WORK = 10_000 * 100  # runs x depth of the ci profile the timings were measured at
 # A campaign above 20 minutes of measured CPU time is split, so every unit leaves room in a 60-minute shard: at 30
 # minutes a segment plus a shard's other files overran the 60-minute job limit on main (run 43492421465, shards 10 and 11).
 SEGMENT_SECONDS = 1200
@@ -55,18 +56,25 @@ def profile_runs():
     foundry.toml, else [profile.default.invariant] runs."""
     if os.environ.get("FOUNDRY_INVARIANT_RUNS"):
         return int(os.environ["FOUNDRY_INVARIANT_RUNS"])
+    return toml_invariant("runs", os.environ.get("FOUNDRY_PROFILE", "default"))
+
+
+def toml_invariant(key, profile):
+    """[profile.<profile>.invariant] <key> in foundry.toml, else [profile.default.invariant] <key>."""
     with open("foundry.toml") as fh:
         toml = fh.read()
-    for profile in (os.environ.get("FOUNDRY_PROFILE", "default"), "default"):
-        m = re.search(r"^\[profile\." + re.escape(profile) + r"\.invariant\]\n(?:(?!^\[).*\n)*?runs\s*=\s*([\d_]+)", toml, re.M)
+    for p in (profile, "default"):
+        m = re.search(r"^\[profile\." + re.escape(p) + r"\.invariant\]\n(?:(?!^\[).*\n)*?" + key + r"\s*=\s*([\d_]+)", toml, re.M)
         if m:
             return int(m.group(1).replace("_", ""))
-    raise SystemExit("test-shard: no invariant runs in foundry.toml")
+    raise SystemExit(f"test-shard: no invariant {key} in foundry.toml")
 
 
 def units():
     """Every unit with its weight in seconds."""
     files = test_files()
+    if os.environ.get("TEST_SHARD_SKIP_INVARIANT") == "1":
+        files = [f for f in files if not is_inv(f)]
     try:
         with open(TIMINGS) as fh:
             known = json.load(fh)
@@ -76,9 +84,11 @@ def units():
     for kind in (True, False):
         seen = [known[f] for f in files if f in known and is_inv(f) == kind]
         defaults[kind] = statistics.median(seen) if seen else 1.0
-    runs = int(os.environ.get("FOUNDRY_INVARIANT_RUNS", 10_000))
-    depth = int(os.environ.get("FOUNDRY_INVARIANT_DEPTH", 100))
-    scale = min(1.0, runs * depth / CI_INVARIANT_WORK)
+    # The timings were measured at the ci profile's runs x depth.
+    ci_runs, ci_depth = toml_invariant("runs", "ci"), toml_invariant("depth", "ci")
+    runs = int(os.environ.get("FOUNDRY_INVARIANT_RUNS", ci_runs))
+    depth = int(os.environ.get("FOUNDRY_INVARIANT_DEPTH", ci_depth))
+    scale = min(1.0, runs * depth / (ci_runs * ci_depth))
     out = {}
     for f in files:
         w = float(known.get(f, defaults[is_inv(f)]))

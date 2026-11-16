@@ -31,6 +31,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// forge-config: default.isolate = false
 /// forge-config: default.invariant.runs = 16
 /// forge-config: default.invariant.depth = 24
+/// forge-config: invariant.invariant.runs = 100
+/// forge-config: invariant.invariant.depth = 400
 /// forge-config: default.invariant.fail-on-revert = false
 contract IntegrationInvariantTest is RealStackFlows, HandlerReach, IIntegrationWorld {
     /// @dev USDT's lowest price: the market's USD band needs `sqrt(pUSDC * pUSDT) >= $0.90`.
