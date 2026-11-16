@@ -190,7 +190,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         spoke = _spokeOfOracle(def.aaveOracle);
         _requireStandardSpoke(spoke, def);
         SpokeDef storage rec = l.spokes[spoke];
-        bytes32 triple = keccak256(abi.encode(def.hub, def.integrationId, def.riskTier));
         if (rec.approved) {
             if (
                 rec.hub != def.hub || rec.integrationId != def.integrationId || rec.riskTier != def.riskTier
@@ -199,9 +198,11 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
             rec.implementation = def.implementation;
             l.spokeCodeHash[spoke] = def.implementation.codehash;
         } else {
+            // Several CDP Spokes may serve one (Hub, integration, tier): markets that need their own liquidation
+            // settings (REQ-CONFIG-045) get their own Spoke.
             if (
                 l.hubTier[def.hub] != def.riskTier || def.riskTier == RiskTier.None
-                    || l.integrationLpVault[def.integrationId] == address(0) || l.spokeOfTriple[triple] != address(0)
+                    || l.integrationLpVault[def.integrationId] == address(0)
             ) revert InvalidSpoke(spoke);
             l.spokes[spoke] = SpokeDef({
                 approved: true,
@@ -212,7 +213,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
                 aaveOracle: def.aaveOracle
             });
             l.spokeCodeHash[spoke] = def.implementation.codehash;
-            l.spokeOfTriple[triple] = spoke;
             l.spokeList.push(spoke);
         }
         // The drift check reads the record just written; a failure reverts the whole call.
