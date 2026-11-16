@@ -39,8 +39,11 @@
 #
 # Signing: on anvil every sender is unlocked (anvil --auto-impersonate): the deployer is AVANA_DEPLOYER (default the
 # first anvil account) and the Safe, the Aave executor's PayloadsController and the faucet come from the network
-# config. Elsewhere AVANA_SIGNER_FLAGS gives forge's signer flags (for example `--account deployer --sender 0x…`),
-# and the timelock operations are written for the governance Safe instead of scheduled.
+# config. 02-test-world also signs the feeds' first OCR2 reports as the four oracles of AVANA_OCR_ORACLES, from the
+# encrypted keystores ocr-0 … ocr-3 and the password file in AVANA_OCR_KEYSTORE_DIR (script/e2e/e2e-local.sh generates
+# them). Elsewhere AVANA_SIGNER_FLAGS gives forge's signer flags (for example `--account deployer --sender 0x…`, plus
+# the oracles' `--keystore` and `--password-file` for 02), and the timelock operations are written for the governance
+# Safe instead of scheduled.
 
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -92,6 +95,10 @@ if [ "$AVANA_NETWORK" = anvil ]; then
   [ "$step" = 04-access-operations ] && sender="$(config governance.governanceSafe)"
   [ $schedule -eq 1 ] && envs+=(AVANA_SCHEDULE=1)
   signer=(--unlocked --sender "$sender")
+  if [ "$step" = 02-test-world ] && [ -n "${AVANA_OCR_KEYSTORE_DIR:-}" ]; then
+    for i in 0 1 2 3; do signer+=(--keystore "$AVANA_OCR_KEYSTORE_DIR/ocr-$i"); done
+    for i in 0 1 2 3; do signer+=(--password-file "$AVANA_OCR_KEYSTORE_DIR/password"); done
+  fi
 else
   read -r -a signer <<< "${AVANA_SIGNER_FLAGS:?set AVANA_SIGNER_FLAGS, for example --account deployer --sender 0x…}"
 fi
