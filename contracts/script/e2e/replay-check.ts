@@ -104,7 +104,26 @@ async function convexMode() {
     const out = convex(["run", fn, JSON.stringify(args), ...(identity ? ["--identity", JSON.stringify(identity)] : [])]).trim();
     return (out === "" || out === "null" ? null : JSON.parse(out)) as T;
   };
-  const table = (name: string): Json[] => JSON.parse(convex(["data", name, "--limit", "1000000", "--order", "asc", "--format", "jsonArray"]).trim() || "[]") as Json[];
+  // `convex data` reads a whole table in one query, which goes over Convex's per-query read limits on a large table
+  // (ingestedLogs). The rows are read a page at a time through the deployment's HTTP API instead, with the admin key
+  // `convex dev` keeps for the local deployment.
+  const table = async (name: string): Promise<Json[]> => {
+    const local = JSON.parse(readFileSync(join(CONVEX_DIR, ".convex/local/default/config.json"), "utf8")) as Json;
+    const rows: Json[] = [];
+    let cursor: string | null = null;
+    for (;;) {
+      const res = await fetch(`http://127.0.0.1:${local.ports.cloud}/api/query`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Convex ${local.adminKey}` },
+        body: JSON.stringify({ path: "_system/cli/tableData", format: "json", args: { table: name, order: "asc", paginationOpts: { numItems: 1000, cursor } } }),
+      });
+      const body = (await res.json()) as Json;
+      if (body.status !== "success") throw new Error(`reading table ${name}: ${body.errorMessage ?? JSON.stringify(body).slice(0, 300)}`);
+      rows.push(...(body.value.page as Json[]));
+      if (body.value.isDone) return rows;
+      cursor = body.value.continueCursor as string;
+    }
+  };
 
   const client = createPublicClient({ transport: http(rpc) }) as PublicClient;
   const { aaveAdapterAbi, aaveV4SpokeAbi, firstLossReserveAbi, lpVaultSwapAbi, marketRegistryAbi, payoutEscrowAbi } = await import("@avana/protocol/abis");
@@ -155,7 +174,7 @@ async function convexMode() {
   const toBlock = BigInt(through);
   run("ingest/sampler:refresh", { chainId });
 
-  const logs = table("ingestedLogs").filter((l) => l.chainId === chainId);
+  const logs = (await table("ingestedLogs")).filter((l) => l.chainId === chainId);
   const byKind = new Map<string, Json[]>();
   for (const l of logs) byKind.set(l.kind, [...(byKind.get(l.kind) ?? []), l]);
 
@@ -186,7 +205,7 @@ async function convexMode() {
 
   // ── Markets ──
   const registered = await chainLogs(marketRegistryAbi as Abi, "MarketRegistered");
-  const marketRows = table("markets").filter((m) => m.chainId === chainId);
+  const marketRows = (await table("markets")).filter((m) => m.chainId === chainId);
   const latest = await client.getBlockNumber();
   const snapAt = async (block: bigint) => {
     const b = await client.getBlock({ blockNumber: block });
@@ -223,7 +242,7 @@ async function convexMode() {
   await sameLogs("markets", "MarketRegistry.MarketRegistered", marketRegistryAbi as Abi, undefined, eqArgs(["marketId", "pool"]));
   // Hub assets: the Lend and Borrow pages' supply, debt and liquidity.
   const HUB_FIELDS = ["added", "drawn", "premium", "owed", "liquidity", "deficit", "priceUsd8"];
-  const hubRows = table("hubAssets").filter((a) => a.chainId === chainId);
+  const hubRows = (await table("hubAssets")).filter((a) => a.chainId === chainId);
   let hubEqual = 0;
   for (const r of hubRows) {
     const a = (await snapOf(r.blockNumber)).hubAssets.find((x) => x.hub === r.hub && x.assetId === r.assetId);
@@ -235,7 +254,7 @@ async function convexMode() {
 
   // ── Accounts and positions ──
   const created = await sameLogs("accounts", "AaveAdapter.UserProxyCreated", aaveAdapterAbi as Abi, undefined, eqArgs(["wallet", "spoke", "marketId", "proxy"]));
-  const accountRows = table("accounts").filter((a) => a.chainId === chainId);
+  const accountRows = (await table("accounts")).filter((a) => a.chainId === chainId);
   const accountKey = (a: Json) => `${lower(a.spoke)}:${lower(a.proxy)}:${lower(a.wallet)}:${a.marketId}`;
   const chainAccounts = new Set(created.map((l) => accountKey(l.args)));
   const convexAccounts = new Set(accountRows.map(accountKey));
@@ -248,8 +267,8 @@ async function convexMode() {
     "function getUserDebt(uint256 reserveId, address user) view returns (uint256, uint256)",
   ]);
   const at = await snapOf(sampleBlock.toString());
-  const positionRows = table("positions").filter((p) => p.chainId === chainId);
-  const debtRows = table("marketReserveDebt").filter((d) => d.chainId === chainId);
+  const positionRows = (await table("positions")).filter((p) => p.chainId === chainId);
+  const debtRows = (await table("marketReserveDebt")).filter((d) => d.chainId === chainId);
   const debts = new Map<string, { debt: bigint; borrowers: number }>();
   let positionsEqual = 0;
   let sampled = 0;
@@ -310,7 +329,7 @@ async function convexMode() {
     perDay.set(k, (perDay.get(k) ?? 0) + 1);
   }
   for (const day of new Set([...perDay.keys()].map((k) => k.split("|")[1]!))) run("rollups:rollUp", { nowMs: Date.parse(`${day}T00:00:00Z`) + 86_400_000 + 1_800_000 });
-  const rollups = table("dailyRollups").filter((r) => r.chainId === chainId && r.scopeKind === "market");
+  const rollups = (await table("dailyRollups")).filter((r) => r.chainId === chainId && r.scopeKind === "market");
   let rollupsEqual = 0;
   for (const [k, n] of perDay) {
     const [marketId, day] = k.split("|");
@@ -349,7 +368,7 @@ async function convexMode() {
   } else fail("intents", "the rehearsal holds no liquidation or account creation to track");
   for (const i of intents) run("intents:submit", { wallet: i.wallet, chainId, txHash: i.tx, kind: i.kind }, { subject: i.wallet, issuer: "http://127.0.0.1:3000", tokenIdentifier: `replay|${i.wallet}` });
   run("intents:track", { chainId });
-  const intentRows = table("intents").filter((r) => r.chainId === chainId);
+  const intentRows = (await table("intents")).filter((r) => r.chainId === chainId);
   for (const i of intents) {
     const r = intentRows.find((x) => x.txHash === lower(i.tx));
     if (!r || r.status !== i.want) fail("intents", `${i.kind} ${i.tx}: want ${i.want}, Convex ${r?.status ?? "none"}`);
