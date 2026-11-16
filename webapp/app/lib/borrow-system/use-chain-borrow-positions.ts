@@ -13,7 +13,13 @@ import {
   type ChainDebtReserveRef,
 } from "@/app/lib/borrow-system/chain-positions"
 import { lensAccountAbi } from "@/app/lib/borrow-system/lens-account-abi"
-import { onBorrowPositionsRefresh, setChainBorrowRefs, type ChainMarketRef } from "@/app/lib/borrow-system/chain-refs"
+import {
+  onBorrowPositionsRefresh,
+  setChainBorrowRefs,
+  type ChainMarketRef,
+  type ChainTokenPrice,
+} from "@/app/lib/borrow-system/chain-refs"
+import { chainRewardPositions, type RewardsChain, type RewardsDeps, type RewardsMarket } from "@/app/lib/borrow-system/chain-rewards"
 
 /** How often the wallet's accounts are re-read at the chain head. */
 export const BORROW_POSITIONS_REFRESH_MS = 15_000
@@ -25,6 +31,24 @@ type BorrowAccountsResult = {
   accounts: readonly ChainBorrowAccountRef[]
   markets?: readonly ChainMarketRef[]
   debtReserves: readonly ChainDebtReserveRef[]
+  tokenPrices?: readonly ChainTokenPrice[]
+}
+
+/** What chainRewardPositions reads with: the chains' read clients, their Lenses and the pool tokens' prices. */
+export function rewardsDeps(refs: BorrowAccountsResult): RewardsDeps {
+  const prices = new Map((refs.tokenPrices ?? []).map((p) => [`${p.chainId}:${p.token.toLowerCase()}`, BigInt(p.priceUsd8)]))
+  return {
+    chain: (chainId) => chainPublicClient(chainId) as RewardsChain | null,
+    lenses: refs.lenses,
+    priceUsd8: (chainId, token) => prices.get(`${chainId}:${token.toLowerCase()}`) ?? null,
+  }
+}
+
+/** The listed markets with their pool tokens, as chainRewardPositions values fees. */
+export function rewardsMarkets(refs: BorrowAccountsResult): RewardsMarket[] {
+  return (refs.markets ?? []).flatMap((m) =>
+    m.tokens && m.tokenDecimals ? [{ chainId: m.chainId, marketId: m.marketId, tokens: m.tokens, tokenDecimals: m.tokenDecimals }] : [],
+  )
 }
 
 /** The wallet's Lens accounts on every chain it has one, read at the chain head. */
@@ -67,13 +91,16 @@ export function useChainBorrowPositions(walletId: string): { refresh: () => void
     if (!wallet || !refs) return
     const run = ++generation.current
     if (refs.accounts.length === 0) {
-      hydrateAccountPositions(wallet, { collateralPositions: [], debtPositions: [] })
+      hydrateAccountPositions(wallet, { collateralPositions: [], debtPositions: [], rewardPositions: [] })
       return
     }
-    void readChainAccountViews(wallet, refs)
-      .then((views) => {
+    void Promise.all([
+      readChainAccountViews(wallet, refs),
+      chainRewardPositions(rewardsDeps(refs), wallet, refs.accounts, rewardsMarkets(refs)),
+    ])
+      .then(([views, rewardPositions]) => {
         if (run !== generation.current) return
-        hydrateAccountPositions(wallet, chainBorrowPositions(views, refs.accounts, refs.debtReserves, markets))
+        hydrateAccountPositions(wallet, { ...chainBorrowPositions(views, refs.accounts, refs.debtReserves, markets), rewardPositions })
       })
       .catch(() => {
         // A failed read keeps the last positions; the next tick retries.

@@ -1,4 +1,11 @@
-import { RAY, TOKEN_SCALE, type BorrowMarketRecord, type UserCollateralPosition, type UserDebtPosition } from "@/app/lib/borrow-system/model"
+import {
+  RAY,
+  TOKEN_SCALE,
+  type BorrowMarketRecord,
+  type UserCollateralPosition,
+  type UserDebtPosition,
+  type UserRewardPosition,
+} from "@/app/lib/borrow-system/model"
 
 /** One account row of services/convex `wallet.positions.borrowAccounts`. */
 export type ChainBorrowAccountRef = {
@@ -37,6 +44,8 @@ export type AccountViewLike = {
 export type ChainBorrowPositions = {
   collateralPositions: UserCollateralPosition[]
   debtPositions: UserDebtPosition[]
+  /** The accounts' uncollected LP fees (chainRewardPositions); left as they are when absent. */
+  rewardPositions?: UserRewardPosition[]
 }
 
 /** Aave values are USD × 1e26 (`IAaveOracle` units × 1e18); debt values also × RAY. */

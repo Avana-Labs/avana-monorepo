@@ -53,7 +53,18 @@ export function borrowAccountRefs(w: World, rows: readonly AccountRow[]) {
     proxy: a.proxy,
     poolSlug: w.markets.find((m) => m.chainId === a.chainId && m.marketId === a.marketId)?.slug ?? null,
   }));
-  const markets = w.markets.map((m) => ({ chainId: m.chainId, marketId: m.marketId, spoke: m.spoke, poolSlug: m.slug }));
+  const markets = w.markets.map((m) => ({
+    chainId: m.chainId,
+    marketId: m.marketId,
+    spoke: m.spoke,
+    poolSlug: m.slug,
+    tokens: m.tokens,
+    tokenDecimals: m.tokenDecimals,
+  }));
+  // USD prices of the markets' pool tokens, to value the accounts' uncollected LP fees.
+  const tokenPrices = [...new Map(w.markets.flatMap((m) => m.tokens.map((t) => [`${m.chainId}:${t}`, { chainId: m.chainId, token: t, hub: m.hub }] as const))).values()]
+    .map(({ chainId, token, hub }) => ({ chainId, token, priceUsd8: priceAsset(w, chainId, token, hub)?.priceUsd8 ?? null }))
+    .filter((p) => p.priceUsd8 !== null);
   const spokes = new Set([...rows, ...markets].map((a) => `${a.chainId}:${a.spoke}`));
   const debtReserves = w.reserves
     .filter((r) => spokes.has(`${r.chainId}:${r.spoke}`))
@@ -66,5 +77,5 @@ export function borrowAccountRefs(w: World, rows: readonly AccountRow[]) {
       decimals: r.decimals,
       priceUsd8: priceAsset(w, r.chainId, r.asset, r.hub)?.priceUsd8 ?? null,
     }));
-  return { accounts, markets, debtReserves };
+  return { accounts, markets, debtReserves, tokenPrices };
 }
