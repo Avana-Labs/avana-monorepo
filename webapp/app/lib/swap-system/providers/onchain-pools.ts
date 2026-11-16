@@ -3,7 +3,7 @@ import type { SwapQuote, SwapQuoteRequest } from "../quote-types"
 import type { SwapQuoteProvider } from "./types"
 
 /**
- * Quotes from a chain's own pools: Uniswap v3 and Uniswap v4 on Ethereum, Aerodrome Slipstream on
+ * Quotes from a chain's own pools: Uniswap v3 and Uniswap v4 on Ethereum, Aero Slipstream on
  * Base. For each venue it tries the direct pools and the one-hop routes through the configured
  * connector tokens, and it keeps the route with the best output net of its gas cost.
  *
@@ -18,7 +18,7 @@ export type PoolVenue = "uniswap-v3" | "uniswap-v4" | "slipstream"
 export const VENUE_NAMES: Readonly<Record<PoolVenue, string>> = {
   "uniswap-v3": "Uniswap v3",
   "uniswap-v4": "Uniswap v4",
-  slipstream: "Aerodrome Slipstream",
+  slipstream: "Aero Slipstream",
 }
 
 export type PoolToken = {
