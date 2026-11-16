@@ -13,6 +13,7 @@
     "services/indexer",
     "services/keeper",
     "services/monitor",
+    "services/faucet",
     "services/convex",
     "webapp"
   ],
