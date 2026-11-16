@@ -636,6 +636,14 @@ export default defineSchema({
     at: v.number(),
   }).index("by_wallet_key", ["wallet", "key"]),
 
+  /** A wallet's older history read once per chain for the rewards (`wallet/backfill.ts`); `truncated` when it was longer than the pages read. */
+  historyBackfills: defineTable({
+    wallet: address,
+    chainId: v.number(),
+    doneAt: v.number(),
+    truncated: v.boolean(),
+  }).index("by_wallet", ["wallet"]),
+
   /** A wallet's invite code (`lib/referrals.ts`): one per wallet, unique across wallets. */
   referralCodes: defineTable({
     wallet: address,

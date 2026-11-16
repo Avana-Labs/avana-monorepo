@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import type { RewardsPromoTabId, RewardsQuest } from "@/app/lib/data/rewards/catalog"
 import { questHref, questsByTab as buildQuestsByTab } from "@/app/lib/data/rewards/quests"
 import { useWalletRewards } from "@/app/lib/rewards/use-wallet-rewards"
+import { useHistoryBackfill } from "@/app/lib/rewards/use-history-backfill"
 import { recordClientQuest } from "@/app/lib/rewards/record-client-quest"
 import { useAvanaSessions } from "@/app/lib/avana-session/avana-sessions-provider"
 import { PortfolioStatCards } from "@/app/dashboard/portfolio-stat-cards"
@@ -89,6 +90,7 @@ export function DashboardPageClient() {
   }, [searchTab])
 
   const rewards = useWalletRewards(walletId)
+  useHistoryBackfill(walletId, rewards)
   const questsByTab = useMemo(
     () =>
       buildQuestsByTab({ comingSoon: t("Coming soon"), earned: t("Earned") }, rewards?.completedQuests ?? new Set()),

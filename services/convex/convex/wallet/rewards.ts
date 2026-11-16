@@ -16,6 +16,8 @@ export interface RewardsSummary {
   readonly feePoints: number;
   /** Ids of the completed quests. */
   readonly completedQuests: readonly string[];
+  /** Whether the wallet's older history was read on every served chain (`wallet.backfill.run`). */
+  readonly historyChecked: boolean;
 }
 
 export const summary = query({
@@ -23,13 +25,16 @@ export const summary = query({
   handler: async (ctx, { wallet }): Promise<RewardsSummary> => {
     if (!/^0x[0-9a-fA-F]{40}$/.test(wallet)) throw new Error("wallet is a 20-byte address");
     const w = wallet.toLowerCase();
-    const [totals, member] = await Promise.all([
+    const [totals, member, deployments, backfills] = await Promise.all([
       ctx.db.query("rewardTotals").withIndex("by_wallet", (q) => q.eq("wallet", w)).unique(),
       firstSeenOf(ctx, w),
+      ctx.db.query("deployments").collect(),
+      ctx.db.query("historyBackfills").withIndex("by_wallet", (q) => q.eq("wallet", w)).collect(),
     ]);
+    const historyChecked = deployments.every((d) => backfills.some((b) => b.chainId === d.chainId));
     const tenure = member ? tenurePoints(member.sinceMs, Date.now()) : 0;
     const questPoints = totals?.questPoints ?? 0;
     const feePoints = totals?.feePoints ?? 0;
-    return { earnedPoints: tenure + questPoints + feePoints, tenurePoints: tenure, questPoints, feePoints, completedQuests: totals?.questIds ?? [] };
+    return { earnedPoints: tenure + questPoints + feePoints, tenurePoints: tenure, questPoints, feePoints, completedQuests: totals?.questIds ?? [], historyChecked };
   },
 });
