@@ -1,6 +1,10 @@
 # L-01 split-liquidation measurement
 
-Measures the split variant of L-01: the same insolvent account liquidated in one call and in several partial calls. No contract change. Test: `contracts/test/integration/LPVaultSwap.SplitLiquidation.integration.t.sol` (local Aave V4, real LPVaultSwap and First-Loss Reserve, the BadDebt fixture).
+Measures the split variant of L-01, where the same underwater account is liquidated in one call and in several partial calls, and records the fix.
+
+**Decision (2026-11-16): insolvent → reserve.** Before each liquidation, if the account's collateral value is below its debt times the liquidation bonus, `B` goes to the First-Loss Reserve on every call, not only on the call that books the deficit. The fallback from PR #80 stays: the borrower receives any part the reserve does not take. The fix is in PR #90 (`LPVaultSwapLiquidationLogic._seize` and `_waterfall`).
+
+Test: `contracts/test/integration/LPVaultSwap.SplitLiquidation.integration.t.sol` (local Aave V4, real LPVaultSwap and First-Loss Reserve, the BadDebt fixture).
 
 ```bash
 forge test -j 2 --match-path test/integration/LPVaultSwap.SplitLiquidation.integration.t.sol -vv
@@ -16,10 +20,10 @@ Yes. Aave V4 has no close factor:
 
 Tests:
 
-- `test_partialLiquidationOfAnInsolventAccountIsAllowed`: a 1,000 USDC call on the report's account settles. It leaves collateral, books no deficit and pays `B` to the borrower.
-- `test_dustRuleKeepsOnlyTheLastThousandDollarsForTheDeficitCall`: a call that would leave $500 of collateral reverts with `MustNotLeaveDust`.
+- `test_TEST_216_partialCallOnAnUnderwaterAccountFundsTheReserve`: a 1,000 USDC call on the report's account settles, leaves collateral and books no deficit. Before the fix it paid `B` to the borrower; now its `B` funds the reserve.
+- `test_TEST_216_dustRuleKeepsTheLastThousandDollarsForTheDeficitCall`: a call that would leave $500 of collateral reverts with `MustNotLeaveDust`.
 
-The borrower can therefore keep `B` on all collateral except the last call's slice, and that slice need be only just over $1,000.
+Before the fix, the borrower could therefore keep `B` on all collateral except the last call's slice, and that slice need be only just over $1,000.
 
 ## Setup
 
@@ -32,7 +36,10 @@ The borrower can therefore keep `B` on all collateral except the last call's sli
   - "2 (max)": one partial call that leaves $1,010 of collateral, then the final call.
 - The borrower is the caller. Avana fee share is 20%.
 
-## Results
+## Results before the fix
+
+These numbers come from the measurement run on `main` before the fix.
+
 
 `B` totals depend only on the spread and the split; they are identical in the three tiers (the tier changes the deficit and the keeper reward, which do not depend on the split). Amounts in USDC; "% of V" is the borrower's `B` over the oracle value of everything seized (9,000).
 
@@ -82,6 +89,29 @@ Reading:
 - Because the dust slice is a fixed $1,000, the share grows with account size. On the $900,000 account the reserve keeps 4.04 of 3,600 (0.1%).
 - Splitting does not change the deficit the reserve covers or the keeper reward. The borrower gains only the `B` column, minus the gas of the extra calls. On the $9,000 account that gain is a few dollars; on the $900,000 account it is $3,596 for one extra call.
 
+## Results after the fix
+
+Same test, same cases, with the fix. The test checks every row below, and `B` goes to the borrower only in the solvent rows.
+
+- **Underwater account, every split.** This covers 1, 2, 4 and 8 calls and the 2 (max) split, in all three tiers, at all four spreads, plus the $900,000 account. The reserve receives all of `B` and the borrower receives 0.00. Total `B`, the deficit and the keeper reward are the same as before the fix. At 0.40%: total `B` 36.00 goes to the reserve (3,600.00 on the $900,000 account).
+- **Account between `debt` and `debt × bonus`.** This is 10,000 USDC of debt against collateral halfway to `debt × bonus` (10,250 on Stable). Its first call starts with collateral above the debt, so a `V < debt` test would have missed it. Both calls fund the reserve, and the last call books a deficit.
+- **Solvent account.** This is 10,000 USDC of debt against 11,000 of collateral, repaid in one call or two. No deficit, and the borrower receives all of `B`.
+
+Borrower `B` and reserve `B`, in USDC:
+
+| Case (2 calls) | Tier | 0.10% | 0.40% | 1% | 2% |
+|---|---|---|---|---|---|
+| Between `debt` and `debt × bonus`: all to the reserve | Stable | 10.25 | 41.00 | 102.50 | 205.00 |
+| | Correlated | 10.30 | 41.20 | 103.00 | 206.00 |
+| | Volatile | 10.40 | 41.60 | 104.00 | 208.00 |
+| Solvent: all to the borrower | Stable | 10.50 | 42.00 | 105.00 | 210.00 |
+| | Correlated | 10.60 | 42.40 | 106.00 | 212.00 |
+| | Volatile | 10.80 | 43.20 | 108.00 | 216.00 |
+
+Final deficits in the "between `debt` and `debt × bonus`" case: Stable 238.10, Correlated 283.02, Volatile 370.37.
+
+Gas: each liquidation costs 1,996 more (`snapshots/WholeAccountSeizure.json`). The per-call budget `G(16)` in `LPVaultSwap.Liquidation.gas.t.sol` still holds.
+
 ## Fix options and measured effect
 
 1. **Accept and document.**
@@ -98,4 +128,4 @@ Reading:
    - It bounds the leak only to the cap. Total `B` here is 9 to 180 on a $9,000 account and 3,600 on the $900,000 account, so a cap that matters is close to zero, which in effect is option 2.
    - Not measured, because measuring it would need a contract change.
 
-Recommendation: option 2 with the `collateral value < debt × bonus` condition. It closes every measured case, adds no state and uses values the call already reads.
+Chosen: option 2 with the `collateral value < debt × bonus` condition (decision of 2026-11-16, PR #90). It closes every measured case, adds no state and uses values the call already reads.

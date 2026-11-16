@@ -173,9 +173,11 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
         assertEq(usdc.balanceOf(address(lvs)), 0, "LPVaultSwap neutral");
     }
 
-    /// @notice Audit finding L-01 (fresh audit 2026-11-15): on the call that seizes the last unit and books the leftover
-    /// debt as the Hub's deficit, the borrower surplus `B` funds the First-Loss Reserve of the debt asset's funding Hub
-    /// instead of going to the defaulted borrower, so the reserve that covers the deficit keeps those proceeds.
+    /// @notice Audit finding L-01 (fresh audit 2026-11-15): Bob's account at $1.00 (10,000 of collateral against 18,000
+    /// USDC) is underwater, its collateral below its debt times the bonus, so on every call, including the one that
+    /// seizes the last unit and books the leftover debt as the Hub's deficit, the borrower surplus `B` funds the
+    /// First-Loss Reserve of the debt asset's funding Hub instead of going to the defaulted borrower, so the reserve that
+    /// covers the deficit keeps those proceeds.
     // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-027
     function test_TEST_216_deficitSurplusFundsTheFirstLossReserve() public {
         lpOracle.setAnswer(int256(100_000_000));
@@ -191,24 +193,21 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
             vm.recordLogs();
             LiquidationResult memory r = _liquidateAs(keeper, p);
             (bool seen, uint256 amount, uint256 shares) = _fundedLog(vm.getRecordedLogs());
-            if (_deficit() > deficitBefore) {
-                assertTrue(seen, "DeficitSurplusFunded emitted");
+            assertEq(seen, r.borrowerSurplus != 0, "DeficitSurplusFunded emitted for every non-zero B");
+            if (seen) {
                 assertEq(amount, r.borrowerSurplus, "event amount is the part of B the reserve took");
                 assertEq(
                     shares, usdcCoverage.fundedShares() - sharesBefore, "event shares are the reserve's new shares"
                 );
                 assertGt(shares, 0, "the reserve reported shares");
+            }
+            assertEq(usdc.balanceOf(bob) + escrow.claimable(address(usdc), bob), walletBefore, "borrower paid nothing");
+            assertEq(usdcCoverage.fundedBalance(), reserveBefore + r.borrowerSurplus, "surplus funded the reserve");
+            assertEq(usdc.allowance(address(lvs), address(usdcCoverage)), 0, "reserve allowance reset");
+            assertEq(usdc.balanceOf(address(lvs)), 0, "LPVaultSwap holds no USDC");
+            if (_deficit() > deficitBefore) {
                 assertEq(_suppliedUnits(proxy), 0, "a deficit is booked only once the collateral is gone");
-                assertEq(
-                    usdc.balanceOf(bob) + escrow.claimable(address(usdc), bob), walletBefore, "borrower paid nothing"
-                );
-                assertEq(usdcCoverage.fundedBalance(), reserveBefore + r.borrowerSurplus, "surplus funded the reserve");
-                assertEq(usdc.allowance(address(lvs), address(usdcCoverage)), 0, "reserve allowance reset");
-                assertEq(usdc.balanceOf(address(lvs)), 0, "LPVaultSwap holds no USDC");
                 deficitSurplus += r.borrowerSurplus;
-            } else {
-                assertFalse(seen, "no deficit, no DeficitSurplusFunded");
-                assertEq(usdcCoverage.fundedBalance(), reserveBefore, "no deficit, reserve untouched");
             }
         }
         assertGt(deficitSurplus, 0, "the deficit call carried a borrower surplus");
@@ -263,9 +262,9 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
         assertEq(usdc.balanceOf(address(lvs)), 0, "LPVaultSwap neutral");
     }
 
-    /// @notice A recorded reserve whose `fund` succeeds but takes only half of `B`: the reserve keeps that half, the
-    /// borrower receives the rest, `DeficitSurplusFunded` reports the half and the shares `fund` returned, and neither
-    /// an allowance nor USDC stays at LPVaultSwap.
+    /// @notice A recorded reserve whose `fund` succeeds but takes only half of `B`: on every call of the underwater
+    /// account the reserve keeps that half, the borrower receives the rest, `DeficitSurplusFunded` reports the half and
+    /// the shares `fund` returned, and neither an allowance nor USDC stays at LPVaultSwap.
     // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-027
     function test_TEST_216_partialReserveTakeLeavesTheRestWithTheBorrower() public {
         PartialReserve reserve = new PartialReserve(IERC20(address(usdc)), 5000);
@@ -276,13 +275,12 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
             uint256 debt = _debtOf(proxy, usdcReserveId);
             LiquidationParams memory p = _params(proxy, debt);
             p.maxShortfall = debt / 5;
-            uint256 deficitBefore = _deficit();
             uint256[2] memory before =
                 [usdc.balanceOf(bob) + escrow.claimable(address(usdc), bob), usdc.balanceOf(address(reserve))];
             vm.recordLogs();
             LiquidationResult memory r = _liquidateAs(keeper, p);
             (bool seen, uint256 amount, uint256 shares) = _fundedLog(vm.getRecordedLogs());
-            uint256 take = _deficit() > deficitBefore ? r.borrowerSurplus / 2 : 0;
+            uint256 take = r.borrowerSurplus / 2;
             assertEq(usdc.balanceOf(address(reserve)), before[1] + take, "reserve kept its take");
             assertEq(
                 usdc.balanceOf(bob) + escrow.claimable(address(usdc), bob),
@@ -298,7 +296,7 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
             assertEq(usdc.balanceOf(address(lvs)), 0, "LPVaultSwap holds no USDC");
             if (take != 0 && take != r.borrowerSurplus) ++split;
         }
-        assertGt(split, 0, "a deficit call split B between the reserve and the borrower");
+        assertGt(split, 0, "a call split B between the reserve and the borrower");
     }
 
     /// @notice A reserve that returns a huge buffer cannot make the deficit call revert or cost it the copy: LPVaultSwap
@@ -359,25 +357,26 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
         uint256 snap = vm.snapshotState();
         uint256 d = 9523e6;
         bool found;
-        uint256 kept;
+        uint256 funded;
         for (uint256 i = 0; i < 16 && !found; ++i) {
             vm.revertToState(snap);
             uint256 b;
             (found, d, b) = _twoDebtAttempt(makeAddr("carol"), d);
-            kept += b;
+            funded += b;
         }
         assertTrue(found, "a call emptied the collateral and the USDC debt together");
-        assertGt(kept, 0, "a two-debt call without a deficit paid B to the borrower");
+        assertGt(funded, 0, "a two-debt call without a deficit on the underwater account funded the reserve");
     }
 
     /// @dev Bob's state with `d` of USDC and 9,000 GHO at $1 a unit, then one USDC liquidation of the whole USDC debt.
     /// Returns whether it emptied both the collateral and the USDC debt (asserting the funding if so), else the next
-    /// USDC borrow to try. When collateral is left (USDC fully repaid, borrowCount 2 to 1, no deficit) it asserts that
-    /// `B` went to the borrower and returns it as `kept`; when USDC debt is left as deficit, that `B` funded the reserve.
+    /// USDC borrow to try. When collateral is left (USDC fully repaid, borrowCount 2 to 1, no deficit) the account was
+    /// still underwater (10,000 of collateral against about 18,500 of debt), so it asserts that `B` funded the reserve
+    /// and returns it as `funded`; when USDC debt is left as deficit, that `B` funded the reserve.
     function _twoDebtAttempt(
         address carol,
         uint256 d
-    ) internal returns (bool found, uint256 next, uint256 kept) {
+    ) internal returns (bool found, uint256 next, uint256 funded) {
         (address p,) = _openAccount(carol, 10_000e6, d, 250_000_000);
         lpOracle.setAnswer(250_000_000);
         adapter.borrow(p, ghoReserveId, address(gho), 9000e18, carol);
@@ -421,7 +420,8 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
         assertEq(usdc.balanceOf(address(lvs)), 0, "LPVaultSwap holds no USDC");
     }
 
-    /// @dev No deficit in either asset: the borrower received `B` and the reserve nothing.
+    /// @dev No deficit in either asset, and the underwater account's `B` funded the USDC reserve; the borrower received
+    /// nothing.
     function _assertNoTwoDebtDeficit(
         address carol,
         LiquidationResult memory r,
@@ -429,11 +429,7 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
     ) internal view {
         assertEq(_deficit(), s0[0], "no USDC deficit");
         assertEq(_ghoDeficit(), s0[1], "no GHO deficit");
-        assertEq(
-            usdc.balanceOf(carol) + escrow.claimable(address(usdc), carol), s0[2] + r.borrowerSurplus, "borrower paid B"
-        );
-        assertEq(usdcCoverage.fundedBalance(), s0[3], "reserve untouched");
-        assertEq(usdc.balanceOf(address(lvs)), 0, "LPVaultSwap holds no USDC");
+        _assertReserveFunded(carol, r, s0);
     }
 
     /// @notice A zero repayment is refused `InvalidAmount` even on an insolvent account.

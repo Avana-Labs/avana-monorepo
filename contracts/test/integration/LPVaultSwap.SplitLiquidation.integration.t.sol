@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
+import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
@@ -21,25 +22,28 @@ interface ISplitSpokeConfigurator {
 }
 
 /// @title LPVaultSwapSplitLiquidationIntegrationTest
-/// @notice Measures audit finding L-01's split variant (fresh audit 2026-11-15) on the local Aave V4: the same insolvent
-/// account is liquidated in one call and in 2, 4 and 8 partial calls, and in the two-call split that leaves just over
-/// Aave's $1,000 dust threshold for the last call. Only the call that seizes the last collateral books the Hub deficit,
-/// so only its borrower surplus `B` funds the First-Loss Reserve; the earlier calls pay `B` to the borrower. Each case
-/// records the total `B`, its part paid to the borrower and to the reserve, the final deficit and the keeper reward,
-/// across the three tiers' collateral factor, bonus and slippage allowance and four oracle spreads. The spread is how
-/// far the swap proceeds `R` sit above the conservative oracle value `V`: the fixture's unwind and routes recover
-/// $2.092097 a unit, and the vault-token price is set that spread below it.
-/// @dev Measurement only: it asserts the settlement conservation of every call, that partial calls of an insolvent
-/// account are accepted, that the deficit does not depend on the split, and that every call started with the account
-/// insolvent. The table rows are printed with `-vv`.
+/// @notice Audit finding L-01, split variant (fresh audit 2026-11-15), on the local Aave V4. An underwater account (its
+/// collateral value below its debt times the liquidation bonus) can be liquidated in several partial calls, and only the
+/// last books the Hub deficit. Every call on such an account pays its borrower surplus `B` into the First-Loss Reserve,
+/// so splitting the liquidation leaves the borrower nothing. Each case liquidates a fresh account in one call, in 2, 4
+/// and 8 calls, and in two calls that leave just over Aave's $1,000 dust threshold for the last, across the three tiers'
+/// collateral factor, bonus and slippage allowance and four oracle spreads. It also covers an account between `debt` and
+/// `debt × bonus` (solvent at the oracle value, still underwater) and a solvent account, whose `B` still goes to the
+/// borrower. The spread is how far the swap proceeds `R` sit above the conservative oracle value `V`: the fixture's
+/// unwind and routes recover $2.092097 a unit, and the vault-token price is set that spread below it.
+/// @dev Each case prints a row (with `-vv`): total `B`, its parts paid to the borrower and to the reserve, the
+/// borrower's part over the oracle value seized, the final deficit and the keeper reward.
 /// forge-config: default.isolate = false
 contract LPVaultSwapSplitLiquidationIntegrationTest is LPVaultSwapUnitBase {
     /// @dev Realized USDC per 1e6 vault units: the USDC leg plus the USDT leg at the routes' 0.9995.
     uint256 internal constant REALIZED_PER_UNIT = 2_092_097;
     /// @dev Aave V4's `DUST_LIQUIDATION_THRESHOLD`, $1,000, in USDC base units at $1.
     uint256 internal constant DUST_USD = 1000e6;
-    /// @dev The max-leak split leaves this much collateral for the last call (just above the dust threshold).
+    /// @dev The max-split case leaves this much collateral for the last call (just above the dust threshold).
     uint256 internal constant LAST_SLICE_USD = 1010e6;
+    /// @dev Case kinds: an underwater account seized to the end, then a solvent one.
+    uint256 internal constant UNDERWATER = 0;
+    uint256 internal constant SOLVENT = 1;
 
     /// @dev One risk tier's Aave collateral factor and maximum bonus and Avana's slippage allowance, from the anvil
     /// listing config (`script/deploy/config/anvil.json`).
@@ -54,17 +58,16 @@ contract LPVaultSwapSplitLiquidationIntegrationTest is LPVaultSwapUnitBase {
     struct Outcome {
         uint256 calls;
         uint256 seizedValue;
-        uint256 repaid;
         uint256 surplusB;
         uint256 toBorrower;
         uint256 toReserve;
         uint256 deficit;
         uint256 keeperReward;
-        uint256 avanaFee;
-        uint256 bInsolventBefore;
+        uint256 underwaterCalls;
+        bool firstCallSolventAtValue;
     }
 
-    // ─── Tiers and cases ───
+    // ─── Tiers ───
 
     function _stable() internal pure returns (Tier memory) {
         return Tier("Stable", 3500, 10_500, 195);
@@ -87,6 +90,8 @@ contract LPVaultSwapSplitLiquidationIntegrationTest is LPVaultSwapUnitBase {
         store.setSlippage(MARKET_ID, t.slippageBps);
     }
 
+    // ─── Accounts and calls ───
+
     /// @dev The vault-token price that puts `R` `spreadBps` above `V`.
     function _priceFor(
         uint256 spreadBps
@@ -96,7 +101,7 @@ contract LPVaultSwapSplitLiquidationIntegrationTest is LPVaultSwapUnitBase {
 
     /// @dev Bob's account: `debt` USDC against vault units worth `collateralUsd` at `price8`, opened at five times that
     /// price so the borrow passes at every tier's collateral factor, then priced at `price8`.
-    function _openInsolvent(
+    function _openAccountAt(
         uint256 debt,
         uint256 collateralUsd,
         uint256 price8
@@ -111,24 +116,35 @@ contract LPVaultSwapSplitLiquidationIntegrationTest is LPVaultSwapUnitBase {
         return IAaveV4Hub(aave.hub).getSpokeDeficitRay(usdcAssetId, aave.cdpSpoke);
     }
 
-    /// @dev The account's collateral at the oracle price is below its debt (`V < debt` before the call).
-    function _insolvent(
+    function _collateralUsd(
+        address proxy,
+        uint256 price8
+    ) internal view returns (uint256) {
+        return _suppliedUnits(proxy) * price8 / PRICE_UNIT;
+    }
+
+    /// @dev The account's collateral is below its debt times the bonus Aave applies to this call.
+    function _underwater(
         address proxy,
         uint256 price8
     ) internal view returns (bool) {
-        return _suppliedUnits(proxy) * price8 / PRICE_UNIT < _debtOf(proxy, usdcReserveId);
+        uint256 bonus = IAaveV4Spoke(aave.cdpSpoke).getLiquidationBonus(vtReserveId, proxy, _hf(proxy));
+        return _collateralUsd(proxy, price8) * BPS < _debtOf(proxy, usdcReserveId) * bonus;
     }
 
-    /// @dev One liquidation by the borrower itself (its own keeper) for `debtToCover`; adds it to `o`.
+    /// @dev One liquidation by the borrower itself (its own keeper) for `debtToCover`; checks where `B` went and adds
+    /// the call to `o`.
     function _call(
         Outcome memory o,
         address proxy,
         uint256 price8,
         uint256 debtToCover
     ) internal {
-        bool insolvent = _insolvent(proxy, price8);
+        bool underwater = _underwater(proxy, price8);
+        if (o.calls == 0) o.firstCallSolventAtValue = _collateralUsd(proxy, price8) >= _debtOf(proxy, usdcReserveId);
         uint256 deficitBefore = _deficit();
         uint256 reserveBefore = usdcCoverage.fundedBalance();
+        uint256 walletBefore = usdc.balanceOf(bob);
         LiquidationParams memory p = _params(proxy, debtToCover);
         p.maxShortfall = debtToCover / 5;
         LiquidationResult memory r = _liquidateAs(bob, p);
@@ -138,27 +154,31 @@ contract LPVaultSwapSplitLiquidationIntegrationTest is LPVaultSwapUnitBase {
             "conservation"
         );
         uint256 funded = usdcCoverage.fundedBalance() - reserveBefore;
-        if (_deficit() > deficitBefore) {
-            assertEq(_suppliedUnits(proxy), 0, "deficit only once the collateral is gone");
-            assertEq(funded, r.borrowerSurplus, "deficit call funds the reserve with B");
+        if (underwater || _deficit() > deficitBefore) {
+            assertEq(funded, r.borrowerSurplus, "underwater: B funds the reserve");
         } else {
-            assertEq(funded, 0, "no deficit, reserve untouched");
+            assertEq(funded, 0, "solvent: reserve untouched");
         }
+        // The borrower is the caller here: `_liquidateAs` minted it `debtToCover + maxShortfall`, LPVaultSwap pulled
+        // `Kf` and the shortfall, and paid back keeperOut plus the part of B the reserve did not take.
+        assertEq(
+            usdc.balanceOf(bob) + r.callerFunds + r.shortfall,
+            walletBefore + debtToCover + p.maxShortfall + r.keeperOut + r.borrowerSurplus - funded,
+            "wallet"
+        );
         ++o.calls;
+        if (underwater) ++o.underwaterCalls;
         o.seizedValue += _valueOf(r.unitsSeized, price8, PRICE_UNIT, 6);
-        o.repaid += r.debtRepaid;
         o.surplusB += r.borrowerSurplus;
         o.toReserve += funded;
         o.toBorrower += r.borrowerSurplus - funded;
         o.keeperReward += r.keeperReward;
-        o.avanaFee += r.avanaFee;
-        if (insolvent) o.bInsolventBefore += r.borrowerSurplus;
     }
 
-    /// @dev Liquidates a fresh insolvent account: `parts - 1` equal partial calls of the debt the collateral can repay
-    /// at the bonus, then one call for the rest of the debt (`parts == 0`: the max-leak two-call split, the first call
-    /// leaving `LAST_SLICE_USD` of collateral).
-    function _case(
+    /// @dev Liquidates a fresh underwater account to the end: `parts - 1` equal partial calls of the debt the collateral
+    /// can repay at the bonus, then one call for the rest of the debt (`parts == 0`: two calls, the first leaving
+    /// `LAST_SLICE_USD` of collateral).
+    function _underwaterCase(
         Tier memory t,
         uint256 spreadBps,
         uint256 debt,
@@ -166,7 +186,7 @@ contract LPVaultSwapSplitLiquidationIntegrationTest is LPVaultSwapUnitBase {
         uint256 parts
     ) internal returns (Outcome memory o) {
         uint256 price8 = _priceFor(spreadBps);
-        address proxy = _openInsolvent(debt, collateralUsd, price8);
+        address proxy = _openAccountAt(debt, collateralUsd, price8);
         uint256 deficit0 = _deficit();
         uint256 repayable = collateralUsd * BPS / t.bonus;
         if (parts == 0) {
@@ -176,19 +196,44 @@ contract LPVaultSwapSplitLiquidationIntegrationTest is LPVaultSwapUnitBase {
                 _call(o, proxy, price8, repayable / parts);
             }
         }
-        assertGt(
-            _suppliedUnits(proxy) * price8 / PRICE_UNIT, DUST_USD, "partial calls leave at least the dust threshold"
-        );
+        assertGt(_collateralUsd(proxy, price8), DUST_USD, "partial calls leave at least the dust threshold");
         _call(o, proxy, price8, _debtOf(proxy, usdcReserveId));
         assertEq(_suppliedUnits(proxy), 0, "every unit seized");
         assertEq(o.calls, parts == 0 ? 2 : parts, "call count");
+        assertEq(o.underwaterCalls, o.calls, "every call started underwater");
         o.deficit = (_deficit() - deficit0) / 1e27;
-        assertEq(o.bInsolventBefore, o.surplusB, "every call started insolvent");
+        assertGt(o.deficit, 0, "the last call booked a deficit");
+        assertGt(o.surplusB, 0, "the calls carried a borrower surplus");
+        assertEq(o.toBorrower, 0, "the underwater borrower kept no B");
+        assertEq(o.toReserve, o.surplusB, "the reserve received all of B");
         assertEq(usdc.balanceOf(address(lvs)), 0, "LPVaultSwap holds no USDC");
     }
 
-    /// @dev Runs one, 2, 4 and 8 calls and the max-leak split at each spread, prints a row per case and checks that
-    /// splitting moves `B` from the reserve to the borrower while the deficit stays the same.
+    /// @dev A solvent account (collateral worth 11,000 against 10,000 USDC, above `debt × bonus` in every tier) repaid
+    /// in `parts` equal calls: no deficit, and every call pays `B` to the borrower.
+    function _solventCase(
+        uint256 spreadBps,
+        uint256 parts
+    ) internal returns (Outcome memory o) {
+        uint256 price8 = _priceFor(spreadBps);
+        address proxy = _openAccountAt(10_000e6, 11_000e6, price8);
+        uint256 deficit0 = _deficit();
+        for (uint256 i = 1; i < parts; ++i) {
+            _call(o, proxy, price8, 10_000e6 / parts);
+        }
+        _call(o, proxy, price8, _debtOf(proxy, usdcReserveId));
+        assertEq(_debtOf(proxy, usdcReserveId), 0, "debt repaid");
+        assertGt(_suppliedUnits(proxy), 0, "collateral left");
+        assertEq(_deficit(), deficit0, "no deficit");
+        assertEq(o.underwaterCalls, 0, "no call started underwater");
+        assertGt(o.surplusB, 0, "the calls carried a borrower surplus");
+        assertEq(o.toReserve, 0, "solvent: the reserve took nothing");
+        assertEq(o.toBorrower, o.surplusB, "solvent: the borrower received all of B");
+    }
+
+    /// @dev Every split of each spread on tier `t`: the underwater account of `debt` against `collateralUsd` in 1, 2, 4
+    /// and 8 calls and the max split; on the report's account also the account between `debt` and `debt × bonus` in two
+    /// calls and the solvent account in one and two calls.
     function _matrix(
         Tier memory t,
         uint256 debt,
@@ -198,21 +243,29 @@ contract LPVaultSwapSplitLiquidationIntegrationTest is LPVaultSwapUnitBase {
         _applyTier(t);
         uint256 snap = vm.snapshotState();
         uint8[5] memory splits = [1, 2, 4, 8, 0];
+        bool reportAccount = debt == 10_000e6;
         for (uint256 s = 0; s < spreads.length; ++s) {
             Outcome memory one;
             for (uint256 k = 0; k < splits.length; ++k) {
                 vm.revertToState(snap);
-                Outcome memory o = _case(t, spreads[s], debt, collateralUsd, splits[k]);
-                _row(t, spreads[s], splits[k], o);
+                Outcome memory o = _underwaterCase(t, spreads[s], debt, collateralUsd, splits[k]);
+                _row(t, spreads[s], "underwater", splits[k], o);
                 if (splits[k] == 1) {
                     one = o;
-                    assertEq(o.toBorrower, 0, "one call: B funds the reserve");
-                    assertGt(o.toReserve, 0, "one call: the reserve receives B");
                 } else {
-                    assertGt(o.toBorrower, 0, "split: the borrower keeps B of the earlier calls");
                     assertApproxEqAbs(o.deficit, one.deficit, 2e6, "deficit independent of the split");
                     assertApproxEqAbs(o.surplusB, one.surplusB, 2e6, "total B independent of the split");
                 }
+            }
+            if (!reportAccount) continue;
+            // Between debt and debt × bonus: solvent at the oracle value before the first call, still underwater.
+            vm.revertToState(snap);
+            Outcome memory band = _underwaterCase(t, spreads[s], 10_000e6, 10_000e6 * (BPS + t.bonus) / (2 * BPS), 2);
+            assertTrue(band.firstCallSolventAtValue, "the first call started with collateral above the debt");
+            _row(t, spreads[s], "debt <= coll < debt x bonus", 2, band);
+            for (uint256 parts = 1; parts <= 2; ++parts) {
+                vm.revertToState(snap);
+                _row(t, spreads[s], "solvent", parts, _solventCase(spreads[s], parts));
             }
         }
     }
@@ -222,60 +275,64 @@ contract LPVaultSwapSplitLiquidationIntegrationTest is LPVaultSwapUnitBase {
         (s[0], s[1], s[2], s[3]) = (10, 40, 100, 200);
     }
 
-    // ─── Is partial liquidation of an insolvent account allowed? ───
+    // ─── Partial liquidation of an underwater account ───
 
     /// @notice Aave V4 has no close factor: a call repays `min(debtToCover, debt to the target health factor)`, and for
-    /// an insolvent account the target-HF debt exceeds the whole debt, so the caller's `debtToCover` sets the size. A
+    /// an underwater account the target-HF debt exceeds the whole debt, so the caller's `debtToCover` sets the size. A
     /// 1,000 USDC call on the report's account (10,000 USDC debt, 9,000 of collateral, Stable tier, 0.40% spread)
-    /// settles, leaves collateral, books no deficit and pays `B` to the borrower.
-    function test_partialLiquidationOfAnInsolventAccountIsAllowed() public {
+    /// settles, leaves collateral and books no deficit, and its `B` funds the First-Loss Reserve.
+    // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-027
+    function test_TEST_216_partialCallOnAnUnderwaterAccountFundsTheReserve() public {
         _applyTier(_stable());
         uint256 price8 = _priceFor(40);
-        address proxy = _openInsolvent(10_000e6, 9000e6, price8);
+        address proxy = _openAccountAt(10_000e6, 9000e6, price8);
         uint256 deficitBefore = _deficit();
-        uint256 reserveBefore = usdcCoverage.fundedBalance();
         Outcome memory o;
         _call(o, proxy, price8, 1000e6);
-        assertEq(o.repaid, 1000e6, "the caller's debtToCover was repaid in full");
         assertGt(_suppliedUnits(proxy), 0, "collateral left");
         assertEq(_deficit(), deficitBefore, "no deficit booked");
-        assertEq(usdcCoverage.fundedBalance(), reserveBefore, "reserve untouched");
-        assertGt(o.toBorrower, 0, "B paid to the defaulted borrower");
+        assertGt(o.toReserve, 0, "B funded the reserve");
+        assertEq(o.toBorrower, 0, "the borrower received no B");
     }
 
-    /// @notice Aave V4's dust rule is the only limit: a partial call that would leave less than $1,000 of collateral
-    /// (and not all of the debt repaid) must seize all of it, so with a `debtToCover` below what that takes Aave reverts
-    /// `MustNotLeaveDust`. The borrower can therefore keep `B` on all but the last $1,000 of collateral.
-    function test_dustRuleKeepsOnlyTheLastThousandDollarsForTheDeficitCall() public {
+    /// @notice Aave V4's dust rule is the only limit on a partial call: one that would leave less than $1,000 of
+    /// collateral (and not all of the debt repaid) must seize all of it, so with a `debtToCover` below what that takes
+    /// Aave reverts `MustNotLeaveDust`.
+    // TEST-216 verifies: SPEC-LIQ-022
+    function test_TEST_216_dustRuleKeepsTheLastThousandDollarsForTheDeficitCall() public {
         _applyTier(_stable());
         uint256 price8 = _priceFor(40);
-        address proxy = _openInsolvent(10_000e6, 9000e6, price8);
+        address proxy = _openAccountAt(10_000e6, 9000e6, price8);
         LiquidationParams memory p = _params(proxy, (9000e6 - 500e6) * BPS / 10_500);
         p.maxShortfall = p.debtToCover / 5;
         _expectLiquidateRevert(bob, p, abi.encodeWithSelector(bytes4(keccak256("MustNotLeaveDust()"))));
     }
 
-    // ─── Measurement matrix ───
+    // ─── Every split, tier and spread ───
 
-    /// @notice The report's example (10,000 USDC debt, 9,000 of collateral) on the Stable tier at 0.10%, 0.40%, 1% and
+    /// @notice The report's account (10,000 USDC debt, 9,000 of collateral) on the Stable tier at 0.10%, 0.40%, 1% and
     /// 2% spread.
-    function test_splitMeasurement_stable() public {
+    // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-026, REQ-SWAP-027
+    function test_TEST_216_splitLiquidationFundsTheReserve_stable() public {
         _matrix(_stable(), 10_000e6, 9000e6, _spreads());
     }
 
     /// @notice The same on the Correlated tier.
-    function test_splitMeasurement_correlated() public {
+    // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-026, REQ-SWAP-027
+    function test_TEST_216_splitLiquidationFundsTheReserve_correlated() public {
         _matrix(_correlated(), 10_000e6, 9000e6, _spreads());
     }
 
     /// @notice The same on the Volatile tier.
-    function test_splitMeasurement_volatile() public {
+    // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-026, REQ-SWAP-027
+    function test_TEST_216_splitLiquidationFundsTheReserve_volatile() public {
         _matrix(_volatile(), 10_000e6, 9000e6, _spreads());
     }
 
     /// @notice A large account (1,000,000 USDC debt, 900,000 of collateral) on the Stable tier at 0.40%: the dust
-    /// threshold is a fixed $1,000, so the max-leak split leaves the reserve the `B` of $1,010 of collateral.
-    function test_splitMeasurement_largeAccount() public {
+    /// threshold is a fixed $1,000, so a split could keep almost all of `B` were it paid to the borrower.
+    // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-027
+    function test_TEST_216_splitLiquidationFundsTheReserve_largeAccount() public {
         uint256[] memory s = new uint256[](1);
         s[0] = 40;
         _matrix(_stable(), 1_000_000e6, 900_000e6, s);
@@ -286,33 +343,18 @@ contract LPVaultSwapSplitLiquidationIntegrationTest is LPVaultSwapUnitBase {
     function _row(
         Tier memory t,
         uint256 spreadBps,
+        string memory kind,
         uint256 parts,
         Outcome memory o
     ) internal pure {
         string memory split = parts == 0 ? "2 (max)" : _uint(parts);
         console2.log(
             string.concat(
-                "| ",
-                t.name,
-                " | ",
-                _pct(spreadBps, BPS),
-                " | ",
-                split,
-                " | ",
-                _usd(o.seizedValue),
-                " | ",
-                _usd(o.surplusB),
-                " | ",
-                _usd(o.toBorrower),
-                " | ",
-                _usd(o.toReserve),
-                " | ",
-                _pct(o.toBorrower, o.seizedValue),
-                " | ",
-                _usd(o.deficit),
-                " | ",
-                _usd(o.keeperReward),
-                " |"
+                string.concat("| ", t.name, " | ", _pct(spreadBps, BPS), " | ", kind, " | ", split, " | "),
+                string.concat(_usd(o.surplusB), " | ", _usd(o.toBorrower), " | ", _usd(o.toReserve), " | "),
+                string.concat(
+                    _pct(o.toBorrower, o.seizedValue), " | ", _usd(o.deficit), " | ", _usd(o.keeperReward), " |"
+                )
             )
         );
     }
