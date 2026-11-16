@@ -126,24 +126,27 @@ The deployer signs with a Foundry keystore account (`--account <name> --sender <
 ## Commands
 
 ```bash
-# Local chain with Avana's Aave V4
-anvil
-forge script script/00_Factories.s.sol --rpc-url anvil --broadcast
-FOUNDRY_PROFILE=aave forge build
-forge script script/01_LiquidationLogic.s.sol --rpc-url anvil --broadcast --account deployer
-set -a; . deployments-local/libraries.env; set +a
-FOUNDRY_PROFILE=aave forge build --force
-AVANA_RELEASE=<tag> forge script script/02_DeployAaveV4.s.sol --rpc-url anvil --broadcast --account deployer
-AVANA_RELEASE=<tag> AVANA_MANIFEST=../deployments/proposed/<file>.json \
-  forge script script/03_DeployAvana.s.sol --rpc-url anvil --broadcast --account deployer
-AVANA_MANIFEST=../deployments/proposed/<file>.json \
-  forge script script/04_ConfigureAccess.s.sol --rpc-url anvil --broadcast --account deployer
+# Builds the deploy scripts read: default and aave profiles, Uniswap v3, Slipstream, Aerodrome, Aave V3, Chainlink
+make build build-aave build-external
 
-# Dry run of a mainnet deployment on a fork
-forge script script/03_DeployAvana.s.sol --fork-url "$RPC_MAINNET" --fork-block-number "$MAINNET_FORK_BLOCK"
+# Every step in order on a fresh anvil node, then the manifest, services and scenarios (deployments/README.md)
+script/e2e/e2e-local.sh
 
-# Checks before a manifest moves to deployments/verified/
-AVANA_MANIFEST=../deployments/proposed/<file>.json forge script script/07_VerifyDeployment.s.sol --rpc-url mainnet
+# One step by hand (script/deploy/step.sh lists every step in order); on anvil every sender is unlocked
+anvil --auto-impersonate --code-size-limit 49152 --gas-limit 60000000 &
+AVANA_NETWORK=anvil AVANA_RPC_URL=http://127.0.0.1:8545 script/deploy/step.sh 00-factories
+AVANA_NETWORK=anvil AVANA_RPC_URL=http://127.0.0.1:8545 script/deploy/step.sh 01-aave-v4
+
+# Off anvil: a keystore or Ledger signer, the release tag checked out
+AVANA_NETWORK=sepolia AVANA_RPC_URL="$RPC_SEPOLIA" AVANA_RELEASE=<tag> \
+  AVANA_SIGNER_FLAGS="--account deployer --sender 0x…" script/deploy/step.sh 03-avana
+
+# Dry run of the Avana deployment on a mainnet fork (simulated, nothing broadcast)
+AVANA_NETWORK=ethereum AVANA_RELEASE=<tag> forge script script/deploy/03_DeployAvana.s.sol --fork-url "$RPC_MAINNET" --fork-block-number "$MAINNET_FORK_BLOCK"
+
+# The release manifest, checked against the chain before it moves to deployments/verified/ (from packages/protocol)
+node src/manifest/cli.ts produce --network sepolia --rpc-env RPC_SEPOLIA
+node src/manifest/cli.ts verify --manifest ../../deployments/sepolia/<release>.json --rpc-env RPC_SEPOLIA
 ```
 
 ## Makefile

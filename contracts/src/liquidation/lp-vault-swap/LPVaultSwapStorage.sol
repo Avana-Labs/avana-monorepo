@@ -19,9 +19,8 @@ import {LPVaultSwapImmutables} from "./types/LPVaultSwapImmutables.sol";
 abstract contract LPVaultSwapStorage is ILPVaultSwapEvents, ILPVaultSwapErrors {
     /// @notice Gas forwarded to each gas-limited escrowable payout transfer (REQ-SWAP-076).
     uint256 internal constant _PAYOUT_TRANSFER_GAS = 100_000;
-    /// @notice Gas kept after a payout transfer returns, for the balance read and the escrow deposit's setup.
-    uint256 internal constant _POST_CALL_GAS = 10_000;
-    /// @notice `⌈_PAYOUT_TRANSFER_GAS × 64 / 63⌉ + _POST_CALL_GAS` = 101,588 + 10,000.
+    /// @notice `⌈_PAYOUT_TRANSFER_GAS × 64 / 63⌉` = 101,588, plus 10,000 kept after the transfer returns for the
+    /// balance read and the escrow deposit's setup.
     uint256 internal constant _PAYOUT_GAS_REQUIRED = 111_588;
     /// @notice Most transfers `onFlashLoan` makes to bring the flash source up to the amount owed (REQ-SWAP-122).
     uint256 internal constant _MAX_REPAY_TRANSFERS = 4;
