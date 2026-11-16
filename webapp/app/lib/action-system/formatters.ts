@@ -1,3 +1,4 @@
+import { frontendFeeUsd } from "@/app/lib/fees/front-end-fee"
 import { getActiveCurrency, withCurrencySymbol } from "@/app/lib/currency/active-rate"
 import { formatHealthFactor } from "@/app/lib/home-view-model"
 
@@ -63,20 +64,12 @@ export function formatActionNetworkFee(value: number) {
   return `~ ${formatActionUsd(value)}`
 }
 
-/** Avana interface fee: 15 bps of the transaction's USD value (see the fee tooltip). */
-export const AVANA_PLATFORM_FEE_BPS = 15
-
-export function avanaPlatformFeeUsd(amountUsd: number) {
-  if (!Number.isFinite(amountUsd) || amountUsd <= 0) return 0
-  return (amountUsd * AVANA_PLATFORM_FEE_BPS) / 10_000
-}
-
 /**
- * The "Avana Platform Fee" row: 15 bps of the action's USD amount. It read a flat "~$0.03" for
- * $100 and $5,000 alike. The extra params are kept for call-site compatibility.
+ * The "Avana Platform Fee" row: the Q-409 front-end fee of `action` on the action's USD amount, from
+ * the fee rules in Convex (app/lib/fees/front-end-fee.ts). "~ $0.00" for an action without a fee.
  */
-export function formatActionFeeSummary(amountUsd: number, _networkFeeUsd?: number, _bps?: number) {
-  return formatActionNetworkFee(avanaPlatformFeeUsd(amountUsd))
+export function formatActionFeeSummary(action: string, amountUsd: number) {
+  return formatActionNetworkFee(frontendFeeUsd(action, amountUsd))
 }
 
 export function formatActionAmount(assetAmount: number, symbol: string, digits = 6) {

@@ -4,6 +4,7 @@ import dynamic from "next/dynamic"
 import { usePathname } from "next/navigation"
 import type { ReactNode } from "react"
 import { PreferencesProfileSync } from "@/app/components/preferences-profile-sync"
+import { FrontendFeeRulesSync } from "@/app/lib/fees/front-end-fee-sync"
 import { TokenPricesProvider } from "@/app/lib/prices/token-prices-context"
 import { useSiweAuth } from "@/app/lib/siwe/use-siwe-auth"
 import { shouldUseOpenGateSession } from "@/app/lib/test-mode"
@@ -57,6 +58,7 @@ export function ProductRuntimeProviders({
   return (
     <AvanaSessionProviders>
       <PreferencesProfileSync />
+      <FrontendFeeRulesSync />
       <TokenPricesProvider initialPrices={initialTokenPrices}>{children}</TokenPricesProvider>
     </AvanaSessionProviders>
   )

@@ -1,5 +1,7 @@
 "use client"
 
+import { feeActionForKind } from "@/app/lib/fees/front-end-fee"
+import { useFrontendFeeRules } from "@/app/lib/fees/front-end-fee-sync"
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useCurrency } from "@/app/lib/currency/use-currency"
@@ -90,6 +92,8 @@ export function LendActionPageClient({
   initialAmount?: string
 }) {
   const descriptor = getActionDescriptor("lend", kind)
+  // Re-render the fee rows when the front-end fee rules load from Convex.
+  useFrontendFeeRules()
   const router = useRouter()
   const { exact } = useCurrency()
   const { t } = useTranslation()
@@ -220,7 +224,7 @@ export function LendActionPageClient({
         balanceValue: "0",
         maxAmount: 0,
         metrics: [],
-        networkFeeLabel: formatActionFeeSummary(0, 0.03),
+        platformFeeLabel: formatActionFeeSummary("withdraw", 0),
         risk: null,
         blockedReason: t("No deposited position found for this market."),
         validationErrors: [t("No deposited position found for this market.")],
@@ -421,6 +425,7 @@ export function LendActionPageClient({
           primaryCtaLabel: successDashboardCtaLabel("lend"),
           preview: executionPreviewUi,
           verb: descriptor.primaryVerb,
+          feeAction: feeActionForKind(kind),
         }),
       )
       setStage("success")

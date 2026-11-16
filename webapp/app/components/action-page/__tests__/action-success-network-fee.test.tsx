@@ -1,12 +1,13 @@
 import { cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { ActionSuccessUi } from "@/app/lib/action-system/contracts"
+import { mapBorrowSuccessToActionUi } from "@/app/lib/action-system/adapters/borrow-preview-mapper"
 
-// Capture the network fee the success stage hands to the receipt without depending
+// Capture the platform fee the success stage hands to the receipt without depending
 // on currency formatting.
 vi.mock("@/app/components/action-page/transaction-receipt", () => ({
-  TransactionReceipt: ({ data }: { data: { networkFeeUsd?: number | null } }) => (
-    <div data-testid="net-fee">{String(data.networkFeeUsd)}</div>
+  TransactionReceipt: ({ data }: { data: { platformFeeUsd?: number | null } }) => (
+    <div data-testid="platform-fee">{String(data.platformFeeUsd)}</div>
   ),
 }))
 
@@ -22,30 +23,37 @@ const base: ActionSuccessUi = {
   secondaryCtaLabel: "Done",
 }
 
+const preview = {
+  quoteId: "q",
+  amountLabel: "1000 USDC",
+  amountUsd: 1000,
+  rateLabel: "Supply APY",
+  rateValue: "5.00%",
+  marketValue: "USDC · Core",
+}
+
 afterEach(cleanup)
 
-describe("ActionSuccessStage network fee", () => {
-  it("charges the 15 bps platform fee on the amount for non-swap actions", () => {
-    render(
-      <ActionSuccessStage
-        closeHref="/lend"
-        success={{
-          ...base,
-          receiptContext: {
-            verb: "Deposit",
-            amountLabel: "1000 USDC",
-            amountUsd: 1000,
-            rateLabel: "Supply APY",
-            rateValue: "5.00%",
-            marketValue: "USDC · Core",
-          },
-        }}
-      />,
-    )
-    expect(screen.getByTestId("net-fee").textContent).toBe("1.5")
+describe("ActionSuccessStage platform fee", () => {
+  it("shows the Q-409 front-end fee of the action (10 bps by default) on the receipt", () => {
+    const success = mapBorrowSuccessToActionUi({
+      ...base,
+      href: "/lend",
+      preview,
+      verb: "Deposit",
+      feeAction: "supply",
+    })
+    expect(success.receiptContext?.platformFeeUsd).toBe(1)
+    render(<ActionSuccessStage closeHref="/lend" success={{ ...success, receiptHash: "sim-xyz" }} />)
+    expect(screen.getByTestId("platform-fee").textContent).toBe("1")
   })
 
-  it("keeps the real swap quote fee for swaps (not forced to $0.03)", () => {
+  it("charges no front-end fee for claim, which is not a Q-409 action", () => {
+    const success = mapBorrowSuccessToActionUi({ ...base, href: "/borrow", preview, verb: "Claim", feeAction: null })
+    expect(success.receiptContext?.platformFeeUsd).toBe(0)
+  })
+
+  it("keeps the fee a swap receipt carries", () => {
     render(
       <ActionSuccessStage
         closeHref="/swap"
@@ -58,12 +66,11 @@ describe("ActionSuccessStage network fee", () => {
             rateLabel: "Received",
             rateValue: "1900 USDC",
             marketValue: "Uniswap",
-            networkFeeUsd: 0.24,
+            platformFeeUsd: 0.24,
           },
         }}
       />,
     )
-    const fee = screen.getByTestId("net-fee").textContent
-    expect(fee).toBe("0.24")
+    expect(screen.getByTestId("platform-fee").textContent).toBe("0.24")
   })
 })

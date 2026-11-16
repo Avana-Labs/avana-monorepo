@@ -3,6 +3,7 @@
 import { type ReactNode } from "react"
 import type { HomeMode } from "@/app/lib/home-view-model"
 import { ActionWorkspaceTabs } from "@/app/components/action-page/action-workspace-tabs"
+import { NetworkBadge } from "@/app/components/network-badge"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 
 export const HOME_MODE_ITEMS: Array<{ value: HomeMode; label: string }> = [
@@ -37,6 +38,7 @@ export function HomeWorkspaceCard({
             withIcons
             revealLabels
           />
+          <NetworkBadge size="compact" />
         </div>
 
         <div className="mt-3 flex flex-col gap-2">{children}</div>

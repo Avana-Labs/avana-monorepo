@@ -10,7 +10,7 @@ import { HeaderBrand, MobileHeaderBrand } from "./header-brand"
 import HeaderDesktopNavigation from "./header-desktop-navigation"
 import { LazyMobileMenu } from "./lazy-mobile-menu"
 import { LazySearchCommand, LazySearchCommandIconOnly } from "./lazy-search-command"
-import { personalDesktopHeaderLinks } from "./site-nav"
+import { personalDesktopHeaderLinks, PRIMARY_HEADER_LINK_COUNT } from "./site-nav"
 import { WalletControl } from "@/app/components/wallet-control"
 import { DesktopPreferenceControls } from "./desktop-preference-trigger"
 import { cn } from "@/lib/utils"
@@ -97,7 +97,7 @@ export function Header() {
   }, [mounted])
 
   const renderPrimaryLinks = (compact: boolean) =>
-    desktopLinks.slice(0, 4).map((link) => {
+    desktopLinks.slice(0, PRIMARY_HEADER_LINK_COUNT).map((link) => {
       const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`)
       const Icon = link.icon
 
@@ -123,7 +123,7 @@ export function Header() {
     })
 
   const renderUtilityLinks = (compact: boolean) =>
-    desktopLinks.slice(4).map((link) => {
+    desktopLinks.slice(PRIMARY_HEADER_LINK_COUNT).map((link) => {
       const isActive = pathname.startsWith(link.href)
       const Icon = link.icon
 
