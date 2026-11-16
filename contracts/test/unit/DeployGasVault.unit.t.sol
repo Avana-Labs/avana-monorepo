@@ -106,7 +106,8 @@ contract DeployGasVaultTest is Test {
         );
     }
 
-    function test_deploySignersFundAndTopUp() public {
+    // TEST-339 verifies: REQ-GASV-002, REQ-GASV-007, REQ-GASV-006
+    function test_TEST_339_deploySignersFundAndTopUp() public {
         DeployGasVault script = new DeployGasVault();
 
         // The treasury must be the ParameterStore's feeRecipient and no operator helper's FUNDING_SAFE.
