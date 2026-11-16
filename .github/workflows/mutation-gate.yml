@@ -1,16 +1,23 @@
 name: mutation-gate
 
 # Mutation gates every night on main (06:00 UTC) and on every release tag (`v*`) over each layer's contracts
-# (security/mutation-layers.json). By hand (workflow_dispatch): one layer or all six. Pull requests run contracts.yml
-# only. `plan` lists the targets with script/ci-shards.py, so a new contract or test file gets its own job on the next
-# run; every target then runs in its own job of at most 4 hours:
-# - mutate: slither-mutate, one job per contract and mutator group (the three groups together test every mutant of
-#   one run, and more, since a group never skips lines another group left uncaught);
-# - gambit: Gambit expression mutants, one job per contract (at most 20 mutants of 5 minutes each);
+# (security/mutation-layers.json). By hand (workflow_dispatch): one layer or all six, optionally only some contracts
+# and tools. Pull requests run contracts.yml only. `plan` lists the targets with script/ci-shards.py, so a new contract
+# or test file gets its own job on the next run; every job then runs in at most 4 hours:
+# - mutants: lists slither-mutate's mutants of every target once (script/mutation-slither.py list: one Slither run
+#   over the project) and splits each contract into shards of at most 40 mutants;
+# - mutate: one job per shard (three matrix jobs, since a matrix holds at most 256 legs);
+# - gambit: Gambit expression mutants, one job per contract (at most 20 mutants);
 # - necessist: Necessist, one job per test file;
 # - certora-mutate: certoraMutate, one job per Certora conf, only while the repository variable CERTORA_ENABLED is
 #   `true` (paused since 2026-11-13); without the CERTORAKEY secret each job passes with a
 #   warning and runs nothing.
+# Every mutant builds in the `mutation` profile of foundry.toml (no optimizer, no via-IR outside the files that need
+# it) and compiles only src/ and its own tests. A timed-out mutant is its own outcome, never counted as killed.
+# Nightly runs test only what changed: script/mutation-ledger.py keys every target by its file, its tests and
+# everything they import, and the `ledger` job keeps the passed reports per key (Actions cache mutation-ledger-*);
+# a target whose key has a passed report of every job is skipped. Release tags and runs by hand test everything
+# (by hand, `changed_only` gives the nightly behaviour).
 # `mutation-summary` passes only when every job passed.
 # Tool versions are pinned: Foundry by contracts/.foundry-version, Node by .nvmrc, every action by commit SHA (the
 # release tag in the trailing comment), dependencies by soldeer.lock, Python tools (Slither, Halmos, Semgrep, ...)
@@ -33,10 +40,25 @@ on:
         type: choice
         default: all
         options: [all, "2.1", "2.2", "2.3", "2.4", "2.5", "2.6"]
+      contracts:
+        description: "Contracts (space-separated file names; empty: every contract of the layer)"
+        required: false
+        type: string
+        default: ""
+      tools:
+        description: "Tools (space-separated: mutate gambit necessist certora-mutate)"
+        required: false
+        type: string
+        default: "mutate gambit necessist certora-mutate"
+      changed_only:
+        description: "Only targets changed since their last passed report (as the nightly run)"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   # A newer run waits for the running gates instead of cancelling them.
-  group: mutation-gate-${{ github.ref }}-${{ inputs.layer || 'all' }}
+  group: mutation-gate-${{ github.ref }}-${{ inputs.layer || 'all' }}-${{ inputs.contracts || 'all' }}
   cancel-in-progress: false
 
 permissions:
@@ -44,8 +66,11 @@ permissions:
 
 env:
   UV_VERSION: "0.13.1"
-  # Empty: every layer.
+  # Empty: every layer, every contract.
   LAYERS: ${{ (inputs.layer != '' && inputs.layer != 'all') && inputs.layer || '' }}
+  CONTRACTS: ${{ inputs.contracts || '' }}
+  TOOLS: ${{ inputs.tools || 'mutate gambit necessist certora-mutate' }}
+  CHANGED_ONLY: ${{ (github.event_name == 'schedule' || inputs.changed_only) && 'true' || 'false' }}
 
 defaults:
   run:
@@ -59,8 +84,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
-      contracts: ${{ steps.plan.outputs.contracts }}
-      groups: ${{ steps.plan.outputs.groups }}
+      mutate: ${{ steps.plan.outputs.mutate }}
+      gambit: ${{ steps.plan.outputs.gambit }}
       tests: ${{ steps.plan.outputs.tests }}
       confs: ${{ steps.plan.outputs.confs }}
     steps:
@@ -68,23 +93,129 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: List every target (script/ci-shards.py)
+      - name: Restore the ledger of passed reports
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/out-security/ledger
+          key: mutation-ledger-${{ github.run_id }}
+          restore-keys: mutation-ledger-
+
+      - name: List every target (script/mutation-ledger.py, script/ci-shards.py)
         id: plan
         run: |
           set -euo pipefail
+          mkdir -p out-security/plan
+          p=out-security/plan
           # Each list is computed before it is written, so a failing listing fails this job.
-          contracts=$(python3 script/ci-shards.py mutate --layers "$LAYERS")
-          groups=$(python3 script/ci-shards.py mutator-groups)
-          tests=$(python3 script/ci-shards.py necessist --layers "$LAYERS")
+          python3 script/mutation-ledger.py keys --layers "$LAYERS" --contracts "$CONTRACTS" >"$p/keys.json"
+          if [ "$CHANGED_ONLY" = true ]; then
+            python3 script/mutation-ledger.py current out-security/ledger "$p/keys.json" >"$p/current.json"
+          else
+            echo '[]' >"$p/current.json"
+          fi
+          sel=(--layers "$LAYERS" --contracts "$CONTRACTS" --keys "$p/keys.json" --skip "$p/current.json")
+          gambit=$(python3 script/ci-shards.py gambit "${sel[@]}")
+          tests=$(python3 script/ci-shards.py necessist "${sel[@]}")
           confs=$(python3 script/ci-shards.py certora-mutate --layers "$LAYERS")
-          printf '%s\n' "contracts=$contracts" "groups=$groups" "tests=$tests" "confs=$confs" | tee -a "$GITHUB_OUTPUT"
+          on() { case " $TOOLS " in *" $1 "*) echo "$2" ;; *) echo '[]' ;; esac; }
+          {
+            echo "mutate=$(on mutate true)"
+            echo "gambit=$(on gambit "$gambit")"
+            echo "tests=$(on necessist "$tests")"
+            echo "confs=$(on certora-mutate "$confs")"
+          } | sed 's/^mutate=\[\]$/mutate=false/' | tee -a "$GITHUB_OUTPUT"
+          {
+            echo "### Mutation plan"
+            echo "- targets current in the ledger, skipped: $(jq length "$p/current.json") of $(jq length "$p/keys.json")"
+            echo "- Gambit: $(jq length <<<"$gambit") jobs; Necessist: $(jq length <<<"$tests") jobs"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mutation-plan
+          path: contracts/out-security/plan
+          retention-days: 30
+
+  mutants:
+    name: list the slither-mutate mutants
+    # One Slither run over the project (the `mutation` profile build) lists every mutant of each target to run
+    # (script/mutation-slither.py list); script/ci-shards.py then splits each target into shards of at most 40
+    # mutants (more when the shards would pass three matrices of 256) and deals them over mutate-1 to mutate-3.
+    needs: plan
+    if: needs.plan.outputs.mutate == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      mutate1: ${{ steps.shards.outputs.mutate1 }}
+      mutate2: ${{ steps.shards.outputs.mutate2 }}
+      mutate3: ${{ steps.shards.outputs.mutate3 }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - name: Install dependencies and pinned tools
+        run: |
+          forge soldeer install
+          script/install-security-tools.sh --python
+          .venv/bin/slither-mutate --list-mutators | python3 script/ci-shards.py mutators-check
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: mutation-plan
+          path: contracts/out-security/plan
+
+      - name: List the mutants (script/mutation-slither.py list)
+        env:
+          FOUNDRY_PROFILE: mutation
+        run: |
+          set -euo pipefail
+          p=out-security/plan
+          .venv/bin/python script/mutation-slither.py list out-security/lists --layers "$LAYERS" --contracts "$CONTRACTS" \
+            --skip "$p/current.json" >"$p/totals.json"
+
+      - name: Split the targets into shards (script/ci-shards.py)
+        id: shards
+        run: |
+          set -euo pipefail
+          p=out-security/plan
+          python3 script/ci-shards.py mutate --totals "$p/totals.json" --keys "$p/keys.json" --chunks 3 >"$p/mutate.json"
+          for k in 0 1 2; do echo "mutate$((k + 1))=$(jq -c ".chunks[$k]" "$p/mutate.json")"; done | tee -a "$GITHUB_OUTPUT"
+          echo "- slither-mutate: $(jq '.mutants' "$p/mutate.json") mutants in $(jq '[.chunks[] | length] | add' "$p/mutate.json") jobs of at most $(jq '.per_job' "$p/mutate.json")" >>"$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mutation-lists
+          path: |
+            contracts/out-security/lists
+            contracts/out-security/plan/totals.json
+            contracts/out-security/plan/mutate.json
+          if-no-files-found: error
+          retention-days: 30
 
   build:
-    name: Aave V4 and Uniswap v3 builds
+    name: dependency builds
     # Nightly runs only when the repository variable NIGHTLY_ENABLED is true (paused until the final slow run).
     if: github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true'
-    # The mutation jobs' isolated copies link out-aave/ and out-univ3/, which the Aave V4 and Uniswap v3 fixtures
-    # deploy from (vm.getCode).
+    # The mutation jobs' isolated copies link these outputs, which the test fixtures deploy from (vm.getCode and
+    # deployCode of out-aave/, out-univ3/, out-univ3-periphery/, out-slipstream-v1/, out-slipstream-main/,
+    # out-aerodrome/); the same builds as contracts.yml.
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -106,41 +237,42 @@ jobs:
 
       - run: |
           forge soldeer install
-          FOUNDRY_PROFILE=aave forge build
-          FOUNDRY_PROFILE=univ3 forge build
+          for p in aave univ3 univ3-periphery slipstream-v1 slipstream-main aerodrome; do FOUNDRY_PROFILE=$p forge build; done
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: out-aave
-          path: contracts/out-aave
+          name: mutation-deps
+          path: |
+            contracts/out-aave
+            contracts/out-univ3
+            contracts/out-univ3-periphery
+            contracts/out-slipstream-v1
+            contracts/out-slipstream-main
+            contracts/out-aerodrome
           if-no-files-found: error
           retention-days: 7
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: out-univ3
-          path: contracts/out-univ3
-          if-no-files-found: error
-          retention-days: 7
-
-  mutate-statements:
-    name: mutate ${{ matrix.layer }} ${{ matrix.contract }} (group 1)
-    # slither-mutate on one contract with mutator group 1 of script/ci-shards.py (CR and RR); each mutant runs the
-    # contract's Foundry tests with MUTATE_TIMEOUT (300 seconds). Uncaught mutants are a report for the layer gate
-    # review; a tool error fails. One job per group keeps each matrix under GitHub's 256 legs.
-    needs: [plan, build]
-    if: needs.plan.outputs.contracts != '[]'
+  mutate-1:
+    name: mutate ${{ matrix.layer }} ${{ matrix.contract }} (shard ${{ matrix.shard }} of ${{ matrix.shards }})
+    # One shard of a contract's slither-mutate mutants (script/mutation-slither.py through security-slow.sh mutate):
+    # the mutants whose index i has i mod shards = shard - 1, each built and tested in the `mutation` profile with
+    # MUTATE_TIMEOUT (600 seconds, compile and tests together). Survivors and timeouts are a report for the layer
+    # gate review; failing tests without a mutant or a tool error fail. The plan deals the shards over 3 matrix
+    # jobs (mutate-1 to mutate-3), each under GitHub's 256 legs.
+    needs: [mutants, build]
+    if: needs.mutants.outputs.mutate1 != '[]' && needs.mutants.outputs.mutate1 != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        include: ${{ fromJSON(needs.plan.outputs.contracts) }}
+        include: ${{ fromJSON(needs.mutants.outputs.mutate1) }}
     env:
       MUTATE_LAYERS: ${{ matrix.layer }}
       MUTATE_CONTRACTS: ${{ matrix.contract }}
-      MUTATE_MUTATORS: ${{ fromJSON(needs.plan.outputs.groups)[0].mutators }}
+      MUTATE_SHARD: ${{ matrix.shard }}/${{ matrix.shards }}
+      MUTATE_LISTS: out-security/lists
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -153,10 +285,6 @@ jobs:
         with:
           version: ${{ env.FOUNDRY_VERSION }}
 
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
-        with:
-          version: ${{ env.UV_VERSION }}
-
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: contracts/dependencies
@@ -165,51 +293,67 @@ jobs:
       - name: Install dependencies and pinned tools
         run: |
           forge soldeer install
-          # out-aave arrives as an artifact, so no build here installs the pinned solc that security-slow.sh looks up;
-          # compiling one small file into a throwaway folder makes Foundry install it.
+          # The dependency outputs arrive as an artifact, so no build here installs the pinned solc that
+          # security-slow.sh looks up; compiling one small file into a throwaway folder makes Foundry install it.
           forge build src/types/AccountGateStatus.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
-          script/install-security-tools.sh --python
-          .venv/bin/slither-mutate --list-mutators | python3 script/ci-shards.py mutators-check
+          # The shard jobs run no Slither (the mutants job listed the mutants): a bare venv is enough.
+          python3 -m venv .venv
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: out-aave
-          path: contracts/out-aave
+          name: mutation-deps
+          path: contracts
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: out-univ3
-          path: contracts/out-univ3
+          name: mutation-lists
+          path: contracts/out-security
 
-      - name: slither-mutate on ${{ matrix.contract }}, mutators ${{ env.MUTATE_MUTATORS }}
+      - name: slither-mutate mutants of ${{ matrix.contract }}, shard ${{ matrix.shard }} of ${{ matrix.shards }}
         run: script/security-slow.sh mutate
+
+      - name: Record the passed report for the ledger
+        env:
+          LAYER: ${{ matrix.layer }}
+          CONTRACT: ${{ matrix.contract }}
+          KEY: ${{ matrix.key }}
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ matrix.shards }}
+        run: |
+          python3 script/mutation-ledger.py done "out-security/mutation/$LAYER/$CONTRACT" "mutate:$LAYER:$CONTRACT" "$KEY" \
+            --shard "$SHARD" --shards "$SHARDS"
 
       - name: Upload reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: mutate-${{ matrix.layer }}-${{ matrix.contract }}-1
+          name: mutate-${{ matrix.layer }}-${{ matrix.contract }}-${{ matrix.shard }}
           path: |
             contracts/out-security/mutation
             !contracts/out-security/mutation/root
           retention-days: 30
 
-  mutate-operators:
-    name: mutate ${{ matrix.layer }} ${{ matrix.contract }} (group 2)
-    # slither-mutate on one contract with mutator group 2 of script/ci-shards.py (operator replacements), as above.
-    needs: [plan, build]
-    if: needs.plan.outputs.contracts != '[]'
+  mutate-2:
+    name: mutate ${{ matrix.layer }} ${{ matrix.contract }} (shard ${{ matrix.shard }} of ${{ matrix.shards }})
+    # One shard of a contract's slither-mutate mutants (script/mutation-slither.py through security-slow.sh mutate):
+    # the mutants whose index i has i mod shards = shard - 1, each built and tested in the `mutation` profile with
+    # MUTATE_TIMEOUT (600 seconds, compile and tests together). Survivors and timeouts are a report for the layer
+    # gate review; failing tests without a mutant or a tool error fail. The plan deals the shards over 3 matrix
+    # jobs (mutate-1 to mutate-3), each under GitHub's 256 legs.
+    needs: [mutants, build]
+    if: needs.mutants.outputs.mutate2 != '[]' && needs.mutants.outputs.mutate2 != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        include: ${{ fromJSON(needs.plan.outputs.contracts) }}
+        include: ${{ fromJSON(needs.mutants.outputs.mutate2) }}
     env:
       MUTATE_LAYERS: ${{ matrix.layer }}
       MUTATE_CONTRACTS: ${{ matrix.contract }}
-      MUTATE_MUTATORS: ${{ fromJSON(needs.plan.outputs.groups)[1].mutators }}
+      MUTATE_SHARD: ${{ matrix.shard }}/${{ matrix.shards }}
+      MUTATE_LISTS: out-security/lists
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -222,10 +366,6 @@ jobs:
         with:
           version: ${{ env.FOUNDRY_VERSION }}
 
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
-        with:
-          version: ${{ env.UV_VERSION }}
-
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: contracts/dependencies
@@ -234,51 +374,67 @@ jobs:
       - name: Install dependencies and pinned tools
         run: |
           forge soldeer install
-          # out-aave arrives as an artifact, so no build here installs the pinned solc that security-slow.sh looks up;
-          # compiling one small file into a throwaway folder makes Foundry install it.
+          # The dependency outputs arrive as an artifact, so no build here installs the pinned solc that
+          # security-slow.sh looks up; compiling one small file into a throwaway folder makes Foundry install it.
           forge build src/types/AccountGateStatus.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
-          script/install-security-tools.sh --python
-          .venv/bin/slither-mutate --list-mutators | python3 script/ci-shards.py mutators-check
+          # The shard jobs run no Slither (the mutants job listed the mutants): a bare venv is enough.
+          python3 -m venv .venv
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: out-aave
-          path: contracts/out-aave
+          name: mutation-deps
+          path: contracts
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: out-univ3
-          path: contracts/out-univ3
+          name: mutation-lists
+          path: contracts/out-security
 
-      - name: slither-mutate on ${{ matrix.contract }}, mutators ${{ env.MUTATE_MUTATORS }}
+      - name: slither-mutate mutants of ${{ matrix.contract }}, shard ${{ matrix.shard }} of ${{ matrix.shards }}
         run: script/security-slow.sh mutate
+
+      - name: Record the passed report for the ledger
+        env:
+          LAYER: ${{ matrix.layer }}
+          CONTRACT: ${{ matrix.contract }}
+          KEY: ${{ matrix.key }}
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ matrix.shards }}
+        run: |
+          python3 script/mutation-ledger.py done "out-security/mutation/$LAYER/$CONTRACT" "mutate:$LAYER:$CONTRACT" "$KEY" \
+            --shard "$SHARD" --shards "$SHARDS"
 
       - name: Upload reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: mutate-${{ matrix.layer }}-${{ matrix.contract }}-2
+          name: mutate-${{ matrix.layer }}-${{ matrix.contract }}-${{ matrix.shard }}
           path: |
             contracts/out-security/mutation
             !contracts/out-security/mutation/root
           retention-days: 30
 
-  mutate-others:
-    name: mutate ${{ matrix.layer }} ${{ matrix.contract }} (group 3)
-    # slither-mutate on one contract with mutator group 3 of script/ci-shards.py (the other mutators), as above.
-    needs: [plan, build]
-    if: needs.plan.outputs.contracts != '[]'
+  mutate-3:
+    name: mutate ${{ matrix.layer }} ${{ matrix.contract }} (shard ${{ matrix.shard }} of ${{ matrix.shards }})
+    # One shard of a contract's slither-mutate mutants (script/mutation-slither.py through security-slow.sh mutate):
+    # the mutants whose index i has i mod shards = shard - 1, each built and tested in the `mutation` profile with
+    # MUTATE_TIMEOUT (600 seconds, compile and tests together). Survivors and timeouts are a report for the layer
+    # gate review; failing tests without a mutant or a tool error fail. The plan deals the shards over 3 matrix
+    # jobs (mutate-1 to mutate-3), each under GitHub's 256 legs.
+    needs: [mutants, build]
+    if: needs.mutants.outputs.mutate3 != '[]' && needs.mutants.outputs.mutate3 != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        include: ${{ fromJSON(needs.plan.outputs.contracts) }}
+        include: ${{ fromJSON(needs.mutants.outputs.mutate3) }}
     env:
       MUTATE_LAYERS: ${{ matrix.layer }}
       MUTATE_CONTRACTS: ${{ matrix.contract }}
-      MUTATE_MUTATORS: ${{ fromJSON(needs.plan.outputs.groups)[2].mutators }}
+      MUTATE_SHARD: ${{ matrix.shard }}/${{ matrix.shards }}
+      MUTATE_LISTS: out-security/lists
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -291,10 +447,6 @@ jobs:
         with:
           version: ${{ env.FOUNDRY_VERSION }}
 
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
-        with:
-          version: ${{ env.UV_VERSION }}
-
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: contracts/dependencies
@@ -303,30 +455,41 @@ jobs:
       - name: Install dependencies and pinned tools
         run: |
           forge soldeer install
-          # out-aave arrives as an artifact, so no build here installs the pinned solc that security-slow.sh looks up;
-          # compiling one small file into a throwaway folder makes Foundry install it.
+          # The dependency outputs arrive as an artifact, so no build here installs the pinned solc that
+          # security-slow.sh looks up; compiling one small file into a throwaway folder makes Foundry install it.
           forge build src/types/AccountGateStatus.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
-          script/install-security-tools.sh --python
-          .venv/bin/slither-mutate --list-mutators | python3 script/ci-shards.py mutators-check
+          # The shard jobs run no Slither (the mutants job listed the mutants): a bare venv is enough.
+          python3 -m venv .venv
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: out-aave
-          path: contracts/out-aave
+          name: mutation-deps
+          path: contracts
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: out-univ3
-          path: contracts/out-univ3
+          name: mutation-lists
+          path: contracts/out-security
 
-      - name: slither-mutate on ${{ matrix.contract }}, mutators ${{ env.MUTATE_MUTATORS }}
+      - name: slither-mutate mutants of ${{ matrix.contract }}, shard ${{ matrix.shard }} of ${{ matrix.shards }}
         run: script/security-slow.sh mutate
+
+      - name: Record the passed report for the ledger
+        env:
+          LAYER: ${{ matrix.layer }}
+          CONTRACT: ${{ matrix.contract }}
+          KEY: ${{ matrix.key }}
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ matrix.shards }}
+        run: |
+          python3 script/mutation-ledger.py done "out-security/mutation/$LAYER/$CONTRACT" "mutate:$LAYER:$CONTRACT" "$KEY" \
+            --shard "$SHARD" --shards "$SHARDS"
 
       - name: Upload reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: mutate-${{ matrix.layer }}-${{ matrix.contract }}-3
+          name: mutate-${{ matrix.layer }}-${{ matrix.contract }}-${{ matrix.shard }}
           path: |
             contracts/out-security/mutation
             !contracts/out-security/mutation/root
@@ -334,19 +497,19 @@ jobs:
 
   gambit:
     name: gambit ${{ matrix.layer }} ${{ matrix.contract }}
-    # Gambit mutants of one contract (layer cap, fixed seed), each built with GAMBIT_BUILD_TIMEOUT (1500 seconds) and
-    # run against its tests with GAMBIT_TIMEOUT (300 seconds); any survived or timed-out mutant not accepted in
-    # security/gambit-triage.json fails the job. A Lens file's mutant rebuilds the via-IR Lens modules (several
-    # minutes each), so 20 of them need more than 240 minutes; 360 is the hosted-runner maximum.
+    # Gambit mutants of one contract (layer cap, fixed seed), each built and tested in the `mutation` profile with
+    # GAMBIT_TIMEOUT (600 seconds, compile and tests together; no separate `forge build`: forge test compiles src/
+    # and the matched tests only); any survived or timed-out mutant not accepted in security/gambit-triage.json fails
+    # the job.
     needs: [plan, build]
-    if: needs.plan.outputs.contracts != '[]'
+    if: needs.plan.outputs.gambit != '[]' && needs.plan.outputs.gambit != ''
     runs-on: ubuntu-24.04
-    timeout-minutes: 360
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       max-parallel: 3
       matrix:
-        include: ${{ fromJSON(needs.plan.outputs.contracts) }}
+        include: ${{ fromJSON(needs.plan.outputs.gambit) }}
     env:
       MUTATE_LAYERS: ${{ matrix.layer }}
       MUTATE_CONTRACTS: ${{ matrix.contract }}
@@ -374,23 +537,25 @@ jobs:
       - name: Install dependencies and pinned tools
         run: |
           forge soldeer install
-          # out-aave arrives as an artifact, so no build here installs the pinned solc that security-slow.sh looks up;
-          # compiling one small file into a throwaway folder makes Foundry install it.
+          # The dependency outputs arrive as an artifact, so no build here installs the pinned solc that
+          # security-slow.sh looks up; compiling one small file into a throwaway folder makes Foundry install it.
           forge build src/types/AccountGateStatus.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
           script/install-security-tools.sh --python --gambit
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: out-aave
-          path: contracts/out-aave
-
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: out-univ3
-          path: contracts/out-univ3
+          name: mutation-deps
+          path: contracts
 
       - name: Gambit on ${{ matrix.contract }}
         run: script/security-slow.sh gambit
+
+      - name: Record the passed report for the ledger
+        env:
+          LAYER: ${{ matrix.layer }}
+          CONTRACT: ${{ matrix.contract }}
+          KEY: ${{ matrix.key }}
+        run: python3 script/mutation-ledger.py done "out-security/gambit/$LAYER/$CONTRACT" "gambit:$LAYER:$CONTRACT" "$KEY"
 
       - name: Upload reports
         if: ${{ !cancelled() }}
@@ -404,10 +569,11 @@ jobs:
 
   necessist:
     name: necessist ${{ matrix.layer }} ${{ matrix.test }}
-    # Necessist on one test file of the layer, NECESSIST_TIMEOUT (300 seconds) per removal; removals that leave the
-    # tests passing are a report for the layer gate review; a tool error fails.
+    # Necessist on one test file of the layer, NECESSIST_TIMEOUT (300 seconds) per removal, in the `mutation` profile
+    # (a file declaring a test of the release build's gas in the default profile); removals that leave the tests
+    # passing are a report for the layer gate review; a tool error fails.
     needs: [plan, build]
-    if: needs.plan.outputs.tests != '[]'
+    if: needs.plan.outputs.tests != '[]' && needs.plan.outputs.tests != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
@@ -449,23 +615,31 @@ jobs:
         # Necessist has no release binaries; the runner's preinstalled cargo builds the pinned crate into tools/bin.
         run: |
           forge soldeer install
-          # out-aave arrives as an artifact, so no build here installs the pinned solc that security-slow.sh looks up;
-          # compiling one small file into a throwaway folder makes Foundry install it.
+          # The dependency outputs arrive as an artifact, so no build here installs the pinned solc that
+          # security-slow.sh looks up; compiling one small file into a throwaway folder makes Foundry install it.
           forge build src/types/AccountGateStatus.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
           script/install-security-tools.sh --python --necessist
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: out-aave
-          path: contracts/out-aave
-
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: out-univ3
-          path: contracts/out-univ3
+          name: mutation-deps
+          path: contracts
 
       - name: Necessist on ${{ matrix.test }}
         run: script/security-slow.sh necessist
+
+      - name: Record the passed report for the ledger
+        env:
+          LAYER: ${{ matrix.layer }}
+          TESTS: ${{ matrix.test }}
+          KEYS: ${{ matrix.keys }}
+        run: |
+          read -ra keys <<<"$KEYS"
+          i=0
+          for t in $TESTS; do
+            python3 script/mutation-ledger.py done out-security/necessist "necessist:$LAYER:$t" "${keys[$i]:--}"
+            i=$((i + 1))
+          done
 
       - name: Name the report
         id: name
@@ -473,7 +647,7 @@ jobs:
         working-directory: .
         env:
           TEST_FILE: ${{ matrix.test }}
-        run: echo "name=$(basename "$TEST_FILE" .sol)" >> "$GITHUB_OUTPUT"
+        run: echo "name=$(basename "${TEST_FILE##* }" .sol)" >> "$GITHUB_OUTPUT"
 
       - name: Upload reports
         if: ${{ !cancelled() }}
@@ -494,7 +668,7 @@ jobs:
     # Paused since 2026-11-13 (Josue): runs only when the repository variable CERTORA_ENABLED is `true`; otherwise the
     # job is skipped, which mutation-summary accepts.
     needs: plan
-    if: vars.CERTORA_ENABLED == 'true' && needs.plan.outputs.confs != '[]'
+    if: vars.CERTORA_ENABLED == 'true' && needs.plan.outputs.confs != '[]' && needs.plan.outputs.confs != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
@@ -576,13 +750,57 @@ jobs:
           path: contracts/out-security/certora-mutate
           retention-days: 30
 
+
+  ledger:
+    name: ledger of passed reports
+    # Adds this run's passed reports to the ledger (script/mutation-ledger.py merge), keyed by each target's key, and
+    # keeps it as the next mutation-ledger-* cache, so the next nightly run skips what did not change. Runs after
+    # every job, whatever their results: only reports with a `done` file (written when the job's tool step passed)
+    # are kept.
+    if: always() && needs.plan.result == 'success'
+    needs: [plan, mutants, mutate-1, mutate-2, mutate-3, gambit, necessist]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Restore the ledger of passed reports
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/out-security/ledger
+          key: mutation-ledger-${{ github.run_id }}
+          restore-keys: mutation-ledger-
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: mutation-plan
+          path: contracts/out-security/plan
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: "{mutate,gambit,necessist}-*"
+          path: contracts/out-security/reports
+
+      - name: Merge this run's passed reports
+        run: |
+          mkdir -p out-security/reports
+          python3 script/mutation-ledger.py merge out-security/ledger out-security/reports out-security/plan/keys.json | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Save the ledger
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/out-security/ledger
+          key: mutation-ledger-${{ github.run_id }}-${{ github.run_attempt }}
+
   mutation-summary:
     # The one check of this workflow: it passes only when the plan and every job passed. A job with no leg is skipped
-    # by its `if` (the selected layers hold no such target); with the plan and the build passed, skipped can mean
-    # nothing else.
+    # by its `if` (the selected layers, contracts or tools hold no such target, or every target is current in the
+    # ledger); with the plan and the build passed, skipped can mean nothing else.
     name: mutation-summary
     if: always() && (github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true')
-    needs: [plan, build, mutate-statements, mutate-operators, mutate-others, gambit, necessist, certora-mutate]
+    needs: [plan, build, mutants, mutate-1, mutate-2, mutate-3, gambit, necessist, certora-mutate, ledger]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

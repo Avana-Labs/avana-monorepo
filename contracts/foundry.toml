@@ -452,6 +452,34 @@ compilation_restrictions = [
 [profile.coverage.fuzz]
 runs = 64
 
+[profile.mutation]
+# Every mutation-gate job (script/slither-mutant-shard.py, script/security-gambit.sh, Necessist): each mutant is one
+# recompile of the mutated file's dependents plus its tests, so compile time is almost all of a mutant's cost. Built
+# like the coverage profile: no optimizer and no via-IR, except where a file does not compile without them (the
+# DebtOracle files need via-IR, the two AMM integrations the optimizer); none of the default profile's size-only
+# restrictions. The optimizer and the IR pipeline change gas and bytecode size, not what a test asserts, so a mutant a
+# test kills here is killed in the default build too. The three tests whose subject is the release build's gas fail
+# without the optimizer (TEST-042 worst-case poke at the minimum gas, TEST-060 exact lock cycle cost, TEST-216 the
+# via-IR LPVaultSwap logic not copying a 2 MiB return); they are left out here and run on the default profile for each
+# mutant that survives the rest (script/mutation-test.py), so they still kill what they killed before.
+optimizer = false
+via_ir = false
+# Unoptimized code is larger; script/check-sizes.sh judges sizes on the default build.
+code_size_limit = 10_000_000
+# Unoptimized code spends more gas per call: as in the coverage profile, Cascade's 100-account setUp would run out of
+# the default 2^30 test gas limit (a DebtOracle poke then sees less than its 900,000 gas floor).
+gas_limit = 4294967296
+no_match_test = "test_TEST_042_worstCasePokeCompletesAtMinimumGas|test_TEST_060_exactCycleCost|test_TEST_216_hugeReserveReturnDoesNotBlockTheSettlement"
+additional_compiler_profiles = [
+  { name = "mutation-ir", optimizer = false, via_ir = true },
+  { name = "mutation-integrations", optimizer = true, via_ir = false, optimizer_runs = 200 },
+]
+compilation_restrictions = [
+  { paths = "src/oracle/debt-oracle/DebtOracle*.sol", via_ir = true },
+  { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 200 },
+]
+
 [profile.gas]
 # Gas snapshots (`make gas`, CI `test` job): suites in test/gas/ name each measured operation with
 # vm.snapshotGasLastCall(group, label) or vm.startSnapshotGas/vm.stopSnapshotGas, and forge writes
