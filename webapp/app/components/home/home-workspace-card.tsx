@@ -34,7 +34,7 @@ export function HomeWorkspaceCard({
             items={HOME_MODE_ITEMS.map((item) => ({ id: item.value, label: item.label }))}
             value={mode}
             onChange={(value) => onModeChange(value as HomeMode)}
-            ariaLabel={t("Express actions")}
+            ariaLabel={t("Swap actions")}
             withIcons
             revealLabels
           />

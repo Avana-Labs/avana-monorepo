@@ -1136,7 +1136,7 @@ const dict: TranslationDictionary = {
   Date: "التاريخ",
   Dismiss: "تجاهل",
   Explorer: "المستكشف",
-  "Express actions": "إجراءات سريعة",
+  "Swap actions": "إجراءات المبادلة",
   Fees: "الرسوم",
   "Fees Earned": "الرسوم المكتسبة",
   "Fees Paid": "الرسوم المدفوعة",

@@ -1202,7 +1202,7 @@ const dict: TranslationDictionary = {
   Dark: "Sombre",
   "Dashboard tabs": "Onglets du tableau de bord",
   Dismiss: "Ignorer",
-  "Express actions": "Actions express",
+  "Swap actions": "Actions d'échange",
   Fees: "Frais",
   "Fees Earned": "Frais gagnés",
   "Fees Paid": "Frais payés",

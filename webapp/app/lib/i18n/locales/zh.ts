@@ -1221,7 +1221,7 @@ const dict: TranslationDictionary = {
   "Dashboard tabs": "仪表盘标签",
   Date: "日期",
   Dismiss: "忽略",
-  "Express actions": "快捷操作",
+  "Swap actions": "兑换操作",
   Fees: "费用",
   "Fees Paid": "已支付费用",
   "Filter transactions": "筛选交易",

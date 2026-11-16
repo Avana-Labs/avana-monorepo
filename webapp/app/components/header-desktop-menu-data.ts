@@ -14,7 +14,7 @@ const PRODUCT_HREFS: Record<string, DesktopMenuId> = {
 // pill link, so panels can ship one at a time.
 const desktopMenusWithPanel: readonly DesktopMenuId[] = ["lend", "borrow"]
 
-// Express + the two products. Utility links (Dashboard) stay right, owned by the header.
+// Swap + the two products. Utility links (Dashboard) stay right, owned by the header.
 export const desktopPrimaryLinks = personalDesktopHeaderLinks.slice(0, PRIMARY_HEADER_LINK_COUNT)
 
 export function menuIdForHref(href: string): DesktopMenuId | null {

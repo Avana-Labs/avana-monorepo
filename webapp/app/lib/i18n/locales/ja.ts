@@ -1197,7 +1197,7 @@ const dict: TranslationDictionary = {
   "Dashboard tabs": "ダッシュボードタブ",
   Date: "日付",
   Dismiss: "閉じる",
-  "Express actions": "エクスプレス操作",
+  "Swap actions": "スワップ操作",
   Fees: "手数料",
   "Fees Earned": "獲得手数料",
   "Fees Paid": "支払手数料",

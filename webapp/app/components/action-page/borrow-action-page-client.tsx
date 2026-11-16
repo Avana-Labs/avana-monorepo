@@ -93,7 +93,7 @@ export function BorrowActionPageClient({
   const router = useRouter()
   const { walletId } = useAvanaIdentity()
   const session = useBorrowSessionContext()
-  // Home Express starts every action from an unselected ("0") state so the user
+  // The home Swap card starts every action from an unselected ("0") state so the user
   // picks the collateral/position first, rather than auto-picking the first pool.
   const isHomeZeroState =
     embedded && layout === "home" && !initialMarketId && !initialAssetId && !initialDebtId && !initialPositionId
@@ -103,7 +103,7 @@ export function BorrowActionPageClient({
   // the markets already pledged). Repay/remove/claim act on existing positions, so
   // they keep the pledged-pool list.
   const usesAllMarketPools = kind === "borrow" || kind === "supply"
-  // The home express borrow should surface the wallet's already-pledged pools (with
+  // The home Swap card's borrow should surface the wallet's already-pledged pools (with
   // real collateral values) when it has them, so a user can borrow against existing
   // collateral — the same source the dashboard/Repay tab use — instead of a list of
   // $0 unpledged catalog markets that dead-ends at "Available $0.00". A fresh wallet
@@ -112,7 +112,7 @@ export function BorrowActionPageClient({
   const unscopedCollateralPoolOptions =
     usesAllMarketPools && !preferPledgedPools ? session.availableCollateralPools : session.collateralPools
   // Asset detail sidebar: only show collateral pools that unlock THIS borrowable
-  // (same spoke / marketIds). Home Express keeps the full catalog for discovery.
+  // (same spoke / marketIds). The home Swap card keeps the full catalog for discovery.
   const scopeCollateralToAsset = Boolean(sidebar && initialAssetId && (kind === "borrow" || kind === "repay"))
   const collateralPoolOptions = useMemo(() => {
     if (!scopeCollateralToAsset || !initialAssetId) return unscopedCollateralPoolOptions

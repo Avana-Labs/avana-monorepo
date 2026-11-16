@@ -6,7 +6,7 @@ import { trackEvent } from "@/app/lib/analytics/track-event"
 
 /**
  * "Get Started" intent: set when a guest clicks any Get Started button (header, detail page,
- * home / Express box, action pages) and read once the wallet signs in, for analytics. A session
+ * home Swap box, action pages) and read once the wallet signs in, for analytics. A session
  * restored on reload never carries the intent.
  */
 const KEY = "avana_get_started_intent"

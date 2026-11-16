@@ -1145,7 +1145,7 @@ const dict: TranslationDictionary = {
   Date: "तारीख",
   Dismiss: "खारिज करें",
   Explorer: "एक्सप्लोरर",
-  "Express actions": "एक्सप्रेस क्रियाएँ",
+  "Swap actions": "स्वैप क्रियाएँ",
   Fees: "शुल्क",
   "Fees Earned": "अर्जित शुल्क",
   "Fees Paid": "भुगतान किया गया शुल्क",

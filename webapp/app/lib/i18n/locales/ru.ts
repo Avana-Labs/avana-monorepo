@@ -1158,7 +1158,7 @@ const dict: TranslationDictionary = {
   Date: "Дата",
   Dismiss: "Скрыть",
   Explorer: "Обозреватель",
-  "Express actions": "Быстрые действия",
+  "Swap actions": "Действия свопа",
   Fees: "Комиссии",
   "Fees Earned": "Заработанные комиссии",
   "Fees Paid": "Уплаченные комиссии",

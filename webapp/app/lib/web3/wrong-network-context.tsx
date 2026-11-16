@@ -7,7 +7,7 @@ import { TARGET_CHAIN_ID, TARGET_CHAIN_NAME } from "@/app/lib/web3/target-chain"
  * Wrong-network state, published by the (lazily-mounted) wallet provider and read by the
  * wrong-network banner and the action-page submit guard.
  *
- * This module is deliberately wagmi-free: the guard is reached statically from the Express
+ * This module is deliberately wagmi-free: the guard is reached statically from the home
  * home page (which embeds the borrow client), so importing wagmi here would drag the wallet
  * SDK back onto the guest critical path. Instead the wagmi hook runs INSIDE the mounted
  * `Web3Provider`, which feeds this context; consumers outside a mounted provider read the
