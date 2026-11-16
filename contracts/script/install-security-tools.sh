@@ -3,9 +3,11 @@
 # Copyright (c) 2026 Avana Labs
 # Installs the pinned security tools of the contracts workspace.
 #
-#   tools/bin/        Echidna, Medusa, Aderyn and hevm from their GitHub releases, each checked against the sha256
-#                     pinned below before it is unpacked; Aderyn falls back to building the release's pinned source
-#                     archive with cargo when its binary archive is gone
+#   tools/bin/        Echidna, Medusa, Aderyn, hevm and the Bitwuzla SMT solver from their GitHub releases, each
+#                     checked against the sha256 pinned below before it is unpacked; Aderyn falls back to building the
+#                     release's pinned source archive with cargo when its binary archive is gone. Halmos finds Bitwuzla
+#                     on PATH for the checks annotated `--solver bitwuzla` (its default solver, Yices, comes with the
+#                     Halmos wheel), so it never downloads a solver at run time
 #   .venv/            Slither, crytic-compile, Halmos and certora-cli (requirements.txt)
 #   .venv-mythril/    Mythril (requirements-mythril.txt); its z3-solver and py-evm pins conflict with Halmos
 #   node_modules/     solhint and @openzeppelin/upgrades-core (package.json, package-lock.json), installed with
@@ -24,8 +26,8 @@
 #   script/install-security-tools.sh [--binaries] [--python] [--gambit] [--node] [--rules] [--4naly3er] [--necessist]
 #   (no flag: --binaries --python --gambit --node --rules --4naly3er; --necessist only when asked, since it compiles
 #   from source)
-# BINARIES="aderyn" (space-separated) limits --binaries to some of echidna, medusa, aderyn and hevm; CI jobs use it to
-# download only what they run.
+# BINARIES="aderyn" (space-separated) limits --binaries to some of echidna, medusa, aderyn, hevm and bitwuzla; CI jobs
+# use it to download only what they run.
 
 set -euo pipefail
 
@@ -37,6 +39,8 @@ ADERYN_VERSION=0.6.8
 # sha256 of the release's source.tar.gz (the same on every platform), as published in its source.tar.gz.sha256.
 ADERYN_SOURCE_SHA256=2d4afdb52bae30f8488e5d9470a281d284c0b286455b61b474e6c2e7dafe343a
 HEVM_VERSION=0.58.0
+# The version and sha256 values Halmos 0.3.3 pins for its own Bitwuzla download (halmos/solvers.py).
+BITWUZLA_VERSION=0.8.1
 PYTHON_VERSION=3.11
 SEMGREP_RULES_COMMIT=2e878a89ac7bba1f8435e8a68e3ecb7700096cd5
 FOURNALYZER_COMMIT=8a9d1ebb7d362bc94f036fa9123d0977c6cb7436
@@ -46,7 +50,7 @@ NECESSIST_VERSION=4.1.0
 PY_EXCLUDE_NEWER=2026-10-26
 
 BIN_DIR="$PWD/tools/bin"
-BINARIES="${BINARIES:-echidna medusa aderyn hevm}"
+BINARIES="${BINARIES:-echidna medusa aderyn hevm bitwuzla}"
 UV="${UV:-$(command -v uv || echo "$HOME/.local/bin/uv")}"
 
 os="$(uname -s)-$(uname -m)"
@@ -60,6 +64,8 @@ case "$os" in
     ADERYN_SHA256=624c6652bb9478b38ddc255c27819cd5c6cb0448f5deb72036cc9cf5a27d4aac
     HEVM_ASSET=hevm-arm64-macos
     HEVM_SHA256=4f6d5e0c8fc39b88c9f5edea05028b4d4ce31e399296da39d89c9cc68697b5d6
+    BITWUZLA_ASSET=Bitwuzla-macOS-arm64-static
+    BITWUZLA_SHA256=f603ff433151cb9f3929a9810a41405bfa57ffaa184fa736a38c32b64a3a9021
     ;;
   Linux-x86_64)
     ECHIDNA_ASSET="echidna-${ECHIDNA_VERSION}-x86_64-linux.tar.gz"
@@ -70,6 +76,8 @@ case "$os" in
     ADERYN_SHA256=ffd6ca658962e211a3ac821c646f69c8e14bf1b1001cbfe091bcd4535a691e46
     HEVM_ASSET=hevm-x86_64-linux
     HEVM_SHA256=7d6da60cfaa5cfe326cef8e4dffc1fb66595c60a325d86921f393bbf5cea275c
+    BITWUZLA_ASSET=Bitwuzla-Linux-x86_64-static
+    BITWUZLA_SHA256=d88ca19bd0495df4e83296d37b8e3b5b588af0768623d674000c681b472bb1d8
     ;;
   *)
     echo "install-security-tools: unsupported platform $os (macOS arm64 and Linux x86_64 only)" >&2
@@ -187,6 +195,18 @@ install_binaries() {
       "$HEVM_SHA256" "$tmp/hevm"
     install -m 0755 "$tmp/hevm" "$BIN_DIR/hevm"
     echo "hevm $HEVM_VERSION installed"
+  fi
+
+  if ! wanted bitwuzla; then
+    :
+  elif have bitwuzla "$BITWUZLA_VERSION"; then
+    echo "bitwuzla $BITWUZLA_VERSION already installed"
+  else
+    fetch "https://github.com/bitwuzla/bitwuzla/releases/download/${BITWUZLA_VERSION}/${BITWUZLA_ASSET}.zip" \
+      "$BITWUZLA_SHA256" "$tmp/bitwuzla.zip"
+    unzip -q "$tmp/bitwuzla.zip" "${BITWUZLA_ASSET}/bin/bitwuzla" -d "$tmp"
+    install -m 0755 "$tmp/${BITWUZLA_ASSET}/bin/bitwuzla" "$BIN_DIR/bitwuzla"
+    echo "bitwuzla $BITWUZLA_VERSION installed"
   fi
 
   # Downloads from GitHub carry the quarantine attribute on macOS; the hashes above are the trust check.

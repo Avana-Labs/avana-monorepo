@@ -29,10 +29,10 @@ Run on 2026-11-11 with Python 3.9.6 and z3-solver 4.13.0, every script one at a 
 |---|---|---|---|---|---|---|
 | `units-oracle/` | 16 (`uo01`…`uo16`) | 212 | 40 (all deliberate) | 27 | 0 | none |
 | `aave-risk/` | 13 (`ar01`…`ar12`, `ch01`; `ar12` is `MATH-AR-70`) | 149 | 12 (all deliberate) | 55 | 0 | none (F-AR-1…F-AR-5 resolved in spec) |
-| `settlement/` | 17 (`st01`…`st17`) | 199 | 58 (all deliberate) | 33 | 0 | none (findings MATH-ST-58, 75, 77, 84 resolved in spec) |
+| `settlement/` | 18 (`st01`…`st18`; `st18` run on 2026-11-15) | 208 | 59 (all deliberate) | 33 | 0 | none (findings MATH-ST-58, 75, 77, 84 resolved in spec) |
 | `governance/` | 3 | 31 | 4 (all deliberate) | — | 0 | none |
 | `amm-pricing/` | 3 | 50 | 9 (all deliberate) | 16 | 0 | none |
-| **Total** | **52** | **641** | **123** | **131** | **0** | **0** |
+| **Total** | **53** | **650** | **124** | **131** | **0** | **0** |
 
 Findings against the final text, with counterexamples and the exact recommended changes, are listed in each folder's README:
 

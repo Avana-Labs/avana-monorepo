@@ -223,7 +223,8 @@ contract SettlementMathProperties {
     /// `property_floorsRoundAgainstCaller` checks at every slippage what follows from them: the slippage term is the
     /// net oracle value rounded up (at least it, less than it plus 1); the floor is that term less `U + ε`, so with at
     /// least one rounding unit (`U` is one raw unit per released token in every liquidation, as in
-    /// `check_PROP_048_floorWithRoundingTerms`) it is at most the net oracle value; a leg minimum is in
+    /// `check_PROP_048_floorWithRoundingTermsFormula` with MATH-ST-143) it is at most the net oracle value; a leg
+    /// minimum is in
     /// `[max(1, floor), max(1, Vleg)]`.
     function floors0(
         uint256 value,
