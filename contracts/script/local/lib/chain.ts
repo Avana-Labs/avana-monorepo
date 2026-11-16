@@ -141,7 +141,10 @@ export function writeBaseConfig(c: LocalChain): string {
   cfg.aave.spokes = { [lend]: `$aave:.spokes.${lend}.proxy` };
   const name = `Avana ${c.label} Hub`;
   cfg.aavePayload.hubs = [{ label, lendSpoke: lend, cdpSpokes: [], content: { slug: `avana-${label}-hub`, name, description: `Avana's Aave V4 Hub on ${c.label}.`, faqs: [] } }];
-  for (const d of cfg.aavePayload.debtAssets) Object.assign(d, tv.debtAssets[d.symbol] ?? {});
+  for (const d of cfg.aavePayload.debtAssets) {
+    const v = tv.debtAssets?.[d.symbol] ?? {};
+    for (const k of ["drawCap", "bootstrapSupply", "coverageMinimum", "offsetMinimum", "rateModel", "liquidityFeeBps"]) if (v[k] !== undefined) d[k] = v[k];
+  }
   cfg.listing.creditLineWhole = tv.creditLineWhole;
   cfg.listing.speedLimits = tv.speedLimits;
   cfg.listing.spokes = [];
@@ -157,7 +160,7 @@ export function writeBaseConfig(c: LocalChain): string {
   cfg.listing.pools = {};
   for (const t of cfg.listing.tokens) {
     t.hubs = [label];
-    t.tokenCapUsd = tv.tokenCapUsd[t.symbol] ?? tv.tokenCapUsd.default;
+    Object.assign(t, tv.tokens?.default ?? {}, tv.tokens?.[t.symbol] ?? {});
   }
   // The chain's Hub files may need tokens and pools the test world lacks: script/deploy/hubs/<network>/world.json
   // adds them to the world step 02 deploys (an entry already in the world is kept as it is).
@@ -208,6 +211,20 @@ export function setConfig(c: LocalChain, configPath: string) {
   writeStatus(c, s);
 }
 
+/** The chain's forge broadcast and cache directories (relative to contracts/), the cache seeded from the shared one so
+ * nothing recompiles. */
+export function forgeDirs(c: LocalChain): Record<string, string> {
+  const broadcast = `deployments-local/${c.network}/forge-broadcast`;
+  const cache = `deployments-local/${c.network}/forge-cache`;
+  const seeded = join(CONTRACTS, cache, "solidity-files-cache.json");
+  const shared = join(CONTRACTS, "cache", "solidity-files-cache.json");
+  if (!existsSync(seeded) && existsSync(shared)) {
+    mkdirSync(join(CONTRACTS, cache), { recursive: true });
+    writeFileSync(seeded, readFileSync(shared));
+  }
+  return { FOUNDRY_BROADCAST: broadcast, FOUNDRY_CACHE_PATH: cache };
+}
+
 /** Git Bash on Windows (never WSL's bash, which would run the steps in another system); bash elsewhere. */
 export function bash(): string {
   if (process.env.STACK_BASH) return process.env.STACK_BASH;
@@ -227,6 +244,10 @@ export interface StepOutcome {
 /** The environment of every step of the chain: its network, RPC, config and the stack's signers. */
 export function stepEnv(c: LocalChain, config = currentConfig(c)): NodeJS.ProcessEnv {
   return {
+    // Each chain's forge runs keep their broadcast records and script cache in the chain's own output directory, so
+    // the two chains' steps never share a file (Windows refuses a file another forge has mapped, os error 1224). The
+    // compiled artifacts stay shared in out/.
+    ...forgeDirs(c),
     AVANA_NETWORK: c.network,
     AVANA_RPC_URL: rpcUrl(c),
     AVANA_CONFIG: relative(CONTRACTS, config).split("\\").join("/"),
@@ -258,6 +279,7 @@ export async function runStep(c: LocalChain, release: string, step: string, conf
     else if (step.startsWith("advance:")) detail = await advance(c, Number(step.slice(8)), env, log);
     else if (step === "manifest") detail = manifest(c, env, log);
     else if (step === "treasury") detail = await fundTreasuries(c);
+    else if (step === "swap-contracts") detail = await swapContracts(c);
     else if (step.startsWith("changes:")) detail = runShell("11-changes", env, log, false, [join(outDir(c), step.slice(8))]);
     else detail = runShell(step, env, log, prev?.outcome === "fail");
     ok = true;
@@ -342,7 +364,7 @@ function manifest(c: LocalChain, env: NodeJS.ProcessEnv, log: string): string {
 export const FIRST_RELEASE = [
   "multicall3", "00-factories", "01-aave-v4", "place-executor", "02-test-world", "03-avana", "04-access-operations",
   "advance:432001", "05-execute-access-operations", "06-aave-deployment-aip", "07-deploy-first-loss-reserves",
-  "08-aave-loss-layers-aip", "07-fund-first-loss-reserves", ...listingSteps(), "manifest", "treasury",
+  "08-aave-loss-layers-aip", "07-fund-first-loss-reserves", ...listingSteps(), "swap-contracts", "manifest", "treasury",
 ];
 
 /** The steps of a later release: each acts only on what the config adds (the rehearsal's day-2 phase). */
@@ -357,6 +379,47 @@ function listingSteps() {
     "09-market-metadata", "09-listing-markets", "advance:432001", "09-execute-listing-markets", "10-aave-markets-aip",
     "09-listing-activate", "advance:43201", "09-execute-listing-activate",
   ];
+}
+
+/**
+ * The swap screen's contracts on the test world, listed in the manifest's `external` (world.json `external`, which the
+ * manifest producer reads): each venue's SwapRouter (step 02 deploys them) and a QuoterV2 deployed here against the
+ * venue's factory and WETH, signed by the deployer keystore. Names: group `uniswap-v3` UniswapV3SwapRouter and
+ * UniswapV3QuoterV2; group `slipstream` SlipstreamSwapRouter and SlipstreamQuoterV2 (generation 0's factory). The swap
+ * tokens are the `token` group step 02 already lists. A quoter already listed is kept.
+ */
+async function swapContracts(c: LocalChain): Promise<string> {
+  const { createPublicClient, createWalletClient, http } = await import("viem");
+  const { privateKeyToAccount } = await import("viem/accounts");
+  const { PASSWORD_FILE, keystorePath } = await import("./keys.ts");
+  const { decryptKeystore } = await import("../../../../services/keeper/src/adapters/localKeystore.ts");
+  const worldPath = join(outDir(c), "world.json");
+  const world = JSON.parse(readFileSync(worldPath, "utf8")) as Record<string, any>;
+  world.external ??= {};
+  const account = privateKeyToAccount(await decryptKeystore(readFileSync(keystorePath("deployer"), "utf8"), readFileSync(PASSWORD_FILE, "utf8").trim()));
+  const wallet = createWalletClient({ account, transport: http(rpcUrl(c)) });
+  const client = createPublicClient({ transport: http(rpcUrl(c)) });
+  const deploy = async (out: string, factory: `0x${string}`): Promise<`0x${string}`> => {
+    const art = JSON.parse(readFileSync(join(CONTRACTS, out, "QuoterV2.sol", "QuoterV2.json"), "utf8")) as { abi: unknown[]; bytecode: { object: `0x${string}` } };
+    const hash = await wallet.deployContract({ abi: art.abi, bytecode: art.bytecode.object, args: [factory, world.tokens.WETH], chain: null });
+    const r = await client.waitForTransactionReceipt({ hash });
+    if (r.status !== "success" || !r.contractAddress) throw new Error(`QuoterV2 from ${out} did not deploy`);
+    return r.contractAddress;
+  };
+  const venues = [
+    { group: "uniswap-v3", prefix: "UniswapV3", out: "out-univ3-periphery", factory: world.uniswapV3Factory, router: world.uniswapV3SwapRouter },
+    { group: "slipstream", prefix: "Slipstream", out: "out-slipstream-v1", factory: world.slipstreamFactories?.[0], router: world.slipstreamSwapRouter },
+  ];
+  const done: string[] = [];
+  for (const v of venues) {
+    if (!v.factory || !v.router) continue;
+    const g = (world.external[v.group] ??= {});
+    g[`${v.prefix}SwapRouter`] ??= { address: v.router, standIn: false };
+    g[`${v.prefix}QuoterV2`] ??= { address: await deploy(v.out, v.factory), standIn: false };
+    done.push(`${v.prefix}QuoterV2 ${g[`${v.prefix}QuoterV2`].address}`);
+  }
+  writeFileSync(worldPath, `${JSON.stringify(world, null, 2)}\n`);
+  return done.join(", ");
 }
 
 /**
