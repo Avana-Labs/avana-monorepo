@@ -1,3 +1,4 @@
+import { frontendFeeUsd } from "@/app/lib/fees/front-end-fee"
 import { formatFixed } from "@/app/lib/borrow-system/model"
 import type { TransactionPreview } from "@/app/lib/borrow-system/contracts"
 import type { ActionPreviewUi, ActionSuccessUi } from "@/app/lib/action-system/contracts"
@@ -197,7 +198,7 @@ export function mapBorrowTransactionPreviewToActionUi(
         tone: hfTone(healthAfter),
       },
     ],
-    networkFeeLabel: formatActionFeeSummary(options.amountUsd, 0.04),
+    platformFeeLabel: formatActionFeeSummary("borrow", options.amountUsd),
     risk: riskFromPreview(preview, healthAfter),
     blockedReason: preview.allowed ? null : blockedReason,
     validationErrors: preview.validationErrors,
@@ -270,7 +271,7 @@ export function mapBorrowRepayPreviewToActionUi(
         tone: options.yearlyInterestSavedUsd > 0 ? "positive" : "default",
       },
     ],
-    networkFeeLabel: formatActionFeeSummary(options.amountUsd, 0.04),
+    platformFeeLabel: formatActionFeeSummary("repay", options.amountUsd),
     risk: riskFromPreview(preview, healthAfter),
     blockedReason: allowed
       ? null
@@ -365,7 +366,7 @@ export function mapBorrowSupplyPreviewToActionUi(
         tone: hfTone(healthAfter),
       },
     ],
-    networkFeeLabel: formatActionFeeSummary(options.amountUsd, 0.04),
+    platformFeeLabel: formatActionFeeSummary("pledge", options.amountUsd),
     risk: null,
     blockedReason,
     validationErrors: preview.validationErrors,
@@ -451,7 +452,7 @@ export function mapBorrowRemovePreviewToActionUi(
         tone: hfTone(healthAfter),
       },
     ],
-    networkFeeLabel: formatActionFeeSummary(removeUsd, 0.04),
+    platformFeeLabel: formatActionFeeSummary("withdrawCollateral", removeUsd),
     risk: riskFromPreview(preview, hfToNumber(preview.after.healthFactorWad)),
     blockedReason: preview.allowed
       ? null
@@ -473,6 +474,8 @@ export function mapBorrowSuccessToActionUi(options: {
     "quoteId" | "amountLabel" | "amountUsd" | "rateLabel" | "rateValue" | "marketValue"
   > | null
   verb?: string
+  /** Q-409 action of the receipt's fee row; none (no fee) for claim. */
+  feeAction?: string | null
 }): ActionSuccessUi {
   return {
     quoteId: options.preview?.quoteId,
@@ -491,6 +494,7 @@ export function mapBorrowSuccessToActionUi(options: {
           rateLabel: options.preview.rateLabel,
           rateValue: options.preview.rateValue,
           marketValue: options.preview.marketValue,
+          platformFeeUsd: frontendFeeUsd(options.feeAction ?? "", options.preview.amountUsd ?? 0),
         }
       : undefined,
   }
