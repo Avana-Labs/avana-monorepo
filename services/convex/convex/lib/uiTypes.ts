@@ -25,10 +25,30 @@ export interface PageLinks {
   readonly audits?: readonly { readonly label: string; readonly href: string }[];
 }
 
-/** The risk card's text (listing metadata version 2): a summary and the rated factors behind it. */
+/** A contract a market relies on, listed on its risk card: an AMM pool or factory, a price feed, its Hub or CDP Spoke. */
+export interface RiskDependency {
+  readonly kind: "amm" | "oracle" | "hub" | "spoke";
+  /** e.g. "Uniswap v3 pool", "USDC / USD (primary)", "Avana Ethereum Hub". */
+  readonly label: string;
+  readonly address: string;
+}
+
+/**
+ * The risk card's text (listing metadata version 2): a summary, the day the risk team reviewed it, the rated factors
+ * behind it (each with its share of the premium in bps where the listing gives one) and the contracts it relies on.
+ */
 export interface PageRisk {
   readonly summary: string;
-  readonly factors: readonly { readonly id: string; readonly label: string; readonly level: RiskLevel; readonly text: string }[];
+  /** `YYYY-MM-DD`. */
+  readonly reviewedAt?: string;
+  readonly factors: readonly { readonly id: string; readonly label: string; readonly level: RiskLevel; readonly text: string; readonly bps?: number }[];
+  readonly dependencies?: readonly RiskDependency[];
+}
+
+/** A Hub page's risk disclosures, shown on every Borrow and Lend page of the Hub. */
+export interface PageDisclosures {
+  readonly borrow?: string;
+  readonly lend?: string;
 }
 
 /** Editorial content of a page, from its listing metadata. */
@@ -48,6 +68,8 @@ export interface PageContent {
   readonly resources?: readonly { readonly label: string; readonly href: string }[];
   readonly links?: PageLinks;
   readonly risk?: PageRisk;
+  /** Hub entries only. */
+  readonly disclosures?: PageDisclosures;
 }
 
 /** One row of the market lists and the detail headers (`markets.listMarketSnapshots`). */
