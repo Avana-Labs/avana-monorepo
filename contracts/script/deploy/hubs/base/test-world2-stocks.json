@@ -1,0 +1,281 @@
+{
+  "_comment": "Local test world, second listing on the Base Hub: the Aero Slipstream Stocks Spoke on the test stock tokens (hubs/base/world.json). Structure and page text only; every number is in contracts/script/local/test-values.json.",
+  "hub": {
+    "label": "base",
+    "tier": 3
+  },
+  "spokes": [
+    {
+      "label": "slipStocks",
+      "integration": "slipstream",
+      "category": "Stocks",
+      "name": "Aero Slipstream Stocks"
+    }
+  ],
+  "lendAssets": [
+    {
+      "symbol": "USDC",
+      "category": "stable",
+      "risk": {
+        "summary": "USDC lent on the Hub. Local test content for the development chains; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "symbol": "GHO",
+      "category": "stable",
+      "risk": {
+        "summary": "GHO lent on the Hub. Local test content for the development chains; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          }
+        ]
+      }
+    }
+  ],
+  "borrowAssets": [
+    {
+      "symbol": "GHO",
+      "risk": {
+        "summary": "GHO borrowed against stock liquidity positions. Local test content for the development chains; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "symbol": "USDC",
+      "risk": {
+        "summary": "USDC borrowed against stock liquidity positions. Local test content for the development chains; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          }
+        ]
+      }
+    }
+  ],
+  "borrowable": {
+    "slipStocks": [
+      "USDC",
+      "GHO"
+    ]
+  },
+  "collateral": [
+    {
+      "symbol": "USDC",
+      "isUsdStable": true
+    },
+    {
+      "symbol": "AMZNc"
+    },
+    {
+      "symbol": "SNDKc"
+    },
+    {
+      "symbol": "GOOGLc"
+    },
+    {
+      "symbol": "NVDAc"
+    },
+    {
+      "symbol": "SPCXc"
+    },
+    {
+      "symbol": "METAc"
+    }
+  ],
+  "markets": [
+    {
+      "name": "slip-AMZNc-USDC-cl100",
+      "pool": "AMZNc-USDC-cl100-g0",
+      "spoke": "slipStocks",
+      "category": "stock",
+      "risk": {
+        "summary": "AMZNc/USDC. Local test content for the development chains; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "name": "slip-SNDKc-USDC-cl100",
+      "pool": "SNDKc-USDC-cl100-g0",
+      "spoke": "slipStocks",
+      "category": "stock",
+      "risk": {
+        "summary": "SNDKc/USDC. Local test content for the development chains; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "name": "slip-GOOGLc-USDC-cl100",
+      "pool": "GOOGLc-USDC-cl100-g0",
+      "spoke": "slipStocks",
+      "category": "stock",
+      "risk": {
+        "summary": "GOOGLc/USDC. Local test content for the development chains; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "name": "slip-NVDAc-USDC-cl100",
+      "pool": "NVDAc-USDC-cl100-g0",
+      "spoke": "slipStocks",
+      "category": "stock",
+      "risk": {
+        "summary": "NVDAc/USDC. Local test content for the development chains; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "name": "slip-SPCXc-USDC-cl100",
+      "pool": "SPCXc-USDC-cl100-g0",
+      "spoke": "slipStocks",
+      "category": "stock",
+      "risk": {
+        "summary": "SPCXc/USDC. Local test content for the development chains; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "name": "slip-METAc-USDC-cl100",
+      "pool": "METAc-USDC-cl100-g0",
+      "spoke": "slipStocks",
+      "category": "stock",
+      "risk": {
+        "summary": "METAc/USDC. Local test content for the development chains; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          }
+        ]
+      }
+    }
+  ]
+}

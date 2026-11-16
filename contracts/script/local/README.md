@@ -89,7 +89,7 @@ node script/local/stack.ts add-hub script/local/hubs/growth.json --chain ethereu
 
 It runs three steps, each a plain function with JSON input and output in `operator/hub.ts`, so an operations dashboard can call them too:
 
-1. **`planHub(config, input)`** turns the chain's current config and the Hub file into the next config. It is pure: an invalid input is refused with every error listed, and nothing is touched. The result is written to `deployments-local/<network>/config-hub-<label>.json`, with a summary in `plan-hub-<label>.json`.
+1. **`planHub(config, input)`** turns the chain's current config and the Hub file into the next config. It is pure: an invalid input is refused with every error listed, and nothing is touched. The result is written to `deployments-local/<network>/config-hub-<file>.json`, with a summary in `plan-hub-<file>.json` (`<file>` is the Hub file's name: each file is its own release, `hub-<file>`, so several files can add Spokes to one Hub).
 2. **`releaseHub(chain, release, config)`** runs the release steps on that config, each acting only on what it adds:
    - the Aave side: Hub, Spokes, assets and loss layers;
    - the timelock operations;
@@ -124,7 +124,7 @@ The collateral factor, slippage allowance and routes are derived as the rehearsa
 
 A debt asset with no `hubs` list in the config is lent on every Hub, a new one included.
 
-Tokens and pools a Hub file needs that the test world lacks go in `contracts/script/deploy/hubs/<chain>/world.json` (`tokens`, `uniswapPools`, `slipstreamPools`, as in the config's `world`). Step 02 deploys them with the rest of the world, so they must be there before the chain's first deploy.
+Tokens and pools a Hub file needs that the test world lacks go in `contracts/script/deploy/hubs/<chain>/world.json` (`tokens`, `uniswapPools`, `slipstreamPools`, `uniswapV4Pools`, as in the config's `world`). Step 02 deploys them with the rest of the world, so they must be there before the chain's first deploy.
 
 ## Values the DAO sets
 
