@@ -7,6 +7,7 @@ import {
   mergeConvexMarketSnapshots,
   type ConvexMarketSnapshot,
 } from "@/app/lib/borrow-system/market-hydration"
+import type { ChainBorrowPositions } from "@/app/lib/borrow-system/chain-positions"
 import type {
   BaseReadAdapter,
   ActionResult,
@@ -27,10 +28,9 @@ import {
 } from "@/app/lib/borrow-system/selectors"
 
 /**
- * Borrow state of one wallet: the markets services/convex reports and the wallet's account.
- * Accounts stay empty until the chain reads (Lens `getAccount`, the wallet's PositionProxy
- * accounts) are wired; actions go through the production transaction adapter, which answers
- * "not available yet" until contract calls land.
+ * Borrow state of one wallet: the markets services/convex reports and the wallet's account, whose
+ * collateral and debt positions come from the chain (Lens `getAccounts`, see
+ * `use-chain-borrow-positions`). Actions go through the production transaction adapter.
  */
 export function useBorrowSession({
   walletId,
@@ -63,6 +63,28 @@ export function useBorrowSession({
   const hydrateMarketData = useCallback((snapshots: readonly ConvexMarketSnapshot[]) => {
     setState((prev) => mergeConvexMarketSnapshots(prev, snapshots))
   }, [])
+
+  /** Replace the wallet's collateral and debt positions with what the chain reports. Markets are untouched. */
+  const hydrateAccountPositions = useCallback(
+    (positionsWalletId: string, positions: ChainBorrowPositions) => {
+      setState((prev) => {
+        const account = prev.accounts[positionsWalletId] ?? emptyBorrowSystemState(positionsWalletId).accounts[positionsWalletId]!
+        return {
+          ...prev,
+          accounts: {
+            ...prev.accounts,
+            [positionsWalletId]: {
+              ...account,
+              collateralPositions: positions.collateralPositions,
+              debtPositions: positions.debtPositions,
+              lastUpdatedAt: Date.now(),
+            },
+          },
+        }
+      })
+    },
+    [],
+  )
 
   const transactionAdapter = useMemo(
     () => injectedTransactionAdapter ?? new ProductionTransactionAdapter(),
@@ -129,6 +151,7 @@ export function useBorrowSession({
       executeTransaction,
       reset,
       hydrateMarketData,
+      hydrateAccountPositions,
     }),
     [
       state,
@@ -151,6 +174,7 @@ export function useBorrowSession({
       executeTransaction,
       reset,
       hydrateMarketData,
+      hydrateAccountPositions,
     ],
   )
 }
