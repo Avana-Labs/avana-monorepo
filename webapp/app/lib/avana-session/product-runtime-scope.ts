@@ -68,6 +68,8 @@ export function resolveProductRuntimeScope(pathname: string | null | undefined):
       walletSession: true,
       marketSnapshots: true,
       hydrateBorrowMarkets: true,
+      // Lend markets too: the wallet's lend positions (read from the chain) are valued at their market's price.
+      hydrateLendMarkets: true,
       rewards: true,
     }
   }
