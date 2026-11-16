@@ -62,7 +62,7 @@ contract UniswapV4IntegrationDonationsUnitTest is UniswapV4IntegrationFixture {
     }
 
     // TEST-015 verifies: REQ-VAULT-165, REQ-VAULT-079, REQ-VAULT-080, REQ-VAULT-083, REQ-VAULT-122, REQ-VAULT-123, ATTACK-006
-    // TEST-166 verifies: REQ-VAULT-082, REQ-VAULT-084, REQ-ACCESS-060, REQ-VAULT-081; shared: TEST-166 returns a stray only through the timelock, which this test checks on the Uniswap v4 LPVault
+    // TEST-166 verifies: REQ-VAULT-082, REQ-VAULT-084, REQ-VAULT-081, REQ-ACCESS-060; shared: TEST-166 returns a stray only through the timelock, which this test checks on the Uniswap v4 LPVault
     /// @notice `returnStray` runs only from the timelock, only for an NFT the LPVault holds without a custody entry,
     /// never to the zero address or itself and never under the Lock.
     function test_TEST_015_returnStrayOnlyThroughTheTimelockForAStray() public {

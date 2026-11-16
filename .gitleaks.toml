@@ -12,3 +12,10 @@ regexes = ['''^\s*"(src|test|script)/[A-Za-z0-9_./-]+\.sol": "[0-9a-f]{64}",?\s*
 description = "Spec traceability comments made only of a check ID and requirement IDs (for example `// TEST-166 verifies: REQ-ACCESS-060, REQ-ACCESS-010`), not credentials. Approved by Josue, 2026-11-13."
 regexTarget = "line"
 regexes = ['''^\s*//+\s*(?:@custom:spec|(?:TEST|PROP|MATH|HYP|QNT|SYM|SIM)-[A-Za-z0-9-]+ verifies:)\s+[A-Z]+(?:-[A-Za-z0-9]+)+(?:,\s*[A-Z]+(?:-[A-Za-z0-9]+)+)*\s*$''']
+
+[[allowlists]]
+description = "Drill files name assets by symbolic market key (vaultToken:<key>), not credentials. Approved by Josue, 2026-11-16."
+condition = "AND"
+paths = ['''contracts/script/e2e/drills/.*\.json''']
+regexTarget = "line"
+regexes = ['''^\s*"asset": "vaultToken:[A-Za-z0-9-]+",?\s*$''']

@@ -26,3 +26,5 @@ eb94547b0cd55254456b1c62ada199b46f16c335:contracts/security/slither-mutate-triag
 6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:14699
 6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:17395
 6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:17396
+# A traceability comment (TEST-166 verifies: …) with prose after the IDs, in a commit the branch history keeps; not a key.
+09e32b55fdda23529e568236d3f13ab7815d35b5:contracts/test/unit/UniswapV4Integration.Donations.unit.t.sol:generic-api-key:65
