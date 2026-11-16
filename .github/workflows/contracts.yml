@@ -753,6 +753,11 @@ jobs:
       # apart from proved and unproved targets.
       SMT_BUDGET_MINUTES: "90"
       SMT_QUERY_TIMEOUT_MS: ${{ inputs.smt_query_timeout_ms }}
+      # Contracts whose timeout is recorded as "timed out" in the report without failing the job (decided 2026-11-16).
+      # PayoutEscrow: its five checked-arithmetic targets do not finish under Z3 (each target kind alone ran past 30
+      # minutes at 20 s per query, runs 43824532883 and 43835608650). Every other contract's timeout fails.
+      SMT_TIMEOUT_REPORTED: "PayoutEscrow"
+      SMT_TIMEOUT_REPORTED_NOTE: "PROP-043 stays as written; Halmos PROP_052 (test/halmos/PayoutEscrow.halmos.t.sol) carries the proof"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -845,6 +850,12 @@ jobs:
           if [ "$rc" = 124 ] || [ "$rc" = 137 ]; then
             echo "SMT_TIMED_OUT=1" >> "$GITHUB_ENV"
             msg="$src: timed out after ${SMT_BUDGET_MINUTES} min, no result (proved 0, unproved 0)"
+            if [[ " $SMT_TIMEOUT_REPORTED " == *" $CONTRACT "* ]]; then
+              msg="$msg; reported, not failed: $SMT_TIMEOUT_REPORTED_NOTE"
+              echo "$msg" | tee smt-results.txt >> "$GITHUB_STEP_SUMMARY"
+              echo "::warning::$msg"
+              exit 0
+            fi
             echo "$msg" | tee smt-results.txt >> "$GITHUB_STEP_SUMMARY"
             echo "::error::$msg"
           fi
