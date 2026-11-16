@@ -13,6 +13,7 @@ import {LensFeesV3Fixture} from "../utils/fixtures/LensFeesFixture.sol";
 /// forge-config: default.isolate = false
 contract LensFeesLifecycleFuzzTest is LensFeesV3Fixture {
     uint256 internal constant Q128 = 1 << 128;
+    uint256 internal constant MAX_GROWTH = (1 << 30) - 1;
 
     function _collect(
         bytes32 key
@@ -31,6 +32,11 @@ contract LensFeesLifecycleFuzzTest is LensFeesV3Fixture {
         uint64[4] memory growth
     ) public {
         liquidity = uint128(bound(liquidity, 2, type(uint96).max));
+        // Each growth word stays below 2^30, so liquidity times either growth step over 2^128 stays below 2^126 and the
+        // fees owed plus the unwound principal fit the manager's uint128 `tokensOwed` (above it the manager truncates).
+        for (uint256 i; i < 4; ++i) {
+            growth[i] = uint64(bound(growth[i], 0, MAX_GROWTH));
+        }
         bytes32 key = _pledge1(alice, liquidity);
         pool500.setFeeGrowthGlobal(uint256(growth[0]) * Q128 / 7, uint256(growth[1]) * Q128 / 3);
         PositionFeesView memory before = lens.getPositionFees(M1, key);
@@ -50,5 +56,15 @@ contract LensFeesLifecycleFuzzTest is LensFeesV3Fixture {
         (uint256 a0, uint256 a1) = _collect(key);
         assertEq(f.amounts[0], a0, "token0 = collectFees");
         assertEq(f.amounts[1], a1, "token1 = collectFees");
+    }
+
+    // TEST-247 verifies: REQ-LENS-050
+    function test_TEST_247_ciCounterexample20261115() public {
+        testFuzz_TEST_247_feesSurviveUnwindsAndDonations(
+            245003304183075693693629,
+            3402992956809132418596140100660247210,
+            2026024998,
+            [uint64(10528), 2500000000000000000, 8431, 7623]
+        );
     }
 }
