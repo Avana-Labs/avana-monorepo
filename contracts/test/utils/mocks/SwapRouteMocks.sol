@@ -216,9 +216,10 @@ contract MockCurvePool {
 
 /// @title MockVault4626
 /// @notice An ERC-4626 vault stand-in (a static aToken or a savings-rate token) on OpenZeppelin's ERC4626, with a pause
-/// switch on deposit and redeem.
+/// switch on deposit and redeem, and a deposit that can pull less than it is asked for.
 contract MockVault4626 is ERC4626 {
     bool public paused;
+    uint256 public shortPull;
 
     constructor(
         IERC20 asset_,
@@ -231,6 +232,13 @@ contract MockVault4626 is ERC4626 {
         paused = on;
     }
 
+    /// @notice Makes `deposit` pull `units` fewer assets than asked, still minting the shares of the full amount.
+    function setShortPull(
+        uint256 units
+    ) external {
+        shortPull = units;
+    }
+
     function _deposit(
         address caller,
         address receiver,
@@ -238,7 +246,7 @@ contract MockVault4626 is ERC4626 {
         uint256 shares
     ) internal override {
         require(!paused, "paused");
-        super._deposit(caller, receiver, assets, shares);
+        super._deposit(caller, receiver, assets - shortPull, shares);
     }
 
     function _withdraw(
