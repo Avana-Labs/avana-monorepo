@@ -5214,6 +5214,14 @@
       "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
       "reason": "One memory-safe mstore in _payload sets the length of the batch's own parameter array, allocated at capacity 10 or 5, to the number of actions pushed, so modifyLiquidities gets one parameter per action. It only shortens the array and never grows it. Measured 2026-11-15: copying into an exact-size array gave 23,644 bytes and sizing each batch from the PoolKey gave 23,607, both inside the 1,024-byte EIP-170 margin; with the mstore the LPVault is 23,509 bytes. Covered by the UniswapV4Integration unit tests of unwind, release, collectFees, the native ETH leg and the V4-01 fallback, and by the v4 removal and whole-account seizure gas tests.",
       "approval": "approved (Josue, 2026-11-15)"
+    },
+    {
+      "fingerprint": "dcb9d086dfed964b",
+      "check": "calls-loop",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._clearStanding(FlashLiquidatorBase.Watch)",
+      "reason": "Bounded loop over the helper's watch list: the market's tokens (at most MAX_POOL_TOKENS = 8) and the intermediates() of each token's two registry-listed routes, each once (_watch). It runs only when some watched token has a standing PayoutEscrow credit; the claim recipient (feeRecipient on the public helper, FUNDING_SAFE on the operator variant) is then read once, before the loop. For each token with a standing credit it makes one PayoutEscrow.claim to that recipient, in try/catch, so a failed claim leaves the credit standing for claimEscrowed and never stops the liquidation (REQ-HELPER-010, audit finding L-04). It runs after the call context opens, so a token callback during a claim meets ContextActive. Covered by TEST-174: standingCreditClearedBeforeTheCall, unclearableStandingCreditNeverGoesToTheCaller (the accepted remainder) and standingClaimRunsInsideTheContext.",
+      "approval": "approved (Josue, 2026-11-15)"
     }
   ]
 }

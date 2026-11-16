@@ -24,6 +24,8 @@ struct Held {
     uint256 lender;
     uint256 helper;
     uint256 helperEscrowed;
+    // The Spoke's deficit on the Hub in this debt asset (ray): a rise marks a call that booked a deficit.
+    uint256 deficit;
 }
 
 /// @title IntegrationBalanceChecks
@@ -35,11 +37,14 @@ library IntegrationBalanceChecks {
     /// pools) equals what reached the Hub, the fee recipient and the borrower (paid or escrowed) and Collateralization
     /// (pool tokens of a reconcile, held for `settlePending`); LPVaultSwap's balance is unchanged, the escrow rose by
     /// exactly the escrowed credit, and the flash lender and the helper are untouched (`conserved`). The result's `D`,
-    /// `A`, `B`, `R` and the caller's net equal those changes (`reported`).
+    /// `A`, `B`, `R` and the caller's net equal those changes (`reported`); `funded`, the part of `B` a deficit
+    /// liquidation paid into the First-Loss Reserve (`DeficitSurplusFunded`), reaches the Hub, not the borrower; it is
+    /// all of `B` on a call that raised the Spoke's deficit and 0 on any other call (REQ-SWAP-027).
     function direct(
         Held memory b,
         Held memory a,
-        LiquidationResult memory r
+        LiquidationResult memory r,
+        uint256 funded
     ) external pure returns (bool conserved, bool reported) {
         int256 callerIn = int256(b.caller) - int256(a.caller);
         int256 parked = int256(a.parked) - int256(b.parked);
@@ -51,8 +56,9 @@ library IntegrationBalanceChecks {
         conserved = callerIn + recovered == toHub + toFee + toBorrower && a.lvs == b.lvs && parked >= 0
             && int256(a.escrow) - int256(b.escrow) == escrowed && a.lender == b.lender && a.helper == b.helper
             && a.helperEscrowed == b.helperEscrowed;
-        reported = toHub == int256(r.debtRepaid) && toFee == int256(r.avanaFee)
-            && toBorrower == int256(r.borrowerSurplus) && recovered == int256(r.recovered)
+        reported = toHub == int256(r.debtRepaid + funded) && toFee == int256(r.avanaFee)
+            && toBorrower == int256(r.borrowerSurplus) - int256(funded) && recovered == int256(r.recovered)
+            && funded == (a.deficit > b.deficit ? r.borrowerSurplus : 0)
             && -callerIn == int256(r.keeperOut) - int256(r.callerFunds) - int256(r.shortfall);
     }
 
