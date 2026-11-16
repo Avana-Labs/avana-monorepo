@@ -4,6 +4,7 @@
 // holds a key: signers are encrypted Foundry keystores (keys.ts), and the governance roles are anvil's unlocked
 // senders (anvil --auto-impersonate).
 
+import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -29,7 +30,22 @@ export interface LocalChain {
   /** The rpc-recorder in front of the node for the indexer (contracts/script/e2e/rpc-recorder.ts). */
   readonly recorderPort: number;
   readonly blockTime: number;
-  readonly forkUrl: string | undefined;
+  /** Fork mode (STACK_FORK=1): the real network at a pinned block, read over public RPCs (fork.json). */
+  readonly fork: { readonly urls: readonly string[]; readonly block: number } | undefined;
+}
+
+/**
+ * Fork mode: every chain forks its real network at the block pinned in fork.json, so runs are repeatable and anvil
+ * caches what it read. The endpoints are public ones (no key); <CHAIN>_FORK_RPC_URL replaces them (comma-separated
+ * for several) and STACK_FORK_BLOCK_<CHAIN> the block.
+ */
+function forkOf(network: string): LocalChain["fork"] {
+  if (process.env.STACK_FORK !== "1") return undefined;
+  const pinned = (JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "fork.json"), "utf8")) as Record<string, { block: number; rpcs: string[] }>)[network];
+  if (!pinned) throw new Error(`fork.json has no ${network}`);
+  const name = network.toUpperCase();
+  const urls = process.env[`${name}_FORK_RPC_URL`]?.split(",").map((u) => u.trim()).filter(Boolean) ?? pinned.rpcs;
+  return { urls, block: Number(process.env[`STACK_FORK_BLOCK_${name}`] ?? pinned.block) };
 }
 
 const int = (name: string, d: number) => (process.env[name] ? Number(process.env[name]) : d);
@@ -44,7 +60,7 @@ export const CHAINS: readonly LocalChain[] = [
     port: int("STACK_PORT_ETHEREUM", 8545),
     recorderPort: int("STACK_RECORDER_PORT_ETHEREUM", 8549),
     blockTime: 12,
-    forkUrl: process.env.STACK_FORK_ETHEREUM || undefined,
+    fork: forkOf("ethereum"),
   },
   {
     network: "base",
@@ -55,7 +71,7 @@ export const CHAINS: readonly LocalChain[] = [
     port: int("STACK_PORT_BASE", 8546),
     recorderPort: int("STACK_RECORDER_PORT_BASE", 8550),
     blockTime: 2,
-    forkUrl: process.env.STACK_FORK_BASE || undefined,
+    fork: forkOf("base"),
   },
 ];
 

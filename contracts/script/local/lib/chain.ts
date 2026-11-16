@@ -53,8 +53,11 @@ export async function startNode(c: LocalChain): Promise<"running" | "started" | 
     "--code-size-limit", "49152", "--gas-limit", "60000000",
   ];
   const restore = existsSync(statePath(c));
-  if (c.forkUrl) args.push("--fork-url", c.forkUrl);
-  else if (!restore) args.push("--timestamp", String(genesisTimestamp()));
+  if (c.fork) {
+    // Every endpoint shares the load; rate limits are retried with backoff.
+    for (const u of c.fork.urls) args.push("--fork-url", u);
+    args.push("--fork-block-number", String(c.fork.block), "--retries", "10", "--fork-retry-backoff", "2000", "--timeout", "60000", "--compute-units-per-second", "200");
+  } else if (!restore) args.push("--timestamp", String(genesisTimestamp()));
   start(nodeName(c), "anvil", args);
   await waitFor(`${c.label} node`, () => answers(c), 30_000, 300);
   if (restore) {
