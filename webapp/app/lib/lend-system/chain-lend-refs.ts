@@ -12,7 +12,7 @@ export type LendHubAssetRef = {
   decimals: number
   /** USD with 8 decimals per whole token. */
   priceUsd8: string
-  lendReserves: readonly { spoke: string; reserveId: string }[]
+  lendReserves: readonly { spoke: string; reserveId: string; paused?: boolean; frozen?: boolean }[]
 }
 
 let latest: readonly LendHubAssetRef[] | null = null

@@ -76,8 +76,9 @@ const decodeSpoke = (calls: { to: Address; data?: `0x${string}` }[]) =>
   calls.filter((c) => c.to === SPOKE_A || c.to === SPOKE_B).map((c) => ({ to: c.to, ...decodeFunctionData({ abi: LEND_SPOKE_ABI, data: c.data! }) }))
 
 describe("executeLendOnChain", () => {
-  it("supplies to the first lend reserve with the fee and approval first", async () => {
+  it("supplies with the fee and approval first", async () => {
     const { deps, sent, onConfirmed } = harness()
+    deps.hubAssets = () => [{ ...asset, lendReserves: [asset.lendReserves[0]!] }]
     const r = await executeLendOnChain(
       deps,
       intent({ payload: { type: "deposit", walletId: WALLET, marketId: "ethereum-usdc", depositAmount: 1_000 } }),
@@ -120,6 +121,24 @@ describe("executeLendOnChain", () => {
       }),
     )
     expect(decodeSpoke(sent.flat())).toMatchObject([{ to: SPOKE_A, args: [1n, 300_000_000n, WALLET] }])
+  })
+
+  it("supplies to the one open lend reserve and refuses to guess between several", async () => {
+    const one = harness()
+    one.deps.hubAssets = () => [{ ...asset, lendReserves: [{ ...asset.lendReserves[0]!, paused: true }, asset.lendReserves[1]!] }]
+    await executeLendOnChain(
+      one.deps,
+      intent({ payload: { type: "deposit", walletId: WALLET, marketId: "ethereum-usdc", depositAmount: 1 } }),
+    )
+    expect(decodeSpoke(one.sent.flat())).toMatchObject([{ to: SPOKE_B, functionName: "supply" }])
+
+    const two = harness()
+    const r = await executeLendOnChain(
+      two.deps,
+      intent({ payload: { type: "deposit", walletId: WALLET, marketId: "ethereum-usdc", depositAmount: 1 } }),
+    )
+    expect(r.receipt.status).toBe("failed")
+    expect(two.sent).toEqual([])
   })
 
   it("fails without sending for an unknown market", async () => {

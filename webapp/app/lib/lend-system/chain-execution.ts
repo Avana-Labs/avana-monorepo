@@ -36,9 +36,16 @@ function toUnits(amount: number, decimals: number): bigint {
   return parseUnits(amount.toFixed(decimals), decimals)
 }
 
+/** The one lend reserve a supply goes to: the asset's reserve that is neither paused nor frozen; an error when none or several are. */
+function supplyReserve(asset: LendHubAssetRef) {
+  const open = asset.lendReserves.filter((r) => !r.paused && !r.frozen)
+  if (open.length === 0) throw new ActionError("This asset cannot be supplied right now.")
+  if (open.length > 1) throw new ActionError("This asset has more than one Lend Spoke; supply is not available here yet.")
+  return open[0]!
+}
+
 function planSupply(asset: LendHubAssetRef, account: Address, amount: bigint): PlannedLend {
-  const reserve = asset.lendReserves[0]
-  if (!reserve) throw new ActionError("This asset cannot be supplied here.")
+  const reserve = supplyReserve(asset)
   const spoke = reserve.spoke as Address
   return {
     feeAction: "supply",
@@ -137,8 +144,8 @@ function result(
 }
 
 /**
- * Sends a Lend supply or withdrawal to the asset's Lend Spoke in the fee batch (Q-409): the supply with its approval
- * and its fee (10 bps of the amount, in the supplied token) first; the withdrawal, from the asset's lend reserves
+ * Sends a Lend supply or withdrawal to the asset's Lend Spoke in the fee batch (Q-409): the supply, to the asset's one
+ * open lend reserve on its chain, with its approval and its fee (10 bps of the amount, in the supplied token) first; the withdrawal, from the asset's lend reserves
  * largest first, with its fee last. Claim is not sent from here. Resolves with a failed result (never throws) for
  * anything the chain or the wallet refuses.
  */
@@ -150,7 +157,9 @@ export async function executeLendOnChain(deps: LendExecutionDeps, intent: LendTr
   if (!assets) return result(deps, intent, "failed", "", "Markets are still loading.")
   try {
     const chainId = deps.state().markets[intent.marketId]?.chainId
-    const asset = assets.find((a) => a.slug === intent.marketId && (chainId === undefined || a.chainId === chainId))
+    const matches = assets.filter((a) => a.slug === intent.marketId && (chainId === undefined || a.chainId === chainId))
+    if (matches.length > 1) throw new ActionError("This market is ambiguous here.")
+    const asset = matches[0]
     const chain = asset ? deps.chain(asset.chainId) : null
     const lens = asset ? (deps.lens(intent.walletId, asset.chainId) as Address | undefined) : undefined
     if (!asset || !chain || !lens) throw new ActionError("This market is not available here.")
