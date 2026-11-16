@@ -641,6 +641,8 @@ export default defineSchema({
     wallet: address,
     questPoints: v.number(),
     feePoints: v.number(),
+    /** Lend supply so far in USD (each supply valued at the asset's price when it was recorded); drives the volume quest. */
+    supplyUsd: v.optional(v.number()),
     questIds: v.array(v.string()),
     updatedAt: v.number(),
   }).index("by_wallet", ["wallet"]),
