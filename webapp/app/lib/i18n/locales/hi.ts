@@ -1567,6 +1567,7 @@ const dict: TranslationDictionary = {
   "Welcome to Avana": "Avana में आपका स्वागत है",
   "Your wallet is funded.": "आपका वॉलेट फ़ंड हो गया है।",
   "seats already claimed.": "सीटें पहले ही क्लेम हो चुकी हैं।",
+  "We can't reach Avana right now.": "हम अभी Avana तक नहीं पहुँच पा रहे हैं।",
 }
 
 export default dict

@@ -1572,6 +1572,7 @@ const dict: TranslationDictionary = {
   "Welcome to Avana": "Avana'ya hoş geldiniz",
   "Your wallet is funded.": "Cüzdanınız fonlandı.",
   "seats already claimed.": "koltuk zaten alındı.",
+  "We can't reach Avana right now.": "Şu anda Avana'ya ulaşamıyoruz.",
 }
 
 export default dict

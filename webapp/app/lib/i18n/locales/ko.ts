@@ -1539,6 +1539,7 @@ const dict: TranslationDictionary = {
   "Welcome to Avana": "Avana에 오신 것을 환영합니다",
   "Your wallet is funded.": "지갑이 충전되었습니다.",
   "seats already claimed.": "자리가 이미 확보되었습니다.",
+  "We can't reach Avana right now.": "지금은 Avana에 연결할 수 없습니다.",
 }
 
 export default dict
