@@ -9,6 +9,8 @@ export type AnalyticsEvent =
   | "get_started_signed_in"
   | "transaction_success"
   | "ask_ai_question"
+  /** A wallet finished /onboarding (funded by the local faucet). */
+  | "onboarding_completed"
   /** An app action sent without its front-end fee (Q-409 (6) or a wallet without atomic batches). */
   | "fee_free_action"
 
