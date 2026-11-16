@@ -122,7 +122,12 @@ def main(argv):
         if source not in info.get("input", {}).get("sources", {}):
             continue
         jobs += 1
-        targets = ast_targets(info.get("output", {}).get("sources", {}).get(source, {}).get("ast"))
+        # Only the kinds the build asked for (model_checker.targets; solc's default is every kind).
+        asked = (info.get("input", {}).get("settings", {}).get("modelChecker") or {}).get("targets")
+        targets = [
+            t for t in ast_targets(info.get("output", {}).get("sources", {}).get(source, {}).get("ast"))
+            if not asked or t[2] in asked
+        ]
         for e in info.get("output", {}).get("errors", []):
             msg, code = e.get("message", ""), str(e.get("errorCode", ""))
             loc = e.get("sourceLocation") or {}
