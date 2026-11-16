@@ -81,6 +81,12 @@ abstract contract LPOracleStorage is ILPOracleEvents, ILPOracleErrors {
     uint256 internal constant FEED_CALL_GAS = 50_000;
     /// @notice Explicit gas of a pool or pricing-module read (`SPEC-ORC-023`).
     uint256 internal constant POOL_CALL_GAS = 100_000;
+    /// @notice Explicit gas of the pool's `observe([window, 0])` read (`SPEC-ORC-023`). Anyone can grow a pool's
+    /// observation buffer to 65,535 slots and it never shrinks; a cold `observe` over a full buffer, at the worst target
+    /// position of the ring, measures about 100,100 gas on a Uniswap v3 pool and 103,100 on a Slipstream clone (call
+    /// overhead and the clone's DELEGATECALL included), more than `POOL_CALL_GAS`, so the read has its own allowance
+    /// with a third of it spare (`test/gas/LPOracleCL.ObserveGas.gas.t.sol`).
+    uint256 internal constant OBSERVE_CALL_GAS = 160_000;
     /// @notice Explicit gas of a registry, store or token read other than `getOracleConfig` (`SPEC-ORC-023`).
     uint256 internal constant CONFIG_CALL_GAS = 40_000;
     /// @notice Explicit gas of the configuration read `getOracleInputs`: `ORACLE_CONFIG_BASE_GAS + n *

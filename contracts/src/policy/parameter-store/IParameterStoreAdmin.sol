@@ -72,7 +72,8 @@ interface IParameterStoreAdmin {
 
     /// @notice Sets `avanaFeeShareBps` in either direction.
     /// @dev `APPLICATION_ADMIN` at the normal delay, or `APPLICATION_RISK_STEWARD` at once, in either direction within
-    /// `[0, 5,000]` (`OutOfBounds`).
+    /// `[0, 5,000]` (`OutOfBounds`). A rise also reverts `OutOfBounds` unless LIQ-I1's fee bound
+    /// `s · minLB ≤ (10⁴ − f)(minLB − 10⁴)` holds on every Active or Offboarding market; a cut is never refused.
     /// @param value New share, bps.
     /// @custom:spec REQ-CONFIG-049, REQ-PSTORE-010, Q-097
     function setAvanaFeeShareBps(

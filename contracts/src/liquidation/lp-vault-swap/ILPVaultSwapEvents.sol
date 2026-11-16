@@ -23,16 +23,35 @@ interface ILPVaultSwapEvents {
         address indexed caller, address indexed proxy, uint256 indexed marketId, SettlementReport report
     );
 
-    /// @notice Emitted when a liquidation's borrower surplus `B > 0` was delivered to the borrower's wallet or, after a
-    /// failed gas-limited transfer, deposited in the PayoutEscrow credited to it.
+    /// @notice Emitted when a liquidation's borrower surplus `B > 0`, less any part the First-Loss Reserve took
+    /// (`DeficitSurplusFunded`), was delivered to the borrower's wallet or, after a failed gas-limited transfer,
+    /// deposited in the PayoutEscrow credited to it.
     /// @param proxy The liquidated PositionProxy.
     /// @param wallet The borrower's wallet (`AaveAdapter.walletOf(proxy)`).
     /// @param debtAsset The debt asset paid.
-    /// @param amount `B`, base units.
+    /// @param amount `B` less the `DeficitSurplusFunded` amount of the same call (all of `B` when there is none), base
+    /// units.
     /// @param escrowed True when the amount went to the PayoutEscrow.
     /// @custom:spec REQ-SWAP-026, REQ-SWAP-027, REQ-SWAP-076, LIQ-085, Q-337
     event BorrowerSurplusPaid(
         address indexed proxy, address indexed wallet, address indexed debtAsset, uint256 amount, bool escrowed
+    );
+
+    /// @notice Emitted when a liquidation that booked a deficit paid its borrower surplus `B > 0` into the First-Loss
+    /// Reserve of the debt asset's funding Hub instead of to the borrower (`BorrowerSurplusPaid` follows only for a part
+    /// the reserve did not take).
+    /// @param proxy The liquidated PositionProxy.
+    /// @param firstLossReserve The reserve funded (`MarketRegistry.firstLossReserveOf(fundingHub, debtAsset)`).
+    /// @param debtAsset The debt asset paid.
+    /// @param amount The part of `B` the reserve took, base units (all of `B` from the recorded reserve).
+    /// @param shares The reserve's Hub shares `fund` reported for it.
+    /// @custom:spec REQ-SWAP-027, SPEC-LIQ-022
+    event DeficitSurplusFunded(
+        address indexed proxy,
+        address indexed firstLossReserve,
+        address indexed debtAsset,
+        uint256 amount,
+        uint256 shares
     );
 
     /// @notice Emitted when `deleverage` took and repaid a flash loan of the debt asset through the chain's

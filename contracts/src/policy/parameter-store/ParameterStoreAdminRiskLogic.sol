@@ -116,6 +116,8 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         _onlyDelegated();
         if (value > FEE_SHARE_MAX_BPS) revert OutOfBounds();
         uint16 old = _s().g.avanaFeeShareBps;
+        // LIQ-I1: a rise keeps the fee bound on every live market, as activation and the slippage loosening do.
+        if (value > old) _requireFeeBoundEverywhere(value);
         _s().g.avanaFeeShareBps = value;
         emit ParameterSet("avanaFeeShareBps", bytes32(0), old, value);
     }

@@ -33,7 +33,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 /// `avana.storage.LPOracle`; the implementation constructor calls `_disableInitializers()`. Implementation constants:
 /// `stableCeilingUsd`, `DECIMALS = 8`, `POKE_MIN_GAS_FLOOR`, `POKE_MIN_GAS_CEILING`, `MAX_ROUTE_ANSWER`,
 /// `LISTING_SHOCK_FACTOR`, `CHECKPOINT_INTERVAL = 3,600`, `MAX_POOL_TOKENS = 8`, `CHAIN_BLOCK_TIME` (12 s on Ethereum,
-/// 2 s on Base), `FEED_CALL_GAS = 50,000`, `CONFIG_CALL_GAS = 40,000`, `POOL_CALL_GAS = 100,000` (`SPEC-ORC-023`),
+/// 2 s on Base), `FEED_CALL_GAS = 50,000`, `CONFIG_CALL_GAS = 40,000`, `POOL_CALL_GAS = 100,000`, `OBSERVE_CALL_GAS = 160,000` (`SPEC-ORC-023`),
 /// `TIMELOCK`. Every evaluation reads its configuration in one call,
 /// `ParameterStore.getOracleInputs(address(this), tokens, withSecondSources)`: the routes in force and route versions
 /// the store reads from `MarketRegistry.activePriceRoutes(token)` and `priceRouteVersion(token)` in that call, each
