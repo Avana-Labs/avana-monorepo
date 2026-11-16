@@ -265,7 +265,7 @@ contract DebtOracleHalmosTest is Test {
     ) public {
         vm.assume(bAnswer > 0 && bAnswer <= ALT_DRIFT_BELOW);
         // b < A: min(p, b) = b, and Drifting serves max(b, A) = A.
-        _driftRevertOnlyForGas(uint40(A), uint40(bAnswer), bAnswer);
+        _driftRevertOnlyForGas(uint40(A), uint40(bAnswer), bAnswer, true);
     }
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
@@ -276,7 +276,7 @@ contract DebtOracleHalmosTest is Test {
     ) public {
         vm.assume(bAnswer > ALT_DRIFT_BELOW && bAnswer < A);
         // b < A: min(p, b) = b; the routes agree, so the quote p = A is served.
-        _driftRevertOnlyForGas(uint40(A), uint40(bAnswer), bAnswer);
+        _driftRevertOnlyForGas(uint40(A), uint40(bAnswer), bAnswer, false);
     }
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
@@ -287,7 +287,7 @@ contract DebtOracleHalmosTest is Test {
     ) public {
         vm.assume(bAnswer >= A && bAnswer <= ALT_DRIFT_ABOVE);
         // b >= A: min(p, b) = A (b itself when b = A); the routes agree, so the quote p = A is served.
-        _driftRevertOnlyForGas(uint40(A), uint40(bAnswer), A);
+        _driftRevertOnlyForGas(uint40(A), uint40(bAnswer), A, false);
     }
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
@@ -312,7 +312,7 @@ contract DebtOracleHalmosTest is Test {
     ) public {
         vm.assume(pAnswer > 0 && pAnswer <= PRI_DRIFT_BELOW);
         // p < b: min(p, b) = p, and Drifting serves max(p, A) = A.
-        _driftRevertOnlyForGas(uint40(pAnswer), B_FIXED, pAnswer);
+        _driftRevertOnlyForGas(uint40(pAnswer), B_FIXED, pAnswer, true);
     }
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
@@ -324,7 +324,7 @@ contract DebtOracleHalmosTest is Test {
     ) public {
         vm.assume(pAnswer > PRI_DRIFT_BELOW && pAnswer < B_FIXED);
         // p < b: min(p, b) = p; the routes agree, so the quote p is served.
-        _driftRevertOnlyForGas(uint40(pAnswer), B_FIXED, pAnswer);
+        _driftRevertOnlyForGas(uint40(pAnswer), B_FIXED, pAnswer, false);
     }
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
@@ -336,7 +336,7 @@ contract DebtOracleHalmosTest is Test {
     ) public {
         vm.assume(pAnswer >= B_FIXED && pAnswer <= PRI_DRIFT_ABOVE);
         // p >= b: min(p, b) = b (p itself when p = b); the routes agree, so the quote p is served.
-        _driftRevertOnlyForGas(uint40(pAnswer), B_FIXED, B_FIXED);
+        _driftRevertOnlyForGas(uint40(pAnswer), B_FIXED, B_FIXED, false);
     }
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
@@ -348,7 +348,7 @@ contract DebtOracleHalmosTest is Test {
     ) public {
         vm.assume(pAnswer > PRI_DRIFT_ABOVE && pAnswer < MAX_ANSWER);
         // p > b: min(p, b) = b, and Drifting serves max(b, A) = A.
-        _driftRevertOnlyForGas(pAnswer, B_FIXED, B_FIXED);
+        _driftRevertOnlyForGas(pAnswer, B_FIXED, B_FIXED, true);
     }
 
     /// @dev With the drift checks' routes and timestamps, `getPriceState()` reverts only with `InsufficientGas`, with
@@ -370,12 +370,16 @@ contract DebtOracleHalmosTest is Test {
     ///   `hi` the lower and higher value and `d = hi − lo`: `(10⁴ × d) / d = 10⁴` (d > 0) and `(tol × lo) / tol = lo`,
     ///   the overflow checks of `(hi − lo) * BPS` and `toleranceBps * lo` in `LPPriceMath._withinTolerance` and
     ///   `deviationBps`.
+    /// - Whether the routes disagree (`drifting`), on the code's term `10⁴ × (hi − lo) > 225 × lo`: the caller's range
+    ///   lies on one side of the agreement bounds. Halmos follows both sides of that branch when the 1 ms branching
+    ///   query does not decide it, and the infeasible side's query ran past the budget in the agreement ranges.
     /// Every value is below 2^40, so no product wraps and each fact holds for every input of the caller's range: the
     /// assumptions exclude no input.
     function _driftRevertOnlyForGas(
         uint40 pAnswer,
         uint40 bAnswer,
-        uint256 low
+        uint256 low,
+        bool drifting
     ) internal {
         uint256 p = pAnswer;
         uint256 b = bAnswer;
@@ -392,6 +396,7 @@ contract DebtOracleHalmosTest is Test {
         vm.assume(_div(p, p) == 1);
         vm.assume(_div(b, b) == 1);
         _toleranceFacts(p, b, ROUTE_TOLERANCE_BPS);
+        vm.assume(_outsideTolerance(p, b, ROUTE_TOLERANCE_BPS) == drifting);
         _toleranceFacts(p, A, SECOND_SOURCE_TOLERANCE_BPS);
         _driftRevertOnlyForGasNoFacts(pAnswer, bAnswer);
     }
@@ -407,6 +412,19 @@ contract DebtOracleHalmosTest is Test {
         uint256 d = hi - lo;
         vm.assume(d == 0 || _div(_mul(d, BPS), d) == BPS);
         vm.assume(_div(_mul(tol, lo), tol) == lo);
+    }
+
+    /// @dev `!LPPriceMath._withinTolerance(x, y, tol)` for valid values, on the code's terms
+    /// (`(hi − lo) * BPS > uint256(toleranceBps) * lo`).
+    function _outsideTolerance(
+        uint256 x,
+        uint256 y,
+        uint256 tol
+    ) internal pure returns (bool out) {
+        (uint256 lo, uint256 hi) = x < y ? (x, y) : (y, x);
+        assembly ("memory-safe") {
+            out := gt(mul(sub(hi, lo), BPS), mul(tol, lo))
+        }
     }
 
     /// @dev OpenZeppelin's `Math.min(a, b)`, `b ^ ([a < b] × (a ^ b))`, with the operands of `mul` in each order;
