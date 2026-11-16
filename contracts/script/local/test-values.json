@@ -176,7 +176,7 @@
       "collateralRisk": 50
     },
     "uniV4CorrelatedBtc": {
-      "collateralRisk": 75
+      "collateralRisk": 50
     },
     "uniV3BlueChip": {
       "collateralRisk": 100
@@ -185,13 +185,13 @@
       "collateralRisk": 100
     },
     "uniV3GovDefi": {
-      "collateralRisk": 200
+      "collateralRisk": 150
     },
     "slipGovDefi": {
-      "collateralRisk": 200
+      "collateralRisk": 150
     },
     "slipStocks": {
-      "collateralRisk": 300
+      "collateralRisk": 200
     }
   },
   "markets": {
