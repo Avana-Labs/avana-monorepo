@@ -1,0 +1,26 @@
+{
+  "name": "aave-caps-zero-v4-back",
+  "description": "AIP: both caps back to their values",
+  "via": "aip",
+  "restores": "aave-caps-zero-v4-forward",
+  "changes": [
+    {
+      "aave": "spokeConfig",
+      "hub": "hub:stable",
+      "asset": "token:GHO",
+      "spoke": "spoke:uniV4Stable",
+      "set": {
+        "drawCap": "$prior"
+      }
+    },
+    {
+      "aave": "spokeConfig",
+      "hub": "hub:stable",
+      "asset": "vaultToken:univ4-USDC-USDT-100",
+      "spoke": "spoke:uniV4Stable",
+      "set": {
+        "addCap": "$prior"
+      }
+    }
+  ]
+}

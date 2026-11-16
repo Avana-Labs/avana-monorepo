@@ -457,7 +457,7 @@ fi
 # drill accounts and the manifest must still verify against the chain. E2E_DRILLS="caps hub-pause" runs only those
 # (between setup and teardown). They run after the services step, whose indexer reads the deployment's early blocks,
 # which anvil no longer serves once the drills have added a few thousand more.
-DRILL_LIST="${E2E_DRILLS:-caps aave-caps-zero market-breaker debt-breaker hub-freeze hub-pause pause-all freeze-address aave-freeze oracle-standby keeper-kill-switch deficit-coverage remove-debt-reserve offboard-close cancel-registration retire-spoke rate-aip rate-role}"
+DRILL_LIST="${E2E_DRILLS:-caps aave-caps-zero aave-caps-zero-v4 market-breaker debt-breaker debt-breaker-v4 hub-freeze hub-pause pause-all freeze-address aave-freeze aave-freeze-v4 oracle-standby keeper-kill-switch deficit-coverage deficit-coverage-v4 remove-debt-reserve offboard-close offboard-close-v4 cancel-registration retire-spoke retire-spoke-v4 rate-aip rate-role}"
 drill() { # name
   local name="drill:$1" log="$LOG/drill-$1.log" rc
   skipped "$name" && return 0

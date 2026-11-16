@@ -1,0 +1,25 @@
+{
+  "name": "retire-v4-back-aip",
+  "description": "AIP: the draw cap back and the reserve unfrozen",
+  "via": "aip",
+  "restores": "retire-v4-forward-aip",
+  "changes": [
+    {
+      "aave": "spokeConfig",
+      "hub": "hub:correlated",
+      "asset": "token:GHO",
+      "spoke": "spoke:uniV4Correlated",
+      "set": {
+        "drawCap": "$prior"
+      }
+    },
+    {
+      "aave": "reserveConfig",
+      "spoke": "spoke:uniV4Correlated",
+      "reserve": "collateral:univ4-wstETH-ETH-100",
+      "set": {
+        "frozen": "$prior"
+      }
+    }
+  ]
+}

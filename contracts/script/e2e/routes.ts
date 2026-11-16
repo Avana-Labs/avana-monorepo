@@ -54,9 +54,15 @@ export function routePair(config: Json, market: string, token: string, asset: st
   throw new Error(`${market}: no two routes from ${token} into ${asset} sharing no pool and no intermediate (found ${all.length} paths)`);
 }
 
-/** The world pool (Uniswap v3 or Slipstream) named `name`. */
+/** The world pool (Uniswap v3, Slipstream or Uniswap v4) named `name`. A Uniswap v4 pool's native ETH reads as WETH:
+ *  LPVaultSwap wraps a native ETH leg before it swaps, so the market's routes start from WETH (REQ-AMM-V4-004). */
 export function poolOf(config: Json, name: string): Json | undefined {
-  return (config.world.uniswapPools as Json[]).find((p) => p.name === name) ?? (config.world.slipstreamPools as Json[]).find((p) => p.name === name);
+  const v3 = (config.world.uniswapPools as Json[]).find((p) => p.name === name) ?? (config.world.slipstreamPools as Json[]).find((p) => p.name === name);
+  if (v3) return v3;
+  const v4 = ((config.world.uniswapV4Pools ?? []) as Json[]).find((p) => p.name === name);
+  if (!v4) return undefined;
+  const weth = (t: string) => (t === "ETH" ? "WETH" : t);
+  return { ...v4, a: weth(v4.a), b: weth(v4.b) };
 }
 
 /** Adds each pool a route names to `listing.pools`. */

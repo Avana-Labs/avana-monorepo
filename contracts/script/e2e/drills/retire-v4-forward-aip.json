@@ -1,0 +1,24 @@
+{
+  "name": "retire-v4-forward-aip",
+  "description": "EMG-061: AIP: the GHO draw cap of the correlated Hub's Uniswap v4 CDP Spoke to 0 and its market's reserve frozen",
+  "via": "aip",
+  "changes": [
+    {
+      "aave": "spokeConfig",
+      "hub": "hub:correlated",
+      "asset": "token:GHO",
+      "spoke": "spoke:uniV4Correlated",
+      "set": {
+        "drawCap": 0
+      }
+    },
+    {
+      "aave": "reserveConfig",
+      "spoke": "spoke:uniV4Correlated",
+      "reserve": "collateral:univ4-wstETH-ETH-100",
+      "set": {
+        "frozen": true
+      }
+    }
+  ]
+}

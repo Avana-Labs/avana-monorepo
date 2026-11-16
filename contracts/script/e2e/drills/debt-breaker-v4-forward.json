@@ -1,0 +1,16 @@
+{
+  "name": "debt-breaker-v4-forward",
+  "description": "the Emergency Guardian trips the breaker of the GHO debt reserve on uniV4Stable",
+  "via": "direct",
+  "sender": "emergencyGuardian",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "tripDebtBreaker",
+      "args": {
+        "spoke": "spoke:uniV4Stable",
+        "debtReserveId": "debtReserve:uniV4Stable:GHO"
+      }
+    }
+  ]
+}
