@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Avana Labs
 // Adding a Hub to a local chain as one operator flow, built from plain functions with JSON inputs and outputs so an
 // operations dashboard can call the same steps:
-//   planHub(config, input)        pure: the chain's current config plus one Hub input file -> the next config and a
+//   planHub(config, input, tv, chainId)  pure: the chain's current config plus one Hub input file -> the next config and a
 //                                 summary of what it adds (validation errors are thrown, nothing is touched)
 //   releaseHub(chain, label, cfg) runs the release steps on the chain (Aave side, timelock, listing, activation) and
 //                                 records the manifest; each step is recorded and a rerun resumes at the failed one
@@ -14,43 +14,84 @@
 // pools, borrowable assets per Spoke). Every number the Aave DAO, governance or a risk provider sets (collateral
 // factors, liquidation bonus, pool risk factor, tolerances, slippage, rate models, liquidity fees, caps, amounts) comes
 // from the local stack's test values (contracts/script/local/test-values.json), never from a Hub file.
+// A Hub file also holds the text of the pages the listing adds (listing metadata version 2, written by
+// script/deploy/market-metadata.ts): names, descriptions, FAQs, links, the risk card's text and the Hub's risk
+// disclosures. On a chain that is not a development node (31337, 31338), every market, lend asset and borrowable asset
+// needs its risk text (summary, reviewedAt, factors).
 // The Hub input file (README.md in this folder; contracts/script/deploy/hubs/<chain>/*.json):
 // {
-//   "hub": { "label": "growth", "tier": 3, "name": "Growth", "description": "…" },
+//   "hub": { "label": "growth", "tier": 3, "name": "Growth", "description": "…", "faqs": [], "links": {…},
+//            "disclosures": { "borrow": "…", "lend": "…" } },
 //   "lendSpoke": "lendGrowth",
-//   "spokes": [{ "label": "uniV3Growth", "integration": "uniswap-v3" }],
-//   "lendAssets": [{ "symbol": "USDC", "category": "stable" }, { "symbol": "PEPE", "new": { … debt asset sizing … } }],
+//   "spokes": [{ "label": "uniV3Growth", "integration": "uniswap-v3", "links": {…} }],
+//   "lendAssets": [{ "symbol": "USDC", "category": "stable", "risk": {…} }],
+//   "borrowAssets": [{ "symbol": "USDC", "description": "…", "risk": {…} }],
+//   "tokens": [{ "symbol": "USDC", "name": "USD Coin", "iconUrl": "https://…", "links": {…} }],
 //   "borrowable": { "uniV3Growth": ["GHO", "USDC"] },
-//   "collateral": [{ "symbol": "USDC" }, { "symbol": "PEPE", "deviationBps": 200, "collateralFactorBps": 4000, "tokenCapUsd": "2000000" }],
-//   "markets": [{ "pool": "USDC-USDT-500", "spoke": "uniV3Growth", "poolRiskFactorBps": 4000, … }]
+//   "collateral": [{ "symbol": "USDC", "isUsdStable": true }],
+//   "markets": [{ "pool": "USDC-USDT-500", "spoke": "uniV3Growth", "risk": {…}, "links": {…} }]
 // }
+// links = { website?, x?, docs?, github?, audits?: [{ label, href }] }
+// risk  = { summary, reviewedAt: "YYYY-MM-DD", factors: [{ id, label, level: low|moderate|elevated|high, text }] }
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { addRoutePools, poolOf, routePair, type Route } from "../../e2e/routes.ts";
+import { DEV_CHAIN_IDS } from "../../../../services/common/src/chains.ts";
 import { chainOf, outDir } from "../lib/env.ts";
 import { LATER_RELEASE, type StepOutcome, currentConfig, miningMode, runRelease, setMining, testValues } from "../lib/chain.ts";
 
 type Json = Record<string, any>;
 
+export type Category = "stable" | "crypto" | "stock";
+export interface Faq {
+  question: string;
+  answer: string;
+}
+/** A page's project links (listing metadata version 2). */
+export interface Links {
+  website?: string;
+  x?: string;
+  docs?: string;
+  github?: string;
+  audits?: { label: string; href: string }[];
+}
+/** The risk card's text: a summary, the date it was last reviewed and the rated factors behind it. */
+export interface Risk {
+  summary: string;
+  /** YYYY-MM-DD. */
+  reviewedAt: string;
+  factors: { id: string; label: string; level: "low" | "moderate" | "elevated" | "high"; text: string }[];
+}
+/** A page's text; generated where the Hub file gives none. */
+export interface PageText {
+  name?: string;
+  description?: string;
+  longText?: string;
+  faqs?: Faq[];
+  links?: Links;
+  iconUrl?: string;
+}
+
 export interface HubInput {
   /** A label already on the chain extends that Hub (its Spokes, assets and markets are added); a new one creates it. */
-  readonly hub: { label: string; tier: 1 | 2 | 3; name?: string; description?: string };
+  readonly hub: { label: string; tier: 1 | 2 | 3; disclosures?: { borrow?: string; lend?: string } } & PageText;
   readonly lendSpoke?: string;
   readonly spokes: readonly SpokeInput[];
-  readonly lendAssets: readonly { symbol: string; category?: "stable" | "crypto" }[];
+  readonly lendAssets: readonly ({ symbol: string; category?: Category; risk?: Risk } & PageText)[];
+  /** The page of each borrowable asset, used for its debt reserve on every CDP Spoke of the Hub. */
+  readonly borrowAssets?: readonly ({ symbol: string; risk?: Risk } & PageText)[];
+  /** Token pages (every symbol on every page), and the links and icon of the token's lend and borrow pages. */
+  readonly tokens?: readonly { symbol: string; name?: string; iconUrl?: string; links?: Links }[];
   readonly borrowable: Readonly<Record<string, readonly string[]>>;
   readonly collateral: readonly CollateralInput[];
   readonly markets: readonly MarketInput[];
 }
-export interface SpokeInput {
+export interface SpokeInput extends PageText {
   label: string;
   integration: "uniswap-v3" | "slipstream";
   /** The Spoke's group within its venue (Stable, Volatile, Blue-chip, Governance, ...). */
   category?: string;
-  /** The Spoke's page name, default `<venue> <category>`. */
-  name?: string;
-  description?: string;
 }
 /** An Aave V4 Hub asset's rate curve, in bps; set when the asset is listed on the Hub. */
 export interface RateModel {
@@ -93,6 +134,8 @@ export interface MarketValues {
   stressFloorUsd?: string;
   marketUsdCap?: string;
   topUpSliceUsd?: string;
+  /** The risk card's bps per factor id, local only: the chain has one premium, and a split needs the risk team's method. */
+  riskFactorBps?: Record<string, number>;
 }
 /** Every number the DAO, governance or a risk provider sets, for the local stack only (test-values.json); `default`
  * entries apply where a token or market has none of its own. */
@@ -106,7 +149,7 @@ export interface CollateralInput {
   /** A fact about the token (a USD stablecoin), not a parameter. */
   isUsdStable?: boolean;
 }
-export interface MarketInput {
+export interface MarketInput extends PageText {
   pool: string;
   spoke: string;
   /** A concentrated range (both, multiples of the pool's tick spacing); full range when omitted. The market key is
@@ -116,8 +159,8 @@ export interface MarketInput {
   /** The market's config name, also its key in the test values' markets (default `<venue>-<pool>[-range]-<spoke>`). */
   name?: string;
   slug?: string;
-  category?: "stable" | "crypto";
-  description?: string;
+  category?: Category;
+  risk?: Risk;
 }
 
 export interface HubPlan {
@@ -138,21 +181,52 @@ export interface HubPlan {
     debtReserves: string[];
     collateralTokens: string[];
     markets: string[];
+    /** What an operator does on the chain before the listing executes (on the local stack, a step does it). */
+    checklist: string[];
   };
 }
 
 /** The CDP Spokes' liquidation bonus factor, set by the Aave deployment payload (06_AaveDeploymentPayload). */
 const LIQUIDATION_BONUS_FACTOR = 5000;
+/** The LPOracle's TWAP window, as 09_ListMarkets sets it. */
+const TWAP_WINDOW = 1800;
 const INTEGRATION_ID = { "uniswap-v3": 1, slipstream: 2 } as const;
 const VENUE = { "uniswap-v3": "Uniswap v3", slipstream: "Slipstream" } as const;
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const LEVELS = ["low", "moderate", "elevated", "high"];
+const CATEGORIES = ["stable", "crypto", "stock"];
 
-/** The next config: `config` (the chain's current one, unchanged) with everything `input` adds. Throws on any error. */
-export function planHub(config: Json, input: HubInput, tv: TestValues = {}): HubPlan {
+/** The risk text's problems, if any (the listing metadata loader checks the rest when the file is written). */
+function riskErrors(where: string, r: Risk | undefined, required: boolean): string[] {
+  if (r === undefined) return required ? [`${where}: risk (summary, reviewedAt, factors) is required on a chain that is not a development node`] : [];
+  const e: string[] = [];
+  if (typeof r.summary !== "string" || !r.summary) e.push(`${where}.risk.summary missing`);
+  if (typeof r.reviewedAt !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(r.reviewedAt) || Number.isNaN(Date.parse(r.reviewedAt))) e.push(`${where}.risk.reviewedAt must be a date, YYYY-MM-DD`);
+  if (!Array.isArray(r.factors) || r.factors.length === 0) e.push(`${where}.risk.factors must list at least one factor`);
+  for (const f of r.factors ?? []) {
+    if (!/^[a-z][a-zA-Z0-9]{0,47}$/.test(f.id ?? "")) e.push(`${where}.risk factor ${f.id}: id must be camelCase`);
+    if (!f.label || !f.text || !LEVELS.includes(f.level)) e.push(`${where}.risk factor ${f.id}: needs a label, text and a level (${LEVELS.join(", ")})`);
+  }
+  return e;
+}
+
+/** The fields of a page's text that are set, for merging over generated text. */
+function given(t: PageText): Partial<PageText> {
+  const out: Json = {};
+  for (const k of ["name", "description", "longText", "faqs", "links", "iconUrl"] as const) if (t[k] !== undefined) out[k] = t[k];
+  return out;
+}
+
+/**
+ * The next config: `config` (the chain's current one, unchanged) with everything `input` adds. Throws on any error.
+ * `chainId` is the target chain's: on one that is not a development node, every page the Hub adds needs its risk text.
+ */
+export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: number): HubPlan {
   const c = structuredClone(config) as Json;
   const errors: string[] = [];
   const label = input.hub.label;
+  const needRisk = !DEV_CHAIN_IDS.has(chainId);
   if (!/^[a-z][a-zA-Z0-9]*$/.test(label)) errors.push(`hub.label ${label}: letters and digits, starting with a lower-case letter`);
   const extend = (c.aaveLocal.hubs as string[]).includes(label);
   const tier = extend ? ((c.aave.hubs as Json[]).find((h) => h.label === label)!.tier as number) : input.hub.tier;
@@ -187,6 +261,21 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
   }
   for (const a of input.lendAssets) sym(a.symbol, "lendAssets");
   for (const t of input.collateral) sym(t.symbol, "collateral");
+  for (const t of input.tokens ?? []) sym(t.symbol, "tokens");
+  // Page text: categories, and the risk text of every market, lend asset and borrowable asset.
+  const borrowed = new Set((Object.values(input.borrowable) as string[][]).flat());
+  for (const a of input.lendAssets) {
+    if (a.category !== undefined && !CATEGORIES.includes(a.category)) errors.push(`lendAssets ${a.symbol}: category must be one of ${CATEGORIES.join(", ")}`);
+    errors.push(...riskErrors(`lendAssets ${a.symbol}`, a.risk, needRisk));
+  }
+  for (const b of input.borrowAssets ?? []) if (!borrowed.has(b.symbol)) errors.push(`borrowAssets ${b.symbol}: no CDP Spoke of this Hub lends it (borrowable)`);
+  for (const s of borrowed) errors.push(...riskErrors(`borrowAssets ${s}`, input.borrowAssets?.find((b) => b.symbol === s)?.risk, needRisk));
+  for (const m of input.markets) {
+    if (m.category !== undefined && !CATEGORIES.includes(m.category)) errors.push(`market ${m.pool}: category must be one of ${CATEGORIES.join(", ")}`);
+    errors.push(...riskErrors(`market ${m.name ?? m.pool}`, m.risk, needRisk));
+    const bps = tv.markets?.[m.name ?? ""]?.riskFactorBps ?? {};
+    for (const id of Object.keys(bps)) if (!m.risk?.factors.some((f) => f.id === id)) errors.push(`test values: market ${m.name} sets riskFactorBps.${id}, which is no factor of its risk text`);
+  }
   if (errors.length) throw new Error(`Hub input refused:\n- ${errors.join("\n- ")}`);
 
   // 1. The Hub, its Lend Spoke and its CDP Spokes (Aave side, then Avana's CDP Spoke records). Extending a Hub adds
@@ -201,10 +290,25 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
       label,
       lendSpoke: lend,
       cdpSpokes: [],
-      ...(input.hub.name ? { content: { slug: slugify(`${input.hub.name}`), name: input.hub.name, description: input.hub.description ?? "", faqs: [] } } : {}),
     });
   }
   const hubEntry = (c.aavePayload.hubs as Json[]).find((h) => h.label === label)!;
+  // The Hub's page: the Hub file's text over what the chain's config has (written once, with the Hub's first market).
+  const hubText = { ...given(input.hub), ...(input.hub.disclosures ? { disclosures: input.hub.disclosures } : {}) };
+  if (hubEntry.content || Object.keys(hubText).length) {
+    const name = input.hub.name ?? hubEntry.content?.name ?? `Avana ${cap(label)} Hub`;
+    hubEntry.content = { slug: slugify(name), description: "", faqs: [], ...hubEntry.content, ...hubText, name };
+  }
+  const hubName = (hubEntry.content?.name as string | undefined) ?? `${label} Hub`;
+  const tokenText = (symbol: string) => {
+    const t = input.tokens?.find((x) => x.symbol === symbol);
+    return { ...(t?.links ? { links: t.links } : {}), ...(t?.iconUrl ? { iconUrl: t.iconUrl } : {}) };
+  };
+  // Token pages, by symbol: the listing metadata writes one for each token the listing first adds.
+  for (const t of input.tokens ?? []) {
+    c.listing.tokenContent ??= {};
+    c.listing.tokenContent[t.symbol] = { ...c.listing.tokenContent[t.symbol], ...t };
+  }
   for (const s of input.spokes) {
     c.aaveLocal.spokes.push({ label: s.label, userReservesLimit: 8 });
     c.aave.spokes[s.label] = `$aave:.spokes.${s.label}.proxy`;
@@ -216,7 +320,7 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
       integrationId: INTEGRATION_ID[s.integration],
       tier,
       spoke: `$aave:.spokes.${s.label}.proxy`,
-      content: { slug: slugify(`${name}-${label}`), name, description: s.description ?? `${name} positions on the ${input.hub.name ?? label} Hub.`, faqs: [] },
+      content: { slug: slugify(`${name}-${label}`), venueLabel: VENUE[s.integration], description: `${name} positions on the ${hubName}.`, faqs: [], ...given(s), name },
     });
   }
 
@@ -276,7 +380,20 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
   }
   hubEntry.lendContent ??= {};
   Object.assign(hubEntry.lendContent, Object.fromEntries(
-    input.lendAssets.map((a) => [a.symbol, { slug: slugify(`${label}-${a.symbol}`), name: `${a.symbol} on the ${input.hub.name ?? label} Hub`, symbol: a.symbol, category: a.category ?? "crypto", description: `Lend ${a.symbol} on Aave V4's ${input.hub.name ?? label} Hub.`, faqs: [] }]),
+    input.lendAssets.map((a) => [
+      a.symbol,
+      {
+        slug: slugify(`${label}-${a.symbol}`),
+        name: `${a.symbol} on the ${hubName}`,
+        description: `Lend ${a.symbol} on Aave V4's ${hubName}.`,
+        faqs: [],
+        ...tokenText(a.symbol),
+        ...given(a),
+        symbol: a.symbol,
+        category: a.category ?? "crypto",
+        ...(a.risk ? { risk: a.risk } : {}),
+      },
+    ]),
   ));
 
   // 3. Debt reserves: what each CDP Spoke lends (the first is each market's default debt asset).
@@ -284,18 +401,25 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
   for (const s of input.spokes) {
     for (const a of input.borrowable[s.label] ?? []) {
       debtReserves.push(`${s.label}:${a}`);
+      const text = input.borrowAssets?.find((x) => x.symbol === a);
+      const spokeName = (c.listing.spokes as Json[]).find((x) => x.label === s.label)!.content.name as string;
       c.listing.debtReserves.push({
         spoke: s.label,
         symbol: a,
         content: {
-          slug: slugify(`${a}-${VENUE[s.integration]}-${label}`),
-          name: `${a} on ${VENUE[s.integration]} (${input.hub.name ?? label} Hub)`,
+          name: `${a} on ${spokeName} (${hubName})`,
+          description: `Borrow ${a} from Aave V4's ${hubName} against ${VENUE[s.integration]} liquidity positions.`,
+          faqs: [{ question: `Where does the ${a} come from?`, answer: `From the ${hubName} of Aave V4, through the ${spokeName} CDP Spoke.` }],
+          ...tokenText(a),
+          ...(text ? given(text) : {}),
+          // One page per Spoke: the slug and name carry the Spoke, whatever the shared text.
+          slug: slugify(`${a}-${spokeName}-${label}`),
           symbol: a,
           category: input.lendAssets.find((x) => x.symbol === a)?.category ?? (/USD|DAI|GHO/.test(a) ? "stable" : "crypto"),
-          description: `Borrow ${a} from Aave V4's ${input.hub.name ?? label} Hub against ${VENUE[s.integration]} liquidity positions.`,
-          faqs: [{ question: `Where does the ${a} come from?`, answer: `From the ${input.hub.name ?? label} Hub of Aave V4, through the ${VENUE[s.integration]} CDP Spoke.` }],
+          ...(text?.risk ? { risk: text.risk } : {}),
         },
       });
+      if (text?.name) c.listing.debtReserves.at(-1).content.name = `${text.name} (${spokeName})`;
     }
   }
 
@@ -338,6 +462,9 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
   const tokenCf = (s: string) => (c.listing.tokens as Json[]).find((x) => x.symbol === s)!.collateralFactorBps as number;
   const f = c.parameters.globals.avanaFeeShareBps as number;
   const markets: string[] = [];
+  const checklist: string[] = [];
+  // The LPOracle's TWAP check needs ceil(window / block time) + 1 observations (LPPriceMath.minObservations).
+  const need = Math.ceil(TWAP_WINDOW / (c.chain.blockTime as number)) + 1;
   const values: Record<string, unknown> = {};
   for (const mi of input.markets) {
     const s = spokeOf(mi.spoke)!;
@@ -360,6 +487,8 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
     values[name] = mv;
     const venue = VENUE[s.integration];
     const fee = slip ? `tick spacing ${p.tickSpacing}` : `${p.fee / 10_000}% fee tier`;
+    const bps = mv.riskFactorBps ?? {};
+    const risk = mi.risk ? { ...mi.risk, factors: mi.risk.factors.map((x) => (bps[x.id] !== undefined ? { ...x, bps: bps[x.id] } : x)) } : undefined;
     c.listing.markets.push({
       ...template(INTEGRATION_ID[s.integration]),
       name,
@@ -382,14 +511,19 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
       routes,
       content: {
         slug: mi.slug ?? slugify(`${venue}-${p.a}-${p.b}-${slip ? `cl${p.tickSpacing}` : String(p.fee)}${range}-${s.label}`),
-        name: `${p.a}/${p.b} ${venue}${mi.name ? "" : ` (${input.hub.name ?? label} Hub)`}`,
         category: mi.category ?? (p.a.match(/USD|DAI|GHO/) && p.b.match(/USD|DAI|GHO/) ? "stable" : "crypto"),
-        venueLabel: venue,
-        description: mi.description ?? `Borrow ${lends.join(", ")} from the ${input.hub.name ?? label} Hub against a full-range ${p.a}/${p.b} liquidity position in the ${venue} pool with ${fee}.`,
-        faqs: [{ question: "What can I borrow?", answer: `${lends.join(", ")} from the ${input.hub.name ?? label} Hub, up to ${cf / 100}% of the position's value.` }],
+        venueLabel: slip ? `${venue} · CL${p.tickSpacing}` : `${venue} · ${p.fee / 10_000} %`,
+        description: `Borrow ${lends.join(", ")} from the ${hubName} against a ${mi.tickLower !== undefined ? "concentrated" : "full-range"} ${p.a}/${p.b} liquidity position in the ${venue} pool with ${fee}.`,
+        faqs: [{ question: "What can I borrow?", answer: `${lends.join(", ")} from the ${hubName}, against the position's value.` }],
+        // A market's `name` is its config name (the test values' key), not its page's.
+        ...{ ...given(mi), name: `${p.a}/${p.b} ${venue}${mi.name ? "" : ` (${hubName})`}` },
+        ...(risk ? { risk } : {}),
       },
     });
     markets.push(name);
+    checklist.push(
+      `Pool ${mi.pool} (${name}): raise its observation cardinality to at least ${need} (increaseObservationCardinalityNext; ceil(${TWAP_WINDOW} s / ${c.chain.blockTime} s blocks) + 1) and let it fill a ${TWAP_WINDOW} s window before the listing executes; until then the market's TWAP check is unavailable. On a fork the stack's fork-pools step does it.`,
+    );
   }
 
   return {
@@ -407,6 +541,7 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
       debtReserves,
       collateralTokens: tokens,
       markets,
+      checklist,
     },
   };
 }
@@ -488,7 +623,7 @@ export async function addHub(args: { chain: string; hubFile: string }, onStep?: 
   // A release that started earlier keeps its config (its steps are on record); a new one is planned on the current.
   if (!existsSync(configPath)) {
     try {
-      const p = planHub(JSON.parse(readFileSync(currentConfig(c), "utf8")), input, testValues());
+      const p = planHub(JSON.parse(readFileSync(currentConfig(c), "utf8")), input, testValues(), c.chainId);
       writeFileSync(configPath, `${JSON.stringify(p.config, null, 2)}\n`);
       writeFileSync(join(outDir(c), `plan-${release}.json`), `${JSON.stringify(p.summary, null, 2)}\n`);
       plan = p.summary;

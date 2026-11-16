@@ -2,7 +2,7 @@
   "hub": {
     "label": "growth",
     "tier": 3,
-    "name": "Growth",
+    "name": "Growth Hub",
     "description": "A volatile-tier Hub for LINK liquidity: lenders supply USDC and GHO, borrowers pledge Uniswap v3 and Slipstream positions."
   },
   "lendSpoke": "lendGrowth",
