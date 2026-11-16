@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
+import {ILensHubReads} from "../../src/lens/lens/ILensHubReads.sol";
 import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
@@ -144,6 +145,15 @@ contract AaveAdapterFuzzTest is AaveAdapterFixture {
         _checkSizing(p, reserve, cap, debtNow, all);
     }
 
+    // TEST-248 verifies: REQ-PROXY-030, SPEC-PROXY-003
+    /// @notice Regression for a CI counterexample of `testFuzz_TEST_248_repaySizing`: a partial GHO repay after about
+    /// 281 days of interest, where Aave's down-rounded share burn leaves the debt two base units above `D − x`.
+    function test_TEST_248_repaySizingShareRoundingRegression() public {
+        testFuzz_TEST_248_repaySizing(
+            93_904_310_331_109_744_336_746_372_785_757_855, 13_877_157_736_575, 38_567_111, false, false
+        );
+    }
+
     function _checkSizing(
         address p,
         uint256 reserve,
@@ -164,8 +174,26 @@ contract AaveAdapterFuzzTest is AaveAdapterFixture {
             assertEq(_debtOf(p, reserve), 0, "cleared");
         } else {
             assertEq(spent, x, "partial takes min(cap, D)");
-            assertLe(_debtOf(p, reserve), debtNow - x + 1, "debt after within one unit of D - x");
+            _checkPartialDebtAfter(p, reserve, debtNow, x);
         }
+    }
+
+    /// @dev SPEC-PROXY-003 bound `D − x ≤ D' ≤ D − x + ⌈drawnIndex / RAY⌉`. Aave values the drawn debt as
+    /// `⌈S·I / RAY⌉` and burns `s = ⌊(x − premium)·RAY / I⌋` shares while the premium is cleared exactly, so
+    /// `D' − (D − x) = ⌈A + e⌉ − ⌈A⌉` with `A = S·I / RAY` and `e = (x − premium) − s·I / RAY ∈ [0, I / RAY)`; that
+    /// difference is at least 0 and below `e + 1`, so at most `⌈I / RAY⌉` (2 base units once the index exceeds RAY).
+    /// A repay below the premium restores it exactly and leaves `D' = D − x`. The index is read in the repay's block.
+    function _checkPartialDebtAfter(
+        address p,
+        uint256 reserve,
+        uint256 debtNow,
+        uint256 x
+    ) internal view {
+        uint256 index = ILensHubReads(aave.hub).getAssetDrawnIndex(reserve == usdcReserveId ? usdcAssetId : ghoAssetId);
+        uint256 slack = (index + 1e27 - 1) / 1e27;
+        uint256 debtAfter = _debtOf(p, reserve);
+        assertGe(debtAfter, debtNow - x, "debt after at least D - x");
+        assertLe(debtAfter, debtNow - x + slack, "debt after within ceil(drawnIndex / RAY) of D - x");
     }
 
     // TEST-165 verifies: REQ-PROXY-028, REQ-PROXY-068, REQ-PROXY-069, REQ-PROXY-084
