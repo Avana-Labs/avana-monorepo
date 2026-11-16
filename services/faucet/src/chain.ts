@@ -54,8 +54,8 @@ function mappingSlots(holder: Address, slot: number): Hex[] {
 const word = (value: bigint): Hex => `0x${value.toString(16).padStart(64, "0")}`;
 
 /**
- * Sets the wallet's balance of an ERC-20 to `amount` whole tokens: anvil_dealERC20 when the node has it, else a write to
- * the balance slot found by probing the first mapping slots. This is the one place that changes on a test network, where
+ * Sets the wallet's balance of an ERC-20 to `amount` whole tokens, with anvil_dealERC20 when the node has it, else with
+ * a write to the balance slot found by probing the first mapping slots. This is the one place that changes on a test network, where
  * tokens come from a real test faucet instead.
  */
 export async function fundToken(rpc: Rpc, token: Address, wallet: Address, amount: string): Promise<bigint> {

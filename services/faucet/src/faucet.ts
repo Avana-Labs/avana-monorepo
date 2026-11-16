@@ -42,10 +42,13 @@ export class Faucet {
         this.store.put(record);
         return { ok: true, record, existing: false };
       } catch (error) {
+        // The cause goes to the faucet's own log; the answer names the step only.
+        process.stderr.write(`faucet: grant ${chain} ${address} failed: ${error instanceof Error ? error.message : String(error)}
+`);
         if (error instanceof StepFailed) {
-          return { ok: false, status: error.step === "check chain" ? 409 : 500, error: error.message, failedStep: error.step };
+          return { ok: false, status: error.step === "check chain" ? 409 : 500, error: `grant step "${error.step}" failed`, failedStep: error.step };
         }
-        return { ok: false, status: 500, error: error instanceof Error ? error.message : String(error) };
+        return { ok: false, status: 500, error: "grant failed" };
       }
     };
 

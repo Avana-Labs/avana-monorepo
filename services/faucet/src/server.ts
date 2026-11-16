@@ -56,7 +56,9 @@ export function faucetServer(faucet: Faucet): Server {
       }
       return send(res, 404, { error: "not found" });
     } catch (error) {
-      return send(res, 500, { error: error instanceof Error ? error.message : String(error) });
+      process.stderr.write(`faucet: ${req.method} ${url.pathname} failed: ${error instanceof Error ? error.stack : String(error)}
+`);
+      return send(res, 500, { error: "internal error" });
     }
   });
 }
