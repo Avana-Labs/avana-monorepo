@@ -17,21 +17,20 @@ import {
 
 describe("market filter model", () => {
   it("offers the chains of the deployments", () => {
-    expect(CHAIN_OPTIONS.map((chain) => chain.label)).toEqual(["Ethereum", "Base", "Local"])
+    expect(CHAIN_OPTIONS.map((chain) => chain.label)).toEqual(["Ethereum", "Base"])
     expect(chainFilterId(1)).toBe("ethereum")
     expect(chainFilterId(8453)).toBe("base")
-    expect(chainFilterId(31337)).toBe("local")
+    expect(chainFilterId(31337)).toBeNull()
     expect(chainFilterId(10)).toBeNull()
   })
 
   it("matches every chain while rows carry no chain", () => {
-    expect(lendFilterItem("USDC").chains).toEqual(["ethereum", "base", "local"])
+    expect(lendFilterItem("USDC").chains).toEqual(["ethereum", "base"])
     expect(borrowPoolFilterItem({ spoke: "aero-slipstream", visuals: [{ symbol: "USDC" }] }).chains).toEqual([
       "ethereum",
       "base",
-      "local",
     ])
-    expect(matchesMarketFilters(lendFilterItem("USDC"), { ...EMPTY_MARKET_FILTERS, chains: ["local"] })).toBe(true)
+    expect(matchesMarketFilters(lendFilterItem("USDC"), { ...EMPTY_MARKET_FILTERS, chains: ["base"] })).toBe(true)
   })
 
   it("derives the hub from the token mix", () => {

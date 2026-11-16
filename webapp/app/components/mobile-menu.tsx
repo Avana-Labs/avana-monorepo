@@ -25,6 +25,7 @@ import { useTheme } from "./theme-provider"
 import { OVERLAY_SCRIM_CLASS } from "./card-surface-tokens"
 import { useNavigationPrefetch } from "./navigation-prefetch"
 import { MenuToggleIcon } from "./menu-toggle-icon"
+import { CHAIN_NAMES, defaultChainKey } from "@/app/lib/chains"
 
 const siteRoutes = {
   home: "/",
@@ -184,7 +185,7 @@ export function MobileMenu({ initialOpen = false }: MobileMenuProps) {
 
   const currentLanguage = LANGUAGE_OPTIONS.find((option) => option.code === language) ?? LANGUAGE_OPTIONS[0]
   const currentCurrency = CURRENCY_OPTIONS.find((option) => option.code === currency) ?? CURRENCY_OPTIONS[0]
-  const currentNetwork = "Local"
+  const currentNetwork = CHAIN_NAMES[defaultChainKey()]
   const lightModeEnabled = mounted ? resolvedTheme === "light" : false
   const isVisible = open && isShown
   const isSelectorSheetOpen = view !== "root"
@@ -517,18 +518,32 @@ export function MobileMenu({ initialOpen = false }: MobileMenuProps) {
             className="flex w-full items-center justify-between gap-4 rounded-radius-lg px-3 py-4 text-start"
             onClick={closeSelectorSheet}
           >
-            <span className="text-[1.15rem] font-medium leading-tight text-foreground">{t("Local")}</span>
+            <span className="text-[1.15rem] font-medium leading-tight text-foreground">{currentNetwork}</span>
             <Check className="h-6 w-6 text-brand" />
           </button>
         </li>
-        {["Ethereum", "Avalanche", "Base", "Arbitrum", "Robinhood"].map((network) => (
-          <li key={network}>
-            <div className="flex w-full items-center justify-between gap-4 rounded-radius-lg px-3 py-4 text-start opacity-70">
-              <span className="text-[1.15rem] font-medium leading-tight text-foreground">{network}</span>
-              <span className="text-[0.82rem] text-muted-foreground">{t("Unavailable")}</span>
-            </div>
-          </li>
-        ))}
+        {["Ethereum", "Avalanche", "Base", "Arbitrum", "Robinhood"]
+          .filter((network) => network !== currentNetwork)
+          .map((network) =>
+            Object.values(CHAIN_NAMES).includes(network) ? (
+              <li key={network}>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-4 rounded-radius-lg px-3 py-4 text-start"
+                  onClick={closeSelectorSheet}
+                >
+                  <span className="text-[1.15rem] font-medium leading-tight text-foreground">{network}</span>
+                </button>
+              </li>
+            ) : (
+              <li key={network}>
+                <div className="flex w-full items-center justify-between gap-4 rounded-radius-lg px-3 py-4 text-start opacity-70">
+                  <span className="text-[1.15rem] font-medium leading-tight text-foreground">{network}</span>
+                  <span className="text-[0.82rem] text-muted-foreground">{t("Unavailable")}</span>
+                </div>
+              </li>
+            ),
+          )}
       </ul>,
     )
   }
