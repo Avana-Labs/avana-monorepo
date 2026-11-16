@@ -50,8 +50,10 @@ contract AaveListingPayload is ListingBase, AavePayloads {
 
     function _debt() private view returns (Builder memory b) {
         b = _newBuilder();
-        string memory sources = vm.readFile(_outputPath("listing-oracles"));
         uint256 n = _cfgCount(".listing.debtReserves");
+        // No debt reserve, no price source to read (09-debt-oracles writes listing-oracles.json only with one).
+        if (n == 0) return b;
+        string memory sources = vm.readFile(_outputPath("listing-oracles"));
         for (uint256 i = 0; i < n; ++i) {
             string memory k = _at("debtReserves", i);
             string memory sym = _str(string.concat(k, ".symbol"));
