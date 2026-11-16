@@ -13,6 +13,7 @@ import {
   type ChainDebtReserveRef,
 } from "@/app/lib/borrow-system/chain-positions"
 import { lensAccountAbi } from "@/app/lib/borrow-system/lens-account-abi"
+import { onBorrowPositionsRefresh, setChainBorrowRefs } from "@/app/lib/borrow-system/chain-refs"
 
 /** How often the wallet's accounts are re-read at the chain head. */
 export const BORROW_POSITIONS_REFRESH_MS = 15_000
@@ -79,9 +80,17 @@ export function useChainBorrowPositions(walletId: string): { refresh: () => void
   }, [wallet, refs, markets, hydrateAccountPositions])
 
   useEffect(() => {
+    setChainBorrowRefs(wallet && refs ? { wallet, ...refs } : null)
+  }, [wallet, refs])
+
+  useEffect(() => {
     refresh()
     const timer = setInterval(refresh, BORROW_POSITIONS_REFRESH_MS)
-    return () => clearInterval(timer)
+    const off = onBorrowPositionsRefresh(refresh)
+    return () => {
+      clearInterval(timer)
+      off()
+    }
   }, [refresh])
 
   return { refresh }

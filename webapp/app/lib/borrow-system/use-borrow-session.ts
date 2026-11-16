@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { calculateCreditMetrics, type BorrowAction, type BorrowSystemState } from "@/app/lib/borrow-system/model"
 import {
   emptyBorrowSystemState,
@@ -17,6 +17,9 @@ import type {
   TransactionIntent,
 } from "@/app/lib/borrow-system/contracts"
 import { ProductionTransactionAdapter } from "@/app/lib/borrow-system/production-transaction-adapter"
+import { executeBorrowOnChain } from "@/app/lib/borrow-system/chain-execution"
+import { connectedBorrowWallet, viemBorrowChain } from "@/app/lib/borrow-system/chain-execution-viem"
+import { chainBorrowRefs, requestBorrowPositionsRefresh } from "@/app/lib/borrow-system/chain-refs"
 import { ProductionBorrowReadAdapter } from "@/app/lib/borrow-system/production-read-adapter"
 import {
   selectBorrowableAssets,
@@ -86,8 +89,26 @@ export function useBorrowSession({
     [],
   )
 
+  // The latest state, for the chain executor's result without re-creating the adapter on every change.
+  const stateRef = useRef(state)
+  stateRef.current = state
+
   const transactionAdapter = useMemo(
-    () => injectedTransactionAdapter ?? new ProductionTransactionAdapter(),
+    () =>
+      injectedTransactionAdapter ??
+      new ProductionTransactionAdapter({
+        executeTransaction: (intent) =>
+          executeBorrowOnChain(
+            {
+              refs: chainBorrowRefs,
+              chain: viemBorrowChain,
+              wallet: connectedBorrowWallet,
+              state: () => stateRef.current,
+              onConfirmed: requestBorrowPositionsRefresh,
+            },
+            intent,
+          ),
+      }),
     [injectedTransactionAdapter],
   )
 
