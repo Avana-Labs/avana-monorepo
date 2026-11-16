@@ -775,6 +775,7 @@ jobs:
       - name: Model-check ${{ matrix.contract }}
         env:
           CONTRACT: ${{ matrix.contract }}
+        # The source path goes before any option: `--skip` takes several values and would take it as one.
         run: |
           set -euo pipefail
           python3 script/ci-shards.py smt-only "$CONTRACT" > foundry.toml.smt
@@ -782,43 +783,30 @@ jobs:
           src=$(grep -oE "\"[^\"]+\" = \[\"${CONTRACT}\"\]" foundry.toml | head -n 1 | cut -d'"' -f2)
           [ -f "$src" ] || { echo "::error::no source file for $CONTRACT in [profile.smt.model_checker] contracts"; exit 1; }
           echo "target: $src:$CONTRACT"
+          echo "SMT_SOURCE=$src" >> "$GITHUB_ENV"
           start=$SECONDS
-          forge build --force --skip test --skip script "$src" 2>&1 | tee smt.log
-          echo "model check and build: $((SECONDS - start)) s"
+          forge build "$src" --force --build-info 2>&1 | tee smt.log
+          echo "model check and build: $((SECONDS - start)) s" | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: Solver ran, no counterexample; unproved targets listed
+      - name: Solver ran, CHC results present, no counterexample; unproved targets listed
+        # forge prints errors and warnings only; script/smt-report.py reads every result, info messages (proved safe)
+        # included, from the build-info files, and fails unless exactly one solc job analysed the source.
         if: ${{ !cancelled() }}
         env:
           CONTRACT: ${{ matrix.contract }}
         run: |
-          set -uo pipefail
-          [ -s smt.log ] || { echo "::error::no SMTChecker log"; exit 1; }
-          # A target's message line, then its location (the next "-->" line).
-          list() { awk -v re="$1" '$0 ~ re {msg=$0; want=1; next} want && /-->/ {print msg " " $0; want=0}' smt.log; }
-          nosolver=$(grep -cE 'Warning \((7649|8158)\)|analysis was not possible' smt.log || true)
-          cex=$(grep -E 'happens here' smt.log | grep -vc 'might happen here' || true)
-          unproved=$(grep -c 'might happen here' smt.log || true)
-          safe=$(grep -cE 'is safe!|proved safe' smt.log || true)
-          unsupported=$(grep -cE 'does not yet support|not supported|unsupported' smt.log || true)
-          chc=$(grep -c 'CHC' smt.log || true)
-          {
-            echo "### SMTChecker $CONTRACT"
-            echo "solver missing (7649/8158): $nosolver; counterexamples: $cex; unproved: $unproved; proved safe: $safe; unsupported: $unsupported"
-            if [ "$unproved" -gt 0 ]; then echo '```'; list 'might happen here' | head -n 200; echo '```'; fi
-            if [ "$cex" -gt 0 ]; then echo '```'; list 'happens here' | head -n 200; echo '```'; fi
-          } | tee -a "$GITHUB_STEP_SUMMARY"
-          rc=0
-          [ "$nosolver" -eq 0 ] || { echo "::error::solc found no solver (warning 7649 or 8158): nothing was checked"; rc=1; }
-          [ "$chc" -gt 0 ] || { echo "::error::no CHC result in the log: the model checker did not run on $CONTRACT"; rc=1; }
-          [ "$cex" -eq 0 ] || { echo "::error::$cex counterexample(s)"; rc=1; }
-          exit $rc
+          set -o pipefail
+          echo "### SMTChecker $CONTRACT" >> "$GITHUB_STEP_SUMMARY"
+          python3 script/smt-report.py out-smt "$SMT_SOURCE" "$GITHUB_STEP_SUMMARY" | tee smt-results.txt
 
       - name: Upload the SMTChecker log
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: smtchecker-${{ matrix.contract }}
-          path: contracts/smt.log
+          path: |
+            contracts/smt.log
+            contracts/smt-results.txt
           retention-days: 14
 
   certora:
