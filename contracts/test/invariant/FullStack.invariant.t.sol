@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {AaveAdapter} from "../../src/policy/aave-adapter/AaveAdapter.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
@@ -243,5 +244,28 @@ contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
             (uint256 line, uint256 sum) = registry.creditLine(aave.hub, assets[i]);
             assertLe(sum, line, "cap sum within the line");
         }
+    }
+
+    // TEST-274 verifies: INV-057, INV-094
+    /// @notice The campaign's shrunk sequence for seed 0x6afae3b8: three full repays leave the CDP Spoke owing no GHO,
+    /// the Aave DAO cuts its GHO draw cap to 160, time passes and Carol borrows exactly 160 GHO. The Hub admits it
+    /// (owed 0 + 160e18 + deficit 0 <= 160e18) and its rounded-up share conversions then read 160e18 + 1 owed: the
+    /// draw gate held, with no draw past the cap beyond the conversions' rounding.
+    function test_TEST_274_borrowAfterADrawCapCut() public {
+        handler.repay(6251, 50_000, 28_784, 250_000_000_000_000);
+        handler.cutDrawCap(22_356, 160);
+        handler.repay(20_862, 1_152_921_504_606_846_975, 711_630_742, 75_000_000_000);
+        handler.warp(661_429_411);
+        handler.repay(
+            20_049_984_438_372_941_852_658_673_219_896_926_510_856_028_572_430_283_221_720_904_586_814_916_919_295,
+            2_199_023_255_552,
+            604_800,
+            100_000_000_000_000_000_000_000_000_000_000_000_000_000_000
+        );
+        uint256 before = handler.borrows();
+        handler.borrow(19_603, 12_035, 7412, 21_160);
+        assertEq(handler.borrows(), before + 1, "the borrow of the room left completed");
+        assertEq(IAaveV4Hub(aave.hub).getSpokeTotalOwed(ghoAssetId, aave.cdpSpoke), 160e18 + 1, "owed after the draw");
+        invariant_TEST_274_drawGateAndCapSum();
     }
 }

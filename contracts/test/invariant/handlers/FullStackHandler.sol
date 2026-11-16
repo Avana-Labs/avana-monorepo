@@ -67,6 +67,12 @@ contract FullStackHandler is CommonBase, StdUtils {
     /// freeze or a breaker does not revert, so its `exitBlocked` count stands.
     error Skipped();
 
+    /// @dev The Hub rounds both share conversions of a draw up (`toDrawnSharesUp`, then `toDrawnAssetsUp` in
+    /// `getSpokeTotalOwed`); each adds less than `drawnIndex / RAY` units, under 2 while the index is below 2 RAY. The
+    /// Hub's cap check reads the owed amount before the draw, so a draw of exactly the room left reads 1 or 2 units above
+    /// the cap afterwards (a GHO draw of 160e18 into an empty 160 GHO cap at index 1.0000003 reads 160e18 + 1).
+    uint256 internal constant DRAW_ROUNDING = 2;
+
     FullStackWorld internal w;
     address[3] internal wallets;
     address internal payer;
@@ -184,22 +190,30 @@ contract FullStackHandler is CommonBase, StdUtils {
         // $1 to $3,000 of the asset ($1.00 each); a borrow beyond the account's room is refused by Aave or the RiskModule.
         uint256 amount = bound(shareSeed, 1, 3000) * 10 ** w.debtAssets[r].decimals();
         PauseState state = w.registry.pauseState(w.hub);
+        // The Spoke's owed amount (drawn + premium) and deficit on the asset in this block, before the draw.
+        (uint256 owedBefore, uint256 deficit) = _spokeOwed(r);
+        if (!_borrowAs(wallet, market, proxy, r, amount)) revert Skipped();
+        ++borrows;
+        if (state != PauseState.None) ++gateViolations;
+        _checkDrawGate(r, amount, owedBefore, deficit);
+    }
+
+    /// @dev `wallet` borrows `amount` of reserve `r` through the AaveAdapter at its proxy's next nonce.
+    function _borrowAs(
+        address wallet,
+        uint256 market,
+        address proxy,
+        uint256 r,
+        uint256 amount
+    ) internal returns (bool ok) {
         uint256 nonce = w.adapter.borrowNonce(proxy);
         vm.prank(wallet);
-        (bool ok,) = address(w.adapter)
+        (ok,) = address(w.adapter)
             .call(
                 abi.encodeCall(
                     w.adapter.borrow, (market, w.debtReserves[r], amount, wallet, block.timestamp + 600, 0, nonce)
                 )
             );
-        if (!ok) revert Skipped();
-        ++borrows;
-        if (state != PauseState.None) ++gateViolations;
-        IAaveV4Hub h = IAaveV4Hub(w.hub);
-        uint256 owed = h.getSpokeTotalOwed(w.debtAssetIds[r], address(w.spoke));
-        uint256 cap =
-            uint256(h.getSpokeConfig(w.debtAssetIds[r], address(w.spoke)).drawCap) * 10 ** w.debtAssets[r].decimals();
-        if (owed > cap) ++drawCapViolations;
     }
 
     /// @dev Steered to the first pair from the seeds whose proxy has debt, in the chosen reserve if it owes it.
@@ -382,6 +396,33 @@ contract FullStackHandler is CommonBase, StdUtils {
     }
 
     // ─── Internals ───
+
+    /// @dev The CDP Spoke's owed amount (drawn + premium) on debt reserve `r`'s asset and its deficit, rounded up as the
+    /// Hub's draw check rounds it (`fromRayUp`).
+    function _spokeOwed(
+        uint256 r
+    ) internal view returns (uint256 owed, uint256 deficit) {
+        IAaveV4Hub h = IAaveV4Hub(w.hub);
+        owed = h.getSpokeTotalOwed(w.debtAssetIds[r], address(w.spoke));
+        uint256 ray = h.getSpokeDeficitRay(w.debtAssetIds[r], address(w.spoke));
+        deficit = ray == 0 ? 0 : (ray - 1) / 1e27 + 1;
+    }
+
+    /// @dev After a borrow of `amount` on reserve `r`: `INV-057`'s draw gate as the Hub applies it at each draw (drawn +
+    /// premium + deficit + the amount within the cap), and the owed amount grown by the amount plus at most the round-up
+    /// of the Hub's two share conversions, so no draw goes past the cap by more than that rounding.
+    function _checkDrawGate(
+        uint256 r,
+        uint256 amount,
+        uint256 owedBefore,
+        uint256 deficit
+    ) internal {
+        IAaveV4Hub h = IAaveV4Hub(w.hub);
+        uint256 id = w.debtAssetIds[r];
+        uint256 cap = uint256(h.getSpokeConfig(id, address(w.spoke)).drawCap) * 10 ** w.debtAssets[r].decimals();
+        if (owedBefore + amount + deficit > cap) ++drawCapViolations;
+        if (h.getSpokeTotalOwed(id, address(w.spoke)) > owedBefore + amount + DRAW_ROUNDING) ++drawCapViolations;
+    }
 
     /// @dev The (wallet, market) pairs in the order a call tries them: the seeds' own pair first, then the others.
     function _pair(
