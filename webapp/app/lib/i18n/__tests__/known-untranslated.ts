@@ -17,7 +17,6 @@ export const KNOWN_UNTRANSLATED: readonly string[] = [
   // Wallet Overview tiles — new copy awaiting the locale backfill.
   "Wallet Overview",
   "Unrealized P/L",
-  "Avana Boost",
   "Member since",
   // Per-collateral borrow-power utilization caption.
   "used",

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { render, screen } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { DisplayPreferencesProvider } from "@/app/components/display-preferences"
 import { DashboardWalletTab, resolvePoolRiskPremiumBps } from "@/app/dashboard/dashboard-wallet-tab"
 
@@ -18,17 +18,38 @@ vi.mock("@/app/lib/currency/use-currency", () => ({
 // The wallet tab now consults Convex for balances when no explicit prop is passed.
 // The isolated test render doesn't mount a ConvexProvider, so stub the hook to
 // return undefined — the tab falls through to the DEMO_SWAP_BALANCES default.
+const onboarding = vi.hoisted(() => ({
+  value: undefined as { sinceMs: number | null; discountBps: number | null } | undefined,
+}))
 vi.mock("@/app/lib/swap-system/use-convex-wallet-balances", () => ({
   useConvexProductWalletBalances: () => undefined,
   useConvexClaimBasis: () => undefined,
-  useConvexWalletOnboardingSummary: () => undefined,
+  useConvexWalletOnboardingSummary: () => onboarding.value,
 }))
+
+afterEach(() => {
+  onboarding.value = undefined
+})
 
 function renderWalletTab(node: ReactNode) {
   return render(<DisplayPreferencesProvider>{node}</DisplayPreferencesProvider>)
 }
 
 describe("DashboardWalletTab", () => {
+  it("shows the member's fee discount, and a dash when there is no membership", () => {
+    onboarding.value = { sinceMs: 1_700_000_000_000, discountBps: 2 }
+    const { unmount } = renderWalletTab(<DashboardWalletTab walletId="demo-wallet" />)
+    expect(screen.getByText("Fee discount")).toBeTruthy()
+    expect(screen.getByText("2 bps off")).toBeTruthy()
+    expect(screen.queryByText("Avana Boost")).toBeNull()
+    unmount()
+
+    onboarding.value = { sinceMs: null, discountBps: null }
+    renderWalletTab(<DashboardWalletTab walletId="demo-wallet" />)
+    expect(screen.getByText("Fee discount")).toBeTruthy()
+    expect(screen.queryByText(/bps off/)).toBeNull()
+  })
+
   it("prefers the hydrated market premium for pools added after the catalog", () => {
     const row = {
       id: "future-pool-row",

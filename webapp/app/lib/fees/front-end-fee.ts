@@ -17,18 +17,38 @@ import {
 
 export type { FeeAction, FeeRules } from "@/convex/lib/fees"
 
+let baseRules: FeeRules = DEFAULT_FEE_RULES
+let memberDiscountBps = 0
 let currentRules: FeeRules = DEFAULT_FEE_RULES
 const listeners = new Set<() => void>()
 
-/** The fee rules in force: Convex `frontendFee.getConfig` once it has loaded, the defaults before. */
+/**
+ * The fee rules in force: Convex `frontendFee.getConfig` once it has loaded, the defaults before, less the signed-in
+ * wallet's membership discount (`setFrontendMemberDiscount`), so the fee row and the fee transfer both start from it.
+ */
 export function frontendFeeRules(): FeeRules {
   return currentRules
 }
 
-export function setFrontendFeeRules(rules: FeeRules) {
-  if (rules === currentRules) return
-  currentRules = rules
+function applyRules() {
+  const next = memberDiscountBps > 0 ? { ...baseRules, memberDiscountBps } : baseRules
+  if (next === currentRules) return
+  currentRules = next
   for (const listener of listeners) listener()
+}
+
+export function setFrontendFeeRules(rules: FeeRules) {
+  if (rules === baseRules) return
+  baseRules = rules
+  applyRules()
+}
+
+/** The bps off every rate for the wallet's membership, computed by Convex; 0 for a guest or a wallet with no membership. */
+export function setFrontendMemberDiscount(bps: number) {
+  const next = Number.isInteger(bps) && bps > 0 ? bps : 0
+  if (next === memberDiscountBps) return
+  memberDiscountBps = next
+  applyRules()
 }
 
 export function subscribeFrontendFeeRules(listener: () => void) {
@@ -122,7 +142,7 @@ export function feeActionForKind(kind: string): FeeAction | null {
   }
 }
 
-/** The rate the fee tooltip states: the default rate, 0 when the fee is off. */
+/** The rate the fee tooltip states: the default rate less the member discount, 0 when the fee is off. */
 export function statedFeeBps(rules: FeeRules = currentRules): number {
-  return rules.enabled ? rules.defaultBps : 0
+  return rules.enabled ? Math.max(0, rules.defaultBps - (rules.memberDiscountBps ?? 0)) : 0
 }

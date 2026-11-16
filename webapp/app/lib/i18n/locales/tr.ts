@@ -1292,6 +1292,9 @@ const dict: TranslationDictionary = {
   "View wallet": "Cüzdanı görüntüle",
   "Wallet balances": "Cüzdan bakiyeleri",
   "Wallet Value": "Cüzdan Değeri",
+  "Fee discount": "Ücret indirimi",
+  "{bps} bps off": "{bps} bps indirim",
+  "Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days.": "Avana ücreti üyelik süresi uzadıkça düşer: 30 günden sonra 1 bps, 90 günden sonra 2 bps ve 180 günden sonra 3 bps indirim.",
   was: "önceden",
   "What assets can be borrowed with {name} as collateral.":
     "{name} teminat olarak kullanılarak hangi varlıklar ödünç alınabilir.",

@@ -2,13 +2,15 @@
 // Copyright (c) 2026 Avana Labs
 // The frontend fee and the total shown before signing: the fee rate and rules from `feeConfig` (10 bps on every app
 // action by default, never above MAX_FEE_BPS), the gas of the simulated batch at the chain's current gas price, and
-// the fee token's Lend Spoke price. The app adds the fee transfer to the action's batch with the amount `quote`
+// the fee token's Lend Spoke price. A member's rate is lower by `tenureDiscountBps` (1, 2 or 3 bps after 30, 90 or 180
+// days; wallet/membership.ts). The app adds the fee transfer to the action's batch with the amount `quote`
 // returns (lib/fees.ts computes both), sent to the ParameterStore's `feeRecipient` that the app reads on chain; Convex
 // holds no recipient.
 
 import { v } from "convex/values";
 import { internalMutation, query, type QueryCtx } from "./_generated/server";
-import { checkFeeRules, DEFAULT_FEE_RULES, type FeeAction, type FeeRules, LP_VALUE_ACTIONS, MAX_FEE_BPS, quoteFee } from "./lib/fees.ts";
+import { checkFeeRules, DEFAULT_FEE_RULES, type FeeAction, type FeeRules, LP_VALUE_ACTIONS, MAX_FEE_BPS, quoteFee, tenureDiscountBps } from "./lib/fees.ts";
+import { firstSeenOf } from "./wallet/membership.ts";
 
 const action = v.union(
   v.literal("supply"),
@@ -49,6 +51,8 @@ export const quote = query({
     gasUnits: v.string(),
     /** L1 data fee of the batch on an L2, wei. */
     l1FeeWei: v.optional(v.string()),
+    /** The wallet paying: its membership discount (`tenureDiscountBps`) comes off the rate; none without a wallet or a membership. */
+    wallet: v.optional(v.string()),
   },
   handler: async (ctx, a) => {
     const lp = LP_VALUE_ACTIONS.has(a.action as FeeAction);
@@ -58,7 +62,9 @@ export const quote = query({
     if (!price) return null;
     const gas = await ctx.db.query("chainGas").withIndex("by_chain", (q) => q.eq("chainId", a.chainId)).unique();
     if (!gas) return null;
-    const q = quoteFee(await rules(ctx), {
+    const base = await rules(ctx);
+    const member = a.wallet && /^0x[0-9a-fA-F]{40}$/.test(a.wallet) ? await firstSeenOf(ctx, a.wallet) : null;
+    const q = quoteFee(member ? { ...base, memberDiscountBps: tenureDiscountBps(member.sinceMs, Date.now()) } : base, {
       action: a.action as FeeAction,
       basis: lp
         ? { kind: "lpValue", valueUsd8: BigInt(input), decimals: price.decimals, priceUsd8: price.priceUsd8 }

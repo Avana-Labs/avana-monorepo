@@ -1332,6 +1332,9 @@ const dict: TranslationDictionary = {
   "View wallet": "Ver carteira",
   "Wallet balances": "Saldos da carteira",
   "Wallet Value": "Valor da carteira",
+  "Fee discount": "Desconto na taxa",
+  "{bps} bps off": "{bps} bps de desconto",
+  "Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days.": "A taxa da Avana diminui com o tempo de adesão: 1 bps de desconto após 30 dias, 2 após 90 dias e 3 após 180 dias.",
   was: "era",
   "What assets can be borrowed with {name} as collateral.":
     "Quais ativos podem ser pegos emprestados com {name} como colateral.",

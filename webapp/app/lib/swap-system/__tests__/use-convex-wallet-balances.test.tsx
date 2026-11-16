@@ -50,7 +50,7 @@ describe("member since", () => {
 
   it("reads nothing for a guest id and shows no date", () => {
     const { result } = renderHook(() => useConvexWalletOnboardingSummary("guest-1"))
-    expect(result.current).toEqual({ sinceMs: null, boost: null })
+    expect(result.current).toEqual({ sinceMs: null, discountBps: null })
     expect(args()).toEqual(["skip"])
   })
 
@@ -61,15 +61,15 @@ describe("member since", () => {
   })
 
   it("carries the first-interaction time, and a dash value when none is recorded", () => {
-    useQuery.mockReturnValueOnce({ sinceMs: 1_760_000_000_000, source: "onchain" } as never)
+    useQuery.mockReturnValueOnce({ sinceMs: 1_760_000_000_000, source: "onchain", discountBps: 3 } as never)
     expect(renderHook(() => useConvexWalletOnboardingSummary(wallet)).result.current).toEqual({
       sinceMs: 1_760_000_000_000,
-      boost: null,
+      discountBps: 3,
     })
     useQuery.mockReturnValueOnce(null as never)
     expect(renderHook(() => useConvexWalletOnboardingSummary(wallet)).result.current).toEqual({
       sinceMs: null,
-      boost: null,
+      discountBps: null,
     })
   })
 })

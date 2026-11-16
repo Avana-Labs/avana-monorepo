@@ -5,7 +5,7 @@
 // the chain's gas price and native price.
 
 import { describe, expect, it } from "vitest";
-import { type AmountBasis, DEFAULT_FEE_RULES, FEE_ACTIONS, type FeeRules, feeBpsFor, LP_VALUE_ACTIONS, lpValueFee, MAX_FEE_BPS, quoteFee } from "../convex/lib/fees.ts";
+import { type AmountBasis, DEFAULT_FEE_RULES, FEE_ACTIONS, type FeeRules, feeBpsFor, LP_VALUE_ACTIONS, lpValueFee, MAX_FEE_BPS, quoteFee, tenureDiscountBps } from "../convex/lib/fees.ts";
 
 // 200,000 gas at 20 gwei base + 1 gwei tip, ETH at $3,000.
 const gas = { gasUnits: 200_000n, baseFeeWei: 20_000_000_000n, priorityFeeWei: 1_000_000_000n, l1FeeWei: 0n, nativeUsd8: 300_000_000_000n };
@@ -183,5 +183,39 @@ describe("totals and caps", () => {
   it("refuses negative inputs", () => {
     expect(() => quoteFee(rules, { action: "supply", basis: amount(-1n, 1n), gas })).toThrow();
     expect(() => quoteFee(rules, { action: "supply", basis: amount(1n), gas: { ...gas, gasUnits: -1n } })).toThrow();
+  });
+});
+
+describe("member fee discount", () => {
+  const DAY = 86_400_000;
+  const NOW = 1_800_000_000_000;
+
+  it("takes 0, 1, 2 and 3 bps off at 0, 30, 90 and 180 days", () => {
+    const at = (days: number) => tenureDiscountBps(NOW - days * DAY, NOW);
+    expect([at(0), at(29.9), at(30), at(89.9), at(90), at(179.9), at(180), at(900)]).toEqual([0, 0, 1, 1, 2, 2, 3, 3]);
+  });
+
+  it("gives 10, 9, 8 and 7 bps on every action at the default rate", () => {
+    for (const [discount, bps] of [[0, 10], [1, 9], [2, 8], [3, 7]] as const) {
+      for (const action of FEE_ACTIONS) expect(feeBpsFor({ ...DEFAULT_FEE_RULES, memberDiscountBps: discount }, action), action).toBe(bps);
+    }
+  });
+
+  it("sizes the quoted fee from the discounted rate, the same amount the batch transfers", () => {
+    const q = quoteFee({ ...DEFAULT_FEE_RULES, memberDiscountBps: 3 }, { action: "supply", basis: amount(usdc(10_000)), gas });
+    expect(q.feeBps).toBe(7);
+    expect(q.feeAmount).toBe(usdc(7));
+    const lp = quoteFee({ ...DEFAULT_FEE_RULES, memberDiscountBps: 2 }, { action: "pledge", basis: lpValue(10_000n * ONE), gas });
+    expect(lp.feeAmount).toBe(usdc(8));
+  });
+
+  it("leaves a fee that is off or exempt at 0, and never goes below 0", () => {
+    expect(feeBpsFor({ ...DEFAULT_FEE_RULES, enabled: false, memberDiscountBps: 3 }, "supply")).toBe(0);
+    expect(feeBpsFor({ ...DEFAULT_FEE_RULES, exemptActions: ["swap"], memberDiscountBps: 3 }, "swap")).toBe(0);
+    expect(feeBpsFor({ ...DEFAULT_FEE_RULES, actionBps: { repay: 2 }, memberDiscountBps: 3 }, "repay")).toBe(0);
+  });
+
+  it("refuses a discount that is negative, fractional or above the ceiling", () => {
+    for (const memberDiscountBps of [-1, 0.5, MAX_FEE_BPS + 1]) expect(() => feeBpsFor({ ...DEFAULT_FEE_RULES, memberDiscountBps }, "supply")).toThrow();
   });
 });

@@ -1324,6 +1324,9 @@ const dict: TranslationDictionary = {
   "View wallet": "Voir le portefeuille",
   "Wallet balances": "Soldes du portefeuille",
   "Wallet Value": "Valeur du portefeuille",
+  "Fee discount": "Remise sur les frais",
+  "{bps} bps off": "{bps} bps de remise",
+  "Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days.": "Les frais Avana baissent avec l'ancienneté : 1 bps de remise après 30 jours, 2 après 90 jours et 3 après 180 jours.",
   was: "était",
   "What assets can be borrowed with {name} as collateral.":
     "Quels actifs peuvent être empruntés avec {name} comme garantie.",
