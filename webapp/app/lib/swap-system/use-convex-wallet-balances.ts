@@ -1,14 +1,20 @@
 "use client"
 
 /**
- * A wallet's balances by product (services/convex `wallet.productBalances.listForWallet`, a public
- * query keyed by wallet). services/convex answers empty buckets until the app reads balances live
- * over RPC. Returns undefined while the query is loading (Convex convention).
+ * A wallet's balances by product, read live from the chain. Lend and borrow positions are read by their own
+ * sessions; this hook gives the wallet's tokens and unpledged LP NFTs.
  */
 
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react"
 import { useQuery } from "convex/react"
+import { isAddress, type Address } from "viem"
 import { api } from "@/convex/_generated/api"
 import { hasConvexClient } from "@/app/lib/convex/has-convex-client"
+import { chainPublicClient } from "@/app/lib/chain/public-client"
+import { chainIds } from "@/app/lib/chains"
+import { useActiveChainKey } from "@/app/lib/web3/active-chain"
+import { SWAP_ASSETS } from "./catalog"
+import { readChainWalletBalances } from "./chain-wallet-balances"
 import type { UserAssetBalance } from "./contracts"
 
 /**
@@ -32,61 +38,146 @@ const NO_SUMMARY = { sinceMs: null, boost: null }
 
 const NO_BALANCES: UserAssetBalance[] = []
 
+/**
+ * The wallet's balances on the chain picked in the Network preference, read from the chain (`chain-wallet-balances.ts`):
+ * its tokens as "wallet" rows and its LP NFTs that an Avana market accepts as "borrow_collateral_unpledged" rows. The
+ * tokens and markets come from Convex (`deployments.swapContractsOf`, `collateralMarkets.list`). Read again on each new
+ * block and after a swap. Undefined while loading; empty for a guest id or without a Convex deployment.
+ */
 export function useConvexProductWalletBalances(walletId: string | null | undefined): UserAssetBalance[] | undefined {
   // Without a deployment there is no ConvexProvider and nothing to read. `hasConvexClient` is a
   // build-time constant, so every render takes the same branch.
   if (!hasConvexClient) return NO_BALANCES
-  return useLiveProductWalletBalances(walletId)
+  return useChainWalletBalances(walletId)
 }
 
-function useLiveProductWalletBalances(walletId: string | null | undefined): UserAssetBalance[] | undefined {
-  const buckets = useQuery(api.wallet.productBalances.listForWallet, walletId ? { wallet: walletId } : "skip")
-  if (!buckets) return buckets === undefined ? undefined : []
-  const resolvedWalletId = walletId ?? ""
+function useChainWalletBalances(walletId: string | null | undefined): UserAssetBalance[] | undefined {
+  const chainId = chainIds()[useActiveChainKey()]
+  const wallet = walletId && isAddress(walletId) ? (walletId.toLowerCase() as Address) : null
+  const contracts = useQuery(api.deployments.swapContractsOf, wallet ? { chainId } : "skip")
+  const markets = useQuery(api.collateralMarkets.list, wallet ? { chainId } : "skip")
+  // A chain without an RPC on this network has nothing to read.
+  const client = wallet ? chainPublicClient(chainId) : null
+  const key = wallet && client ? `${chainId}:${wallet}` : null
+  const balances = useSyncExternalStore(
+    useCallback((listener: () => void) => (key ? subscribeBalances(key, listener) : () => {}), [key]),
+    () => (key ? balancesSnapshot(key) : NO_BALANCES),
+    () => undefined,
+  )
 
-  const rows: UserAssetBalance[] = []
-  for (const row of buckets.liquid) {
-    rows.push({
-      id: `${resolvedWalletId}:${row.assetId}:liquid`,
-      walletId: resolvedWalletId,
-      assetId: row.assetId,
-      amount: row.amount,
-      valueUsd: row.valueUsd,
-      sourceType: "wallet",
-    })
+  useEffect(() => {
+    if (!key || !wallet || !client || contracts === undefined || markets === undefined) return
+    return startBalanceReads(
+      key,
+      () =>
+        readChainWalletBalances({
+          client,
+          chainId,
+          wallet,
+          tokens: contracts?.tokens ?? [],
+          markets,
+          assets: SWAP_ASSETS,
+        }),
+      client,
+    )
+  }, [key, wallet, client, chainId, contracts, markets])
+
+  // Rows carry the session's wallet id as given (it may be checksummed), as the row builders match on it.
+  return useMemo(
+    () => (!key ? NO_BALANCES : balances?.map((row) => ({ ...row, walletId: walletId ?? row.walletId }))),
+    [balances, key, walletId],
+  )
+}
+
+type BalanceEntry = { rows: UserAssetBalance[] | undefined; listeners: Set<() => void>; refresh: (() => void) | null }
+
+const entries = new Map<string, BalanceEntry>()
+
+function entryOf(key: string): BalanceEntry {
+  let entry = entries.get(key)
+  if (!entry) {
+    entry = { rows: undefined, listeners: new Set(), refresh: null }
+    entries.set(key, entry)
   }
-  for (const row of buckets.lend) {
-    rows.push({
-      id: `${resolvedWalletId}:${row.marketId}:lend:${row.state}`,
-      walletId: resolvedWalletId,
-      assetId: row.assetId,
-      amount: row.amount,
-      valueUsd: row.valueUsd,
-      sourceType: row.state === "available" ? "lend_available" : "lend_deposited",
-      sourcePositionId: row.marketId,
-    })
+  return entry
+}
+
+function subscribeBalances(key: string, listener: () => void) {
+  const entry = entryOf(key)
+  entry.listeners.add(listener)
+  return () => entry.listeners.delete(listener)
+}
+
+function balancesSnapshot(key: string): UserAssetBalance[] | undefined {
+  return entries.get(key)?.rows
+}
+
+/**
+ * Reads now, then on each new block, one read at a time; returns the stop function. Several hooks on the same wallet
+ * and chain share one read: a second start only adds a reference.
+ */
+const readers = new Map<string, { count: number; read: () => Promise<UserAssetBalance[]>; stop: () => void }>()
+
+function startBalanceReads(
+  key: string,
+  read: () => Promise<UserAssetBalance[]>,
+  client: { watchBlockNumber(args: { onBlockNumber: () => void; emitOnBegin?: boolean }): () => void },
+): () => void {
+  const running = readers.get(key)
+  if (running) {
+    // The latest tokens and markets win.
+    running.count++
+    running.read = read
+    return () => release(key)
   }
-  for (const row of buckets.borrow) {
-    rows.push({
-      id: `${resolvedWalletId}:${row.marketId ?? row.assetId ?? row.symbol}:borrow:${row.state}`,
-      walletId: resolvedWalletId,
-      assetId: row.poolId ?? row.assetId ?? row.marketId ?? row.symbol.toLowerCase(),
-      amount: row.amount,
-      valueUsd: row.state === "debt" ? -row.valueUsd : row.valueUsd,
-      symbol: row.symbol,
-      isLpToken: row.state === "poolAvailable" || row.state === "collateral",
-      unitPriceUsd: row.unitPriceUsd,
-      ltvPct: row.ltvPct,
-      sourceType:
-        row.state === "poolAvailable"
-          ? "borrow_collateral_unpledged"
-          : row.state === "collateral"
-            ? "borrow_collateral_pledged"
-            : row.state === "debt"
-              ? "borrow_debt"
-              : "borrow_claimable",
-      sourcePositionId: row.marketId,
-    })
+  const entry = entryOf(key)
+  let inFlight = false
+  let again = false
+  const refresh = () => {
+    if (inFlight) {
+      again = true
+      return
+    }
+    inFlight = true
+    ;(readers.get(key)?.read ?? read)()
+      .then((rows) => {
+        entry.rows = rows
+        for (const listener of entry.listeners) listener()
+      })
+      .catch(() => {
+        // Unreadable now (RPC down); the next block reads again and the last rows stay shown.
+      })
+      .finally(() => {
+        inFlight = false
+        if (again) {
+          again = false
+          refresh()
+        }
+      })
   }
-  return rows
+  entry.refresh = refresh
+  const unwatch = client.watchBlockNumber({ onBlockNumber: refresh, emitOnBegin: true })
+  readers.set(key, {
+    count: 1,
+    read,
+    stop: () => {
+      unwatch()
+      entry.refresh = null
+    },
+  })
+  return () => release(key)
+}
+
+function release(key: string) {
+  const running = readers.get(key)
+  if (!running) return
+  running.count--
+  if (running.count > 0) return
+  running.stop()
+  readers.delete(key)
+}
+
+/** Reads every watched wallet's balances again now, e.g. after a swap confirms. */
+export function refreshWalletBalances() {
+  for (const entry of entries.values()) entry.refresh?.()
 }
