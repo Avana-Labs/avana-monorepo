@@ -48,9 +48,10 @@ abstract contract WorldFeeds is DeployBase {
     address internal linkToken;
     uint40 internal epochAndRound;
 
-    /// @notice Oracle addresses; funds the transmitters with gas on anvil.
+    /// @notice Oracle addresses; funds the transmitters with gas on a local chain (told by its chain ID, not by the
+    /// network name, which the signature keeps for its callers).
     function _ocrSetup(
-        string memory network,
+        string memory, /* network */
         address link
     ) internal {
         bool local = _isLocalChain(block.chainid);
