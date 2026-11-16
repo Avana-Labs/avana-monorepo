@@ -39,6 +39,12 @@ export default defineSchema({
     /** Chainlink native/USD feed (8 decimals) used to value gas. */
     nativeUsdFeed: address,
     release: v.string(),
+    /** The About card's contracts from the manifest: `avana.lpVaults[]`, `avana.riskModule`, each Spoke's oracle. */
+    lpVaults: v.optional(v.array(v.object({ integrationId: v.number(), address }))),
+    riskModule: v.optional(address),
+    spokeOracles: v.optional(v.array(v.object({ spoke: address, oracle: address }))),
+    /** The manifest's `external` list: third-party contracts (swap venues, tokens, feeds) by group and name. */
+    external: v.optional(v.array(v.object({ group: v.string(), name: v.string(), address, standIn: v.boolean() }))),
   }).index("by_chain", ["chainId"]),
 
   /** One row per (chain, Hub): label, tier, its Lend and CDP Spokes and lend assets. Its totals are its `hubAssets`. */
@@ -309,11 +315,23 @@ export default defineSchema({
     risk: v.optional(
       v.object({
         summary: v.string(),
+        reviewedAt: v.optional(v.string()),
         factors: v.array(
-          v.object({ id: v.string(), label: v.string(), level: v.union(v.literal("low"), v.literal("moderate"), v.literal("elevated"), v.literal("high")), text: v.string() }),
+          v.object({
+            id: v.string(),
+            label: v.string(),
+            level: v.union(v.literal("low"), v.literal("moderate"), v.literal("elevated"), v.literal("high")),
+            text: v.string(),
+            bps: v.optional(v.number()),
+          }),
+        ),
+        dependencies: v.optional(
+          v.array(v.object({ kind: v.union(v.literal("amm"), v.literal("oracle"), v.literal("hub"), v.literal("spoke")), label: v.string(), address: v.string() })),
         ),
       }),
     ),
+    /** A Hub page's risk disclosures for its Borrow and Lend pages. */
+    disclosures: v.optional(v.object({ borrow: v.optional(v.string()), lend: v.optional(v.string()) })),
     contentHash: v.string(),
     operationId: v.string(),
     loadedAt: v.number(),

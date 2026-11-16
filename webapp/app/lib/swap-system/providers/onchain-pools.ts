@@ -1,47 +1,75 @@
-import { encodePacked, formatUnits, parseUnits, type Address, type Hex } from "viem"
+import { encodePacked, formatUnits, parseUnits, zeroAddress, type Address, type Hex } from "viem"
 import type { SwapQuote, SwapQuoteRequest } from "../quote-types"
 import type { SwapQuoteProvider } from "./types"
 
 /**
- * Quotes from the chain's own concentrated-liquidity pools through the venue's QuoterV2
- * (Uniswap v3 or Aerodrome Slipstream; both take `quoteExactInput(path, amountIn)` and differ only
- * in what the path carries between tokens: the fee tier or the tick spacing). It tries the direct
- * pools and the one-hop routes through the configured connector tokens and keeps the best output.
+ * Quotes from a chain's own pools: Uniswap v3 and Uniswap v4 on Ethereum, Aerodrome Slipstream on
+ * Base. For each venue it tries the direct pools and the one-hop routes through the configured
+ * connector tokens, and it keeps the route with the best output net of its gas cost.
+ *
+ * - Uniswap v3 and Slipstream: QuoterV2 `quoteExactInput(path, amountIn)`; the packed path carries
+ *   the fee tier (v3) or the tick spacing (Slipstream) between tokens. Native ETH trades as WETH.
+ * - Uniswap v4: V4Quoter `quoteExactInput((exactCurrency, PathKey[], exactAmount))` over hookless
+ *   pools keyed by (fee, tick spacing); native ETH is the currency address(0).
  */
 
-export type PoolVenue = "uniswap-v3" | "slipstream"
+export type PoolVenue = "uniswap-v3" | "uniswap-v4" | "slipstream"
+
+export const VENUE_NAMES: Readonly<Record<PoolVenue, string>> = {
+  "uniswap-v3": "Uniswap v3",
+  "uniswap-v4": "Uniswap v4",
+  slipstream: "Aerodrome Slipstream",
+}
 
 export type PoolToken = {
-  /** Swap asset id (`eth`, `usdc`, …); native ETH maps to the WETH address. */
+  /** Swap asset id (`eth`, `usdc`, …). */
   assetId: string
   symbol: string
+  /** ERC-20 address; for native ETH, the WETH address (used by Uniswap v3 and Slipstream). */
   address: Address
   decimals: number
+  /** Native ETH: Uniswap v4 trades it as address(0). */
+  isNative?: boolean
 }
+
+/** A Uniswap v4 pool key without the currencies: hookless pools only. */
+export type V4PoolKey = { fee: number; tickSpacing: number }
+
+export type VenueConfig =
+  | {
+      venue: "uniswap-v3" | "slipstream"
+      quoter: Address
+      /** Uniswap v3 fee tiers (500 = 0.05 %) or Slipstream tick spacings to try for each hop. */
+      poolKeys: readonly number[]
+    }
+  | {
+      venue: "uniswap-v4"
+      quoter: Address
+      poolKeys: readonly V4PoolKey[]
+    }
 
 export type OnchainPoolsConfig = {
   chainId: number
-  venue: PoolVenue
-  quoter: Address
   tokens: readonly PoolToken[]
-  /** Uniswap v3 fee tiers (500 = 0.05 %) or Slipstream tick spacings to try for each hop. */
-  poolKeys: readonly number[]
+  venues: readonly VenueConfig[]
   /** Asset ids a two-hop route may pass through (for example `weth`, `usdc`). */
   connectorAssetIds: readonly string[]
   /** Seconds a quote stays valid. */
   quoteValiditySeconds?: number
   /** USD cost of a swap using `gas` units, when known. */
   networkFeeUsd?: (gas: bigint) => Promise<number> | number
+  /** USD price of an asset, when known; used to compare routes net of gas. */
+  priceUsd?: (assetId: string) => number | undefined
 }
 
 /** The read the provider needs from a chain client (viem's PublicClient satisfies it). */
 export type QuoterClient = {
   readContract(args: {
     address: Address
-    abi: typeof QUOTER_V2_ABI
+    abi: typeof QUOTER_V2_ABI | typeof V4_QUOTER_ABI
     functionName: "quoteExactInput"
-    args: readonly [Hex, bigint]
-  }): Promise<readonly [bigint, readonly bigint[], readonly number[], bigint]>
+    args: readonly unknown[]
+  }): Promise<unknown>
 }
 
 export const QUOTER_V2_ABI = [
@@ -63,11 +91,44 @@ export const QUOTER_V2_ABI = [
   },
 ] as const
 
-/** A route: tokens and the pool key (fee tier or tick spacing) of each hop between them. */
-export type PoolRoute = { tokens: readonly PoolToken[]; poolKeys: readonly number[] }
+export const V4_QUOTER_ABI = [
+  {
+    type: "function",
+    name: "quoteExactInput",
+    stateMutability: "view",
+    inputs: [
+      {
+        name: "params",
+        type: "tuple",
+        components: [
+          { name: "exactCurrency", type: "address" },
+          {
+            name: "path",
+            type: "tuple[]",
+            components: [
+              { name: "intermediateCurrency", type: "address" },
+              { name: "fee", type: "uint24" },
+              { name: "tickSpacing", type: "int24" },
+              { name: "hooks", type: "address" },
+              { name: "hookData", type: "bytes" },
+            ],
+          },
+          { name: "exactAmount", type: "uint128" },
+        ],
+      },
+    ],
+    outputs: [
+      { name: "amountOut", type: "uint256" },
+      { name: "gasEstimate", type: "uint256" },
+    ],
+  },
+] as const
 
-/** Packed QuoterV2 path: token, then for each hop its 3-byte pool key and the next token. */
-export function encodePoolPath(route: PoolRoute, venue: PoolVenue): Hex {
+/** A route: tokens and the pool key of each hop between them. */
+export type PoolRoute<Key = number | V4PoolKey> = { tokens: readonly PoolToken[]; poolKeys: readonly Key[] }
+
+/** Packed QuoterV2 path (Uniswap v3, Slipstream): token, then per hop its 3-byte pool key and the next token. */
+export function encodePoolPath(route: PoolRoute<number>, venue: "uniswap-v3" | "slipstream"): Hex {
   const types: ("address" | "uint24" | "int24")[] = []
   const values: (Address | number)[] = []
   route.tokens.forEach((token, index) => {
@@ -81,14 +142,45 @@ export function encodePoolPath(route: PoolRoute, venue: PoolVenue): Hex {
   return encodePacked(types, values)
 }
 
+/** Uniswap v4 currency of a token: address(0) for native ETH. */
+export function v4Currency(token: PoolToken): Address {
+  return token.isNative ? zeroAddress : token.address
+}
+
+/** V4Quoter `quoteExactInput` params for a route of hookless pools. */
+export function v4QuoteParams(route: PoolRoute<V4PoolKey>, amountIn: bigint) {
+  return {
+    exactCurrency: v4Currency(route.tokens[0]!),
+    path: route.tokens.slice(1).map((token, index) => ({
+      intermediateCurrency: v4Currency(token),
+      fee: route.poolKeys[index]!.fee,
+      tickSpacing: route.poolKeys[index]!.tickSpacing,
+      hooks: zeroAddress,
+      hookData: "0x" as Hex,
+    })),
+    exactAmount: amountIn,
+  }
+}
+
+function sameCurrency(a: PoolToken, b: PoolToken, venue: PoolVenue): boolean {
+  return venue === "uniswap-v4" ? v4Currency(a) === v4Currency(b) : a.address === b.address
+}
+
 /** Direct routes over every pool key, then one-hop routes through each connector. */
-export function candidateRoutes(config: OnchainPoolsConfig, input: PoolToken, output: PoolToken): PoolRoute[] {
-  const routes: PoolRoute[] = config.poolKeys.map((key) => ({ tokens: [input, output], poolKeys: [key] }))
+export function candidateRoutes<Key>(
+  config: OnchainPoolsConfig,
+  venue: PoolVenue,
+  poolKeys: readonly Key[],
+  input: PoolToken,
+  output: PoolToken,
+): PoolRoute<Key>[] {
+  if (sameCurrency(input, output, venue)) return []
+  const routes: PoolRoute<Key>[] = poolKeys.map((key) => ({ tokens: [input, output], poolKeys: [key] }))
   for (const connectorId of config.connectorAssetIds) {
     const connector = config.tokens.find((token) => token.assetId === connectorId)
-    if (!connector || connector.address === input.address || connector.address === output.address) continue
-    for (const first of config.poolKeys) {
-      for (const second of config.poolKeys) {
+    if (!connector || sameCurrency(connector, input, venue) || sameCurrency(connector, output, venue)) continue
+    for (const first of poolKeys) {
+      for (const second of poolKeys) {
         routes.push({ tokens: [input, connector, output], poolKeys: [first, second] })
       }
     }
@@ -101,29 +193,41 @@ function toUnits(amount: number, decimals: number): bigint {
   return parseUnits(amount.toFixed(Math.min(decimals, 18)), decimals)
 }
 
-function routeFeeBps(route: PoolRoute, venue: PoolVenue): number {
-  // Uniswap v3 fee tiers are in hundredths of a basis point; Slipstream paths carry no fee.
-  if (venue !== "uniswap-v3") return 0
-  const keep = route.poolKeys.reduce((product, fee) => product * (1 - fee / 1_000_000), 1)
+function routeFeeBps(venue: PoolVenue, route: PoolRoute): number {
+  // Uniswap fees are in hundredths of a basis point; a Slipstream path carries no fee.
+  if (venue === "slipstream") return 0
+  const keep = route.poolKeys.reduce<number>((product, key) => {
+    const fee = typeof key === "number" ? key : key.fee
+    return product * (1 - fee / 1_000_000)
+  }, 1)
   return Math.round((1 - keep) * 10_000 * 100) / 100
 }
 
-type RouteQuote = { route: PoolRoute; amountOut: bigint; gasEstimate: bigint }
+type RouteQuote = { venue: VenueConfig; route: PoolRoute; amountOut: bigint; gasEstimate: bigint }
 
 async function quoteRoute(
   client: QuoterClient,
-  config: OnchainPoolsConfig,
+  venue: VenueConfig,
   route: PoolRoute,
   amountIn: bigint,
 ): Promise<RouteQuote | null> {
   try {
-    const [amountOut, , , gasEstimate] = await client.readContract({
-      address: config.quoter,
+    if (venue.venue === "uniswap-v4") {
+      const [amountOut, gasEstimate] = (await client.readContract({
+        address: venue.quoter,
+        abi: V4_QUOTER_ABI,
+        functionName: "quoteExactInput",
+        args: [v4QuoteParams(route as PoolRoute<V4PoolKey>, amountIn)],
+      })) as readonly [bigint, bigint]
+      return amountOut > 0n ? { venue, route, amountOut, gasEstimate } : null
+    }
+    const [amountOut, , , gasEstimate] = (await client.readContract({
+      address: venue.quoter,
       abi: QUOTER_V2_ABI,
       functionName: "quoteExactInput",
-      args: [encodePoolPath(route, config.venue), amountIn],
-    })
-    return amountOut > 0n ? { route, amountOut, gasEstimate } : null
+      args: [encodePoolPath(route as PoolRoute<number>, venue.venue), amountIn],
+    })) as readonly [bigint, readonly bigint[], readonly number[], bigint]
+    return amountOut > 0n ? { venue, route, amountOut, gasEstimate } : null
   } catch {
     // No pool at this key, or not enough liquidity on the route.
     return null
@@ -154,12 +258,17 @@ function emptyQuote(request: SwapQuoteRequest, name: string, now: number, status
   }
 }
 
+/** The provider name before a route is chosen: the chain's venues. */
+function providerName(config: OnchainPoolsConfig): string {
+  return config.venues.map((venue) => VENUE_NAMES[venue.venue]).join(" / ")
+}
+
 export function createOnchainPoolsProvider(
   config: OnchainPoolsConfig,
   client: QuoterClient,
-  name = config.venue === "uniswap-v3" ? "Uniswap v3" : "Aerodrome Slipstream",
   clock: () => number = Date.now,
 ): SwapQuoteProvider {
+  const name = providerName(config)
   return {
     id: "onchain-pools",
     name,
@@ -167,35 +276,44 @@ export function createOnchainPoolsProvider(
       const now = clock()
       const input = config.tokens.find((token) => token.assetId === request.inputAssetId)
       const output = config.tokens.find((token) => token.assetId === request.outputAssetId)
-      if (request.chainId !== config.chainId || !input || !output || input.address === output.address) {
-        return emptyQuote(request, name, now, "unsupported")
-      }
+      if (request.chainId !== config.chainId || !input || !output) return emptyQuote(request, name, now, "unsupported")
       const amountIn = toUnits(request.inputAmount, input.decimals)
       if (amountIn === 0n) return emptyQuote(request, name, now, "idle")
 
-      const routes = candidateRoutes(config, input, output)
-      const quotes = (await Promise.all(routes.map((route) => quoteRoute(client, config, route, amountIn)))).filter(
-        (quote): quote is RouteQuote => quote !== null,
+      const attempts = config.venues.flatMap((venue) =>
+        candidateRoutes<number | V4PoolKey>(config, venue.venue, venue.poolKeys, input, output).map((route) =>
+          quoteRoute(client, venue, route, amountIn),
+        ),
       )
+      const quotes = (await Promise.all(attempts)).filter((quote): quote is RouteQuote => quote !== null)
       if (quotes.length === 0) return emptyQuote(request, name, now, "unsupported")
-      const best = quotes.reduce((a, b) => (b.amountOut > a.amountOut ? b : a))
+
+      // Best output net of gas: compare in USD when the output price is known, else by output alone.
+      const outputPrice = config.priceUsd?.(output.assetId)
+      const scored = await Promise.all(
+        quotes.map(async (quote) => {
+          const gasUsd = config.networkFeeUsd ? await config.networkFeeUsd(quote.gasEstimate) : 0
+          const out = Number(formatUnits(quote.amountOut, output.decimals))
+          return { quote, gasUsd, score: outputPrice ? out * outputPrice - gasUsd : out }
+        }),
+      )
+      const best = scored.reduce((a, b) => (b.score > a.score ? b : a))
 
       // Price impact against the same route quoted for a thousandth of the amount.
       const probeIn = amountIn / 1000n > 0n ? amountIn / 1000n : 1n
-      const probe = await quoteRoute(client, config, best.route, probeIn)
-      const outAmount = Number(formatUnits(best.amountOut, output.decimals))
+      const probe = await quoteRoute(client, best.quote.venue, best.quote.route, probeIn)
+      const outAmount = Number(formatUnits(best.quote.amountOut, output.decimals))
       const exchangeRate = outAmount / request.inputAmount
       const probeRate = probe
         ? Number(formatUnits(probe.amountOut, output.decimals)) / Number(formatUnits(probeIn, input.decimals))
         : exchangeRate
       const priceImpactPct = probeRate > 0 ? Math.max(0, (1 - exchangeRate / probeRate) * 100) : 0
-      const feeBps = routeFeeBps(best.route, config.venue)
-      const networkFeeUsd = config.networkFeeUsd ? await config.networkFeeUsd(best.gasEstimate) : 0
+      const feeBps = routeFeeBps(best.quote.venue.venue, best.quote.route)
 
       return {
         id: `quote-${request.inputAssetId}-${request.outputAssetId}-${now}`,
         status: "valid",
-        provider: name,
+        provider: VENUE_NAMES[best.quote.venue.venue],
         chainId: request.chainId,
         inputAssetId: request.inputAssetId,
         outputAssetId: request.outputAssetId,
@@ -207,10 +325,10 @@ export function createOnchainPoolsProvider(
         feeBps,
         priceImpactPct,
         slippageBps: request.slippageBps,
-        networkFeeUsd,
+        networkFeeUsd: best.gasUsd,
         expiresAt: now + (config.quoteValiditySeconds ?? 30) * 1000,
         createdAt: now,
-        route: best.route.tokens.map((token) => token.symbol),
+        route: best.quote.route.tokens.map((token) => token.symbol),
       }
     },
   }

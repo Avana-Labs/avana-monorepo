@@ -7,7 +7,7 @@
 
 import { type HubAssetRow, type HubAssetSpokeRow, type MarketRow, type SpokeReserveRow, MAX_SPOKE_CAP, bpsToPct, capRoom, marketBorrowRateRay, rayToAprPct, spokeHeadroom, tokens, usd } from "@avana/services-common/views";
 import { type Values } from "./charts.ts";
-import { compactUsd, pct } from "./format.ts";
+import { compactUsd, liquidationBonusBps, pct } from "./format.ts";
 import type { Cashflow, LiquidationRisk, PageRisk, RiskAssessment, RiskLevel, RiskParameters } from "./uiTypes.ts";
 
 const PAUSE = ["None", "Frozen", "Paused"] as const;
@@ -78,11 +78,15 @@ export function assetRiskParameters(slug: string, reserve: SpokeReserveRow, slic
   };
 }
 
-/** Liquidation bonus range: Aave V4 scales from `maxBonus × bonusFactor` near HF 1 to `maxBonus` at the max-bonus HF. */
-export function liquidationPenaltyRange(maxBonusBps: number, bonusFactorBps: number | null): string {
-  if (bonusFactorBps === null) return pct(bpsToPct(maxBonusBps));
-  const min = Math.floor((maxBonusBps * bonusFactorBps) / 10_000);
-  return min === maxBonusBps ? pct(bpsToPct(maxBonusBps)) : `${pct(bpsToPct(min))} – ${pct(bpsToPct(maxBonusBps))}`;
+/**
+ * Liquidation bonus range from Aave V4's 10,000-based `maxLiquidationBonus`: the bonus scales from
+ * `(maxBonus − 100 %) × bonusFactor` near HF 1 to `maxBonus − 100 %` at the max-bonus HF.
+ */
+export function liquidationPenaltyRange(maxLiquidationBonus: number, bonusFactorBps: number | null): string {
+  const max = liquidationBonusBps(maxLiquidationBonus);
+  if (bonusFactorBps === null) return pct(bpsToPct(max));
+  const min = Math.floor((max * bonusFactorBps) / 10_000);
+  return min === max ? pct(bpsToPct(max)) : `${pct(bpsToPct(min))} – ${pct(bpsToPct(max))}`;
 }
 
 /** Room the market has to borrow now in USD, summed over its debt reserves' borrow speeds (BOR-024). */
@@ -106,7 +110,7 @@ export function poolRiskParameters(slug: string, market: MarketRow, headRateRay:
       ...(liq ? [{ id: "targetHealthFactor", label: "Target health factor", value: wadHf(liq.targetHealthFactorWad) }] : []),
       ...(caps ? [{ id: "liquidationThreshold", label: "Liquidation threshold", value: pct(bpsToPct(caps.liquidationThresholdBps)) }] : []),
       { id: "oracle", label: "Oracle source", value: `Avana LP oracle ${market.lpOracle.slice(0, 6)}…${market.lpOracle.slice(-4)}`, description: "Prices the vault token from the pool's token feeds and its TWAP." },
-      { id: "maxBonus", label: "Max liquidation bonus", value: pct(bpsToPct(market.maxLiquidationBonusBps)) },
+      { id: "maxBonus", label: "Max liquidation bonus", value: pct(bpsToPct(liquidationBonusBps(market.maxLiquidationBonusBps))) },
       ...(headRateRay ? [{ id: "borrowRate", label: "Borrow APR (this market)", value: pct(rayToAprPct(marketBorrowRateRay(headRateRay, market.collateralRiskBps))) }] : []),
       ...(caps
         ? [
@@ -155,7 +159,7 @@ export function poolRiskAssessment(market: MarketRow, risk?: PageRisk): RiskAsse
     breakdown: [{ id: "collateralRisk", label: "Collateral risk", bps, level: level(bps), description: "Aave V4 collateral risk of the market's vault-token reserve." }, ...listed],
     metrics: [
       { id: "cf", label: "Collateral factor", value: pct(bpsToPct(market.collateralFactorBps)) },
-      { id: "bonus", label: "Max liquidation bonus", value: pct(bpsToPct(market.maxLiquidationBonusBps)) },
+      { id: "bonus", label: "Max liquidation bonus", value: pct(bpsToPct(liquidationBonusBps(market.maxLiquidationBonusBps))) },
       { id: "price", label: "Price state", value: PRICE[market.priceState] ?? String(market.priceState) },
     ],
   };
@@ -212,19 +216,24 @@ export function liquidationRisk(slug: string, day: string, last: LiquidationWind
   };
 }
 
+/** Days the cashflow rows total. */
+export const CASHFLOW_ROW_DAYS = 90;
+
 /**
- * Interest paid over the last 12 months from daily Hub samples: each day's owed amount × that day's drawn rate /
- * 365, valued at that day's price. Lenders receive it less the reserve factor; the Hub keeps the rest. A Spoke's
- * cashflow uses its own owed amount, so the Spokes' cashflows add up to the Hub's.
+ * Interest paid from daily Hub samples: each day's owed amount × that day's drawn rate / 365, valued at that day's
+ * price. Lenders receive it less the reserve factor; the Hub keeps the rest. A Spoke's cashflow uses its own owed
+ * amount, so the Spokes' cashflows add up to the Hub's. The bars cover every day given (12 months); the rows are the
+ * last 90 days, the period the card's 1D / 30D / 90D columns are scaled from.
  */
 export function cashflow(days: readonly { t: number; hub: Values; owed?: string }[], decimals: number, liquidityFeeBps: number): Cashflow {
   const monthly = new Map<string, number>();
+  const rowsFrom = (days.at(-1)?.t ?? 0) - CASHFLOW_ROW_DAYS * 86_400;
   let interest = 0;
   for (const d of days) {
     const owed = d.owed ?? d.hub.owed ?? "0";
     const rateApr = rayToAprPct(d.hub.drawnRateRay ?? "0") / 100;
     const value = (usd(owed, decimals, d.hub.priceUsd8 ?? "0") * rateApr) / 365;
-    interest += value;
+    if (d.t > rowsFrom) interest += value;
     const month = new Date(d.t * 1000).toISOString().slice(0, 7) + "-01";
     monthly.set(month, (monthly.get(month) ?? 0) + value);
   }

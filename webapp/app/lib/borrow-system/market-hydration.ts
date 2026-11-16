@@ -8,6 +8,7 @@ import {
   type BorrowVisual,
 } from "@/app/lib/borrow-system/model"
 import { getTokenIconMeta } from "@/app/lib/token-icons"
+import { chainName } from "@/app/lib/chains"
 
 /**
  * One Borrow row from services/convex `markets.listMarketSnapshots`: a collateral market
@@ -50,10 +51,8 @@ export type ConvexMarketSnapshot = {
   lpPriceUsd?: number
 }
 
-const CHAIN_LABELS: Record<number, string> = { 1: "Ethereum", 8453: "Base", 31337: "Local" }
-
 export function chainLabel(chainId: number | undefined): string {
-  return chainId !== undefined ? (CHAIN_LABELS[chainId] ?? `Chain ${chainId}`) : "—"
+  return chainId !== undefined ? (chainName(chainId) ?? `Chain ${chainId}`) : "—"
 }
 
 function usd6(value: number | undefined) {
@@ -130,6 +129,7 @@ export function borrowMarketFromSnapshot(
     // Aave V4: the liquidation threshold equals the collateral factor (REQ-LENS-045).
     riskConfig: { collateralFactorWad: cf, liquidationThresholdWad: cf, riskScoreWad: 0n },
     listPremiumBps: finite(snap.premiumBps),
+    ...(snap.hubId ? { hubId: snap.hubId.toLowerCase(), hubLabel: snap.hubLabel?.trim() || snap.hubId } : {}),
     reserveFactorPct: finite(snap.reserveFactorPct),
     relations: {
       supportedBorrowAssetIds: related
@@ -159,11 +159,6 @@ export function borrowMarketFromSnapshot(
   }
 }
 
-/**
- * services/convex reports a pool row's Spoke by address and an asset row's Spoke by its slug, so
- * the two only match when both use the same key; otherwise the debt reserves of the same chain
- * are offered (one CDP Spoke per chain at launch).
- */
 /**
  * A market's collateral borrows only the debt reserves of its own CDP Spoke. The chain is the
  * match only when a row does not name its Spoke.
