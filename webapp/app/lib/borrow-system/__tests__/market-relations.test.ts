@@ -49,3 +49,10 @@ describe("borrowMarketFromSnapshot relations", () => {
     ])
   })
 })
+
+describe("borrowMarketFromSnapshot Spoke name", () => {
+  it("keeps the Spoke's listing name for the Markets filter, and none without one", () => {
+    expect(borrowMarketFromSnapshot({ ...row("m", "pool", SPOKE_A), spokeName: " Avana Blue Chip " }, []).spokeName).toBe("Avana Blue Chip")
+    expect(borrowMarketFromSnapshot(row("m", "pool", SPOKE_A), [])).not.toHaveProperty("spokeName")
+  })
+})
