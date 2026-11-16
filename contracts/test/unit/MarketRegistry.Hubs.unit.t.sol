@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IMarketRegistryApprovals} from "../../src/policy/market-registry/IMarketRegistryApprovals.sol";
 import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
 import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketRegistryEvents.sol";
@@ -11,6 +12,8 @@ import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
 import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
 import {DriftReason} from "../../src/types/DriftReason.sol";
 import {MarketDef} from "../../src/types/MarketDef.sol";
+import {PositionShape} from "../../src/types/PositionShape.sol";
+import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
     RegistryAaveOracleMock,
@@ -21,6 +24,7 @@ import {
 import {
     RegistryAvanaFirstLossReserveMock,
     RegistryFlashSourceMock,
+    RegistryLPOracleMock,
     RegistryLPVaultMock,
     RegistryTokenMock
 } from "../utils/mocks/MarketRegistryMocks.sol";
@@ -219,15 +223,72 @@ contract MarketRegistryHubsUnitTest is MarketRegistryFixture {
         assertEq(registry.deployCdpSpoke(d), address(spoke2));
         assertEq(registry.hubOf(address(spoke2)), address(hub2));
         assertEq(registry.getSpokes().length, 2);
-        // A second Spoke for the same (Hub, integration, tier).
-        RegistrySpokeMock spoke3 = new RegistrySpokeMock();
-        RegistryAaveOracleMock oracle3 = new RegistryAaveOracleMock();
-        spoke3.setOracle(address(oracle3));
-        spoke3.setImplementation(address(spokeImpl));
-        oracle3.setSpoke(address(spoke3));
+        // A second Spoke for the same (Hub, integration, tier) is recorded too.
         SpokeDef memory d3 = d;
-        (d3.aaveOracle, d3.implementation) = (address(oracle3), address(spokeImpl));
-        _expectInvalidSpoke(d3, address(spoke3));
+        address spoke3 = _newSpoke(d3);
+        vm.prank(address(timelock));
+        assertEq(registry.deployCdpSpoke(d3), spoke3);
+        assertEq(registry.hubOf(spoke3), address(hub2));
+        assertEq(registry.getSpokes().length, 3);
+    }
+
+    /// @notice Two CDP Spokes on the same (Hub, integration, tier), a market listed on each (each market key is
+    /// chain-wide, so the second market takes another range of the same pool).
+    function test_TEST_185_twoSpokesShareHubIntegrationTier() public {
+        SpokeDef memory d = _spokeDef();
+        address other = _newSpoke(d);
+        vm.prank(address(timelock));
+        assertEq(registry.deployCdpSpoke(d), other);
+        assertEq(registry.hubOf(other), address(hub));
+        assertEq(registry.hubOf(address(spoke)), address(hub));
+        // The second Spoke lends GHO too, as the fixture's Spoke does: its settlement reserve.
+        IAaveV4Spoke.Reserve memory r;
+        (r.underlying, r.hub, r.assetId, r.decimals) = (address(gho), address(hub), uint16(GHO_ASSET), 18);
+        IAaveV4Spoke.ReserveConfig memory c;
+        c.borrowable = true;
+        IAaveV4Spoke.DynamicReserveConfig memory dyn;
+        RegistrySpokeMock(other).setReserve(GHO_RESERVE, r, c, dyn);
+        RegistryAaveOracleMock(d.aaveOracle).setSource(GHO_RESERVE, address(ghoSource));
+        hub.setSpokeConfig(GHO_ASSET, other, 0, 1_000_000);
+        vm.prank(address(timelock));
+        registry.enableDebtReserve(other, _ghoDef());
+
+        (uint256 first,,) = _listMarket();
+        uint256 second = registry.marketCount() + 1;
+        PositionShape memory shape = PositionShape(ShapeKind.TickRange, -100, 100);
+        RegistryLPOracleMock lpOracle = new RegistryLPOracleMock(second, address(lpVault));
+        vm.prank(address(timelock));
+        address vaultToken = factory.deployVaultToken(
+            V3,
+            pool,
+            bytes32(0),
+            shape,
+            address(hub),
+            other,
+            second,
+            address(lpOracle),
+            18,
+            "Avana USDC/USDT wide",
+            "avUSDC-USDT-w"
+        );
+        MarketDef memory m = _marketDef(vaultToken, address(lpOracle));
+        (m.spoke, m.shape) = (other, shape);
+        vm.prank(address(timelock));
+        assertEq(registry.listCollateralMarket(m), second);
+        assertEq(first + 1, second);
+    }
+
+    /// @dev A standard Spoke mock with its own AaveOracle, for `def` (its oracle and implementation are set).
+    function _newSpoke(
+        SpokeDef memory def
+    ) internal returns (address) {
+        RegistrySpokeMock s = new RegistrySpokeMock();
+        RegistryAaveOracleMock o = new RegistryAaveOracleMock();
+        s.setOracle(address(o));
+        s.setImplementation(address(spokeImpl));
+        o.setSpoke(address(s));
+        (def.aaveOracle, def.implementation) = (address(o), address(spokeImpl));
+        return address(s);
     }
 
     // TEST-185 verifies: REQ-CONFIG-016, REQ-CONFIG-074
