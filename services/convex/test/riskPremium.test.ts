@@ -42,3 +42,17 @@ describe("Lend premium yield", () => {
     expect(lendRiskAssessment(asset, "USDC")).toMatchObject({ premiumBps: 90, headline: "0.90% premium yield" });
   });
 });
+
+describe("collateral premium wording", () => {
+  it("says the premium is a share of the base rate, with the extra APR points at today's rate", async () => {
+    const { collateralRiskDescription, poolRiskAssessment } = await import("../convex/lib/riskViews.ts");
+    const RAY = 10n ** 27n;
+    // Stable at 400 bps of a 5 % base rate: ×1.04, 0.20 extra points.
+    expect(collateralRiskDescription(400, ((5n * RAY) / 100n).toString())).toBe(
+      "Aave V4 collateral risk of the market's vault-token reserve: borrowers pay the base rate ×1.04, 0.20 extra APR points at today's 5.00% base rate.",
+    );
+    expect(collateralRiskDescription(400)).toBe("Aave V4 collateral risk of the market's vault-token reserve: borrowers pay the base rate ×1.04.");
+    const card = poolRiskAssessment({ collateralRiskBps: 400, collateralFactorBps: 8_000, maxLiquidationBonusBps: 10_500, priceState: 0 } as never);
+    expect(card).toMatchObject({ premiumBps: 400, premiumBasis: "baseRate", breakdown: [{ label: "Collateral risk (% of base rate)", bps: 400 }] });
+  });
+});

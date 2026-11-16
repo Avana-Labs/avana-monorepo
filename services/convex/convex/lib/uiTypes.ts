@@ -172,6 +172,8 @@ export interface RiskAssessment {
   readonly premiumBps: number;
   /** The highest premium when the card covers several (a Borrow asset's markets); `premiumBps` is then the lowest. */
   readonly premiumMaxBps?: number;
+  /** "baseRate" when `premiumBps` is a share of the base rate (collateral risk), not APY points (a Lend premium yield). */
+  readonly premiumBasis?: "baseRate";
   readonly level: RiskLevel;
   readonly score: number;
   readonly headline: string;

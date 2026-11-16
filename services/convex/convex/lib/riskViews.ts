@@ -170,12 +170,13 @@ export function debtRiskAssessment(range: { min: number; max: number }, symbol: 
   return {
     premiumBps: range.min,
     ...(range.max !== range.min ? { premiumMaxBps: range.max } : {}),
+    premiumBasis: "baseRate",
     level: lvl,
     score: Math.min(100, Math.round(range.max / 20)),
     headline: `${pctRange(range)} collateral risk premium`,
     summary: risk?.summary ?? `Borrowers of ${symbol} pay the Hub's base rate plus their collateral's premium (${pctRange(range)}), set by the Aave DAO for each collateral.`,
     breakdown: [
-      { id: "collateralRisk", label: "Collateral risk", bps: range.max, level: lvl, description: "Aave V4 collateral risk of the markets that can borrow this asset." },
+      { id: "collateralRisk", label: "Collateral risk (% of base rate)", bps: range.max, level: lvl, description: "Aave V4 collateral risk of the markets that can borrow this asset: a borrower pays the base rate × (1 + their collateral's premium)." },
       ...(risk ? factorRows(risk) : []),
     ],
     metrics: [],
@@ -209,17 +210,30 @@ export function lendRiskAssessment(a: Pick<HubAssetRow, "drawnRateRay" | "premiu
   };
 }
 
+/**
+ * What a collateral premium costs a borrower: the base rate × (1 + premium), so the extra APY points are the base rate ×
+ * premium (with today's base rate when known).
+ */
+export function collateralRiskDescription(bps: number, baseRateRay?: string | null): string {
+  const factor = `×${(1 + bps / 10_000).toFixed(2)}`;
+  if (!baseRateRay) return `Aave V4 collateral risk of the market's vault-token reserve: borrowers pay the base rate ${factor}.`;
+  const basePct = rayToAprPct(baseRateRay);
+  const extra = rayToAprPct(marketBorrowRateRay(baseRateRay, bps)) - basePct;
+  return `Aave V4 collateral risk of the market's vault-token reserve: borrowers pay the base rate ${factor}, ${extra.toFixed(2)} extra APR points at today's ${pct(basePct)} base rate.`;
+}
+
 /** The pool page's premium card: the market's `collateralRisk`, the one premium every borrower of it pays. */
-export function poolRiskAssessment(market: MarketRow, risk?: PageRisk): RiskAssessment {
+export function poolRiskAssessment(market: MarketRow, risk?: PageRisk, baseRateRay?: string | null): RiskAssessment {
   const bps = market.collateralRiskBps;
   const listed = risk ? factorRows(risk) : [];
   return {
     premiumBps: bps,
+    premiumBasis: "baseRate",
     level: level(bps),
     score: Math.min(100, Math.round(bps / 20)),
     headline: `${pct(bpsToPct(bps))} collateral risk premium`,
     summary: risk?.summary ?? `Every borrower against this market pays the Hub's base rate plus ${pct(bpsToPct(bps))} of it, set by the Aave DAO for this collateral.`,
-    breakdown: [{ id: "collateralRisk", label: "Collateral risk", bps, level: level(bps), description: "Aave V4 collateral risk of the market's vault-token reserve." }, ...listed],
+    breakdown: [{ id: "collateralRisk", label: "Collateral risk (% of base rate)", bps, level: level(bps), description: collateralRiskDescription(bps, baseRateRay) }, ...listed],
     metrics: [
       { id: "cf", label: "Collateral factor", value: pct(bpsToPct(market.collateralFactorBps)) },
       { id: "bonus", label: "Max liquidation bonus", value: pct(bpsToPct(liquidationBonusBps(market.maxLiquidationBonusBps))) },

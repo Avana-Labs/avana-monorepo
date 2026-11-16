@@ -52,7 +52,8 @@ export function RiskSection({ detail }: Props) {
                   : formatBpsAsPct(risk.premiumBps)}
               </SectionCardPrimaryMetric>
               <SectionCardSupportingLabel>
-                ({risk.premiumMaxBps != null ? `${risk.premiumBps}–${risk.premiumMaxBps}` : risk.premiumBps} bps)
+                ({risk.premiumMaxBps != null ? `${risk.premiumBps}–${risk.premiumMaxBps}` : risk.premiumBps} bps
+                {risk.premiumBasis === "baseRate" ? ` ${t("of the base rate")}` : ""})
               </SectionCardSupportingLabel>
             </div>
           </div>

@@ -138,6 +138,8 @@ export type RiskAssessment = {
   premiumBps: number
   /** The highest premium when the card covers several markets (a Borrow asset); `premiumBps` is then the lowest. */
   premiumMaxBps?: number
+  /** "baseRate" when the premium is a share of the base rate (collateral risk), not APY points. */
+  premiumBasis?: "baseRate"
   /** Qualitative bucket derived from `premiumBps`. */
   level: RiskLevel
   /** Score 0..100 used to position the gauge needle. */

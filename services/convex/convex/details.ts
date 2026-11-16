@@ -100,7 +100,10 @@ export function readRisk(w: World, scope: PageScope, slug: string) {
   const c = page ? contentOf(w, scope, page.chainId, page.key) : null;
   if (scope === "pool") {
     const m = bySlug(w, "pool", slug) as MarketDoc | null;
-    return m ? poolRiskAssessment(m, c?.risk) : null;
+    if (!m) return null;
+    const head = headlineReserve(w.reserves.filter((r) => r.chainId === m.chainId), m.spoke);
+    const asset = head ? w.assetsByKey.get(hubAssetKey(head)) : undefined;
+    return poolRiskAssessment(m, c?.risk, asset?.drawnRateRay ?? null);
   }
   if (scope === "asset") {
     const r = bySlug(w, "asset", slug) as SpokeReserveDoc | null;
