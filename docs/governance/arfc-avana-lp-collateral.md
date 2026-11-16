@@ -352,7 +352,7 @@ Avana's contracts are implemented and checked against the specification by tests
 
 | Check | What it covers | Result | Source |
 |---|---|---|---|
-| Foundry unit, integration, fuzz and hostile-component tests | Happy paths, rejections, access control, bounds, formulas and rounding directions, and hostile Avana components installed through the timelock | 478 suites, 3,932 tests passed, 0 failed, 1 skipped | CI run 43757248540 on `main` (`5cb4098`; the contracts are unchanged on `8704d52`), coverage job |
+| Foundry unit, integration, fuzz and hostile-component tests | Happy paths, rejections, access control, bounds, formulas and rounding directions, and hostile Avana components installed through the timelock | 478 suites, 3,932 tests passed, 0 failed, 1 skipped | CI run 43757248540 on `main` at `5cb4098`, coverage job |
 | Foundry at CI depth, invariants included | The same tests with fuzzing at 10,000 runs and invariant campaigns at 10,000 × 100, in 30 shards | All 30 shards pass, 0 failed | CI run 43757248540, `tests (ci profile)` jobs |
 | Branch coverage | Branch coverage of every file in `contracts/src`; CI fails any file below its own minimum, and no minimum is below 80% | 98.62% (2,636 of 2,673 branches) over 137 files; 0 files below their minimum | CI run 43757248540, `branch coverage (per-file minimums)`; minimums in `contracts/security/coverage-thresholds.json` |
 | Fork tests | Avana against the deployed Uniswap v3, Aerodrome Slipstream, Aave V3 Pool, peg-module routes and Chainlink feeds at pinned blocks | Configured per chain (Ethereum and Base) and run on each chain's fork before deployment | [fork-tests](../audit/fork-tests/README.md) |
@@ -368,7 +368,7 @@ Avana's contracts are implemented and checked against the specification by tests
 | Necessist | Every test statement removed one at a time; a test that still passes checks less than it should | 6,108 removals classified, 0 unclassified: 3,723 equivalent or harmless, 2,092 noise, 158 real test gaps (each with the assertion that closes it), 135 to re-run | [necessist](../audit/necessist/README.md), [findings register](../audit/findings-register.md) section 2.2 |
 | Mutation testing | Faults injected into the code; a test must fail for each one | Kill rates below. Of 1,691 surviving mutants of the earlier run, 0 are untriaged: 388 real test gaps, each now with a test; 1,020 equivalent or harmless; 52 noise; 4 superseded; 227 left to the next run with corrected test sets | [mutation](../audit/mutation/README.md), [findings register](../audit/findings-register.md) section 2.2 |
 | Independent review per contract | Each contract reviewed from its spec page and code only, with a proof-of-concept test per finding | 1 High, 12 Medium, 33 Low found; each fixed or decided | [reviews](../audit/reviews/README.md), [audit index](../audit/README.md#internal-verification) |
-| Fresh adversarial audit | The whole protocol on `main` at `a024490`, traced into the pinned Aave V4, Uniswap v3 and Slipstream code | Security score 88/100. No Critical or High finding; no path to take user, LP or protocol funds. One Medium (M-01, a rescue top-up refused once a token counter passes its cap), fixed with a regression test; four Low (L-01 to L-04) and two Informational (I-01, I-02), each with its fix and regression test tracked in section 9 of the report | [fresh audit report](../audit/reviews/fresh-audit-2026-11-15/REPORT.md) |
+| Fresh adversarial audit | The whole protocol on `main` at `a024490`, traced into the pinned Aave V4, Uniswap v3 and Slipstream code | Security score 87/100 (88 when first published; lowered when I-01 was re-measured as a Low). No Critical or High finding; no path to take user, LP or protocol funds. One Medium (M-01, a rescue top-up refused once a token counter passes its cap) and five Low (L-01 to L-04, I-01), each fixed with a regression test; one Informational (I-02, documentation) corrected | [fresh audit report](../audit/reviews/fresh-audit-2026-11-15/REPORT.md) |
 | Traceability | Links each requirement to its checks, tests and Solidity; a changed requirement fails until its checks re-run | 3,562 requirements, 0 errors, 0 changed requirements awaiting re-verification. The committed matrix counts only recorded prover and Halmos passes: 121 verified, 1,879 with checks whose results it does not include, 1,562 with no counting check yet | [traceability matrix](../spec/05-verification/traceability.md) |
 | Z3 and SymPy | Every formula in exact integers at Solidity bit widths, each formula against the rule it implements, every worked example recomputed | Z3: 641 proved, 123 deliberate counterexamples, 131 computed, 0 mismatches. SymPy: 230 checks, 229 hold, 1 deliberate wrong reading | [z3](../audit/z3/README.md), [sympy](../audit/sympy/README.md) |
 | Hypothesis | Generated action sequences against an integer model of Avana, Aave V4 and Uniswap v3, with solvency per debt asset after every step | 82 tests, 82 pass | [hypothesis](../spec/05-verification/hypothesis/README.md) |
@@ -405,6 +405,20 @@ The triage also found one contract defect, `MUT-01`: a DebtOracle poke whose fee
 ### Triage policy
 
 A finding from a tool is either fixed or accepted. Every accepted Slither, Aderyn, Semgrep, Mythril, 4naly3er, Gambit, mutation, Necessist or gitleaks entry carries a written reason, and the static-analysis gates fail on an entry without one. The triage entries also record their approval by Avana Labs: one by one, or under an approved pattern once the independent review agrees; an entry not yet approved says so. The triage files are in `contracts/security/`, and the gitleaks entries are in `.gitleaksignore`.
+
+### Expected results of the final runs
+
+These are the targets the final runs must meet before deployment. They are requirements, not results; each run's result is recorded in its `docs/audit` folder when it completes. Scope counts are taken from the repository at `5fbb1eb`.
+
+| Run | Scope | Target before deployment |
+|---|---|---|
+| Full Foundry mutation gate (`mutation-gate.yml`, every layer) | The 26 mutation targets of layers 2.1 to 2.6 in `contracts/security/mutation-layers.json`, with Gambit at up to 10 mutants per file in layer 2.1 and 20 in the others; the last full dispatch (run 43653570827) queued 746 jobs | Every mutant killed, or recorded as equivalent with a reason, published as the kill-rate table above |
+| Certora Prover | 292 rules and 39 invariants in 26 spec files (`contracts/certora/specs/`), run through 31 confs (`contracts/certora/conf/`) | Every rule and invariant proved with sanity checks on the release commit, with job ids in `contracts/certora/RUNS.md` |
+| Certora mutation (`certoraMutate`) | The 30 confs with a `mutations` section (every conf except `Hub.conf`, which verifies the unmodified Aave V4 Hub) | Every mutant caught by a rule, or explained with a reason |
+| Halmos | 169 `check_` functions in 30 files under `contracts/test/halmos/` | Every check runs to completion and passes; no check is accepted as bounded |
+| Slow suites (`security-slow.yml`, deep invariant campaigns) | 35 Echidna and Medusa property harnesses (`contracts/test/invariant/echidna/`), the hevm entry points of the same harnesses, the Halmos checks above, and 33 Foundry invariant suites (`contracts/test/invariant/`) | Every job green |
+| Fork tests | 16 fork test files (`contracts/test/fork/`) on Ethereum and Base forks at the blocks pinned in `ForkConstants.sol` | Every test passes on each chain's fork before that chain's deployment |
+| External audits, audit contest and bug bounty | Listed under What comes next | No open Critical or High finding at deployment |
 
 ### What comes next
 
