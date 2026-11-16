@@ -124,7 +124,7 @@ export function headlineReserve(reserves: readonly SpokeReserveRow[], spoke: str
 export function poolSnapshot(
   market: WithSlug<MarketRow>,
   debts: readonly MarketReserveDebtRow[],
-  reserves: readonly SpokeReserveRow[],
+  reserves: readonly WithSlug<SpokeReserveRow>[],
   assets: ReadonlyMap<string, HubAssetRow>,
   pool24h: { volumeUsd: number; feesUsd: number; lpFeeAprPct?: number },
   content: PageContent | null,
