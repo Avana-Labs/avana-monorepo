@@ -5095,7 +5095,7 @@
     ]
   },
   "INV-096": {
-    "hash": "caf8c251bdea11af",
+    "hash": "9881de2d25877d12",
     "checks": [
       "IAmmIntegration",
       "MATH-CAP-09",
@@ -14926,7 +14926,7 @@
     ]
   },
   "REQ-AMM-CORE-015": {
-    "hash": "03ddd53cb9d70357",
+    "hash": "d0fee4dfe4d3ca99",
     "checks": [
       "MATH-ST-108",
       "TEST-342"
@@ -16755,7 +16755,7 @@
     ]
   },
   "REQ-COLL-025": {
-    "hash": "2d5e62c08fe412f2",
+    "hash": "f6be9a1e0aa34e86",
     "checks": [
       "CollateralizationPledge",
       "FV-CUS-41",
@@ -28954,7 +28954,7 @@
     ]
   },
   "REQ-VAULT-025": {
-    "hash": "a3b07b3a9972497f",
+    "hash": "0b1170b0b0c7fa69",
     "checks": [
       "AmmConstants",
       "CollateralizationPledge",
