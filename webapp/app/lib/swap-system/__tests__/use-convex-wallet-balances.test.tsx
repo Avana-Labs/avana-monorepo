@@ -8,7 +8,10 @@ vi.mock("@/app/lib/chain/public-client", () => ({
   chainPublicClient: () => (rpc.set ? { watchBlockNumber: () => () => {} } : null),
 }))
 
-import { useConvexProductWalletBalances } from "@/app/lib/swap-system/use-convex-wallet-balances"
+import {
+  useConvexProductWalletBalances,
+  useConvexWalletOnboardingSummary,
+} from "@/app/lib/swap-system/use-convex-wallet-balances"
 import { chainIds } from "@/app/lib/chains"
 import { setActiveChainKey } from "@/app/lib/web3/active-chain"
 
@@ -39,5 +42,34 @@ describe("wallet balance reads", () => {
     rpc.set = false
     const { result } = renderHook(() => useConvexProductWalletBalances("0x00000000000000000000000000000000000000aa"))
     expect(result.current).toEqual([])
+  })
+})
+
+describe("member since", () => {
+  const wallet = "0x00000000000000000000000000000000000000aa"
+
+  it("reads nothing for a guest id and shows no date", () => {
+    const { result } = renderHook(() => useConvexWalletOnboardingSummary("guest-1"))
+    expect(result.current).toEqual({ sinceMs: null, boost: null })
+    expect(args()).toEqual(["skip"])
+  })
+
+  it("is undefined while the wallet's membership loads", () => {
+    const { result } = renderHook(() => useConvexWalletOnboardingSummary(wallet))
+    expect(result.current).toBeUndefined()
+    expect(args()).toContainEqual({ wallet })
+  })
+
+  it("carries the first-interaction time, and a dash value when none is recorded", () => {
+    useQuery.mockReturnValueOnce({ sinceMs: 1_760_000_000_000, source: "onchain" } as never)
+    expect(renderHook(() => useConvexWalletOnboardingSummary(wallet)).result.current).toEqual({
+      sinceMs: 1_760_000_000_000,
+      boost: null,
+    })
+    useQuery.mockReturnValueOnce(null as never)
+    expect(renderHook(() => useConvexWalletOnboardingSummary(wallet)).result.current).toEqual({
+      sinceMs: null,
+      boost: null,
+    })
   })
 })

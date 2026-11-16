@@ -612,6 +612,18 @@ export default defineSchema({
     .index("by_authSubject", ["authSubject"]),
 
   /**
+   * When a wallet first interacted with Avana ("Member since"): the earliest of its first on-chain Avana event (the
+   * import), its first submitted app transaction (`intents`) and its profile creation. Written only by the server
+   * (lib/membership.ts keeps the minimum), never by a client.
+   */
+  memberships: defineTable({
+    wallet: address,
+    firstSeenAt: v.number(),
+    source: v.union(v.literal("onchain"), v.literal("intent"), v.literal("profile")),
+    updatedAt: v.number(),
+  }).index("by_wallet", ["wallet"]),
+
+  /**
    * Shared per-key rate-limit buckets for the Next API route guards (SIWE nonce/verify/
    * dev-token). Must live here, not in process memory, so a horizontally-scaled deploy
    * enforces ONE limit across instances. `resetAt` = epoch ms the window ends.

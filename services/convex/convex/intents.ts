@@ -10,6 +10,7 @@ import { internalAction, internalMutation, internalQuery, mutation, query } from
 import { codedError } from "./codedError";
 import { INTENT_KINDS, type IntentState, type IntentStatus, isFinal, nextIntentState } from "./lib/intents.ts";
 import { explorerLinks } from "./lib/explorer.ts";
+import { noteFirstSeen } from "./lib/membership.ts";
 import { rpcClient } from "./lib/rpc.ts";
 import { consumeWriteBudget } from "./writeRateLimit";
 import { requireWalletSession } from "./walletAuth";
@@ -37,6 +38,7 @@ export const submit = mutation({
     }
     const now = Date.now();
     const id = await ctx.db.insert("intents", { wallet: w, chainId, txHash: hash, kind, ...(page ? { page } : {}), status: "pending", submittedAt: now, open: true, checkedAt: 0, updatedAt: now });
+    await noteFirstSeen(ctx, w, now, "intent");
     return { id, status: "pending" as const };
   },
 });
