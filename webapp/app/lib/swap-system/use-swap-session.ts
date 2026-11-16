@@ -26,6 +26,7 @@ import {
   type SwapTransactionRecord,
 } from "./quote-types"
 import type { UserAssetBalance } from "./contracts"
+import { refreshWalletBalances, useConvexProductWalletBalances } from "./use-convex-wallet-balances"
 
 /**
  * Swap state of one wallet. Quotes come from the network's provider (NEXT_PUBLIC_AVANA_SWAP_PROVIDER):
@@ -36,10 +37,13 @@ import type { UserAssetBalance } from "./contracts"
 export function useSwapSession({ walletId }: { walletId: string }) {
   const [state, setState] = useState<SwapSystemState>({ balances: [], allowances: {}, transactions: [] })
 
-  const walletBalances = useMemo(
-    () => state.balances.filter((balance): balance is UserAssetBalance => balance.walletId === walletId),
-    [state.balances, walletId],
-  )
+  // The wallet's balances on the active chain (`use-convex-wallet-balances.ts`); balances handed in through
+  // `hydrateBalances` win while set.
+  const chainBalances = useConvexProductWalletBalances(walletId)
+  const walletBalances = useMemo(() => {
+    const source = state.balances.length > 0 ? state.balances : (chainBalances ?? [])
+    return source.filter((balance): balance is UserAssetBalance => balance.walletId === walletId)
+  }, [chainBalances, state.balances, walletId])
 
   const contracts = useSwapContracts()
   const provider = useMemo(() => {
@@ -134,6 +138,7 @@ export function useSwapSession({ walletId }: { walletId: string }) {
       const record = await sendSwap(execution, quote, walletId, lastApprovalHash.current)
       lastApprovalHash.current = undefined
       setState((current) => ({ ...current, transactions: [record, ...current.transactions] }))
+      refreshWalletBalances()
       const venue = lastVenue.current.get(quote.inputAssetId)
       if (venue) void refreshAllowance(quote.inputAssetId, venue)
       return record
