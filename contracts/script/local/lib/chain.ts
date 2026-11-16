@@ -115,7 +115,7 @@ export const testValues = (): Record<string, any> => JSON.parse(readFileSync(joi
  * parameters; the values the DAO sets (caps, credit lines, First-Loss Reserve and offset amounts, speed limits) come
  * from test-values.json. The stack's keystores fill every role: the deployer is also the test tokens' minter and the
  * First-Loss Reserves' funder, the keeper is the keeper and the operator helper's signer, the treasury is the fee
- * recipient.
+ * recipient, the guardian is the Aave Protocol Guardian.
  */
 export function writeBaseConfig(c: LocalChain): string {
   const src = JSON.parse(readFileSync(join(CONTRACTS, "script/deploy/config/anvil.json"), "utf8")) as Record<string, any>;
@@ -130,6 +130,7 @@ export function writeBaseConfig(c: LocalChain): string {
   // The MarketRegistry's MAX_MARKET_COUNT is fixed at deployment: room for every Hub file the stack may add.
   cfg.parameters.maxMarketCount = Number(process.env.STACK_MAX_MARKETS ?? 128);
   cfg.parameters.globals.feeRecipient = a.treasury;
+  cfg.governance.aaveProtocolGuardian = a.guardian;
   cfg.keepers = [a.keeper];
   for (const h of cfg.operatorHelpers) h.signer = a.keeper;
   cfg.aavePayload.tokenMinter = a.deployer;
