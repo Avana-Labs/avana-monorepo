@@ -53,8 +53,10 @@ export async function startNode(c: LocalChain): Promise<"running" | "started" | 
     "--code-size-limit", "49152", "--gas-limit", "60000000",
   ];
   const restore = existsSync(statePath(c));
-  if (c.forkUrl) args.push("--fork-url", c.forkUrl);
-  else if (!restore) args.push("--timestamp", String(genesisTimestamp()));
+  if (c.fork) {
+    await startForkProxy(c);
+    args.push("--fork-url", `http://127.0.0.1:${c.fork.proxyPort}`, "--fork-block-number", String(c.fork.block), "--retries", "10", "--fork-retry-backoff", "2000", "--timeout", "60000");
+  } else if (!restore) args.push("--timestamp", String(genesisTimestamp()));
   start(nodeName(c), "anvil", args);
   await waitFor(`${c.label} node`, () => answers(c), 30_000, 300);
   if (restore) {
@@ -64,6 +66,18 @@ export async function startNode(c: LocalChain): Promise<"running" | "started" | 
   return "started";
 }
 
+/** The chain's fork proxy, holding the network's RPC endpoints (environment or encrypted secrets) in its environment. */
+async function startForkProxy(c: LocalChain): Promise<void> {
+  const name = `fork-proxy-${c.key}`;
+  if (running(name)) return;
+  const { secretValue } = await import("./secrets.ts");
+  const varName = `${c.network.toUpperCase()}_FORK_RPC_URL` as "ETHEREUM_FORK_RPC_URL" | "BASE_FORK_RPC_URL";
+  const urls = secretValue(varName);
+  if (!urls) throw new Error(`fork mode needs ${varName}: set it in the environment, or store it encrypted with \`node script/local/stack.ts secrets\``);
+  start(name, process.execPath, [join(CONTRACTS, "script/local/fork-proxy.ts"), String(c.fork!.proxyPort)], { env: { FORK_UPSTREAMS: urls } });
+  await waitFor(`${c.label} fork proxy`, async () => (await fetch(`http://127.0.0.1:${c.fork!.proxyPort}`)).ok, 15_000, 300);
+}
+
 /** Saves the node's state (anvil_dumpState) and stops it. */
 export async function stopNode(c: LocalChain, save = true): Promise<void> {
   if (save && (await answers(c))) {
@@ -71,6 +85,7 @@ export async function stopNode(c: LocalChain, save = true): Promise<void> {
     writeFileSync(statePath(c), hex);
   }
   stop(nodeName(c));
+  stop(`fork-proxy-${c.key}`);
 }
 
 export const nodeRunning = (c: LocalChain) => running(nodeName(c));

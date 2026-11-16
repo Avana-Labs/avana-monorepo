@@ -55,7 +55,9 @@ Logs are in `deployments-local/stack/logs/<process>.log`, one per process and on
 
 | Variable | Default | Effect |
 |---|---|---|
-| `STACK_FORK_ETHEREUM`, `STACK_FORK_BASE` | none | Fork a network (anvil `--fork-url`); the chain keeps its local ID |
+| `STACK_FORK` | off | `1` forks Ethereum and Base at the blocks pinned in `fork.json`. The chains keep their local IDs (31337, 31338) |
+| `ETHEREUM_FORK_RPC_URL`, `BASE_FORK_RPC_URL` | none | The networks' RPC endpoints (comma-separated for several). Never in the repository: set in the environment, or stored encrypted next to the keystores with `stack.ts secrets`. anvil reads them through a local proxy (`fork-proxy.ts`, retries with backoff), so they appear on no command line. `up` stops if one is missing in fork mode |
+| `STACK_FORK_BLOCK_ETHEREUM`, `STACK_FORK_BLOCK_BASE` | `fork.json` | Another fork block |
 | `STACK_GENESIS_DAYS_AGO` | 35 | Chain time at genesis. Each release moves the clock past its timelock delays (about 15.5 days), so the first release lands near the present |
 | `STACK_MAX_MARKETS` | 64 | The MarketRegistry's market limit, fixed at deployment |
 | `STACK_CONVEX_DIR`, `STACK_WEBAPP_DIR` | this checkout | Run another checkout's `services/convex` or `webapp` (its `node_modules` installed) |

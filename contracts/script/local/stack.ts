@@ -8,6 +8,7 @@
 //   node script/local/stack.ts up [--chains ethereum,base] [--no-activity] [--no-hubs] [--no-webapp]
 //   node script/local/stack.ts deploy [--chains ...]   the chains and their first release only, no services
 //   node script/local/stack.ts status
+//   node script/local/stack.ts secrets          store the fork RPC URLs, encrypted next to the keystores (prompted)
 //   node script/local/stack.ts check            re-check only: manifests, indexer at head, Convex against the chain
 //   node script/local/stack.ts replay           the indexer replay and replay-check.ts against the local Convex
 //   node script/local/stack.ts add-hub <hub.json> --chain ethereum|base
@@ -231,6 +232,12 @@ async function main() {
       case "up":
         await up();
         break;
+      case "secrets": {
+        ensureKeys();
+        const { promptSecrets } = await import("./lib/secrets.ts");
+        await promptSecrets(say);
+        break;
+      }
       case "deploy":
         ensureKeys();
         for (const c of selected()) await upChain(c);
