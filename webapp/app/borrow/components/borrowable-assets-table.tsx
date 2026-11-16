@@ -106,7 +106,7 @@ const LoanAssetsRow = memo(function LoanAssetsRow({
       <td className={cn(TABLE_CELL_PADDING, TABLE_CELL_NUMERIC, TABLE_ROW_HOVER_BG)}>{asset.borrowApr.toFixed(2)}%</td>
       <td className={cn(TABLE_CELL_PADDING, TABLE_ROW_HOVER_BG)}>
         <div className={TABLE_CELL_NUMERIC}>
-          {formatTokenQuantity(asset.totalBorrowedUsd / (priceFor(asset.symbol) ?? 1), asset.symbol)}
+          {formatTokenQuantity(asset.totalBorrowedUsd / (priceFor(asset.symbol) ?? Number.NaN), asset.symbol)}
         </div>
         <div className={cn(TABLE_CELL_SECONDARY, "tabular-nums")}>{compact(asset.totalBorrowedUsd)}</div>
       </td>
@@ -115,7 +115,7 @@ const LoanAssetsRow = memo(function LoanAssetsRow({
       </td>
       <td className={cn(TABLE_CELL_PADDING, TABLE_ROW_HOVER_BG)}>
         <div className={TABLE_CELL_NUMERIC}>
-          {formatTokenQuantity(asset.availableUsd / (priceFor(asset.symbol) ?? 1), asset.symbol)}
+          {formatTokenQuantity(asset.availableUsd / (priceFor(asset.symbol) ?? Number.NaN), asset.symbol)}
         </div>
         <div className={cn(TABLE_CELL_SECONDARY, "tabular-nums")}>{compact(asset.availableUsd)}</div>
       </td>

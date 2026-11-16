@@ -11,6 +11,7 @@ import { SwapStyleField } from "@/app/components/action-page/swap-style-field"
 import { ActionSessionLoading } from "@/app/components/action-page/action-session-loading"
 import { useSwapSessionContext } from "@/app/lib/avana-session/avana-sessions-context"
 import { useCurrency } from "@/app/lib/currency/use-currency"
+import { useCanonicalPriceFor } from "@/app/lib/prices/token-prices-context"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { TRANSACT_ACCESS_HREF, useTransactAccessCta } from "@/app/lib/transact-access"
 import { useActionNetworkGuard } from "@/app/lib/web3/use-action-network-guard"
@@ -72,6 +73,10 @@ export function HomeSwapAction() {
 
   const inputAsset = SWAP_ASSETS.find((asset) => asset.id === inputAssetId) ?? null
   const outputAsset = SWAP_ASSETS.find((asset) => asset.id === outputAssetId) ?? null
+  // Live prices; no price is unpriced (NaN, which the currency formatters show as "—"), never the catalog's 0.
+  const priceFor = useCanonicalPriceFor()
+  const inputPriceUsd = inputAsset ? (priceFor(inputAsset.symbol) ?? Number.NaN) : Number.NaN
+  const outputPriceUsd = outputAsset ? (priceFor(outputAsset.symbol) ?? Number.NaN) : Number.NaN
   const inputBalance = swap.walletBalances.find(
     (balance) => balance.assetId === inputAsset?.id && balance.sourceType === "wallet",
   )
@@ -162,8 +167,8 @@ export function HomeSwapAction() {
       amountValue: amount,
       assetLabel: inputAsset.symbol,
       assetSymbol: inputAsset.symbol,
-      amountUsd: validation.amount * inputAsset.priceUsd,
-      amountUsdLabel: exact(validation.amount * inputAsset.priceUsd),
+      amountUsd: validation.amount * inputPriceUsd,
+      amountUsdLabel: exact(validation.amount * inputPriceUsd),
       rateLabel: t("Rate"),
       rateValue: `1 ${inputAsset.symbol} = ${formatAmount(quote.exchangeRate)} ${outputAsset.symbol}`,
       marketLabel: t("Buy"),
@@ -185,7 +190,7 @@ export function HomeSwapAction() {
         },
         { id: "provider", label: t("Provider"), value: quote.provider },
       ],
-      platformFeeLabel: exact(quote.feeAmount * inputAsset.priceUsd),
+      platformFeeLabel: exact(quote.feeAmount * inputPriceUsd),
       risk:
         quote.priceImpactPct >= 3
           ? {
@@ -203,7 +208,7 @@ export function HomeSwapAction() {
         { id: "submit", label: t("Submit") },
       ],
     }
-  }, [amount, exact, inputAsset, networkGuard.blockedReason, outputAsset, quote, swap, t, validation])
+  }, [amount, exact, inputAsset, inputPriceUsd, networkGuard.blockedReason, outputAsset, quote, swap, t, validation])
 
   const submitSwap = useCallback(async () => {
     if (!quote || !previewUi || !validation.valid || !inputAsset || !outputAsset || isPending) return
@@ -253,14 +258,14 @@ export function HomeSwapAction() {
         secondaryCtaLabel: t("Swap again"),
         receiptContext: {
           verb: t("Sold"),
-          amountUsd: validation.amount * inputAsset.priceUsd,
+          amountUsd: validation.amount * inputPriceUsd,
           amountLabel: `${amount} ${inputAsset.symbol}`,
           rateLabel: t("Received"),
           rateValue: `${formatAmount(quote.estimatedOutputAmount)} ${outputAsset.symbol}`,
           marketValue: quote.provider,
           // Carry the real quote fee so the inline receipt matches the estimate
           // and the permalink receipt instead of a hash-derived amount.
-          platformFeeUsd: quote.feeAmount * inputAsset.priceUsd,
+          platformFeeUsd: quote.feeAmount * inputPriceUsd,
         },
       })
       setStage("success")
@@ -274,6 +279,7 @@ export function HomeSwapAction() {
     acceptedPriceImpact,
     amount,
     inputAsset,
+    inputPriceUsd,
     isPending,
     networkGuard.isWrongNetwork,
     outputAsset,
@@ -372,8 +378,8 @@ export function HomeSwapAction() {
               onOpenAssetPicker={() => setPickerSide("input")}
               fiatLabel={
                 quote && outputAsset
-                  ? exact(quote.estimatedOutputAmount * outputAsset.priceUsd)
-                  : exact((Number(amount) || 0) * (inputAsset?.priceUsd ?? 0))
+                  ? exact(quote.estimatedOutputAmount * outputPriceUsd)
+                  : exact((Number(amount) || 0) * inputPriceUsd)
               }
               balanceLabel={inputBalanceLabel}
               onBalanceClick={
@@ -391,7 +397,7 @@ export function HomeSwapAction() {
                 amount={quote ? formatAmount(quote.estimatedOutputAmount) : "0"}
                 assetId={outputAssetId}
                 onOpenAssetPicker={() => setPickerSide("output")}
-                fiatLabel={quote && outputAsset ? exact(quote.estimatedOutputAmount * outputAsset.priceUsd) : exact(0)}
+                fiatLabel={quote && outputAsset ? exact(quote.estimatedOutputAmount * outputPriceUsd) : exact(0)}
                 readOnly
                 tone="inset"
               />

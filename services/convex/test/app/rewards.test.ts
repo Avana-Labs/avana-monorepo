@@ -61,7 +61,7 @@ describe("quest points", () => {
 describe("rewards summary", () => {
   test("is zero for a wallet with no activity, and rejects a malformed wallet", async () => {
     const t = convexTest(schema, modules);
-    expect(await t.query(api.wallet.rewards.summary, { wallet: WALLET })).toEqual({ earnedPoints: 0, tenurePoints: 0, questPoints: 0, feePoints: 0, completedQuests: [] });
+    expect(await t.query(api.wallet.rewards.summary, { wallet: WALLET })).toEqual({ earnedPoints: 0, tenurePoints: 0, questPoints: 0, feePoints: 0, completedQuests: [], historyChecked: true });
     await expect(t.query(api.wallet.rewards.summary, { wallet: "0x12" })).rejects.toThrow(/20-byte address/);
   });
 
@@ -78,6 +78,7 @@ describe("rewards summary", () => {
       questPoints: 50,
       feePoints: 7,
       completedQuests: ["first-borrow"],
+      historyChecked: true,
     });
   });
 });

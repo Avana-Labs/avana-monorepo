@@ -114,8 +114,9 @@ export function SwapPageClient({ initialFrom, initialTo, origin = "wallet", retu
 
   const inputAsset = SWAP_ASSETS.find((asset) => asset.id === inputAssetId)
   const outputAsset = SWAP_ASSETS.find((asset) => asset.id === outputAssetId)
-  const inputPriceUsd = inputAsset ? (canonicalPriceFor(inputAsset.symbol) ?? inputAsset.priceUsd) : 0
-  const outputPriceUsd = outputAsset ? (canonicalPriceFor(outputAsset.symbol) ?? outputAsset.priceUsd) : 0
+  // No live price: unpriced (NaN, which the currency formatters show as "—"), never the catalog's placeholder 0.
+  const inputPriceUsd = inputAsset ? (canonicalPriceFor(inputAsset.symbol) ?? Number.NaN) : Number.NaN
+  const outputPriceUsd = outputAsset ? (canonicalPriceFor(outputAsset.symbol) ?? Number.NaN) : Number.NaN
   const inputBalance = inputAsset
     ? swap.walletBalances.find((balance) => balance.assetId === inputAsset.id && balance.sourceType === "wallet")
     : undefined
