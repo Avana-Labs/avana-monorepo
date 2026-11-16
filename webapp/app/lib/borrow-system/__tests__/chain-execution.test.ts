@@ -4,6 +4,7 @@ import {
   AAVE_ADAPTER_ABI,
   executeBorrowOnChain,
   pickCovering,
+  pledgePositionKey,
   type BorrowChain,
   type BorrowWallet,
 } from "@/app/lib/borrow-system/chain-execution"
@@ -176,6 +177,22 @@ describe("executeBorrowOnChain", () => {
     const call = adapterCall(all)
     expect(call.functionName).toBe("pledge")
     expect(call.args).toEqual([8n, { integrationId: 1, positionKey: KEY_B }, 1_600n])
+  })
+
+  it("pledges only the LP NFT the intent names", async () => {
+    const { deps, sent } = harness({ lps: [lp(11n, 30_000_000_000n), lp(12n, 50_000_000_000n, KEY_B)] })
+    await executeBorrowOnChain(
+      deps,
+      intent({ actionType: "deposit", marketId: "wbtc-usdc-30", amountUsd6: 40_000_000_000n, positionKey: KEY_A }),
+    )
+    expect(adapterCall(sent.flat()).args).toEqual([8n, { integrationId: 1, positionKey: KEY_A }, 1_600n])
+  })
+
+  it("names the one LP NFT covering a pledge on the intent, and none when several are needed", () => {
+    const lps = [lp(11n, 30_000_000_000n), lp(12n, 50_000_000_000n, KEY_B)]
+    expect(pledgePositionKey(refs, lps, "wbtc-usdc-30", 40_000_000_000n)).toBe(KEY_B)
+    expect(pledgePositionKey(refs, lps, "wbtc-usdc-30", 70_000_000_000n)).toBeUndefined()
+    expect(pledgePositionKey(null, lps, "wbtc-usdc-30", 1n)).toBeUndefined()
   })
 
   it("fails without sending when the wallet has no LP NFT for the market", async () => {

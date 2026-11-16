@@ -140,18 +140,53 @@ function lpFee(
 
 const lensOf = (refs: ChainBorrowRefs, chainId: number) => refs.lenses.find((l) => l.chainId === chainId)?.lens as Address | undefined
 
+/**
+ * The LP NFTs a pledge of `amountUsd6` in the market `poolSlug` takes: only `positionKey`'s when given, else whole NFTs
+ * covering the amount (pickCovering), else every NFT of the market when they fall short by at most
+ * PLEDGE_SHORTFALL_BPS. Null when the wallet's NFTs cannot cover it.
+ */
+export function selectPledgeLps(
+  lps: readonly PledgeableLp[],
+  market: { chainId: number; marketId: string },
+  amountUsd6: bigint,
+  positionKey?: string,
+): PledgeableLp[] | null {
+  const owned = lps.filter((lp) => lp.chainId === market.chainId && lp.marketId === market.marketId)
+  if (positionKey) {
+    const one = owned.find((lp) => lp.positionKey.toLowerCase() === positionKey.toLowerCase())
+    return one ? [one] : null
+  }
+  if (owned.length === 0) return null
+  const total = owned.reduce((s, lp) => s + lp.valueUsd6, 0n)
+  return (
+    pickCovering(owned, (lp) => lp.valueUsd6, amountUsd6) ??
+    (total * 10_000n >= amountUsd6 * (10_000n - PLEDGE_SHORTFALL_BPS) ? owned : null)
+  )
+}
+
+/** The position key a pledge intent carries: the one LP NFT that covers the amount, if one does. */
+export function pledgePositionKey(
+  refs: ChainBorrowRefs | null,
+  lps: readonly PledgeableLp[],
+  poolSlug: string,
+  amountUsd6: bigint,
+): `0x${string}` | undefined {
+  const market = refs?.markets?.find((m) => m.poolSlug === poolSlug)
+  const picked = market && amountUsd6 > 0n ? selectPledgeLps(lps, market, amountUsd6) : null
+  return picked?.length === 1 ? picked[0]!.positionKey : undefined
+}
+
 async function planPledge(deps: BorrowExecutionDeps, intent: TransactionIntent, refs: ChainBorrowRefs): Promise<PlannedAction> {
   const market = refs.markets?.find((m) => m.poolSlug === intent.marketId)
   const lens = market ? lensOf(refs, market.chainId) : undefined
   const chain = market ? deps.chain(market.chainId) : null
   if (!market || !lens || !chain) throw new ActionError("This market cannot take collateral here.")
   if (intent.amountUsd6 <= 0n) throw new ActionError("Enter an amount to pledge.")
-  const owned = (deps.lps?.(intent.walletId) ?? []).filter((lp) => lp.chainId === market.chainId && lp.marketId === market.marketId)
-  if (owned.length === 0) throw new ActionError("Your wallet has no LP position for this market.")
-  const total = owned.reduce((s, lp) => s + lp.valueUsd6, 0n)
-  const picked =
-    pickCovering(owned, (lp) => lp.valueUsd6, intent.amountUsd6) ??
-    (total * 10_000n >= intent.amountUsd6 * (10_000n - PLEDGE_SHORTFALL_BPS) ? owned : null)
+  const lps = deps.lps?.(intent.walletId) ?? []
+  if (!lps.some((lp) => lp.chainId === market.chainId && lp.marketId === market.marketId)) {
+    throw new ActionError("Your wallet has no LP position for this market.")
+  }
+  const picked = selectPledgeLps(lps, market, intent.amountUsd6, intent.positionKey)
   if (!picked) throw new ActionError("Your LP positions in this market are worth less than this amount.")
 
   const adapter = (await chain.readContract({ address: lens, abi: LENS_ADDRESSES_ABI, functionName: "ADAPTER" })) as Address
