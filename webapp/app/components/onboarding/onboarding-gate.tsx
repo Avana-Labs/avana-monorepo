@@ -72,7 +72,7 @@ function OpenGate({ children }: { children: ReactNode }) {
 }
 
 /**
- * Open routes (see `requiresOnboarding`) render for everyone. The dashboard and umbrella stay
+ * Open routes (see `requiresOnboarding`) render for everyone. The dashboard stays
  * inside the gate until Convex confirms the wallet finished onboarding.
  */
 export function OnboardingGate({

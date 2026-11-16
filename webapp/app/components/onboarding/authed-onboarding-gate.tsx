@@ -107,7 +107,7 @@ function CheckerBody({
   }, [walletState, isDone, isOpenRoute, router])
 
   if (isDone || walletState === undefined) return offline ? <OfflineGate /> : null
-  // Open routes keep the page; the onboarding flow lives on the dashboard and umbrella.
+  // Open routes keep the page; the onboarding flow lives on the dashboard.
   if (economy === undefined || isOpenRoute) return null
   return (
     <LockedShell>

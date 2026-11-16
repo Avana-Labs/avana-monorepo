@@ -59,7 +59,7 @@ describe("OnboardingGate for guests", () => {
     },
   )
 
-  it.each(["/dashboard", "/umbrella"])("shows the onboarding flow on %s", (pathname) => {
+  it.each(["/dashboard"])("shows the onboarding flow on %s", (pathname) => {
     state.pathname = pathname
     render(<OnboardingGate>{page}</OnboardingGate>)
     expect(screen.getByTestId("guest-onboarding")).toBeTruthy()
