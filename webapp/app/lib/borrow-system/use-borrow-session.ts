@@ -99,7 +99,10 @@ export function useBorrowSession({
       injectedTransactionAdapter ??
       new ProductionTransactionAdapter({
         previewTransaction: (intent) =>
-          previewBorrowOnChain({ refs: chainBorrowRefs, chain: viemBorrowChain, state: () => stateRef.current }, intent),
+          previewBorrowOnChain(
+            { refs: chainBorrowRefs, lps: pledgeableLps, chain: viemBorrowChain, state: () => stateRef.current },
+            intent,
+          ),
         pledgePositionKey: (action) =>
           pledgePositionKey(chainBorrowRefs(action.walletId), pledgeableLps(action.walletId), action.marketId, action.amountUsd6),
         executeTransaction: (intent) =>
