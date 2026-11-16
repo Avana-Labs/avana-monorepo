@@ -34,7 +34,7 @@ export interface HubInput {
   readonly hub: { label: string; tier: 1 | 2 | 3; name?: string; description?: string };
   readonly lendSpoke?: string;
   readonly spokes: readonly SpokeInput[];
-  readonly lendAssets: readonly { symbol: string; category?: "stable" | "crypto"; new?: NewDebtAsset }[];
+  readonly lendAssets: readonly { symbol: string; category?: "stable" | "crypto"; new?: NewDebtAsset; rateModel?: RateModel }[];
   readonly borrowable: Readonly<Record<string, readonly string[]>>;
   readonly collateral: readonly CollateralInput[];
   readonly markets: readonly MarketInput[];
@@ -47,6 +47,13 @@ export interface SpokeInput {
   /** The Spoke's page name, default `<venue> <category>`. */
   name?: string;
   description?: string;
+}
+/** An Aave V4 Hub asset's rate curve, in bps; set when the asset is listed on the Hub. */
+export interface RateModel {
+  optimalUsageBps: number;
+  baseDrawnRateBps: number;
+  rateGrowthBeforeOptimalBps: number;
+  rateGrowthAfterOptimalBps: number;
 }
 export interface NewDebtAsset {
   drawCap: number;
@@ -94,6 +101,9 @@ export interface HubPlan {
     spokes: string[];
     lendSpoke: string;
     newDebtAssets: string[];
+    /** Assets already lent on the extended Hub with a rate model in the file: the release changes their curve with an
+     * Aave rate change (11-changes, assetRates via the governance executor). */
+    rateChanges: { symbol: string; rateModel: RateModel }[];
     lendAssets: string[];
     debtReserves: string[];
     collateralTokens: string[];
@@ -182,9 +192,11 @@ export function planHub(config: Json, input: HubInput): HubPlan {
 
   // 2. What the Hub lends: an existing debt asset limited to some Hubs gets this one; a new one is sized from input.
   const newDebt: string[] = [];
+  const rateKept: { symbol: string; rateModel: RateModel }[] = [];
   for (const a of input.lendAssets) {
     const d = (c.aavePayload.debtAssets as Json[]).find((x) => x.symbol === a.symbol);
     const w = (c.world.tokens as Json[]).find((t) => t.symbol === a.symbol)!;
+    const wasLent = extend && d !== undefined && (!d.hubs || d.hubs.includes(label));
     if (d) {
       if (d.hubs && !d.hubs.includes(label)) d.hubs.push(label);
       if (d.lendOnly && (Object.values(input.borrowable) as string[][]).some((x) => x.includes(a.symbol))) throw new Error(`${a.symbol} is lend-only on this chain and cannot be borrowed`);
@@ -202,6 +214,14 @@ export function planHub(config: Json, input: HubInput): HubPlan {
         offsetMinimum: a.new.offsetMinimum,
         hubs: [label],
       });
+    }
+    // The asset's rate curve on this Hub, applied by 06 when the asset is listed on it (an asset listed earlier keeps
+    // its curve: the summary says so).
+    if (a.rateModel) {
+      const target = (c.aavePayload.debtAssets as Json[]).find((x) => x.symbol === a.symbol)!;
+      target.rateModelByHub ??= {};
+      target.rateModelByHub[label] = a.rateModel;
+      if (wasLent) rateKept.push({ symbol: a.symbol, rateModel: a.rateModel });
     }
     // A debt asset borrowable on a CDP Spoke needs its listing entry (its DebtOracle) once per chain.
     const borrowed = (Object.values(input.borrowable) as string[][]).some((x) => x.includes(a.symbol));
@@ -337,6 +357,7 @@ export function planHub(config: Json, input: HubInput): HubPlan {
       spokes: input.spokes.map((s) => s.label),
       lendSpoke: lend,
       newDebtAssets: newDebt,
+      rateChanges: rateKept,
       lendAssets: input.lendAssets.map((a) => a.symbol),
       debtReserves,
       collateralTokens: tokens,
@@ -358,12 +379,41 @@ export interface ReleaseResult {
  * ending with the manifest produced and verified. The chain mines a block per transaction meanwhile and returns to its
  * own block time afterwards.
  */
-export async function releaseHub(network: string, release: string, configPath: string, onStep?: (o: StepOutcome) => void): Promise<ReleaseResult> {
+export async function releaseHub(network: string, release: string, configPath: string, onStep?: (o: StepOutcome) => void, plan?: HubPlan["summary"]): Promise<ReleaseResult> {
   const c = chainOf(network);
   const before = await miningMode(c);
   await setMining(c, "auto");
   try {
-    const steps = await runRelease(c, release, LATER_RELEASE, configPath, onStep);
+    // Rate curves of assets the Hub already lent: one Aave rate change before the manifest.
+    let sequence = LATER_RELEASE;
+    if (plan?.rateChanges.length) {
+      const file = `changes-${release}-rates.json`;
+      writeFileSync(
+        join(outDir(c), file),
+        `${JSON.stringify(
+          {
+            name: `${release}-rates`,
+            description: `the rate curves of the ${plan.hub} Hub's assets, from its Hub file`,
+            via: "aip",
+            changes: plan.rateChanges.map((r) => ({
+              aave: "assetRates",
+              hub: `hub:${plan.hub}`,
+              asset: `token:${r.symbol}`,
+              set: {
+                optimalUsageRatio: r.rateModel.optimalUsageBps,
+                baseDrawnRate: r.rateModel.baseDrawnRateBps,
+                rateGrowthBeforeOptimal: r.rateModel.rateGrowthBeforeOptimalBps,
+                rateGrowthAfterOptimal: r.rateModel.rateGrowthAfterOptimalBps,
+              },
+            })),
+          },
+          null,
+          2,
+        )}\n`,
+      );
+      sequence = [...LATER_RELEASE.slice(0, -1), `changes:${file}`, LATER_RELEASE.at(-1)!];
+    }
+    const steps = await runRelease(c, release, sequence, configPath, onStep);
     const ok = steps.every((s) => s.outcome !== "fail");
     return { ok, chain: c.network, release, steps, ...(ok ? { manifest: join(outDir(c), "manifest.json") } : {}) };
   } finally {
@@ -396,7 +446,7 @@ export async function addHub(args: { chain: string; hubFile: string }, onStep?: 
       return { ok: false, chain: c.network, release, steps: [], error: (e as Error).message };
     }
   } else plan = JSON.parse(readFileSync(join(outDir(c), `plan-${release}.json`), "utf8"));
-  const r = await releaseHub(c.network, release, configPath, onStep);
+  const r = await releaseHub(c.network, release, configPath, onStep, plan);
   const listed = existsSync(join(outDir(c), "listing-markets.json")) ? (Object.values(JSON.parse(readFileSync(join(outDir(c), "listing-markets.json"), "utf8"))) as Json[]) : [];
   return { ...r, plan, config: configPath, markets: listed.filter((m) => plan?.markets.includes(m.name)) };
 }

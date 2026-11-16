@@ -184,8 +184,9 @@ export function stepEnv(c: LocalChain, config = currentConfig(c)): NodeJS.Proces
 }
 
 /**
- * A step of the chain's release `release`: a named step of script/deploy/step.sh, or one of the stack's own
- * (`multicall3`, `place-executor`, `advance:<seconds>`, `manifest`). Passed steps are skipped.
+ * A step of the chain's release `release`: a named step of script/deploy/step.sh, `changes:<file>` (11-changes with a
+ * changes file of deployments-local/<network>), or one of the stack's own (`multicall3`, `place-executor`,
+ * `advance:<seconds>`, `manifest`, `treasury`). Passed steps are skipped.
  */
 export async function runStep(c: LocalChain, release: string, step: string, config = currentConfig(c)): Promise<StepOutcome> {
   const key = `${release}:${step}`;
@@ -204,6 +205,7 @@ export async function runStep(c: LocalChain, release: string, step: string, conf
     else if (step.startsWith("advance:")) detail = await advance(c, Number(step.slice(8)), env, log);
     else if (step === "manifest") detail = manifest(c, env, log);
     else if (step === "treasury") detail = await fundTreasuries(c);
+    else if (step.startsWith("changes:")) detail = runShell("11-changes", env, log, false, [join(outDir(c), step.slice(8))]);
     else detail = runShell(step, env, log, prev?.outcome === "fail");
     ok = true;
   } catch (e) {
@@ -215,10 +217,10 @@ export async function runStep(c: LocalChain, release: string, step: string, conf
   return { chain: c.network, step: key, outcome: ok ? "pass" : "fail", detail, log };
 }
 
-function runShell(step: string, env: NodeJS.ProcessEnv, log: string, fresh: boolean): string {
+function runShell(step: string, env: NodeJS.ProcessEnv, log: string, fresh: boolean, args: string[] = []): string {
   // A step whose earlier broadcast stopped part-way is run again from the start, its old broadcast record archived.
   const e = { ...env, AVANA_FORGE_FLAGS: fresh ? "--start-fresh" : "" };
-  const r = spawnSync(bash(), ["script/deploy/step.sh", step], { cwd: CONTRACTS, env: e, encoding: "utf8", maxBuffer: 1 << 28 });
+  const r = spawnSync(bash(), ["script/deploy/step.sh", step, ...args], { cwd: CONTRACTS, env: e, encoding: "utf8", maxBuffer: 1 << 28 });
   const text = `${r.stdout ?? ""}${r.stderr ?? ""}`;
   writeFileSync(log, text);
   if (r.status !== 0) {
