@@ -3,7 +3,8 @@ import { canonicalPriceUsd } from "@/app/lib/prices/canonical"
 
 /** Format a token quantity for transaction tables (commas, sane precision). */
 export function formatDetailTokenAmount(value: number): string {
-  if (!Number.isFinite(value)) return "0"
+  // An amount with no price to derive it from is unknown, not 0.
+  if (!Number.isFinite(value)) return "—"
   const abs = Math.abs(value)
   const digits = abs >= 1_000 ? 2 : abs >= 1 ? 4 : 6
   return abs.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: digits })
@@ -44,10 +45,13 @@ export type TransactionPriceContext = {
   token1Weight?: number
 }
 
-/** Price used to turn a recorded USD amount into a token quantity: the override, else the live price. */
+/**
+ * Price used to turn a recorded USD amount into a token quantity: the override, else the live price, else NaN (no
+ * price: the quantity is unknown and shows "—").
+ */
 export function seedPriceUsdForSymbol(symbol: string, seedOverride?: number): number {
   if (seedOverride != null && seedOverride > 0) return seedOverride
-  return canonicalPriceUsd(symbol) ?? 1
+  return canonicalPriceUsd(symbol) ?? Number.NaN
 }
 
 function livePriceUsdForSymbol(symbol: string, ctx?: TransactionPriceContext): number {
@@ -95,7 +99,8 @@ function usdValueFromTokenAmount(
 ): number | null {
   const qty = parseTokenQuantity(tokenAmountLabel)
   if (qty == null) return null
-  return qty * livePriceUsdForSymbol(symbol, ctx)
+  const usd = qty * livePriceUsdForSymbol(symbol, ctx)
+  return Number.isFinite(usd) ? usd : null
 }
 
 export function resolveTransactionTokenDisplay(

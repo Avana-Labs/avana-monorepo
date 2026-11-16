@@ -50,6 +50,8 @@ export type ConvexMarketSnapshot = {
   feesUsd: number
   /** Pools: the market's accepted LP price (LPOracle). */
   lpPriceUsd?: number
+  /** Debt assets: the token's USD price from the app's price snapshot (`prices.getPriceSnapshot`), when it has one. */
+  assetPriceUsd?: number
 }
 
 export function chainLabel(chainId: number | undefined): string {
@@ -197,7 +199,8 @@ export function borrowAssetFromSnapshot(
     borrowConfig: { baseBorrowAprWad: wadFromPct(snap.borrowAprPct) },
     reserveFactorPct: finite(snap.reserveFactorPct),
     snapshot: {
-      priceUsd6: 0n,
+      // 0 when the price snapshot has no price for the token: the action pages treat it as unpriced.
+      priceUsd6: snap.assetPriceUsd !== undefined && snap.assetPriceUsd > 0 ? usd6(snap.assetPriceUsd) : 0n,
       priceChange24hWad: 0n,
       availableLiquidityUsd6: usd6(snap.availableUsd),
       totalBorrowedUsd6: borrowed,

@@ -105,6 +105,7 @@ function LendHeroView({ detail, leading, actions, className, hideIdentity = fals
   const feed = React.useMemo(() => {
     const suppliedFeed = detail.heroFeed ?? getLendMarketHeroFeed(detail.id)
     if (activeMetricTab === metricTabs[3]) {
+      const assetPriceUsd = session.state.markets[detail.id]?.assetPriceUsd ?? Number.NaN
       const currentValueUsd = Object.values(session.state.positions)
         .filter((position) => position.marketId === detail.id && position.status === "active")
         .reduce((sum, position) => sum + position.suppliedValueUsd, 0)
@@ -114,7 +115,8 @@ function LendHeroView({ detail, leading, actions, className, hideIdentity = fals
           .filter((item) => item.marketId === detail.id && item.status === "success" && item.kind !== "claim")
           .map((item) => ({
             timestamp: item.timestamp,
-            deltaUsd: item.kind === "deposit" ? item.amount : -item.amount,
+            // The history records token amounts: valued at the market's price, as the positions are.
+            deltaUsd: (item.kind === "deposit" ? item.amount : -item.amount) * assetPriceUsd,
           })),
       )
     }
@@ -135,6 +137,7 @@ function LendHeroView({ detail, leading, actions, className, hideIdentity = fals
     detail.supplyBorrow.borrowed,
     detail.supplyBorrow.utilization,
     metricTabs,
+    session.state.markets,
     session.state.positions,
     session.transactionHistory,
   ])
