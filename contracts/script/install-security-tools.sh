@@ -23,9 +23,10 @@
 # picked. Supported platforms: macOS arm64 and Linux x86_64.
 #
 # Usage, from contracts/:
-#   script/install-security-tools.sh [--binaries] [--python] [--gambit] [--node] [--rules] [--4naly3er] [--necessist]
+#   script/install-security-tools.sh [--solc] [--binaries] [--python] [--gambit] [--node] [--rules] [--4naly3er] [--necessist]
 #   (no flag: --binaries --python --gambit --node --rules --4naly3er; --necessist only when asked, since it compiles
 #   from source)
+# --solc installs every solc version foundry.toml pins into ~/.svm (with retries), so forge never downloads one.
 # BINARIES="aderyn" (space-separated) limits --binaries to some of echidna, medusa, aderyn, hevm and bitwuzla; CI jobs
 # use it to download only what they run.
 
@@ -289,11 +290,45 @@ install_necessist() {
   cargo install necessist --version "$NECESSIST_VERSION" --locked --root "$PWD/tools"
 }
 
+# Installs every solc version that foundry.toml pins into ~/.svm, where forge looks before it downloads, retrying the
+# network the way forge does not: a reset connection to binaries.soliditylang.org failed a Halmos job's build twice
+# (runs 43913219732 and the earlier check_PROP_025 job). Each binary is checked against the sha256 in the list.
+install_solc() {
+  local platform list v release want dir tmp
+  case "$os" in
+    Darwin-arm64) platform=macosx-amd64 ;;
+    *) platform=linux-amd64 ;;
+  esac
+  list=$(curl -sSfL --retry 8 --retry-all-errors --retry-delay 15 "https://binaries.soliditylang.org/$platform/list.json")
+  for v in $(sed -nE 's/^solc_version *= *"([0-9.]+)".*/\1/p' foundry.toml | sort -u); do
+    dir="$HOME/.svm/$v"
+    if [ -x "$dir/solc-$v" ]; then
+      echo "solc $v already installed"
+      continue
+    fi
+    read -r release want < <(printf '%s' "$list" | python3 -c '
+import json, sys
+v = sys.argv[1]
+builds = json.load(sys.stdin)["builds"]
+b = next(b for b in builds if b["version"] == v and not b.get("prerelease"))
+print(b["path"], b["sha256"].removeprefix("0x"))
+' "$v")
+    mkdir -p "$dir"
+    tmp="$dir/solc-$v.download"
+    curl -sSfL --retry 8 --retry-all-errors --retry-delay 15 -o "$tmp" "https://binaries.soliditylang.org/$platform/$release"
+    verify "$release" "$want" "$tmp"
+    chmod +x "$tmp"
+    mv "$tmp" "$dir/solc-$v"
+    echo "solc $v installed"
+  done
+}
+
 if [ $# -eq 0 ]; then
   set -- --binaries --python --gambit --node --rules --4naly3er
 fi
 for step in "$@"; do
   case "$step" in
+    --solc) install_solc ;;
     --binaries) install_binaries ;;
     --python) install_python ;;
     --gambit) install_gambit ;;
