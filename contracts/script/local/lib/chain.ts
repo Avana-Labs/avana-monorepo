@@ -141,7 +141,10 @@ export function writeBaseConfig(c: LocalChain): string {
   cfg.aave.spokes = { [lend]: `$aave:.spokes.${lend}.proxy` };
   const name = `Avana ${c.label} Hub`;
   cfg.aavePayload.hubs = [{ label, lendSpoke: lend, cdpSpokes: [], content: { slug: `avana-${label}-hub`, name, description: `Avana's Aave V4 Hub on ${c.label}.`, faqs: [] } }];
-  for (const d of cfg.aavePayload.debtAssets) Object.assign(d, tv.debtAssets[d.symbol] ?? {});
+  for (const d of cfg.aavePayload.debtAssets) {
+    const v = tv.debtAssets?.[d.symbol] ?? {};
+    for (const k of ["drawCap", "bootstrapSupply", "coverageMinimum", "offsetMinimum", "rateModel", "liquidityFeeBps"]) if (v[k] !== undefined) d[k] = v[k];
+  }
   cfg.listing.creditLineWhole = tv.creditLineWhole;
   cfg.listing.speedLimits = tv.speedLimits;
   cfg.listing.spokes = [];
@@ -157,7 +160,7 @@ export function writeBaseConfig(c: LocalChain): string {
   cfg.listing.pools = {};
   for (const t of cfg.listing.tokens) {
     t.hubs = [label];
-    t.tokenCapUsd = tv.tokenCapUsd[t.symbol] ?? tv.tokenCapUsd.default;
+    Object.assign(t, tv.tokens?.default ?? {}, tv.tokens?.[t.symbol] ?? {});
   }
   // The chain's Hub files may need tokens and pools the test world lacks: script/deploy/hubs/<network>/world.json
   // adds them to the world step 02 deploys (an entry already in the world is kept as it is).

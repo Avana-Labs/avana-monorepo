@@ -10,7 +10,11 @@
 // The indexer and Convex pick the Hub, its Spokes and markets up from the chain's events (HubRecorded, SpokeApproved,
 // MarketRegistered, AddSpoke) and the listing metadata the release commits to: no Convex row is written by hand.
 //
-// The Hub input file (README.md in this folder has a full example, hubs/*.json):
+// A Hub file holds structure only (Hub, Lend Spoke, CDP Spokes with venue and category, lend assets, collateral tokens,
+// pools, borrowable assets per Spoke). Every number the Aave DAO, governance or a risk provider sets (collateral
+// factors, liquidation bonus, pool risk factor, tolerances, slippage, rate models, liquidity fees, caps, amounts) comes
+// from the local stack's test values (contracts/script/local/test-values.json), never from a Hub file.
+// The Hub input file (README.md in this folder; contracts/script/deploy/hubs/<chain>/*.json):
 // {
 //   "hub": { "label": "growth", "tier": 3, "name": "Growth", "description": "…" },
 //   "lendSpoke": "lendGrowth",
@@ -34,7 +38,7 @@ export interface HubInput {
   readonly hub: { label: string; tier: 1 | 2 | 3; name?: string; description?: string };
   readonly lendSpoke?: string;
   readonly spokes: readonly SpokeInput[];
-  readonly lendAssets: readonly { symbol: string; category?: "stable" | "crypto"; new?: NewDebtAsset; rateModel?: RateModel; liquidityFeeBps?: number }[];
+  readonly lendAssets: readonly { symbol: string; category?: "stable" | "crypto" }[];
   readonly borrowable: Readonly<Record<string, readonly string[]>>;
   readonly collateral: readonly CollateralInput[];
   readonly markets: readonly MarketInput[];
@@ -55,26 +59,52 @@ export interface RateModel {
   rateGrowthBeforeOptimalBps: number;
   rateGrowthAfterOptimalBps: number;
 }
-/**
- * A token new to Aave on the chain. Its risk parameters are the file's; the amounts the Aave DAO sets (draw cap,
- * bootstrap supply, First-Loss Reserve and offset minimums, credit line, debt speed limit) are never in a Hub file:
- * on the local stack they come from test-values.json (`TestValues`).
- */
-export interface NewDebtAsset {
-  stressRiseBps: number;
-  floorRoundingAllowance: string;
+/** A debt asset's values (amounts in whole tokens unless noted); `byHub.<label>` overrides the curve and fee per Hub. */
+export interface DebtAssetValues {
+  drawCap?: number;
+  bootstrapSupply?: string;
+  coverageMinimum?: number;
+  offsetMinimum?: number;
+  stressRiseBps?: number;
+  floorRoundingAllowance?: string;
+  creditLineWhole?: number;
+  debtMinWhole?: number;
+  debtMaxWhole?: number;
+  rateModel?: RateModel;
+  liquidityFeeBps?: number;
+  byHub?: Record<string, { rateModel?: RateModel; liquidityFeeBps?: number }>;
 }
-/** The values the DAO sets, for the local stack only (contracts/script/local/test-values.json). */
+export interface TokenValues {
+  deviationBps?: number;
+  collateralFactorBps?: number;
+  agreementToleranceBps?: number;
+  secondToleranceBps?: number;
+  tokenCapUsd?: string;
+}
+export interface MarketValues {
+  collateralFactorBps?: number;
+  poolRiskFactorBps?: number;
+  maxLiquidationBonus?: number;
+  consistencyToleranceBps?: number;
+  slippageAllowanceBps?: number;
+  slippageAllowanceMinBps?: number;
+  collateralRisk?: number;
+  minPledgeUsd?: string;
+  stressFloorUsd?: string;
+  marketUsdCap?: string;
+  topUpSliceUsd?: string;
+}
+/** Every number the DAO, governance or a risk provider sets, for the local stack only (test-values.json); `default`
+ * entries apply where a token or market has none of its own. */
 export interface TestValues {
-  debtAssets?: Record<string, { drawCap: number; bootstrapSupply: string; coverageMinimum: number; offsetMinimum: number; creditLineWhole?: number; debtMinWhole?: number; debtMaxWhole?: number }>;
-  tokenCapUsd?: Record<string, string>;
-  markets?: Record<string, { marketUsdCap: string; topUpSliceUsd: string }>;
+  debtAssets?: Record<string, DebtAssetValues>;
+  tokens?: Record<string, TokenValues>;
+  markets?: Record<string, MarketValues>;
 }
 export interface CollateralInput {
   symbol: string;
+  /** A fact about the token (a USD stablecoin), not a parameter. */
   isUsdStable?: boolean;
-  deviationBps?: number;
-  collateralFactorBps?: number;
 }
 export interface MarketInput {
   pool: string;
@@ -83,10 +113,7 @@ export interface MarketInput {
    * (integration, pool, range) chain-wide, so one pool on two Spokes needs two ranges. */
   tickLower?: number;
   tickUpper?: number;
-  poolRiskFactorBps: number;
-  maxLiquidationBonus: number;
-  consistencyToleranceBps?: number;
-  minPledgeUsd?: string;
+  /** The market's config name, also its key in the test values' markets (default `<venue>-<pool>[-range]-<spoke>`). */
   name?: string;
   slug?: string;
   category?: "stable" | "crypto";
@@ -105,6 +132,8 @@ export interface HubPlan {
     /** Assets already lent on the extended Hub with a rate model in the file: the release changes their curve with an
      * Aave rate change (11-changes, assetRates via the governance executor). */
     rateChanges: { symbol: string; rateModel?: RateModel; liquidityFeeBps?: number }[];
+    /** Numbers that came from the test values, for the record. */
+    values: Record<string, unknown>;
     lendAssets: string[];
     debtReserves: string[];
     collateralTokens: string[];
@@ -202,9 +231,8 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
       if (d.hubs && !d.hubs.includes(label)) d.hubs.push(label);
       if (d.lendOnly && (Object.values(input.borrowable) as string[][]).some((x) => x.includes(a.symbol))) throw new Error(`${a.symbol} is lend-only on this chain and cannot be borrowed`);
     } else {
-      if (!a.new) throw new Error(`lendAssets: ${a.symbol} is new to Aave on this chain: give its risk parameters in "new"`);
       const dao = tv.debtAssets?.[a.symbol];
-      if (!dao) throw new Error(`lendAssets: ${a.symbol} has no DAO-set amounts in the test values`);
+      if (!dao?.drawCap || !dao.bootstrapSupply || !dao.coverageMinimum || !dao.offsetMinimum) throw new Error(`lendAssets: ${a.symbol} is new to Aave on this chain and test values have no drawCap, bootstrapSupply, coverageMinimum and offsetMinimum for it`);
       newDebt.push(a.symbol);
       c.aavePayload.debtAssets.push({
         symbol: a.symbol,
@@ -220,21 +248,24 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
     }
     // The asset's rate curve on this Hub, applied by 06 when the asset is listed on it (an asset listed earlier keeps
     // its curve: the summary says so).
-    if (a.rateModel || a.liquidityFeeBps !== undefined) {
+    const dv = tv.debtAssets?.[a.symbol];
+    const rateModel = dv?.byHub?.[label]?.rateModel ?? dv?.rateModel;
+    const liquidityFeeBps = dv?.byHub?.[label]?.liquidityFeeBps ?? dv?.liquidityFeeBps;
+    if (rateModel || liquidityFeeBps !== undefined) {
       const target = (c.aavePayload.debtAssets as Json[]).find((x) => x.symbol === a.symbol)!;
-      if (a.rateModel) (target.rateModelByHub ??= {})[label] = a.rateModel;
-      if (a.liquidityFeeBps !== undefined) (target.liquidityFeeByHub ??= {})[label] = a.liquidityFeeBps;
-      if (wasLent) rateKept.push({ symbol: a.symbol, ...(a.rateModel ? { rateModel: a.rateModel } : {}), ...(a.liquidityFeeBps !== undefined ? { liquidityFeeBps: a.liquidityFeeBps } : {}) });
+      if (rateModel) (target.rateModelByHub ??= {})[label] = rateModel;
+      if (liquidityFeeBps !== undefined) (target.liquidityFeeByHub ??= {})[label] = liquidityFeeBps;
+      if (wasLent) rateKept.push({ symbol: a.symbol, ...(rateModel ? { rateModel } : {}), ...(liquidityFeeBps !== undefined ? { liquidityFeeBps } : {}) });
     }
     // A debt asset borrowable on a CDP Spoke needs its listing entry (its DebtOracle) once per chain.
     const borrowed = (Object.values(input.borrowable) as string[][]).some((x) => x.includes(a.symbol));
     if (borrowed && !(c.listing.debtAssets as Json[]).some((x) => x.symbol === a.symbol)) {
-      if (!a.new) throw new Error(`${a.symbol} has no DebtOracle on this chain: give its sizing in "new"`);
+      if (dv?.stressRiseBps === undefined || !dv.floorRoundingAllowance) throw new Error(`${a.symbol} has no DebtOracle on this chain and test values have no stressRiseBps and floorRoundingAllowance for it`);
       c.listing.debtAssets.push({
         symbol: a.symbol,
         fixedPrice: false,
-        stressRiseBps: a.new.stressRiseBps,
-        floorRoundingAllowance: a.new.floorRoundingAllowance,
+        stressRiseBps: dv.stressRiseBps,
+        floorRoundingAllowance: dv.floorRoundingAllowance,
         debtOraclePokeMinGas: 1000000,
         ...(tv.debtAssets?.[a.symbol]?.creditLineWhole ? { creditLineWhole: tv.debtAssets[a.symbol]!.creditLineWhole } : {}),
         ...(tv.debtAssets?.[a.symbol]?.debtMinWhole ? { debtMinWhole: tv.debtAssets[a.symbol]!.debtMinWhole, debtMaxWhole: tv.debtAssets[a.symbol]!.debtMaxWhole } : {}),
@@ -278,16 +309,18 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
       tokens.push(`${t.symbol} (listed)`);
       continue;
     }
-    const dev = t.deviationBps ?? 100;
-    const tol = 2 * dev + (c.parameters.globals.feedAgreementMarginBps as number) + 50;
+    const tvals: TokenValues = { ...tv.tokens?.default, ...tv.tokens?.[t.symbol] };
+    if (tvals.deviationBps === undefined || tvals.collateralFactorBps === undefined || !tvals.tokenCapUsd) throw new Error(`collateral ${t.symbol}: test values have no deviationBps, collateralFactorBps and tokenCapUsd for it`);
+    // The ParameterStore's least agreement tolerance (two routes' deviation plus the margin) plus 50 bps, unless set.
+    const tol = 2 * tvals.deviationBps + (c.parameters.globals.feedAgreementMarginBps as number) + 50;
     c.listing.tokens.push({
       symbol: t.symbol,
       isUsdStable: t.isUsdStable ?? false,
-      deviationBps: dev,
-      collateralFactorBps: t.collateralFactorBps ?? 6000,
-      agreementToleranceBps: tol,
-      secondToleranceBps: tol,
-      tokenCapUsd: tv.tokenCapUsd?.[t.symbol] ?? tv.tokenCapUsd?.default ?? "0",
+      deviationBps: tvals.deviationBps,
+      collateralFactorBps: tvals.collateralFactorBps,
+      agreementToleranceBps: tvals.agreementToleranceBps ?? tol,
+      secondToleranceBps: tvals.secondToleranceBps ?? tol,
+      tokenCapUsd: tvals.tokenCapUsd,
       hubs: [label],
       address: `$world:.tokens.${t.symbol}`,
       feeds: { primary: `$world:.feeds.${t.symbol}.primary`, alternate: `$world:.feeds.${t.symbol}.alternate`, standby: `$world:.feeds.${t.symbol}.standby`, second: `$world:.feeds.${t.symbol}.second` },
@@ -305,6 +338,7 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
   const tokenCf = (s: string) => (c.listing.tokens as Json[]).find((x) => x.symbol === s)!.collateralFactorBps as number;
   const f = c.parameters.globals.avanaFeeShareBps as number;
   const markets: string[] = [];
+  const values: Record<string, unknown> = {};
   for (const mi of input.markets) {
     const s = spokeOf(mi.spoke)!;
     const p = poolOf(c, mi.pool)!;
@@ -316,9 +350,14 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
     const routes: Route[] = lends.flatMap((asset) => [p.a, p.b].filter((t: string) => t !== asset).map((t: string) => routePair(c, name, t, asset, own)));
     addRoutePools(c, routes);
     c.listing.pools[mi.pool] = slip ? `$world:.slipstreamPools['${mi.pool}']` : `$world:.uniswapPools['${mi.pool}']`;
-    const cf = Math.floor((Math.min(tokenCf(p.a), tokenCf(p.b)) * mi.poolRiskFactorBps) / 1e4);
-    // The largest slippage allowance s with s x minLB <= (1e4 - f)(minLB - 1e4), minLB the smallest bonus (LIQ-I1).
-    const minLb = 10_000 + Math.floor(((mi.maxLiquidationBonus - 10_000) * LIQUIDATION_BONUS_FACTOR) / 10_000);
+    const mv: MarketValues = { ...tv.markets?.default, ...tv.markets?.[name] };
+    if (mv.poolRiskFactorBps === undefined || mv.maxLiquidationBonus === undefined || mv.consistencyToleranceBps === undefined || !mv.marketUsdCap || !mv.topUpSliceUsd)
+      throw new Error(`market ${name}: test values have no poolRiskFactorBps, maxLiquidationBonus, consistencyToleranceBps, marketUsdCap and topUpSliceUsd for it`);
+    // Unless the test values set them: the collateral factor min(token factors) x pool risk factor (SPEC-CF-001), and
+    // the largest slippage allowance s with s x minLB <= (1e4 - f)(minLB - 1e4), minLB the smallest bonus (LIQ-I1).
+    const cf = mv.collateralFactorBps ?? Math.floor((Math.min(tokenCf(p.a), tokenCf(p.b)) * mv.poolRiskFactorBps) / 1e4);
+    const minLb = 10_000 + Math.floor(((mv.maxLiquidationBonus - 10_000) * LIQUIDATION_BONUS_FACTOR) / 10_000);
+    values[name] = mv;
     const venue = VENUE[s.integration];
     const fee = slip ? `tick spacing ${p.tickSpacing}` : `${p.fee / 10_000}% fee tier`;
     c.listing.markets.push({
@@ -330,15 +369,16 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
       tickLower: mi.tickLower ?? 0,
       tickUpper: mi.tickUpper ?? 0,
       collateralFactorBps: cf,
-      maxLiquidationBonus: mi.maxLiquidationBonus,
-      consistencyToleranceBps: mi.consistencyToleranceBps ?? 100,
-      poolRiskFactorBps: mi.poolRiskFactorBps,
-      slippageAllowanceBps: Math.floor(((10_000 - f) * (minLb - 10_000)) / minLb),
-      slippageAllowanceMinBps: 50,
-      ...(mi.minPledgeUsd ? { minPledgeUsd: mi.minPledgeUsd } : {}),
-      // Caps are the DAO's: the local stack's test values (per market name, else the default).
-      marketUsdCap: (tv.markets?.[name] ?? tv.markets?.default)?.marketUsdCap ?? "0",
-      topUpSliceUsd: (tv.markets?.[name] ?? tv.markets?.default)?.topUpSliceUsd ?? "0",
+      maxLiquidationBonus: mv.maxLiquidationBonus,
+      consistencyToleranceBps: mv.consistencyToleranceBps,
+      poolRiskFactorBps: mv.poolRiskFactorBps,
+      slippageAllowanceBps: mv.slippageAllowanceBps ?? Math.floor(((10_000 - f) * (minLb - 10_000)) / minLb),
+      ...(mv.slippageAllowanceMinBps !== undefined ? { slippageAllowanceMinBps: mv.slippageAllowanceMinBps } : {}),
+      ...(mv.collateralRisk !== undefined ? { collateralRisk: mv.collateralRisk } : {}),
+      ...(mv.minPledgeUsd ? { minPledgeUsd: mv.minPledgeUsd } : {}),
+      ...(mv.stressFloorUsd ? { stressFloorUsd: mv.stressFloorUsd } : {}),
+      marketUsdCap: mv.marketUsdCap,
+      topUpSliceUsd: mv.topUpSliceUsd,
       routes,
       content: {
         slug: mi.slug ?? slugify(`${venue}-${p.a}-${p.b}-${slip ? `cl${p.tickSpacing}` : String(p.fee)}${range}-${s.label}`),
@@ -362,6 +402,7 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
       lendSpoke: lend,
       newDebtAssets: newDebt,
       rateChanges: rateKept,
+      values,
       lendAssets: input.lendAssets.map((a) => a.symbol),
       debtReserves,
       collateralTokens: tokens,
