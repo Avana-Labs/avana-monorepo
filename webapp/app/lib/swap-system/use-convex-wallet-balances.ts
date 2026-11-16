@@ -27,14 +27,37 @@ export function useConvexClaimBasis(_walletId: string | null | undefined): Recor
 
 const EMPTY_BASIS: Record<string, number> = {}
 
-/** "Member since" and boost of the Wallet Overview tiles: no source yet, so both are null. */
+/**
+ * "Member since" and boost of the Wallet Overview tiles. `sinceMs` is the wallet's first interaction with Avana
+ * (Convex `wallet.membership.get`), null when none is recorded, so the tile shows a dash and never an invented date.
+ * Boost has no source yet and stays null. Undefined while loading; null-valued for a guest id, a null wallet or
+ * without a Convex deployment.
+ */
 export function useConvexWalletOnboardingSummary(
-  _walletId: string | null | undefined,
+  walletId: string | null | undefined,
 ): { sinceMs: number | null; boost: number | null } | undefined {
-  return NO_SUMMARY
+  // `hasConvexClient` is a build-time constant, so every render takes the same branch.
+  if (!hasConvexClient) return NO_SUMMARY
+  return useLiveWalletOnboardingSummary(walletId)
 }
 
 const NO_SUMMARY = { sinceMs: null, boost: null }
+
+function useLiveWalletOnboardingSummary(
+  walletId: string | null | undefined,
+): { sinceMs: number | null; boost: number | null } | undefined {
+  const wallet = walletId && isAddress(walletId, { strict: false }) ? walletId : null
+  const membership = useQuery(api.wallet.membership.get, wallet ? { wallet } : "skip")
+  return useMemo(
+    () =>
+      wallet === null
+        ? NO_SUMMARY
+        : membership === undefined
+          ? undefined
+          : { sinceMs: membership?.sinceMs ?? null, boost: null },
+    [wallet, membership],
+  )
+}
 
 const NO_BALANCES: UserAssetBalance[] = []
 

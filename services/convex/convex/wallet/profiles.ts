@@ -4,6 +4,7 @@ import { codedError } from "../codedError"
 import { v } from "convex/values"
 import { internalMutation, mutation, query } from "../_generated/server"
 import { getAuthedWallet, getAuthSubject } from "../walletAuth"
+import { noteFirstSeen } from "../lib/membership.ts"
 
 const preferencesValidator = v.object({
   theme: v.optional(v.union(v.literal("light"), v.literal("dark"), v.literal("system"))),
@@ -95,6 +96,7 @@ export const savePreferences = mutation({
       createdAt: now,
       updatedAt: now,
     })
+    await noteFirstSeen(ctx, wallet, now, "profile")
     return "created" as const
   },
 })
