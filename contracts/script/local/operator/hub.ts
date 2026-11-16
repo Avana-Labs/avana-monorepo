@@ -181,11 +181,15 @@ export interface HubPlan {
     debtReserves: string[];
     collateralTokens: string[];
     markets: string[];
+    /** What an operator does on the chain before the listing executes (on the local stack, a step does it). */
+    checklist: string[];
   };
 }
 
 /** The CDP Spokes' liquidation bonus factor, set by the Aave deployment payload (06_AaveDeploymentPayload). */
 const LIQUIDATION_BONUS_FACTOR = 5000;
+/** The LPOracle's TWAP window, as 09_ListMarkets sets it. */
+const TWAP_WINDOW = 1800;
 const INTEGRATION_ID = { "uniswap-v3": 1, slipstream: 2 } as const;
 const VENUE = { "uniswap-v3": "Uniswap v3", slipstream: "Slipstream" } as const;
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -458,6 +462,9 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
   const tokenCf = (s: string) => (c.listing.tokens as Json[]).find((x) => x.symbol === s)!.collateralFactorBps as number;
   const f = c.parameters.globals.avanaFeeShareBps as number;
   const markets: string[] = [];
+  const checklist: string[] = [];
+  // The LPOracle's TWAP check needs ceil(window / block time) + 1 observations (LPPriceMath.minObservations).
+  const need = Math.ceil(TWAP_WINDOW / (c.chain.blockTime as number)) + 1;
   const values: Record<string, unknown> = {};
   for (const mi of input.markets) {
     const s = spokeOf(mi.spoke)!;
@@ -514,6 +521,9 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
       },
     });
     markets.push(name);
+    checklist.push(
+      `Pool ${mi.pool} (${name}): raise its observation cardinality to at least ${need} (increaseObservationCardinalityNext; ceil(${TWAP_WINDOW} s / ${c.chain.blockTime} s blocks) + 1) and let it fill a ${TWAP_WINDOW} s window before the listing executes; until then the market's TWAP check is unavailable. On a fork the stack's fork-pools step does it.`,
+    );
   }
 
   return {
@@ -531,6 +541,7 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
       debtReserves,
       collateralTokens: tokens,
       markets,
+      checklist,
     },
   };
 }
