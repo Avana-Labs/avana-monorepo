@@ -8,10 +8,11 @@
 
 import { categorizeMarket, CATEGORY_CHIPS, type MarketCategory } from "@/app/lib/markets/category"
 import { tokenDisplayName } from "@/app/lib/markets/token-names"
+import { chainKey, type ChainKey } from "@/app/lib/chains"
 
 // ----- Chains ----------------------------------------------------------------
 
-export type ChainId = "ethereum" | "base" | "local"
+export type ChainId = ChainKey
 
 export type FilterOption<Id extends string = string> = {
   id: Id
@@ -27,21 +28,17 @@ export type FilterOption<Id extends string = string> = {
 export const CHAIN_OPTIONS: ReadonlyArray<FilterOption<ChainId>> = [
   { id: "ethereum", label: "Ethereum", brand: true, iconSrc: "/asset-icons/eth.png" },
   { id: "base", label: "Base", brand: true },
-  { id: "local", label: "Local" },
 ]
 
 /**
  * List rows do not carry their chain yet, so every row matches every chain option. Derive the
  * chain per row from services/convex `chainId` when the rows carry it.
  */
-export const MARKET_CHAINS: readonly ChainId[] = ["ethereum", "base", "local"]
+export const MARKET_CHAINS: readonly ChainId[] = ["ethereum", "base"]
 
-/** The chain filter id of an EVM chain id. */
+/** The chain filter id of an EVM chain id (chain ids per network from env, `app/lib/chains.ts`). */
 export function chainFilterId(chainId: number | undefined): ChainId | null {
-  if (chainId === 1) return "ethereum"
-  if (chainId === 8453) return "base"
-  if (chainId === 31337) return "local"
-  return null
+  return chainKey(chainId)
 }
 
 // ----- Hubs ------------------------------------------------------------------
