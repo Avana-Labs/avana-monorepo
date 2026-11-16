@@ -101,3 +101,9 @@ export function assetSlugs(chainId: number, reserves: readonly AssetSlugInput[])
   }
   return out;
 }
+
+/**
+ * The bonus a liquidator earns, in bps, from Aave V4's `maxLiquidationBonus`: that value is 10,000-based (10,500 is
+ * a 5 % bonus), and the Lens reports it as is in `MarketView.maxLiquidationBonusBps`.
+ */
+export const liquidationBonusBps = (maxLiquidationBonus: number): number => Math.max(0, maxLiquidationBonus - 10_000);
