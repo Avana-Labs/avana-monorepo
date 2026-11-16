@@ -360,7 +360,9 @@ contract DebtOracleHalmosTest is Test {
     /// - `min(p, b) = low` and, while Drifting, `max(max(low, low), A) = A`, as OpenZeppelin's branchless
     ///   `b ^ ([condition] × (a ^ b))`; the caller's range fixes the ordering of p, b and A (A exceeds the lower route
     ///   in every drift range). The served price (A, or the quote p when the routes agree), below 2^40, is unchanged by
-    ///   the `min` with `2^255 − 1` in `DebtOracle._answer`.
+    ///   the `min` with `2^255 − 1` in `DebtOracle._answer`. The DebtOracle build multiplies the condition and the xor
+    ///   in either order depending on the call site, and Halmos does not treat its uninterpreted `mul` as commutative,
+    ///   so each fact is stated for both orders, at each level of nesting.
     /// - `x / x = 1` for each route answer x > 0: the overflow check of `a * 10 ** 0` in `LPPriceMath.normalizeAnswer`
     ///   (`checked_mul(x, y)` tests `div(x × y, x) = y`).
     /// - For the routes (tolerance 225 bps) and for the quote against the second source at A (100 bps), with `lo`,
@@ -377,14 +379,19 @@ contract DebtOracleHalmosTest is Test {
     ) internal {
         uint256 p = pAnswer;
         uint256 b = bAnswer;
-        uint256 lowTerm = _min(p, b);
-        vm.assume(lowTerm == low);
-        uint256 served = p;
+        uint256[2] memory lows = _mins(p, b, low);
         if (drifting) {
-            served = _max(_max(lowTerm, lowTerm), A);
-            vm.assume(served == A);
+            for (uint256 i = 0; i < 2; ++i) {
+                uint256[2] memory inner = _maxs(lows[i], lows[i], low);
+                for (uint256 j = 0; j < 2; ++j) {
+                    uint256[2] memory served = _maxs(inner[j], A, A);
+                    _mins(served[0], INT256_MAX, A);
+                    _mins(served[1], INT256_MAX, A);
+                }
+            }
+        } else {
+            _mins(p, INT256_MAX, p);
         }
-        vm.assume(_min(served, INT256_MAX) == served);
         vm.assume(_div(p, p) == 1);
         vm.assume(_div(b, b) == 1);
         _toleranceFacts(p, b, ROUTE_TOLERANCE_BPS);
@@ -405,25 +412,39 @@ contract DebtOracleHalmosTest is Test {
         vm.assume(_div(_mul(tol, lo), tol) == lo);
     }
 
-    /// @dev OpenZeppelin's `Math.min`, `b ^ ([a < b] × (a ^ b))`, with the operands of `mul` in the order of the
-    /// DebtOracle build.
-    function _min(
+    /// @dev OpenZeppelin's `Math.min(a, b)`, `b ^ ([a < b] × (a ^ b))`, with the operands of `mul` in each order;
+    /// assumes both equal `v` and returns them.
+    function _mins(
         uint256 a,
-        uint256 b
-    ) internal pure returns (uint256 r) {
+        uint256 b,
+        uint256 v
+    ) internal pure returns (uint256[2] memory r) {
+        uint256 r0;
+        uint256 r1;
         assembly ("memory-safe") {
-            r := xor(b, mul(lt(a, b), xor(a, b)))
+            r0 := xor(b, mul(lt(a, b), xor(a, b)))
+            r1 := xor(b, mul(xor(a, b), lt(a, b)))
         }
+        vm.assume(r0 == v);
+        vm.assume(r1 == v);
+        r = [r0, r1];
     }
 
-    /// @dev OpenZeppelin's `Math.max`, `b ^ ([a > b] × (a ^ b))`, as `_min`.
-    function _max(
+    /// @dev OpenZeppelin's `Math.max(a, b)`, `b ^ ([a > b] × (a ^ b))`, as `_mins`.
+    function _maxs(
         uint256 a,
-        uint256 b
-    ) internal pure returns (uint256 r) {
+        uint256 b,
+        uint256 v
+    ) internal pure returns (uint256[2] memory r) {
+        uint256 r0;
+        uint256 r1;
         assembly ("memory-safe") {
-            r := xor(b, mul(gt(a, b), xor(a, b)))
+            r0 := xor(b, mul(gt(a, b), xor(a, b)))
+            r1 := xor(b, mul(xor(a, b), gt(a, b)))
         }
+        vm.assume(r0 == v);
+        vm.assume(r1 == v);
+        r = [r0, r1];
     }
 
     /// @dev EVM `mul`, unchecked.
