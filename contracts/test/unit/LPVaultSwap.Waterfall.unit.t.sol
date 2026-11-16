@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
@@ -236,5 +237,28 @@ contract LPVaultSwapWaterfallUnitTest is LPVaultSwapUnitBase {
         assertGt(feeAt, 0, "fee paid");
         assertGt(borrowerAt, feeAt, "borrower after the fee");
         assertGt(callerAt, borrowerAt, "caller last");
+    }
+
+    /// @notice REQ-SWAP-027: an account that owed several reserves before the call and owes none after it had the rest
+    /// cleared as deficit, so `B` funds the First-Loss Reserve of the repaid asset even when that asset's Hub deficit
+    /// did not move and the account was not underwater before the call. The Spoke's account reads report two borrows
+    /// before the call and none after it; every other value is the real one.
+    // TEST-216 verifies: SPEC-LIQ-022, REQ-SWAP-027
+    function test_TEST_216_debtClearedAcrossReservesFundsTheReserve() public {
+        usdtUsdcPool.setRate(103, 100);
+        (address proxy,) = _bobAccount();
+        IAaveV4Spoke.UserAccountData memory a = IAaveV4Spoke(aave.cdpSpoke).getUserAccountData(proxy);
+        bytes[] memory reads = new bytes[](2);
+        a.borrowCount = 2;
+        reads[0] = abi.encode(a);
+        a.borrowCount = 0;
+        reads[1] = abi.encode(a);
+        vm.mockCalls(aave.cdpSpoke, abi.encodeCall(IAaveV4Spoke.getUserAccountData, (proxy)), reads);
+        uint256 bobBefore = usdc.balanceOf(bob);
+        uint256 reserveBefore = usdcCoverage.fundedBalance();
+        LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, 1950e6));
+        assertGt(r.borrowerSurplus, 0, "the call carried a borrower surplus");
+        assertEq(usdc.balanceOf(bob), bobBefore, "borrower paid nothing");
+        assertEq(usdcCoverage.fundedBalance(), reserveBefore + r.borrowerSurplus, "surplus funded the USDC reserve");
     }
 }
