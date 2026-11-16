@@ -636,6 +636,25 @@ export default defineSchema({
     at: v.number(),
   }).index("by_wallet_key", ["wallet", "key"]),
 
+  /** A wallet's invite code (`lib/referrals.ts`): one per wallet, unique across wallets. */
+  referralCodes: defineTable({
+    wallet: address,
+    code: v.string(),
+  })
+    .index("by_wallet", ["wallet"])
+    .index("by_code", ["code"]),
+
+  /** A wallet that arrived with someone's code: attributed once; `activatedAt` is its first action (a quest-kind log or intent). */
+  referralAttributions: defineTable({
+    referred: address,
+    owner: address,
+    code: v.string(),
+    capturedAt: v.number(),
+    activatedAt: v.optional(v.number()),
+  })
+    .index("by_referred", ["referred"])
+    .index("by_owner", ["owner"]),
+
   /** Running sums of a wallet's `rewardEvents`, so a read never scans the ledger; `questIds` are the completed quests. */
   rewardTotals: defineTable({
     wallet: address,

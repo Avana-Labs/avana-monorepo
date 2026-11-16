@@ -11,6 +11,7 @@ import { codedError } from "./codedError";
 import { INTENT_KINDS, type IntentState, type IntentStatus, isFinal, nextIntentState } from "./lib/intents.ts";
 import { explorerLinks } from "./lib/explorer.ts";
 import { noteFirstSeen } from "./lib/membership.ts";
+import { activateReferral } from "./lib/referrals.ts";
 import { awardQuestForIntent } from "./lib/rewards.ts";
 import { rpcClient } from "./lib/rpc.ts";
 import { consumeWriteBudget } from "./writeRateLimit";
@@ -103,7 +104,10 @@ export const apply = internalMutation({
     const { _id, _creationTime, blockNumber: _b, blockHash: _h, finalizedAt: _f, ...rest } = row;
     await ctx.db.replace(id, { ...rest, ...next, status, open: !isFinal(status, next.finalizedAt), checkedAt: now, updatedAt: now });
     // The transaction is on chain: it completes the quest of its kind (a failed or dropped one does not).
-    if (status === "included" || status === "indexed" || status === "confirmed") await awardQuestForIntent(ctx, row.wallet, row.kind, now);
+    if (status === "included" || status === "indexed" || status === "confirmed") {
+      await awardQuestForIntent(ctx, row.wallet, row.kind, now);
+      await activateReferral(ctx, row.wallet, { intent: row.kind }, now);
+    }
   },
 });
 
