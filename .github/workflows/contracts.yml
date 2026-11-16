@@ -60,6 +60,13 @@ on:
         required: false
         default: ""
         type: string
+      smt_query_timeout_ms:
+        # Overrides [profile.smt.model_checker] timeout (solc's limit per solver query) for this run, to measure a
+        # contract's time and results at another limit. Empty: foundry.toml's.
+        description: "SMTChecker solver timeout per query in ms (empty: foundry.toml's)"
+        required: false
+        default: ""
+        type: string
 
 concurrency:
   # A newer pull-request run cancels the older one on the same ref; runs on main finish, so the next merge never
@@ -740,6 +747,11 @@ jobs:
       # Z3 4.12.6, the last 4.12 release (solc 0.8.28 loads libz3.so.4.12), glibc 2.35 build; sha256 of the zip.
       Z3_VERSION: "4.12.6"
       Z3_SHA256: "6719feaa729c321a73db870d7f7ebc111c6e0919ba4e0b34942976e3788d4a6d"
+      # Wall-clock budget of one contract's model check. solc's own limit is per query, so a contract with many
+      # queries can run for hours; past this budget the build is stopped and the job fails as "timed out", reported
+      # apart from proved and unproved targets.
+      SMT_BUDGET_MINUTES: "90"
+      SMT_QUERY_TIMEOUT_MS: ${{ inputs.smt_query_timeout_ms }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -812,18 +824,35 @@ jobs:
           set -euo pipefail
           python3 script/ci-shards.py smt-only "$CONTRACT" > foundry.toml.smt
           mv foundry.toml.smt foundry.toml
+          if [ -n "${SMT_QUERY_TIMEOUT_MS:-}" ]; then
+            [[ "$SMT_QUERY_TIMEOUT_MS" =~ ^[0-9]+$ ]] || { echo "::error::smt_query_timeout_ms is not a number of ms"; exit 1; }
+            [ "$(grep -c '^timeout = ' foundry.toml)" = 1 ] || { echo "::error::expected one timeout line in foundry.toml"; exit 1; }
+            sed -i "s/^timeout = .*/timeout = ${SMT_QUERY_TIMEOUT_MS}/" foundry.toml
+          fi
+          echo "solver timeout per query: $(grep '^timeout = ' foundry.toml | cut -d' ' -f3) ms; budget ${SMT_BUDGET_MINUTES} min" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
           src=$(grep -oE "\"[^\"]+\" = \[\"${CONTRACT}\"\]" foundry.toml | head -n 1 | cut -d'"' -f2)
           [ -f "$src" ] || { echo "::error::no source file for $CONTRACT in [profile.smt.model_checker] contracts"; exit 1; }
           echo "target: $src:$CONTRACT"
           echo "SMT_SOURCE=$src" >> "$GITHUB_ENV"
           start=$SECONDS
-          forge build "$src" --force --build-info 2>&1 | tee smt.log
+          set +e
+          timeout --kill-after=60 "${SMT_BUDGET_MINUTES}m" forge build "$src" --force --build-info 2>&1 | tee smt.log
+          rc=${PIPESTATUS[0]}
+          set -e
           echo "model check and build: $((SECONDS - start)) s" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$rc" = 124 ] || [ "$rc" = 137 ]; then
+            echo "SMT_TIMED_OUT=1" >> "$GITHUB_ENV"
+            msg="$src: timed out after ${SMT_BUDGET_MINUTES} min, no result (proved 0, unproved 0)"
+            echo "$msg" | tee smt-results.txt >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::$msg"
+          fi
+          exit "$rc"
 
       - name: Solver ran, CHC results present, no counterexample; unproved targets listed
         # forge prints errors and warnings only; script/smt-report.py reads every result, info messages (proved safe)
         # included, from the build-info files, and fails unless exactly one solc job analysed the source.
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && env.SMT_TIMED_OUT != '1' }}
         env:
           CONTRACT: ${{ matrix.contract }}
         run: |
