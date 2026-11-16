@@ -3,6 +3,7 @@ import { DEFAULT_FEE_RULES } from "@/convex/lib/fees"
 import { SWAP_ASSETS } from "@/app/lib/swap-system/catalog"
 import {
   CONNECTOR_ASSET_IDS,
+  QUOTE_VALIDITY_SECONDS,
   SLIPSTREAM_TICK_SPACINGS,
   V3_FEE_TIERS,
   V4_POOL_KEYS,
@@ -40,12 +41,14 @@ describe("on-chain swap config", () => {
     ])
   })
 
-  it("tries the agreed pools per venue and routes through WETH and USDC", () => {
+  it("tries the agreed pools per venue, routes through WETH and USDC, and keeps quotes for 2 minutes", () => {
     const config = onchainPoolsConfig(contracts, SWAP_ASSETS)!
-    expect(config.venues).toEqual([
-      { venue: "uniswap-v3", quoter: A(2), poolKeys: V3_FEE_TIERS },
-      { venue: "uniswap-v4", quoter: A(4), poolKeys: V4_POOL_KEYS },
-    ])
+    // Uniswap v4 is quote-only until its swaps can be sent, so it never takes part in route choice.
+    expect(config.venues).toEqual([{ venue: "uniswap-v3", quoter: A(2), poolKeys: V3_FEE_TIERS }])
+    expect(onchainPoolsConfig({ ...contracts, venues: [{ venue: "uniswap-v4", router: A(3), quoter: A(4) }] }, SWAP_ASSETS)).toBeNull()
+    expect(V4_POOL_KEYS).toHaveLength(4)
+    expect(config.quoteValiditySeconds).toBe(QUOTE_VALIDITY_SECONDS)
+    expect(QUOTE_VALIDITY_SECONDS).toBe(120)
     expect(config.connectorAssetIds).toEqual(CONNECTOR_ASSET_IDS)
     expect(onchainPoolsConfig({ ...contracts, venues: [{ venue: "slipstream", router: A(5), quoter: A(6) }] }, SWAP_ASSETS)!.venues[0]!.poolKeys).toEqual(
       SLIPSTREAM_TICK_SPACINGS,

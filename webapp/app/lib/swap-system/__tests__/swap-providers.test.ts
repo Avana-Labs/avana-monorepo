@@ -195,6 +195,17 @@ describe("on-chain pools provider", () => {
     expect(quote.estimatedOutputAmount).toBeCloseTo(2000)
     expect(quote.networkFeeUsd).toBeCloseTo(1)
     expect(chain.v4Calls.length).toBeGreaterThan(0)
+    // A v4 route can be shown by the provider but is never kept as a route to send.
+    expect(provider.executionRoute?.(quote.id)).toBeUndefined()
+  })
+
+  it("keeps the route of a v3 quote to send it as priced", async () => {
+    const provider = createOnchainPoolsProvider(v3Only, fakeChain(), clock)
+    const quote = await provider.quote({ ...request, inputAssetId: "eth", outputAssetId: "usdc", inputAmount: 1 })
+    const route = provider.executionRoute?.(quote.id)
+    expect(route).toMatchObject({ venue: "uniswap-v3", amountIn: 10n ** 18n })
+    expect(route!.route.tokens.map((t) => t.symbol)).toEqual(["ETH", "USDC"])
+    expect(route!.amountOut).toBeGreaterThan(0n)
   })
 
   it("keeps Uniswap v3 when the v4 output is higher but its gas eats the difference", async () => {
