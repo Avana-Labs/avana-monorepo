@@ -6,8 +6,8 @@ pragma solidity 0.8.28;
 import {AaveGuardianRole} from "./lib/AaveGuardianRole.sol";
 import {
     AAssetListing,
-    AFlags,
     ADynamicReserveConfig,
+    AFlags,
     AInterestRateData,
     ALiquidationConfigUpdate,
     AReserveConfig,
@@ -191,7 +191,10 @@ contract AaveDeploymentPayload is AavePayloads {
             );
         }
         bytes4[] memory sel = AaveGuardianRole.selectors();
-        if (v.getTargetFunctionRole(configurator, sel[0]) != role || v.getTargetFunctionRole(configurator, sel[1]) != role) {
+        if (
+            v.getTargetFunctionRole(configurator, sel[0]) != role
+                || v.getTargetFunctionRole(configurator, sel[1]) != role
+        ) {
             _targetFunctionRole(b, ATargetFunctionRoleUpdate(am, configurator, sel, role));
         }
         address[2] memory holders = [guardian, executor];
