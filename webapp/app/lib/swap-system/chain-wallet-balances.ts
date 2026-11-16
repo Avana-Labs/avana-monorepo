@@ -384,6 +384,11 @@ function poolOf(client: BalanceChainClient, chainId: number, nft: Nft): Promise<
   })
 }
 
+/** 10^n as a bigint. */
+function pow10(n: number): bigint {
+  return BigInt(`1${"0".repeat(n)}`)
+}
+
 function positionKeyOf(generation: number | undefined, tokenId: bigint): Hex {
   const key = generation === undefined ? tokenId : (BigInt(generation) << GENERATION_SHIFT) | tokenId
   return toHex(key, { size: 32 })
@@ -477,7 +482,7 @@ export async function readWalletLpPositions({
           integrationId: m.integrationId,
           lpVault: binding.lpVault,
           units,
-          valueUsd6: (units * BigInt(m.acceptedPrice)) / 10n ** BigInt(m.vaultDecimals) / 100n,
+          valueUsd6: (units * BigInt(m.acceptedPrice)) / pow10(m.vaultDecimals) / 100n,
         }
         break
       }
