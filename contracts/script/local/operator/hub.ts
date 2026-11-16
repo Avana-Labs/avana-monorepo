@@ -34,7 +34,7 @@ export interface HubInput {
   readonly hub: { label: string; tier: 1 | 2 | 3; name?: string; description?: string };
   readonly lendSpoke?: string;
   readonly spokes: readonly SpokeInput[];
-  readonly lendAssets: readonly { symbol: string; category?: "stable" | "crypto"; new?: NewDebtAsset; rateModel?: RateModel }[];
+  readonly lendAssets: readonly { symbol: string; category?: "stable" | "crypto"; new?: NewDebtAsset; rateModel?: RateModel; liquidityFeeBps?: number }[];
   readonly borrowable: Readonly<Record<string, readonly string[]>>;
   readonly collateral: readonly CollateralInput[];
   readonly markets: readonly MarketInput[];
@@ -104,7 +104,7 @@ export interface HubPlan {
     newDebtAssets: string[];
     /** Assets already lent on the extended Hub with a rate model in the file: the release changes their curve with an
      * Aave rate change (11-changes, assetRates via the governance executor). */
-    rateChanges: { symbol: string; rateModel: RateModel }[];
+    rateChanges: { symbol: string; rateModel?: RateModel; liquidityFeeBps?: number }[];
     lendAssets: string[];
     debtReserves: string[];
     collateralTokens: string[];
@@ -193,7 +193,7 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
 
   // 2. What the Hub lends: an existing debt asset limited to some Hubs gets this one; a new one is sized from input.
   const newDebt: string[] = [];
-  const rateKept: { symbol: string; rateModel: RateModel }[] = [];
+  const rateKept: { symbol: string; rateModel?: RateModel; liquidityFeeBps?: number }[] = [];
   for (const a of input.lendAssets) {
     const d = (c.aavePayload.debtAssets as Json[]).find((x) => x.symbol === a.symbol);
     const w = (c.world.tokens as Json[]).find((t) => t.symbol === a.symbol)!;
@@ -220,11 +220,11 @@ export function planHub(config: Json, input: HubInput, tv: TestValues = {}): Hub
     }
     // The asset's rate curve on this Hub, applied by 06 when the asset is listed on it (an asset listed earlier keeps
     // its curve: the summary says so).
-    if (a.rateModel) {
+    if (a.rateModel || a.liquidityFeeBps !== undefined) {
       const target = (c.aavePayload.debtAssets as Json[]).find((x) => x.symbol === a.symbol)!;
-      target.rateModelByHub ??= {};
-      target.rateModelByHub[label] = a.rateModel;
-      if (wasLent) rateKept.push({ symbol: a.symbol, rateModel: a.rateModel });
+      if (a.rateModel) (target.rateModelByHub ??= {})[label] = a.rateModel;
+      if (a.liquidityFeeBps !== undefined) (target.liquidityFeeByHub ??= {})[label] = a.liquidityFeeBps;
+      if (wasLent) rateKept.push({ symbol: a.symbol, ...(a.rateModel ? { rateModel: a.rateModel } : {}), ...(a.liquidityFeeBps !== undefined ? { liquidityFeeBps: a.liquidityFeeBps } : {}) });
     }
     // A debt asset borrowable on a CDP Spoke needs its listing entry (its DebtOracle) once per chain.
     const borrowed = (Object.values(input.borrowable) as string[][]).some((x) => x.includes(a.symbol));
@@ -404,10 +404,15 @@ export async function releaseHub(network: string, release: string, configPath: s
               hub: `hub:${plan.hub}`,
               asset: `token:${r.symbol}`,
               set: {
-                optimalUsageRatio: r.rateModel.optimalUsageBps,
-                baseDrawnRate: r.rateModel.baseDrawnRateBps,
-                rateGrowthBeforeOptimal: r.rateModel.rateGrowthBeforeOptimalBps,
-                rateGrowthAfterOptimal: r.rateModel.rateGrowthAfterOptimalBps,
+                ...(r.rateModel
+                  ? {
+                      optimalUsageRatio: r.rateModel.optimalUsageBps,
+                      baseDrawnRate: r.rateModel.baseDrawnRateBps,
+                      rateGrowthBeforeOptimal: r.rateModel.rateGrowthBeforeOptimalBps,
+                      rateGrowthAfterOptimal: r.rateModel.rateGrowthAfterOptimalBps,
+                    }
+                  : {}),
+                ...(r.liquidityFeeBps !== undefined ? { liquidityFee: r.liquidityFeeBps } : {}),
               },
             })),
           },
