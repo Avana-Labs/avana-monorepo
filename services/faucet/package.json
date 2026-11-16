@@ -1,0 +1,26 @@
+{
+  "name": "@avana/faucet",
+  "version": "0.0.0",
+  "private": true,
+  "license": "BUSL-1.1",
+  "description": "Test funds for a connected wallet on the local fork chains: gas, wallet tokens and, later, the starting positions. Refuses any chain that is not a local anvil fork.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@avana/services-common": "file:../common",
+    "viem": "2.57.11"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
+  }
+}

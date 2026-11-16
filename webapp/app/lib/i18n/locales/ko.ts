@@ -1467,8 +1467,8 @@ const dict: TranslationDictionary = {
   "If something looks off, send the details and our team can help you triage the issue.":
     "이상해 보이면 세부 정보를 보내 주세요. 팀에서 문제 분류를 도와드릴 수 있습니다.",
   "Avana Platform Fee": "Avana 플랫폼 수수료",
-  "A 15 bps (0.15%) upfront Avana interface fee applies to transactions initiated through the Avana platform. Interest rates, returns, and other transaction costs may vary depending on the market, position, and execution route.":
-    "Avana 플랫폼을 통해 시작된 거래에는 15bps(0.15%)의 선불 Avana 인터페이스 수수료가 적용됩니다. 이자율, 수익률 및 기타 거래 비용은 시장, 포지션, 실행 경로에 따라 달라질 수 있습니다.",
+  "A {bps} bps ({pct}%) upfront Avana interface fee applies to transactions initiated through the Avana platform. Interest rates, returns, and other transaction costs may vary depending on the market, position, and execution route.":
+    "Avana 플랫폼을 통해 시작된 거래에는 {bps}bps({pct}%)의 선불 Avana 인터페이스 수수료가 적용됩니다. 이자율, 수익률 및 기타 거래 비용은 시장, 포지션, 실행 경로에 따라 달라질 수 있습니다.",
   "Complete onboarding": "온보딩 완료하기",
   "Get Started": "시작하기",
   "Too many new Ask AI sessions from this network. Try again later.":
