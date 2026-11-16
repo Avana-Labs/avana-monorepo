@@ -24,6 +24,15 @@
       "approval": "approved (Josue, 2026-11-11)"
     },
     {
+      "fingerprint": "0b5857f338138a3b",
+      "check": "AssignmentMutation",
+      "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+      "function": "MarketRegistryActivationLogic._checkOracleAndRoutes",
+      "reason": "Equivalent: `listed` is true for every market activateMarket can reach. A market's tokens are written only by MarketRegistryListingLogic._writeMarket, after _bindAndCheck's _checkTokens refuses any unlisted token (TokenNotListed, REQ-CONFIG-017); the only write to TokenDef.listed is `t.listed = true` in listToken, so no token is ever unlisted; and m.tokens is never rewritten after listing. Setting listed = true therefore changes no outcome. The listing refusal is covered by test_TEST_139_firstUnlistedTokenReported.",
+      "approval": "pending",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
       "fingerprint": "ae055e8c39d60707",
       "check": "BinaryOpMutation",
       "file": "src/lens/lens/LensPreview.sol",
