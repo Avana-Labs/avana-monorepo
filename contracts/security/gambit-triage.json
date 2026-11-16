@@ -167,15 +167,6 @@
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
-      "fingerprint": "c0b3380c64512cf9",
-      "check": "AssignmentMutation",
-      "file": "src/oracle/lp-oracle/LPOracleCLModule.sol",
-      "function": "LPOracleCLModule._listingChecks",
-      "reason": "Equivalent: this override runs in no deployed contract. LPOracleCL forwards checkConfig to its listing logic and runs initialize's market part in its init logic, so LPOracleListing._checkPrices never executes in the implementation; the listing and init logic contracts use LPOracleCLModuleCaller._listingChecks, which delegates to LPOracleCLModuleLogic.listingChecks, and that entry point calls _clListingChecks directly. The module's listing bits are covered through that path by test_TEST_306_moduleListingBits and test_TEST_306_unitExponentMismatchSetsOnlyItsBit.",
-      "approval": "pending",
-      "review": "mutation gate run 43816627319, equivalent mutant"
-    },
-    {
       "fingerprint": "8485ad731642472b",
       "check": "AssignmentMutation",
       "file": "src/oracle/lp-oracle/LPOracleCLModule.sol",
