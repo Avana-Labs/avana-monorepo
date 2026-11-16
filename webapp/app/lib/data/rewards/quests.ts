@@ -114,6 +114,7 @@ const QUESTS: Record<RewardsPromoTabId, PlaceholderQuest[]> = {
 
 /** Where each quest's card takes the wallet, and the label of that button. */
 const QUEST_ACTIONS: Record<string, { href: string; cta: string }> = {
+  "connect-wallet": { href: "/dashboard", cta: "Connect Wallet" },
   "first-lend-deposit": { href: "/lend", cta: "Deposit" },
   "first-borrow": { href: "/borrow", cta: "Borrow" },
   "first-repay": { href: "/borrow", cta: "Repay" },

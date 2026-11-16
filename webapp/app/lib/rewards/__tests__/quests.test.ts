@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { CLIENT_QUEST_POINTS } from "@/convex/lib/clientQuests"
 import { QUEST_POINTS } from "@/convex/lib/rewards"
 import { questHref, questsByTab } from "@/app/lib/data/rewards/quests"
 import { translate, TRANSLATIONS } from "@/app/lib/i18n/translations"
@@ -14,6 +15,13 @@ describe("rewards quests", () => {
     }
   })
 
+  it("shows the Convex points of the client quests that are live", () => {
+    expect(byId([], "connect-wallet").reward).toBe(`${CLIENT_QUEST_POINTS["connect-wallet"]} pts`)
+    expect(byId([], "connect-wallet")).toMatchObject({ status: "available", cta: "Connect Wallet" })
+    expect(byId(["connect-wallet"], "connect-wallet")).toMatchObject({ status: "claimed", cta: "Earned" })
+    expect(questHref("connect-wallet")).toBe("/dashboard")
+  })
+
   it("opens the page of a real quest that is not done and marks a done one Earned", () => {
     expect(byId([], "first-lend-deposit")).toMatchObject({ status: "available", cta: "Deposit" })
     expect(byId([], "first-borrow")).toMatchObject({ status: "available", cta: "Borrow" })
@@ -26,7 +34,7 @@ describe("rewards quests", () => {
   })
 
   it("keeps every other quest Coming soon, with no action", () => {
-    const live = new Set(Object.keys(QUEST_POINTS))
+    const live = new Set([...Object.keys(QUEST_POINTS), "connect-wallet"])
     const rest = all([]).filter((q) => !live.has(q.id))
     expect(rest.length).toBeGreaterThan(0)
     for (const q of rest) {
@@ -38,7 +46,7 @@ describe("rewards quests", () => {
 
   it("has the button labels and the Earned label translated in every locale", () => {
     for (const lang of Object.keys(TRANSLATIONS).filter((l) => l !== "EN")) {
-      for (const key of ["Deposit", "Borrow", "Repay", "Pledge", "Earned"]) {
+      for (const key of ["Deposit", "Borrow", "Repay", "Pledge", "Earned", "Connect Wallet"]) {
         expect(translate(lang as keyof typeof TRANSLATIONS, key), `${lang} ${key}`).not.toBe(key)
       }
     }
