@@ -15,7 +15,8 @@ need no list of files: every harness and every src/ contract found in the build 
         Writes the creation code of the contract (hex, no 0x) to <file>.
     security-targets.py runtime-code <build> <out-dir> [<self-address>]
         Writes the runtime code of every contract and library compiled from src/ that has code to <out-dir>/<Name>.hex
-        and prints "<Name><TAB><hex file>" per line. Interfaces have no code and are skipped. Every immutable of an
+        and prints "<Name><TAB><hex file>" per line. Interfaces have no code and are skipped, and so is each copy of a
+        source compiled under a compiler profile it is not deployed with (`deployed`). Every immutable of an
         address or contract type is filled in, as a constructor fills it, with an address of its own (`FILL_BASE` + k,
         k = 1, 2, ... in the order of the AST IDs), except those that hold the contract's own address (`SELF_NAMES`),
         which get <self-address> (default 0, where Mythril runs the code); other immutables keep the zero solc leaves
@@ -139,12 +140,42 @@ def fill_immutables(name: str, runtime: str, data: dict, units: list[Unit], self
     return code.hex()
 
 
+def profile_of(file: str) -> str:
+    """The compiler profile a deployable file is deployed with, as script/deploy/lib/DeployBase.sol `_profileOf` reads
+    it ("" for the default profile)."""
+    if (
+        file == "Collateralization.sol"
+        or file.startswith("DebtOracle")
+        or (file.startswith("LPVaultSwap") and file.endswith("Logic.sol"))
+        or (file.startswith("Lens") and file.endswith("Module.sol"))
+    ):
+        return "collateralization"
+    if file in ("UniswapV3Integration.sol", "SlipstreamIntegration.sol"):
+        return "clvault"
+    if file.startswith("LPOracle"):
+        return "lporacle"
+    return ""
+
+
+def deployed(build: Path, stem: str, source: str) -> bool:
+    """True when the artifact <stem> is the one the deploy scripts read (DeployBase `_artifactPath`): <Name>.<profile>.json
+    when the file's profile has one, else <Name>.json. A file compiled under several profiles (a library or contract
+    imported by a file of another profile) has one artifact per profile, `<Name>.<profile>.json` beside `<Name>.json`;
+    the others are the same source under settings it is never deployed with, so each would be analysed again."""
+    name, _, suffix = stem.partition(".")
+    file = Path(source).name
+    profile = profile_of(file)
+    if profile and (build / file / f"{name}.{profile}.json").exists():
+        return suffix == profile
+    return suffix == ""
+
+
 def runtime_code(build: Path, out: Path, self_address: int = 0) -> None:
     out.mkdir(parents=True, exist_ok=True)
     units = [Unit(p) for p in sorted((build / "build-info").glob("*.json"))]
     for name, source, data in artifacts(build):
         runtime = data.get("deployedBytecode", {}).get("object", "0x")
-        if not source.startswith("src/") or runtime in ("", "0x"):
+        if not source.startswith("src/") or runtime in ("", "0x") or not deployed(build, name, source):
             continue
         hex_file = out / f"{name}.hex"
         hex_file.write_text(fill_immutables(name, runtime.removeprefix("0x"), data, units, self_address), encoding="utf8")
