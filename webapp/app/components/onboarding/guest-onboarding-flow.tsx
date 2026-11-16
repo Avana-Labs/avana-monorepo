@@ -31,11 +31,11 @@ export function GuestOnboardingFlow() {
         {!hasStarted ? (
           <>
             <h1 className="max-w-[600px] text-balance text-[clamp(1.85rem,3.2vw,2.4rem)] font-medium leading-[1.14] tracking-[-0.03em]">
-              {t("Welcome to the Avana Sandbox")}
+              {t("Welcome to Avana")}
             </h1>
             <p className="mt-6 max-w-[520px] text-[15px] leading-6 text-muted-foreground">
               {t(
-                "This risk-free Avana Sandbox lets you borrow against practice LP positions, lend, and loop strategies using sandbox funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.",
+                "This risk-free Avana test setup lets you borrow against practice LP positions, lend, and loop strategies using test funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.",
               )}
             </p>
             <ul className="mt-7 space-y-2.5">
@@ -55,7 +55,7 @@ export function GuestOnboardingFlow() {
             <h1 className="max-w-[560px] text-balance text-[clamp(1.4rem,2.3vw,1.75rem)] font-medium leading-[1.16] tracking-[-0.03em]">
               <span className="text-muted-foreground">{t("Connect an EVM wallet.")}</span>
               <br />
-              <span className="text-foreground">{t("We'll set up your sandbox and scope it to your address.")}</span>
+              <span className="text-foreground">{t("We'll set up your wallet and scope it to your address.")}</span>
             </h1>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <WalletControl size="desktop" />

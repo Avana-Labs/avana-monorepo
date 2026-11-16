@@ -1562,6 +1562,18 @@ const dict: TranslationDictionary = {
   Chains: "Jaringan",
   Other: "Lainnya",
   "Filter markets": "Filter pasar",
+  "Leverage loops": "Loop leverage",
+  "Your practice portfolio is ready.": "Portofolio latihan Anda sudah siap.",
+  "Fund my wallet": "Danai dompet saya",
+  "Let's fund your wallet.": "Mari danai dompet Anda.",
+  "Multiply": "Lipat gandakan",
+  "Onboarding requires a Convex connection. Set": "Orientasi memerlukan koneksi Convex. Atur",
+  "This risk-free Avana test setup lets you borrow against practice LP positions, lend, and loop strategies using test funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.": "Pengaturan uji Avana yang bebas risiko ini memungkinkan Anda meminjam dengan jaminan posisi LP latihan, meminjamkan, dan melakukan loop strategi menggunakan dana uji. Tanpa aset nyata. Tanpa tanda tangan dompet. Cara cepat memahami cara kerja Avana sebelum beralih ke aplikasi langsung.",
+  "We'll set up your wallet and scope it to your address.": "Kami akan menyiapkan dompet Anda dan mengaitkannya dengan alamat Anda.",
+  "We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.": "Kami akan menyebarkan dana latihan ke berbagai pasar agar Anda dapat meminjamkan, meminjam, dan melakukan loop tanpa risiko.",
+  "Welcome to Avana": "Selamat datang di Avana",
+  "Your wallet is funded.": "Dompet Anda sudah didanai.",
+  "seats already claimed.": "kursi sudah diklaim.",
 }
 
 export default dict

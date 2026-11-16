@@ -1527,6 +1527,18 @@ const dict: TranslationDictionary = {
   Chains: "체인",
   Other: "기타",
   "Filter markets": "마켓 필터",
+  "Leverage loops": "레버리지 루프",
+  "Your practice portfolio is ready.": "연습 포트폴리오가 준비되었습니다.",
+  "Fund my wallet": "내 지갑 충전",
+  "Let's fund your wallet.": "지갑을 충전해 봅시다.",
+  "Multiply": "멀티플라이",
+  "Onboarding requires a Convex connection. Set": "온보딩에는 Convex 연결이 필요합니다. 설정:",
+  "This risk-free Avana test setup lets you borrow against practice LP positions, lend, and loop strategies using test funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.": "위험 없는 이 Avana 테스트 환경에서는 연습용 LP 포지션을 담보로 대출하고, 예치하고, 테스트 자금으로 전략을 루프할 수 있습니다. 실제 자산 없음. 지갑 서명 없음. 실제 앱으로 전환하기 전에 Avana의 작동 방식을 빠르게 이해하는 방법입니다.",
+  "We'll set up your wallet and scope it to your address.": "지갑을 설정하고 주소에 연결하겠습니다.",
+  "We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.": "연습 자금을 여러 마켓에 분산해 위험 없이 예치, 대출, 루프할 수 있게 해 드립니다.",
+  "Welcome to Avana": "Avana에 오신 것을 환영합니다",
+  "Your wallet is funded.": "지갑이 충전되었습니다.",
+  "seats already claimed.": "자리가 이미 확보되었습니다.",
 }
 
 export default dict

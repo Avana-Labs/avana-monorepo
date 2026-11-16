@@ -24,7 +24,7 @@ import { useTranslation } from "@/app/lib/i18n/use-translation"
 const MAX_NAME_LENGTH = 10
 
 /**
- * Cosmetic head-start for the "seats claimed" counter so the sandbox never reads as
+ * Cosmetic head-start for the "seats claimed" counter so onboarding never reads as
  * empty (0/cap) to early users/investors. This is a DISPLAY-ONLY baseline added on top
  * of the real Convex `userCount`; it does not affect allocation, caps, or waitlisting.
  */
@@ -32,7 +32,7 @@ const SEATS_CLAIMED_BASELINE = 3760
 
 /**
  * Decentralized exchanges a user might bring LP liquidity from. Captured purely as a
- * research signal (where our sandbox users' real positions originate). Extend freely —
+ * research signal (where our users' real positions originate). Extend freely —
  * "Other" is the catch-all for anything not listed.
  */
 const DEX_SOURCES: Array<{ id: string; label: string }> = [
@@ -94,7 +94,7 @@ const SHARE_URL = "https://app.avana.cc"
  * Used only as the fallback when Convex config carries no tweetTemplate.
  */
 const DEFAULT_SHARE_TEXT = [
-  "Just claimed my sandbox spot at Avana.",
+  "Just claimed my spot at Avana.",
   "A new Aave v4 lending market built for AMM markets.",
   "Borrow against AMM LP positions, lend, and loop, all risk-free before mainnet.",
   `Try it 👉 ${SHARE_URL}`,
@@ -240,7 +240,7 @@ export function OnboardingUnavailable({
 
 const ANALYSIS_STEPS = [
   "Reading your wallet history",
-  "Checking sandbox eligibility",
+  "Checking eligibility",
   "Selecting markets to fund",
   "Sizing your practice portfolio",
 ]
@@ -248,7 +248,7 @@ const CLAIM_STEPS = [
   "Minting your practice funds",
   "Opening LP & lending positions",
   "Building your multiply loops",
-  "Finalizing your sandbox",
+  "Finalizing your wallet",
 ]
 const STEP_STAGGER_MS = 950
 
@@ -776,10 +776,10 @@ export function OnboardingFlow({ wallet, state }: { wallet: string | null; state
       <div key={viewPhase} data-onboarding-phase={viewPhase}>
         {!wallet && !hasStarted ? (
           <>
-            <Headline active={t("Welcome to the Avana Sandbox")} size="hero" />
+            <Headline active={t("Welcome to Avana")} size="hero" />
             <p className="mt-6 max-w-[520px] text-[15px] leading-6 text-muted-foreground">
               {t(
-                "This risk-free Avana Sandbox lets you borrow against practice LP positions, lend, and loop strategies using sandbox funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.",
+                "This risk-free Avana test setup lets you borrow against practice LP positions, lend, and loop strategies using test funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.",
               )}
             </p>
             <ul className="mt-7 space-y-2.5">
@@ -798,7 +798,7 @@ export function OnboardingFlow({ wallet, state }: { wallet: string | null; state
           <>
             <Headline
               muted={t("Connect an EVM wallet.")}
-              active={t("We'll set up your sandbox and scope it to your address.")}
+              active={t("We'll set up your wallet and scope it to your address.")}
             />
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               {/* One control: connect → sign in → account, all via the ConnectKit modal. */}
@@ -846,12 +846,12 @@ export function OnboardingFlow({ wallet, state }: { wallet: string | null; state
           />
         ) : step === "wallet" ? (
           <>
-            <Headline muted={t("Last step.")} active={t("Let's fund your sandbox.")} />
+            <Headline muted={t("Last step.")} active={t("Let's fund your wallet.")} />
             <p className="mt-6 max-w-lg text-[15px] leading-6 text-muted-foreground">
               {t("We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.")}
             </p>
             <button className={`${PRIMARY} mt-7`} onClick={analyze} type="button">
-              {t("Fund my sandbox")}
+              {t("Fund my wallet")}
             </button>
             <ErrorMessage error={error} />
           </>
@@ -865,7 +865,7 @@ export function OnboardingFlow({ wallet, state }: { wallet: string | null; state
             <Headline muted={t("Good news, you're in.")} active={t("Your practice portfolio is ready.")} />
             <p className="mt-6 text-sm text-muted-foreground">
               <span className="font-semibold text-foreground">{claimedSeats.toLocaleString()}</span> {t("of")}{" "}
-              {economy.userCap.toLocaleString()} {t("sandbox seats already claimed.")}
+              {economy.userCap.toLocaleString()} {t("seats already claimed.")}
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
@@ -924,7 +924,7 @@ export function OnboardingFlow({ wallet, state }: { wallet: string | null; state
           </>
         ) : step === "claimPending" ? (
           <>
-            <ThinkingSteps muted="Hang tight." active="Funding your sandbox…" steps={CLAIM_STEPS} />
+            <ThinkingSteps muted="Hang tight." active="Funding your wallet…" steps={CLAIM_STEPS} />
             <LoadingRecovery error={error} onResume={resume} />
           </>
         ) : step === "waitlisted" ? (
@@ -941,7 +941,7 @@ export function OnboardingFlow({ wallet, state }: { wallet: string | null; state
             >
               <Check className="size-6" strokeWidth={3} />
             </div>
-            <Headline muted={t("You're all set.")} active={t("Your sandbox is live.")} />
+            <Headline muted={t("You're all set.")} active={t("Your wallet is funded.")} />
             <p className="mt-4 max-w-md text-pretty text-[15px] leading-6 text-muted-foreground">
               {t("Everything's funded and waiting. Dive in whenever you're ready.")}
             </p>

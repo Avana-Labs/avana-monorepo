@@ -1617,6 +1617,18 @@ const dict: TranslationDictionary = {
   Chains: "Chains",
   Other: "Andere",
   "Filter markets": "Märkte filtern",
+  "Leverage loops": "Leverage-Loops",
+  "Your practice portfolio is ready.": "Dein Übungsportfolio ist bereit.",
+  "Fund my wallet": "Meine Wallet aufladen",
+  "Let's fund your wallet.": "Lass uns deine Wallet aufladen.",
+  "Multiply": "Multiplizieren",
+  "Onboarding requires a Convex connection. Set": "Das Onboarding erfordert eine Convex-Verbindung. Setze",
+  "This risk-free Avana test setup lets you borrow against practice LP positions, lend, and loop strategies using test funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.": "Mit diesem risikofreien Avana-Testaufbau kannst du gegen Übungs-LP-Positionen leihen, verleihen und Strategien mit Testgeldern loopen. Keine echten Vermögenswerte. Keine Wallet-Signaturen. Einfach ein schneller Weg, Avana kennenzulernen, bevor du zur Live-App wechselst.",
+  "We'll set up your wallet and scope it to your address.": "Wir richten deine Wallet ein und ordnen sie deiner Adresse zu.",
+  "We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.": "Wir verteilen Übungsgelder auf die Märkte, damit du risikofrei verleihen, leihen und loopen kannst.",
+  "Welcome to Avana": "Willkommen bei Avana",
+  "Your wallet is funded.": "Deine Wallet ist aufgeladen.",
+  "seats already claimed.": "Plätze bereits vergeben.",
 }
 
 export default dict

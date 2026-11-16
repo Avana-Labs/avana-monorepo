@@ -37,7 +37,7 @@ export const DEFAULT_CONFIG = {
   basket: DEFAULT_BASKET,
   seedVersion: SEED_VERSION,
   tweetTemplate:
-    "I'm practicing DeFi risk-free on the Avana sandbox — borrowing against LP, lending, and looping positions with $1M of synthetic funds.",
+    "I'm practicing DeFi risk-free on Avana — borrowing against LP, lending, and looping positions with $1M of test funds.",
   xHandle: "AvanaFinance",
   resourcesLinks: [
     { label: "Read the docs", href: "/docs" },

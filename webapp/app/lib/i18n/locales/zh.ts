@@ -1580,6 +1580,18 @@ const dict: TranslationDictionary = {
   Volatile: "波动",
   Chains: "链",
   Other: "其他",
+  "Leverage loops": "杠杆循环",
+  "Your practice portfolio is ready.": "你的练习组合已准备就绪。",
+  "Fund my wallet": "为我的钱包注资",
+  "Let's fund your wallet.": "来为你的钱包注资吧。",
+  "Multiply": "倍增",
+  "Onboarding requires a Convex connection. Set": "新手引导需要 Convex 连接。请设置",
+  "This risk-free Avana test setup lets you borrow against practice LP positions, lend, and loop strategies using test funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.": "这个零风险的 Avana 测试环境让你可以用练习 LP 头寸作抵押借款、出借，并用测试资金循环策略。没有真实资产。无需钱包签名。在切换到正式应用前快速了解 Avana 的运作方式。",
+  "We'll set up your wallet and scope it to your address.": "我们将设置你的钱包并将其绑定到你的地址。",
+  "We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.": "我们会把练习资金分散到各个市场，让你零风险地出借、借款和循环。",
+  "Welcome to Avana": "欢迎来到 Avana",
+  "Your wallet is funded.": "你的钱包已注资。",
+  "seats already claimed.": "个席位已被领取。",
 }
 
 export default dict

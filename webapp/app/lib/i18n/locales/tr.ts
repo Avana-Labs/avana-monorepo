@@ -1560,6 +1560,18 @@ const dict: TranslationDictionary = {
   Chains: "Ağlar",
   Other: "Diğer",
   "Filter markets": "Piyasaları filtrele",
+  "Leverage loops": "Kaldıraç döngüleri",
+  "Your practice portfolio is ready.": "Alıştırma portföyünüz hazır.",
+  "Fund my wallet": "Cüzdanımı fonla",
+  "Let's fund your wallet.": "Hadi cüzdanınızı fonlayalım.",
+  "Multiply": "Çarp",
+  "Onboarding requires a Convex connection. Set": "Katılım için Convex bağlantısı gerekir. Ayarlayın:",
+  "This risk-free Avana test setup lets you borrow against practice LP positions, lend, and loop strategies using test funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.": "Bu risksiz Avana test ortamı, alıştırma LP pozisyonlarına karşı borç almanızı, borç vermenizi ve test fonlarıyla stratejileri döngüye almanızı sağlar. Gerçek varlık yok. Cüzdan imzası yok. Canlı uygulamaya geçmeden önce Avana'nın nasıl çalıştığını anlamanın hızlı bir yolu.",
+  "We'll set up your wallet and scope it to your address.": "Cüzdanınızı kuracak ve adresinize bağlayacağız.",
+  "We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.": "Alıştırma fonlarını piyasalara dağıtacağız; böylece sıfır riskle borç verebilir, borç alabilir ve döngü yapabilirsiniz.",
+  "Welcome to Avana": "Avana'ya hoş geldiniz",
+  "Your wallet is funded.": "Cüzdanınız fonlandı.",
+  "seats already claimed.": "koltuk zaten alındı.",
 }
 
 export default dict

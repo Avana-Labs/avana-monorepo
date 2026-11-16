@@ -114,7 +114,7 @@ describe("OnboardingFlow — Convex config drives the UI (issue #139)", () => {
 
   it("falls back to the launch copy when the config carries no tweetTemplate", () => {
     render(<OnboardingFlow wallet={WALLET} state={stateWithStep("xPending")} />)
-    expect(screen.getByText(/Just claimed my sandbox spot at Avana/)).toBeInTheDocument()
+    expect(screen.getByText(/Just claimed my spot at Avana/)).toBeInTheDocument()
   })
 })
 
@@ -148,7 +148,7 @@ describe("OnboardingFlow — personalize + liquidity-source steps", () => {
     )
 
     // Then the original funding card.
-    await screen.findByText(/Let's fund your sandbox/i)
+    await screen.findByText(/Let's fund your wallet/i)
   })
 
   it("skips both steps for a wallet that has already saved preferences", () => {
@@ -156,7 +156,7 @@ describe("OnboardingFlow — personalize + liquidity-source steps", () => {
     walletProfile = { preferences: { name: "Sam", dexSources: ["uniswap"] } }
     render(<OnboardingFlow wallet={WALLET} state={state} />)
 
-    expect(screen.getByText(/Let's fund your sandbox/i)).toBeInTheDocument()
+    expect(screen.getByText(/Let's fund your wallet/i)).toBeInTheDocument()
     expect(screen.queryByText(/make Avana yours/i)).not.toBeInTheDocument()
   })
 })
