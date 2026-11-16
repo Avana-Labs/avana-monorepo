@@ -16,6 +16,10 @@
 #   timeout   compile and tests took longer than GAMBIT_TIMEOUT seconds, or the default-profile run longer than
 #             GAMBIT_OPTIMIZED_TIMEOUT (counted with the survivors: a slow suite must not hide a surviving mutant)
 #   invalid   the mutant did not compile under forge (counted with neither)
+#   error     the mutant could not be applied (its file missing or identical to the original); the run fails
+#
+# The mutants are read from gambit/gambit_results.json (script/mutation-records.py gambit), never from mutants.log,
+# whose CSV fields can span lines.
 #
 # Reports, per layer and contract: out-security/gambit/<layer>/<Contract>/status.tsv (mutant id and result),
 # gambit/gambit_results.json and gambit/mutants/<id>/ (each mutant's diff and source), and <id>.log (its test run);
@@ -110,8 +114,14 @@ while IFS=$'\t' read -r layer name file tests cap seed ops; do
     echo "gambit: mutant generation failed on $name (see $dir/gambit.log)"
     continue
   fi
-  ids=$(cut -d, -f1 "$dir/gambit/mutants.log" 2>/dev/null)
-  if [ -z "$ids" ]; then
+  # The mutants come from gambit_results.json through a JSON parser: mutants.log is CSV whose quoted fields can span
+  # lines, so reading it line by line takes a continuation line ("&", a quote) for a mutant id.
+  if ! mutants=$("$PY" script/mutation-records.py gambit "$dir/gambit"); then
+    status=1
+    echo "gambit: cannot read the mutants of $name (see $dir/gambit/gambit_results.json)"
+    continue
+  fi
+  if [ -z "$mutants" ]; then
     echo "  no mutant generated"
     continue
   fi
@@ -126,9 +136,19 @@ while IFS=$'\t' read -r layer name file tests cap seed ops; do
   fi
 
   cp "$root/$file" "$dir/original.sol"
-  killed=0 survived=0 timeouts=0 invalid=0
-  for id in $ids; do
-    cp "$dir/gambit/mutants/$id/$file" "$root/$file"
+  killed=0 survived=0 timeouts=0 invalid=0 errors=0
+  # The list is read on its own descriptor, so no command in the loop can consume it from stdin.
+  while IFS=$'\t' read -r id path record <&3; do
+    # A mutant that cannot be applied (its file missing, or identical to the original) is an error, never a
+    # survivor: the tests would run on the unmutated code.
+    if ! cp "$dir/gambit/$path" "$root/$file" || cmp -s "$dir/original.sol" "$root/$file"; then
+      cp "$dir/original.sol" "$root/$file"
+      status=1
+      errors=$((errors + 1))
+      echo "gambit: mutant $id of $name could not be applied from $dir/gambit/$path"
+      printf '%s\t%s\n' "$id" error >>"$dir/status.tsv"
+      continue
+    fi
     result=$(cd "$root" && FOUNDRY_FUZZ_RUNS="$GAMBIT_FUZZ_RUNS" "$PY" "$ROOT/script/mutation-test.py" run "$tests" \
       "$dir/$id.log" --timeout "$GAMBIT_TIMEOUT" --optimized-timeout "$GAMBIT_OPTIMIZED_TIMEOUT")
     cp "$dir/original.sol" "$root/$file"
@@ -145,10 +165,10 @@ while IFS=$'\t' read -r layer name file tests cap seed ops; do
     esac
     printf '%s\t%s\n' "$id" "$result" >>"$dir/status.tsv"
     if [ $result = survived ] || [ $result = timeout ]; then
-      echo "$name: $result $(grep -m1 "^$id," "$dir/gambit/mutants.log")" >>"$ROOT/$OUT/$layer/survivors.txt"
+      echo "$name: $result $record" >>"$ROOT/$OUT/$layer/survivors.txt"
     fi
-  done
-  echo "  killed $killed, survived $survived, timeout $timeouts, invalid $invalid"
+  done 3<<<"$mutants"
+  echo "  killed $killed, survived $survived, timeout $timeouts, invalid $invalid, error $errors"
   # The isolated copy must hold the original file again before the next target.
   if ! cmp -s "$dir/original.sol" "$root/$file"; then
     status=1

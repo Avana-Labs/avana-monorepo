@@ -12,7 +12,8 @@ run's job list (`gh run view <run> --json jobs > jobs.json`). Output: `README.md
                     killed, survived, timeout (the run passed its budget: never counted as killed) or invalid (does
                     not compile, reported as not compiled).
     Gambit          gambit-<layer>-<Contract>/<layer>/<Contract>/status.tsv (id, killed | survived | timeout |
-                    invalid) and gambit/mutants.log (id, operator, file, line:column, original, replacement).
+                    invalid | error) and gambit/gambit_results.json (each mutant's operator, file and diff, read by
+                    script/mutation-records.py); a job with an `error` mutant (not applied) is listed as inconclusive.
     Necessist       necessist-<layer>-<file>/<layer>.log: "N candidates in ..." and one "... passed" line per
                     statement whose removal left the tests passing.
 
@@ -124,13 +125,12 @@ def main() -> int:
             if not status.exists():
                 inconclusive.append(f"{job['name']} ({job['conclusion']}, no report)")
                 continue
+            # From gambit_results.json: mutants.log is CSV whose quoted fields can span lines.
             ops = {}
-            mlog = base / "gambit" / "mutants.log"
-            if mlog.exists():
-                for row in mlog.read_text(encoding="utf8", errors="replace").splitlines():
-                    parts = row.split(",", 5)
-                    if len(parts) == 6:
-                        ops[parts[0]] = parts
+            if (base / "gambit" / "gambit_results.json").exists():
+                for m in RECORDS.gambit_mutants(base / "gambit"):
+                    ops[m["id"]] = [m["id"], m["operator"], m["file"], f"line {m['line']}", m["original"],
+                                    m["replacement"]]
             s = stats[(layer, target)]
             for row in status.read_text(encoding="utf8").splitlines():
                 if "\t" not in row:
@@ -141,7 +141,9 @@ def main() -> int:
                     p = ops.get(mid, [mid, "?", "?", "?", "?", "?"])
                     survivors.append(("Gambit", layer, target, f"`{p[2]}` {p[3]} ({p[1]}, mutant {mid})", f"`{md(p[4])}` → `{md(p[5])}`", mark(target, result)))
             s["gambit_seen"] += 1
-            if job["conclusion"] != "success" and not any(s[f"gambit_{r}"] for r in ("killed", "survived", "timeout", "invalid")):
+            if s["gambit_error"]:
+                inconclusive.append(f"{job['name']} ({s['gambit_error']} mutants could not be applied)")
+            elif job["conclusion"] != "success" and not any(s[f"gambit_{r}"] for r in ("killed", "survived", "timeout", "invalid")):
                 inconclusive.append(f"{job['name']} ({job['conclusion']})")
         else:
             files = target

@@ -52,6 +52,23 @@ contract MarketRegistryBreakersUnitTest is MarketRegistryFixture {
         registry.recordBreach(mKey, BreakerReasons.ISSUER);
     }
 
+    // TEST-228 verifies: REQ-MREG-026, SPEC-BRK-007
+    /// @dev Each temporary reason keeps its own breach time: a breach reporting one reason sets that reason's time and
+    /// the breaker's latest, and leaves the other reasons' times as they were.
+    function test_TEST_228_eachTemporaryReasonKeepsItsOwnBreachTime() public {
+        uint32[3] memory reasons = [BreakerReasons.ORACLE, BreakerReasons.POOL_SHARE, BreakerReasons.POOL_DEPTH];
+        for (uint256 i = 0; i < 3; ++i) {
+            vm.warp(1000 * (i + 1));
+            vm.prank(address(rm));
+            registry.recordBreach(mKey, reasons[i]);
+            assertEq(registry.lastBreachAt(mKey), 1000 * (i + 1), "latest of any reason");
+            for (uint256 j = 0; j < 3; ++j) {
+                uint64 want = j <= i ? uint64(1000 * (j + 1)) : 0;
+                assertEq(registry.lastBreachAt(BreakerReasons.breachKey(mKey, reasons[j])), want, "own reason time");
+            }
+        }
+    }
+
     // TEST-228 verifies: REQ-MREG-025, Q-241, REQ-ACCESS-158, REQ-ACCESS-084, REQ-CONFIG-068
     function test_TEST_228_manualTripsAndUnknownKeys() public {
         vm.expectEmit(address(registry));
