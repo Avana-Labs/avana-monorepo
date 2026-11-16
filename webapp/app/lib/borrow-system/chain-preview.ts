@@ -42,10 +42,13 @@ export const PREVIEWS_UNAVAILABLE = "Previews are not available yet."
 
 const MAX_UINT = (1n << 256n) - 1n
 const WAD = 1_000_000_000_000_000_000n
-/** Aave value units (USD × 1e26) to USD with 6 decimals. */
-const VALUE_TO_USD6 = 100_000_000_000_000_000_000n
-/** Aave value units × RAY to USD with 6 decimals: 1e20 × 1e27. */
-const VALUE_RAY_TO_USD6 = VALUE_TO_USD6 * 1_000_000_000_000_000_000_000_000_000n
+/**
+ * Aave value units per micro-USD: `collateralValueAfter` is USD × 1e26, so dividing by 1e20 gives USD with 6 decimals
+ * (the `…Usd6` amounts the pages read).
+ */
+const AAVE_VALUE_PER_USD6 = 100_000_000_000_000_000_000n
+/** `debtValueAfterRay` is USD × 1e26 × RAY: dividing by 1e47 gives USD with 6 decimals. */
+const AAVE_VALUE_RAY_PER_USD6 = AAVE_VALUE_PER_USD6 * 1_000_000_000_000_000_000_000_000_000n
 /** Health factors below these are shown as danger and warning (WAD). */
 const DANGER_HF = 1_100_000_000_000_000_000n
 const WARNING_HF = 1_500_000_000_000_000_000n
@@ -82,6 +85,7 @@ function parseDebtId(id: string): { chainId: number; marketId: string; reserveId
   return m ? { chainId: Number(m[1]), marketId: m[2]!, reserveId: m[3]! } : null
 }
 
+/** `type(uint256).max` means no debt: null, which the pages show as ∞. */
 function healthFactor(value: bigint): bigint | null {
   return value === MAX_UINT ? null : value
 }
@@ -195,9 +199,10 @@ async function previewBorrow(deps: BorrowPreviewDeps, intent: TransactionIntent,
     }) as Promise<bigint>,
   ])
   const cf = collateralFactorWad(deps, intent.marketId)
-  const collateral = after.collateralValueAfter / VALUE_TO_USD6
-  const debtAfter = after.debtValueAfterRay / VALUE_RAY_TO_USD6
-  const amountUsd6 = unitsToUsd6(units, r.reserve)
+  const collateral = after.collateralValueAfter / AAVE_VALUE_PER_USD6
+  const debtAfter = after.debtValueAfterRay / AAVE_VALUE_RAY_PER_USD6
+  // The borrowed amount the Lens previewed, at the served price; collateral does not move on a borrow.
+  const amountUsd6 = unitsToUsd6(after.amount, r.reserve)
   const debtBefore = debtAfter > amountUsd6 ? debtAfter - amountUsd6 : 0n
   const maxUsd6 = unitsToUsd6(max, r.reserve)
   const hfAfter = healthFactor(after.healthFactorAfter)
@@ -228,8 +233,9 @@ async function previewRepay(deps: BorrowPreviewDeps, intent: TransactionIntent, 
     args: [intent.walletId as Address, BigInt(r.account.marketId), BigInt(r.reserve.reserveId), units],
   })) as ActionPreviewView
   const cf = collateralFactorWad(deps, r.account.poolSlug)
-  const collateral = after.collateralValueAfter / VALUE_TO_USD6
-  const debtAfter = after.debtValueAfterRay / VALUE_RAY_TO_USD6
+  const collateral = after.collateralValueAfter / AAVE_VALUE_PER_USD6
+  const debtAfter = after.debtValueAfterRay / AAVE_VALUE_RAY_PER_USD6
+  // `amount` is the part Aave repays (an input at or above the debt repays all of it).
   const debtBefore = debtAfter + unitsToUsd6(after.amount, r.reserve)
   const capacity = (collateral * cf) / WAD
   const hfAfter = healthFactor(after.healthFactorAfter)
