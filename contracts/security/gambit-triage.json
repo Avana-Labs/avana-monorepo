@@ -86,21 +86,12 @@
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
-      "fingerprint": "03fa68b57b4c7acb",
-      "check": "DeleteExpressionMutation",
-      "file": "src/liquidation/settlement-routes/PegModuleRoute.sol",
-      "function": "PegModuleRoute._runLegs",
-      "reason": "Equivalent for a conforming ERC-4626 wrapper: deposit(amount, ...) pulls exactly `amount` with transferFrom, which spends the `amount` allowance set just before, so the allowance is already 0 when the reset runs. The reset only guards a wrapper that pulls less, which the registry's wrapper review excludes.",
-      "approval": "pending (Josue)",
-      "review": "mutation gate run 43492416937, equivalent mutant"
-    },
-    {
       "fingerprint": "5be107e65910f34b",
       "check": "BinaryOpMutation",
       "file": "src/liquidation/settlement-routes/RouteReads.sol",
       "function": "RouteReads.hasFeeSwitch",
-      "reason": "Equivalent in effect: the mutant lowers the gas threshold from ceil(64 * FEE_SWITCH_PROBE_GAS / 63) + POST_CALL_GAS by at most 2 gas; POST_CALL_GAS (5,000) still exceeds the gas spent between the check and the STATICCALL, so the probe receives its full FEE_SWITCH_PROBE_GAS in the 2-gas window and returns the same answer.",
-      "approval": "pending (Josue)",
+      "reason": "Both results are safe: the mutant lowers the threshold from (64 * FEE_SWITCH_PROBE_GAS + 62) / 63 + POST_CALL_GAS by at most 2 gas. Only a call whose gasleft() at the check falls in that 2-gas window behaves differently: the original returns the conservative true without probing, while the mutant runs the probe, which still receives its full FEE_SWITCH_PROBE_GAS because POST_CALL_GAS (5,000) exceeds the gas spent between the check and the STATICCALL, and returns the token's real answer. A killing test would need a gas-exact call that moves with every compiler or optimizer change.",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
@@ -127,7 +118,7 @@
       "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
       "function": "FlashLiquidatorBase._add",
       "reason": "Equivalent in reachable states: _add grows only when count == w.tokens.length, and w.tokens starts at the market's token count (a listed market has at least two tokens), so count >= 2 and count * 2 still leaves room for the new token; the arrays hold the same tokens.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
@@ -154,7 +145,7 @@
       "file": "src/oracle/debt-oracle/DebtOracleEvaluation.sol",
       "function": "DebtOracleEvaluation._evaluate",
       "reason": "Equivalent in reachable states: the age term is evaluated only when the state is Live, where every served leg passed DebtOracleReads' checks (updatedAt <= block.timestamp and age <= its feedMaxAge, at most a few days). Then 0 <= block.timestamp - servedUpdatedAt < servedUpdatedAt for any timestamp above twice that age (after early 1970), so block.timestamp % servedUpdatedAt equals the difference. The borrow-age gate itself is covered by test_TEST_276_alternateHeldToItsBorrowAge and test_TEST_276_feedFreshUntilHeartbeatPlusMargin.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
     }
   ]
