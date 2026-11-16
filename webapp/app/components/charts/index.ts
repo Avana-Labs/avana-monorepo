@@ -1,6 +1,6 @@
 // IMPORTANT: this barrel must stay recharts-FREE. Many engine/lib modules (chart-feeds,
 // read-model, detail types, portfolio mappers) import only the lightweight utils/types below,
-// and they sit on the app-entry (`/` Express) critical path. Re-exporting the recharts chart
+// and they sit on the app-entry (`/` Swap) critical path. Re-exporting the recharts chart
 // components here dragged all of recharts (~384KB) onto that path because barrels defeat
 // tree-shaking. Import the chart components DIRECTLY from their files instead:
 //   HeroAreaChart   → "@/app/components/charts/hero-area-chart"

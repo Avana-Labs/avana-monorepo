@@ -1155,7 +1155,7 @@ const dict: TranslationDictionary = {
   Date: "Tanggal",
   Dismiss: "Tutup",
   Explorer: "Explorer",
-  "Express actions": "Aksi ekspres",
+  "Swap actions": "Aksi tukar",
   Fees: "Biaya",
   "Fees Earned": "Biaya Diperoleh",
   "Fees Paid": "Biaya Dibayar",

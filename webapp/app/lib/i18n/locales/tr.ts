@@ -1151,7 +1151,7 @@ const dict: TranslationDictionary = {
   Date: "Tarih",
   Dismiss: "Kapat",
   Explorer: "Gezgin",
-  "Express actions": "Hızlı işlemler",
+  "Swap actions": "Takas işlemleri",
   Fees: "Ücretler",
   "Fees Earned": "Kazanılan Ücretler",
   "Fees Paid": "Ödenen Ücretler",

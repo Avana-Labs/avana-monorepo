@@ -1202,7 +1202,7 @@ const dict: TranslationDictionary = {
   "Dashboard tabs": "Dashboard-Tabs",
   Date: "Datum",
   Dismiss: "Schließen",
-  "Express actions": "Express-Aktionen",
+  "Swap actions": "Tausch-Aktionen",
   Fees: "Gebühren",
   "Fees Earned": "Verdiente Gebühren",
   "Fees Paid": "Bezahlte Gebühren",

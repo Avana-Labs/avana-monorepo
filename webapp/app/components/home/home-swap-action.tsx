@@ -494,7 +494,7 @@ function HomeSwapAssetField({
   return (
     <SwapStyleField label={label} tone={tone} className="py-3">
       {/* Row sizing mirrors the shared ActionAmountCard (borrow/repay/claim/remove) exactly —
-          no min-heights — so the Express Sell/Buy cards are the SAME height as the other tabs'
+          no min-heights — so the Swap Sell/Buy cards are the SAME height as the other tabs'
           cards and there's no card-size shift when switching tabs. (#9) */}
       <div className="mt-1.5 flex items-center justify-between gap-3 max-[360px]:flex-col max-[360px]:items-start">
         <div className="min-w-0 flex-1">
@@ -505,7 +505,7 @@ function HomeSwapAssetField({
             inputMode="decimal"
             // h-[1em] makes the <input> size to its line box exactly like the borrow tab's
             // amount <div>, so the Sell/Buy cards are the SAME height as the borrow cards and
-            // there's no card-size shift when toggling Express tabs. (#9)
+            // there's no card-size shift when toggling home tabs. (#9)
             className={`h-[1em] w-full min-w-0 border-0 bg-transparent p-0 text-[clamp(1.5rem,4vw,2rem)] font-normal leading-none tracking-[-0.02em] outline-none placeholder:text-muted-foreground/80 ${
               amount && amount !== "0" ? "text-foreground" : "text-muted-foreground/80"
             }`}

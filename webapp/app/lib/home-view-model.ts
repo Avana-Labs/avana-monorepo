@@ -1,4 +1,4 @@
-// View-model types and formatters of the Express (home) card. The card reads markets and
+// View-model types and formatters of the home Swap card. The card reads markets and
 // wallet positions from the session; there are no built-in pools, tokens or previews.
 import { getActiveCurrency } from "@/app/lib/currency/active-rate"
 import { healthFactorBand } from "@/app/lib/health/health-factor-bands"

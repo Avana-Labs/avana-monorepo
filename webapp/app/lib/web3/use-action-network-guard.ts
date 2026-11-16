@@ -19,7 +19,7 @@ type ActionNetworkGuard = {
  */
 export function useActionNetworkGuard(): ActionNetworkGuard {
   // Reads the wagmi-free context (fed by the mounted wallet provider), so the borrow client
-  // embedded on the Express home page never drags the wallet SDK onto the guest critical path.
+  // embedded on the home page never drags the wallet SDK onto the guest critical path.
   // Inert when no wallet provider is mounted — a guest can't be on the wrong network.
   const { isWrongNetwork, targetChainName } = useWrongNetworkState()
   return {

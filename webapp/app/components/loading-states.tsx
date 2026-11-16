@@ -91,7 +91,7 @@ export function HomeWorkspaceSkeleton() {
               items={HOME_MODE_ITEMS.map((item) => ({ id: item.value, label: item.label }))}
               value="swap"
               onChange={() => {}}
-              ariaLabel="Express actions"
+              ariaLabel="Swap actions"
               withIcons
               revealLabels
             />

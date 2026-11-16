@@ -1137,7 +1137,7 @@ const dict: TranslationDictionary = {
   Date: "날짜",
   Dismiss: "닫기",
   Explorer: "익스플로러",
-  "Express actions": "익스프레스 작업",
+  "Swap actions": "스왑 작업",
   Fees: "수수료",
   "Fees Earned": "획득 수수료",
   "Fees Paid": "지불 수수료",

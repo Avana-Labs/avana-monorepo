@@ -216,7 +216,7 @@ export function selectBorrowCollateralPools(state: BorrowSystemState, walletId: 
 /**
  * Every listed market as a collateral pool — pledged or not. Pools the
  * wallet already holds carry their real collateral/borrow-power; the rest report
- * zero until the user pledges. The Express borrow card uses this so its pool
+ * zero until the user pledges. The home borrow card uses this so its pool
  * picker is always pre-loaded (a fresh wallet with no positions still sees the
  * full market list), mirroring the dashboard's borrow view.
  */

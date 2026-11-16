@@ -17,7 +17,7 @@ const AvanaSessionProviders = dynamic(() =>
 const PRODUCT_RUNTIME_ROUTES = ["/actions", "/borrow", "/lend", "/swap", "/dashboard", "/ask"]
 
 function needsProductRuntime(pathname: string) {
-  // The guest Express workspace owns a swap-only session and activates the full
+  // The guest home workspace owns a swap-only session and activates the full
   // runtime on demand. Signed-in visitors still take the full runtime below.
   return PRODUCT_RUNTIME_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`))
 }
@@ -46,7 +46,7 @@ export function ProductRuntimeProviders({
   if (!isSignedIn && !needsProductRuntime(pathname) && !(pathname === "/" && shouldUseOpenGateSession())) {
     // Still provide the server-seeded prices so any price consumer rendered outside the product
     // runtime resolves live values instead of the fixture. No Convex session is mounted on this
-    // branch (guest Express or a route like `/support-center`), so realtime={false} avoids lazy-loading
+    // branch (guest home or a route like `/support-center`), so realtime={false} avoids lazy-loading
     // convex/react for a subscription that would only throw for lack of a provider and fall back
     // to this same seed. Mirrors the guest `/ask` branch above.
     return (
