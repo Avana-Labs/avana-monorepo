@@ -30,22 +30,21 @@ export interface LocalChain {
   /** The rpc-recorder in front of the node for the indexer (contracts/script/e2e/rpc-recorder.ts). */
   readonly recorderPort: number;
   readonly blockTime: number;
-  /** Fork mode (STACK_FORK=1): the real network at a pinned block, read over public RPCs (fork.json). */
-  readonly fork: { readonly urls: readonly string[]; readonly block: number } | undefined;
+  /** Fork mode (STACK_FORK=1): the real network at the block pinned in fork.json, read through the fork proxy. */
+  readonly fork: { readonly block: number; readonly proxyPort: number } | undefined;
 }
 
 /**
  * Fork mode: every chain forks its real network at the block pinned in fork.json, so runs are repeatable and anvil
- * caches what it read. The endpoints are public ones (no key); <CHAIN>_FORK_RPC_URL replaces them (comma-separated
- * for several) and STACK_FORK_BLOCK_<CHAIN> the block.
+ * caches what it read; STACK_FORK_BLOCK_<CHAIN> pins another. The network's RPC endpoints are never in the repository:
+ * <CHAIN>_FORK_RPC_URL comes from the environment or the encrypted secrets file (secrets.ts), and anvil reaches them
+ * through the local fork proxy (fork-proxy.ts), so they appear on no command line either.
  */
-function forkOf(network: string): LocalChain["fork"] {
+function forkOf(network: string, proxyPort: number): LocalChain["fork"] {
   if (process.env.STACK_FORK !== "1") return undefined;
-  const pinned = (JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "fork.json"), "utf8")) as Record<string, { block: number; rpcs: string[] }>)[network];
+  const pinned = (JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "fork.json"), "utf8")) as Record<string, { block: number }>)[network];
   if (!pinned) throw new Error(`fork.json has no ${network}`);
-  const name = network.toUpperCase();
-  const urls = process.env[`${name}_FORK_RPC_URL`]?.split(",").map((u) => u.trim()).filter(Boolean) ?? pinned.rpcs;
-  return { urls, block: Number(process.env[`STACK_FORK_BLOCK_${name}`] ?? pinned.block) };
+  return { block: Number(process.env[`STACK_FORK_BLOCK_${network.toUpperCase()}`] ?? pinned.block), proxyPort };
 }
 
 const int = (name: string, d: number) => (process.env[name] ? Number(process.env[name]) : d);
@@ -60,7 +59,7 @@ export const CHAINS: readonly LocalChain[] = [
     port: int("STACK_PORT_ETHEREUM", 8545),
     recorderPort: int("STACK_RECORDER_PORT_ETHEREUM", 8549),
     blockTime: 12,
-    fork: forkOf("ethereum"),
+    fork: forkOf("ethereum", int("STACK_FORK_PROXY_PORT_ETHEREUM", 8559)),
   },
   {
     network: "base",
@@ -71,7 +70,7 @@ export const CHAINS: readonly LocalChain[] = [
     port: int("STACK_PORT_BASE", 8546),
     recorderPort: int("STACK_RECORDER_PORT_BASE", 8550),
     blockTime: 2,
-    fork: forkOf("base"),
+    fork: forkOf("base", int("STACK_FORK_PROXY_PORT_BASE", 8560)),
   },
 ];
 
