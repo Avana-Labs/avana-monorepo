@@ -434,12 +434,12 @@ library LPPriceMath {
 
     /// @notice Served debt price by state (`SPEC-ORC-018`).
     /// @dev Live: `q`. Drifting (the routes disagree): `max(p, b, A)`; the DebtOracle passes the lower route as both
-    /// `p` and `b`, so it serves `max(min(p, b), A)`, the median or `A` above both (ORACLE-06). Cached: `A`. Expired:
-    /// `ceil(A * (10^4 + δ) / 10^4)`, rounding up against the borrower, with `δ` below 100 read as 100 and a product of
-    /// 256 bits or more saturating at `type(uint256).max`. No stable ceiling. The route values round down by less than
-    /// one unit (exact for a feed with 8 or fewer decimals). The result is at least 1 for any inputs and at least `A` in
-    /// every state but Live. Example: `A = 99,990,000`, `δ = 500`: Expired serves 104,989,500; `A = 99,987,001` serves
-    /// 104,986,352.
+    /// `p` and `b`, so it serves `max(min(p, b), A)`, the median of `p`, `b` and `A`, or `A` when `A` is above both
+    /// (ORACLE-06). Cached: `A`. Expired: `ceil(A * (10^4 + δ) / 10^4)`, rounding up against the borrower, with `δ`
+    /// below 100 read as 100 and a product of 256 bits or more saturating at `type(uint256).max`. No stable ceiling.
+    /// The route values round down by less than one unit (exact for a feed with 8 or fewer decimals). The result is at
+    /// least 1 for any inputs and at least `A` in every state but Live. Example: `A = 99,990,000`, `δ = 500`: Expired
+    /// serves 104,989,500; `A = 99,987,001` serves 104,986,352.
     /// @param stressRiseBps `debtStressRiseBps(asset)`, in `[100, 5,000]`.
     /// @custom:spec SPEC-ORC-018, REQ-ORACLE-093, INV-087
     function debtServedPrice(

@@ -10,7 +10,7 @@ Status is the row's implementation state: **Verified** (a counting test or prope
 
 No run results are given to this matrix (it is committed and must not depend on a run), so no Foundry test counts as Verified here; a CVL rule or Halmos check counts when contracts/certora/RUNS.md or docs/audit/halmos/results/ records its pass with a job id or log. The CI evidence job writes the same matrix from the run's results.
 
-**3562 requirements · 121 verified · 0 failed · 1879 not run · 1562 unlinked · 0 changed — re-verify · 0 errors · 3484 warnings**
+**3563 requirements · 121 verified · 0 failed · 1879 not run · 1563 unlinked · 0 changed — re-verify · 0 errors · 3484 warnings**
 
 | Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |
 |---|---|---|---|---|---|---|---|
@@ -77,7 +77,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `ATTACK-061` | Liquidation gas exhaustion with many dust NFTs in one market | — | — | — | `TEST-196`, `TEST-269`° | — | Not run |
 | `ATTACK-062` | Gas exhaustion in account health evaluation across many reserves | — | — | — | `TEST-203` | — | Unlinked |
 | `ATTACK-063` | Dust account that the recovery floor makes unliquidatable | — | — | `HYP-53` | `TEST-160`, `TEST-161`, `TEST-196` | — | Unlinked |
-| `ATTACK-064` | Bad debt and reimbursement cost from sub-economic positions | — | — | `SIM-05A`, `SIM-05C`, `SIM-07C` | `TEST-199` | — | Unlinked |
+| `ATTACK-064` | Bad debt and keeper gas cost from sub-economic positions | — | — | `SIM-05A`, `SIM-05C`, `SIM-07C` | `TEST-199` | — | Unlinked |
 | `ATTACK-065` | Liquidation griefing by moving the pool spot price | — | — | `SIM-06C` | `TEST-197`, `TEST-233`° | — | Not run |
 | `ATTACK-066` | Zero-seizure liquidations that bill Avana for funding costs | — | `QNT-29`, `QNT-T07` | — | `TEST-160`, `TEST-200` | — | Unlinked |
 | `ATTACK-067` | Route sandwiching that pushes a settlement gap onto Avana | `MATH-ST-05`, `MATH-ST-08`, `MATH-ST-21`, `MATH-ST-22`, `SYM-42` | — | — | `TEST-198` | — | Unlinked |
@@ -1008,7 +1008,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `Q-055` | Exposure caps | Per-market and per-token caps in USD (8 decimals), checked on pledge only;… | — | — | `HYP-10`, `HYP-48` | — | — | Unlinked |
 | `Q-056` | Price feed behaviour | Each market's LPOracle never returns 0 and never reverts on a price… | — | — | `HYP-11`, `HYP-42` | `PROP-027`°, `TEST-038`°, `TEST-040`°, `TEST-219`° | — | Not run |
 | `Q-057` | GHO inside an LP | Superseded by `Q-177`. | — | — | — | — | — | — | — | Unlinked |
-| `Q-058` | Listing rule | Eligible: large stable pools from any integrated AMM protocol whose readine… | — | — | — | — | — | Unlinked |
+| `Q-058` | Listing rule | Eligible: pools from any integrated AMM protocol whose readiness guards pas… | — | — | — | — | — | Unlinked |
 | `Q-059` | Restricted liquidation Spoke | Superseded by `Q-116`. | — | — | — | — | — | — | — | Unlinked |
 | `Q-060` | Liquidation route | Partial seizure only, through the standard Spoke `liquidationCall` (`Q… | `MATH-AR-02` | `QNT-T05` | `HYP-34`, `HYP-35`, `HYP-48`, `HYP-49` | `TEST-047`° | — | Not run |
 | `Q-061` | Fees during liquidation | Principal-capped collection: after removing the seized liquidity… | `MATH-ST-32`, `MATH-ST-33`, `MATH-ST-34`, `MATH-ST-35`, `MATH-ST-36` | `QNT-11`, `QNT-T05`, `QNT-T17` | `HYP-09`, `HYP-28`, `HYP-46` | `TEST-047`°, `TEST-074`°, `TEST-091`° | — | Not run |
@@ -1245,7 +1245,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `Q-292` | Position and market keys | Records, events and indexes use (`integrationId`, `positionKey`… | — | — | — | `PROP-002`° | — | Not run |
 | `Q-293` | Exact shape at pledge | Each market stores its pool and exact shape write-once in its LPVa… | — | — | — | `TEST-279`° | `ICollateralizationErrors` (decl.) | Not run |
 | `Q-294` | Record limit | At most 16 open records per account per market (`MAX_RECORDS_PER_ACCOUNT_MA… | — | — | — | `TEST-269`° | `IAmmIntegration` (decl.) | Not run |
-| `Q-295` | Hub-keyed counters in one ledger per chain | `tokenUsd` and `poolUnits` (there is no per-d… | — | — | — | `TEST-272`° | `IAmmIntegration` (decl.), `RiskStatus` | Not run |
+| `Q-295` | Hub-keyed counters in one ledger per chain | `tokenUsd` and `poolUnits` (there is no per-w… | — | — | — | `TEST-272`° | `IAmmIntegration` (decl.), `RiskStatus` | Not run |
 | `Q-296` | Lock membership and routing in custody | Collateralization and every LPVault are not Lock … | — | — | — | `PROP-037`° | — | Not run |
 | `Q-297` | n-token amounts and hooks | Every amount array has one entry per market token (2 to 8, `MA… | — | — | — | — | `IAmmIntegration` (decl.) | Unlinked |
 | `Q-298` | Vault-token decimals by value | `d` is the smallest integer in [6, 18] with `10^d · v ≥ $1… | — | — | — | — | — | Unlinked |
@@ -1339,7 +1339,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `Q-389` | Failed payout transfers go to the PayoutEscrow | Every payout LPVaultSwap makes (Avana's f… | `MATH-ST-28` | — | — | `TEST-173`°, `TEST-174`°, `TEST-179`°, `TEST-179`‡, `TEST-229`°, `TEST-286`°, `TEST-289`° | — | Not run |
 | `Q-390` | Balance-delta flash path and transfer fees on a debt asset | Every amount LPVaultSwap rece… | `MATH-ST-111`, `MATH-ST-112`, `MATH-ST-53` | — | — | `PROP-097`°, `TEST-048`°, `TEST-080`°, `TEST-239`°, `TEST-287`° | `AaveV3FlashSource`, `MarketRegistryHubsLogic` | Not run |
 | `Q-391` | First-loss reserve size is set in the funding ARFC | The coverage rule stays: for each (fu… | — | — | — | `TEST-273`°, `TEST-293`° | `IParameterStoreCoverage` (decl.) | Not run |
-| `Q-392` | Base GHO credit line set in the funding ARFC | Each debt reserve's `drawCap` stays at most… | — | — | — | — | — | Unlinked |
+| `Q-392` | Base GHO credit line set in the funding ARFC | Each debt reserve's `drawCap` is bounded on… | — | — | — | — | — | Unlinked |
 | `Q-393` | Aave Spoke liquidation settings are guidance | `aaveTargetHealthFactor` 1.10 and `minLiqui… | — | — | — | — | — | Unlinked |
 | `Q-394` | Proposed defaults and final values | Every economic or risk value in 1.5 shows its number … | — | — | — | — | — | Unlinked |
 | `Q-395` | No keeper minimum repayment | `keeperMinRepay` is removed. Avana's keepers liquidate whate… | — | — | — | — | — | Unlinked |
@@ -1359,6 +1359,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `Q-409` | Frontend fee | Decision of 2026-11-12. (1) Rate and actions: the Avana app charges 10 bps … | — | — | — | — | — | Unlinked |
 | `Q-410` | Loss order for deficits beyond the Avana Umbrella | Decision of 2026-11-12. (1) Aave V4 ha… | `SYM-193` | — | — | `TEST-247`°, `TEST-298`°, `TEST-299`° | `AvanaFirstLossReserve`, `DaoDeficitOffset`, `IDaoDeficitOffset` (decl.), `TailCoverageView` | Not run |
 | `Q-411` | Borrow-speed and pledge-speed limits | Decision of 2026-11-12, after the Aave risk service… | — | — | — | — | `BorrowSpeedInputs`, `BorrowSpeedView`, `ILensSpeed` (decl.), `IParameterStoreSpeed` (decl.), `IRiskModuleErrors` (decl.), `IRiskModuleSpeedLogic` (decl.), `IRiskModuleViews` (decl.), `LensSpeedModule`, `MarketSpeedLimits`, `ParameterStoreForwardSpeed`, `ParameterStoreLoosenLogic`, `ParameterStoreSpeedRules`, `ParameterStoreTightenLogic`, `RiskModuleSpeedLogic`, `RiskModuleSpeed`, `RiskModule`, `SpeedLimitMath`, `SpeedLimit`, `SpeedView`, `SpeedWindow` | Unlinked |
+| `Q-412` | No per-wallet deposit cap | Decision of 2026-11-14. There is no per-wallet (per-depositor)… | — | — | — | — | — | Unlinked |
 | `REP-001` | `Y` calls `AD.repay(W, m, r, maxRepaySpend, repayAll, deadline)` | AaveAdapter (`Y`) | The… | — | — | — | — | `IAaveAdapterUser` (decl.) | Unlinked |
 | `REP-002` | Take the caller as the payer | `AD` | No caller check: any `msg.sender` is accepted and be… | — | — | — | — | `IAaveAdapterUser` (decl.) | Unlinked |
 | `REP-003` | Check the deadline | `AD` | `block.timestamp ≤ deadline`, in seconds. (Source: Q-075) | — | — | — | — | `IAaveAdapterUser` (decl.) | Unlinked |
@@ -2181,7 +2182,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-FLR-006` | Every state-changing function MUST be non-reentrant and follow checks-effects-interactions… | — | — | — | `TEST-293`° | `AvanaFirstLossReserve` | Not run |
 | `REQ-FLR-007` | On its Hub, each First-Loss Reserve MUST be registered only on its own asset with `drawCap… | — | — | — | `TEST-002`°, `TEST-293`° | — | Not run |
 | `REQ-FLR-008` | The constructor `constructor(hub, asset, assetId, authority, reserveWithdrawalDelay)` MUST… | — | — | — | `TEST-002`°, `TEST-293`°, `TEST-298`° | `AvanaFirstLossReserve`, `DaoDeficitOffset`, `IAvanaFirstLossReserveErrors` (decl.), `IAvanaFirstLossReserveViews` (decl.), `IAvanaFirstLossReserve` (decl.) | Not run |
-| `REQ-FLR-009` | Aave Labs' confirmation of the coverage caller (the First-Loss Reserve as `eliminateDefici… | — | — | — | — | — | Unlinked |
+| `REQ-FLR-009` | `COVERAGE_ROLE`, the role that calls `coverDeficit` (the First-Loss Reserve being the `eli… | — | — | — | — | — | Unlinked |
 | `REQ-FLR-010` | `fund(amount)` MUST revert `ZeroAmount` if `amount == 0`, MUST move exactly `amount` of `A… | — | — | — | `PROP-060`°, `TEST-177`°, `TEST-293`°, `TEST-298`° | `AvanaFirstLossReserve`, `IAvanaFirstLossReserveErrors` (decl.), `IAvanaFirstLossReserveViews` (decl.), `IAvanaFirstLossReserve` (decl.) | Not run |
 | `REQ-FLR-011` | Avana Labs MUST fund each First-Loss Reserve with at least `firstLossReserveMinimum[asset]… | — | — | — | `TEST-199`°, `TEST-293`° | `AvanaFirstLossReserve`, `IAvanaFirstLossReserve` (decl.) | Not run |
 | `REQ-FLR-012` | A First-Loss Reserve's asset MUST be Hub liquidity like any other added liquidity of that … | — | — | — | `TEST-128`°, `TEST-293`° | `AvanaFirstLossReserve` | Not run |
