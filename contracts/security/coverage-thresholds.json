@@ -197,9 +197,9 @@
     "src/lens/lens/LensRemoval.sol": 80,
     "src/lens/lens/LensSizing.sol": 80,
     "src/amm/concentrated-liquidity/ClNfpmLPVault.sol": 94,
-    "src/amm/uniswap-v4/UniswapV4Integration.sol": 80,
+    "src/amm/uniswap-v4/UniswapV4Integration.sol": 100,
     "src/amm/uniswap-v4/UniswapV4State.sol": 100,
     "src/oracle/lp-oracle/LPOracleV4.sol": 100,
-    "src/oracle/lp-oracle/LPOracleV4Module.sol": 80
+    "src/oracle/lp-oracle/LPOracleV4Module.sol": 94
   }
 }

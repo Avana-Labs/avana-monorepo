@@ -125,6 +125,20 @@ contract UniswapV4IntegrationUnitTest is UniswapV4IntegrationFixture {
         );
     }
 
+    // TEST-331 verifies: REQ-AMM-V4-009
+    /// @notice A token whose `totalSupply` read fails is refused at listing, as one at the supply bound is.
+    function test_TEST_331_bindRefusesAnUnreadableSupply() public {
+        ClTestToken mute = new ClTestToken("MUTE", 18);
+        (address a, address b) =
+            address(mute) < address(usdc) ? (address(mute), address(usdc)) : (address(usdc), address(mute));
+        PoolKey memory muteKey = _key(a, b, 500, 10);
+        pm.initialize(muteKey, 1 << 96);
+        IClPool muteRef = IClPool(factory.createPool(a, b, 500));
+        vm.mockCallRevert(address(mute), abi.encodeWithSignature("totalSupply()"), "");
+        _expectBindRange(muteKey, address(muteRef), -100, 100, abi.encodeWithSelector(InvalidPool.selector));
+        vm.clearMockedCalls();
+    }
+
     // ─── Custody ───
 
     // TEST-333 verifies: REQ-AMM-V4-003, REQ-AMM-CORE-005, SPEC-UNIT-002

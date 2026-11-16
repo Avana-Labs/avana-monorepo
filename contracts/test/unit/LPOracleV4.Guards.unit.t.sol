@@ -96,6 +96,15 @@ contract LPOracleV4GuardsUnitTest is LPOracleV4Fixture {
         _refused(abi.encode(address(pm), fresh, int24(-206_940), int24(-194_040), uint256(0), address(ref)));
     }
 
+    // TEST-331 verifies: REQ-ORACLE-058, REQ-AMM-V4-009
+    /// @notice A market token reporting more than 18 decimals is refused at `initialize`, as the LPVault refuses it at
+    /// listing.
+    function test_TEST_331_initializeRefusesTokensAboveEighteenDecimals() public {
+        vm.mockCall(address(weth), abi.encodeWithSignature("decimals()"), abi.encode(uint8(19)));
+        _refused(_market(_v4Key(), address(ref)));
+        vm.clearMockedCalls();
+    }
+
     // ─── Reads ───
 
     // TEST-335 verifies: REQ-AMM-V4-003, REQ-AMM-V4-011, REQ-ORACLE-016
@@ -124,6 +133,18 @@ contract LPOracleV4GuardsUnitTest is LPOracleV4Fixture {
         vm.mockCall(address(ref), abi.encodeWithSelector(IUniswapV3Pool.slot0.selector), slot0);
         assertTrue(_state().reasons & LPOracleCodes.CONSISTENCY_UNAVAILABLE != 0, "cardinality");
         vm.clearMockedCalls();
+    }
+
+    // TEST-335 verifies: REQ-ORACLE-016, REQ-ORACLE-104, SPEC-AMM-V4-002
+    /// @notice With every feed past its maximum age the market is not Live and the CL report carries no mean or
+    /// reference tick.
+    function test_TEST_335_staleQuotesReportNoTicks() public {
+        vm.warp(block.timestamp + MAX_AGE + 1);
+        PriceStateView memory v = _state();
+        assertTrue(v.state != PriceState.Live, "not live without fresh quotes");
+        ClPriceStateView memory r = oracle.getClPriceState();
+        assertEq(r.meanTick, 0, "no mean tick");
+        assertEq(r.tickRef, 0, "no reference tick");
     }
 
     // TEST-335 verifies: SPEC-AMM-V4-002, REQ-ORACLE-104

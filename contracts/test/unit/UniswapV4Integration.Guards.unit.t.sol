@@ -77,6 +77,9 @@ contract UniswapV4IntegrationGuardsUnitTest is UniswapV4IntegrationFixture {
         _expectDeployRefused(address(0), address(factory), 12);
         _expectDeployRefused(coll, address(factory), 12);
         _expectDeployRefused(address(posm), timelock, 12);
+        // A PositionManager or factory with code that is one of the Avana bindings (the Lock).
+        _expectDeployRefused(address(lock), address(factory), 12);
+        _expectDeployRefused(address(posm), address(lock), 12);
         _expectDeployRefused(address(new V4ManagerStub(address(0), address(weth))), address(factory), 12);
         _expectDeployRefused(address(new V4ManagerStub(address(pm), address(0))), address(factory), 12);
         _expectDeployRefused(address(new V4ManagerStub(address(pm), makeAddr("noCode"))), address(factory), 12);

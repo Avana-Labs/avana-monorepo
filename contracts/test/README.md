@@ -172,7 +172,7 @@ Safety handlers bound inputs but may hit reverting paths; the suites keep `fail_
 function invariant_TEST_099_repayLive() public view { assertFalse(ghosts.livenessViolation(), ghosts.violationReason()); }
 ```
 
-A campaign that passes because every call reverted or returned early proves nothing, so the handlers revert `Skipped()` when a call finds nothing to act on or the contract refuses it: the campaign's metrics (`show_metrics`, on in the `invariant` profile) then count only real work as success. Exceptions: an attack action whose refusal is the expected outcome still returns, and so does an exit refused for a pause, a freeze or a breaker (its counter must stand); the `fail_on_revert` suites (`ClLPVault.Custody`, `Oracles.Liquidation`) and `IntegrationHandler` keep their early returns. `handlers/HandlerReach.sol` replays fixed-seed sequences of a suite's targeted actions from its set-up state and asserts, in the suite's `test_TEST_082_handlerReach` (Collateralization, Collateralization.Ledger, LPVaultSwap, Integration, AaveAdapter, AaveAdapter.Reconcile, FullStack), a floor on each action's success rate and on the share of runs that reach each target state (a liquidation, a kept seizure, a pending settlement, a shortfall top-up, a reconciling exit); `forge test --match-test handlerReach -vv` prints the table.
+A campaign that passes because every call reverted or returned early proves nothing, so the handlers revert `Skipped()` when a call finds nothing to act on or the contract refuses it: the campaign's metrics (`show_metrics`, on in the `invariant` profile) then count only real work as success. Exceptions: an attack action whose refusal is the expected outcome still returns, and so does an exit refused for a pause, a freeze or a breaker (its counter must stand); the `fail_on_revert` suites (`ClLPVault.Custody`, `Oracles.Liquidation`) and `IntegrationHandler` keep their early returns. `handlers/HandlerReach.sol` replays fixed-seed sequences of a suite's targeted actions from its set-up state and asserts, in the suite's `test_TEST_082_handlerReach` (Collateralization, Collateralization.Ledger, LPVaultSwap, Integration, AaveAdapter, AaveAdapter.Reconcile, FullStack, UniswapV4Integration.FeesCustody), a floor on each action's success rate and on the share of runs that reach each target state (a liquidation, a kept seizure, a pending settlement, a shortfall top-up, a reconciling exit, the Uniswap v4 fallback removal); `forge test --match-test handlerReach -vv` prints the table.
 
 ### 4.2 Ghost variables
 
@@ -252,6 +252,7 @@ Each Halmos harness below is one contract `<Subject>HalmosTest` with one `check_
 | `SettlementMath.halmos.t.sol` | `SettlementMathHalmosTest` | PROP-015, PROP-017, PROP-018, PROP-019, PROP-048, PROP-069 | `check_PROP_015_settlementIdentity`, `check_PROP_015_waterfallExample`, `check_PROP_017_effectiveSlippageCoversDebt`, `check_PROP_018_minRecoveryRounding`, `check_PROP_048_floorWithRoundingTerms`, `check_PROP_019_callerTopUpClosesGap`, `check_PROP_015_gapSettlesWithoutRevert`, `check_PROP_018_floorCoversDebtUsdc`, `check_PROP_018_floorCoversDebtGho`, `check_PROP_019_legSlippageNoRelax`, `check_PROP_019_legSlippageWide`, `check_PROP_019_legSlippageQuotientV3`, `check_PROP_019_legSlippageQuotientV10000`, `check_PROP_019_legSlippageQuotientVPrime`, `check_PROP_019_legSlippageQuotientVMax`, `check_PROP_018_unitAndPendingValues`, `check_PROP_069_feeAtMostSurplus`, `check_PROP_069_feeMonotoneInValue`, `check_PROP_069_feeIndependentOfRecovery` |
 | `SlipstreamIntegration.halmos.t.sol` | `SlipstreamIntegrationHalmosTest` | PROP-083 | `check_PROP_083_validateAcceptsOnlyTheExactRange`, `check_PROP_083_receiveTakesOnlyTheExactRangeOfTheMarketPool`, `check_PROP_083_anotherGenerationIsNeverAccepted`, `check_PROP_083_anotherGenerationIsRefusedEvenWhenItsFactoryResolvesThePool`, `check_PROP_083_keyEncodingRoundTrips` |
 | `UniswapV3Integration.halmos.t.sol` | `UniswapV3IntegrationHalmosTest` | PROP-083 | `check_PROP_083_validateAcceptsOnlyTheExactRange`, `check_PROP_083_receiveTakesOnlyTheExactRangeOfTheMarketPool`, `check_PROP_083_clampStaysInTheRange`, `check_PROP_083_outOfRangeHoldsOneToken`, `check_PROP_083_token1NeverAboveTheExactHolding` |
+| `UniswapV4Integration.halmos.t.sol` | `UniswapV4IntegrationHalmosTest` | PROP-083 | `check_PROP_083_v4ValidateAcceptsOnlyTheExactUnsubscribedPosition` |
 | `VaultToken.halmos.t.sol` | `VaultTokenHalmosTest` | PROP-005, PROP-008, PROP-009, PROP-055 | `check_PROP_005_supplyChangesOnlyThroughAdapter`, `check_PROP_005_adapterOnlyFunctionsRefuseOtherCallers`, `check_PROP_055_burnNeedsNoAllowanceAndLowersExactly`, `check_PROP_008_movementsOnlyOnAllowedPaths`, `check_PROP_055_viewsAreTheFixedFormulas`, `check_PROP_009_registryAppendOnlyByAdapter`, `check_PROP_055_bindingsNeverChange` |
 | `VaultTokenFactory.halmos.t.sol` | `VaultTokenFactoryHalmosTest` | PROP-099 | `check_PROP_099_writesOnlyByTimelock`, `check_PROP_099_registrationIsWriteOnce`, `check_PROP_099_secondDeployForPairReverts`, `check_PROP_099_onlyValidListingsReachDeployment` |
 | `WrapperThenDexRoute.halmos.t.sol` | `WrapperThenDexRouteHalmosTest` | PROP-036, PROP-037, PROP-068 | `check_PROP_037_swapOnlyForLPVaultSwapUnderLock`, `check_PROP_036_callbackRefusedOutsideHop`, `check_PROP_068_swapDeliversAtLeastMinOut` |
@@ -379,14 +380,14 @@ Every row of 5.1 with the test files under `contracts/test/` that link it: a fun
 | TEST-081 | fuzz | `fuzz/LPVaultSwap.Settlement.fuzz.t.sol` (1) | — |
 | TEST-082 | environment | — | planned in `invariant/handlers/` `*Handler.sol`, `HandlerBase.sol`, `actors/Actors.sol` |
 | TEST-083 | invariant | `invariant/AaveAdapter.PauseTransitions.invariant.t.sol` (1), `invariant/AaveAdapter.invariant.t.sol` (1), `invariant/Collateralization.invariant.t.sol` (1), `invariant/VaultToken.invariant.t.sol` (1) | — |
-| TEST-084 | invariant | `invariant/Collateralization.Ledger.invariant.t.sol` (1) | — |
+| TEST-084 | invariant | `invariant/Collateralization.Ledger.invariant.t.sol` (1), `invariant/UniswapV4Integration.FeesCustody.invariant.t.sol` (1) | — |
 | TEST-085 | invariant | `invariant/Collateralization.invariant.t.sol` (1) | — |
 | TEST-086 | invariant | `invariant/VaultToken.invariant.t.sol` (1) | — |
 | TEST-087 | invariant | `invariant/VaultToken.invariant.t.sol` (2) | — |
 | TEST-088 | invariant | `invariant/AaveAdapter.invariant.t.sol` (1) | — |
 | TEST-089 | invariant | `invariant/ProxyManager.invariant.t.sol` (3), `unit/ProxyManager.unit.t.sol` (1) | — |
 | TEST-090 | invariant | `invariant/LPVaultSwap.invariant.t.sol` (1) | — |
-| TEST-091 | invariant | `invariant/UniswapV3Integration.Fees.invariant.t.sol` (2) | — |
+| TEST-091 | invariant | `invariant/UniswapV3Integration.Fees.invariant.t.sol` (2), `invariant/UniswapV4Integration.FeesCustody.invariant.t.sol` (2) | — |
 | TEST-092 | invariant | `fuzz/LPVaultSwap.Neutrality.fuzz.t.sol` (1), `invariant/LPVaultSwap.invariant.t.sol` (2) | — |
 | TEST-093 | invariant | `invariant/LPVaultSwap.invariant.t.sol` (3), `unit/LPVaultSwap.NoBudget.unit.t.sol` (1), `unit/LPVaultSwap.Sequencing.unit.t.sol` (1) | — |
 | TEST-094 | invariant | `invariant/AvanaFirstLossReserve.invariant.t.sol` (3) | — |
@@ -510,7 +511,7 @@ Every row of 5.1 with the test files under `contracts/test/` that link it: a fun
 | TEST-212 | invariant | `invariant/AvanaTimelock.invariant.t.sol` (5) | — |
 | TEST-213 | unit | `integration/AaveAdapter.RiskModule.integration.t.sol` (1), `invariant/MarketRegistry.Lifecycle.invariant.t.sol` (3), `unit/MarketRegistry.Activation.unit.t.sol` (5), `unit/MarketRegistry.DebtReserve.unit.t.sol` (1), `unit/MarketRegistry.DebtReserveSet.unit.t.sol` (10), `unit/MarketRegistry.Lifecycle.unit.t.sol` (13), `unit/MarketRegistry.SpecExamples.unit.t.sol` (1), `unit/MarketRegistry.Views.unit.t.sol` (1) | — |
 | TEST-214 | deployment-check | — | planned in `fork/deployment/` `RoleSnapshot.fork.t.sol` |
-| TEST-215 | invariant | `invariant/LPVaultSwap.invariant.t.sol` (1) | — |
+| TEST-215 | invariant | `invariant/LPVaultSwap.invariant.t.sol` (1), `invariant/UniswapV4Integration.FeesCustody.invariant.t.sol` (1) | — |
 | TEST-216 | invariant | `integration/LPVaultSwap.BadDebt.integration.t.sol` (3), `invariant/LPVaultSwap.invariant.t.sol` (1) | — |
 | TEST-217 | fuzz | `fuzz/LPPriceMath.fuzz.t.sol` (1), `unit/ClPriceMath.unit.t.sol` (1) | — |
 | TEST-218 | invariant | `fuzz/LPVaultSwap.Cascade.fuzz.t.sol` (1), `integration/Cascade.UniswapV4.integration.t.sol` (1) | — |
