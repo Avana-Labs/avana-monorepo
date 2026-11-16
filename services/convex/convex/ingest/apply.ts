@@ -246,6 +246,13 @@ export const applySeriesPage = internalMutation({
         if (!existing) await ctx.db.insert("marketReserveDebt", row);
         else if (BigInt(existing.blockNumber) <= BigInt(r.blockNumber)) await ctx.db.replace(existing._id, row);
       }
+      // The sampler writes a market's debt reserves only while they carry debt, next to the market's own point of the
+      // same block; a debt row older than that point was repaid or liquidated since.
+      if (r.scopeKind === "market" && r.resolution === "hour") {
+        const [, marketId] = r.scopeKey.split(":") as [string, string];
+        const debts = await ctx.db.query("marketReserveDebt").withIndex("by_market", (q) => q.eq("chainId", chainId).eq("marketId", marketId)).collect();
+        for (const d of debts) if (BigInt(d.blockNumber) < BigInt(r.blockNumber)) await ctx.db.delete(d._id);
+      }
       if (r.scopeKind === "position" && r.resolution === "day") {
         const [, spoke, proxy] = r.scopeKey.split(":") as [string, string, string];
         const account = await ctx.db.query("accounts").withIndex("by_key", (q) => q.eq("chainId", chainId).eq("spoke", spoke).eq("proxy", proxy)).unique();

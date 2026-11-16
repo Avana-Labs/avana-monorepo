@@ -1488,7 +1488,15 @@ async function failoverDrill(e: Env) {
       }
     }
   } finally {
-    keeper.kill();
+    // On Windows the keeper runs under a shell, and kill() ends only the shell: the keeper would keep running and hold
+    // this process's pipes open, so the scenario run would never exit. The whole process tree is ended instead.
+    if (process.platform === "win32" && keeper.pid !== undefined) {
+      try {
+        execFileSync("taskkill", ["/pid", String(keeper.pid), "/T", "/F"], { stdio: "ignore" });
+      } catch {
+        keeper.kill();
+      }
+    } else keeper.kill();
     await e.rpc("evm_setAutomine", [true]).catch(() => undefined);
     // The keeper's breaker pokes during the crash record a breach on these markets: a latched reason is reset, as the
     // Aave Protocol Guardian would, and the breach keeps the breaker TEMPORARY for the recovery time after it. The
