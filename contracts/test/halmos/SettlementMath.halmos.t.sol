@@ -241,12 +241,14 @@ contract SettlementMathHalmosTest is Test {
     /// and balances (the `Settles` checks). Coverage: every input of the single check (`minRec ≤ V < 2^120`, share
     /// 2,000) is an input of the `Payouts` case, which gives its `A`, `B` the bound `A + B ≤ S` with this `S`; `V` and
     /// the share reach the gap and the payout only through `A` and `B`. So the `Payouts` case and the four `AnyPayouts`
-    /// checks cover the single check and extend it to every share ≤ 10⁴. The four checks are the two assertions, each
-    /// split by `R ≥ minRec` (no floor gap, `S = max(0, R − D)`) and `R < minRec` (gap `minRec − R`,
-    /// `S = max(0, minRec − D)`): the two sides together are every input, and the two assertions together are what one
-    /// check asserts. Every term is a sum, a difference or a comparison. One check with both assertions did not
-    /// complete within 1 hour over both sides (run 43742353540) nor over either side (run 43777240448); each assertion
-    /// alone over both sides completed in about 1 minute (run 43755742247).
+    /// checks cover the single check and extend it to every share ≤ 10⁴. The `AnyPayouts` checks are the two
+    /// assertions, each split by `R ≥ minRec` (no floor gap, `S = max(0, R − D)`) and `R < minRec` (gap `minRec − R`,
+    /// `S = max(0, minRec − D)`), and the `Settles` assertion further by `R_f ≤ D` (`S = 0`, so `A = B = 0`) and
+    /// `R_f > D`, with `R_f = max(R, minRec)`: the sides together are every input, and the two assertions together are
+    /// what one check asserts. Every term is a sum, a difference or a comparison. One check with both assertions did
+    /// not complete within 1 hour over both sides (run 43742353540) nor over either side (run 43777240448); the `Gap`
+    /// checks complete in about 1 minute, and the `Settles` assertion split only by the floor did not complete within
+    /// 1 hour (run 43791210194), so the `Settles` checks use bitwuzla.
     function check_PROP_015_gapSettlesWithoutRevertAnyPayoutsGapAboveFloor(
         uint256 debt,
         uint256 extraFunding,
@@ -275,9 +277,10 @@ contract SettlementMathHalmosTest is Test {
     }
 
     // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-061, REQ-SWAP-062, Q-397, Q-404
-    /// @notice The `Settles` assertion of `check_PROP_015_gapSettlesWithoutRevertAnyPayoutsGapAboveFloor` for a
-    /// recovery at or above the floor.
-    function check_PROP_015_gapSettlesWithoutRevertAnyPayoutsSettlesAboveFloor(
+    /// @notice The `Settles` assertion of `check_PROP_015_gapSettlesWithoutRevertAnyPayoutsGapAboveFloor` for
+    /// a recovery at or above the floor and no surplus (`R ≤ D`).
+    /// @custom:halmos --solver bitwuzla
+    function check_PROP_015_gapSettlesWithoutRevertAnyPayoutsSettlesAboveFloorNoSurplus(
         uint256 debt,
         uint256 extraFunding,
         uint256 minRec,
@@ -285,14 +288,15 @@ contract SettlementMathHalmosTest is Test {
         uint256 fee,
         uint256 surplusToBorrower
     ) public {
-        vm.assume(recovered >= minRec);
+        vm.assume(recovered >= minRec && recovered <= debt);
         _anyPayoutsSettles(debt, extraFunding, minRec, recovered, fee, surplusToBorrower);
     }
 
     // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-061, REQ-SWAP-062, Q-397, Q-404
-    /// @notice The `Settles` assertion of `check_PROP_015_gapSettlesWithoutRevertAnyPayoutsGapAboveFloor` for a
-    /// recovery below the floor.
-    function check_PROP_015_gapSettlesWithoutRevertAnyPayoutsSettlesBelowFloor(
+    /// @notice The `Settles` assertion of `check_PROP_015_gapSettlesWithoutRevertAnyPayoutsGapAboveFloor` for
+    /// a recovery at or above the floor and a surplus (`R > D`).
+    /// @custom:halmos --solver bitwuzla
+    function check_PROP_015_gapSettlesWithoutRevertAnyPayoutsSettlesAboveFloorSurplus(
         uint256 debt,
         uint256 extraFunding,
         uint256 minRec,
@@ -300,7 +304,39 @@ contract SettlementMathHalmosTest is Test {
         uint256 fee,
         uint256 surplusToBorrower
     ) public {
-        vm.assume(recovered < minRec);
+        vm.assume(recovered >= minRec && recovered > debt);
+        _anyPayoutsSettles(debt, extraFunding, minRec, recovered, fee, surplusToBorrower);
+    }
+
+    // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-061, REQ-SWAP-062, Q-397, Q-404
+    /// @notice The `Settles` assertion of `check_PROP_015_gapSettlesWithoutRevertAnyPayoutsGapAboveFloor` for
+    /// a recovery below the floor and no surplus (`minRec ≤ D`).
+    /// @custom:halmos --solver bitwuzla
+    function check_PROP_015_gapSettlesWithoutRevertAnyPayoutsSettlesBelowFloorNoSurplus(
+        uint256 debt,
+        uint256 extraFunding,
+        uint256 minRec,
+        uint256 recovered,
+        uint256 fee,
+        uint256 surplusToBorrower
+    ) public {
+        vm.assume(recovered < minRec && minRec <= debt);
+        _anyPayoutsSettles(debt, extraFunding, minRec, recovered, fee, surplusToBorrower);
+    }
+
+    // PROP-015 verifies: SPEC-LIQ-008, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-SET-001, REQ-SWAP-061, REQ-SWAP-062, Q-397, Q-404
+    /// @notice The `Settles` assertion of `check_PROP_015_gapSettlesWithoutRevertAnyPayoutsGapAboveFloor` for
+    /// a recovery below the floor and a surplus (`minRec > D`).
+    /// @custom:halmos --solver bitwuzla
+    function check_PROP_015_gapSettlesWithoutRevertAnyPayoutsSettlesBelowFloorSurplus(
+        uint256 debt,
+        uint256 extraFunding,
+        uint256 minRec,
+        uint256 recovered,
+        uint256 fee,
+        uint256 surplusToBorrower
+    ) public {
+        vm.assume(recovered < minRec && minRec > debt);
         _anyPayoutsSettles(debt, extraFunding, minRec, recovered, fee, surplusToBorrower);
     }
 
