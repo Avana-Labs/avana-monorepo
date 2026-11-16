@@ -236,6 +236,7 @@ The proof-of-concept tests on `claude/fresh-audit-pocs` show the defects and pas
 |---|---|---|
 | M-01 | PR #71 (`contracts/decisions-rest`) | Ported from `M01_RescueTopUpTokenCap.audit.t.sol` in PR #71 |
 | L-01 | PR #80 (`claude/audit-fixes-lows`) | `LPVaultSwap.BadDebt.integration.t.sol`: `test_TEST_216_deficitSurplusFundsTheFirstLossReserve`, `test_TEST_216_unusableReserveLeavesTheSurplusWithTheBorrower` |
+| L-01 (split liquidation) | PR #90 (`test/l01-split-measure`): every call on an account whose collateral value is below its debt times the liquidation bonus funds the First-Loss Reserve; measurements in `L-01-split-measurement.md` | `LPVaultSwap.SplitLiquidation.integration.t.sol`: `test_TEST_216_splitLiquidationFundsTheReserve_stable`, `_correlated`, `_volatile`, `_largeAccount`, `test_TEST_216_partialCallOnAnUnderwaterAccountFundsTheReserve` |
 | L-02 | PR #80 | `Collateralization.SpeedCredit.unit.t.sol`: `test_TEST_018_rescueChargeIsNotCreditedBack`, `test_TEST_237_mixedRecordCreditsOnlyItsChargedShare` |
 | L-03 | PR #80 | `ParameterStore.Bounds.unit.t.sol`: `test_TEST_064_feeShareRiseKeepsTheFeeBound` |
 | L-04 | PR #80 | `FlashLiquidator.Residues.unit.t.sol`: `test_TEST_174_standingCreditClearedBeforeTheCall`, `test_TEST_174_unclearableStandingCreditNeverGoesToTheCaller` |

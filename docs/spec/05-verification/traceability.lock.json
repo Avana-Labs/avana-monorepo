@@ -10433,7 +10433,7 @@
     ]
   },
   "Q-337": {
-    "hash": "5fb4106f267accc2",
+    "hash": "d61dd812b254c10f",
     "checks": [
       "ILPVaultSwapEvents",
       "MATH-ST-101",
@@ -27391,7 +27391,7 @@
     ]
   },
   "REQ-SWAP-026": {
-    "hash": "0c7587f051cead8a",
+    "hash": "a61ac3933647459c",
     "checks": [
       "FV-LIQ-01",
       "FV-LIQ-03",
@@ -27407,6 +27407,7 @@
       "TEST-174",
       "TEST-179",
       "TEST-205",
+      "TEST-216",
       "TEST-233",
       "TEST-272",
       "TEST-286",
@@ -27414,7 +27415,7 @@
     ]
   },
   "REQ-SWAP-027": {
-    "hash": "1f33fab927f6e864",
+    "hash": "24a7feaef020c90e",
     "checks": [
       "FV-LIQ-01",
       "FV-LIQ-06",
@@ -33187,7 +33188,7 @@
     ]
   },
   "SPEC-LIQ-022": {
-    "hash": "ca7d68af34e990b2",
+    "hash": "2d039fd9a21ac4d5",
     "checks": [
       "FV-LIQ-01",
       "FV-LIQ-04",
