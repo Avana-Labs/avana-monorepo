@@ -13,6 +13,37 @@ import {MockCLPool} from "../utils/mocks/SwapRouteMocks.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 import {Vm} from "forge-std/Vm.sol";
 
+/// @notice A settlement route that reports five intermediate tokens it never moves and swaps its input for the debt
+/// asset at 0.9995 in one step, so a liquidation through it tracks more tokens than LPVaultSwap's first allocation.
+contract WideIntermediatesRoute {
+    PayoutToken internal immutable _IN;
+    PayoutToken internal immutable _OUT;
+    address[] internal _intermediates;
+
+    constructor(
+        PayoutToken tokenIn,
+        PayoutToken tokenOut
+    ) {
+        (_IN, _OUT) = (tokenIn, tokenOut);
+        for (uint256 i = 0; i < 5; ++i) {
+            _intermediates.push(address(new PayoutToken("MID", 18)));
+        }
+    }
+
+    function intermediates() external view returns (address[] memory tokens) {
+        tokens = _intermediates;
+    }
+
+    function swap(
+        uint256 amountIn,
+        uint256
+    ) external returns (uint256 amountOut) {
+        _IN.transferFrom(msg.sender, address(this), amountIn);
+        amountOut = amountIn * 9995 / 10_000;
+        _OUT.mint(msg.sender, amountOut);
+    }
+}
+
 /// @title LPVaultSwapResiduesUnitTest
 /// @notice Route residues and dust legs (2.11 REQ-SWAP-024, REQ-SWAP-121): input or intermediate tokens a route
 /// returns unswapped and released tokens worth at most one raw unit of the debt asset are paid to the caller in the
@@ -140,5 +171,24 @@ contract LPVaultSwapResiduesUnitTest is LPVaultSwapUnitBase {
         assertEq(_count(vm.getRecordedLogs(), ResidueReturned.selector), 0, "no residue event");
         assertEq(usdt.balanceOf(keeper), before, "no USDT paid");
         assertEq(usdt.balanceOf(address(lvs)), 0, "no USDT kept");
+    }
+
+    /// @notice A route with five intermediates grows the tracked set past its first allocation of `n + 4` tokens; the
+    /// balances taken before the growth are kept, so a prior USDT donation stays in LPVaultSwap and is not paid to the
+    /// caller as a residue.
+    // TEST-053 verifies: REQ-SWAP-024, REQ-SWAP-042
+    function test_TEST_053_trackedSetGrowthKeepsStartBalances() public {
+        WideIntermediatesRoute wide = new WideIntermediatesRoute(usdt, usdc);
+        registry.setRoute(MARKET_ID, address(usdt), address(usdc), 0, address(wide), true);
+        usdt.mint(address(lvs), 7e6); // a prior donation stays and is not paid out
+        _fund(usdc, keeper, 1950e6);
+        uint256 before = usdt.balanceOf(keeper);
+        vm.recordLogs();
+        vm.prank(keeper);
+        LiquidationResult memory r = lvs.liquidate(_params(proxy, 1950e6));
+        assertEq(r.amountsOut[1], a1, "released USDT excludes the donation");
+        assertEq(_count(vm.getRecordedLogs(), ResidueReturned.selector), 0, "no residue event");
+        assertEq(usdt.balanceOf(keeper), before, "no USDT paid");
+        assertEq(usdt.balanceOf(address(lvs)), 7e6, "LPVaultSwap's USDT unchanged");
     }
 }

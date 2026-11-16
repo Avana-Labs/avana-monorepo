@@ -5,16 +5,21 @@
 #
 # For every implementation file that `script/mutation-targets.py gambit` lists from security/mutation-layers.json,
 # Gambit (tools/bin/gambit) writes at most the layer's mutant cap, drawn with the fixed seed from the configured
-# operators and checked to compile with the project's solc. The file's tests (`forge test -j 2 --fail-fast
-# --match-path <tests>`) first run once on the unmutated code, then once per mutant with the mutant copied over the
-# file, all in an isolated copy of src/ and test/ under out-security/gambit/root, so the workspace is never mutated.
-# Each mutant ends as
+# operators and checked to compile with the project's solc. The file's tests first run once on the unmutated code, then
+# once per mutant with the mutant copied over the file, each run by script/mutation-test.py (one `forge test -j 2
+# --fail-fast --match-path <tests>` in the `mutation` profile of foundry.toml, which compiles src/ and the matched
+# tests only, then the optimized-only tests in the default profile for a mutant the rest let through), all in an
+# isolated copy of src/ and test/ under out-security/gambit/root, so the workspace is never mutated. Each mutant ends as
 #
 #   killed    a test failed
 #   survived  every matched test passed
-#   timeout   the build took longer than GAMBIT_BUILD_TIMEOUT seconds or the test run longer than GAMBIT_TIMEOUT
-#             (counted with the survivors: a slow suite must not hide a surviving mutant)
+#   timeout   compile and tests took longer than GAMBIT_TIMEOUT seconds, or the default-profile run longer than
+#             GAMBIT_OPTIMIZED_TIMEOUT (counted with the survivors: a slow suite must not hide a surviving mutant)
 #   invalid   the mutant did not compile under forge (counted with neither)
+#   error     the mutant could not be applied (its file missing or identical to the original); the run fails
+#
+# The mutants are read from gambit/gambit_results.json (script/mutation-records.py gambit), never from mutants.log,
+# whose CSV fields can span lines.
 #
 # Reports, per layer and contract: out-security/gambit/<layer>/<Contract>/status.tsv (mutant id and result),
 # gambit/gambit_results.json and gambit/mutants/<id>/ (each mutant's diff and source), and <id>.log (its test run);
@@ -24,8 +29,8 @@
 # with the reason the change cannot be observed.
 #
 # Budgets (environment, with defaults): MUTATE_LAYERS and MUTATE_CONTRACTS (space-separated, as for `mutate`; empty:
-# all), GAMBIT_BUILD_TIMEOUT=1500 seconds per mutant build (the via-IR baseline build of every unit took 722 s on
-# CI), GAMBIT_TIMEOUT=300 seconds per mutant test run, GAMBIT_FUZZ_RUNS (default MUTATE_FUZZ_RUNS, else 256).
+# all), GAMBIT_TIMEOUT=600 seconds per mutant (its compile and tests), GAMBIT_OPTIMIZED_TIMEOUT=1800 seconds for the
+# default-profile run of the optimized-only tests, GAMBIT_FUZZ_RUNS (default MUTATE_FUZZ_RUNS, else 256).
 #
 # Usage, from contracts/:  script/security-gambit.sh
 
@@ -38,8 +43,8 @@ PY="$ROOT/.venv/bin/python"
 GAMBIT="$ROOT/tools/bin/gambit"
 export PATH="$ROOT/tools/bin:$ROOT/.venv/bin:$HOME/.foundry/bin:$PATH"
 
-GAMBIT_TIMEOUT=${GAMBIT_TIMEOUT:-300}
-GAMBIT_BUILD_TIMEOUT=${GAMBIT_BUILD_TIMEOUT:-1500}
+GAMBIT_TIMEOUT=${GAMBIT_TIMEOUT:-600}
+GAMBIT_OPTIMIZED_TIMEOUT=${GAMBIT_OPTIMIZED_TIMEOUT:-1800}
 GAMBIT_FUZZ_RUNS=${GAMBIT_FUZZ_RUNS:-${MUTATE_FUZZ_RUNS:-256}}
 TRIAGE=security/gambit-triage.json
 
@@ -48,26 +53,6 @@ if [ ! -x "$GAMBIT" ]; then
   exit 1
 fi
 command -v forge >/dev/null 2>&1 || { echo "missing forge" >&2; exit 1; }
-
-# with_timeout <seconds> <command...>: the command's exit code, or 124 when it ran longer than <seconds>. GNU timeout
-# where present (Linux CI), else a perl wrapper (macOS ships no timeout) that runs the command in its own process
-# group and stops the whole group, so no child outlives the run.
-with_timeout() {
-  local secs=$1
-  shift
-  if command -v timeout >/dev/null 2>&1; then
-    timeout -k 10 "$secs" "$@"
-    return $?
-  fi
-  perl -e '
-    my $secs = shift;
-    my $pid = fork() // exit 127;
-    if ($pid == 0) { setpgrp(0, 0); exec @ARGV or exit 127 }
-    $SIG{ALRM} = sub { kill "TERM", -$pid; sleep 2; kill "KILL", -$pid; waitpid($pid, 0); exit 124 };
-    alarm $secs;
-    waitpid($pid, 0);
-    exit(($? & 127) ? 128 + ($? & 127) : $? >> 8);' "$secs" "$@"
-}
 
 # solc_bin: the solc of foundry.toml's solc_version, from Foundry's svm cache (macOS or Linux) or tools/bin.
 solc_bin() {
@@ -88,21 +73,16 @@ isolated_root() {
   solc=$(solc_bin) || return 1
   rm -rf "$root" && mkdir -p "$root/bin"
   cp -R src test "$root/"
-  for f in dependencies foundry.toml remappings.txt out-aave out-univ3 out-univ4 out-permit2; do
+  for f in dependencies foundry.toml remappings.txt out-aave out-univ3 out-univ3-periphery out-slipstream-v1 \
+    out-slipstream-main out-aerodrome out-univ4 out-permit2; do
     [ -e "$f" ] && ln -s "$ROOT/$f" "$root/$f"
   done
   ln -s "$solc" "$root/bin/solc"
 }
 
-# run_tests <root> <tests glob> <log>: forge build, then forge test, in the isolated copy; exit code as with_timeout.
-# The build has its own budget: a mutant of a file that a via-IR unit imports (the Lens modules, Collateralization,
-# DebtOracle, the LPVaultSwap logic) recompiles that unit, which alone took longer than GAMBIT_TIMEOUT on CI (every
-# Lens mutant timed out in its build in run 43492416937), so only the test run counts against GAMBIT_TIMEOUT.
-run_tests() {
-  (cd "$1" && export FOUNDRY_FUZZ_RUNS="$GAMBIT_FUZZ_RUNS" &&
-    with_timeout "$GAMBIT_BUILD_TIMEOUT" forge build >"$3" 2>&1 &&
-    with_timeout "$GAMBIT_TIMEOUT" forge test -j 2 --fail-fast --match-path "$2" >>"$3" 2>&1)
-}
+# Every forge run of this script builds in the `mutation` profile (script/mutation-test.py sets the default profile
+# for the optimized-only tests itself).
+export FOUNDRY_PROFILE=mutation
 
 list=$("$PY" script/mutation-targets.py gambit --layers "${MUTATE_LAYERS:-}" --contracts "${MUTATE_CONTRACTS:-}") ||
   exit 1
@@ -134,43 +114,61 @@ while IFS=$'\t' read -r layer name file tests cap seed ops; do
     echo "gambit: mutant generation failed on $name (see $dir/gambit.log)"
     continue
   fi
-  ids=$(cut -d, -f1 "$dir/gambit/mutants.log" 2>/dev/null)
-  if [ -z "$ids" ]; then
+  # The mutants come from gambit_results.json through a JSON parser: mutants.log is CSV whose quoted fields can span
+  # lines, so reading it line by line takes a continuation line ("&", a quote) for a mutant id.
+  if ! mutants=$("$PY" script/mutation-records.py gambit "$dir/gambit"); then
+    status=1
+    echo "gambit: cannot read the mutants of $name (see $dir/gambit/gambit_results.json)"
+    continue
+  fi
+  if [ -z "$mutants" ]; then
     echo "  no mutant generated"
     continue
   fi
 
   # The unmutated file must pass its tests first, or a failing suite would count every mutant as killed. This run
   # also compiles the isolated copy, so it gets no per-mutant timeout.
-  if ! (cd "$root" && FOUNDRY_FUZZ_RUNS="$GAMBIT_FUZZ_RUNS" forge test -j 2 --match-path "$tests" \
-    >"$dir/baseline.log" 2>&1); then
+  if ! (cd "$root" && FOUNDRY_FUZZ_RUNS="$GAMBIT_FUZZ_RUNS" "$PY" "$ROOT/script/mutation-test.py" baseline "$tests" \
+    "$dir/baseline.log"); then
     status=1
     echo "gambit: the tests of $name fail without a mutant (see $dir/baseline.log)"
     continue
   fi
 
   cp "$root/$file" "$dir/original.sol"
-  killed=0 survived=0 timeouts=0 invalid=0
-  for id in $ids; do
-    cp "$dir/gambit/mutants/$id/$file" "$root/$file"
-    run_tests "$root" "$tests" "$dir/$id.log"
-    rc=$?
-    cp "$dir/original.sol" "$root/$file"
-    if [ $rc -eq 0 ]; then
-      result=survived survived=$((survived + 1))
-    elif [ $rc -eq 124 ]; then
-      result=timeout timeouts=$((timeouts + 1))
-    elif grep -qE 'Compiler run failed|Error \([0-9]+\):' "$dir/$id.log"; then
-      result=invalid invalid=$((invalid + 1))
-    else
-      result=killed killed=$((killed + 1))
+  killed=0 survived=0 timeouts=0 invalid=0 errors=0
+  # The list is read on its own descriptor, so no command in the loop can consume it from stdin.
+  while IFS=$'\t' read -r id path record <&3; do
+    # A mutant that cannot be applied (its file missing, or identical to the original) is an error, never a
+    # survivor: the tests would run on the unmutated code.
+    if ! cp "$dir/gambit/$path" "$root/$file" || cmp -s "$dir/original.sol" "$root/$file"; then
+      cp "$dir/original.sol" "$root/$file"
+      status=1
+      errors=$((errors + 1))
+      echo "gambit: mutant $id of $name could not be applied from $dir/gambit/$path"
+      printf '%s\t%s\n' "$id" error >>"$dir/status.tsv"
+      continue
     fi
+    result=$(cd "$root" && FOUNDRY_FUZZ_RUNS="$GAMBIT_FUZZ_RUNS" "$PY" "$ROOT/script/mutation-test.py" run "$tests" \
+      "$dir/$id.log" --timeout "$GAMBIT_TIMEOUT" --optimized-timeout "$GAMBIT_OPTIMIZED_TIMEOUT")
+    cp "$dir/original.sol" "$root/$file"
+    case $result in
+      survived) survived=$((survived + 1)) ;;
+      timeout) timeouts=$((timeouts + 1)) ;;
+      invalid) invalid=$((invalid + 1)) ;;
+      killed) killed=$((killed + 1)) ;;
+      *)
+        status=1
+        echo "gambit: mutant $id of $name has no outcome (see $dir/$id.log)"
+        continue
+        ;;
+    esac
     printf '%s\t%s\n' "$id" "$result" >>"$dir/status.tsv"
     if [ $result = survived ] || [ $result = timeout ]; then
-      echo "$name: $result $(grep -m1 "^$id," "$dir/gambit/mutants.log")" >>"$ROOT/$OUT/$layer/survivors.txt"
+      echo "$name: $result $record" >>"$ROOT/$OUT/$layer/survivors.txt"
     fi
-  done
-  echo "  killed $killed, survived $survived, timeout $timeouts, invalid $invalid"
+  done 3<<<"$mutants"
+  echo "  killed $killed, survived $survived, timeout $timeouts, invalid $invalid, error $errors"
   # The isolated copy must hold the original file again before the next target.
   if ! cmp -s "$dir/original.sol" "$root/$file"; then
     status=1

@@ -13,7 +13,7 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 /// `donate` to the pool, and ERC-20 and ETH sent to the LPVault. A pushed NFT is only a stray, returned only through
 /// the timelock; a pool donation is fee growth, paid to the depositor as fees and never units; a token or ETH balance
 /// of the LPVault changes no unit read, reported amount or composition, and no code path reads one. The same suite as
-/// the Uniswap v3 and Slipstream LPVaults' (a third party's added liquidity is impossible on v4: `TEST-334`).
+/// the Uniswap v3 and Slipstream LPVaults' (a third party's added liquidity is impossible on v4: `TEST-342`).
 /// forge-config: default.isolate = false
 contract UniswapV4IntegrationDonationsUnitTest is UniswapV4IntegrationFixture {
     function _mint1(
@@ -120,11 +120,11 @@ contract UniswapV4IntegrationDonationsUnitTest is UniswapV4IntegrationFixture {
 
     // ─── Pool donations ───
 
-    // TEST-334 verifies: REQ-AMM-V4-004, REQ-AMM-V4-010, REQ-VAULT-077, REQ-VAULT-162
+    // TEST-342 verifies: REQ-AMM-V4-004, REQ-AMM-V4-010, REQ-VAULT-077, REQ-VAULT-162
     /// @notice A PoolManager `donate` to the market's pool is fee growth: the depositor's units do not move, and the
     /// next fee collection pays the donation to the depositor (the only liquidity in range), to the rounding of the
     /// fee-growth division.
-    function test_TEST_334_poolDonationIsFeesNotUnits() public {
+    function test_TEST_342_poolDonationIsFeesNotUnits() public {
         bytes32 key = _mint1(alice);
         uint128 units = _receive(M1, alice, key);
         v4Actor.donate(stableKey, 1e9, 2e9);

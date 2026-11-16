@@ -1,4 +1,4 @@
-import { personalDesktopHeaderLinks } from "./site-nav"
+import { personalDesktopHeaderLinks, PRIMARY_HEADER_LINK_COUNT } from "./site-nav"
 
 // The desktop mega-menu is scoped to the product routes. IDs must stay in sync with the
 // panel configs in header-desktop-menu-panel.tsx and the trigger wiring in
@@ -15,7 +15,7 @@ const PRODUCT_HREFS: Record<string, DesktopMenuId> = {
 const desktopMenusWithPanel: readonly DesktopMenuId[] = ["lend", "borrow"]
 
 // Express + the two products. Utility links (Dashboard) stay right, owned by the header.
-export const desktopPrimaryLinks = personalDesktopHeaderLinks.slice(0, 3)
+export const desktopPrimaryLinks = personalDesktopHeaderLinks.slice(0, PRIMARY_HEADER_LINK_COUNT)
 
 export function menuIdForHref(href: string): DesktopMenuId | null {
   return PRODUCT_HREFS[href] ?? null

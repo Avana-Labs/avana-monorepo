@@ -30,6 +30,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | AMM-neutral core, Hubs and chains | `ATTACK-153` … `ATTACK-199` |
 | Aave configuration liveness and adversarial review fixes | `ATTACK-200` … `ATTACK-203` |
 | Speed limits | `ATTACK-204` … `ATTACK-206` |
+| Keeper gas | `ATTACK-207` … `ATTACK-209` |
 
 ## Custody and minting
 
@@ -923,7 +924,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Result | Mitigated; zero-unit residual accepted (`FINDING-098`) |
 | Checks | HYP-53 (holds with the Q-198 terms; zero-unit bound recorded in FINDING-098), TEST-160, TEST-161, TEST-196, FINDING-048, FINDING-098 |
 
-### ATTACK-064: Bad debt and reimbursement cost from sub-economic positions
+### ATTACK-064: Bad debt and keeper gas cost from sub-economic positions
 
 | Field | Value |
 |---|---|
@@ -934,7 +935,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Attack approach | Split borrowing across sybil wallets, in any debt reserve; wait for a gas spike and a price drop |
 | Impact | Avana's own keeper gas cost, or bad debt covered by the First-Loss Reserve of the affected asset |
 | Expected protection | `INV-041`, `INV-042`, `INV-069`, `INV-071`: each sybil position needs a pledge worth at least `minPledgeUsd` ($10); Avana has no minimum debt (`INV-096`, `Q-381`): Avana's own committed keeper liquidates every HF < 1 account whatever its size and Avana pays the gas as its own keeper cost, so liquidation never waits for a keeper to make a profit, and `liquidate` stays open to every address that is not frozen (`INV-062`, `Q-404`); the 16-record cap keeps each account's liquidation within one transaction; Aave's dust rule forces full liquidation of small debts; a recorded deficit in debt reserve r is covered only from the First-Loss Reserve of r's (Hub, asset), in that asset (Source: Q-071, Q-098, Q-169, Q-179, Q-185, Q-230, Q-236, Q-381, Q-404) |
-| Result | Accepted risk — owner: Avana Labs (keeper gas, an operating cost); bound: gas per account at most `G(16)` = 5.15M gas, and the attacker funds at least `minPledgeUsd` of collateral and the opening gas per account |
+| Result | Accepted risk — owner: Avana Labs (keeper gas, an operating cost); bound: gas per account at most `G(16)` = 7.33M gas (budget 7.5M), and the attacker funds at least `minPledgeUsd` of collateral and the opening gas per account |
 | Checks | SIM-05A, SIM-05C, SIM-07C, TEST-199 |
 
 ### ATTACK-065: Liquidation griefing by moving the pool spot price
@@ -1302,7 +1303,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Attack approach | Call `eliminateDeficit(assetId, amount, otherSpoke)`; the Hub checks only that the caller Spoke is active; or ask the First-Loss Reserve of another asset (GHO) to cover a USDC deficit |
 | Impact | Reserve depleted for non-Avana losses or for another asset's losses |
 | Expected protection | `INV-042`, `INV-071`: each First-Loss Reserve is registered on one `(Hub, asset)` and its `coverDeficit(borrowSpoke, maxAmount)` covers only CDP Spokes on its DAO-set allowlist, at most `min(maxAmount, recorded deficit, funded balance)`, in its own asset (`SpokeNotAllowlisted`); no First-Loss Reserve can cover a deficit in another asset (Source: Q-142, Q-190, Q-236) |
-| Result | Launch condition — Aave Labs confirms the coverage caller and its allowlist enforcement for every First-Loss Reserve before its asset's `drawCap` rises above 0 |
+| Result | Mitigated — `COVERAGE_ROLE` is held by the Emergency Guardian and the Aave Protocol Guardian (`Q-142`), and each First-Loss Reserve's `coverDeficit` enforces its allowlist and its asset |
 | Checks | MATH-ST-50, TEST-199 |
 
 ### ATTACK-091: Cap bypass or lockout through counter drift
@@ -1703,7 +1704,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Prerequisites | An account whose payout transfer failed and was escrowed; any address, or a hostile LPVaultSwap installed through the timelock at the normal delay |
 | Attack approach | Call the escrow's claim for another borrower's credit; make a hostile LPVaultSwap deposit with a false borrower or amount; deposit directly to the escrow and claim |
 | Impact | None for honest deposits: only the credited account (the borrower, `feeRecipient` or the caller) can claim. A hostile LPVaultSwap could misdirect the payouts of liquidations it settles during its lifetime, which it could equally do by paying the wrong address directly |
-| Expected protection | `INV-061`, `INV-068`: the escrow, whose only job is to hold payouts whose transfer the token refused (`Q-401`), credits only deposits from LPVaultSwap while it holds the Lock, which never escrows the caller's `keeperOut` (paid to `msg.sender` or the call reverts), keyed by account and token, each for the measured rise of its balance capped at the amount requested, so a token that delivers less credits only what arrived and an excess stays uncredited; only the credited account (the borrower, `feeRecipient` or the caller, `Q-389`), as `msg.sender`, can claim, and a claim pays its whole credit to the recipient it names; there is no claim on behalf and no way to move a credit; credited equals claimed plus held for every account and token; the escrow is immutable, with no admin and no sweep, so donations stay where they are and change no credit. LPVaultSwap upgrades wait the normal delay (5 days) and any canceller can cancel them (Source: Q-090, Q-214, Q-226, Q-228, Q-401, Q-404) |
+| Expected protection | `INV-061`, `INV-068`: the escrow, whose only job is to hold payouts whose transfer the token refused (`Q-401`), credits only deposits from LPVaultSwap while it holds the Lock, which never escrows the caller's `keeperOut` (paid to `msg.sender` or the call reverts), keyed by account and token, each for the measured rise of its balance capped at the amount requested, so a token that delivers less credits only what arrived and an excess stays uncredited; only the credited account (the borrower, `feeRecipient` or the caller, `Q-389`), as `msg.sender`, can claim, and a claim pays its whole credit, or an amount up to it and never more (`REQ-ESCROW-020`), to the recipient it names; there is no claim on behalf and no way to move a credit; credited equals claimed plus held for every account and token; the escrow is immutable, with no admin and no sweep, so donations stay where they are and change no credit. LPVaultSwap upgrades wait the normal delay (5 days) and any canceller can cancel them (Source: Q-090, Q-214, Q-226, Q-228, Q-401, Q-404) |
 | Result | Mitigated |
 | Checks | TEST-173, TEST-179, PROP-052 |
 
@@ -2953,3 +2954,46 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Result | Accepted risk — owner: Aave DAO; bound: the accounts liquidatable while the setting is on and what their liquidators borrow against the shares taken, which the debt reserves' caps and credit lines limit |
 | Checks | TEST-055 |
 
+## Keeper gas
+
+### ATTACK-207: Draining the gas vault
+
+| Field | Value |
+|---|---|
+| Target | AvanaGasVault |
+| Objective | Take the vault's ETH, or make it pay more than its signers need |
+| Affected steps | `EMG-115` refill |
+| Prerequisites | A wallet; optionally a builder relationship to recover a high tip |
+| Attack approach | Call `topUp` and `topUpAll` repeatedly or with a signer chosen to profit; set a high `tx.gasprice` to claim a refund; re-enter a top-up from a signer's code; call a privileged function |
+| Impact | Without the design: a gas refund at the caller's own gas price was drained for about 204 ETH in 2022 |
+| Expected protection | `REQ-GASV-001`: no refund, no read of `tx.gasprice` or `gasleft()`. `REQ-GASV-004`: the caller chooses only which listed signer, the amount is `min(target − balance, cap room, vault balance)`, paid to the signer, never to the caller, and only while the signer is below its minimum. `REQ-GASV-005`: at most `periodCap` per signer over any 24 h. `REQ-GASV-012`: withdrawal only to `TREASURY`, only by the timelock. `REQ-GASV-013`: re-entry refused. |
+| Result | Mitigated: repeated calls do nothing after the first; no caller gains |
+| Checks | TEST-333, TEST-334, TEST-335, PROP-113 |
+
+### ATTACK-208: Stolen keeper signer key
+
+| Field | Value |
+|---|---|
+| Target | A keeper signer and the AvanaGasVault |
+| Objective | Turn a stolen signing permission into ETH |
+| Affected steps | `EMG-081` step 5 |
+| Prerequisites | Signing access to one KMS key |
+| Attack approach | Burn the signer's ETH, trigger `topUp`, repeat; time the sends around a period boundary to take two caps |
+| Impact | At most the signer's balance plus one `periodCap` before the guardian removes the signer; a calendar-period cap would allow two caps across a reset |
+| Expected protection | `REQ-GASV-005`: the cap holds over any 24 h window, not per calendar period, and at most four sends per window. `REQ-GASV-010`: the Emergency Guardian removes the signer at once. The operator helper pays only `FUNDING_SAFE` and its signer can only start liquidations (`Q-404`). |
+| Result | Mitigated: loss bounded to 2 × `targetBalance` with `periodCap = targetBalance` |
+| Checks | TEST-333, TEST-334, PROP-113 |
+
+### ATTACK-209: Making Avana's keeper spend gas
+
+| Field | Value |
+|---|---|
+| Target | Avana's keeper and its signers |
+| Objective | Run up Avana's gas bill or empty the keeper's balance |
+| Affected steps | `EMG-114`, `REQ-RISK-090`, `REQ-RISK-091`, `REQ-ORACLE-037` |
+| Prerequisites | Capital to move a pool, toggle an oracle state, or open dust accounts |
+| Attack approach | Hold a pool's TWAP off so the oracle stays non-Live and the keeper pokes every block; flap a temporary breaker reason; open many dust accounts for the keeper to liquidate at its own gas |
+| Impact | Without send-on-change: about 0.86M gas per block per market for a held non-Live state, about 6B gas per day |
+| Expected protection | `REQ-ORACLE-037`, `REQ-RISK-090`, `REQ-RISK-091`: check every block, send on change, so a held episode costs one send; security reasons latch. `EMG-114`: `scheduled` and `lazy` stop at their daily budget, every class keeps the per-transaction ceiling, M-31 pages on a spend anomaly. Dust: the attacker pays about 1.5× Avana's gas per account and loses collateral above `minPledgeUsd`; the cost is reported daily (`Q-413`). |
+| Result | Mitigated for oracle and breaker toggling; dust liquidations accepted and tracked |
+| Checks | TEST-338 |

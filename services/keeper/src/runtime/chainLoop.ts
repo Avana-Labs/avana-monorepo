@@ -14,6 +14,7 @@ import { createChainReader } from "../chain/reads.ts";
 import type { AccountCache } from "../discovery/accountCache.ts";
 import { type Head, ProcessedHeads, isReorg } from "../discovery/stream.ts";
 import { breakerPokeJob } from "../jobs/breakerPoke.ts";
+import { gasTopUpJob } from "../jobs/gasTopUp.ts";
 import { liquidationJob } from "../jobs/liquidation.ts";
 import { PokeBook, oraclePokeJob } from "../jobs/oraclePoke.ts";
 import { settlePendingJob } from "../jobs/settlePending.ts";
@@ -50,11 +51,13 @@ export interface ChainLoopDeps {
 
 export function chainLoop(d: ChainLoopDeps) {
   const book = new PokeBook();
-  // A poke a liquidation pre-empted is sent again: an oracle poke forgets its last poke so it is due in the next pass;
-  // a breaker poke is due again as long as its simulation still records a breach.
+  // A poke a liquidation pre-empted is sent again: an oracle poke forgets its last poke and the state it would have
+  // stored, so it is due in the next pass; a breaker poke is due again as long as its simulation still records a breach.
   if (d.submitter) {
     d.submitter.preempted = (plan) => {
-      if (plan.job === "oraclePoke") book.lastPokeAt.delete(plan.params.oracle as Address);
+      if (plan.job !== "oraclePoke") return;
+      book.lastPokeAt.delete(plan.params.oracle as Address);
+      book.lastState.delete(plan.params.oracle as Address);
     };
   }
   const hints = new Map<string, RetryHint>();
@@ -99,8 +102,9 @@ export function chainLoop(d: ChainLoopDeps) {
       },
     }),
     settlePendingJob(),
-    oraclePokeJob(book),
+    oraclePokeJob(book, { from: d.from }),
     breakerPokeJob(),
+    gasTopUpJob(d.from),
   ];
   const chainId = d.cfg.chain.id;
   const pipeline: PipelineDeps = {

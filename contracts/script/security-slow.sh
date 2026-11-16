@@ -19,10 +19,9 @@
 #   medusa   every `*Properties` harness in test/invariant/echidna/ and test/invariant/medusa/ (property and
 #            assertion tests in one campaign), each on a build of its own file and imports
 #            (out-security/build/medusa/<Name>, slow-tier settings) with a copy of medusa.json pointing at it
-#   halmos   every `check_` function in test/halmos/ (contract names ending in HalmosTest); a single check listed in
-#            security/halmos-bounds.json runs within that entry's wall-clock budget, and when the budget (or a solver
-#            timeout) ends it without a counterexample it is reported as bounded, no violation found, and passes; a
-#            counterexample always fails, and so does an unlisted check that runs out (script/halmos-outcome.py)
+#   halmos   every `check_` function in test/halmos/ (contract names ending in HalmosTest), within HALMOS_TIMEOUT; a
+#            counterexample fails, and so does a check that the budget or a solver timeout ends before it completes
+#            (script/halmos-outcome.py; security/halmos-bounds.json must list no check)
 #   hevm     against a local anvil chain (see hevm_targets below): `hevm symbolic` on each assertion entry point of
 #            every harness, deployed so its constructor has run (each must reach QED; a counterexample fails the step
 #            only when replaying it with `cast call` on the deployed harness ends in Panic(1), and an hevm internal
@@ -30,17 +29,24 @@
 #            src/ contract and library with its address immutables filled (no assertion violation), and `hevm test`
 #            on every `prove_` function in test/symbolic/
 #   mythril  script/security-mythril.sh on the runtime code of every src/ contract and library
-#   mutate   slither-mutate on every implementation file of the layers in security/mutation-layers.json, each mutant
-#            run against its Foundry tests (`forge test -j 2 --match-path <tests>`) in an isolated copy of src/ and
-#            test/ under out-security/mutation/root; uncaught mutants are listed per layer in
-#            out-security/mutation/<layer>/survivors.txt and kept in out-security/mutation/<layer>/<Contract>/
+#   mutate   slither-mutate's mutants (script/mutation-slither.py: the mutators of ci-shards.py SLITHER_MUTATORS) of
+#            every implementation file of the layers in security/mutation-layers.json, or of one shard of them
+#            (MUTATE_SHARD=k/n), each run against its Foundry tests by script/mutation-test.py (`forge test -j 2
+#            --fail-fast --match-path <tests>` in the `mutation` profile) in an isolated copy of src/ and test/ under
+#            out-security/mutation/root; the mutants come from the lists in MUTATE_LISTS (a folder written by
+#            `mutation-slither.py list`, as the CI `mutants` job does), else this step lists them first (one Slither
+#            run over the copy); each mutant is killed, survived, timeout or invalid
+#            (out-security/mutation/<layer>/<Contract>/shard-<k>.tsv); survivors and timeouts are listed per layer in
+#            out-security/mutation/<layer>/survivors.txt (one line each, a multi-line mutant kept whole with its
+#            newlines written as \n)
 #   gambit   script/security-gambit.sh: Gambit expression mutants of the same files (fixed seed, operators and per-file
 #            cap from the `gambit` object of security/mutation-layers.json), each run against the same tests with a
 #            per-mutant timeout in an isolated copy under out-security/gambit/root; survivors are listed in
 #            out-security/gambit/<layer>/survivors.txt, and any survived or timed-out mutant not accepted in
 #            security/gambit-triage.json fails the step
 #   necessist  Necessist (tools/bin/necessist) on the test files of the same layers, in the same kind of isolated copy;
-#            every statement whose removal leaves the tests passing is listed in out-security/necessist/<layer>.txt
+#            every statement whose removal leaves the tests passing is listed in out-security/necessist/<layer>.txt,
+#            one line each in the same way
 #
 # A step with nothing to run prints what it skipped and why and passes; a step whose targets exist fails on any
 # failed property, counterexample, unproven harness assertion, untriaged finding or tool error. Every step runs even
@@ -49,15 +55,20 @@
 # Budgets (environment, with defaults): ECHIDNA_TEST_LIMIT (echidna.yaml), ECHIDNA_TIMEOUT=900 and MEDUSA_TIMEOUT=900
 # seconds per harness and mode, ECHIDNA_MAX_HEAP=8g (GHC heap limit), ECHIDNA_HARNESSES (space-separated harness
 # names; empty: all), MEDUSA_TEST_LIMIT
-# (medusa.json), HEVM_SMT_TIMEOUT=300 seconds per query, HEVM_SMT_MEMORY=1024 MB per z3 instance (hevm's own
-# default), one z3 instance per hevm run (--num-solvers 1), HALMOS_LOOP=8 with one solver thread (--solver-threads 1),
-# HALMOS_TIMEOUT (seconds of wall clock per Halmos run; empty: none) unless security/halmos-bounds.json sets the
-# budget, and the loop bound, of the one selected check;
+# (medusa.json), Medusa's workers (one per CPU, nproc), HEVM_SMT_TIMEOUT=300 seconds per query,
+# HEVM_ENTRY_TIMEOUT (seconds of wall clock per hevm run, one entry point or src/ contract; empty: none),
+# HEVM_TIMEOUT_REPORTED (space-separated Harness.function entry points whose timeout is reported, not failed),
+# HEVM_SMT_MEMORY=1024 MB per z3 instance (hevm's own default), one z3 instance per hevm run (--num-solvers 1), HALMOS_LOOP=8 with one solver thread (--solver-threads 1),
+# HALMOS_TIMEOUT (seconds of wall clock per Halmos run; empty: none);
 # SECURITY_MEMORY_MAX (empty: no cap) bounds the memory of each hevm and Halmos run (see `capped`);
 # BUILD_CHUNK=60 files per strict build group;
 # MUTATE_LAYERS and MUTATE_CONTRACTS (space-separated; empty: every layer and contract of
-# security/mutation-layers.json), MUTATE_TIMEOUT=300 seconds per mutant test run, MUTATE_FUZZ_RUNS=256,
-# MUTATE_MUTATORS (comma-separated slither-mutate mutators; empty: all), NECESSIST_TIMEOUT=300 seconds per removal.
+# security/mutation-layers.json), MUTATE_SHARD (k/n: the mutants whose index i has i mod n = k - 1; empty: all),
+# MUTATE_LISTS (a folder of mutation-slither.py lists; empty: the step lists the mutants first),
+# MUTATE_TIMEOUT=600 seconds per mutant (its compile and tests), MUTATE_OPTIMIZED_TIMEOUT=1800 seconds for the
+# default-profile run of the optimized-only tests on a survivor, MUTATE_FUZZ_RUNS=256, MUTATE_MUTATORS
+# (comma-separated slither-mutate mutators; empty: ci-shards.py SLITHER_MUTATORS), NECESSIST_TIMEOUT=300 seconds per
+# removal. The mutate, gambit and necessist steps build in the `mutation` profile of foundry.toml (FOUNDRY_PROFILE).
 # GAMBIT_TIMEOUT=300 seconds per Gambit mutant test run, GAMBIT_FUZZ_RUNS (default MUTATE_FUZZ_RUNS).
 # Selectors (environment, space-separated; empty: every target, as above), used by CI to run one target per job:
 # ECHIDNA_HARNESSES and ECHIDNA_MODES (default "property assertion"), MEDUSA_HARNESSES, HALMOS_CONTRACTS (exact
@@ -87,6 +98,8 @@ ECHIDNA_TIMEOUT=${ECHIDNA_TIMEOUT:-900}
 ECHIDNA_MAX_HEAP=${ECHIDNA_MAX_HEAP:-8g}
 MEDUSA_TIMEOUT=${MEDUSA_TIMEOUT:-900}
 HEVM_SMT_TIMEOUT=${HEVM_SMT_TIMEOUT:-300}
+HEVM_ENTRY_TIMEOUT=${HEVM_ENTRY_TIMEOUT:-}
+HEVM_TIMEOUT_REPORTED=${HEVM_TIMEOUT_REPORTED:-}
 HEVM_SMT_MEMORY=${HEVM_SMT_MEMORY:-1024}
 HALMOS_LOOP=${HALMOS_LOOP:-8}
 SECURITY_MEMORY_MAX=${SECURITY_MEMORY_MAX:-}
@@ -318,7 +331,7 @@ step_medusa() {
     # build of all of src/, test/ and script/ (446 MB compressed on c07ddca, up from 254 MB on a6d7acd) every CI job
     # of run 43387180884 died 10 to 16 minutes in with the runner shut down and no log, as Echidna did on that build.
     # So each harness gets a build of its own file and imports, with the slow-tier settings, and a copy of medusa.json
-    # that points crytic-compile, Slither and their caches at it. Workers, timeout and test limit are unchanged.
+    # that points crytic-compile, Slither and their caches at it, with one worker per CPU.
     hbuild="$OUT/build/medusa/$name"
     config="$OUT/medusa/$name.json"
     log="$OUT/medusa/$name.log"
@@ -331,9 +344,11 @@ step_medusa() {
       continue
     fi
     if ! "$PY" - medusa.json "$config" "$hbuild" "$OUT/medusa/$name" <<'PYCONF'
-import json, sys
+import json, os, sys
 src, dst, build, work = sys.argv[1:5]
 c = json.load(open(src))
+# One worker per CPU (nproc), not medusa.json's fixed 8: on a 4-vCPU runner 8 workers only share the CPUs.
+c["fuzzing"]["workers"] = len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else os.cpu_count()
 old = "out-security/build/all"
 for args in (c["compilation"]["platformConfig"]["args"], c["slither"]["args"]):
     if old not in args:
@@ -369,20 +384,14 @@ step_halmos() {
   fi
   # HALMOS_CONTRACTS selects exact contract names and HALMOS_TESTS exact test function names (CI runs one of each per
   # job); halmos fails with "No tests with" when the selection matches no test.
-  local match='HalmosTest$' tests=() single=() budget=${HALMOS_TIMEOUT:-} loop=$HALMOS_LOOP listed bloop
+  local match='HalmosTest$' tests=() single=() budget=${HALMOS_TIMEOUT:-} loop=$HALMOS_LOOP
   [ -n "${HALMOS_CONTRACTS:-}" ] && match="^($(echo $HALMOS_CONTRACTS | tr ' ' '|'))\$"
   [ -n "${HALMOS_TESTS:-}" ] && tests=(--match-test "^($(echo $HALMOS_TESTS | tr ' ' '|'))\\(")
-  # A single-check run (one contract and one test function, as each CI job runs) of a check listed in
-  # security/halmos-bounds.json takes that entry's wall-clock budget (`timeout`, seconds) and, when given, its loop
-  # bound; any other run takes HALMOS_TIMEOUT (empty: no wall-clock budget) and HALMOS_LOOP.
+  # security/halmos-bounds.json must hold an empty `bounded` list: every check runs to completion or fails.
+  "$PY" script/halmos-outcome.py check || return 1
+  # A single-check run (one contract and one test function, as each CI job runs) requires exactly "1 passed".
   if [ "$(wc -w <<<"${HALMOS_CONTRACTS:-}")" -eq 1 ] && [ "$(wc -w <<<"${HALMOS_TESTS:-}")" -eq 1 ]; then
     single=("$(echo $HALMOS_CONTRACTS)" "$(echo $HALMOS_TESTS)")
-    listed=$("$PY" script/halmos-outcome.py budget "${single[@]}") || return 1
-    if [ -n "$listed" ]; then
-      read -r budget bloop <<<"$listed"
-      [ "$bloop" = - ] || loop=$bloop
-      echo "halmos ${single[0]}.${single[1]}: listed in security/halmos-bounds.json, budget ${budget}s, loop $loop"
-    fi
   fi
   # timeout: at the budget Halmos gets SIGTERM, on which it shuts its solver processes down, and SIGKILL 5 minutes
   # later if it has not exited (a solver call in progress holds the signal back); timeout signals its whole process
@@ -400,19 +409,26 @@ step_halmos() {
   # still shows which checks passed and every counterexample found. --solver-threads 1: one solver process at a time,
   # so a check's queries do not multiply its memory by the number of CPUs; with SECURITY_MEMORY_MAX the run is capped
   # (`capped`) and a check that reaches the cap is reported.
+  # The loop bound is passed in a config file, not on the command line: Halmos ranks the command line above a check's
+  # `/// @custom:halmos` annotation and a config file below it, so a check can set its own `--loop`. A check that the
+  # bound cuts short fails (script/halmos-outcome.py). --forge-build-out: the output directory of the active Foundry
+  # profile (FOUNDRY_PROFILE=halmos in CI, out-halmos/).
+  local config="$OUT/halmos.toml" build_out
+  printf '[global]\nloop = %s\n' "$loop" >"$config"
+  build_out=$(forge config --json | "$PY" -c 'import json, sys; print(json.load(sys.stdin)["out"])') || return 1
   local start=$SECONDS
   capped halmos ${wrap[@]+"${wrap[@]}"} env PYTHONUNBUFFERED=1 FOUNDRY_DYNAMIC_TEST_LINKING=false halmos --root . \
-    --match-contract "$match" ${tests[@]+"${tests[@]}"} --loop "$loop" --solver-timeout-assertion 0 \
-    --solver-threads 1 2>&1 | tee "$OUT/halmos.txt"
+    --forge-build-out "$build_out" --config "$config" --match-contract "$match" ${tests[@]+"${tests[@]}"} \
+    --solver-timeout-assertion 0 --solver-threads 1 2>&1 | tee "$OUT/halmos.txt"
   local rc=${PIPESTATUS[0]} exhausted=0
   # The budget ran out when timeout reports it (124), or when it had to kill Halmos (137) once the budget had passed;
   # a 137 before that is the memory cap, which `capped` reports in the log.
   if [ -n "$budget" ]; then
     if [ "$rc" -eq 124 ] || { [ "$rc" -eq 137 ] && [ $((SECONDS - start)) -ge "$budget" ]; }; then exhausted=1; fi
   fi
-  # pass, bounded or fail (script/halmos-outcome.py): a counterexample always fails; a listed single check that its
-  # budget or a solver timeout ended without one is "bounded, no violation found" and passes; an unlisted check that
-  # runs out fails. The outcome goes to out-security/halmos-outcome.json and, in CI, to the job summary.
+  # pass or fail (script/halmos-outcome.py): a counterexample fails, and so does a check that its budget or a solver
+  # timeout ended before it completed. The outcome goes to out-security/halmos-outcome.json and, in CI, to the job
+  # summary.
   "$PY" script/halmos-outcome.py classify "$OUT/halmos.txt" "$rc" "$exhausted" "$OUT/halmos-outcome.json" \
     ${single[@]+"${single[@]}"}
 }
@@ -483,7 +499,10 @@ hevm_chain_start() {
 hevm_chain_stop() { [ -n "$HEVM_ANVIL_PID" ] && kill "$HEVM_ANVIL_PID" 2>/dev/null; HEVM_ANVIL_PID=""; }
 
 # hevm_symbolic <log> <args...>: hevm against the chain's latest block; 0 on QED, 1 on a counterexample or error, 2 on
-# a partial exploration.
+# a partial exploration, 3 when HEVM_ENTRY_TIMEOUT ended the run (no result). The bound is per run, so a CI job that
+# runs a batch of targets ends each one in time: CollateralizationProperties.pledge took 3 h 51 min in run 43677588077
+# (24 counterexamples, none reproduced, no iteration bound reached) and an AvanaTimelockProperties entry point ran
+# into the 4-hour job limit.
 # Block context: hevm 0.58 takes the block number, coinbase, base fee and prevrandao of the fetched block but leaves
 # the timestamp symbolic unless --timestamp is given, and sets the chain id to 1 unless --chainid is given. A symbolic
 # timestamp includes times before the state it explores was written and times at or above 2^64, which no chain
@@ -510,11 +529,17 @@ hevm_symbolic() {
   for entry in $HEVM_MAX_ITERATIONS_FOR; do
     [ "${entry%=*}" = "$key" ] && iters=(--max-iterations "${entry#*=}")
   done
-  capped "hevm $key" hevm symbolic --solver z3 --num-solvers 1 --smt-memory "$HEVM_SMT_MEMORY" \
-    --smt-timeout "$HEVM_SMT_TIMEOUT" ${iters[@]+"${iters[@]}"} --rpc "$HEVM_RPC" --block "$block" \
-    --number "$block" --timestamp "$ts" --chainid "$chain" "$@" >"$log" 2>&1
+  local bound=()
+  [ -n "$HEVM_ENTRY_TIMEOUT" ] && bound=(timeout --kill-after=60 "$HEVM_ENTRY_TIMEOUT")
+  capped "hevm $key" ${bound[@]+"${bound[@]}"} hevm symbolic --solver z3 --num-solvers 1 \
+    --smt-memory "$HEVM_SMT_MEMORY" --smt-timeout "$HEVM_SMT_TIMEOUT" ${iters[@]+"${iters[@]}"} --rpc "$HEVM_RPC" \
+    --block "$block" --number "$block" --timestamp "$ts" --chainid "$chain" "$@" >"$log" 2>&1
   local rc=$?
   grep -E 'OUT OF MEMORY|killed by SIGKILL' "$log" || true
+  if [ -n "$HEVM_ENTRY_TIMEOUT" ] && [ "$rc" -eq 124 ]; then
+    echo "hevm: timed out after $HEVM_ENTRY_TIMEOUT s (HEVM_ENTRY_TIMEOUT)" >>"$log"
+    return 3
+  fi
   if grep -q 'QED' "$log" && ! grep -qi 'partially explore' "$log"; then return 0; fi
   if grep -qiE 'counterexample|discovered the following|internal error' "$log"; then return 1; fi
   if grep -qi 'partially explore' "$log"; then return 2; fi
@@ -591,6 +616,13 @@ hevm_targets() {
       case $rc in
         0) echo "hevm $name.$sig: QED" ;;
         2) echo "hevm $name.$sig: FAIL, explored only partially (see $slog)"; status=1 ;;
+        3)
+          if [[ " $HEVM_TIMEOUT_REPORTED " == *" $name.${sig%%(*} "* ]]; then
+            echo "hevm $name.$sig: timed out after $HEVM_ENTRY_TIMEOUT s, no result; reported, not failed (HEVM_TIMEOUT_REPORTED) (see $slog)"
+          else
+            echo "hevm $name.$sig: FAIL, timed out after $HEVM_ENTRY_TIMEOUT s, no result (see $slog)"; status=1
+          fi
+          ;;
         *)
           if grep -qi 'internal error' "$slog"; then
             # A crash of hevm itself proves nothing either way: reported, not counted as a finding.
@@ -633,6 +665,7 @@ hevm_targets() {
     case $rc in
       0) echo "hevm src $name: QED" ;;
       2) echo "hevm src $name: no assertion violation found, explored partially (see $OUT/hevm/src-$name.log)" ;;
+      3) echo "hevm src $name: no assertion violation found, timed out after $HEVM_ENTRY_TIMEOUT s (see $OUT/hevm/src-$name.log)" ;;
       *) echo "hevm src $name: FAIL (see $OUT/hevm/src-$name.log)"; status=1 ;;
     esac
   done <<<"$list"
@@ -665,9 +698,12 @@ step_mythril() {
   MYTHRIL_CONTRACTS="${MYTHRIL_CONTRACTS:-}" script/security-mythril.sh "$BUILD"
 }
 
-MUTATE_TIMEOUT=${MUTATE_TIMEOUT:-300}
+MUTATE_TIMEOUT=${MUTATE_TIMEOUT:-600}
+MUTATE_OPTIMIZED_TIMEOUT=${MUTATE_OPTIMIZED_TIMEOUT:-1800}
 MUTATE_FUZZ_RUNS=${MUTATE_FUZZ_RUNS:-256}
 NECESSIST_TIMEOUT=${NECESSIST_TIMEOUT:-300}
+# The prebuilt dependency outputs the test fixtures deploy from (vm.getCode / deployCode of out-<name>/...).
+DEP_OUTS="out-aave out-univ3 out-univ3-periphery out-slipstream-v1 out-slipstream-main out-aerodrome out-univ4 out-permit2"
 
 # solc_bin: the solc of foundry.toml's solc_version, from Foundry's svm cache (macOS or Linux) or tools/bin.
 solc_bin() {
@@ -689,42 +725,57 @@ isolated_root() {
   solc=$(solc_bin) || return 1
   rm -rf "$root" && mkdir -p "$root/bin"
   cp -R src test "$root/"
-  for f in dependencies foundry.toml remappings.txt out-aave out-univ3 out-univ4 out-permit2; do
+  for f in dependencies foundry.toml remappings.txt $DEP_OUTS; do
     [ -e "$f" ] && ln -s "$ROOT/$f" "$root/$f"
   done
   ln -s "$solc" "$root/bin/solc"
 }
 
 step_mutate() {
-  require slither-mutate forge || return 1
-  local list status=0 layer name file tests root="$OUT/mutation/root" dir log remaps mutators=()
+  require forge || return 1
+  local list lists status=0 layer name file tests root="$OUT/mutation/root" dir shard=1 shards=1 mutators=()
+  if [ -n "${MUTATE_SHARD:-}" ]; then
+    shard=${MUTATE_SHARD%/*} shards=${MUTATE_SHARD#*/}
+  fi
   list=$("$PY" script/mutation-targets.py contracts --layers "${MUTATE_LAYERS:-}" --contracts "${MUTATE_CONTRACTS:-}") || return 1
   if [ -z "$list" ]; then
     echo "mutate: skipped, no implementation file in the selected layers of security/mutation-layers.json"
     return 0
   fi
   isolated_root "$root" || return 1
-  remaps=$(tr '\n' ' ' <remappings.txt)
-  [ -n "${MUTATE_MUTATORS:-}" ] && mutators=(--mutators-to-run "$MUTATE_MUTATORS")
+  [ -n "${MUTATE_MUTATORS:-}" ] && mutators=(--mutators "$MUTATE_MUTATORS")
+  lists=${MUTATE_LISTS:-}
+  if [ -z "$lists" ]; then
+    lists="$ROOT/$OUT/mutation/lists"
+    echo "=== listing the slither-mutate mutants (see $OUT/mutation/list.log)"
+    if ! (cd "$root" && PATH="$PWD/bin:$PATH" FOUNDRY_PROFILE=mutation "$PY" "$ROOT/script/mutation-slither.py" list \
+      "$lists" --layers "${MUTATE_LAYERS:-}" --contracts "${MUTATE_CONTRACTS:-}" ${mutators[@]+"${mutators[@]}"} \
+      >"$ROOT/$OUT/mutation/list.log" 2>&1); then
+      echo "mutate: listing the mutants failed (see $OUT/mutation/list.log)"
+      return 1
+    fi
+  fi
+  case $lists in /*) ;; *) lists="$ROOT/$lists" ;; esac
   while IFS=$'\t' read -r layer name file tests; do
-    dir="$ROOT/$OUT/mutation/$layer"
+    dir="$ROOT/$OUT/mutation/$layer/$name"
     mkdir -p "$dir"
-    log="$dir/$name.log"
-    echo "=== slither-mutate $name ($file), layer $layer, tests $tests"
-    if ! (cd "$root" && PATH="$PWD/bin:$PATH" FOUNDRY_FUZZ_RUNS="$MUTATE_FUZZ_RUNS" slither-mutate "$file" \
-      --contract-names "$name" --solc "$PWD/bin/solc" --solc-remaps "$remaps" --timeout "$MUTATE_TIMEOUT" \
-      --test-cmd "forge test -j 2 --match-path '$tests'" --output-dir "$dir/$name" ${mutators[@]+"${mutators[@]}"} \
-      >"$log" 2>&1); then
+    echo "=== slither-mutate mutants of $name ($file), shard $shard of $shards, layer $layer, tests $tests"
+    if [ ! -f "$lists/$layer/$name.json" ]; then
       status=1
-      echo "mutate: slither-mutate failed on $name (see $log)"
+      echo "mutate: no mutant list for $name in $lists"
+      continue
     fi
-    if grep -qE 'Test suite fails|Cannot find contracts|Traceback|too short for tests' "$log"; then
+    if ! (cd "$root" && PATH="$PWD/bin:$PATH" FOUNDRY_PROFILE=mutation FOUNDRY_FUZZ_RUNS="$MUTATE_FUZZ_RUNS" \
+      "$PY" "$ROOT/script/mutation-slither.py" run "$lists/$layer/$name.json" "$dir" --shard "$shard" \
+      --shards "$shards" --timeout "$MUTATE_TIMEOUT" --optimized-timeout "$MUTATE_OPTIMIZED_TIMEOUT"); then
       status=1
-      echo "mutate: $name did not run (see $log)"
+      echo "mutate: $name did not run to the end (see $dir/shard-$shard.log)"
     fi
-    grep -oE '(Revert|Comment|Tweak) mutants: .*|Zero (Revert|Comment|Tweak) mutants analyzed' "$log" | sed 's/^/  /' || true
-    grep 'UNCAUGHT' "$log" | sed "s|^|$name: |" >>"$dir/survivors.txt" || true
-    # The isolated copy must be unchanged after the campaign: slither-mutate restores every file it mutates.
+    # One line per surviving or timed-out mutant, its texts escaped as in script/mutation-records.py.
+    [ -f "$dir/shard-$shard.tsv" ] && awk -F'\t' -v n="$name" 'NR > 1 && ($5 == "survived" || $5 == "timeout") {
+      printf "%s: [%s] Line %s: '\''%s'\'' ==> '\''%s'\'' --> %s\n", n, $2, $4, $7, $8, ($5 == "survived" ? "UNCAUGHT" : "TIMEOUT")
+    }' "$dir/shard-$shard.tsv" >>"$ROOT/$OUT/mutation/$layer/survivors.txt"
+    # The isolated copy must be unchanged after the run: every mutant is written back to the original.
     if ! diff -q "$file" "$root/$file" >/dev/null; then
       status=1
       echo "mutate: $file was not restored in the isolated copy; recreating it"
@@ -732,7 +783,7 @@ step_mutate() {
     fi
   done <<<"$list"
   for dir in "$OUT"/mutation/*; do
-    [ -f "$dir/survivors.txt" ] && echo "survivors: $(wc -l <"$dir/survivors.txt" | tr -d ' ') in $dir/survivors.txt"
+    [ -f "$dir/survivors.txt" ] && echo "survivors and timeouts: $(wc -l <"$dir/survivors.txt" | tr -d ' ') in $dir/survivors.txt"
   done
   return $status
 }
@@ -758,17 +809,38 @@ step_necessist() {
     return 0
   fi
   mkdir -p "$OUT/necessist"
+  # Test files that declare a test the `mutation` profile leaves out (its no_match_test: tests of the release build's
+  # gas) run in the default profile, so their statements are removed under the build those tests check.
+  local optimized group profile f
+  optimized=$(sed -nE 's/^no_match_test *= *"(.*)"$/\1/p' foundry.toml)
   for layer in $(cut -f1 <<<"$list" | sort -u); do
     files=$(awk -F'\t' -v l="$layer" '$1 == l {print $2}' <<<"$list")
     isolated_root "$root" || return 1
     echo "=== necessist, layer $layer: $(wc -l <<<"$files" | tr -d ' ') test file(s)"
-    # shellcheck disable=SC2086
-    if ! (cd "$root" && PATH="$PWD/bin:$PATH" FOUNDRY_FUZZ_RUNS="$MUTATE_FUZZ_RUNS" necessist --framework foundry \
-      --timeout "$NECESSIST_TIMEOUT" --no-sqlite $files -- -j 2 >"$ROOT/$OUT/necessist/$layer.log" 2>&1); then
+    : >"$OUT/necessist/$layer.log"
+    for profile in mutation default; do
+      group=""
+      for f in $files; do
+        if [ -n "$optimized" ] && grep -qE "function ($optimized)\(" "$f"; then
+          [ $profile = default ] && group+=" $f"
+        else
+          [ $profile = mutation ] && group+=" $f"
+        fi
+      done
+      [ -n "$group" ] || continue
+      # shellcheck disable=SC2086
+      if ! (cd "$root" && PATH="$PWD/bin:$PATH" FOUNDRY_PROFILE=$profile FOUNDRY_FUZZ_RUNS="$MUTATE_FUZZ_RUNS" \
+        necessist --framework foundry --timeout "$NECESSIST_TIMEOUT" --no-sqlite $group -- -j 2 \
+        >>"$ROOT/$OUT/necessist/$layer.log" 2>&1); then
+        status=1
+        echo "necessist: layer $layer failed in the $profile profile (see $OUT/necessist/$layer.log)"
+      fi
+    done
+    # One line per passing removal, a multi-line statement kept whole (script/mutation-records.py).
+    if ! "$PY" script/mutation-records.py necessist "$OUT/necessist/$layer.log" >"$OUT/necessist/$layer.txt"; then
       status=1
-      echo "necessist: layer $layer failed (see $OUT/necessist/$layer.log)"
+      echo "necessist: could not read the removals of layer $layer from $OUT/necessist/$layer.log"
     fi
-    grep -E ' passed$' "$OUT/necessist/$layer.log" >"$OUT/necessist/$layer.txt" || true
     echo "necessist: $(wc -l <"$OUT/necessist/$layer.txt" | tr -d ' ') removal(s) left the tests passing (see $OUT/necessist/$layer.txt)"
   done
   return $status

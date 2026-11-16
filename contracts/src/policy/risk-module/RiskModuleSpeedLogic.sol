@@ -52,36 +52,6 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
     }
 
     /// @inheritdoc IRiskModuleSpeedLogic
-    /// @custom:spec REQ-RISK-092, SPEC-CAP-013
-    function borrowInputs(
-        address proxy,
-        uint256 debtReserveId,
-        uint256 amount
-    ) external view override returns (BorrowSpeedInputs memory inputs) {
-        // The account's Spoke is the market's Spoke; the borrow logic checked it before this read.
-        // forge-lint: disable-next-line(unused-return)
-        (, uint256 marketId) = _account(proxy);
-        inputs = _inputs(marketId, debtReserveId, amount);
-    }
-
-    /// @inheritdoc IRiskModuleSpeedLogic
-    /// @custom:spec REQ-RISK-097
-    function borrowInputsOf(
-        uint256 marketId,
-        uint256 debtReserveId
-    ) external view override returns (BorrowSpeedInputs memory inputs) {
-        inputs = _inputs(marketId, debtReserveId, 0);
-    }
-
-    /// @inheritdoc IRiskModuleSpeedLogic
-    /// @custom:spec REQ-RISK-093, REQ-RISK-097
-    function pledgeInputsOf(
-        uint256 marketId
-    ) external view override returns (MarketSpeedLimits memory limits, uint256 bookedUsd) {
-        (limits, bookedUsd) = _pledgeInputs(marketId);
-    }
-
-    /// @inheritdoc IRiskModuleSpeedLogic
     /// @custom:spec REQ-RISK-092, SPEC-CAP-011, SPEC-CAP-012, SPEC-CAP-013
     function borrowCharge(
         address proxy,
@@ -93,7 +63,7 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
         override
         returns (uint256 marketId, bytes32 debtKey, SpeedWindow memory market, SpeedWindow memory debt)
     {
-        // As in `borrowInputs`.
+        // The account's Spoke is the market's Spoke; the borrow logic checked it before this read.
         // forge-lint: disable-next-line(unused-return)
         (, marketId) = _account(proxy);
         BorrowSpeedInputs memory s = _inputs(marketId, debtReserveId, amount);
@@ -270,7 +240,6 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
         address spoke = m.spoke;
         DebtReserveDef memory def = _registry().getDebtReserve(spoke, r);
         address oracle = IAaveV4Spoke(spoke).ORACLE();
-        inputs.marketId = marketId;
         inputs.hub = def.fundingHub;
         inputs.asset = def.asset;
         inputs.debtKey = keccak256(abi.encode(def.fundingHub, def.asset));

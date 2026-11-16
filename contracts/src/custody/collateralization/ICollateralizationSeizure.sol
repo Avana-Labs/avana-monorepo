@@ -10,7 +10,7 @@ pragma solidity 0.8.28;
 /// AaveAdapter burn the seized units from its own balance (`burnSeized`) between `beginSeizure` and `settleSeizure`,
 /// and before `settlePending`; Collateralization proves each burn with a supply check. Reads no price, pause or
 /// policy. A seizure walks at most `MAX_RECORDS_PER_ACCOUNT_MARKET` = 16 records, so its gas is bounded by about
-/// 1.31M + 16 x 0.29M = 5.95M on every chain (AMMN-GAS-01).
+/// 4.61M + 16 x 0.17M = 7.33M on every chain, within the 7.5M liquidation gas budget (AMMN-GAS-01).
 /// @custom:spec REQ-VAULT-046, REQ-VAULT-050, REQ-VAULT-063, REQ-VAULT-086, REQ-VAULT-138, REQ-COLL-008, Q-224, Q-369
 interface ICollateralizationSeizure {
     /// @notice Snapshots the proxy's supplied shares and the token's total supply before LPVaultSwap calls

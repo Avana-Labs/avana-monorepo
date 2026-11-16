@@ -1,13 +1,13 @@
 # services/monitor
 
-Avana's monitoring service: the signals `M-01` to `M-30` of [services/README.md](../README.md#monitoring-and-alerting) at warn and page levels, each sent to its responders with its playbook, every page re-read on a second RPC provider at the same block before it goes out, every notice logged with its block (`EMG-075`).
+Avana's monitoring service: the signals `M-01` to `M-36` of [services/README.md](../README.md#monitoring-and-alerting) at warn and page levels, each sent to its responders with its playbook, every page re-read on a second RPC provider at the same block before it goes out, every notice logged with its block (`EMG-075`).
 
 ## How it works
 
 Each chain is read every `MONITOR_INTERVAL_SECONDS` (12 by default), one round at a time:
 
 1. The keeper's findings at the head: alerts the keeper instances posted (held while they keep arriving, resolved once the head is more than two blocks past the last report) and each instance's heartbeat (3 blocks behind the head pages its on-call engineer).
-2. Each probe ([src/probes.ts](src/probes.ts)) reads its inputs at the head on the primary provider and judges them: the chain snapshot of `@avana/services-common/views`, the oracles, coverage and pools, contract events since the last round, issuer probes, route depth (every `MONITOR_ROUTE_CHECK_HOURS`, 24 by default), and where configured the Safes, the Core Hub GHO rate and the frontend. A subject whose read fails is unread: its open alert is neither resolved nor re-sent.
+2. Each probe ([src/probes.ts](src/probes.ts)) reads its inputs at the head on the primary provider and judges them: the chain snapshot of `@avana/services-common/views`, the oracles, coverage and pools, contract events since the last round, issuer probes, route depth (every `MONITOR_ROUTE_CHECK_HOURS`, 24 by default), each market's oracle checkpoint, and where configured the Safes, the Core Hub GHO rate and the frontend. A subject whose read fails is unread: its open alert is neither resolved nor re-sent.
 3. Each page is confirmed: the probe is read again on the second provider at the same block, and the values the page was judged from must match. A page they contradict goes out as a warn with a note; with the second provider down it still pages, marked unconfirmed.
 4. The alert book turns findings into notices: a condition is sent when it opens, on each level change and when it resolves; an event every time. A page that stays true is sent once.
 5. Each notice goes to its recipients' channels (PagerDuty, an https webhook, the log), retried with backoff, and is appended to the incident log with each channel's answer.
@@ -48,8 +48,14 @@ Routing (services/README.md, Rules): warns reach the on-call engineer and the si
 | M-28 | coverage | Each listed pool's in-range `liquidity()`: −20 % / −40 % within the hour |
 | M-29 | snapshot, ghoRate | Any rate-curve change warns; GHO's `baseDrawnRate` below the Core Hub's (`MONITOR_CORE_HUB_GHO`) pages |
 | M-30 | keeper | As the keeper posts it, one alert per chain: accounts only one of its discovery sources holds (the indexer stream or the RPC log backfill) warn, one-sided for `KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS` pages |
+| M-31 | keeper | As the keeper posts it, every block: the rolling 24 h gas spend from its spend log above 3x the 7-day median daily spend warns, above 5x pages |
+| M-32 | keeper | As the keeper posts it, every block while it holds: a scheduled or lazy fee class at its rolling 24 h budget (`KEEPER_DAILY_BUDGET_WEI_{SCHEDULED,LAZY}_<CHAIN>`) has stopped sending; pages |
+| M-33 | keeper | As the keeper posts it, every block: the standby signer's gas balance below `KEEPER_STANDBY_MIN_BALANCE_WEI_<CHAIN>` warns |
+| M-34 | checkpoint | Each market's LPOracle `priceCheckpoint().at`, read from the chain at the round's block: older than 7,200 s pages, confirmed on the second provider; resolves once a poke stores a new checkpoint. Independent of the keeper's heartbeat |
+| M-35 | gasVault | The chain's AvanaGasVault balance (`getEthBalance` through Multicall3) against what it sent per day (`ToppedUp` logs from the vault's deployment block, over the last 30 days, never below `MONITOR_GAS_VAULT_DAILY_WEI`, `chain:wei`): under 30 days warns, under 14 days pages, confirmed on the second provider; judged once the log reads have caught up with the head. No vault in the manifest: nothing |
+| M-36 | gasVault | Each `ToppedUp` whose amount is below its `requested` and each `TopUpFailed` pages once, confirmed on the second provider over the same block range |
 
-The keeper posts `M-09`, `M-10`, `M-16`, `M-17`, `M-24`, `M-26` and `M-30` ([services/keeper/DESIGN.md](../keeper/DESIGN.md#monitoring-service)); the keeper confirms its block-cadence pages on its fallback provider, and the monitor holds each alert open while it keeps arriving without reading it again.
+The keeper posts `M-09`, `M-10`, `M-16`, `M-17`, `M-24`, `M-26`, `M-30`, `M-31`, `M-32` and `M-33` ([services/keeper/DESIGN.md](../keeper/DESIGN.md#monitoring-service)); the keeper confirms its block-cadence pages on chain state on its fallback provider (`M-31` and `M-32` judge its own spend log, which has nothing to confirm), and the monitor holds each alert open while it keeps arriving without reading it again.
 
 ## Route simulation
 

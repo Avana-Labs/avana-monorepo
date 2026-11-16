@@ -24,11 +24,20 @@
       "approval": "approved (Josue, 2026-11-11)"
     },
     {
+      "fingerprint": "0b5857f338138a3b",
+      "check": "AssignmentMutation",
+      "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
+      "function": "MarketRegistryActivationLogic._checkOracleAndRoutes",
+      "reason": "Equivalent: `listed` is true for every market activateMarket can reach. A market's tokens are written only by MarketRegistryListingLogic._writeMarket, after _bindAndCheck's _checkTokens refuses any unlisted token (TokenNotListed, REQ-CONFIG-017); the only write to TokenDef.listed is `t.listed = true` in listToken, so no token is ever unlisted; and m.tokens is never rewritten after listing. Setting listed = true therefore changes no outcome. The listing refusal is covered by test_TEST_139_firstUnlistedTokenReported.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
       "fingerprint": "ae055e8c39d60707",
       "check": "BinaryOpMutation",
       "file": "src/lens/lens/LensPreview.sol",
       "reason": "Equivalent: BreakerReasons.ORACLE (1 << 0) and CONFIG_DRIFT (1 << 10) are disjoint bits, so ORACLE + CONFIG_DRIFT equals ORACLE | CONFIG_DRIFT (1,025) and the mask is unchanged. The rule itself is covered by test_TEST_238_recreditRescueOnlyCases (ORACLE and CONFIG_DRIFT never force a rescue, POOL_SHARE does).",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), equivalent mutant"
     },
     {
@@ -37,7 +46,7 @@
       "file": "src/policy/parameter-store/ParameterStore.sol",
       "function": "ParameterStore.initialize",
       "reason": "Equivalent: __UUPSUpgradeable_init has an empty body in OpenZeppelin Contracts Upgradeable 5.1.0 (proxy/utils/UUPSUpgradeable.sol), so removing the call changes no state; initializer and the upgrade authorisation are unaffected.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
@@ -46,7 +55,7 @@
       "file": "src/amm/concentrated-liquidity/ClLPVaultCustody.sol",
       "function": "ClLPVaultCustody.positionOwner",
       "reason": "Equivalent: `owner` is the named return value and is already address(0) when the catch branch runs, so dropping the assignment returns the same value.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
@@ -55,7 +64,7 @@
       "file": "src/amm/concentrated-liquidity/ClLPVaultMarkets.sol",
       "function": "ClLPVaultMarkets.consistencyDeviation",
       "reason": "Equivalent: swapping the operands only negates `diff`, and the next statement returns its absolute value (diff < 0 ? -diff : diff); |diff| is at most 2 * MAX_TICK, so the negation cannot overflow.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
@@ -64,7 +73,7 @@
       "file": "src/flash/AaveV3FlashSource.sol",
       "function": "AaveV3FlashSource._clearContext",
       "reason": "Equivalent: ASSET_SLOT is read only in executeOperation behind STATE_SLOT == STATE_OPEN, and the only path to STATE_OPEN (flashLoan) writes ASSET_SLOT first; _clearContext resets STATE_SLOT to STATE_NONE, so a stale transient asset can never be read. REQ-FLASH-001 state checks covered by the TEST-036/TEST-080 suites.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
@@ -73,7 +82,7 @@
       "file": "src/flash/AaveV3FlashSource.sol",
       "function": "AaveV3FlashSource._clearContext",
       "reason": "Equivalent: AMOUNT_SLOT is read only in executeOperation behind STATE_SLOT == STATE_OPEN, and flashLoan writes it before setting STATE_OPEN; with STATE_SLOT reset to STATE_NONE a stale transient amount can never be read.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
@@ -82,16 +91,7 @@
       "file": "src/liquidation/settlement-routes/DexPathRoute.sol",
       "function": "DexPathRoute.routeType",
       "reason": "Equivalent: ROUTE_TYPE is the constant 1, so the literal Gambit substitutes is the same value.",
-      "approval": "pending (Josue)",
-      "review": "mutation gate run 43492416937, equivalent mutant"
-    },
-    {
-      "fingerprint": "03fa68b57b4c7acb",
-      "check": "DeleteExpressionMutation",
-      "file": "src/liquidation/settlement-routes/PegModuleRoute.sol",
-      "function": "PegModuleRoute._runLegs",
-      "reason": "Equivalent for a conforming ERC-4626 wrapper: deposit(amount, ...) pulls exactly `amount` with transferFrom, which spends the `amount` allowance set just before, so the allowance is already 0 when the reset runs. The reset only guards a wrapper that pulls less, which the registry's wrapper review excludes.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
@@ -99,8 +99,8 @@
       "check": "BinaryOpMutation",
       "file": "src/liquidation/settlement-routes/RouteReads.sol",
       "function": "RouteReads.hasFeeSwitch",
-      "reason": "Equivalent in effect: the mutant lowers the gas threshold from ceil(64 * FEE_SWITCH_PROBE_GAS / 63) + POST_CALL_GAS by at most 2 gas; POST_CALL_GAS (5,000) still exceeds the gas spent between the check and the STATICCALL, so the probe receives its full FEE_SWITCH_PROBE_GAS in the 2-gas window and returns the same answer.",
-      "approval": "pending (Josue)",
+      "reason": "Both results are safe: the mutant lowers the threshold from (64 * FEE_SWITCH_PROBE_GAS + 62) / 63 + POST_CALL_GAS by at most 2 gas. Only a call whose gasleft() at the check falls in that 2-gas window behaves differently: the original returns the conservative true without probing, while the mutant runs the probe, which still receives its full FEE_SWITCH_PROBE_GAS because POST_CALL_GAS (5,000) exceeds the gas spent between the check and the STATICCALL, and returns the token's real answer. A killing test would need a gas-exact call that moves with every compiler or optimizer change.",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
@@ -109,7 +109,7 @@
       "file": "src/periphery/flash-liquidator/FlashLiquidator.sol",
       "function": "FlashLiquidator._zeroLoanAllowed",
       "reason": "Equivalent: `allowed` is the named return value and defaults to false, so removing the assignment returns the same value.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
@@ -118,7 +118,7 @@
       "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
       "function": "FlashLiquidatorBase._watch",
       "reason": "Equivalent: without the pre-sized array w.tokens is an empty memory array and _add grows it on the first insert (count == length == 0), so the watched token set and its order are the same; only memory capacity differs.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
@@ -127,7 +127,7 @@
       "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
       "function": "FlashLiquidatorBase._add",
       "reason": "Equivalent in reachable states: _add grows only when count == w.tokens.length, and w.tokens starts at the market's token count (a listed market has at least two tokens), so count >= 2 and count * 2 still leaves room for the new token; the arrays hold the same tokens.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
@@ -136,7 +136,7 @@
       "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
       "function": "FlashLiquidatorBase._clearContext",
       "reason": "Equivalent: MAX_PREMIUM_SLOT is read only in the lender callback after STATE_SLOT == STATE_OPEN is checked, and _openContext writes it before setting STATE_OPEN; with STATE_SLOT reset to STATE_NONE a stale transient value is never read.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
@@ -145,8 +145,17 @@
       "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
       "function": "FlashLiquidatorBase._clearContext",
       "reason": "Equivalent: PARAMS_HASH_SLOT is compared only in the lender callback in the same condition as STATE_SLOT == STATE_OPEN, and _openContext writes it before setting STATE_OPEN; with STATE_SLOT reset to STATE_NONE a stale hash is never read.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "f80dd4503c494eae",
+      "check": "DeleteExpressionMutation",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._clearContext",
+      "reason": "Equivalent: LENDER_SLOT is read only in the lender callback, in the same condition as STATE_SLOT == STATE_OPEN, and in _repay and _payOut, which run only inside a flashLiquidate call after _openContext has written the slot for that call; with STATE_SLOT reset to STATE_NONE, a stale lender from an earlier call in the same transaction is never read.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "mutation gate run 43816627319, equivalent mutant"
     },
     {
       "fingerprint": "767fffb6f2c6c3f9",
@@ -154,8 +163,125 @@
       "file": "src/oracle/debt-oracle/DebtOracleEvaluation.sol",
       "function": "DebtOracleEvaluation._evaluate",
       "reason": "Equivalent in reachable states: the age term is evaluated only when the state is Live, where every served leg passed DebtOracleReads' checks (updatedAt <= block.timestamp and age <= its feedMaxAge, at most a few days). Then 0 <= block.timestamp - servedUpdatedAt < servedUpdatedAt for any timestamp above twice that age (after early 1970), so block.timestamp % servedUpdatedAt equals the difference. The borrow-age gate itself is covered by test_TEST_276_alternateHeldToItsBorrowAge and test_TEST_276_feedFreshUntilHeartbeatPlusMargin.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "mutation gate run 43492416937, equivalent mutant"
+    },
+    {
+      "fingerprint": "8485ad731642472b",
+      "check": "AssignmentMutation",
+      "file": "src/oracle/lp-oracle/LPOracleCLModule.sol",
+      "function": "LPOracleCLModule._clListingChecks",
+      "reason": "Equivalent: CL_CHECK_RANGE is 1 << 0, which is 1, so `failed |= 1` sets the same bit.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "d95f5c3dbcabf9ef",
+      "check": "DeleteExpressionMutation",
+      "file": "src/oracle/lp-oracle/LPOracle.sol",
+      "function": "LPOracle.initialize",
+      "reason": "Equivalent: __AccessControl_init has an empty body in OpenZeppelin Contracts Upgradeable 5.1.0 (access/AccessControlUpgradeable.sol line 82), so removing the call changes no state; the role grants that follow are covered by the LPOracle.Access suite.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "dcd8e624bf02e05a",
+      "check": "AssignmentMutation",
+      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "function": "LPOraclePoke._newestLegInUse",
+      "reason": "Equivalent in reachable states: _newestLegInUse runs only from _startGrace on an evaluation that is not failed, where every token's used route is Valid, and a route is Valid only when each of its legs is Valid, which requires updatedAt <= block.timestamp (LPOracleReads._classify). The maximum is therefore never above block.timestamp and the clamp to now never runs; it is kept as the min(..., now) of REQ-ORACLE-032 (c).",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "0b6e79fc52d397e9",
+      "check": "BinaryOpMutation",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "function": "LPVaultSwapLiquidationLogic._fundReserve",
+      "reason": "Equivalent in reachable states: the reserve is approved exactly `amount` and the allowance is reset after `fund`, with the Lock held, so LPVaultSwap's balance falls by at most `amount` and `before - balance > amount` is false. The balance after `fund` still holds keeperOut, which is positive (keeperOut >= Kf - A with A below D <= Kf), so balance > 0; then before % balance <= before - balance <= amount and the mutant also takes before - balance. Partial and full funding are covered by the TEST-216 suites of LPVaultSwap.BadDebt.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "9c6fbbcec4c0204b",
+      "check": "DeleteExpressionMutation",
+      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "function": "LPVaultSwapDeleverageLogic._clear",
+      "reason": "Equivalent: the amount slot is read only in _checkCallback, after it requires the state slot to be _STATE_OPEN, and _runFlash writes the amount slot in the same step that opens the state; _clear resets the state to _STATE_NONE, so a stale amount from an earlier deleverage in the same transaction can never be read. No view or other code reads the slot.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "591a58108c6b5cc3",
+      "check": "DeleteExpressionMutation",
+      "file": "src/lens/lens/Lens.sol",
+      "function": "Lens.getAccounts",
+      "reason": "Equivalent: Lens.getAccounts forwards with _forward, which copies the module's return data and ends the call with an assembly `return`, so the named return variable is never what the function returns. The `accounts;` expression statement only references it to silence solc warning 5667 (unused named return); replacing it changes no returned value.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "e18c5d7a013d909c",
+      "check": "DeleteExpressionMutation",
+      "file": "src/lens/lens/Lens.sol",
+      "function": "Lens.getApplicationState",
+      "reason": "Equivalent: Lens.getApplicationState forwards with _forward, which copies the module's return data and ends the call with an assembly `return`, so the named return variable is never what the function returns. The `state;` expression statement only references it to silence solc warning 5667 (unused named return); replacing it changes no returned value.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "29deb5fb8ef3022d",
+      "check": "DeleteExpressionMutation",
+      "file": "src/lens/lens/Lens.sol",
+      "function": "Lens.getHubAssetExposure",
+      "reason": "Equivalent: Lens.getHubAssetExposure forwards with _forward, which copies the module's return data and ends the call with an assembly `return`, so the named return variable is never what the function returns. The `view_;` expression statement only references it to silence solc warning 5667 (unused named return); replacing it changes no returned value.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "258e0fc5e1f47a5d",
+      "check": "DeleteExpressionMutation",
+      "file": "src/lens/lens/Lens.sol",
+      "function": "Lens.previewBorrowRecommended",
+      "reason": "Equivalent: Lens.previewBorrowRecommended forwards with _forward, which copies the module's return data and ends the call with an assembly `return`, so the named return variable is never what the function returns. The `(recommended, maximum);` expression statement only references it to silence solc warning 5667 (unused named return); replacing it changes no returned value.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "5afe43802c07f9ec",
+      "check": "DeleteExpressionMutation",
+      "file": "src/lens/lens/Lens.sol",
+      "function": "Lens.previewWithdrawAfter",
+      "reason": "Equivalent: Lens.previewWithdrawAfter forwards with _forward, which copies the module's return data and ends the call with an assembly `return`, so the named return variable is never what the function returns. The `preview;` expression statement only references it to silence solc warning 5667 (unused named return); replacing it changes no returned value.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "975d48f9bae712df",
+      "check": "DeleteExpressionMutation",
+      "file": "src/lens/lens/Lens.sol",
+      "function": "Lens.previewMaxWithdraw",
+      "reason": "Equivalent: Lens.previewMaxWithdraw forwards with _forward, which copies the module's return data and ends the call with an assembly `return`, so the named return variable is never what the function returns. The `sizing;` expression statement only references it to silence solc warning 5667 (unused named return); replacing it changes no returned value.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "7db53a773faf9b94",
+      "check": "DeleteExpressionMutation",
+      "file": "src/lens/lens/LensLiquidationSizing.sol",
+      "function": "LensLiquidationSizing.size",
+      "reason": "Equivalent: s.wholeDebt is read only by LensLiquidation._params, which margins debtToCover when wholeDebt, allCollateral or nearDust holds. Aave liquidates the whole premium before any drawn share, so when every drawn share is liquidated debtRepaid (drawn shares times the index rounded up plus the premium rounded up) is at least getUserTotalDebt; the remainder is 0, nearDust is true and the margined branch is taken without wholeDebt. Whole-debt margining covered by test_TEST_069_wholeDebtIsMarginedAndStaysValidLater and test_TEST_069_wholeDebtSizingIncludesThePremium.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "local Gambit rerun of LensLiquidationSizing with the fixed harness (CI run 43816627319 misread its mutants), equivalent mutant"
+    },
+    {
+      "fingerprint": "914f77f062aac0d5",
+      "check": "AssignmentMutation",
+      "file": "src/lens/lens/LensLiquidationSizing.sol",
+      "function": "LensLiquidationSizing.size",
+      "reason": "Equivalent: s.wholeDebt = false is unobservable for the reason of fingerprint 7db53a773faf9b94: a whole-debt liquidation leaves no remainder, so LensLiquidation._params takes the margined branch through nearDust whatever wholeDebt holds.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "review": "local Gambit rerun of LensLiquidationSizing with the fixed harness (CI run 43816627319 misread its mutants), equivalent mutant"
     }
   ]
 }

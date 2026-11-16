@@ -29,6 +29,7 @@ function context(implementation: string): BlockContext {
 
 const plan: TxPlan = {
   job: "oraclePoke",
+  jobClass: "scheduled",
   subject: TARGET,
   to: TARGET,
   data: "0x18178358",

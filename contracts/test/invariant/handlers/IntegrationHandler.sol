@@ -380,6 +380,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         uint256 loans = env.v3Pool.flashLoanCalls();
         uint256 supply = ClTestToken(env.vt).totalSupply();
         Held memory before = _held(asset, caller, wallet);
+        before.underwater = IntegrationBalanceChecks.underwater(env.spoke, env.vtReserveId, p.params.proxy);
         vm.recordLogs();
         vm.prank(caller);
         try env.lvs.liquidate(p.params) returns (LiquidationResult memory r) {

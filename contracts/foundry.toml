@@ -151,6 +151,17 @@ out = "out-lite"
 cache_path = "cache-lite"
 code_size_limit = 10_000_000
 
+[profile.halmos]
+# The Halmos build (FOUNDRY_PROFILE=halmos in the slow tier's build step and Halmos jobs): src/ and test/halmos/ with
+# what they import, and no scripts (the script directory is test/halmos/ too). Every compiler setting, compilation
+# restriction and additional compiler profile is the default profile's, so each contract compiles as in the default
+# build. Its own out/ and cache/ keep the default build warm; script/security-slow.sh reads the output directory from
+# `forge config`.
+test = "test/halmos"
+script = "test/halmos"
+out = "out-halmos"
+cache_path = "cache-halmos"
+
 [profile.ci]
 # Fresh seed per CI run (taken from the environment by the workflow) so coverage grows over time.
 [profile.ci.fuzz]
@@ -158,9 +169,10 @@ runs = 10_000
 max_test_rejects = 1_000_000
 
 [profile.ci.invariant]
-# 10,000 runs per TEST-007; depth 100 covers the longest operation sequence in the Quint models
-# (pledge, borrow, price move, liquidation, repay, withdraw interleaved across 3 accounts).
-runs = 10_000
+# 1,000 runs at depth 100 per TEST-007: 100,000 handler calls per campaign on every push to main. Depth 100 covers the
+# longest operation sequence in the Quint models (pledge, borrow, price move, liquidation, repay, withdraw interleaved
+# across 3 accounts). The deep campaign of every file runs nightly in the invariant profile below.
+runs = 1_000
 depth = 100
 fail_on_revert = false
 shrink_run_limit = 10_000
@@ -170,8 +182,8 @@ shrink_run_limit = 10_000
 # Spokes, AaveOracle, configurators and LiquidationLogic that fixtures and deploy scripts use have
 # the runtime code of the release (TEST-002, TEST-134). Fixtures deploy from these artifacts with
 # deployCode/vm.getCode; nothing in Avana's src/ or test/ imports Aave sources, so Aave's settings
-# never leak into Avana's build. SpokeInstance links LiquidationLogic at its CREATE2 address,
-# supplied through FOUNDRY_LIBRARIES by the library step in script/README.md.
+# never leak into Avana's build. SpokeInstance keeps its LiquidationLogic placeholder;
+# script/deploy/01_DeployAaveV4 links it to LiquidationLogic's CREATE2 address at deployment.
 src = "dependencies/aave-v4-a3ef63e/src"
 test = "dependencies/aave-v4-a3ef63e/src/deployments"
 # aave-deploy/ holds AvanaAaveV4Roles, which runs Aave's own role procedures for the local fixture; it is compiled here,
@@ -399,8 +411,11 @@ no_match_path = "test/fork/**"
 runs = 2_000
 
 [profile.invariant]
-# Dedicated deep campaign over test/invariant only: fewer runs than ci, but four times the call
-# depth, to reach states that need long histories (incident clock, cooldown, grace latch).
+# Dedicated deep campaign over test/invariant only, nightly and on release tags: 2,000 runs at four times the ci call
+# depth, 800,000 handler calls, to reach states that need long histories (incident clock, cooldown, grace latch). On
+# those runs the test shards leave test/invariant/ out, so each campaign runs once, here. A file that pins its own
+# runs and depth inline for the short profiles (`default.invariant.*`) sets this profile's too
+# (`invariant.invariant.*`).
 match_path = "test/invariant/**"
 no_match_path = "test/fork/**"
 
@@ -436,8 +451,26 @@ fail_on_revert = false
 # Solidity SMTChecker (PROP-043, PROP-044): no reachable overflow, underflow, division by zero or
 # failing assert in the immutable contracts, the LPOracle, DebtOracle, LPVaultSwap, the AaveAdapter (router and its four
 # logic contracts), the RiskModule, the ParameterStore and the swap route contracts.
-# CHC finds loop and cross-function counterexamples that BMC misses.
+# CHC finds loop and cross-function counterexamples that BMC misses. The CI job builds only the target contract's
+# import graph; solc loads the Z3 library (libz3.so.4.12 for solc 0.8.28 on Linux) and the job fails when no solver ran.
+# The model checker reads the source, not the generated code, so the build keeps only the compilation restrictions a
+# file needs to compile at all with the optimizer off, as in the coverage profile: the DebtOracle files need via-IR
+# (stack too deep in the legacy pipeline), the three AMM integrations the optimizer (stack too deep in ABI decoding).
+# Every other file builds once, in the legacy pipeline, so no source is analysed twice.
 optimizer = false
+via_ir = false
+out = "out-smt"
+cache_path = "cache-smt"
+additional_compiler_profiles = [
+  { name = "smt-ir", optimizer = false, via_ir = true },
+  { name = "smt-integrations", optimizer = true, via_ir = false, optimizer_runs = 200 },
+]
+compilation_restrictions = [
+  { paths = "src/oracle/debt-oracle/DebtOracle*.sol", via_ir = true },
+  { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/amm/uniswap-v4/UniswapV4Integration.sol", via_ir = false, optimizer_runs = 200 },
+]
 
 [profile.smt.model_checker]
 engine = "chc"
@@ -453,14 +486,17 @@ targets = [
   "balance",
 ]
 invariants = ["contract", "reentrancy"]
+# z3 only: with no solver available solc reports warnings 7649 (CHC) and 8158 (BMC) instead of failing.
+solvers = ["z3"]
 show_unproved = true
 show_unsupported = true
+show_proved_safe = true
 # PROP-043: the immutable contracts (LPVault, Collateralization, vault token, VaultTokenFactory, ProxyManager,
 # PositionProxy, Lock, PayoutEscrow, the First-Loss Reserve, the AvanaTimelock extension), plus the MarketRegistry, which holds the pause
-# state. PROP-044: LPOracle, DebtOracle, LPVaultSwap (its implementation and three logic contracts), the AaveAdapter
+# state. PROP-044: LPOracle (its deployable implementation LPOracleCL: the model checker skips abstract contracts), DebtOracle, LPVaultSwap (its implementation and three logic contracts), the AaveAdapter
 # router and its four logic contracts, the RiskModule, the ParameterStore and one contract per swap route type
 # (PegModule, DexPath, WrapperThenDex).
-contracts = { "src/amm/uniswap-v3/UniswapV3Integration.sol" = ["UniswapV3Integration"], "src/custody/collateralization/Collateralization.sol" = ["Collateralization"], "src/vault-token/vault-token/VaultToken.sol" = ["VaultToken"], "src/vault-token/vault-token-factory/VaultTokenFactory.sol" = ["VaultTokenFactory"], "src/proxy/proxy-manager/ProxyManager.sol" = ["ProxyManager"], "src/proxy/position-proxy/PositionProxy.sol" = ["PositionProxy"], "src/lock/lock/Lock.sol" = ["Lock"], "src/governance/timelock/AvanaTimelock.sol" = ["AvanaTimelock"], "src/liquidation/payout-escrow/PayoutEscrow.sol" = ["PayoutEscrow"], "src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol" = ["AvanaFirstLossReserve"], "src/policy/market-registry/MarketRegistry.sol" = ["MarketRegistry"], "src/policy/parameter-store/ParameterStore.sol" = ["ParameterStore"], "src/policy/risk-module/RiskModule.sol" = ["RiskModule"], "src/oracle/lp-oracle/LPOracle.sol" = ["LPOracle"], "src/oracle/debt-oracle/DebtOracle.sol" = ["DebtOracle"], "src/liquidation/lp-vault-swap/LPVaultSwap.sol" = ["LPVaultSwap"], "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol" = ["LPVaultSwapLiquidationLogic"], "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol" = ["LPVaultSwapPendingLogic"], "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol" = ["LPVaultSwapDeleverageLogic"], "src/policy/aave-adapter/AaveAdapter.sol" = ["AaveAdapter"], "src/policy/aave-adapter/AaveAdapterUserLogic.sol" = ["AaveAdapterUserLogic"], "src/policy/aave-adapter/AaveAdapterExitLogic.sol" = ["AaveAdapterExitLogic"], "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol" = ["AaveAdapterCollateralLogic"], "src/policy/aave-adapter/AaveAdapterSettlementLogic.sol" = ["AaveAdapterSettlementLogic"], "src/liquidation/settlement-routes/PegModuleRoute.sol" = ["PegModuleRoute"], "src/liquidation/settlement-routes/DexPathRoute.sol" = ["DexPathRoute"], "src/liquidation/settlement-routes/WrapperThenDexRoute.sol" = ["WrapperThenDexRoute"] }
+contracts = { "src/amm/uniswap-v3/UniswapV3Integration.sol" = ["UniswapV3Integration"], "src/custody/collateralization/Collateralization.sol" = ["Collateralization"], "src/vault-token/vault-token/VaultToken.sol" = ["VaultToken"], "src/vault-token/vault-token-factory/VaultTokenFactory.sol" = ["VaultTokenFactory"], "src/proxy/proxy-manager/ProxyManager.sol" = ["ProxyManager"], "src/proxy/position-proxy/PositionProxy.sol" = ["PositionProxy"], "src/lock/lock/Lock.sol" = ["Lock"], "src/governance/timelock/AvanaTimelock.sol" = ["AvanaTimelock"], "src/liquidation/payout-escrow/PayoutEscrow.sol" = ["PayoutEscrow"], "src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol" = ["AvanaFirstLossReserve"], "src/policy/market-registry/MarketRegistry.sol" = ["MarketRegistry"], "src/policy/parameter-store/ParameterStore.sol" = ["ParameterStore"], "src/policy/risk-module/RiskModule.sol" = ["RiskModule"], "src/oracle/lp-oracle/LPOracleCL.sol" = ["LPOracleCL"], "src/oracle/debt-oracle/DebtOracle.sol" = ["DebtOracle"], "src/liquidation/lp-vault-swap/LPVaultSwap.sol" = ["LPVaultSwap"], "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol" = ["LPVaultSwapLiquidationLogic"], "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol" = ["LPVaultSwapPendingLogic"], "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol" = ["LPVaultSwapDeleverageLogic"], "src/policy/aave-adapter/AaveAdapter.sol" = ["AaveAdapter"], "src/policy/aave-adapter/AaveAdapterUserLogic.sol" = ["AaveAdapterUserLogic"], "src/policy/aave-adapter/AaveAdapterExitLogic.sol" = ["AaveAdapterExitLogic"], "src/policy/aave-adapter/AaveAdapterCollateralLogic.sol" = ["AaveAdapterCollateralLogic"], "src/policy/aave-adapter/AaveAdapterSettlementLogic.sol" = ["AaveAdapterSettlementLogic"], "src/liquidation/settlement-routes/PegModuleRoute.sol" = ["PegModuleRoute"], "src/liquidation/settlement-routes/DexPathRoute.sol" = ["DexPathRoute"], "src/liquidation/settlement-routes/WrapperThenDexRoute.sol" = ["WrapperThenDexRoute"] }
 
 [profile.coverage]
 # Coverage builds without the optimizer and without via-IR so source maps stay exact. Fork,
@@ -469,7 +505,7 @@ contracts = { "src/amm/uniswap-v3/UniswapV3Integration.sol" = ["UniswapV3Integra
 # The default profile's compilation_restrictions would otherwise apply here too, and in a via-IR or optimized build
 # forge records a ternary as 0/0, the body of a single-statement `if` as 0 and a revert merged with an identical one as
 # 0, however often tests run them. Only files that do not compile without them keep a restriction: the DebtOracle files
-# need via-IR ("stack too deep" in the legacy pipeline), built here without the optimizer; the two AMM integrations need
+# need via-IR ("stack too deep" in the legacy pipeline), built here without the optimizer; the three AMM integrations need
 # the optimizer ("stack too deep" in ABI decoding without it), built here with the legacy pipeline.
 optimizer = false
 via_ir = false
@@ -491,6 +527,35 @@ compilation_restrictions = [
 
 [profile.coverage.fuzz]
 runs = 64
+
+[profile.mutation]
+# Every mutation-gate job (script/slither-mutant-shard.py, script/security-gambit.sh, Necessist): each mutant is one
+# recompile of the mutated file's dependents plus its tests, so compile time is almost all of a mutant's cost. Built
+# like the coverage profile: no optimizer and no via-IR, except where a file does not compile without them (the
+# DebtOracle files need via-IR, the three AMM integrations the optimizer); none of the default profile's size-only
+# restrictions. The optimizer and the IR pipeline change gas and bytecode size, not what a test asserts, so a mutant a
+# test kills here is killed in the default build too. The three tests whose subject is the release build's gas fail
+# without the optimizer (TEST-042 worst-case poke at the minimum gas, TEST-060 exact lock cycle cost, TEST-216 the
+# via-IR LPVaultSwap logic not copying a 2 MiB return); they are left out here and run on the default profile for each
+# mutant that survives the rest (script/mutation-test.py), so they still kill what they killed before.
+optimizer = false
+via_ir = false
+# Unoptimized code is larger; script/check-sizes.sh judges sizes on the default build.
+code_size_limit = 10_000_000
+# Unoptimized code spends more gas per call: as in the coverage profile, Cascade's 100-account setUp would run out of
+# the default 2^30 test gas limit (a DebtOracle poke then sees less than its 900,000 gas floor).
+gas_limit = 4294967296
+no_match_test = "test_TEST_042_worstCasePokeCompletesAtMinimumGas|test_TEST_060_exactCycleCost|test_TEST_216_hugeReserveReturnDoesNotBlockTheSettlement"
+additional_compiler_profiles = [
+  { name = "mutation-ir", optimizer = false, via_ir = true },
+  { name = "mutation-integrations", optimizer = true, via_ir = false, optimizer_runs = 200 },
+]
+compilation_restrictions = [
+  { paths = "src/oracle/debt-oracle/DebtOracle*.sol", via_ir = true },
+  { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/amm/uniswap-v4/UniswapV4Integration.sol", via_ir = false, optimizer_runs = 200 },
+]
 
 [profile.gas]
 # Gas snapshots (`make gas`, CI `test` job): suites in test/gas/ name each measured operation with

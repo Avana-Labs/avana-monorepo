@@ -102,7 +102,9 @@ contract UniswapV4IntegrationFeesCustodyInvariantTest is UniswapV4IntegrationFix
             (uint256 a0, uint256 a1) = handler.accrued(key);
             assertEq(o0 + p0 + f0, a0, "token0: owed + paid + fallback = accrued");
             assertEq(o1 + p1 + f1, a1, "token1: owed + paid + fallback = accrued");
-            if (handler.depositorOfKey(key) != bob) assertEq(f0 + f1, 0, "fallback only for the blocklisted depositor");
+            if (handler.depositorOfKey(key) != bob) {
+                assertEq(f0 + f1, 0, "fallback only for the blocklisted depositor");
+            }
         }
     }
 

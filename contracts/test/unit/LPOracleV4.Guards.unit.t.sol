@@ -107,8 +107,8 @@ contract LPOracleV4GuardsUnitTest is LPOracleV4Fixture {
 
     // ─── Reads ───
 
-    // TEST-335 verifies: REQ-AMM-V4-003, REQ-AMM-V4-011, REQ-ORACLE-016
-    function test_TEST_335_failedPoolManagerReadsFailTheMarket() public {
+    // TEST-343 verifies: REQ-AMM-V4-003, REQ-AMM-V4-011, REQ-ORACLE-016
+    function test_TEST_343_failedPoolManagerReadsFailTheMarket() public {
         vm.mockCallRevert(address(pm), abi.encodeWithSignature("exttload(bytes32)"), "");
         _assertState(PriceState.Cached);
         vm.clearMockedCalls();
@@ -119,8 +119,8 @@ contract LPOracleV4GuardsUnitTest is LPOracleV4Fixture {
         vm.clearMockedCalls();
     }
 
-    // TEST-335 verifies: REQ-AMM-V4-005, REQ-ORACLE-014, REQ-ORACLE-104
-    function test_TEST_335_unavailableReferenceTwapIsDrifting() public {
+    // TEST-343 verifies: REQ-AMM-V4-005, REQ-ORACLE-014, REQ-ORACLE-104
+    function test_TEST_343_unavailableReferenceTwapIsDrifting() public {
         vm.mockCallRevert(address(ref), abi.encodeWithSelector(IUniswapV3Pool.observe.selector), "OLD");
         PriceStateView memory v = _state();
         assertEq(uint8(v.state), uint8(PriceState.Drifting));
@@ -135,10 +135,10 @@ contract LPOracleV4GuardsUnitTest is LPOracleV4Fixture {
         vm.clearMockedCalls();
     }
 
-    // TEST-335 verifies: REQ-ORACLE-016, REQ-ORACLE-104, SPEC-AMM-V4-002
+    // TEST-343 verifies: REQ-ORACLE-016, REQ-ORACLE-104, SPEC-AMM-V4-002
     /// @notice With every feed past its maximum age the market is not Live and the CL report carries no mean or
     /// reference tick.
-    function test_TEST_335_staleQuotesReportNoTicks() public {
+    function test_TEST_343_staleQuotesReportNoTicks() public {
         vm.warp(block.timestamp + MAX_AGE + 1);
         PriceStateView memory v = _state();
         assertTrue(v.state != PriceState.Live, "not live without fresh quotes");
@@ -147,8 +147,8 @@ contract LPOracleV4GuardsUnitTest is LPOracleV4Fixture {
         assertEq(r.tickRef, 0, "no reference tick");
     }
 
-    // TEST-335 verifies: SPEC-AMM-V4-002, REQ-ORACLE-104
-    function test_TEST_335_stableAboveItsCeilingUsesTheQuote() public {
+    // TEST-343 verifies: SPEC-AMM-V4-002, REQ-ORACLE-104
+    function test_TEST_343_stableAboveItsCeilingUsesTheQuote() public {
         vm.warp(block.timestamp + 1);
         _setPrices(price0, 101_000_000);
         PriceStateView memory v = _state();

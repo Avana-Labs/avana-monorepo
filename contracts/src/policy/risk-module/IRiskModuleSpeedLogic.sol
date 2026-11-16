@@ -3,9 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {MarketSpeedLimits} from "../parameter-store/types/MarketSpeedLimits.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
-import {BorrowSpeedInputs} from "./types/BorrowSpeedInputs.sol";
 import {SpeedView} from "./types/SpeedView.sol";
 import {SpeedWindow} from "./types/SpeedWindow.sol";
 
@@ -16,38 +14,6 @@ import {SpeedWindow} from "./types/SpeedWindow.sol";
 /// windows.
 /// @custom:spec REQ-RISK-092, REQ-RISK-093, REQ-RISK-095, REQ-RISK-097, SPEC-CAP-011, SPEC-CAP-012, Q-411
 interface IRiskModuleSpeedLogic is IRiskModuleLogic {
-    /// @notice Inputs of the borrow-speed check of a borrow of `amount` of reserve `debtReserveId` by `proxy`.
-    /// @param proxy The account.
-    /// @param debtReserveId The borrowed reserve.
-    /// @param amount Base units borrowed.
-    /// @return inputs The keys, the charge in USD, both bases and both parameter sets.
-    /// @custom:spec REQ-RISK-092, SPEC-CAP-013
-    function borrowInputs(
-        address proxy,
-        uint256 debtReserveId,
-        uint256 amount
-    ) external view returns (BorrowSpeedInputs memory inputs);
-
-    /// @notice Inputs of the borrow-speed views of a market and reserve, with no charge.
-    /// @param marketId The market.
-    /// @param debtReserveId The reserve.
-    /// @return inputs As `borrowInputs` with `amountUsd = 0`.
-    /// @custom:spec REQ-RISK-097
-    function borrowInputsOf(
-        uint256 marketId,
-        uint256 debtReserveId
-    ) external view returns (BorrowSpeedInputs memory inputs);
-
-    /// @notice Inputs of the pledge-speed view of a market: its parameters and its booked value.
-    /// @dev Reads Collateralization's counters, so it reverts while the Lock is held.
-    /// @param marketId The market.
-    /// @return limits The market's speed limits.
-    /// @return bookedUsd `regularUsed + sliceUsed`, 8-decimal USD.
-    /// @custom:spec REQ-RISK-093, REQ-RISK-097
-    function pledgeInputsOf(
-        uint256 marketId
-    ) external view returns (MarketSpeedLimits memory limits, uint256 bookedUsd);
-
     /// @notice The borrow-speed check of a borrow (REQ-RISK-092): the market window first, then the (funding Hub,
     /// asset) window, each rolled to now and tested against its limit on the window-start base; reverts
     /// `BorrowSpeedExceeded` or `DebtSpeedExceeded`, else returns both windows with the charges added.

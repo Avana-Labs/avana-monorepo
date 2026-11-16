@@ -30,6 +30,10 @@
 #   10-aave-markets-aip           AAVE  vault-token assets and collateral reserves
 #   09-listing-activate           LPOracles poked, activateMarket (timelock, short delay)
 #   09-execute-listing-activate
+#   12-gas-vault                  the chain's AvanaGasVault (treasury = feeRecipient, checked on chain; no role granted)
+#   12-gas-vault-signers          addSigner of each configured keeper signer (timelock, normal delay)
+#   12-execute-gas-vault-signers
+#   12-fund-gas-vault             the treasury funds the vault to gasVault.fundWei (Ethereum and Base: printed for the Safe)
 #
 # Changes to a live deployment (deploy recipe B8), any time after the first deployment:
 #   11-changes <file>             a JSON list of changes, each checked against its on-chain limit, run as one timelock
@@ -39,8 +43,11 @@
 #
 # Signing: on anvil every sender is unlocked (anvil --auto-impersonate): the deployer is AVANA_DEPLOYER (default the
 # first anvil account) and the Safe, the Aave executor's PayloadsController and the faucet come from the network
-# config. Elsewhere AVANA_SIGNER_FLAGS gives forge's signer flags (for example `--account deployer --sender 0x…`),
-# and the timelock operations are written for the governance Safe instead of scheduled.
+# config. 02-test-world also signs the feeds' first OCR2 reports as the four oracles of AVANA_OCR_ORACLES, from the
+# encrypted keystores ocr-0 … ocr-3 and the password file in AVANA_OCR_KEYSTORE_DIR (script/e2e/e2e-local.sh generates
+# them). Elsewhere AVANA_SIGNER_FLAGS gives forge's signer flags (for example `--account deployer --sender 0x…`, plus
+# the oracles' `--keystore` and `--password-file` for 02), and the timelock operations are written for the governance
+# Safe instead of scheduled.
 
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -83,6 +90,10 @@ case "$step" in
   10-aave-markets-aip) script=10_AaveListingPayload.s.sol; envs+=(AVANA_AAVE_STEP=vault-tokens) ;;
   09-listing-activate) script=09_ListMarkets.s.sol; envs+=(AVANA_LISTING_STEP=activate); schedule=1 ;;
   09-execute-listing-activate) script=05_ExecuteOperations.s.sol; envs+=(AVANA_OPERATIONS=listing-activate) ;;
+  12-gas-vault) script=12_DeployGasVault.s.sol; envs+=(AVANA_GAS_VAULT_STEP=deploy) ;;
+  12-gas-vault-signers) script=12_DeployGasVault.s.sol; envs+=(AVANA_GAS_VAULT_STEP=signers); schedule=1 ;;
+  12-execute-gas-vault-signers) script=05_ExecuteOperations.s.sol; envs+=(AVANA_OPERATIONS=gas-vault-signers) ;;
+  12-fund-gas-vault) script=12_DeployGasVault.s.sol; envs+=(AVANA_GAS_VAULT_STEP=fund) ;;
   *) echo "unknown step $step; the steps are listed at the top of script/deploy/step.sh" >&2; exit 2 ;;
 esac
 
@@ -92,6 +103,10 @@ if [ "$AVANA_NETWORK" = anvil ]; then
   [ "$step" = 04-access-operations ] && sender="$(config governance.governanceSafe)"
   [ $schedule -eq 1 ] && envs+=(AVANA_SCHEDULE=1)
   signer=(--unlocked --sender "$sender")
+  if [ "$step" = 02-test-world ] && [ -n "${AVANA_OCR_KEYSTORE_DIR:-}" ]; then
+    for i in 0 1 2 3; do signer+=(--keystore "$AVANA_OCR_KEYSTORE_DIR/ocr-$i"); done
+    for i in 0 1 2 3; do signer+=(--password-file "$AVANA_OCR_KEYSTORE_DIR/password"); done
+  fi
 else
   read -r -a signer <<< "${AVANA_SIGNER_FLAGS:?set AVANA_SIGNER_FLAGS, for example --account deployer --sender 0x…}"
 fi

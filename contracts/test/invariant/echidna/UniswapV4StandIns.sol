@@ -206,8 +206,8 @@ contract V4StandInManager {
         _owner[id] = to;
         _keys[id] = key;
         bytes32 poolId = keccak256(abi.encode(key));
-        _info[id] = (uint256(poolId) & MASK_UPPER_200_BITS) | uint256(uint24(upper)) << 32
-            | uint256(uint24(lower)) << 8 | (subscribed ? 1 : 0);
+        _info[id] = (uint256(poolId) & MASK_UPPER_200_BITS) | uint256(uint24(upper)) << 32 | uint256(uint24(lower)) << 8
+            | (subscribed ? 1 : 0);
         (uint256 g0, uint256 g1) = feeGrowthInside(poolId, lower, upper);
         (,,, bytes32 pos) = _locate(id);
         _setPosition(pos, liquidity, g0, g1);

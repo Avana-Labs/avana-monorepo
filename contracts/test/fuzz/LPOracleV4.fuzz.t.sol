@@ -56,8 +56,8 @@ contract LPOracleV4FuzzTest is LPOracleV4Fixture {
         assertFalse(_initializes(m), "a market of another length was accepted");
     }
 
-    // TEST-335 verifies: SPEC-AMM-V4-002, REQ-AMM-V4-005, REQ-ORACLE-104
-    function testFuzz_TEST_335_deviationIsTheLargerOfSpotAndTwapDistance(
+    // TEST-343 verifies: SPEC-AMM-V4-002, REQ-AMM-V4-005, REQ-ORACLE-104
+    function testFuzz_TEST_343_deviationIsTheLargerOfSpotAndTwapDistance(
         int256 spotShift,
         uint256 priceBps
     ) public {

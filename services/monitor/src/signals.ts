@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The signals M-01 to M-30 of services/README.md (Monitoring and alerting): what each reads, its warn and page
+// The signals M-01 to M-36 of services/README.md (Monitoring and alerting): what each reads, its warn and page
 // levels, who responds and which playbook of docs/spec/03-operations/06-emergency-operations.md they follow. The router
 // sends each alert to the responders named here, so no time is spent deciding who acts.
 
@@ -78,6 +78,12 @@ export const SIGNALS: readonly SignalDef[] = [
   { id: "M-28", name: "Liquidity leaving a listed pool", source: "snapshot", warn: "−20 % in 1 hour", page: "−40 % in 1 hour", responders: ["riskProviders", "guardians"], playbook: "P-04 (EMG-078)" },
   { id: "M-29", name: "Rate curve per lend asset", source: "snapshot", warn: "any change of a curve's values", page: "GHO baseDrawnRate below the Core Hub GHO base rate", responders: ["aaveDao", "riskProviders"], playbook: "P-10 (EMG-084)" },
   { id: "M-30", name: "Keeper discovery mismatch", source: "keeper", warn: "any account one discovery source holds and the other lacks", page: "one-sided for KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS (1 hour by default)", responders: ["keeperOnCall"], playbook: "P-08 (EMG-082)" },
+  { id: "M-31", name: "Keeper gas spend anomaly", source: "keeper", warn: "rolling 24 h spend above 3× the 7-day median daily spend", page: "above 5×", responders: ["avanaLabs", "keeperOnCall"], playbook: "P-08 (EMG-082)" },
+  { id: "M-32", name: "Keeper class budget reached", source: "keeper", warn: "—", page: "a scheduled or lazy class reaches its rolling 24 h budget and stops sending", responders: ["keeperOnCall", "avanaLabs"], playbook: "P-08 (EMG-082)" },
+  { id: "M-33", name: "Standby keeper signer below its minimum balance", source: "keeper", warn: "standby signer balance below its minBalance", page: "—", responders: ["avanaLabs"], playbook: "P-08 (EMG-082)" },
+  { id: "M-34", name: "Oracle poke overdue", source: "snapshot", warn: "—", page: "priceCheckpoint().at older than 7,200 s on any market", responders: ["keeperOnCall", "operators"], playbook: "P-08 (EMG-082)" },
+  { id: "M-35", name: "Gas vault runway", source: "snapshot", warn: "vault balance below 30 days of its daily top-ups", page: "below 14 days", responders: ["avanaLabs", "keeperOnCall"], playbook: "P-22 (EMG-115)" },
+  { id: "M-36", name: "Gas vault top-up capped", source: "events", warn: "—", page: "a ToppedUp below its requested amount (24 h cap or vault balance) or a TopUpFailed", responders: ["avanaLabs", "keeperOnCall"], playbook: "P-22 (EMG-115)" },
 ];
 
 const BY_ID: ReadonlyMap<SignalId, SignalDef> = new Map(SIGNALS.map((s) => [s.id, s]));

@@ -140,6 +140,31 @@ contract LensLiquidationUnitTest is LensFixture {
         assertEq(seized, p.expectedUnitsSeized, "seizure from the RAY debt");
     }
 
+    // TEST-069 verifies: REQ-LENS-017, REQ-LENS-029
+    /// @dev A 20 % collateral risk gives the account a risk premium, so a premium debt accrues beside the drawn debt.
+    /// The dust rule makes Aave liquidate the whole debt: every drawn share and the whole premium, which the drawn
+    /// shares alone do not cover.
+    function test_TEST_069_wholeDebtSizingIncludesThePremium() public {
+        _spokeConfig(
+            abi.encodeWithSignature("updateCollateralRisk(address,uint256,uint256)", aave.cdpSpoke, vtReserveId, 2000)
+        );
+        _open(bob, bobProxy, 2, 600e6);
+        _borrow(bobProxy, 900e18);
+        vm.warp(block.timestamp + 60 days);
+        _setVtPrice(1.7e8);
+        (bool ok, bytes memory ret) = aave.cdpSpoke
+            .staticcall(abi.encodeWithSignature("getUserPremiumDebtRay(uint256,address)", debtReserveId, bobProxy));
+        assertTrue(ok && abi.decode(ret, (uint256)) >= 1e27, "at least one GHO unit of premium accrued");
+        LiquidationPreview memory p = lens.previewLiquidation(bobProxy, debtReserveId, DEADLINE);
+        assertTrue(p.aaveLiquidatable, "liquidatable");
+        uint256 total = _debtOf(bobProxy, debtReserveId);
+        assertEq(p.expectedDebtRepaid, total, "drawn debt and premium: the whole debt");
+        (uint256 repaid, uint256 seized) = _execute(address(debt), debtReserveId, bobProxy, p.params.debtToCover);
+        assertEq(repaid, p.expectedDebtRepaid, "Aave pulls the premium too");
+        assertEq(seized, p.expectedUnitsSeized, "seizure for the drawn debt and the premium");
+        assertEq(_debtOf(bobProxy, debtReserveId), 0, "nothing left");
+    }
+
     // TEST-069 verifies: REQ-LENS-017, REQ-LENS-028, Q-235, Q-268
     function test_TEST_069_dustRemainderAsksForMarginedWholeDebt() public {
         // 1,060 GHO owed; Aave's own sizing would leave a remainder under $1,050.
@@ -368,6 +393,18 @@ contract LensLiquidationUnitTest is LensFixture {
         assertEq(uint8(p.params.routeMode), uint8(RouteMode.BackupOnly), "a token without a route, a primary down");
     }
 
+    // TEST-069 verifies: REQ-LENS-028
+    /// @dev The token without a usable route is the second one: USDC's routes, listed first, are both usable, so the
+    /// primary that is down is found past the first entry of the route list.
+    function test_TEST_069_routeModeFindsALaterPrimaryDown() public {
+        reg.setRoute(MARKET_ID, address(usdt), address(debt), 0, address(0), false);
+        reg.setRoute(MARKET_ID, address(usdt), address(debt), 1, address(0), false);
+        LiquidationPreview memory p = lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE);
+        assertTrue(p.routeUsable[0].usable && p.routeUsable[1].usable, "USDC primary and backup usable");
+        assertFalse(p.routeUsable[2].usable || p.routeUsable[3].usable, "USDT has no usable route");
+        assertEq(uint8(p.params.routeMode), uint8(RouteMode.BackupOnly), "USDT's primary is down");
+    }
+
     // TEST-069 verifies: REQ-LENS-016, Q-242
     function test_TEST_069_informationalFields() public {
         reg.setPause(aave.hub, PauseState.Paused, PauseReason.General);
@@ -428,6 +465,35 @@ contract LensLiquidationUnitTest is LensFixture {
         assertEq(p.expectedCallerLoss, 0, "unwound value covers D");
     }
 
+    // TEST-069 verifies: REQ-LENS-029, SPEC-LIQ-010
+    /// @dev A collateral factor of 40 % with a 140 % maximum bonus (their product stays under 1, as Aave requires) and
+    /// no Avana fee: Aave seizes every unit for less than half their value, so the net payout exceeds the funding
+    /// itself and `expectedNetPayout` must be the whole `expectedPayout - debtToCover`.
+    function test_TEST_069_netPayoutAboveTheFunding() public {
+        _spokeConfig(
+            abi.encodeWithSignature(
+                "updateDynamicReserveConfig(address,uint256,uint32,(uint16,uint32,uint16))",
+                aave.cdpSpoke,
+                vtReserveId,
+                uint32(0),
+                uint16(4000),
+                uint32(24_000),
+                uint16(0)
+            )
+        );
+        store.setFees(0, store.maxFlashFeeBps());
+        _borrow(aliceProxy, 5000e18);
+        _setVtPrice(1.1e8);
+        LiquidationPreview memory p = lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE);
+        assertTrue(p.aaveLiquidatable, "HF 0.88");
+        assertEq(p.expectedUnitsSeized, UNITS, "every unit seized");
+        uint256 kf = p.params.debtToCover;
+        uint256 v = UNITS * 1.1e8 * 1e18 / (1e6 * 1e8);
+        assertEq(p.expectedPayout, kf + v - p.expectedDebtRepaid, "keeperOut = Kf + V - D with no fee");
+        assertGe(p.expectedPayout - kf, kf, "the reward beyond the funding exceeds the funding");
+        assertEq(p.expectedNetPayout, p.expectedPayout - kf, "the whole reward beyond the funding");
+    }
+
     // TEST-069 verifies: REQ-LENS-029
     function test_TEST_069_callerLossWhenUnwoundBelowDebt() public {
         _borrow(aliceProxy, 15_000e18);
@@ -456,6 +522,16 @@ contract LensLiquidationUnitTest is LensFixture {
         LiquidationPreview memory p = lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE);
         uint256 v = 2e18;
         assertEq(p.minOutPerWholeToken, _ceilDiv(v * 9900, 10_000) - 2e12 - 1e18, "one whole token at $2.00");
+    }
+
+    // TEST-069 verifies: REQ-LENS-016, SPEC-LIQ-004, SPEC-LIQ-005
+    /// @dev `Pc` is the smaller of the AaveOracle price and the LPOracle's answer: with the LPOracle at $1.50 under
+    /// Aave's $2.00, the whole-token floor is priced at $1.50.
+    function test_TEST_069_minOutPerWholeTokenAtTheLowerCollateralPrice() public {
+        lpo.setAnswer(true, 150_000_000);
+        LiquidationPreview memory p = lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE);
+        uint256 v = 1.5e18;
+        assertEq(p.minOutPerWholeToken, _ceilDiv(v * 9900, 10_000) - 2e12 - 1e18, "one whole token at $1.50");
     }
 
     // TEST-069 verifies: REQ-LENS-007, REQ-LENS-016

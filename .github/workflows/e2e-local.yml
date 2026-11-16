@@ -117,7 +117,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: e2e-local
+          # The run's generated keystores and their password stay on the runner.
           path: |
             contracts/deployments-local/anvil
             contracts/broadcast
+            !contracts/deployments-local/anvil/keystore
           retention-days: 14

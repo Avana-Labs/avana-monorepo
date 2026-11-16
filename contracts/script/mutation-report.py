@@ -7,37 +7,57 @@ Input: a folder holding the run's artifacts as `gh run download <run>` writes th
 run's job list (`gh run view <run> --json jobs > jobs.json`). Output: `README.md` (the summary tables) and
 `survivors.md` (every surviving or timed-out mutant and every Necessist removal that left its tests passing).
 
-    slither-mutate  mutate-<layer>-<Contract>-<group>/<layer>/<Contract>.log: "<Kind> mutants: k caught of n" per
-                    kind, "UNCAUGHT" lines for the survivors; a mutant that does not compile is not counted by
-                    slither-mutate and is reported here as not compiled.
+    slither-mutate  mutate-<layer>-<Contract>-<shard>/<layer>/<Contract>/shard-<shard>.tsv (script/mutation-slither.py:
+                    index, mutator, kind, line, outcome, seconds, original, replacement), one per shard; outcome
+                    killed, survived, timeout (the run passed its budget: never counted as killed) or invalid (does
+                    not compile, reported as not compiled).
     Gambit          gambit-<layer>-<Contract>/<layer>/<Contract>/status.tsv (id, killed | survived | timeout |
-                    invalid) and gambit/mutants.log (id, operator, file, line:column, original, replacement).
+                    invalid | error) and gambit/gambit_results.json (each mutant's operator, file and diff, read by
+                    script/mutation-records.py); a job with an `error` mutant (not applied) is listed as inconclusive.
     Necessist       necessist-<layer>-<file>/<layer>.log: "N candidates in ..." and one "... passed" line per
                     statement whose removal left the tests passing.
 
 A job that has not finished is listed as pending, one that failed or was cancelled without a report as inconclusive.
+A timed-out mutant is its own outcome everywhere: it counts in the kill rate's denominator, never as killed.
 
-    mutation-report.py <artifacts dir> <jobs.json> <run id> <commit> <out dir> [<inflated>]
+    mutation-report.py <artifacts dir> <jobs.json | -> <run id> <commit> <out dir> [<inflated>]
+
+With `-` for the job list, every report folder in <artifacts dir> counts as a finished job that passed.
 
 <inflated>: comma-separated contract name patterns whose mutants this run tested without some of their own test
 suites (a test-selection gap in security/mutation-layers.json); their survivors are marked "inflated, rerun pending".
 """
 
 import fnmatch
+import importlib.util
 import json
 import re
 import sys
 from collections import defaultdict
 from pathlib import Path
 
-KIND = re.compile(r"(Revert|Comment|Tweak) mutants: (\d+) caught of (\d+)")
-UNCAUGHT = re.compile(r"\[(\w+)\] Line (\d+): '(.*)' ==> '(.*)' --> UNCAUGHT")
-COMPILE_FAIL = "ERROR:CryticCompile:'forge' returned non-zero exit code"
-JOB = re.compile(r"^(mutate|gambit|necessist) (\S+) (.+?)(?: \(group (\d)\))?$")
+JOB = re.compile(r"^(mutate|gambit|necessist) (\S+) (.+?)(?: \(shard (\d+) of [^)]+\))?$")
+ARTIFACT = re.compile(r"^(mutate|gambit|necessist)-(\d+\.\d+)-(.+?)(?:-(\d+))?$")
+
+
+def _records():
+    """script/mutation-records.py, which reads a mutant or statement that spans several log lines whole."""
+    spec = importlib.util.spec_from_file_location("mutation_records", Path(__file__).with_name("mutation-records.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+RECORDS = _records()
 
 
 def rate(killed: int, counted: int) -> str:
     return f"{100.0 * killed / counted:.1f} %" if counted else "-"
+
+
+def unescape(text: str) -> str:
+    """The text of a shard-<k>.tsv column (backslash, newline and tab escaped by script/mutation-slither.py)."""
+    return re.sub(r"\\(.)", lambda m: {"n": "\n", "t": "\t"}.get(m.group(1), m.group(1)), text)
 
 
 def md(text: str) -> str:
@@ -46,7 +66,21 @@ def md(text: str) -> str:
 
 def main() -> int:
     art, jobs_file, run, commit, out = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], sys.argv[4], Path(sys.argv[5])
-    jobs = json.loads(jobs_file.read_text(encoding="utf8"))["jobs"]
+    if str(jobs_file) == "-":
+        jobs = []
+        for d in sorted(p for p in art.iterdir() if p.is_dir()):
+            m = ARTIFACT.match(d.name)
+            if not m:
+                continue
+            tool, layer, target, shard = m.groups()
+            if tool == "necessist":
+                # The artifact is named after the stem of the leg's last test file.
+                name = f"necessist {layer} x/{target}.sol"
+            else:
+                name = f"{tool} {layer} {target}" + (f" (shard {shard} of ?)" if tool == "mutate" else "")
+            jobs.append({"name": name, "status": "completed", "conclusion": "success"})
+    else:
+        jobs = json.loads(jobs_file.read_text(encoding="utf8"))["jobs"]
     inflated = [p for p in (sys.argv[6] if len(sys.argv) > 6 else "").split(",") if p]
 
     def mark(contract: str, result: str) -> str:
@@ -64,23 +98,25 @@ def main() -> int:
         m = JOB.match(job["name"])
         if not m:
             continue
-        tool, layer, target, group = m.groups()
+        tool, layer, target, shard = m.groups()
         if job["status"] != "completed":
             pending.append(job["name"])
             continue
         if tool == "mutate":
-            log = art / f"mutate-{layer}-{target}-{group}" / layer / f"{target}.log"
-            if not log.exists():
+            tsv = art / f"mutate-{layer}-{target}-{shard or 1}" / layer / target / f"shard-{shard or 1}.tsv"
+            if not tsv.exists():
                 inconclusive.append(f"{job['name']} ({job['conclusion']}, no report)")
                 continue
-            text = log.read_text(encoding="utf8", errors="replace")
             s = stats[(layer, target)]
-            for _, caught, total in KIND.findall(text):
-                s["mutate_total"] += int(total)
-                s["mutate_killed"] += int(caught)
-            s["mutate_not_compiled"] += text.count(COMPILE_FAIL)
-            for kind, line, orig, mut in UNCAUGHT.findall(text):
-                survivors.append(("slither-mutate", layer, target, f"line {line} ({kind})", f"`{md(orig)}` → `{md(mut)}`", mark(target, "survived")))
+            for row in tsv.read_text(encoding="utf8").splitlines()[1:]:
+                cols = row.split("\t")
+                if len(cols) != 8:
+                    continue
+                _, mutator, kind, line, outcome, _, orig, mut = cols
+                s[f"mutate_{outcome}"] += 1
+                if outcome in ("survived", "timeout"):
+                    survivors.append(("slither-mutate", layer, target, f"line {line} ({mutator})",
+                                      f"`{md(unescape(orig))}` → `{md(unescape(mut))}`", mark(target, outcome)))
             if job["conclusion"] != "success":
                 inconclusive.append(f"{job['name']} ({job['conclusion']})")
         elif tool == "gambit":
@@ -89,13 +125,12 @@ def main() -> int:
             if not status.exists():
                 inconclusive.append(f"{job['name']} ({job['conclusion']}, no report)")
                 continue
+            # From gambit_results.json: mutants.log is CSV whose quoted fields can span lines.
             ops = {}
-            mlog = base / "gambit" / "mutants.log"
-            if mlog.exists():
-                for row in mlog.read_text(encoding="utf8", errors="replace").splitlines():
-                    parts = row.split(",", 5)
-                    if len(parts) == 6:
-                        ops[parts[0]] = parts
+            if (base / "gambit" / "gambit_results.json").exists():
+                for m in RECORDS.gambit_mutants(base / "gambit"):
+                    ops[m["id"]] = [m["id"], m["operator"], m["file"], f"line {m['line']}", m["original"],
+                                    m["replacement"]]
             s = stats[(layer, target)]
             for row in status.read_text(encoding="utf8").splitlines():
                 if "\t" not in row:
@@ -106,7 +141,9 @@ def main() -> int:
                     p = ops.get(mid, [mid, "?", "?", "?", "?", "?"])
                     survivors.append(("Gambit", layer, target, f"`{p[2]}` {p[3]} ({p[1]}, mutant {mid})", f"`{md(p[4])}` → `{md(p[5])}`", mark(target, result)))
             s["gambit_seen"] += 1
-            if job["conclusion"] != "success" and not any(s[f"gambit_{r}"] for r in ("killed", "survived", "timeout", "invalid")):
+            if s["gambit_error"]:
+                inconclusive.append(f"{job['name']} ({s['gambit_error']} mutants could not be applied)")
+            elif job["conclusion"] != "success" and not any(s[f"gambit_{r}"] for r in ("killed", "survived", "timeout", "invalid")):
                 inconclusive.append(f"{job['name']} ({job['conclusion']})")
         else:
             files = target
@@ -117,9 +154,9 @@ def main() -> int:
                 inconclusive.append(f"{job['name']} ({job['conclusion']}, no report)")
                 continue
             text = log.read_text(encoding="utf8", errors="replace")
-            cand = re.search(r"(\d+) candidates in", text)
-            passed = re.findall(r"^(\S+:\d+:\d+-\d+:\d+): `(.*)` passed$", text, re.M)
-            necessist.append((layer, files, int(cand.group(1)) if cand else 0, len(passed)))
+            cand = sum(int(c) for c in re.findall(r"(\d+) candidates in", text))
+            passed = [(loc, stmt) for _, loc, stmt in RECORDS.necessist_passed(text)]
+            necessist.append((layer, files, cand, len(passed)))
             necessist_rows.extend((layer, loc, md(stmt)) for loc, stmt in passed)
 
     out.mkdir(parents=True, exist_ok=True)
@@ -138,19 +175,20 @@ def main() -> int:
     tot = defaultdict(int)
     for (layer, name), s in sorted(stats.items(), key=lambda kv: (kv[0][0], kv[0][1])):
         killed = s["mutate_killed"] + s["gambit_killed"]
-        surv = (s["mutate_total"] - s["mutate_killed"]) + s["gambit_survived"]
-        tout = s["gambit_timeout"]
-        nc = s["mutate_not_compiled"] + s["gambit_invalid"]
+        surv = s["mutate_survived"] + s["gambit_survived"]
+        tout = s["mutate_timeout"] + s["gambit_timeout"]
+        nc = s["mutate_invalid"] + s["gambit_invalid"]
         counted = killed + surv + tout
         for k, v in (("m", counted), ("k", killed), ("s", surv), ("t", tout), ("n", nc)):
             tot[k] += v
         flag = " (inflated, rerun pending)" if any(fnmatch.fnmatch(name, p) for p in inflated) else ""
         lines.append(f"| {name}{flag} | {layer} | {counted} | {killed} | {surv} | {tout} | {nc} | {rate(killed, counted)} |")
     lines.append(f"| **All** | | **{tot['m']}** | **{tot['k']}** | **{tot['s']}** | **{tot['t']}** | **{tot['n']}** | **{rate(tot['k'], tot['m'])}** |")
-    lines += ["", "By tool:", "", "| Contract | Layer | slither-mutate killed / tested | Gambit killed / survived / timed out / invalid |", "|---|---|---|---|"]
+    lines += ["", "By tool:", "", "| Contract | Layer | slither-mutate killed / survived / timed out / invalid | Gambit killed / survived / timed out / invalid |", "|---|---|---|---|"]
     for (layer, name), s in sorted(stats.items(), key=lambda kv: (kv[0][0], kv[0][1])):
         g = f"{s['gambit_killed']} / {s['gambit_survived']} / {s['gambit_timeout']} / {s['gambit_invalid']}" if s["gambit_seen"] else "pending"
-        lines.append(f"| {name} | {layer} | {s['mutate_killed']} / {s['mutate_total']} | {g} |")
+        sm = f"{s['mutate_killed']} / {s['mutate_survived']} / {s['mutate_timeout']} / {s['mutate_invalid']}"
+        lines.append(f"| {name} | {layer} | {sm} | {g} |")
     lines += ["", "## Necessist", "", "Statements removed from the tests one at a time; a removal that leaves the tests passing is listed in [survivors.md](survivors.md#necessist).", "",
               "| Layer | Test files | Candidates | Removals that left the tests passing |", "|---|---|---|---|"]
     nc_tot = [0, 0]

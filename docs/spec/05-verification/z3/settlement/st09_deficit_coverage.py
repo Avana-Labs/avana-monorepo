@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: BUSL-1.1
 # Copyright (c) 2026 Avana Labs
-"""MATH-ST-46..50, MATH-ST-61..62, MATH-ST-114: First-Loss coverage and withdrawal (SPEC-FLR-001..003).
+"""MATH-ST-46..50, MATH-ST-61..62, MATH-ST-114, MATH-ST-130: First-Loss coverage and withdrawal (SPEC-FLR-001..003).
 
 First-Loss Reserve (SPEC-FLR-001): amount = min(maxAmount, ceil(deficitRay / RAY), fundedBalance()), reverts if 0;
 fundedBalance() = floor(callerShares (A+1e6) / (S+1e6)) (SPEC-FLR-002).
@@ -77,6 +77,53 @@ check("MATH-ST-50",
       "check carry the restriction (counterexample expected)",
       model + [spokeApproved == 0],
       "COUNTEREXAMPLE", show=[amount, defS, dRay, dE, sh])
+
+# MATH-ST-130: the reference terms of the First-Loss Reserve Halmos checks (PROP-039). The checks compare the code's
+# amount with OpenZeppelin's Math.ceilDiv(x, RAY) = toUint(x > 0) * ((x - 1) / RAY + 1), computed unchecked in 256
+# bits, and run against a recording Hub whose eliminateDeficit arithmetic is unchecked. These checks show, in exact
+# integers over the full uint256 range, that (a) that term is ceil(x / RAY) and equals (x + RAY - 1) / RAY wherever
+# x + RAY - 1 fits 256 bits, and is at least 1 for x > 0; (b) the recording Hub's operations never wrap for a recorded
+# deficit d <= 2^256 - RAY and any amount, so its unchecked form computes the checked form's values; (c) the coverage
+# amount min(min(maxAmount, ceil(d / RAY)), funded) is at least 1 when all three inputs are, so coverDeficit's
+# NothingToCover cannot fire.
+U256 = 2**256
+x, q1, ozc, cUp, cAlt = Ints("x q1 ozCeil ceilUp ceilAlt")
+xmodel = [x >= 0, x < U256] + floor_div(q1, x - 1, RAY) + ceil_div(cUp, x, RAY) \
+    + [ozc == If(x > 0, q1 + 1, 0)]
+# MATH-ST-130 verifies: SPEC-FLR-001, REQ-FLR-019, Q-101
+check("MATH-ST-130",
+      "Math.ceilDiv(x, RAY) = ceil(x / RAY) for every uint256 x, with (x - 1) / RAY + 1 below 2^256 (no wrap)",
+      xmodel + [Or(ozc != cUp, And(x > 0, q1 + 1 >= U256))],
+      "PROVED")
+# MATH-ST-130 verifies: SPEC-FLR-001, REQ-FLR-019, Q-101
+check("MATH-ST-130",
+      "Math.ceilDiv(x, RAY) = (x + RAY - 1) / RAY for every x <= 2^256 - RAY",
+      xmodel + floor_div(cAlt, x + RAY - 1, RAY) + [x <= U256 - RAY, ozc != cAlt],
+      "PROVED")
+# MATH-ST-130 verifies: SPEC-FLR-001, REQ-FLR-031, Q-101
+check("MATH-ST-130",
+      "Math.ceilDiv(x, RAY) >= 1 for every x > 0",
+      xmodel + [x > 0, ozc < 1],
+      "PROVED")
+
+d, amt, c2, dR, cov = Ints("d amount ceilD dRay covered")
+hmodel = [d >= 0, d <= U256 - RAY, amt >= 0, amt < U256] + floor_div(c2, d + RAY - 1, RAY) \
+    + [dR == If(amt < c2, amt * RAY, d)] + floor_div(cov, dR + RAY - 1, RAY)
+# MATH-ST-130 verifies: SPEC-FLR-001, REQ-FLR-018, Q-101
+check("MATH-ST-130",
+      "the recording Hub's eliminateDeficit never wraps for d <= 2^256 - RAY and any uint256 amount: "
+      "d + RAY - 1 and dRay + RAY - 1 fit 256 bits, amount * RAY fits when taken, and d - dRay >= 0",
+      hmodel + [Or(d + RAY - 1 >= U256, dR + RAY - 1 >= U256, And(amt < c2, amt * RAY >= U256), d - dR < 0)],
+      "PROVED")
+
+m2, f2c, a2 = Ints("maxAmount2 funded2 amount2")
+amodel = [d >= 1, d < U256, m2 >= 1, m2 < U256, f2c >= 1, f2c < U256] + ceil_div(c2, d, RAY) \
+    + [a2 == If(m2 < c2, If(m2 < f2c, m2, f2c), If(c2 < f2c, c2, f2c))]
+# MATH-ST-130 verifies: SPEC-FLR-001, REQ-FLR-031, Q-101
+check("MATH-ST-130",
+      "min(min(maxAmount, ceil(d / RAY)), funded) >= 1 when d, maxAmount and funded are all >= 1",
+      amodel + [a2 < 1],
+      "PROVED")
 
 # MATH-ST-61: withdrawal (SPEC-FLR-003): withdrawn = min(request, fundedBalance()); shares burned
 # ceil(withdrawn (S+1e6)/(A+1e6)) never exceed the shares held.

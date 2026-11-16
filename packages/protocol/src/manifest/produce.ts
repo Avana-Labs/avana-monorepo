@@ -11,7 +11,7 @@ import { type Address, type Hex, type PublicClient, getAddress, parseAbi } from 
 import { ABI_HASH } from "../abis/index.ts";
 import { broadcastBlocks, codeHash, firstBlockWithCode, implementationOf } from "./chain.ts";
 import { validate } from "./schema.ts";
-import type { DebtReserve, External, Immutable, Logic, Market, ReleaseManifest, Upgradeable } from "./types.ts";
+import type { DebtReserve, External, GasVault, Immutable, Logic, Market, ReleaseManifest, Upgradeable } from "./types.ts";
 
 export interface ProduceOptions {
   readonly client: PublicClient;
@@ -89,6 +89,32 @@ export function integrationArtifacts(kind: string): { lpVault: string; lpOracle:
     default:
       throw new Error(`unknown integration kind ${kind}`);
   }
+}
+
+/** The AvanaGasVault step 12-gas-vault recorded (`gas-vault.json`) with its immutables read from the chain; null
+ * when the step has not run. */
+async function gasVaultOf(
+  client: PublicClient,
+  outDir: string,
+  imm: (a: unknown, artifact: string | null) => Promise<Immutable>,
+): Promise<GasVault | null> {
+  const path = join(outDir, "gas-vault.json");
+  if (!existsSync(path)) return null;
+  const address = getAddress((JSON.parse(readFileSync(path, "utf8")) as { AvanaGasVault: string }).AvanaGasVault);
+  const abi = parseAbi([
+    "function TREASURY() view returns (address)",
+    "function TIMELOCK() view returns (address)",
+    "function GUARDIAN() view returns (address)",
+    "function MAX_SIGNERS() view returns (uint256)",
+  ]);
+  const read = (functionName: "TREASURY" | "TIMELOCK" | "GUARDIAN") => client.readContract({ address, abi, functionName }) as Promise<Address>;
+  return {
+    ...(await imm(address, art("AvanaGasVault"))),
+    treasury: getAddress(await read("TREASURY")),
+    timelock: getAddress(await read("TIMELOCK")),
+    guardian: getAddress(await read("GUARDIAN")),
+    maxSigners: Number(await client.readContract({ address, abi, functionName: "MAX_SIGNERS" })),
+  };
 }
 
 type Json = Record<string, unknown>;
@@ -318,6 +344,7 @@ export async function produceManifest(o: ProduceOptions): Promise<ReleaseManifes
       debtOracleImplementation: await imm(avana.debtOracleImplementation, art("DebtOracle")),
       clOracles,
       proxyCreationCodeHash,
+      gasVault: await gasVaultOf(client, outDir, imm),
     },
     markets,
     debtReserves,

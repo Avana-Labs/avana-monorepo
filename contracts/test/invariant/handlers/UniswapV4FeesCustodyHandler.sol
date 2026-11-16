@@ -160,7 +160,7 @@ contract UniswapV4FeesCustodyHandler is CommonBase, StdUtils {
         address weth
     ) {
         (VAULT, POSM, POOL_ACTOR, STATE_VIEW, SOURCE, LOCK) =
-            (w.vault, w.posm, w.poolActor, w.stateView, w.source, w.lock);
+        (w.vault, w.posm, w.poolActor, w.stateView, w.source, w.lock);
         (ADAPTER, COLL, SWAP, TIMELOCK, ATTACKER) = (roles[0], roles[1], roles[2], roles[3], roles[4]);
         depositors = depositors_;
         BLOCKABLE = depositors_[1];
@@ -185,7 +185,8 @@ contract UniswapV4FeesCustodyHandler is CommonBase, StdUtils {
         swapMax[1] = [uint256(1e21), 1e12];
         pledgeBounds[0] = [uint128(1e12), 1e15];
         pledgeBounds[1] = [uint128(1e14), 1e17];
-        actors = [depositors_[0], depositors_[1], ATTACKER, SWAP, COLL, address(VAULT), ADAPTER, TIMELOCK, address(POSM)];
+        actors =
+            [depositors_[0], depositors_[1], ATTACKER, SWAP, COLL, address(VAULT), ADAPTER, TIMELOCK, address(POSM)];
     }
 
     // ─── Views for the suite ───
@@ -529,11 +530,12 @@ contract UniswapV4FeesCustodyHandler is CommonBase, StdUtils {
         if (which == 5) {
             if (!isOpen[key]) revert Skipped();
             vm.prank(ATTACKER);
-            (ok,) = address(POSM).call(
-                abi.encodeWithSignature(
-                    "transferFrom(address,address,uint256)", address(VAULT), ATTACKER, uint256(key)
-                )
-            );
+            (ok,) = address(POSM)
+                .call(
+                    abi.encodeWithSignature(
+                        "transferFrom(address,address,uint256)", address(VAULT), ATTACKER, uint256(key)
+                    )
+                );
         } else if (which == 6) {
             if (!isOpen[key]) revert Skipped();
             vm.prank(ATTACKER);

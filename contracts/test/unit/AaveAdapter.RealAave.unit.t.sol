@@ -289,7 +289,7 @@ contract AaveAdapterRealAaveUnitTest is AaveAdapterFixture {
     // ─── Signature and permit routes ───
 
     // TEST-187 verifies: REQ-PROXY-008, REQ-PROXY-011, REQ-PROXY-055, REQ-RISK-088, INV-063, ATTACK-022
-    // Sources: real-Aave list (signature cases); Wave 2 review decision (PositionManagerApproved)
+    // Sources: real-Aave list (signature cases); Wave 2 review decision (no position-manager approval)
     /// @notice After a pledge, a `setUserPositionManagersWithSig` naming the proxy fails for any signature (the proxy
     /// has no key and no ERC-1271), an ERC-2612 `permit` naming the proxy as owner fails, and across a full account
     /// lifecycle through the Adapter no address becomes a position manager of the proxy.

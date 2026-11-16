@@ -163,48 +163,48 @@ contract LiquidationWholeAccountUniswapV4GasTest is RealStackUniswapV4, GasCalib
         assertLt(used, TX_GAS_CAP / 2, "within half the per-transaction gas limit");
     }
 
-    // TEST-336 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012
+    // TEST-344 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012
     /// @notice One native ETH/USDC v4 record, USDC debt: the whole reserve in one call.
-    function test_TEST_336_v4OneRecordOneDebt() public {
+    function test_TEST_344_v4OneRecordOneDebt() public {
         _run(1, false);
     }
 
-    // TEST-336 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012
+    // TEST-344 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012
     /// @notice The v4 cap of 8 records, USDC debt: every record debited and removed in one call.
-    function test_TEST_336_v4EightRecordsOneDebt() public {
+    function test_TEST_344_v4EightRecordsOneDebt() public {
         _run(V4_RECORDS, false);
     }
 
-    // TEST-336 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-012
+    // TEST-344 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-012
     /// @notice One v4 record at the Spoke's limit of 4 borrowed reserves.
-    function test_TEST_336_v4OneRecordFourDebts() public {
+    function test_TEST_344_v4OneRecordFourDebts() public {
         _run(1, true);
     }
 
-    // TEST-336 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012
+    // TEST-344 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012
     /// @notice 8 records at the Spoke's limit of 4 borrowed reserves, no fees owed.
-    function test_TEST_336_v4EightRecordsFourDebts() public {
+    function test_TEST_344_v4EightRecordsFourDebts() public {
         _run(V4_RECORDS, true);
     }
 
-    // TEST-336 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012
+    // TEST-344 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012
     /// @notice One fee-bearing native ETH/USDC record with one debt, the per-record baseline of the cases below.
-    function test_TEST_336_v4OneFeeBearingRecordOneDebt() public {
+    function test_TEST_344_v4OneFeeBearingRecordOneDebt() public {
         _run(1, false, true);
     }
 
-    // TEST-336 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012, INV-096
+    // TEST-344 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012, INV-096
     /// @notice Review S8: 8 native ETH/USDC records each owed fees in ETH and USDC, at the Spoke's limit of 4 borrowed
     /// reserves, so every removal also pays two fee transfers to the depositor; within 7.5M.
-    function test_TEST_336_v4EightFeeBearingRecordsFourDebts() public {
+    function test_TEST_344_v4EightFeeBearingRecordsFourDebts() public {
         _run(V4_RECORDS, true, true);
     }
 
-    // TEST-336 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012, REQ-AMM-V4-013, INV-096
+    // TEST-344 verifies: SPEC-BACK-016, REQ-VAULT-108, REQ-AMM-V4-004, REQ-AMM-V4-012, REQ-AMM-V4-013, INV-096
     /// @notice The worst supported v4 account, which sets the cap: the 8 fee-bearing records of the case above, held by
     /// a depositor whose USDC transfers revert (an issuer blocklist), so every removal runs the reverting batch and then
     /// the fallback batch that takes the principal and the fees to LPVaultSwap; within 7.5M.
-    function test_TEST_336_v4EightFeeBearingRecordsBlockedDepositor() public {
+    function test_TEST_344_v4EightFeeBearingRecordsBlockedDepositor() public {
         _run(V4_RECORDS, true, true, true);
     }
 }

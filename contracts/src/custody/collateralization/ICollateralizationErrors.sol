@@ -135,9 +135,9 @@ interface ICollateralizationErrors {
     error InvalidDepositor(address depositor);
 
     /// @notice Too little gas for a call whose failure must not be the caller's starvation: `markDebtFree`'s Spoke read
-    /// failed with less than `DEBT_MARK_GAS_FLOOR` left (the whole call reverts instead of keeping a stale mark), or an
-    /// exit reached the RiskModule's speed credit with less than `SPEED_CREDIT_FLOOR` (the exit reverts instead of
-    /// skipping the credit).
+    /// failed with less than `DEBT_MARK_GAS_FLOOR` left or with `InsufficientGas` revert data from an oracle it read
+    /// (the whole call reverts instead of keeping a stale mark), or an exit reached the RiskModule's speed credit with
+    /// less than `SPEED_CREDIT_FLOOR` (the exit reverts instead of skipping the credit).
     /// @param gasLeft Gas left at the check.
     /// @param required `DEBT_MARK_GAS_FLOOR` or `SPEED_CREDIT_FLOOR`.
     /// @custom:spec REQ-COLL-040, REQ-RISK-093

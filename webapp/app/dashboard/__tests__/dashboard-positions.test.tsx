@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { DashboardBorrowTab } from "@/app/dashboard/dashboard-borrow-tab"
 
 const push = vi.fn()
+const ltvCardProps = vi.fn()
 
 const poolVisual = { symbol: "WETH", shortLabel: "WETH", bgClassName: "bg-black", textClassName: "text-white" }
 const stableVisual = { symbol: "USDC", shortLabel: "USDC", bgClassName: "bg-blue-500", textClassName: "text-white" }
@@ -46,7 +47,10 @@ vi.mock("@/app/dashboard/borrow-tab/supplies-table", () => ({
 }))
 
 vi.mock("@/app/dashboard/borrow-tab/debts-table", () => ({
-  CurrentLtvCard: () => null,
+  CurrentLtvCard: (props: unknown) => {
+    ltvCardProps(props)
+    return null
+  },
   DebtsPanel: ({ rows, onRepay }: { rows: Array<typeof debtRow>; onRepay: (row: typeof debtRow) => void }) => (
     <div>
       <button type="button" onClick={() => onRepay(rows[0]!)}>
@@ -66,5 +70,14 @@ describe("DashboardBorrowTab", () => {
 
     fireEvent.click(screen.getByText("open-repay"))
     expect(push).toHaveBeenCalledWith("/actions/borrow/repay?market=uni-v3-bluechip-weth-usdc&return=%2Fdashboard")
+  })
+})
+
+describe("DashboardBorrowTab borrowing power", () => {
+  it("gives the borrowing power card the account's liquidation threshold", () => {
+    render(<DashboardBorrowTab section="all" debtPositions={[debtRow] as never} collateralPositions={[]} />)
+
+    // 9,000 liquidation value over 12,000 collateral.
+    expect(ltvCardProps).toHaveBeenCalledWith(expect.objectContaining({ liquidationThresholdPct: 75 }))
   })
 })

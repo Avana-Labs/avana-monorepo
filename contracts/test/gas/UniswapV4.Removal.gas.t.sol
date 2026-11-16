@@ -16,8 +16,8 @@ contract UniswapV4RemovalGasTest is UniswapV4IntegrationFixture {
     address internal owner = makeAddr("owner");
     address internal to = makeAddr("lpVaultSwapStandIn");
 
-    // TEST-334 verifies: REQ-AMM-CORE-015, REQ-AMM-V4-004
-    function test_TEST_334_removalGasErc20Pool() public {
+    // TEST-342 verifies: REQ-AMM-CORE-015, REQ-AMM-V4-004
+    function test_TEST_342_removalGasErc20Pool() public {
         bytes32 key = _mintFor(owner, stableKey, M1_LOWER, M1_UPPER, 1e15);
         _lock();
         vm.prank(coll);
@@ -35,8 +35,8 @@ contract UniswapV4RemovalGasTest is UniswapV4IntegrationFixture {
         _unlock();
     }
 
-    // TEST-334 verifies: REQ-AMM-CORE-015, REQ-AMM-V4-004, REQ-AMM-CORE-010
-    function test_TEST_334_removalGasNativeEthPool() public {
+    // TEST-342 verifies: REQ-AMM-CORE-015, REQ-AMM-V4-004, REQ-AMM-CORE-010
+    function test_TEST_342_removalGasNativeEthPool() public {
         bytes32 key = _mintFor(owner, ethKey, M2_LOWER, M2_UPPER, 1e18);
         _lock();
         vm.prank(coll);
@@ -64,8 +64,8 @@ contract LPOracleV4GasTest is LPOracleV4Fixture {
         _deployV4Market();
     }
 
-    // TEST-335 verifies: SPEC-ORC-023, REQ-AMM-V4-005
-    function test_TEST_335_oracleGas() public {
+    // TEST-343 verifies: SPEC-ORC-023, REQ-AMM-V4-005
+    function test_TEST_343_oracleGas() public {
         oracle.poke();
         vm.snapshotGasLastCall("UniswapV4Oracle", "poke");
         oracle.getPriceState();

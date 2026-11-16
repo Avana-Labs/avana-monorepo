@@ -11,17 +11,17 @@ import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 
 /// @title PayoutEscrow
 /// @notice The payout escrow (2.18): holds each liquidation payout LPVaultSwap could not deliver, credited to its
-/// recipient and token, until that recipient claims the whole credit to an address it names.
+/// recipient and token, until that recipient claims the whole credit, or a part of it, to an address it names.
 /// @dev Immutable, with no owner, role, setter, pause, sweep, rescue, fallback, `receive`, `delegatecall` or
 /// `selfdestruct`. Deposits come only from `LP_VAULT_SWAP` while it holds the Lock and credit the measured balance
-/// rise, capped at the requested amount; claims run only while the Lock is free and revert if the escrow's balance
-/// falls by more than the amount paid. Both hold a transient reentrancy flag at `REENTRANCY_SLOT` (OpenZeppelin
+/// rise, capped at the requested amount; claims (of the whole credit, or of an amount up to it) run only while the Lock
+/// is free and revert if the escrow's balance falls by more than the amount paid. Both hold a transient reentrancy flag at `REENTRANCY_SLOT` (OpenZeppelin
 /// `TransientSlot`), checked first. External calls: `LOCK.holder()` and `LOCK.isLocked()` (views of the immutable
 /// Lock), and `balanceOf`, `transferFrom` and `transfer` of the deposited or claimed token. Conservation: for every token
 /// `t`, `totalClaimable[t] == Σ_a claimable[t][a]`, and `t.balanceOf(this) >= totalClaimable[t]` while no one but the
 /// escrow moves its balance (INV-061); if the token's issuer burns from the escrow or a negative rebase lowers its
 /// balance, claims are paid first come, first served and the last ones revert until the balance is restored.
-/// @custom:spec REQ-ESCROW-001, REQ-ESCROW-005, REQ-ESCROW-006, REQ-ESCROW-007, REQ-ESCROW-008, REQ-ESCROW-017, REQ-ESCROW-018, INV-061, Q-214, Q-401
+/// @custom:spec REQ-ESCROW-001, REQ-ESCROW-005, REQ-ESCROW-006, REQ-ESCROW-007, REQ-ESCROW-008, REQ-ESCROW-017, REQ-ESCROW-018, REQ-ESCROW-020, INV-061, Q-214, Q-401
 contract PayoutEscrow is IPayoutEscrow {
     using SafeERC20 for IERC20;
     using TransientSlot for bytes32;
@@ -62,7 +62,7 @@ contract PayoutEscrow is IPayoutEscrow {
         if (lock.code.length == 0 || ILock(lock).LP_VAULT_SWAP() != lpVaultSwap) revert LockMismatch();
     }
 
-    /// @notice Holds the transient reentrancy flag for the whole call; the first check of `deposit` and `claim`.
+    /// @notice Holds the transient reentrancy flag for the whole call; the first check of `deposit` and both `claim`s.
     /// @custom:spec REQ-ESCROW-007, REQ-ESCROW-016
     modifier nonReentrant() {
         TransientSlot.BooleanSlot flag = REENTRANCY_SLOT.asBoolean();
@@ -107,13 +107,52 @@ contract PayoutEscrow is IPayoutEscrow {
         address token,
         address recipient
     ) external override nonReentrant returns (uint256 amount) {
-        if (ILock(LOCK).isLocked()) revert LockHeld();
-        if (recipient == address(0) || recipient == address(this)) revert InvalidRecipient();
+        _checkClaim(recipient);
         amount = claimable[token][msg.sender];
         if (amount == 0) revert NothingToClaim();
+        _pay(token, recipient, amount);
+    }
 
-        // Effects before the transfer: a callback during it finds the credit cleared (and the flag set).
-        claimable[token][msg.sender] = 0;
+    /// @inheritdoc IPayoutEscrow
+    /// @custom:spec REQ-ESCROW-004, REQ-ESCROW-005, REQ-ESCROW-007, REQ-ESCROW-008, REQ-ESCROW-012, REQ-ESCROW-013, REQ-ESCROW-014, REQ-ESCROW-015, REQ-ESCROW-016, REQ-ESCROW-020, REQ-ESCROW-021, INV-021, INV-053, INV-081, Q-214, Q-217, Q-241, Q-242
+    function claim(
+        address token,
+        address recipient,
+        uint256 amount
+    ) external override nonReentrant returns (uint256 paid) {
+        _checkClaim(recipient);
+        if (amount == 0) revert ZeroAmount();
+        uint256 credit = claimable[token][msg.sender];
+        if (credit == 0) revert NothingToClaim();
+        if (amount > credit) revert AmountExceedsCredit();
+        _pay(token, recipient, amount);
+        paid = amount;
+    }
+
+    /// @notice The checks both claims make first, after the reentrancy flag: the Lock is free and the recipient is
+    /// neither `address(0)` nor the escrow.
+    /// @param recipient Address that receives the tokens.
+    /// @custom:spec REQ-ESCROW-004, REQ-ESCROW-012, REQ-ESCROW-014
+    function _checkClaim(
+        address recipient
+    ) private view {
+        if (ILock(LOCK).isLocked()) revert LockHeld();
+        if (recipient == address(0) || recipient == address(this)) revert InvalidRecipient();
+    }
+
+    /// @notice Lowers the caller's credit and the total by `amount`, then pays `amount` to `recipient`.
+    /// @dev `amount` is non-zero and at most `claimable[token][msg.sender]`, checked by the caller.
+    /// @param token The token.
+    /// @param recipient Address that receives the tokens.
+    /// @param amount Amount paid, token base units.
+    /// @custom:spec REQ-ESCROW-004, REQ-ESCROW-011, REQ-ESCROW-015
+    function _pay(
+        address token,
+        address recipient,
+        uint256 amount
+    ) private {
+        // Effects before the transfer: a callback during it finds the credit lowered (and the flag set).
+        claimable[token][msg.sender] -= amount;
         totalClaimable[token] -= amount;
 
         IERC20 asset = IERC20(token);

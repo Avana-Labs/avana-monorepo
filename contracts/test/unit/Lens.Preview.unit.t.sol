@@ -79,6 +79,19 @@ contract LensPreviewUnitTest is LensFixture {
         vm.clearMockedCalls();
     }
 
+    // TEST-247 verifies: REQ-LENS-035
+    /// @dev No debt yet: the borrowed reserve's own rate, the only one in the account, sets the target health factor.
+    function test_TEST_247_borrowMaxUsesTheBorrowedReserveRateWithoutDebt() public {
+        uint256 deadline = block.timestamp + 365 days;
+        vm.mockCall(aave.hub, abi.encodeWithSignature("getAssetDrawnRate(uint256)", usdcAssetId), abi.encode(0));
+        uint256 flat = lens.previewBorrowMax(alice, MARKET_ID, usdcReserveId, deadline);
+        vm.mockCall(aave.hub, abi.encodeWithSignature("getAssetDrawnRate(uint256)", usdcAssetId), abi.encode(0.5e27));
+        uint256 steep = lens.previewBorrowMax(alice, MARKET_ID, usdcReserveId, deadline);
+        assertEq(flat, Math.mulDiv(_weighted(aliceProxy), 1e18, 1.005e18) / (0.9999e8 * 1e12), "zero rate: H0 x 1.005");
+        assertLt(steep, flat, "the borrowed reserve's 50 % rate raises the target");
+        vm.clearMockedCalls();
+    }
+
     // TEST-247 verifies: REQ-LENS-035, Q-398
     function test_TEST_247_borrowMaxHardFloor() public {
         store.setHardHealthFloor(MARKET_ID, 1.2e18);

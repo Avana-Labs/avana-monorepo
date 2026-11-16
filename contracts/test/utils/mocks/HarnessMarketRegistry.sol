@@ -10,7 +10,7 @@ import {ShapeKind} from "../../../src/types/ShapeKind.sol";
 
 /// @title HarnessMarketRegistry
 /// @notice The MarketRegistry views the ParameterStore logic reads in the property harnesses, for one Registered
-/// market (identifier 1) of two listed tokens in an address-keyed pool, with no price routes and no Hub. Small on
+/// market (identifier 1) of two listed tokens in an address-keyed pool, with no price routes, no Hub and no Spoke. Small on
 /// purpose: each harness deploys it beside a logic contract under the 49,152-byte initcode limit.
 contract HarnessMarketRegistry {
     address public pool;
@@ -59,4 +59,11 @@ contract HarnessMarketRegistry {
     ) external pure returns (bool) {
         return false;
     }
+
+    /// @notice No CDP Spoke is registered: the one market has no Hub.
+    function getSpokes() external pure returns (address[] memory) {}
+
+    function marketsOfSpoke(
+        address
+    ) external pure returns (uint256[] memory) {}
 }

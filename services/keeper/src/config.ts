@@ -16,6 +16,8 @@ import {
   rpcEnvName,
 } from "@avana/services-common";
 import { ABI_HASH } from "@avana/protocol/abis";
+import type { Address } from "viem";
+import { type FeePolicy, GWEI, paysL1DataFee } from "./chain/gas.ts";
 import { type StreamKey, parseStreamKey } from "./discovery/indexerStream.ts";
 import type { LocalKeystore } from "./adapters/localKeystore.ts";
 import { DISCOVERY_PAGE_SECONDS } from "./monitoring/discovery.ts";
@@ -38,6 +40,20 @@ export interface ChainConfig {
   readonly largestDebtToCover: ReadonlyMap<string, bigint>;
   /** The signer's expected daily gas spend, the floor of M-17's measured median; required wherever a signer is set. */
   readonly gasDailySpendWei: bigint | undefined;
+  /** Tips and the lazy base-fee gate per job class (KEEPER_MIN_TIP_*, KEEPER_LAZY_*); defaults in `feePolicy`. */
+  readonly feePolicy: FeePolicy;
+  /**
+   * Rolling 24 h budget in wei of the scheduled and lazy classes (KEEPER_DAILY_BUDGET_WEI_{SCHEDULED,LAZY}_<CHAIN>);
+   * a class at its budget stops sending and pages M-32. Undefined without a daily spend (observe-only). Urgent has none.
+   */
+  readonly dailyBudgetWei: { readonly scheduled: bigint; readonly lazy: bigint } | undefined;
+  /** The standby instance's signer on this chain and its minimum gas balance (M-33); null when not configured. */
+  readonly standby: { readonly signer: Address; readonly minBalanceWei: bigint } | null;
+  /**
+   * A Chainlink feed of the chain's gas token in USD (KEEPER_NATIVE_USD_FEED_<CHAIN>), used only to value a
+   * liquidation's reward in wei for the small-account spend metric; null leaves that metric unreported.
+   */
+  readonly nativeUsdFeed: Address | null;
   /** This chain's instance at the monitoring service; null when KEEPER_MONITOR_URL is unset (log lines only). */
   readonly monitor: { readonly url: string; readonly instance: string; readonly token: string } | null;
 }
@@ -89,6 +105,100 @@ export function gasCeiling(env: NodeJS.ProcessEnv, name: string): bigint | undef
   return BigInt(raw);
 }
 
+/** A decimal wei amount with a default; zero and anything but digits are refused, as for `gasCeiling`. */
+export function weiOr(env: NodeJS.ProcessEnv, name: string, fallback: bigint): bigint {
+  return gasCeiling(env, name) ?? fallback;
+}
+
+/** A positive whole number of seconds with a default. */
+export function secondsOr(env: NodeJS.ProcessEnv, name: string, fallback: bigint): bigint {
+  const raw = optionalEnv(env, name);
+  if (raw === undefined) return fallback;
+  if (!/^\d+$/.test(raw) || BigInt(raw) === 0n) throw new Error(`${name} must be a positive integer number of seconds`);
+  return BigInt(raw);
+}
+
+/**
+ * Default fee policy of a chain. Urgent keeps today's rule (at least 1 gwei). The scheduled and lazy values are
+ * conservative starting points, lower on an OP Stack chain (Base), whose base fee is a few thousandths of a gwei; they
+ * are replaced by the inclusion-delay measurement of the AvanaGas design (section 6: a scheduled poke lands inside the
+ * 60 s lead in at least 99 % of trials) through the KEEPER_MIN_TIP_* and KEEPER_LAZY_* variables.
+ */
+export function defaultFeePolicy(chain: Pick<ChainInfo, "key">): FeePolicy {
+  const rollup = paysL1DataFee(chain);
+  return {
+    minTipUrgent: GWEI,
+    minTipScheduled: rollup ? GWEI / 100n : GWEI / 2n,
+    minTipLazy: rollup ? GWEI / 1_000n : GWEI / 10n,
+    lazyBaseFeeMax: rollup ? GWEI / 20n : GWEI,
+    lazyMaxWaitSeconds: 3_600n,
+  };
+}
+
+/**
+ * KEEPER_MIN_TIP_{URGENT,SCHEDULED,LAZY}_<CHAIN>, KEEPER_LAZY_BASEFEE_MAX_<CHAIN> (wei) and KEEPER_LAZY_MAX_WAIT_<CHAIN>
+ * (seconds), each defaulting to `defaultFeePolicy`. The tips must not rise from urgent to lazy, so a non-urgent
+ * transaction never outbids a liquidation.
+ */
+export function feePolicy(env: NodeJS.ProcessEnv, chain: Pick<ChainInfo, "key" | "envSuffix">): FeePolicy {
+  const d = defaultFeePolicy(chain);
+  const sfx = chain.envSuffix;
+  const p: FeePolicy = {
+    minTipUrgent: weiOr(env, `KEEPER_MIN_TIP_URGENT_${sfx}`, d.minTipUrgent),
+    minTipScheduled: weiOr(env, `KEEPER_MIN_TIP_SCHEDULED_${sfx}`, d.minTipScheduled),
+    minTipLazy: weiOr(env, `KEEPER_MIN_TIP_LAZY_${sfx}`, d.minTipLazy),
+    lazyBaseFeeMax: weiOr(env, `KEEPER_LAZY_BASEFEE_MAX_${sfx}`, d.lazyBaseFeeMax),
+    lazyMaxWaitSeconds: secondsOr(env, `KEEPER_LAZY_MAX_WAIT_${sfx}`, d.lazyMaxWaitSeconds),
+  };
+  if (p.minTipScheduled > p.minTipUrgent) throw new Error(`KEEPER_MIN_TIP_SCHEDULED_${sfx} must not exceed KEEPER_MIN_TIP_URGENT_${sfx}`);
+  if (p.minTipLazy > p.minTipScheduled) throw new Error(`KEEPER_MIN_TIP_LAZY_${sfx} must not exceed KEEPER_MIN_TIP_SCHEDULED_${sfx}`);
+  return p;
+}
+
+/** Multiples of the expected daily spend that the class budgets default to: a volatile day doubles feed rounds. */
+export const DEFAULT_BUDGET_DAYS = { scheduled: 3n, lazy: 1n } as const;
+
+/** KEEPER_DAILY_BUDGET_WEI_{SCHEDULED,LAZY}_<CHAIN>; default 3 and 1 times KEEPER_GAS_DAILY_SPEND_WEI_<CHAIN>. */
+export function dailyBudgets(env: NodeJS.ProcessEnv, sfx: string, dailySpend: bigint | undefined): ChainConfig["dailyBudgetWei"] {
+  const scheduled = gasCeiling(env, `KEEPER_DAILY_BUDGET_WEI_SCHEDULED_${sfx}`);
+  const lazy = gasCeiling(env, `KEEPER_DAILY_BUDGET_WEI_LAZY_${sfx}`);
+  if (dailySpend === undefined && scheduled === undefined && lazy === undefined) return undefined;
+  const base = dailySpend ?? 0n;
+  const s = scheduled ?? base * DEFAULT_BUDGET_DAYS.scheduled;
+  const l = lazy ?? base * DEFAULT_BUDGET_DAYS.lazy;
+  if (s === 0n || l === 0n) throw new Error(`KEEPER_DAILY_BUDGET_WEI_SCHEDULED_${sfx} and KEEPER_DAILY_BUDGET_WEI_LAZY_${sfx} need KEEPER_GAS_DAILY_SPEND_WEI_${sfx} or both set`);
+  return { scheduled: s, lazy: l };
+}
+
+const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
+
+/**
+ * KEEPER_STANDBY_SIGNER_<CHAIN> and KEEPER_STANDBY_MIN_BALANCE_WEI_<CHAIN> (M-33). The minimum defaults to 3 days of
+ * KEEPER_GAS_DAILY_SPEND_WEI_<CHAIN>, the level at which M-17 warns.
+ */
+export function standbySigner(env: NodeJS.ProcessEnv, sfx: string, dailySpend: bigint | undefined): ChainConfig["standby"] {
+  const name = `KEEPER_STANDBY_SIGNER_${sfx}`;
+  const signer = optionalEnv(env, name);
+  const min = gasCeiling(env, `KEEPER_STANDBY_MIN_BALANCE_WEI_${sfx}`);
+  if (signer === undefined) {
+    if (min !== undefined) throw new Error(`KEEPER_STANDBY_MIN_BALANCE_WEI_${sfx} is set without ${name}`);
+    return null;
+  }
+  if (!ADDRESS.test(signer)) throw new Error(`${name} must be an address`);
+  const minBalanceWei = min ?? (dailySpend !== undefined ? dailySpend * 3n : undefined);
+  if (minBalanceWei === undefined) throw new Error(`${name} needs KEEPER_STANDBY_MIN_BALANCE_WEI_${sfx} or KEEPER_GAS_DAILY_SPEND_WEI_${sfx}`);
+  return { signer: signer as Address, minBalanceWei };
+}
+
+/** KEEPER_NATIVE_USD_FEED_<CHAIN>: an address, or null when unset. */
+export function nativeUsdFeed(env: NodeJS.ProcessEnv, sfx: string): Address | null {
+  const name = `KEEPER_NATIVE_USD_FEED_${sfx}`;
+  const raw = optionalEnv(env, name);
+  if (raw === undefined) return null;
+  if (!ADDRESS.test(raw)) throw new Error(`${name} must be an address`);
+  return raw as Address;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
   const set = (optionalEnv(env, "KEEPER_NETWORK_SET") ?? "testnet") as NetworkSet;
   const mode = (optionalEnv(env, "KEEPER_MODE") ?? "observe") as KeeperMode;
@@ -116,6 +226,10 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
     gasCeilingWei: gasCeiling(env, `KEEPER_GAS_CEILING_WEI_${chain.envSuffix}`),
     largestDebtToCover: parseLargest(listEnv(env, `KEEPER_LARGEST_DEBT_TO_COVER_${chain.envSuffix}`), `KEEPER_LARGEST_DEBT_TO_COVER_${chain.envSuffix}`),
     gasDailySpendWei: gasCeiling(env, `KEEPER_GAS_DAILY_SPEND_WEI_${chain.envSuffix}`),
+    feePolicy: feePolicy(env, chain),
+    dailyBudgetWei: dailyBudgets(env, chain.envSuffix, gasCeiling(env, `KEEPER_GAS_DAILY_SPEND_WEI_${chain.envSuffix}`)),
+    standby: standbySigner(env, chain.envSuffix, gasCeiling(env, `KEEPER_GAS_DAILY_SPEND_WEI_${chain.envSuffix}`)),
+    nativeUsdFeed: nativeUsdFeed(env, chain.envSuffix),
     monitor: monitorUrl
       ? { url: monitorUrl, instance: requireEnv(env, `KEEPER_MONITOR_INSTANCE_${chain.envSuffix}`), token: requireEnv(env, `KEEPER_MONITOR_TOKEN_${chain.envSuffix}`) }
       : null,

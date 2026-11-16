@@ -26,6 +26,8 @@ import {HandlerReach} from "./handlers/HandlerReach.sol";
 /// routes that agree, a fresh and agreeing USDC route.
 /// forge-config: default.invariant.runs = 32
 /// forge-config: default.invariant.depth = 40
+/// forge-config: invariant.invariant.runs = 1000
+/// forge-config: invariant.invariant.depth = 400
 /// forge-config: default.invariant.fail-on-revert = true
 contract OraclesLiquidationInvariantTest is RealOraclesFixture, HandlerReach {
     OracleEnvHandler internal handler;
@@ -178,6 +180,31 @@ contract OraclesLiquidationInvariantTest is RealOraclesFixture, HandlerReach {
         assertEq(handler.repayViolations(), 0, handler.lastViolation());
     }
 
+    // TEST-104 verifies: INV-030, INV-059, INV-087, REQ-SWAP-008, REQ-SWAP-091
+    /// @notice The campaign's shrunk sequence for seed 0x6afae3c6: five rounds on the USDC feeds raise ETH/USD 1.15,
+    /// 1.25, 1.20, 1.44 and 1.50 times, to 11,230.34 USD (1,123,033,792,766 at 8 decimals), above the feed's pinned
+    /// `maxAnswer` (10^12). The DebtOracle reads that leg `Invalid` (`REQ-ORACLE-002`), so the alternate route is not a
+    /// route and the primary alone serves Live: the liquidation repaying USDC is admitted, and the handler's record
+    /// reads the alternate route invalid too.
+    function test_TEST_104_ethUsdAboveItsBoundLeavesThePrimaryAlone() public {
+        handler.publishDebt(10_019, 6498);
+        handler.publishDebt(
+            24_440_054_405_305_269_366_569_402_256_811_496_959_409_073_762_505_157_381_672_968_839_269_610_695_612,
+            14_548_992
+        );
+        handler.publishDebt(691_415_978_906_521_570_653_435_304_214_168, 30_000_000);
+        handler.publishDebt(
+            12_847_376_061_809_297_530_290_974_190_478_138_313,
+            95_115_121_061_027_811_687_980_966_805_548_252_556_728_832_139_771_166_539_643_081_784_468_208_272_135
+        );
+        handler.publishDebt(9950, 25_000_000_000_000);
+        (, int256 ethUsd,,,) = dAltEthUsd.latestRoundData();
+        assertEq(ethUsd, 1_123_033_792_766, "ETH/USD above its maxAnswer");
+        handler.liquidate();
+        assertEq(uint8(debtOracle.getPriceState().state), uint8(PriceState.Live), "the primary alone serves Live");
+        invariant_TEST_104_admittedLiquidationsMetTheirOraclePreconditions();
+    }
+
     // ─── TEST-105 ───
 
     // TEST-105 verifies: INV-031, INV-055, INV-056, INV-087, SPEC-ORC-017, SPEC-ORC-018
@@ -245,6 +272,13 @@ contract OracleEnvHandler {
     uint256 internal constant ETH_USD_AGE = 5400;
     uint256 internal constant T_LP = 150;
     uint256 internal constant T_USDC = 225;
+    // The USDC feeds' pinned bounds (the fixture's `setFeed`): an answer at or below `minAnswer` or at or above
+    // `maxAnswer` makes the leg Invalid (`REQ-ORACLE-002`), and a route is valid only if `1 <= r <= MAX_ROUTE_ANSWER`
+    // (`REQ-ORACLE-004`).
+    int256 internal constant DEBT_MIN_ANSWER = 0;
+    int256 internal constant DEBT_USD_MAX_ANSWER = 1e12;
+    int256 internal constant DEBT_ETH_MAX_ANSWER = 1e18;
+    int256 internal constant MAX_ROUTE_ANSWER = 1e18;
 
     OraclesLiquidationInvariantTest internal immutable F;
     LPOracleCL internal immutable O;
@@ -405,11 +439,11 @@ contract OracleEnvHandler {
         }
         if (repayable) {
             bool vp = _debtValid(0, LEG_AGE);
-            bool va = _debtValid(1, LEG_AGE) && _debtValid(2, ETH_USD_AGE);
+            bool va = _debtValid(1, LEG_AGE) && _debtValid(2, ETH_USD_AGE) && _debtAlternate() >= 1
+                && _debtAlternate() <= MAX_ROUTE_ANSWER;
             if (!vp && !va) _repayViolation("USDC repaid with no fresh route");
-            if (vp && va) {
-                int256 alt = debtPrice[1] * debtPrice[2] / 1e18;
-                if (_dev(debtPrice[0], alt) > T_USDC) _repayViolation("USDC repaid while its routes disagree");
+            if (vp && va && _dev(debtPrice[0], _debtAlternate()) > T_USDC) {
+                _repayViolation("USDC repaid while its routes disagree");
             }
         }
     }
@@ -437,11 +471,19 @@ contract OracleEnvHandler {
         return !down[i] && price[i] > 0 && at[i] <= block.timestamp && block.timestamp - at[i] <= LEG_AGE;
     }
 
+    /// @dev A USDC leg the DebtOracle reads Valid: answering, inside its pinned bounds and within `age`.
     function _debtValid(
         uint256 i,
         uint256 age
     ) internal view returns (bool) {
-        return !debtDown[i] && debtPrice[i] > 0 && block.timestamp - debtAt[i] <= age;
+        int256 maxAnswer = i == 1 ? DEBT_ETH_MAX_ANSWER : DEBT_USD_MAX_ANSWER;
+        return !debtDown[i] && debtPrice[i] > DEBT_MIN_ANSWER && debtPrice[i] < maxAnswer
+            && block.timestamp - debtAt[i] <= age;
+    }
+
+    /// @dev The alternate route's value, USDC/ETH (18 decimals) times ETH/USD (8 decimals), at 8 decimals.
+    function _debtAlternate() internal view returns (int256) {
+        return debtPrice[1] * debtPrice[2] / 1e18;
     }
 
     function _dev(

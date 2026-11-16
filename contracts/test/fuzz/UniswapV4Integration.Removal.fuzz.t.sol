@@ -19,8 +19,8 @@ import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 contract UniswapV4IntegrationRemovalFuzzTest is UniswapV4IntegrationFixture {
     address internal recipient = makeAddr("recipient");
 
-    // TEST-334 verifies: REQ-AMM-V4-004, SPEC-AMM-V4-003, REQ-AMM-V4-010
-    function testFuzz_TEST_334_stableRemovalPaysThePoolManagersCredit(
+    // TEST-342 verifies: REQ-AMM-V4-004, SPEC-AMM-V4-003, REQ-AMM-V4-010
+    function testFuzz_TEST_342_stableRemovalPaysThePoolManagersCredit(
         uint128 liquidity,
         uint256 wash,
         int256 endTick,
@@ -34,8 +34,8 @@ contract UniswapV4IntegrationRemovalFuzzTest is UniswapV4IntegrationFixture {
         _removeAndCheck(M1, stableKey, key, units, M1_LOWER, M1_UPPER, share);
     }
 
-    // TEST-334 verifies: REQ-AMM-V4-004, SPEC-AMM-V4-003, REQ-AMM-CORE-010
-    function testFuzz_TEST_334_nativeEthRemovalPaysThePoolManagersCredit(
+    // TEST-342 verifies: REQ-AMM-V4-004, SPEC-AMM-V4-003, REQ-AMM-CORE-010
+    function testFuzz_TEST_342_nativeEthRemovalPaysThePoolManagersCredit(
         uint128 liquidity,
         uint256 wash,
         int256 endTick,
@@ -51,8 +51,8 @@ contract UniswapV4IntegrationRemovalFuzzTest is UniswapV4IntegrationFixture {
         assertEq(recipient.balance, 0, "ETH wrapped for the recipient");
     }
 
-    // TEST-334 verifies: REQ-AMM-V4-004, REQ-AMM-CORE-007
-    function testFuzz_TEST_334_minimumsHoldAtTheExactAmounts(
+    // TEST-342 verifies: REQ-AMM-V4-004, REQ-AMM-CORE-007
+    function testFuzz_TEST_342_minimumsHoldAtTheExactAmounts(
         uint128 liquidity,
         int256 endTick,
         bool second
@@ -77,8 +77,8 @@ contract UniswapV4IntegrationRemovalFuzzTest is UniswapV4IntegrationFixture {
         assertEq(paid[1], exact[1], "token1 at its minimum");
     }
 
-    // TEST-334 verifies: REQ-AMM-V4-010, REQ-VAULT-064
-    function testFuzz_TEST_334_wrappedFeeGrowthReadsWhatThePoolManagerPays(
+    // TEST-342 verifies: REQ-AMM-V4-010, REQ-VAULT-064
+    function testFuzz_TEST_342_wrappedFeeGrowthReadsWhatThePoolManagerPays(
         uint256 below0,
         uint256 below1,
         uint256 wash,

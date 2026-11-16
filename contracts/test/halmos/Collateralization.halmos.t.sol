@@ -38,19 +38,52 @@ contract CollateralizationHalmosTest is Test {
     // PROP-028 verifies: SPEC-BACK-005, SPEC-BACK-013, REQ-VAULT-036, INV-027
     /// @notice `ceil(V0 * r / U0)` is monotone in the remaining units, at most `V0`, `V0` at `r = U0` and 0 at
     /// `r = 0`, so any split of exits releases the same total and the last exit releases exactly what remains.
-    function check_PROP_028_exitChargeIndependentOfSplit(
+    /// @dev Proved in two parts. This check: for every `V0, U0, r < 2^64` with `U0 > 0` and `r <= U0`,
+    /// `remainingCharge(V0, r, U0)` equals `R(r) = floor(V0 * r / U0) + (V0 * r mod U0 > 0 ? 1 : 0)`. MATH-AR-91
+    /// (`docs/spec/05-verification/z3/aave-risk/ar17_halmos_references.py`) proves, for every `0 <= r2 <= r1 <= U0`,
+    /// `R(r2) <= R(r1)`, `R(r1) <= V0`, `R(0) = 0` and `R(U0) = V0`, and that `V0 * r < 2^256 - 1`. Exits `x1`, then
+    /// `x2` (`x1 <= U0`, `x2 <= U0 - x1`) leave `r1 = U0 - x1` and `r2 = r1 - x2`, which ranges over every such pair,
+    /// so the two parts give the four assertions this check made before the split. That form divided by a symbolic
+    /// `U0` four times and needed products of symbolic values compared, and ran out of its 5-hour budget (run
+    /// 43492412351).
+    function check_PROP_028_exitChargeIndependentOfSplitFormula(
         uint64 v0,
         uint64 u0,
-        uint64 x1,
-        uint64 x2
+        uint64 r
     ) public view {
-        vm.assume(u0 > 0 && x1 <= u0 && x2 <= u0 - x1);
-        uint256 afterFirst = h.remainingCharge(v0, u0 - x1, u0);
-        uint256 afterBoth = h.remainingCharge(v0, u0 - x1 - x2, u0);
-        assert(afterBoth <= afterFirst);
-        assert(afterFirst <= v0);
-        assert(h.remainingCharge(v0, 0, u0) == 0);
-        assert(h.remainingCharge(v0, u0, u0) == v0);
+        vm.assume(u0 > 0 && r <= u0);
+        uint256 v = v0;
+        uint256 k = r;
+        uint256 n = u0;
+        _assumeExactProduct(v, k);
+        assert(h.remainingCharge(v, k, n) == _ceilShape(v, k, n));
+    }
+
+    /// @dev Assumes `mulmod(x, y, 2^256 - 1) == x * y` (and `== y * x`). The caller passes `x, y < 2^64`, so
+    /// `x * y < 2^128` and both sides are the exact product (MATH-AR-91d): the assumption removes no input. It states,
+    /// without a multiplication, the fact `Math.mulDiv` tests first: the high word of the 512-bit product is 0. The
+    /// solver then rules out the 512-bit branch of `mulDiv`, with its symbolic divisor, from this equality alone. Both
+    /// operand orders are given because the optimizer may emit either order for the code's `x * y`.
+    function _assumeExactProduct(
+        uint256 x,
+        uint256 y
+    ) internal pure {
+        unchecked {
+            vm.assume(mulmod(x, y, type(uint256).max) == x * y);
+            vm.assume(mulmod(x, y, type(uint256).max) == y * x);
+        }
+    }
+
+    /// @dev `ceil(x * y / s)` in the shape `Math.mulDiv(x, y, s, Ceil)` computes it when the product fits 256 bits: the
+    /// floor quotient, plus 1 when `mulmod` leaves a remainder. Called with `x * y < 2^256` and `s > 0`.
+    function _ceilShape(
+        uint256 x,
+        uint256 y,
+        uint256 s
+    ) internal pure returns (uint256) {
+        unchecked {
+            return x * y / s + (mulmod(x, y, s) > 0 ? 1 : 0);
+        }
     }
 
     // PROP-014 verifies: SPEC-BACK-006, REQ-VAULT-016, INV-015

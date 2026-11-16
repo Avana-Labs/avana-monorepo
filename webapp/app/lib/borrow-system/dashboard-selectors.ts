@@ -175,3 +175,11 @@ export function selectBorrowSnapshot(state: BorrowSystemState, walletId: string)
     spokeBreakdown,
   }
 }
+
+/**
+ * The account's liquidation threshold as a percent of its collateral: the positions' liquidation
+ * value over their collateral value. Undefined without collateral.
+ */
+export function accountLiquidationThresholdPct(liquidationValueUsd: number, collateralUsd: number): number | undefined {
+  return collateralUsd > 0 ? (liquidationValueUsd / collateralUsd) * 100 : undefined
+}

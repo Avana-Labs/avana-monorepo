@@ -158,6 +158,7 @@ contract LPOracleCLModuleTest is LPOracleCLFixture {
         c.tokens[1].secondSource.poolRef = bytes32(uint256(uint160(address(deep))));
         c.tokens[1].secondSource.twapWindow = WINDOW;
         c.tokens[1].secondSource.toleranceBps = 100;
+        assertEq(_checkConfig(c), 0, "a deep pool of the pair is not the market's own pool");
         store.setConfig(c);
         PriceStateView memory v = _state();
         assertEq(v.tokens[1].reasons & ((1 << 4) | (1 << 5)), 0, "token1 confirmed by the deep pool");
@@ -213,6 +214,32 @@ contract LPOracleCLModuleTest is LPOracleCLFixture {
         (m.tokens[0], m.tokens[1]) = (address(token0), address(token1));
         registry.setMarketOf(address(oracle), MARKET, m);
         assertTrue(_checkConfig(c) & (1 << (SHIFT + 6)) != 0, "registered: an unreadable provider list is refused");
+    }
+
+    // TEST-306 verifies: REQ-ORACLE-105, SPEC-ORC-005
+    /// @dev Once bound, an integration unit exponent other than the stored `k` sets bit 7 alone, at
+    /// `MODULE_CHECKS_SHIFT + 7`.
+    function test_TEST_306_unitExponentMismatchSetsOnlyItsBit() public {
+        _deployClMarket(_ethUsdc());
+        OracleConfig memory c = _config();
+        integration.setBound(true);
+        assertEq(_checkConfig(c), 0, "bound, same unit exponent");
+        integration.setUnitExp(unitExp + 1);
+        assertEq(_checkConfig(c), 1 << (SHIFT + 7), "bound, another unit exponent");
+    }
+
+    // TEST-306 verifies: REQ-ORACLE-105, REQ-AMM-CORE-004
+    /// @dev `rateProviders` must return exactly the four words of two zero addresses: a return with a fifth word is
+    /// malformed and refused, even when its first four words are those of two zero addresses.
+    function test_TEST_306_oversizedRateProvidersReturnIsRefused() public {
+        _deployClMarket(_ethUsdc());
+        OracleConfig memory c = _config();
+        integration.setBound(true);
+        bytes memory call = abi.encodeCall(integration.rateProviders, (MARKET));
+        vm.mockCall(address(integration), call, abi.encode(uint256(32), uint256(2), uint256(0), uint256(0)));
+        assertEq(_checkConfig(c), 0, "four words: two zero providers");
+        vm.mockCall(address(integration), call, abi.encode(uint256(32), uint256(2), uint256(0), uint256(0), uint256(0)));
+        assertEq(_checkConfig(c), 1 << (SHIFT + 6), "five words: malformed");
     }
 
     // TEST-306 verifies: REQ-ORACLE-105, SPEC-ORC-009

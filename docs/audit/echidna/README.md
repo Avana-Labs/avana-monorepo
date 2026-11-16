@@ -10,7 +10,7 @@ From `contracts/`, Echidna 2.3.3 from `tools/bin/`:
 
 ```bash
 script/security-slow.sh build echidna
-ECHIDNA_TEST_LIMIT=1000000 ECHIDNA_TIMEOUT=1800 script/security-slow.sh build echidna      # full budget
+ECHIDNA_TEST_LIMIT=100000 ECHIDNA_TIMEOUT=600 script/security-slow.sh build echidna        # nightly CI budget
 ```
 
 Configuration: `contracts/echidna.yaml` (`testLimit` 50,000, `seqLen` 100, time delay up to 14 days, block delay up to 100,800); `ECHIDNA_TIMEOUT` 900 s per harness and mode by default. Corpora persist in `out-security/corpus/echidna/`.

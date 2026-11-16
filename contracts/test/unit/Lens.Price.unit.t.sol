@@ -108,6 +108,11 @@ contract LensPriceUnitTest is LensFixture {
         assertEq(uint8(lens.getPriceState(vt).liquidationState), uint8(PriceState.Cached), "from Live too");
         lpo.setState(PriceState.Expired, 1 << 12, true);
         assertEq(uint8(lens.getPriceState(vt).liquidationState), uint8(PriceState.Expired), "Expired stays");
+        // Other reason bits without bit 12 leave the state as it is.
+        lpo.setState(PriceState.Drifting, (1 << 9) | (1 << 10) | (1 << 13), true);
+        assertEq(uint8(lens.getPriceState(vt).liquidationState), uint8(PriceState.Drifting), "other reasons only");
+        lpo.setState(PriceState.Live, 1 << 10, true);
+        assertEq(uint8(lens.getPriceState(vt).liquidationState), uint8(PriceState.Live), "in grace, Live");
     }
 
     // TEST-247 verifies: REQ-LENS-015
@@ -177,6 +182,8 @@ contract LensPriceUnitTest is LensFixture {
         usdcOracle.set(99_990_000, PriceState.Live, 99_990_000, 1_762_696_000);
         vm.warp(1_762_697_800);
         DebtPriceView memory v = lens.getDebtPriceState(aave.cdpSpoke, usdcReserveId);
+        assertTrue(usdcReserveId != 0, "a non-zero reserve id");
+        assertEq(v.debtReserveId, usdcReserveId, "reserve");
         assertEq(v.source, address(usdcOracle), "DebtOracle");
         assertFalse(v.fixedPrice, "not fixed");
         assertEq(v.age, 1800, "age");

@@ -199,6 +199,50 @@ contract RiskModuleNetSpeedUnitTest is RiskModuleFixture {
         assertEq(w.base, 2_400_000e6);
     }
 
+    // TEST-321 verifies: REQ-RISK-092, REQ-RISK-093, REQ-RISK-097
+    /// @dev `opened` is set only by a charge: a repay or a withdrawal credit on windows no charge has opened stores them
+    /// unopened, and the first charge then opens them.
+    function test_TEST_321_aCreditNeverOpensAWindow() public {
+        bytes32 debtKey = keccak256(abi.encode(address(hub), address(usdc)));
+        _repay(10_000e6);
+        vm.prank(address(coll));
+        riskModule.creditWithdraw(mid, 5000e8);
+        assertFalse(riskModule.getSpeedWindow(SpeedScope.MarketBorrow, bytes32(mid)).opened, "market borrow");
+        assertFalse(riskModule.getSpeedWindow(SpeedScope.DebtBorrow, debtKey).opened, "debt borrow");
+        assertFalse(riskModule.getSpeedWindow(SpeedScope.MarketPledge, bytes32(mid)).opened, "market pledge");
+        _borrow(10_000e6);
+        assertTrue(riskModule.getSpeedWindow(SpeedScope.MarketBorrow, bytes32(mid)).opened, "opened by the borrow");
+        assertTrue(riskModule.getSpeedWindow(SpeedScope.DebtBorrow, debtKey).opened, "opened by the borrow");
+    }
+
+    // TEST-321 verifies: REQ-RISK-092, REQ-RISK-093, REQ-RISK-097
+    /// @dev The speed logic's inputs through the live entry points: a borrow charges the proxy's market window in USD
+    /// and the (funding Hub, asset) window in base units, each against its own limits; the borrow views read the window
+    /// of the market asked for; and the pledge view's limit is on the booked value `regularUsed + sliceUsed`.
+    function test_TEST_321_speedInputsThroughLiveEntryPoints() public {
+        bytes32 debtKey = keccak256(abi.encode(address(hub), address(usdc)));
+        _borrow(10_000e6);
+        assertEq(riskModule.getSpeedWindow(SpeedScope.MarketBorrow, bytes32(mid)).curr, 10_000 * E8, "charge in USD");
+        assertEq(riskModule.getSpeedWindow(SpeedScope.DebtBorrow, debtKey).curr, 10_000e6, "(funding Hub, asset) key");
+        (SpeedView memory m, SpeedView memory d) = _views();
+        assertEq(m.limit, 850_000 * E8, "market limits");
+        assertEq(d.limit, 600_000e6, "debt limits");
+        // The window read is the one of the market asked for: a second identifier, whose record and limits are set to
+        // this market's, shows an empty window on the same limit.
+        uint256 other = mid + 1;
+        vm.mockCall(address(registry), abi.encodeCall(registry.getMarket, (other)), abi.encode(registry.getMarket(mid)));
+        store.setMarketSpeed(other, store.marketSpeedLimits(mid));
+        (m,) = riskModule.getBorrowSpeed(other, USDC_RESERVE);
+        assertFalse(m.unavailable, "read");
+        assertEq(m.used, 0, "the market asked for");
+        assertEq(m.limit, 850_000 * E8, "same limit");
+        vm.clearMockedCalls();
+        PledgeCounters memory k = _counters();
+        (k.regularUsed, k.sliceUsed) = (6_000_000e8, 250_000e8);
+        coll.setCounters(k);
+        assertEq(riskModule.getPledgeSpeed(mid).limit, 1_562_500e8, "2,500 bps of $6,250,000 booked");
+    }
+
     // ----------------------------------------------------------------------------------------- withdrawal credit
 
     // TEST-322 verifies: REQ-RISK-093, REQ-RISK-095, SPEC-CAP-011

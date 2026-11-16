@@ -15,6 +15,7 @@ import {LVSLPOracleMock, LVSMarketRegistryMock} from "../../utils/mocks/LPVaultS
 import {PayoutToken} from "../../utils/mocks/PayoutToken.sol";
 import {MockCLPool} from "../../utils/mocks/SwapRouteMocks.sol";
 import {DeficitFunding} from "./DeficitFunding.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
@@ -77,6 +78,8 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
         uint256 parked;
         // The Spoke's USDC deficit on the Hub (ray): a rise marks a call that booked a deficit (SPEC-LIQ-022).
         uint256 deficit;
+        // Before the call only: the account's collateral value was below its debt value times the call's bonus.
+        bool underwater;
     }
 
     /// @dev A route rate at or above this (per 10,000) meets the per-leg minimum at the fixture's 1 % slippage
@@ -151,6 +154,7 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
         vm.prank(caller);
         env.usdc.approve(address(env.lvs), debtToCover + maxShortfall);
         Usdc memory before = _usdc(caller, env.wallets[i]);
+        before.underwater = _underwater(proxy);
         vm.recordLogs();
         vm.prank(caller);
         try env.lvs.liquidate(p) returns (LiquidationResult memory r) {
@@ -356,6 +360,16 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
 
     // ─── Balance checks ───
 
+    /// @dev Whether `proxy` is underwater: its Aave collateral value below its debt value times the liquidation bonus
+    /// at its health factor (REQ-SWAP-027), as LPVaultSwap tests it at the call's entry.
+    function _underwater(
+        address proxy
+    ) internal view returns (bool) {
+        IAaveV4Spoke.UserAccountData memory d = IAaveV4Spoke(env.spoke).getUserAccountData(proxy);
+        uint256 bonus = IAaveV4Spoke(env.spoke).getLiquidationBonus(env.vtReserveId, proxy, d.healthFactor);
+        return d.totalCollateralValue * 1e4 < Math.mulDiv(d.totalDebtValueRay, bonus, 1e27, Math.Rounding.Ceil);
+    }
+
     function _usdc(
         address caller,
         address wallet
@@ -382,7 +396,8 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
     /// report what the balances show: `D` the Hub's rise, `A` the fee recipient's, `B` the borrower's, `R` the sources'
     /// fall less Collateralization's rise and `keeperOut − Kf − shortfall` the caller's change. The part of `B` a deficit
     /// liquidation paid into the First-Loss Reserve (`DeficitSurplusFunded`) reaches the Hub, not the borrower; it is
-    /// all of `B` on a call that raised the Spoke's deficit and 0 on any other call (REQ-SWAP-027). Floor: `R + shortfall >= minOut` and `D <= Kf <=
+    /// all of `B` on a call of an account underwater before it or that raised the Spoke's deficit, and 0 on any other
+    /// call (REQ-SWAP-027). Floor: `R + shortfall >= minOut` and `D <= Kf <=
     /// debtToCover`, `shortfall <= maxShortfall`.
     function _checkBalances(
         Usdc memory b,
@@ -406,7 +421,8 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
         if (
             toHub != int256(r.debtRepaid + funded) || toFee != int256(r.avanaFee)
                 || toBorrower != int256(r.borrowerSurplus) - int256(funded)
-                || funded != (a.deficit > b.deficit ? r.borrowerSurplus : 0) || recovered != int256(r.recovered)
+                || funded != (b.underwater || a.deficit > b.deficit ? r.borrowerSurplus : 0)
+                || recovered != int256(r.recovered)
                 || -callerIn != int256(r.keeperOut) - int256(r.callerFunds) - int256(r.shortfall)
         ) ++reportBreaks;
         if (

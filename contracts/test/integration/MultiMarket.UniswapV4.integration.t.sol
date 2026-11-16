@@ -75,8 +75,8 @@ contract MultiMarketUniswapV4IntegrationTest is RealStackUniswapV4 {
         _borrowAs(c.wallet, c.marketId, c.reserveId, c.borrowed);
     }
 
-    // TEST-336 verifies: REQ-AMM-V4-004, REQ-AMM-V4-005, REQ-AMM-V4-008, SPEC-AMM-V4-001, REQ-AMM-CORE-007
-    function test_TEST_336_v4MarketsPledgeBorrowAndLiquidate() public {
+    // TEST-344 verifies: REQ-AMM-V4-004, REQ-AMM-V4-005, REQ-AMM-V4-008, SPEC-AMM-V4-001, REQ-AMM-CORE-007
+    function test_TEST_344_v4MarketsPledgeBorrowAndLiquidate() public {
         address[] memory proxies = new address[](cases.length);
         for (uint256 i = 0; i < cases.length; ++i) {
             Case memory c = cases[i];
@@ -125,8 +125,8 @@ contract MultiMarketUniswapV4IntegrationTest is RealStackUniswapV4 {
         assertFalse(lock.isLocked(), "Lock free");
     }
 
-    // TEST-335 verifies: REQ-AMM-V4-005, SPEC-AMM-V4-002, REQ-ORACLE-015
-    function test_TEST_335_parkedV4PoolFailsClosed() public {
+    // TEST-343 verifies: REQ-AMM-V4-005, SPEC-AMM-V4-002, REQ-ORACLE-015
+    function test_TEST_343_parkedV4PoolFailsClosed() public {
         Case memory c = cases[0];
         (, address proxy) = _v4PledgeUsd(c.wallet, c.marketId, c.usd);
         uint256 nonce = adapterC.borrowNonce(proxy);
@@ -159,8 +159,8 @@ contract MultiMarketUniswapV4IntegrationTest is RealStackUniswapV4 {
         return _addV4Market(pk, ref, VT_CF);
     }
 
-    // TEST-336 verifies: REQ-AMM-V4-010, REQ-AMM-V4-004, REQ-LENS-050
-    function test_TEST_336_wrappedFeeGrowthKeepsFeesAndExitsWorking() public {
+    // TEST-344 verifies: REQ-AMM-V4-010, REQ-AMM-V4-004, REQ-LENS-050
+    function test_TEST_344_wrappedFeeGrowthKeepsFeesAndExitsWorking() public {
         Case memory c = cases[1];
         PoolKey memory pk = v4KeyOf[c.marketId];
         bytes32 state = UniswapV4State.poolStateSlot(keccak256(abi.encode(pk)));
@@ -181,11 +181,11 @@ contract MultiMarketUniswapV4IntegrationTest is RealStackUniswapV4 {
         assertEq(_sharesOn(_spokeOf(c.marketId), proxy, mkt[c.marketId].reserveId), 0, "nothing supplied");
     }
 
-    // TEST-336 verifies: REQ-AMM-V4-012, REQ-AMM-CORE-020, INV-096
+    // TEST-344 verifies: REQ-AMM-V4-012, REQ-AMM-CORE-020, INV-096
     /// @notice The v4 LPVault caps an account-market at 8 open records, where the Uniswap v3 LPVault keeps 16: the
     /// pledge preview names `TooManyRecords` and a 9th pledge reverts, while a re-credit of an existing record is
     /// not limited.
-    function test_TEST_336_v4RecordCapIsEight() public {
+    function test_TEST_344_v4RecordCapIsEight() public {
         assertEq(IAmmIntegration(v4Vault).maxRecordsPerAccountMarket(), 8, "v4 cap");
         assertEq(IAmmIntegration(registry.getMarket(mA).integration).maxRecordsPerAccountMarket(), 16, "v3 cap");
         Case memory c = cases[1];

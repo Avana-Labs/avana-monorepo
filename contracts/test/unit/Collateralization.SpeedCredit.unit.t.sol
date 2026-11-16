@@ -24,6 +24,16 @@ contract CollateralizationSpeedCreditUnitTest is CollateralizationFixture {
         _pledge(alice, aliceProxy, KEY42, UNITS);
     }
 
+    /// @dev The ABI-encoded arguments of revert data `data`: everything after its 4-byte selector.
+    function _args(
+        bytes memory data
+    ) internal pure returns (bytes memory args) {
+        args = new bytes(data.length - 4);
+        for (uint256 i = 0; i < args.length; ++i) {
+            args[i] = data[i + 4];
+        }
+    }
+
     function _withdrawUnits(
         uint256 units
     ) internal {
@@ -100,6 +110,42 @@ contract CollateralizationSpeedCreditUnitTest is CollateralizationFixture {
         assertEq(riskModule.creditedUsd(), 1_000_000_000_000, "in total exactly the $10,000 charged");
     }
 
+    /// @dev Re-credits `UNITS` more to `key` under the adapter's Lock, charged as a rescue or not.
+    function _recredit(
+        bytes32 key,
+        bool rescue
+    ) internal {
+        lpVault.addUnits(key, UNITS);
+        riskModule.setRescue(rescue);
+        vm.startPrank(adapter);
+        lock.acquire();
+        (uint128 added,) = coll.recredit(alice, aliceProxy, vt, key, "", false);
+        token.mint(aliceProxy, added);
+        vm.stopPrank();
+        _supply(aliceProxy, added);
+        vm.prank(adapter);
+        lock.release();
+        riskModule.setRescue(false);
+    }
+
+    /// @notice The windowed share follows each re-credit: a $10,000 rescue pledge (share 0), a $10,000 charged
+    /// re-credit (window charged $10,000 of $20,000: 5,000 bps) and a $10,000 rescue re-credit (window charged
+    /// 5,000 bps of the $20,000 still booked, $10,000 of $30,000: 3,333 bps, rounded down). Releasing the whole record
+    /// credits $30,000 x 3,333 / 10,000 = $9,999, never more than the $10,000 charged.
+    // TEST-237 verifies: REQ-RISK-093, REQ-RISK-095, REQ-COLL-014
+    function test_TEST_237_windowedShareAcrossRescueAndChargedRecredits() public {
+        riskModule.setRescue(true);
+        _pledge(alice, aliceProxy, KEY43, UNITS);
+        riskModule.setRescue(false);
+        _recredit(KEY43, false);
+        _recredit(KEY43, true);
+        _withdrawUnits(3 * UNITS);
+        vm.prank(adapter);
+        coll.release(aliceProxy, vt, KEY43, 3 * UNITS);
+        assertEq(riskModule.creditedUsd(), 999_900_000_000, "3,333 bps of the $30,000 booked");
+        assertEq(riskModule.withdrawCredits(), 1);
+    }
+
     // TEST-018 verifies: REQ-RISK-005, REQ-RISK-093
     function test_TEST_018_aFailingCreditNeverStopsTheExit() public {
         riskModule.setCredit(true, false);
@@ -121,9 +167,11 @@ contract CollateralizationSpeedCreditUnitTest is CollateralizationFixture {
 
     // TEST-018 verifies: REQ-RISK-005, REQ-RISK-093
     /// @dev Over a range of gas limits a `release` either reverts or has made the credit: a caller cannot pick a limit
-    /// that skips it. The low end reverts `InsufficientGas` at the floor.
+    /// that skips it. The low end reverts `InsufficientGas` at the floor, which is the stipend, the 1/64 the call keeps
+    /// back of it and 10,000 gas for the call itself: 100,000 + 1,587 + 10,000 = 111,587.
     function test_TEST_018_noGasLimitSkipsTheCredit() public {
         _withdrawUnits(UNITS);
+        uint256 floor = 111_587;
         bool sawFloor = false;
         bool sawSuccess = false;
         for (uint256 g = 100_000; g <= 700_000; g += 4000) {
@@ -135,12 +183,13 @@ contract CollateralizationSpeedCreditUnitTest is CollateralizationFixture {
             if (ok) {
                 sawSuccess = true;
                 assertEq(riskModule.withdrawCredits(), 1, "a successful exit made the credit");
-            } else if (data.length >= 4 && bytes4(data) == ICollateralizationErrors.InsufficientGas.selector) {
-                sawFloor = true;
+            } else if (data.length == 68 && bytes4(data) == ICollateralizationErrors.InsufficientGas.selector) {
+                (, uint256 required) = abi.decode(_args(data), (uint256, uint256));
+                if (required == floor) sawFloor = true;
             }
             vm.revertToState(snap);
         }
-        assertTrue(sawFloor, "some limit stopped at the floor");
+        assertTrue(sawFloor, "some limit stopped at the floor of 111,587");
         assertTrue(sawSuccess, "some limit succeeded");
     }
 }

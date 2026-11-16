@@ -173,6 +173,7 @@ export function liquidationJob(d: LiquidationDeps): Job<CachedAccount, Decision>
 
       const plan: TxPlan = {
         job: "liquidation",
+        jobClass: "urgent",
         subject,
         to: d.helper.address,
         data: encodeFunctionData({ abi: flashLiquidatorAbi, functionName: "flashLiquidate", args: [request] }),

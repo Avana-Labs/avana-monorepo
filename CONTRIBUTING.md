@@ -19,9 +19,11 @@ script/install-security-tools.sh
 FOUNDRY_PROFILE=aave forge build
 ```
 
-`forge soldeer install` installs the dependencies pinned in `contracts/soldeer.lock`; `script/install-security-tools.sh` installs the pinned analysis tools (Slither, Halmos, Semgrep, certora-cli and Gambit, Mythril, solhint, Echidna, Medusa, Aderyn, hevm, the Semgrep rules and 4naly3er); `--necessist` adds Necessist, which needs cargo. The `aave` build produces the Aave V4 artifacts the test fixtures deploy.
+`forge soldeer install` installs the dependencies pinned in `contracts/soldeer.lock`; `script/install-security-tools.sh` installs the pinned analysis tools (Slither, Halmos, Semgrep, certora-cli and Gambit, Mythril, solhint, Echidna, Medusa, Aderyn, hevm, Bitwuzla, the Semgrep rules and 4naly3er); `--necessist` adds Necessist, which needs cargo. The `aave` build produces the Aave V4 artifacts the test fixtures deploy.
 
 The pre-commit hook ([`lefthook.yml`](lefthook.yml)) runs `forge fmt --check` and the file-size check on staged Solidity, the licence-header check on staged Solidity, Python, JavaScript, shell and JSON files, and `trace.py` on changes to the specification, sources, tests or Certora specs. CI repeats every check.
+
+Commit messages and pull request text carry no AI credit (no AI co-author trailer, no "Generated with" line). The `commit-msg` hook, installed by the same `lefthook install`, runs [`contracts/script/check-ai-credit.sh`](contracts/script/check-ai-credit.sh) on each message, and the `commit-messages` workflow checks a pull request's own commits, title and body.
 
 ## Build and test
 

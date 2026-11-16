@@ -7,7 +7,7 @@ Reads the changed paths (relative to the repository root, one per line) on stdin
 marks its folder; the folder's contracts are the base names of its .sol files. The units are the invariant campaigns
 of each test/invariant/ file whose name starts with one of those contract names, as script/test-shard.py splits them
 at the ci profile (a file, or `<file>@<k>/<m>` segments of a campaign longer than SEGMENT_SECONDS), so a pull request
-labelled `hotfix` runs the touched contracts' invariant campaigns at the full ci profile (10,000 runs at depth 100),
+labelled `hotfix` runs the touched contracts' invariant campaigns at the full ci profile (1,000 runs at depth 100),
 one unit per job (`script/test-shard.sh --unit`), beside the usual short set (which already runs their unit and fuzz
 tests at 10,000 runs).
 

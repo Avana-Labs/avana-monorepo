@@ -43,9 +43,7 @@ contract UniswapV4IntegrationHalmosTest is Test {
         key = UniswapV4PoolKey(a, b, 500, 10, address(0));
         bytes32 poolId = keccak256(abi.encode(key));
         manager.initialize(poolId, 0);
-        vault = new UniswapV4Integration(
-            1, COLL, REGISTRY, address(lock), TIMELOCK, address(manager), address(ref), 12
-        );
+        vault = new UniswapV4Integration(1, COLL, REGISTRY, address(lock), TIMELOCK, address(manager), address(ref), 12);
         vm.prank(REGISTRY);
         vault.bindMarket(
             1,

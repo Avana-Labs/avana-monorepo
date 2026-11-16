@@ -1292,6 +1292,7 @@
           {
             "token": "USDC",
             "asset": "GHO",
+            "depthThreshold": 5000000,
             "primary": [
               "GHO-USDC-100"
             ],
@@ -1303,6 +1304,7 @@
           {
             "token": "USDT",
             "asset": "GHO",
+            "depthThreshold": 5000000,
             "primary": [
               "GHO-USDT-100"
             ],
@@ -1358,6 +1360,7 @@
           {
             "token": "WETH",
             "asset": "GHO",
+            "depthThreshold": 5000000,
             "primary": [
               "GHO-WETH-3000"
             ],
@@ -1369,6 +1372,7 @@
           {
             "token": "USDC",
             "asset": "GHO",
+            "depthThreshold": 5000000,
             "primary": [
               "GHO-USDC-100"
             ],
@@ -1424,6 +1428,7 @@
           {
             "token": "USDT",
             "asset": "USDC",
+            "depthThreshold": 5000000,
             "primary": [
               "USDC-USDT-100"
             ],
@@ -1478,6 +1483,7 @@
           {
             "token": "WETH",
             "asset": "USDC",
+            "depthThreshold": 5000000,
             "primary": [
               "WETH-USDC-500"
             ],
@@ -1533,6 +1539,7 @@
           {
             "token": "wstETH",
             "asset": "GHO",
+            "depthThreshold": 5000000,
             "primary": [
               "wstETH-USDC-500",
               "GHO-USDC-100"
@@ -1545,6 +1552,7 @@
           {
             "token": "WETH",
             "asset": "GHO",
+            "depthThreshold": 5000000,
             "primary": [
               "GHO-WETH-3000"
             ],
@@ -1600,6 +1608,7 @@
           {
             "token": "wstETH",
             "asset": "USDC",
+            "depthThreshold": 5000000,
             "primary": [
               "wstETH-USDC-500"
             ],
@@ -1611,6 +1620,7 @@
           {
             "token": "WETH",
             "asset": "USDC",
+            "depthThreshold": 5000000,
             "primary": [
               "WETH-USDC-500"
             ],
@@ -1666,6 +1676,7 @@
           {
             "token": "USDC",
             "asset": "GHO",
+            "depthThreshold": 5000000,
             "primary": [
               "GHO-USDC-100"
             ],
@@ -1677,6 +1688,7 @@
           {
             "token": "USDT",
             "asset": "GHO",
+            "depthThreshold": 5000000,
             "primary": [
               "GHO-USDT-100"
             ],
@@ -1732,6 +1744,7 @@
           {
             "token": "WETH",
             "asset": "GHO",
+            "depthThreshold": 5000000,
             "primary": [
               "GHO-WETH-3000"
             ],
@@ -1743,6 +1756,7 @@
           {
             "token": "USDC",
             "asset": "GHO",
+            "depthThreshold": 5000000,
             "primary": [
               "GHO-USDC-100"
             ],
@@ -1798,6 +1812,7 @@
           {
             "token": "wstETH",
             "asset": "GHO",
+            "depthThreshold": 5000000,
             "primary": [
               "wstETH-USDC-500",
               "GHO-USDC-100"
@@ -1810,6 +1825,7 @@
           {
             "token": "WETH",
             "asset": "GHO",
+            "depthThreshold": 5000000,
             "primary": [
               "GHO-WETH-3000"
             ],
@@ -1885,5 +1901,23 @@
   },
   "coverage": {
     "funder": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+  },
+  "gasVault": {
+    "maxSigners": 8,
+    "fundWei": "100000000000000000000",
+    "signers": [
+      {
+        "signer": "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
+        "minBalanceWei": "3000000000000000000",
+        "targetBalanceWei": "10000000000000000000",
+        "periodCapWei": "10000000000000000000"
+      },
+      {
+        "signer": "0xBcd4042DE499D14e55001CcbB24a551F3b954096",
+        "minBalanceWei": "3000000000000000000",
+        "targetBalanceWei": "10000000000000000000",
+        "periodCapWei": "10000000000000000000"
+      }
+    ]
   }
 }

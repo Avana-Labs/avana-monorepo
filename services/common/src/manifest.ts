@@ -47,6 +47,8 @@ export interface ServiceManifest {
     readonly flashSource: Immutable;
     /** The public flash liquidation helper (REQ-HELPER-015). */
     readonly flashLiquidator: Immutable;
+    /** The chain's AvanaGasVault, which refills the keeper signers; null while it is not deployed. */
+    readonly gasVault: (Immutable & { readonly treasury: Address; readonly timelock: Address; readonly guardian: Address; readonly maxSigners: number }) | null;
     /** One operator helper per keeper instance, bound to that instance's signer and funding Safe (REQ-HELPER-011). */
     readonly operatorHelpers: readonly (Immutable & { readonly signer: Address; readonly fundingSafe: Address })[];
     /** One LPVault per AMM integration on this chain. */
