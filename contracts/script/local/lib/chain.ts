@@ -141,7 +141,10 @@ export function writeBaseConfig(c: LocalChain): string {
   cfg.aave.spokes = { [lend]: `$aave:.spokes.${lend}.proxy` };
   const name = `Avana ${c.label} Hub`;
   cfg.aavePayload.hubs = [{ label, lendSpoke: lend, cdpSpokes: [], content: { slug: `avana-${label}-hub`, name, description: `Avana's Aave V4 Hub on ${c.label}.`, faqs: [] } }];
-  for (const d of cfg.aavePayload.debtAssets) Object.assign(d, tv.debtAssets[d.symbol] ?? {});
+  for (const d of cfg.aavePayload.debtAssets) {
+    const v = tv.debtAssets?.[d.symbol] ?? {};
+    for (const k of ["drawCap", "bootstrapSupply", "coverageMinimum", "offsetMinimum", "rateModel", "liquidityFeeBps"]) if (v[k] !== undefined) d[k] = v[k];
+  }
   cfg.listing.creditLineWhole = tv.creditLineWhole;
   cfg.listing.speedLimits = tv.speedLimits;
   cfg.listing.spokes = [];
@@ -157,7 +160,7 @@ export function writeBaseConfig(c: LocalChain): string {
   cfg.listing.pools = {};
   for (const t of cfg.listing.tokens) {
     t.hubs = [label];
-    t.tokenCapUsd = tv.tokenCapUsd[t.symbol] ?? tv.tokenCapUsd.default;
+    Object.assign(t, tv.tokens?.default ?? {}, tv.tokens?.[t.symbol] ?? {});
   }
   // The chain's Hub files may need tokens and pools the test world lacks: script/deploy/hubs/<network>/world.json
   // adds them to the world step 02 deploys (an entry already in the world is kept as it is).
@@ -208,6 +211,20 @@ export function setConfig(c: LocalChain, configPath: string) {
   writeStatus(c, s);
 }
 
+/** The chain's forge broadcast and cache directories (relative to contracts/), the cache seeded from the shared one so
+ * nothing recompiles. */
+export function forgeDirs(c: LocalChain): Record<string, string> {
+  const broadcast = `deployments-local/${c.network}/forge-broadcast`;
+  const cache = `deployments-local/${c.network}/forge-cache`;
+  const seeded = join(CONTRACTS, cache, "solidity-files-cache.json");
+  const shared = join(CONTRACTS, "cache", "solidity-files-cache.json");
+  if (!existsSync(seeded) && existsSync(shared)) {
+    mkdirSync(join(CONTRACTS, cache), { recursive: true });
+    writeFileSync(seeded, readFileSync(shared));
+  }
+  return { FOUNDRY_BROADCAST: broadcast, FOUNDRY_CACHE_PATH: cache };
+}
+
 /** Git Bash on Windows (never WSL's bash, which would run the steps in another system); bash elsewhere. */
 export function bash(): string {
   if (process.env.STACK_BASH) return process.env.STACK_BASH;
@@ -227,6 +244,10 @@ export interface StepOutcome {
 /** The environment of every step of the chain: its network, RPC, config and the stack's signers. */
 export function stepEnv(c: LocalChain, config = currentConfig(c)): NodeJS.ProcessEnv {
   return {
+    // Each chain's forge runs keep their broadcast records and script cache in the chain's own output directory, so
+    // the two chains' steps never share a file (Windows refuses a file another forge has mapped, os error 1224). The
+    // compiled artifacts stay shared in out/.
+    ...forgeDirs(c),
     AVANA_NETWORK: c.network,
     AVANA_RPC_URL: rpcUrl(c),
     AVANA_CONFIG: relative(CONTRACTS, config).split("\\").join("/"),
