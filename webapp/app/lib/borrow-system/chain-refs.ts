@@ -1,7 +1,18 @@
 import type { ChainBorrowAccountRef, ChainDebtReserveRef } from "@/app/lib/borrow-system/chain-positions"
 
 /** A listed market with its CDP Spoke and the Borrow list's pool slug. */
-export type ChainMarketRef = { chainId: number; marketId: string; spoke: string; poolSlug: string }
+export type ChainMarketRef = {
+  chainId: number
+  marketId: string
+  spoke: string
+  poolSlug: string
+  /** The pool's tokens in pool order and their decimals (absent from an older services/convex). */
+  tokens?: readonly string[]
+  tokenDecimals?: readonly number[]
+}
+
+/** A pool token's USD price, 8 decimals. */
+export type ChainTokenPrice = { chainId: number; token: string; priceUsd8: string }
 
 /** The wallet's chain references, as services/convex last named them (`wallet.positions.borrowAccounts`). */
 export type ChainBorrowRefs = {
@@ -10,6 +21,7 @@ export type ChainBorrowRefs = {
   accounts: readonly ChainBorrowAccountRef[]
   /** Every listed market; empty from an older services/convex. */
   markets?: readonly ChainMarketRef[]
+  tokenPrices?: readonly ChainTokenPrice[]
   debtReserves: readonly ChainDebtReserveRef[]
 }
 

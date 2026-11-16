@@ -35,7 +35,17 @@ describe("wallet borrow accounts", () => {
   it("names every listed market and its Spoke's reserves without an account, for a first pledge", () => {
     const refs = borrowAccountRefs(world, []);
     expect(refs.accounts).toEqual([]);
-    expect(refs.markets).toEqual([{ chainId: market.chainId, marketId: market.marketId, spoke: market.spoke, poolSlug: market.slug }]);
+    expect(refs.markets).toEqual([
+      {
+        chainId: market.chainId,
+        marketId: market.marketId,
+        spoke: market.spoke,
+        poolSlug: market.slug,
+        tokens: market.tokens,
+        tokenDecimals: market.tokenDecimals,
+      },
+    ]);
+    for (const p of refs.tokenPrices) expect(market.tokens).toContain(p.token);
     const own = reserves.filter((r) => r.chainId === market.chainId && r.spoke === market.spoke);
     expect(refs.debtReserves).toHaveLength(own.length);
   });

@@ -81,6 +81,7 @@ export function useBorrowSession({
               ...account,
               collateralPositions: positions.collateralPositions,
               debtPositions: positions.debtPositions,
+              ...(positions.rewardPositions ? { rewardPositions: positions.rewardPositions } : {}),
               lastUpdatedAt: Date.now(),
             },
           },
