@@ -3,20 +3,40 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AaveGuardianRole} from "./lib/AaveGuardianRole.sol";
 import {
     AAssetListing,
     ADynamicReserveConfig,
+    AFlags,
     AInterestRateData,
     ALiquidationConfigUpdate,
     AReserveConfig,
     AReserveListing,
+    ARoleMembership,
+    ARoleUpdate,
     ASpokeAssetConfig,
     ASpokeConfig,
     ASpokeToAssetsAddition,
+    ATargetFunctionRoleUpdate,
     AavePayloads,
     IAaveHubLimits,
     IAaveListedViews
 } from "./lib/AavePayloads.sol";
+
+/// @notice The Aave AccessManager's views the Guardian grant reads, so a rerun adds only what is missing.
+interface IGuardianAccessViews {
+    function isRoleLabeled(
+        uint64 roleId
+    ) external view returns (bool);
+    function hasRole(
+        uint64 roleId,
+        address account
+    ) external view returns (bool isMember, uint32 executionDelay);
+    function getTargetFunctionRole(
+        address target,
+        bytes4 selector
+    ) external view returns (uint64);
+}
 
 interface IFlashAcl {
     function addFlashBorrower(
@@ -136,6 +156,51 @@ contract AaveDeploymentPayload is AavePayloads {
         for (uint256 h = 0; h < nHubs; ++h) {
             _hubAssets(b, h);
             _hubSpokes(b, h);
+        }
+        _guardianRole(b);
+    }
+
+    /// @notice REQ-ACCESS-070: the Aave Protocol Guardian's one-way `freezeReserve` and `pauseReserve` on the
+    /// chain's SpokeConfigurator, in a role of their own that the Guardian and the Domain Admin (the executor) hold.
+    function _guardianRole(
+        Builder memory b
+    ) private view {
+        address am = _addr(cfg, ".aave.accessManager");
+        address configurator = _addr(cfg, ".aave.spokeConfigurator");
+        address guardian = _addr(cfg, ".governance.aaveProtocolGuardian");
+        uint64 role = uint64(vm.parseJsonUint(cfg, ".aavePayload.guardianRole"));
+        // Outside Aave V4's role ranges (0-499, aave-v4 Roles.sol) and apart from Avana's loss-layer roles.
+        require(
+            role >= 500 && role != vm.parseJsonUint(cfg, ".aavePayload.lossLayerRoles.coverageRole")
+                && role != vm.parseJsonUint(cfg, ".aavePayload.lossLayerRoles.reserveAdminRole"),
+            "aavePayload.guardianRole: outside 0-499 and not a loss-layer role"
+        );
+        IGuardianAccessViews v = IGuardianAccessViews(am);
+        if (!v.isRoleLabeled(role)) {
+            _roleUpdate(
+                b,
+                ARoleUpdate({
+                    authority: am,
+                    roleId: role,
+                    admin: AFlags.KEEP_CURRENT_UINT64,
+                    guardian: AFlags.KEEP_CURRENT_UINT64,
+                    grantDelay: AFlags.KEEP_CURRENT_UINT32,
+                    label: AaveGuardianRole.LABEL,
+                    labelUpdate: false
+                })
+            );
+        }
+        bytes4[] memory sel = AaveGuardianRole.selectors();
+        if (
+            v.getTargetFunctionRole(configurator, sel[0]) != role
+                || v.getTargetFunctionRole(configurator, sel[1]) != role
+        ) {
+            _targetFunctionRole(b, ATargetFunctionRoleUpdate(am, configurator, sel, role));
+        }
+        address[2] memory holders = [guardian, executor];
+        for (uint256 i = 0; i < holders.length; ++i) {
+            (bool member,) = v.hasRole(role, holders[i]);
+            if (!member) _roleMembership(b, ARoleMembership(am, role, holders[i], true, 0));
         }
     }
 

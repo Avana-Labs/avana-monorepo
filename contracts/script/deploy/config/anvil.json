@@ -831,7 +831,8 @@
     "lossLayerRoles": {
       "coverageRole": 500,
       "reserveAdminRole": 501
-    }
+    },
+    "guardianRole": 502
   },
   "listing": {
     "feed": {
