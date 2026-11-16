@@ -1,6 +1,8 @@
+import { chainIds } from "@/app/lib/chains"
 import type { SwapAsset, SwapPair } from "./contracts"
 
-export const SWAP_CHAIN_ID = 1
+/** The swap chain: Ethereum on this network (its chain id from env, 1 on mainnet). */
+export const SWAP_CHAIN_ID = chainIds().ethereum
 export const NATIVE_GAS_RESERVE_ETH = 0.002
 
 export const SWAP_ASSETS: SwapAsset[] = [

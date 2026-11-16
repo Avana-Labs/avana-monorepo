@@ -185,7 +185,7 @@ export function HomeSwapAction() {
         },
         { id: "provider", label: t("Provider"), value: quote.provider },
       ],
-      platformFeeLabel: exact(quote.networkFeeUsd),
+      platformFeeLabel: exact(quote.feeAmount * inputAsset.priceUsd),
       risk:
         quote.priceImpactPct >= 3
           ? {
@@ -260,7 +260,7 @@ export function HomeSwapAction() {
           marketValue: quote.provider,
           // Carry the real quote fee so the inline receipt matches the estimate
           // and the permalink receipt instead of a hash-derived amount.
-          platformFeeUsd: quote.networkFeeUsd,
+          platformFeeUsd: quote.feeAmount * inputAsset.priceUsd,
         },
       })
       setStage("success")
