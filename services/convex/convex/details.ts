@@ -5,6 +5,7 @@
 
 import type { QueryCtx } from "./_generated/server";
 import { type Values, combineSources, filledBuckets } from "./lib/charts.ts";
+import { aboutContractRows } from "./lib/aboutContracts.ts";
 import { chainSlug } from "./lib/format.ts";
 import { hubAssetKey, interestRateModel, marketAllocation, poolBorrowables, headlineReserve } from "./lib/pages.ts";
 import { assetRiskParameters, atRisk, cashflow, contentRiskAssessment, lendRiskParameters, liquidationRisk, poolRiskAssessment, poolRiskParameters, type LiquidationWindow } from "./lib/riskViews.ts";
@@ -176,26 +177,12 @@ export async function readCashflow(ctx: QueryCtx, w: World, scope: "lend" | "ass
   return cashflow(days, asset.decimals, asset.liquidityFeeBps);
 }
 
-/** The contract rows of a page: token, Hub, Spokes, vault token, oracle, pool, with explorer links. */
+/** The About card's contract slots of a page (lib/aboutContracts.ts), linked to the explorer of the page's chain. */
 export async function readAddresses(ctx: QueryCtx, w: World, scope: PageScope, slug: string): Promise<ContractAddressRow[]> {
   const row = bySlug(w, scope, slug);
   if (!row) return [];
   const dep = await ctx.db.query("deployments").withIndex("by_chain", (q) => q.eq("chainId", row.chainId)).unique();
-  const href = (a: string) => (dep ? `${dep.explorerUrl}/address/${a}` : "");
-  const chain = chainSlug(row.chainId);
-  const rows: [string, string][] = [];
-  if (scope === "lend") {
-    const a = row as HubAssetDoc;
-    rows.push(["Token", a.underlying], ["Hub", a.hub], ...a.lendReserves.map((r): [string, string] => ["Lend Spoke", r.spoke]));
-    if (a.exposure) rows.push(["First-Loss Reserve", a.exposure.firstLossReserve]);
-  } else if (scope === "asset") {
-    const r = row as SpokeReserveDoc;
-    rows.push(["Token", r.asset], ["Hub", r.hub], ["CDP Spoke", r.spoke]);
-  } else {
-    const m = row as MarketDoc;
-    rows.push(["Pool", m.pool], ["Vault token", m.vaultToken], ["LP oracle", m.lpOracle], ["CDP Spoke", m.spoke], ["Hub", m.hub]);
-  }
-  return rows.map(([label, address]) => ({ slug, salt: "", address, label, href: href(address), chain, isSynthetic: false as const }));
+  return aboutContractRows(scope, slug, chainSlug(row.chainId), row, dep);
 }
 
 /** The page identity the detail builders fall back on (the app's per-product `getMarket`). */
