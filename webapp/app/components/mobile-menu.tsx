@@ -168,7 +168,7 @@ export function MobileMenu({ initialOpen = false }: MobileMenuProps) {
   const mainLinks = [
     {
       href: siteRoutes.home,
-      label: "Express",
+      label: "Swap",
     },
     {
       href: "/lend",

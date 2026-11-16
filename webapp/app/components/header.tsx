@@ -122,40 +122,6 @@ export function Header() {
       )
     })
 
-  const renderUtilityLinks = (compact: boolean) =>
-    desktopLinks.slice(PRIMARY_HEADER_LINK_COUNT).map((link) => {
-      const isActive = pathname.startsWith(link.href)
-      const Icon = link.icon
-
-      return (
-        <Link
-          key={link.href}
-          href={link.href}
-          prefetch={prefetchNavigation(link.href)}
-          aria-label={t(link.label)}
-          title={t(link.label)}
-          className={`group inline-flex shrink-0 items-center rounded-full font-sans text-[15px] font-normal leading-5 transition-colors ${
-            compact ? "px-1.5 py-1.5" : "px-2.5 py-2"
-          } ${
-            isActive
-              ? "text-brand dark:text-[#7DDCFF]"
-              : "text-muted-foreground hover:text-brand dark:hover:text-[#7DDCFF]"
-          }`}
-        >
-          {Icon ? (
-            <span
-              className={`inline-flex shrink-0 items-center justify-center text-current transition-transform duration-200 ease-out group-hover:-translate-y-[1px] ${
-                compact ? "h-9 w-9" : "me-1.5 h-6 w-6"
-              }`}
-            >
-              <Icon className="h-5 w-5 shrink-0" strokeWidth={2} />
-            </span>
-          ) : null}
-          {compact ? null : <span className="whitespace-nowrap">{t(link.label)}</span>}
-        </Link>
-      )
-    })
-
   return (
     <header
       ref={headerRef}
@@ -187,7 +153,7 @@ export function Header() {
           </div>
 
           <div className="flex shrink-0 items-center justify-end gap-2">
-            <div className="flex items-center gap-0.5 whitespace-nowrap">{renderUtilityLinks(false)}</div>
+            <AskAssistantTrigger />
 
             <div className="flex shrink-0 items-center gap-2">
               <DesktopPreferenceControls />
@@ -221,8 +187,6 @@ export function Header() {
           </div>
 
           <div className="flex shrink-0 items-center justify-end gap-1.5">
-            <div className="flex items-center gap-0.5">{renderUtilityLinks(true)}</div>
-
             <div className="flex shrink-0 items-center gap-1.5">
               <span className="flex items-center">
                 <LazySearchCommandIconOnly />

@@ -1,5 +1,4 @@
 import type { LucideIcon } from "@/app/components/icons"
-import { DashboardSquareAdd } from "@/app/components/icons"
 
 type DesktopHeaderLink = {
   href: string
@@ -8,13 +7,13 @@ type DesktopHeaderLink = {
 }
 
 // Labels are translated at the header callsite (header.tsx wraps them in t()).
-// The first PRIMARY_HEADER_LINK_COUNT links are the product links; the rest (Dashboard) are the
-// icon utility links on the right.
-export const PRIMARY_HEADER_LINK_COUNT = 3
+// The header's product links, in order: Swap (the homepage's swap box, at "/"), Lend, Borrow and
+// Dashboard, all plain text links. Ask AI sits beside Preferences instead (header.tsx).
+export const PRIMARY_HEADER_LINK_COUNT = 4
 
 export const personalDesktopHeaderLinks: DesktopHeaderLink[] = [
-  { href: "/", label: "Express" },
+  { href: "/", label: "Swap" },
   { href: "/lend", label: "Lend" },
   { href: "/borrow", label: "Borrow" },
-  { href: "/dashboard", label: "Dashboard", icon: DashboardSquareAdd },
+  { href: "/dashboard", label: "Dashboard" },
 ]
