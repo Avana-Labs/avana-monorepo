@@ -250,7 +250,7 @@ contract DebtOracleHalmosTest is Test {
     // solver, the proof did not complete within 1 hour (run 43777240448), and over the drift-below range alone it took
     // 37 minutes (run 43766285060). With bitwuzla, `AlternateDriftAbove` completed in 10 minutes and the other five
     // did not within 1 hour (run 43806465033); each check states its solver options.
-    /// @custom:halmos --solver bitwuzla --solver-timeout-branching 10s
+    /// @custom:halmos --solver bitwuzla --solver-timeout-branching 10000
     function check_PROP_074_driftingTimestampsRevertOnlyForGasAlternateDriftBelow(
         uint32 bAnswer
     ) public {
@@ -260,7 +260,7 @@ contract DebtOracleHalmosTest is Test {
 
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
     // Sources: `check_PROP_074_driftingTimestampsRevertOnlyForGasAlternateDriftBelow` for the agreement range.
-    /// @custom:halmos --solver yices --solver-timeout-branching 10s
+    /// @custom:halmos --solver yices --solver-timeout-branching 10000
     function check_PROP_074_driftingTimestampsRevertOnlyForGasAlternateAgree(
         uint32 bAnswer
     ) public {
@@ -294,7 +294,7 @@ contract DebtOracleHalmosTest is Test {
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
     // Sources: `check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAcceptedDriftBelow` for the agreement
     // range.
-    /// @custom:halmos --solver bitwuzla-abs --solver-timeout-branching 10s
+    /// @custom:halmos --solver bitwuzla-abs --solver-timeout-branching 10000
     function check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAcceptedAgree(
         uint32 pAnswer
     ) public {
@@ -305,7 +305,7 @@ contract DebtOracleHalmosTest is Test {
     // PROP-074 verifies: SPEC-ORC-018, REQ-ORACLE-093
     // Sources: `check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAcceptedDriftBelow` above the agreement
     // range.
-    /// @custom:halmos --solver bitwuzla --solver-timeout-branching 60s
+    /// @custom:halmos --solver bitwuzla --solver-timeout-branching 60000
     function check_PROP_074_driftingTimestampsRevertOnlyForGasPrimaryOrAcceptedDriftAbove(
         uint40 pAnswer
     ) public {
