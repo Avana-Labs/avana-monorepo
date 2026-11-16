@@ -6,15 +6,56 @@
 import { type Address, type Hex, type PublicClient, parseAbi, serializeTransaction } from "viem";
 import type { ChainInfo } from "@avana/services-common";
 import { paddedGasLimit } from "@avana/services-common/gas";
+import type { JobClass } from "../types.ts";
 
 export const GWEI = 1_000_000_000n;
 
-/** Priority fee: the 90th percentile of the last 5 blocks' priority fees, at least 1 gwei. */
-export function priorityFee(rewardsP90LastFiveBlocks: readonly bigint[]): bigint {
-  if (rewardsP90LastFiveBlocks.length === 0) return GWEI;
+/** Priority fee: the 90th percentile of the last 5 blocks' priority fees, at least `minTip` (1 gwei unless configured). */
+export function priorityFee(rewardsP90LastFiveBlocks: readonly bigint[], minTip: bigint = GWEI): bigint {
+  if (rewardsP90LastFiveBlocks.length === 0) return minTip;
   const sorted = [...rewardsP90LastFiveBlocks].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   const p90 = sorted[Math.min(sorted.length - 1, Math.ceil(0.9 * sorted.length) - 1)]!;
-  return p90 > GWEI ? p90 : GWEI;
+  return p90 > minTip ? p90 : minTip;
+}
+
+/**
+ * One chain's fee policy per job class (keeper DESIGN.md, Fees; KEEPER_MIN_TIP_*, KEEPER_LAZY_* in .env.example).
+ * The per-transaction ceiling (KEEPER_GAS_CEILING_WEI_<CHAIN>) applies to every class on top of it.
+ */
+export interface FeePolicy {
+  /** Floor of the urgent tip; the urgent tip is the 90th percentile of the last 5 blocks when that is higher. */
+  readonly minTipUrgent: bigint;
+  /** The scheduled tip: checkpoint and feed-round oracle pokes. */
+  readonly minTipScheduled: bigint;
+  /** The lazy tip, used only while the base fee is at most `lazyBaseFeeMax`. */
+  readonly minTipLazy: bigint;
+  /** Highest base fee, in wei, at which a lazy transaction is sent at the lazy tip. */
+  readonly lazyBaseFeeMax: bigint;
+  /** Seconds a lazy transaction waits for a low base fee from when it first fell due; then it goes at scheduled fees. */
+  readonly lazyMaxWaitSeconds: bigint;
+}
+
+/** Today's rule for every class: urgent fees everywhere. Used where no policy is configured (tests, observe-only). */
+export const URGENT_ONLY: FeePolicy = { minTipUrgent: GWEI, minTipScheduled: GWEI, minTipLazy: GWEI, lazyBaseFeeMax: 2n ** 255n, lazyMaxWaitSeconds: 0n };
+
+export type FeeDecision =
+  | { readonly send: true; readonly maxFeePerGas: bigint; readonly maxPriorityFeePerGas: bigint; /** The class whose fees were used. */ readonly paidAs: JobClass }
+  | { readonly send: false; readonly reason: "lazyBaseFeeHigh"; readonly baseFee: bigint; readonly waitedSeconds: bigint };
+
+/**
+ * The fees of one transaction by its class. Max fee is always 2 × base fee + tip.
+ * - urgent: tip = the 90th percentile of the last 5 blocks' priority fees, at least `minTipUrgent`;
+ * - scheduled: tip = `minTipScheduled`;
+ * - lazy: tip = `minTipLazy` while the base fee is at most `lazyBaseFeeMax`; above it, not sent until `lazyMaxWaitSeconds`
+ *   have passed since it first fell due (`waitedSeconds`), then sent at scheduled fees.
+ */
+export function classFees(jobClass: JobClass, rewardsP90LastFiveBlocks: readonly bigint[], baseFee: bigint, policy: FeePolicy, waitedSeconds = 0n): FeeDecision {
+  const at = (tip: bigint, paidAs: JobClass): FeeDecision => ({ send: true, maxPriorityFeePerGas: tip, maxFeePerGas: maxFee(baseFee, tip), paidAs });
+  if (jobClass === "urgent") return at(priorityFee(rewardsP90LastFiveBlocks, policy.minTipUrgent), "urgent");
+  if (jobClass === "scheduled") return at(policy.minTipScheduled, "scheduled");
+  if (baseFee <= policy.lazyBaseFeeMax) return at(policy.minTipLazy, "lazy");
+  if (waitedSeconds >= policy.lazyMaxWaitSeconds) return at(policy.minTipScheduled, "scheduled");
+  return { send: false, reason: "lazyBaseFeeHigh", baseFee, waitedSeconds };
 }
 
 /** Max fee: twice the base fee plus the tip. */

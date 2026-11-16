@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The keeper's side of monitoring (services/README.md, Keeper > Monitoring and alerting). Each keeper instance posts
-// its alert lines (M-09, M-10, M-16, M-17, M-26; pages already confirmed on its second provider) and a heartbeat with
-// the block it has processed. A keeper re-sends an alert every block while it holds, so an alert is a condition that
+// its alert lines (M-09, M-10, M-16, M-17, M-24, M-26, M-30 to M-33; block-cadence pages on chain state already
+// confirmed on its second provider) and a heartbeat with the block it has processed. A keeper re-sends an alert every block while it holds, so an alert is a condition that
 // stays open while it keeps arriving and resolves once `graceBlocks` pass without it. An instance whose heartbeat
 // falls 3 blocks behind the head pages its on-call engineer (reported as M-09: accounts below HF 1 are then not
 // being watched by that instance).

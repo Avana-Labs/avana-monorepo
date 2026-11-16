@@ -5,7 +5,7 @@
 // structured records, with its block, parameters and revert reason.
 
 import type { Hex } from "viem";
-import type { JobKind, SkipReason } from "./types.ts";
+import type { JobClass, JobKind, SkipReason } from "./types.ts";
 
 export type AttemptOutcome =
   | "wouldSend"
@@ -39,6 +39,20 @@ export interface AttemptRecord {
   readonly txHash?: Hex;
   readonly nonce?: number;
   readonly params: Readonly<Record<string, string>>;
+  /** The transaction's fee class (keeper DESIGN.md, Fees). */
+  readonly jobClass?: JobClass;
+  /**
+   * On an `included` line, the spend log: gas used, effective gas price and the L1 data fee (Base; 0 elsewhere), in
+   * decimal, their total cost in wei, and the market and Hub the subject is attributed to ("" when unknown).
+   */
+  readonly spend?: {
+    readonly gasUsed: string;
+    readonly effectiveGasPrice: string;
+    readonly l1Fee: string;
+    readonly costWei: string;
+    readonly market: string;
+    readonly hub: string;
+  };
 }
 
 /** Bigint-safe structured line on stdout; the log shipper sends it off the host. */
