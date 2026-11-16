@@ -5,7 +5,9 @@ pragma solidity 0.8.28;
 
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
+import {PriceState} from "../../src/types/PriceState.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {GasCalibration} from "../utils/GasCalibration.sol";
 import {LPOracleGasFixture} from "../utils/fixtures/LPOracleGasFixture.sol";
 import {OcrAggregatorMock} from "../utils/mocks/ChainlinkCostMocks.sol";
 
@@ -98,5 +100,50 @@ contract LPOraclePokeFloorGasTest is LPOracleGasFixture {
         assertTrue(ok, "poke at the floor");
         (, uint64 acceptedAt) = ILPOracle(address(oracle)).lastAcceptedPrice();
         assertEq(acceptedAt, block.timestamp - 60, "the fresh price was accepted");
+    }
+}
+
+/// @notice Typical keeper pokes of the same two-token market (`REQ-ORACLE-037`), beside the worst case above: each
+/// token on its one-leg primary route (`TOKEN/USD`) with its two-leg alternate and oracle-network second source read
+/// for agreement, every feed fresh and the market Live; the poke's entry check at the floor the fixture uses. Each poke
+/// is its own transaction (`isolate = true`, `GasCalibration._txGas`: intrinsic gas included, every account and slot
+/// cold at its first access, as for any keeper transaction), recorded in group `PokeFloor`:
+/// - `LPOracleCL_twoToken_typical_checkpoint_txGas`: the hourly poke 3,600 s after the last accepted price with no new
+///   feed round, which moves `priceCheckpoint` (`REQ-ORACLE-088`).
+/// - `LPOracleCL_twoToken_typical_newRound_txGas`: the poke one block later after one new round of USDC/USD at the same
+///   answer (no checkpoint due).
+/// forge-config: default.isolate = true
+contract LPOraclePokeTypicalGasTest is LPOracleGasFixture, GasCalibration {
+    address internal poker = makeAddr("poker");
+
+    function setUp() public {
+        _setUpGas(false, FLOOR);
+        assertEq(uint8(ILPOracle(address(oracle)).poke()), uint8(PriceState.Live), "Live after the first poke");
+    }
+
+    function _poke() internal returns (uint256) {
+        return _txGas(poker, address(oracle), abi.encodeCall(ILPOracle.poke, ()));
+    }
+
+    // TEST-337 verifies: REQ-ORACLE-037, REQ-ORACLE-088, REQ-ORACLE-025
+    /// @notice An hourly checkpoint poke with no new feed round, then a poke after one new feed round.
+    function test_TEST_337_typicalPokeGas() public {
+        (, uint64 checkpointAt) = ILPOracle(address(oracle)).priceCheckpoint();
+        vm.warp(uint256(checkpointAt) + 3600);
+        vm.roll(block.number + 300);
+        uint256 checkpoint = _poke();
+        (, uint64 movedAt) = ILPOracle(address(oracle)).priceCheckpoint();
+        assertEq(movedAt, block.timestamp, "the checkpoint moved");
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + BLOCK_TIME);
+        _round(0, 1e8, block.timestamp);
+        uint256 newRound = _poke();
+        assertEq(uint8(ILPOracle(address(oracle)).getPriceState().state), uint8(PriceState.Live), "still Live");
+        (, uint64 sameAt) = ILPOracle(address(oracle)).priceCheckpoint();
+        assertEq(sameAt, movedAt, "no checkpoint due");
+        vm.snapshotValue("PokeFloor", "LPOracleCL_twoToken_typical_checkpoint_txGas", checkpoint);
+        vm.snapshotValue("PokeFloor", "LPOracleCL_twoToken_typical_newRound_txGas", newRound);
+        emit log_named_uint("LPOracleCL typical: hourly checkpoint poke, no new round (tx gas)", checkpoint);
+        emit log_named_uint("LPOracleCL typical: poke after one new feed round (tx gas)", newRound);
     }
 }
