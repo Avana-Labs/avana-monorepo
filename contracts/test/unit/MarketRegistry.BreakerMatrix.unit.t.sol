@@ -261,7 +261,9 @@ contract MarketRegistryBreakerMatrixUnitTest is MarketRegistryFixture {
         _setUpWorld();
         dKey = keccak256(abi.encode(address(spoke), GHO_RESERVE));
         vm.warp(4242);
-        _breach(dKey, BreakerReasons.DEFICIT | BreakerReasons.ORACLE);
+        _breach(
+            dKey, BreakerReasons.DEFICIT | BreakerReasons.ORACLE | BreakerReasons.POOL_SHARE | BreakerReasons.POOL_DEPTH
+        );
         vm.prank(emergencyGuardian);
         registry.tripDebtBreaker(address(spoke), GHO_RESERVE);
         (uint32 latched, uint64 last) = registry.debtBreaker(address(spoke), GHO_RESERVE);
@@ -273,6 +275,10 @@ contract MarketRegistryBreakerMatrixUnitTest is MarketRegistryFixture {
         assertEq(latched, 0);
         assertEq(last, 0);
         assertEq(registry.lastBreachAt(dKey), 0);
+        uint32[3] memory temporary = [BreakerReasons.ORACLE, BreakerReasons.POOL_SHARE, BreakerReasons.POOL_DEPTH];
+        for (uint256 i = 0; i < 3; ++i) {
+            assertEq(registry.lastBreachAt(BreakerReasons.breachKey(dKey, temporary[i])), 0, "reason time cleared");
+        }
         vm.prank(emergencyGuardian);
         vm.expectRevert(
             abi.encodeWithSelector(IMarketRegistryErrors.UnknownDebtReserve.selector, address(spoke), GHO_RESERVE)
