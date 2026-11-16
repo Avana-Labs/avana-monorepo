@@ -84,6 +84,8 @@ export interface MarketSnapshotRow {
   readonly description?: string;
   readonly iconUrl?: string;
   readonly spokeId?: string;
+  /** The name of a Borrow pool's Spoke from the Spoke's listing entry, when it has one. */
+  readonly spokeName?: string;
   /** The Hub of a Lend or Borrow asset row (its address) and the Hub's label: the same token on two Hubs is two rows. */
   readonly hubId?: string;
   readonly hubLabel?: string;
