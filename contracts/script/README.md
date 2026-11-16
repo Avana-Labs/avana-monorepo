@@ -116,7 +116,6 @@ Scripts read manifests with `vm.readFile` and `vm.parseJson*` (`fs_permissions` 
 | `AVANA_RELEASE` | `03`, `04`, `09` | Release tag used in salts and output file names, default the config's `release`. Checked on every run (see [Releases and tags](#releases-and-tags)) |
 | `AVANA_RELEASE_RECORD` | `03` | Path from `contracts/` of the release workflow's `release.json` for this tag, default `deployments-local/<network>/release.json` when present; `03` refuses to deploy unless its release, commit, CREATE3 factory, salts and (for this deployer) addresses match |
 | `AVANA_OPERATION_GAS_BUDGET` | `09` (`markets`) | Execution gas budget of each listing operation; overrides the config's `.chain.operationGasBudget` (default 40,000,000) |
-| `FOUNDRY_LIBRARIES` | `02` and the `aave` profile build | Set from `deployments-local/libraries.env` after `01` |
 | `AVANA_FIXTURE` | hostile suites | `fork` runs the hostile-component tests on the Ethereum fork |
 
 Every name is listed, without values, in [`../.env.example`](../.env.example); Foundry and the Makefile read the values from `contracts/.env`.

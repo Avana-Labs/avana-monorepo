@@ -163,8 +163,8 @@ shrink_run_limit = 10_000
 # Spokes, AaveOracle, configurators and LiquidationLogic that fixtures and deploy scripts use have
 # the runtime code of the release (TEST-002, TEST-134). Fixtures deploy from these artifacts with
 # deployCode/vm.getCode; nothing in Avana's src/ or test/ imports Aave sources, so Aave's settings
-# never leak into Avana's build. SpokeInstance links LiquidationLogic at its CREATE2 address,
-# supplied through FOUNDRY_LIBRARIES by the library step in script/README.md.
+# never leak into Avana's build. SpokeInstance keeps its LiquidationLogic placeholder;
+# script/deploy/01_DeployAaveV4 links it to LiquidationLogic's CREATE2 address at deployment.
 src = "dependencies/aave-v4-a3ef63e/src"
 test = "dependencies/aave-v4-a3ef63e/src/deployments"
 # aave-deploy/ holds AvanaAaveV4Roles, which runs Aave's own role procedures for the local fixture; it is compiled here,
