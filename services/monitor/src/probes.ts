@@ -11,6 +11,7 @@ import type { Probe } from "./probe.ts";
 import { checkpointProbe } from "./probes/checkpoint.ts";
 import { coverageProbe } from "./probes/coverage.ts";
 import { eventsProbe } from "./probes/events.ts";
+import { gasVaultProbe } from "./probes/gasVault.ts";
 import { type FrontendDeps, frontendProbe, ghoRateProbe, issuerProbe, safesProbe } from "./probes/external.ts";
 import { oracleProbe } from "./probes/oracle.ts";
 import { routesProbe } from "./probes/routes.ts";
@@ -31,7 +32,7 @@ export const liveFrontend: FrontendDeps = {
 
 export function probesFor(chain: ChainConfig, config: MonitorConfig, frontendDeps: FrontendDeps = liveFrontend, liveness?: LivenessBook): Probe[] {
   const id = chain.chain.id;
-  const probes: Probe[] = [snapshotProbe() as Probe, oracleProbe() as Probe, coverageProbe() as Probe, eventsProbe() as Probe, issuerProbe() as Probe, routesProbe(config.routeCheckSeconds) as Probe, checkpointProbe() as Probe];
+  const probes: Probe[] = [snapshotProbe() as Probe, oracleProbe() as Probe, coverageProbe() as Probe, eventsProbe() as Probe, issuerProbe() as Probe, routesProbe(config.routeCheckSeconds) as Probe, checkpointProbe() as Probe, gasVaultProbe(config.gasVaultDailyWei?.get(id) ?? null) as Probe];
   const safes = config.safes.get(id);
   if (safes && safes.length > 0) probes.push(safesProbe(safes, liveness ? { book: liveness, chainId: id } : undefined) as Probe);
   const core = config.coreHubGho.get(id);

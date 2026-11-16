@@ -109,6 +109,9 @@ export const releaseManifestSchema: Schema = {
         }),
       ),
       proxyCreationCodeHash: hash,
+      gasVault: nullable(
+        obj({ ...immutableProps, treasury: address, timelock: address, guardian: address, maxSigners: { type: "integer", minimum: 1, maximum: 8 } }),
+      ),
     }),
     markets: arr(ref("market")),
     debtReserves: arr(ref("debtReserve")),

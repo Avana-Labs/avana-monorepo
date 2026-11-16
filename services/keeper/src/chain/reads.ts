@@ -6,6 +6,7 @@
 import { type Address, type Hex, type PublicClient, decodeFunctionResult, encodeFunctionData, keccak256, multicall3Abi, parseAbi } from "viem";
 import {
   aaveV4SpokeAbi,
+  avanaGasVaultAbi,
   collateralizationAbi,
   debtOracleAbi,
   flashLiquidatorAbi,
@@ -196,6 +197,22 @@ export function createChainReader(client: PublicClient, manifest: { avana: { len
 
     /** eth_call of a state-changing function at this block (pokeBreakers, pokeConfig): its return, without sending. */
     callAt: (to: Address, data: Hex, from?: Address) => client.call({ ...at, to, data, account: from }),
+
+    /**
+     * The gas vault's view of `signer` at this block (2.23): whether it is listed, its refill trigger, the signer's
+     * balance and what `topUp(signer)` would send now and request (0 while paused, not due or capped to 0).
+     */
+    async gasVaultQuote(vault: Address, signer: Address): Promise<{ listed: boolean; minBalance: bigint; balance: bigint; amount: bigint; requested: bigint; paused: boolean }> {
+      const v = { ...at, address: vault, abi: avanaGasVaultAbi } as const;
+      const [listed, config, quote, paused, balance] = await Promise.all([
+        client.readContract({ ...v, functionName: "isSigner", args: [signer] }),
+        client.readContract({ ...v, functionName: "signerConfig", args: [signer] }),
+        client.readContract({ ...v, functionName: "quoteTopUp", args: [signer] }),
+        client.readContract({ ...v, functionName: "paused" }),
+        client.getBalance({ ...at, address: signer }),
+      ]);
+      return { listed, minBalance: config.minBalance, balance, amount: quote[0], requested: quote[1], paused };
+    },
 
     async implementationOf(proxy: Address): Promise<Address> {
       const word = await client.getStorageAt({ ...at, address: proxy, slot: IMPLEMENTATION_SLOT });

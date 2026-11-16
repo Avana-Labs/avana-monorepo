@@ -13077,7 +13077,7 @@
     ]
   },
   "REQ-ACCESS-158": {
-    "hash": "ef153ebeb7bc5aac",
+    "hash": "f33b37ef0d53517e",
     "checks": [
       "AvanaRoles",
       "FV-CTL-04",
@@ -15973,7 +15973,7 @@
     "checks": []
   },
   "REQ-ARCH-132": {
-    "hash": "903d7af8f5ae2c45",
+    "hash": "14c5b90c1d7006d8",
     "checks": []
   },
   "REQ-ARCH-133": {
@@ -24726,7 +24726,7 @@
     ]
   },
   "REQ-PSTORE-030": {
-    "hash": "b11a1bdbe6186198",
+    "hash": "1da491d88a26e58f",
     "checks": [
       "IParameterStoreBreakers",
       "PROP-042",
@@ -26209,7 +26209,7 @@
     "checks": []
   },
   "REQ-ROLE-050": {
-    "hash": "d5fe437f70414d1b",
+    "hash": "7d138141fd95729a",
     "checks": []
   },
   "REQ-ROLE-051": {

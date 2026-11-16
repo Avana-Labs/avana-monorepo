@@ -104,6 +104,7 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
     ["AaveV3FlashSource", m.avana.flashSource],
     ["FlashLiquidator", m.avana.flashLiquidator],
     ["DebtOracle implementation", m.avana.debtOracleImplementation],
+    ...(m.avana.gasVault ? [["AvanaGasVault", m.avana.gasVault] as [string, Immutable]] : []),
     ...m.avana.lensModules.map((x, i): [string, Immutable] => [`Lens module ${i}`, x]),
     ...m.avana.operatorHelpers.map((x, i): [string, Immutable] => [`OperatorFlashLiquidator ${i}`, x]),
     ...m.avana.lpVaults.map((x): [string, Immutable] => [`LPVault ${x.integrationId} (${x.kind})`, x]),
@@ -201,6 +202,17 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
   const read = (address: Address, n: string) => client.readContract({ address, abi: getter(n), functionName: n }) as Promise<Address>;
   add("VaultTokenFactory.TIMELOCK", (await read(m.avana.vaultTokenFactory.address, "TIMELOCK")) === t);
   add("PayoutEscrow.LP_VAULT_SWAP", (await read(m.avana.payoutEscrow.address, "LP_VAULT_SWAP")) === m.avana.lpVaultSwap.address);
+  // The gas vault (REQ-GASV-002): its treasury is the manifest's feeRecipient and no operator helper's funding Safe,
+  // its timelock the chain's AvanaTimelock, its guardian the Emergency Guardian.
+  const gv = m.avana.gasVault;
+  if (gv) {
+    add("AvanaGasVault.TREASURY", (await read(gv.address, "TREASURY")) === m.feeRecipient && gv.treasury === m.feeRecipient, gv.treasury);
+    add("AvanaGasVault.TREASURY is no FUNDING_SAFE", m.avana.operatorHelpers.every((h) => h.fundingSafe !== gv.treasury));
+    add("AvanaGasVault.TIMELOCK", (await read(gv.address, "TIMELOCK")) === t && gv.timelock === t);
+    add("AvanaGasVault.GUARDIAN", (await read(gv.address, "GUARDIAN")) === m.roles.emergencyGuardian && gv.guardian === m.roles.emergencyGuardian);
+  } else {
+    add("AvanaGasVault deployed", "pending", "deployed by step 12-gas-vault, not run yet");
+  }
   for (const v of m.avana.lpVaults) {
     add(`LPVault ${v.integrationId} TIMELOCK`, (await read(v.address, "TIMELOCK")) === t);
     add(`LPVault ${v.integrationId} MARKET_REGISTRY`, (await read(v.address, "MARKET_REGISTRY")) === m.avana.marketRegistry.address);
