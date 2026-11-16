@@ -16,10 +16,11 @@ import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 /// 16 records as on an account of one: gas grows with the records a call debits, not with the records held. Run for
 /// USDC debt (caller funding and swap legs into USDC) and GHO debt (legs into GHO). The LPVault and the pool are the
 /// fixture's constant-cost mocks, so the figures are LPVaultSwap's, Collateralization's and Aave's work; the fork
-/// suite of TEST-269 measures real unwinds against `G(16) = 5.15M`.
+/// suite of TEST-269 measures real unwinds against the 7.5M liquidation gas budget.
 /// forge-config: default.isolate = false
 contract LPVaultSwapLiquidationGasTest is LPVaultSwapUnitBase {
-    /// @notice Per-call budget: `G(16)` of SPEC-BACK-016, the whole worst-case liquidation with real unwinds.
+    /// @notice Per-call budget with the mock unwinds, below the 7.5M liquidation gas budget of SPEC-CHAIN-001 by the
+    /// real unwinds' extra cost (TEST-269, `Liquidation.WholeAccount.gas.t.sol`).
     uint256 internal constant CALL_BUDGET = 5_150_000;
     /// @notice A small call on a 16-record account costs at most this much more than on a one-record account.
     uint256 internal constant HELD_RECORDS_SLACK = 50_000;
@@ -103,7 +104,7 @@ contract LPVaultSwapLiquidationGasTest is LPVaultSwapUnitBase {
         emit log_named_uint("calls, USDC debt, 16 records", calls);
         emit log_named_uint("largest call gas, USDC debt, 16 records", maxUsed);
         assertGt(calls, 1, "successive calls");
-        assertLe(maxUsed, CALL_BUDGET, "per-call gas within G(16)");
+        assertLe(maxUsed, CALL_BUDGET, "per-call gas within CALL_BUDGET");
         assertTrue(_suppliedUnits(proxy) == 0 || _hf(proxy) >= 1e18, "everything seized or the account restored");
         assertEq(coll.getAccountCredited(proxy, address(vt)), _suppliedUnits(proxy), "ledger follows Aave");
     }
@@ -118,7 +119,7 @@ contract LPVaultSwapLiquidationGasTest is LPVaultSwapUnitBase {
         emit log_named_uint("calls, GHO debt, 16 records", calls);
         emit log_named_uint("largest call gas, GHO debt, 16 records", maxUsed);
         assertGt(calls, 1, "successive calls");
-        assertLe(maxUsed, CALL_BUDGET, "per-call gas within G(16)");
+        assertLe(maxUsed, CALL_BUDGET, "per-call gas within CALL_BUDGET");
         assertTrue(_suppliedUnits(proxy) == 0 || _hf(proxy) >= 1e18, "everything seized or the account restored");
     }
 
@@ -160,8 +161,8 @@ contract LPVaultSwapLiquidationGasTest is LPVaultSwapUnitBase {
 
     /// @notice Record bound: an account-market of 16 records at `minPledgeUsd` ($10 each at the pledge price) owing 1
     /// raw unit of USDC, and another owing 5 GHO, is liquidated whole by a committed operator in one call, through the
-    /// dust-rule branch that takes the whole reserve, within the 16,777,216 per-transaction gas limit and within
-    /// `G(16) = 5.15M`; a 17th pledge into the same account-market reverts `TooManyRecords`.
+    /// dust-rule branch that takes the whole reserve, within the 16,777,216 per-transaction gas limit and within the
+    /// mock-unwind `CALL_BUDGET`; a 17th pledge into the same account-market reverts `TooManyRecords`.
     // TEST-269 verifies: SPEC-BACK-016, INV-096
     function test_TEST_269_sixteenRecordsLiquidatedInOneCall() public {
         uint256 units = 4_000_000; // $10 at $2.50
@@ -182,7 +183,7 @@ contract LPVaultSwapLiquidationGasTest is LPVaultSwapUnitBase {
             (bool ok, uint256 used,) = _call(proxies[i], debts[i], gho_[i]);
             assertTrue(ok, "one call");
             assertLt(used, 16_777_216, "within the per-transaction gas limit");
-            assertLe(used, CALL_BUDGET, "within G(16)");
+            assertLe(used, CALL_BUDGET, "within CALL_BUDGET");
             assertEq(_suppliedUnits(proxies[i]), 0, "the whole reserve taken");
         }
     }

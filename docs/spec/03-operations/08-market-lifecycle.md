@@ -181,7 +181,7 @@ In order. A listing carries one normal-delay (5-day) timelock operation, on regi
 | Stablecoin feeds | USDC/USD heartbeat 82,800 s, USDT/USD and GHO/USD 86,400 s | USD stablecoin feeds heartbeat 86,400 s | Freshness `feedHeartbeat + heartbeatMargin` (1,800 s on both): 84,600 s and 88,200 s on Ethereum, 88,200 s on Base, with a second source for borrow (`MKT-005`) |
 | AMM integration | Uniswap v3 | Aerodrome Slipstream (unstaked only) | `MKT-003` |
 | Flash source | Aave V3 Core Pool `flashLoan` | Aave V3 Base Pool `0xA238Dd80C259a72e81d7e4664a9801593F98d1c5` `flashLoan` | Q-358 |
-| Liquidation gas model | Execution gas `G(n) = 1,310,000 + 240,000 × n` for `n` records | The same execution gas plus the L1 data fee of each transaction | [1.5](../01-architecture/05-parameters.md) `SPEC-CHAIN-001`: sizes the 16-record cap, `G(16) = 5.15M ≤ 16,777,216`, and Avana's keeper gas budget. There is no minimum debt on either chain; Avana's keepers liquidate every account and pay the gas (`Q-381`, AMMN-GAS-02) |
+| Liquidation gas model | Execution gas `G(n) = 4,610,000 + 170,000 × n` for `n` records | The same execution gas plus the L1 data fee of each transaction | [1.5](../01-architecture/05-parameters.md) `SPEC-CHAIN-001`: sizes the 16-record cap, `G(16) = 7.33M`, within the 7.5M liquidation gas budget and `16,777,216`, and Avana's keeper gas budget. There is no minimum debt on either chain; Avana's keepers liquidate every account and pay the gas (`Q-381`, AMMN-GAS-02) |
 | Aave governance path | Direct | Cross-chain governance with bridge delivery time ([2.15](../02-contracts/15-governance-and-timelock.md) `REQ-ACCESS-173`) | Aave-side playbook steps take longer on Base |
 
 (Source: Q-357, Q-358, Q-381)

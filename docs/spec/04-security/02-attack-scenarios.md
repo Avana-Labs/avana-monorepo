@@ -934,7 +934,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Attack approach | Split borrowing across sybil wallets, in any debt reserve; wait for a gas spike and a price drop |
 | Impact | Avana's own keeper gas cost, or bad debt covered by the First-Loss Reserve of the affected asset |
 | Expected protection | `INV-041`, `INV-042`, `INV-069`, `INV-071`: each sybil position needs a pledge worth at least `minPledgeUsd` ($10); Avana has no minimum debt (`INV-096`, `Q-381`): Avana's own committed keeper liquidates every HF < 1 account whatever its size and Avana pays the gas as its own keeper cost, so liquidation never waits for a keeper to make a profit, and `liquidate` stays open to every address that is not frozen (`INV-062`, `Q-404`); the 16-record cap keeps each account's liquidation within one transaction; Aave's dust rule forces full liquidation of small debts; a recorded deficit in debt reserve r is covered only from the First-Loss Reserve of r's (Hub, asset), in that asset (Source: Q-071, Q-098, Q-169, Q-179, Q-185, Q-230, Q-236, Q-381, Q-404) |
-| Result | Accepted risk — owner: Avana Labs (keeper gas, an operating cost); bound: gas per account at most `G(16)` = 5.15M gas, and the attacker funds at least `minPledgeUsd` of collateral and the opening gas per account |
+| Result | Accepted risk — owner: Avana Labs (keeper gas, an operating cost); bound: gas per account at most `G(16)` = 7.33M gas (budget 7.5M), and the attacker funds at least `minPledgeUsd` of collateral and the opening gas per account |
 | Checks | SIM-05A, SIM-05C, SIM-07C, TEST-199 |
 
 ### ATTACK-065: Liquidation griefing by moving the pool spot price

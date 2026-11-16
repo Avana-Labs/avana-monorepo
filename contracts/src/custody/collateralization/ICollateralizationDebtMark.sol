@@ -25,8 +25,9 @@ interface ICollateralizationDebtMark {
     /// permissionless `refreshDebtMark(proxy)`. Reads `getUserAccountData(proxy).borrowCount` on `vaultToken.spoke()`;
     /// when it is 0 and `indebted[proxy]` is set, clears the flag and decrements `indebtedCount[vt]`; otherwise, and
     /// when the read fails or returns short data, changes nothing. Reverts with `InsufficientGas` when the read fails
-    /// with less than 50,000 gas left (a starved read), and never otherwise for an authorized caller. A stale mark only
-    /// delays `closeMarket` until anyone calls `refreshDebtMark`; no exit reads it.
+    /// with less than 50,000 gas left (a starved read) or with `InsufficientGas` revert data (an oracle the Spoke reads
+    /// was starved below its own floor), and never otherwise for an authorized caller. A stale mark only delays
+    /// `closeMarket` until anyone calls `refreshDebtMark`; no exit reads it.
     /// @param proxy The account.
     /// @custom:spec REQ-COLL-040, Q-355
     function markDebtFree(

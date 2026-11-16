@@ -200,8 +200,9 @@ interface IRiskModuleErrors {
 
     /// @notice The account already holds `AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET` (16) open records in its
     /// market. One liquidation of the largest account must fit the per-transaction gas limit: by the gas model of
-    /// `SPEC-CHAIN-001`, `G = 1,310,000 + 240,000 × 16 = 5,150,000 <= 16,777,216 / 2`, while an uncapped list of about 125
-    /// records needs about 31M gas and could never be liquidated (AMMN-GAS-01).
+    /// `SPEC-CHAIN-001`, `G = 4,610,000 + 170,000 × 16 = 7,330,000`, within the 7,500,000 liquidation gas budget and
+    /// `16,777,216 / 2`, while an uncapped list of about 125 records needs about 26M gas and could never be liquidated
+    /// (AMMN-GAS-01).
     /// @param records The account's current record count.
     /// @custom:spec SPEC-CHAIN-001, Q-380, Q-381
     error TooManyRecords(uint256 records);

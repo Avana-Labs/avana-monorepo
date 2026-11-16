@@ -21,16 +21,16 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// into USDC and Aave reports what is left as deficit. Each account borrows either USDC alone or, at the Spoke's
 /// `MAX_USER_RESERVES_LIMIT` of 4 borrowed reserves, USDC, GHO, WETH and DAI (each DebtOracle-priced but GHO), so every
 /// health-factor read prices 1 collateral and 4 debt reserves. Gas is measured with every account and slot cold
-/// (`GasCalibration`), recorded with `vm.snapshotValue` (group `WholeAccountSeizure`) and compared with `G(16) = 5.15M`
-/// of `SPEC-CHAIN-001` and the per-transaction gas limit. The same accounts give the cold cost of
+/// (`GasCalibration`), recorded with `vm.snapshotValue` (group `WholeAccountSeizure`) and compared with the 7.5M
+/// liquidation gas budget of `SPEC-CHAIN-001` and the per-transaction gas limit. The same accounts give the cold cost of
 /// `Spoke.getUserAccountData`, the read `markDebtFree` guards with `DEBT_MARK_GAS_FLOOR` (`REQ-COLL-040`): a failed read
 /// that leaves 50,000 gas was given at least 63 × 50,000 = 3,150,000, which must exceed the read's cost.
 /// @dev Stand-ins external to Avana and Aave V4, as in the fixture: Chainlink feeds (`OracleFeedMock`), GHO's fixed
 /// price and the Aave V3 flash pool (not used: the keeper funds the repayment).
 /// forge-config: default.isolate = false
 contract LiquidationWholeAccountGasTest is RealStackVolatile, GasCalibration {
-    /// @notice `G(16)` of `SPEC-BACK-016` / `SPEC-CHAIN-001`: the worst-case liquidation of 16 records.
-    uint256 internal constant G16 = 5_150_000;
+    /// @notice Liquidation gas budget of a 16-record seizure (`SPEC-CHAIN-001`, `SPEC-BACK-016`).
+    uint256 internal constant LIQUIDATION_GAS_BUDGET = 7_500_000;
     /// @notice `63 × DEBT_MARK_GAS_FLOOR`: the least gas a failed `markDebtFree` read leaving the floor was given.
     uint256 internal constant DEBT_MARK_READ_BOUND = 63 * 50_000;
     /// @notice Collateral of every account: about $32,000 of WBTC/WETH liquidity, in 1 or 16 records.
@@ -122,7 +122,8 @@ contract LiquidationWholeAccountGasTest is RealStackVolatile, GasCalibration {
         vm.snapshotValue("WholeAccountSeizure", string.concat("getUserAccountData_", k), accountData);
         emit log_named_uint(string.concat("whole-account liquidate, ", k), used);
         emit log_named_uint(string.concat("getUserAccountData (cold), ", k), accountData);
-        emit log_named_uint("G(16) of SPEC-CHAIN-001", G16);
+        emit log_named_uint("liquidation gas budget of SPEC-CHAIN-001", LIQUIDATION_GAS_BUDGET);
+        assertLe(used, LIQUIDATION_GAS_BUDGET, "within the liquidation gas budget");
         assertLt(used, TX_GAS_CAP / 2, "within half the per-transaction gas limit");
         assertLt(accountData, DEBT_MARK_READ_BOUND, "63 x DEBT_MARK_GAS_FLOOR covers the read");
     }

@@ -13,7 +13,8 @@ Units: gas units for MATH-CAP-09; whole tokens for drawCaps and lines; base unit
 Changed on 2026-11-10 (Q-381): Avana has no minimum debt, so MATH-CAP-09 no longer checks a minimum-debt gate or a
 keeper break-even. It now checks that the record cap keeps every account liquidatable in one transaction (the pledge
 check refuses a new record at 16, and one liquidation of an account with n <= 16 records needs
-G(n) = 1,310,000 + 240,000 * n <= 16,777,216 / 2 gas units). MATH-CAP-09e..h checked the idle test until
+G(n) = 4,610,000 + 170,000 * n <= 7,500,000 gas units, the liquidation gas budget decided on 2026-11-14, under
+16,777,216 / 2). MATH-CAP-09e..h checked the idle test until
 Q-396 removed it (cap squatting by a non-borrowing LP, AMMN-FLOW-16, is an accepted risk handled by listing caps and
 monitoring); they now check the Lens capacity figures of Q-398.
 
@@ -25,25 +26,26 @@ from _common import prove, computed, finish
 
 # ---------------------------------------------------------------------------
 # MATH-CAP-09  Record cap and the per-transaction gas limit.
-BASE, PER_RECORD, CAP, TX_LIMIT = 1_310_000, 240_000, 16, 16_777_216 // 2
+BASE, PER_RECORD, CAP, TX_LIMIT, BUDGET = 4_610_000, 170_000, 16, 16_777_216 // 2, 7_500_000
 before, after, nrec = Ints('recordsBefore recordsAfter records')
 # The pledge check: a new record is refused unless recordsBefore < 16; a pledge adds at most one record.
 gate = [before >= 0, before < CAP, after >= before, after <= before + 1]
 prove('MATH-CAP-09a', 'a pledge that passes the record check (recordsBefore < 16, at most one new record) leaves at most 16 records',
       gate,
       after <= CAP)
-prove('MATH-CAP-09b', 'an account with at most 16 records is liquidated in one transaction: G(n) = 1,310,000 + 240,000 n <= 16,777,216 / 2',
+prove('MATH-CAP-09b', 'an account with at most 16 records is liquidated in one transaction: G(n) = 4,610,000 + 170,000 n <= 7,500,000 <= 16,777,216 / 2',
       [nrec >= 0, nrec <= CAP],
-      BASE + PER_RECORD * nrec <= TX_LIMIT)
+      And(BASE + PER_RECORD * nrec <= BUDGET, BUDGET <= TX_LIMIT))
 prove('MATH-CAP-09c', 'the gas model is monotone in the record count: fewer records never need more gas',
       [nrec >= 0, before >= 0, before <= nrec],
       BASE + PER_RECORD * before <= BASE + PER_RECORD * nrec)
 computed('MATH-CAP-09d', 'SPEC-CHAIN-001 worked figures (gas units)', [
-    ('G(16)', 5_150_000, BASE + PER_RECORD * CAP),
+    ('G(16)', 7_330_000, BASE + PER_RECORD * CAP),
+    ('G(16) <= 7,500,000 (the liquidation gas budget)', True, BASE + PER_RECORD * CAP <= BUDGET),
     ('G(16) <= 8,388,608 (half the per-transaction limit)', True, BASE + PER_RECORD * CAP <= TX_LIMIT),
-    ('headroom to half the limit', 3_238_608, TX_LIMIT - (BASE + PER_RECORD * CAP)),
-    ('largest record count within half the limit', 29, (TX_LIMIT - BASE) // PER_RECORD),
-    ('G(125), an uncapped list of about 125 records', 31_310_000, BASE + PER_RECORD * 125),
+    ('headroom to the budget', 170_000, BUDGET - (BASE + PER_RECORD * CAP)),
+    ('largest record count within the budget', 17, (BUDGET - BASE) // PER_RECORD),
+    ('G(125), an uncapped list of about 125 records', 25_860_000, BASE + PER_RECORD * 125),
     ('G(125) > 16,777,216', True, BASE + PER_RECORD * 125 > TX_LIMIT),
 ])
 
