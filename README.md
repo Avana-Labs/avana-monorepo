@@ -124,7 +124,7 @@ cd contracts && forge soldeer install
 cd contracts && script/install-security-tools.sh
 ```
 
-The install script adds Slither, Halmos, Semgrep, certora-cli, Gambit, Mythril, solhint, Echidna, Medusa, Aderyn, hevm, the Semgrep smart-contract rules and 4naly3er; `--necessist` also builds Necessist, which needs cargo.
+The install script adds Slither, Halmos, Semgrep, certora-cli, Gambit, Mythril, solhint, Echidna, Medusa, Aderyn, hevm, Bitwuzla, the Semgrep smart-contract rules and 4naly3er; `--necessist` also builds Necessist, which needs cargo.
 
 Two checks need credentials, read from the environment: fork tests read the archive RPC endpoints `RPC_MAINNET` and `RPC_BASE`, and Certora runs need a Certora API key in `CERTORAKEY`. [`contracts/.env.example`](contracts/.env.example) lists every variable the contracts workspace reads. Everything else runs offline once the tools are installed.
 

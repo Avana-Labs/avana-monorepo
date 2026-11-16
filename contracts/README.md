@@ -21,7 +21,7 @@ The Foundry workspace for Avana's Solidity contracts. It builds and tests with t
 | solhint, @openzeppelin/upgrades-core | 6.2.5, 1.47.0 | `package.json`, `package-lock.json` |
 | Necessist | 4.1.0, built with `cargo install --locked` into `tools/bin/` (no release binaries exist) | `script/install-security-tools.sh --necessist` |
 | Gambit | the binary shipped in the certora-cli 8.20.3 wheel, linked as `tools/bin/gambit` | `requirements.txt` (certora-cli pin), `script/install-security-tools.sh --gambit` |
-| Echidna, Medusa, Aderyn, hevm | 2.3.3, 1.5.1, 0.6.8, 0.58.0 (GitHub release binaries in `tools/bin/`, checked by sha256) | `script/install-security-tools.sh` |
+| Echidna, Medusa, Aderyn, hevm, Bitwuzla | 2.3.3, 1.5.1, 0.6.8, 0.58.0, 0.8.1 (GitHub release binaries in `tools/bin/`, checked by sha256) | `script/install-security-tools.sh` |
 | uv | 0.13.1 in CI | CI `UV_VERSION`; resolves Python packages with an upload-date cutoff |
 | Python | 3.11 for `.venv` and `.venv-mythril` (uv); 3.12 in the Halmos, differential and Certora CI jobs | `script/install-security-tools.sh`, CI workflow |
 
@@ -47,7 +47,7 @@ Dependencies, installed by Soldeer into `dependencies/` (not committed) and lock
 cd contracts
 cp .env.example .env                     # every variable name the workspace reads: RPC endpoints and keys
 forge soldeer install                    # dependencies/ from soldeer.lock
-script/install-security-tools.sh         # .venv, .venv-mythril, node_modules/ (solhint), tools/bin/ (Echidna, Medusa, Aderyn, hevm)
+script/install-security-tools.sh         # .venv, .venv-mythril, node_modules/ (solhint), tools/bin/ (Echidna, Medusa, Aderyn, hevm, Bitwuzla)
 forge build
 ```
 
@@ -111,7 +111,7 @@ contracts/
 ├── certora/              CVL specifications and configurations: certora/README.md
 ├── script/               deployment, listing and verification, file size check: script/README.md
 ├── dependencies/         Soldeer packages (ignored)
-├── tools/bin/            Echidna, Medusa, Aderyn, hevm (ignored)
+├── tools/bin/            Echidna, Medusa, Aderyn, hevm, Bitwuzla (ignored)
 ├── out-security/         security tool builds and reports (ignored)
 ├── out/, cache/          Avana build (ignored)
 └── out-aave/, cache-aave/  Aave V4 build with Aave's compiler settings (ignored)

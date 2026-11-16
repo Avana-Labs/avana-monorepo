@@ -373,9 +373,10 @@ jobs:
           key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
 
       - name: Install dependencies and pinned tools
+        # Bitwuzla: the pinned solver of the checks annotated `--solver bitwuzla`; Halmos finds it on PATH (tools/bin).
         run: |
           forge soldeer install
-          script/install-security-tools.sh --python
+          BINARIES=bitwuzla script/install-security-tools.sh --python --binaries
 
       - name: Reuse the build job's output
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
