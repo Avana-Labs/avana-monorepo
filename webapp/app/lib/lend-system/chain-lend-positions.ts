@@ -31,8 +31,15 @@ export type LendHubAsset = {
   lendReserves: readonly { spoke: string; reserveId: string }[]
 }
 
-/** Whole-token amounts per Lend market slug. */
-export type ChainLendRead = { supplied: Record<string, number>; walletBalances: Record<string, number> }
+/**
+ * Whole-token amounts per Lend market slug. `principal` (Σ supplied − Σ withdrawn, `lend-principal.ts`) is set only
+ * when the wallet's whole history was read.
+ */
+export type ChainLendRead = {
+  supplied: Record<string, number>
+  walletBalances: Record<string, number>
+  principal?: Record<string, number> | null
+}
 
 /** Reads every Hub asset on a chain with a client; a market whose read fails is left out of both maps. */
 export async function readChainLendPositions({
@@ -88,8 +95,8 @@ export async function readChainLendPositions({
  * The wallet's positions and wallet balances in a Lend state, from a chain read. A market with a supply is an active
  * position valued at the market's price; markets the read left out keep their previous position.
  *
- * The chain keeps no principal, so the principal is the current supply and the interest earned is 0.
- * TODO(activity): principal = Σ Supply − Σ Withdraw from the wallet's activity once it is read (PR 4).
+ * The chain keeps no principal: it comes from the wallet's history (`read.principal`), and the interest earned is the
+ * supply above it. Without a full history the principal is the current supply and the interest earned is 0.
  */
 export function mergeChainLendPositions(
   state: LendSystemState,
@@ -106,16 +113,19 @@ export function mergeChainLendPositions(
       continue
     }
     const previous = positions[positionId]
+    const historyPrincipal = read.principal?.[slug]
+    // A principal above the supply (rounding, or a history that lags a withdrawal) earns 0, never a negative figure.
+    const principal = historyPrincipal !== undefined ? Math.min(historyPrincipal, amount) : amount
     positions[positionId] = {
       positionId,
       walletId,
       marketId: slug,
       asset: market.asset.symbol,
-      principalAmount: amount,
+      principalAmount: principal,
       scaledBalance: amount,
       liquidityIndexAtLastAction: market.liquidityIndex,
       currentSuppliedAmount: amount,
-      interestEarned: 0,
+      interestEarned: amount - principal,
       rewardsEarnedUsd: 0,
       suppliedValueUsd: amount * market.assetPriceUsd,
       openedAt: previous?.openedAt ?? now,
