@@ -1201,7 +1201,7 @@
       "fingerprint": "70e5954afe4eae54",
       "check": "Division by zero not prevented",
       "file": "src/lens/lens/LensPreview.sol",
-      "reason": "The divisor is checked on the line before (unitValue == 0 returns) or is a non-zero constant or price checked above. Tests: Lens.Preview, Lens.States (a zero answer).",
+      "reason": "The divisor cannot be zero: _borrowPreview returns (0, 0) when unitValue == 0, before either _capacity call; target is the target health factor (at least 1e18) or the non-zero RECOMMENDED_HEALTH_FACTOR constant. Tests: Lens.Preview, Lens.States (a zero answer).",
       "approval": "pending (Josue)",
       "review": "Lens (wave 1), new site"
     },

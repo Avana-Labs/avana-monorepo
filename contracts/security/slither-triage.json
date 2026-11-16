@@ -2049,7 +2049,7 @@
       "check": "incorrect-equality",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
       "function": "LPVaultSwapLiquidationLogic._seize(LPVaultSwapLiquidationLogic.Liq,LiquidationParams)",
-      "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, and the tracked-token array grows when full. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
+      "reason": "Exact comparisons the spec requires on values LPVaultSwap measures or on its own enums: a zero seizure or pending balance reverts (NothingSeized, NothingPending, REQ-SWAP-077), a zero amount or dust leg is skipped (REQ-SWAP-077, SPEC-LIQ-018), the flash principal must satisfy 0 < Fr <= F (REQ-SWAP-013), route-mode and price-state enum tests, the tracked-token array grows when full, and _seize records a deficit when an account that had debt in other reserves has no borrow left after the liquidation (borrowCount == 0, REQ-SWAP-027, audit finding L-01): under the Lock only this liquidationCall can change that count, and a liquidation repays one reserve, so only a deficit clears the rest. None compares a balance a donation could steer to a refusal: donations are excluded by the start snapshots. Covered by LPVaultSwap.ZeroSeizure, LPVaultSwap.Legs, LPVaultSwap.Callbacks.fuzz and LPVaultSwap.Neutrality.fuzz.",
       "approval": "pending (Josue)"
     },
     {
@@ -2281,7 +2281,7 @@
       "check": "reentrancy-events",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol",
       "function": "LPVaultSwapSettlement._tryRoute(LPVaultSwapSettlement.LegArgs,uint256,address,uint256,LPVaultSwapSettlement.Tracked,bool)",
-      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
       "approval": "pending (Josue)"
     },
     {
@@ -2289,7 +2289,7 @@
       "check": "reentrancy-events",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
       "function": "LPVaultSwapDeleverageLogic._settleLoan(LPVaultSwapDeleverageLogic.FlashContext,uint256,uint256)",
-      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
       "approval": "pending (Josue)"
     },
     {
@@ -2297,7 +2297,7 @@
       "check": "reentrancy-events",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
       "function": "LPVaultSwapDeleverageLogic._runFlash(LPVaultSwapDeleverageLogic.FlashContext)",
-      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
       "approval": "pending (Josue)"
     },
     {
@@ -2305,7 +2305,7 @@
       "check": "reentrancy-events",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
       "function": "LPVaultSwapLiquidationLogic._unwindAndSwap(LPVaultSwapLiquidationLogic.Liq,LiquidationParams)",
-      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
       "approval": "pending (Josue)"
     },
     {
@@ -2313,7 +2313,7 @@
       "check": "reentrancy-events",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
       "function": "LPVaultSwapPendingLogic.settlePending(uint256,uint256)",
-      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
       "approval": "pending (Josue)"
     },
     {
@@ -2321,7 +2321,7 @@
       "check": "reentrancy-events",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
       "function": "LPVaultSwapDeleverageLogic.onFlashLoan(address,uint256,uint256,bytes)",
-      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
       "approval": "pending (Josue)"
     },
     {
@@ -2329,7 +2329,7 @@
       "check": "reentrancy-events",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
       "function": "LPVaultSwapLiquidationLogic._waterfall(LPVaultSwapLiquidationLogic.Liq,LiquidationParams)",
-      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
       "approval": "pending (Josue)"
     },
     {
@@ -2337,7 +2337,7 @@
       "check": "reentrancy-events",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
       "function": "LPVaultSwapLiquidationLogic.liquidate(LiquidationParams)",
-      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
       "approval": "pending (Josue)"
     },
     {
@@ -2345,7 +2345,7 @@
       "check": "reentrancy-events",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
       "function": "LPVaultSwapPendingLogic._releaseAndSwap(LPVaultSwapPendingLogic.Pend,uint256,uint256)",
-      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
       "approval": "pending (Josue)"
     },
     {
@@ -2353,7 +2353,7 @@
       "check": "reentrancy-events",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
       "function": "LPVaultSwapDeleverageLogic._releaseAndSwap(LPVaultSwapDeleverageLogic.FlashContext)",
-      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
+      "reason": "Events that report amounts known only after the external calls (LiquidationSettled, DeficitSurplusFunded, BorrowerSurplusPaid, ResidueReturned, RouteFailed, PendingSettlementForwarded, FlashLoanUsed, Deleveraged, KeeperAdded/Removed). liquidate and settlePending run under the Lock taken before the first state-changing call (REQ-SWAP-002), deleverage under the AaveAdapter's Lock with a hashed transient context (REQ-SWAP-106), and the keeper setters are timelock-only with a view read before the event, so no Avana entry point can re-enter to reorder the logs. Covered by LPVaultSwap.Lock, LPVaultSwap.Lock.fuzz, LPVaultSwap.Routes.fuzz (re-entry refused LockHeld) and LPVaultSwap.Events.fuzz.",
       "approval": "pending (Josue)"
     },
     {
@@ -4025,7 +4025,7 @@
       "check": "unused-return",
       "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
       "function": "FlashLiquidatorBase._forwardTokens(address,FlashLiquidatorBase.Watch)",
-      "reason": "PayoutEscrow.claim pays the helper's whole credit of the token to the recipient and returns the amount; the helper reads nothing back, since the credit was 0 when the call started and the escrow pays it straight to the caller (REQ-HELPER-010). The claim runs in try/catch so a recipient that cannot receive leaves the credit for claimEscrowed. Covered by TEST-174 (escrowedIntermediateClaimedToTheCaller, standingCreditStaysForClaimEscrowed), TEST-289.",
+      "reason": "PayoutEscrow.claim pays the helper's whole credit of the token to the recipient and returns the amount; the helper reads nothing back, since the credit was 0 when the call started and the escrow pays it straight to the caller (REQ-HELPER-010). The claim runs in try/catch so a recipient that cannot receive leaves the credit for claimEscrowed. Covered by TEST-174 (escrowedIntermediateClaimedToTheCaller, standingCreditClearedBeforeTheCall), TEST-289.",
       "approval": "pending (Josue)",
       "review": "fixmed (adversarial-review fixes 2026-11-12); new site"
     },

@@ -398,7 +398,7 @@
       "fingerprint": "cb4df2a13bf9b1db",
       "check": "missing-assignment",
       "file": "src/lens/lens/LensAccount.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
+      "reason": "Rule false positive on a compound assignment: `reasons |= a.debts[i].breakerReasons` assigns (it ORs each indebted reserve's breaker reasons into the account's), and the result is stored in a.breakerReasons right after the loop (REQ-LENS-009). Semgrep's Solidity pattern does not treat `|=` as an assignment. Tests: Lens account views (getAccount breaker reasons).",
       "approval": "pending (Josue)",
       "review": "Lens (wave 1), new site"
     },
