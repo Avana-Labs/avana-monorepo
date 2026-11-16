@@ -8,8 +8,9 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 /// @title Hostile test tokens
 /// @notice Stand-ins for the token behaviours `REQ-ARCH-014` keeps out of listing: a transfer fee, a rebasing balance,
 /// a missing `decimals()`, and an issuer fee switch read by `basisPointsRate()`. The local rehearsal lists each and
-/// expects the listing to be refused. Only the minter (the world deployer) can mint or change a token's behaviour.
-/// Never deployed on Ethereum or Base.
+/// expects the listing to be refused. Also an issuer blocklist, which listing accepts (USDC has one): the local USDC,
+/// so a scenario can block a borrower (`REQ-AMM-V4-013`). Only the minter (the world deployer) can mint or change a
+/// token's behaviour. Never deployed on Ethereum or Base.
 abstract contract HostileBase is ERC20 {
     address public immutable MINTER;
 
@@ -141,5 +142,43 @@ contract FeeSwitchToken is HostileBase {
         uint256 fee = (value * basisPointsRate) / 10_000;
         super._update(from, address(0), fee);
         super._update(from, to, value - fee);
+    }
+}
+
+/// @notice An issuer blocklist, as Circle's USDC has: a blocked address can neither send nor receive. Otherwise a
+/// `TestToken`: chosen decimals, minter-only mint. Nothing is blocked until the minter blocks an address.
+contract BlocklistToken is HostileBase {
+    uint8 private immutable _DECIMALS;
+    mapping(address account => bool) public isBlocked;
+
+    error Blocked(address account);
+
+    constructor(
+        string memory symbol_,
+        uint8 decimals_,
+        address minter
+    ) HostileBase(string.concat("Test ", symbol_), symbol_, minter) {
+        _DECIMALS = decimals_;
+    }
+
+    function decimals() public view override returns (uint8) {
+        return _DECIMALS;
+    }
+
+    function setBlocked(
+        address account,
+        bool blocked
+    ) external onlyMinter {
+        isBlocked[account] = blocked;
+    }
+
+    function _update(
+        address from,
+        address to,
+        uint256 value
+    ) internal override {
+        if (isBlocked[from]) revert Blocked(from);
+        if (isBlocked[to]) revert Blocked(to);
+        super._update(from, to, value);
     }
 }

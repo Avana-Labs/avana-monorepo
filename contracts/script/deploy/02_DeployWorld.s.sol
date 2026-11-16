@@ -8,7 +8,13 @@ import {WorldAaveV3} from "./lib/WorldAaveV3.sol";
 import {WorldAerodrome} from "./lib/WorldAerodrome.sol";
 import {WorldFeeds} from "./lib/WorldFeeds.sol";
 import {WorldUniswapV4} from "./lib/WorldUniswapV4.sol";
-import {FeeOnTransferToken, FeeSwitchToken, NoDecimalsToken, RebasingToken} from "./local/HostileTokens.sol";
+import {
+    BlocklistToken,
+    FeeOnTransferToken,
+    FeeSwitchToken,
+    NoDecimalsToken,
+    RebasingToken
+} from "./local/HostileTokens.sol";
 import {TestToken} from "./local/TestToken.sol";
 import {TestWETH9} from "./local/TestWETH9.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -103,7 +109,7 @@ interface ISlipNpm {
 /// primary feed, flash loans enabled and `world.aaveV3SupplyUsd` dollars supplied, and every pool of the network's
 /// `world.uniswapPools` and `world.slipstreamPools`, created at the feeds' price with full-range liquidity of `usd`
 /// dollars from the deployer. With `world.uniswapV4Pools`, also Uniswap v4 (`WorldUniswapV4`: Permit2, PoolManager,
-/// PositionManager, StateView) and each of those hookless pools (`ETH` for native ETH) at the feeds' price with
+/// PositionManager, StateView, and the rehearsal's swap helper `UniswapV4PoolActor`) and each of those hookless pools (`ETH` for native ETH) at the feeds' price with
 /// full-range liquidity of `usd` dollars, and its Uniswap v3 reference pool: the fee-500 pool of the same pair (WETH for
 /// ETH), created with `usd` dollars of full-range liquidity when `world.uniswapPools` has none, its observation
 /// cardinality grown to `world.observationCardinality`.
@@ -167,6 +173,7 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3, WorldUniswapV4 
             vm.serializeAddress("world", "uniswapV4PoolManager", v4PoolManager);
             vm.serializeAddress("world", "uniswapV4PositionManager", v4PositionManager);
             vm.serializeAddress("world", "uniswapV4StateView", v4StateView);
+            vm.serializeAddress("world", "uniswapV4PoolActor", v4PoolActor);
         }
         string memory json = vm.serializeString("world", "external", _externalJson(flashPool, v4));
         vm.createDir(string.concat(vm.projectRoot(), "/", OUTPUT_DIR, "/", network), true);
@@ -208,7 +215,8 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3, WorldUniswapV4 
     }
 
     /// @notice A test token of `world.tokens` entry `k`: a TestToken, or with `kind` one of the hostile stand-ins
-    /// (local/HostileTokens.sol) that listing must refuse: `feeOnTransfer`, `rebasing`, `noDecimals`, `feeSwitch`.
+    /// (local/HostileTokens.sol) that listing must refuse: `feeOnTransfer`, `rebasing`, `noDecimals`, `feeSwitch`;
+    /// or `blocklist`, a TestToken whose minter can block an address, as USDC's issuer can.
     function _newToken(
         string memory k,
         string memory sym,
@@ -227,6 +235,7 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3, WorldUniswapV4 
         if (kind == keccak256("rebasing")) return address(new RebasingToken(sym, me));
         if (kind == keccak256("noDecimals")) return address(new NoDecimalsToken(sym, me));
         if (kind == keccak256("feeSwitch")) return address(new FeeSwitchToken(sym, me));
+        if (kind == keccak256("blocklist")) return address(new BlocklistToken(sym, dec, me));
         revert(string.concat("unknown token kind for ", sym));
     }
 

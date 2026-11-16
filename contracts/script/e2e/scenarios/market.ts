@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Market scenarios of the local rehearsal, on the markets listed by script/deploy/09_ListMarkets.s.sol
-// (deployments-local/<network>/listing-markets.json): an LP's whole life on a Uniswap v3 and on a Slipstream market,
-// LPOracle price paths, keeper liquidations through LPVaultSwap, a self-liquidation attempt, a deficit covered by the
-// First-Loss Reserve, and the cross-Hub credit line switch (off by default). Each scenario uses its own wallet, starts from
-// the world's configured feed prices and leaves them restored. Prices move only by signed OCR2 rounds
-// (refresh-feeds.ts); pools move only by swaps through the world's routers.
+// (deployments-local/<network>/listing-markets.json): an LP's whole life on a Uniswap v3, a Slipstream and a Uniswap v4
+// market, LPOracle price paths, keeper liquidations through LPVaultSwap (on a Uniswap v4 market, of a borrower the USDC
+// issuer has blocked), a self-liquidation attempt, a deficit covered by the First-Loss Reserve, and the cross-Hub credit
+// line switch (off by default). Each scenario uses its own wallet, starts from the world's configured feed prices and
+// leaves them restored. Prices move only by signed OCR2 rounds (refresh-feeds.ts); pools move only by swaps through the
+// world's routers (the UniswapV4PoolActor for Uniswap v4).
 
 import {
   type Address,
@@ -85,6 +86,15 @@ const V4_MINT_POSITION = 0x02;
 const V4_SETTLE_PAIR = 0x0d;
 const V4_SWEEP = 0x14;
 const V4_MSG_SENDER = "0x0000000000000000000000000000000000000001";
+/** The world's Uniswap v4 swap helper (script/deploy/local/UniswapV4PoolActor.sol) and v4-core's price bounds. */
+const V4_ACTOR = parseAbi([
+  "struct PoolKey { address currency0; address currency1; uint24 fee; int24 tickSpacing; address hooks; }",
+  "function swap(PoolKey key, bool zeroForOne, int256 amountSpecified, uint160 sqrtPriceLimitX96) returns (int256 delta)",
+]);
+const MIN_SQRT_PRICE = 4295128739n;
+const MAX_SQRT_PRICE = 1461446703485210103287273052203988822378723970342n;
+/** The local USDC's issuer blocklist (BlocklistToken, script/deploy/local/HostileTokens.sol). */
+const BLOCKLIST = parseAbi(["function setBlocked(address account, bool blocked)", "function isBlocked(address account) view returns (bool)"]);
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const Q96 = 1n << 96n;
 const UNI_ROUTER = parseAbi([
@@ -152,6 +162,8 @@ const WALLETS = {
   poker: "0x1000000000000000000000000000000000000c0f",
   drillUniswap: "0x1000000000000000000000000000000000000c11",
   drillSlipstream: "0x1000000000000000000000000000000000000c12",
+  uniswapV4Lp: "0x1000000000000000000000000000000000000c21",
+  uniswapV4Borrower: "0x1000000000000000000000000000000000000c22",
 } as const satisfies Record<string, Address>;
 
 // ─── Concentrated-liquidity math ───
@@ -616,6 +628,36 @@ export class Env {
     const k = toHex(tokenId, { size: 32 });
     await this.must("approve the LPVault", owner, posm, NFT, "approve", [m.lpVault, tokenId]);
     return { tokenId, key: k, npm: posm, ref: { integrationId: m.integrationId, positionKey: k }, amounts: used };
+  }
+
+  /**
+   * Uniswap v4: an exact-input swap of `amountIn` on the market's pool through the world's UniswapV4PoolActor, which
+   * pays from its own balance (funded here: the input token minted to it, or ether for the native currency) and keeps
+   * the output. Returns the pool's price after the swap.
+   */
+  async swapV4(m: Market, zeroForOne: boolean, amountIn: bigint): Promise<string> {
+    const actor = this.ctx.world.uniswapV4PoolActor as Address;
+    const stateView = this.ctx.world.uniswapV4StateView as Address;
+    if (!actor || !stateView) throw new StepError(`no Uniswap v4 pool actor for ${m.name}`);
+    const { key } = (await this.read(m.lpVault, V4_VAULT, "v4Market", [m.marketId])) as {
+      key: { currency0: Address; currency1: Address; fee: number; tickSpacing: number; hooks: Address };
+    };
+    const tokenIn = zeroForOne ? key.currency0 : key.currency1;
+    if (eq(tokenIn, ZERO_ADDRESS)) {
+      const held = await this.ctx.client.getBalance({ address: actor });
+      await this.rpc("anvil_setBalance", [actor, toHex(held + amountIn)]);
+    } else {
+      await this.mint(tokenIn, actor, amountIn);
+    }
+    await this.gasFor(WALLETS.swapper);
+    await this.must("Uniswap v4 swap", WALLETS.swapper, actor, V4_ACTOR, "swap", [
+      key,
+      zeroForOne,
+      -amountIn,
+      zeroForOne ? MIN_SQRT_PRICE + 1n : MAX_SQRT_PRICE - 1n,
+    ]);
+    const [sqrtP, tick] = (await this.read(stateView, V4_STATE_VIEW, "getSlot0", [m.poolId])) as readonly [bigint, number];
+    return `${zeroForOne ? "0->1" : "1->0"} ${amountIn}: sqrtPriceX96 ${sqrtP} (tick ${tick})`;
   }
 
   mintedTokenId(receipt: TransactionReceipt, npm: Address, owner: Address): bigint | undefined {
@@ -1249,6 +1291,109 @@ async function keeperLiquidations(e: Env) {
   return { ok, detail: ok ? `keeper ${keeper} liquidated on ${um.name} (GHO) and ${sm.name} (USDC)` : detail.join("; ") };
 }
 
+// ─── 9. Uniswap v4 LP: pledge (paid through Permit2), borrow GHO, fees, repay, withdraw ───
+
+async function uniswapV4Lifecycle(e: Env) {
+  const m = e.market("univ4-USDC-USDT-100");
+  const lp = WALLETS.uniswapV4Lp;
+  const n = e.numbers;
+  n.settle = await e.settle();
+  const p = await e.mintPosition(m, lp, 50_000n);
+  n.position = `tokenId ${p.tokenId} key ${p.key}; minted ${fmt(p.amounts[0], e.dec(m.token0))} ${e.sym(m.token0)} + ${fmt(p.amounts[1], e.dec(m.token1))} ${e.sym(m.token1)} on [${m.tickLower}, ${m.tickUpper}]`;
+  const a = await e.pledge(m, lp, p);
+  n.pledge = `proxy ${a.proxy}; credited ${a.credited} units; collateral $${formatUnits(await e.collateralUsd8(m, a), 8)}`;
+  const d = e.dec(m.debtAsset);
+  const amount = 20_000n * 10n ** BigInt(d);
+  n.liquidity = await e.ensureLiquidity(m, amount);
+  const ghoBefore = await e.balance(m.debtAsset, lp);
+  await e.borrow(m, lp, a, amount, 11n * 10n ** 17n);
+  const ghoAfter = await e.balance(m.debtAsset, lp);
+  const debt1 = await e.debt(m, a);
+  n.borrow = `${fmt(amount, d)} ${e.sym(m.debtAsset)}; wallet +${fmt(ghoAfter - ghoBefore, d)}; debt ${fmt(debt1, d)}; HF ${fmt(await e.healthFactor(m, a), 18)}`;
+  if (ghoAfter - ghoBefore !== amount || debt1 < amount) return { ok: false, detail: "borrow did not move the wallet and the debt by the amount" };
+
+  // Fees: alternating exact-input swaps on the market's v4 pool through the world's pool actor.
+  const leg0 = e.amountForUsd(m.token0, 20_000n);
+  const leg1 = e.amountForUsd(m.token1, 20_000n);
+  for (let i = 0; i < 6; i++) n.swaps = await e.swapV4(m, i % 2 === 0, i % 2 === 0 ? leg0 : leg1);
+  const owed = await e.read(e.lens, lensAbi, "getPositionFees", [m.marketId, p.key]).catch(() => undefined);
+  const b0 = await e.balance(m.token0, lp);
+  const b1 = await e.balance(m.token1, lp);
+  const c = await e.must("collectFees", lp, e.adapter, aaveAdapterAbi, "collectFees", [m.marketId, p.ref, await e.deadline()]);
+  const f0 = (await e.balance(m.token0, lp)) - b0;
+  const f1 = (await e.balance(m.token1, lp)) - b1;
+  const fees = c.result as readonly bigint[];
+  n.fees = `Lens owed ${owed ? (owed.amounts as bigint[]).join("/") : "n/a"}; collected ${fmt(f0, e.dec(m.token0))} ${e.sym(m.token0)} + ${fmt(f1, e.dec(m.token1))} ${e.sym(m.token1)} (returned ${fees.join("/")})`;
+  if (f0 === 0n || f1 === 0n || f0 !== fees[0] || f1 !== fees[1]) return { ok: false, detail: "collectFees did not pay fees in both tokens, or not what it returned" };
+
+  // Repay the debt in full, then withdraw the record: the PositionManager NFT goes back to the LP.
+  const rest = await e.debt(m, a);
+  const cap = rest + rest / 100n + 10n ** BigInt(d);
+  await e.mint(m.debtAsset, lp, cap);
+  await e.approve(lp, m.debtAsset, e.adapter, cap);
+  const rep = await e.must("repay", lp, e.adapter, aaveAdapterAbi, "repay", [lp, m.marketId, a.debtReserveId, cap, true, await e.deadline()]);
+  const debt2 = await e.debt(m, a);
+  n.repay = `repayAll spent ${fmt(rep.result as bigint, d)}; debt ${fmt(rest, d)} -> ${fmt(debt2, d)}`;
+  const units = (await e.record(a, p.key)).creditedAfterReconcile as bigint;
+  await e.must("withdraw", lp, e.adapter, aaveAdapterAbi, "withdraw", [m.marketId, p.ref, units, await e.deadline(), 0n]);
+  const owner = (await e.read(p.npm, NFT, "ownerOf", [p.tokenId])) as Address;
+  const left = await e.supplied(m, a);
+  n.withdraw = `units ${units}; NFT owner ${owner}; supplied units left ${left}`;
+  const ok = debt2 === 0n && eq(owner, lp) && left === 0n;
+  return { ok, detail: ok ? "Uniswap v4: pledge, borrow, fees in both tokens, repay all, withdraw" : "debt, NFT or supply not cleared" };
+}
+
+// ─── 10. Keeper liquidation on a Uniswap v4 market of a borrower the USDC issuer has blocked ───
+
+/**
+ * REQ-AMM-V4-013: a seizure's unwind pays the record's fees to the depositor in the same PositionManager batch. The
+ * borrower holds a native ETH/USDC position with fees in both tokens and is then blocked by the local USDC (a
+ * BlocklistToken, as Circle can block an address), so that payment reverts; the LPVault then takes the principal and the
+ * fees to LPVaultSwap, and the liquidation goes through. The borrower is unblocked at the end.
+ */
+async function uniswapV4BlockedBorrowerLiquidation(e: Env) {
+  const m = e.market("univ4-ETH-USDC-500");
+  const w = WALLETS.uniswapV4Borrower;
+  const keeper = (e.ctx.config.keepers as Address[])[0]!;
+  const usdc = e.token("USDC");
+  const minter = (await e.read(usdc, ERC20, "MINTER")) as Address;
+  const n = e.numbers;
+  n.settle = await e.settle();
+  const p = await e.mintPosition(m, w, 50_000n);
+  const a = await e.pledge(m, w, p);
+  const max = await e.maxBorrow(m, w, a);
+  const amount = pct(max, 9_700n);
+  n.liquidity = await e.ensureLiquidity(m, amount);
+  await e.borrow(m, w, a, amount, WAD);
+  n.borrow = `${m.name}: collateral $${formatUnits(await e.collateralUsd8(m, a), 8)}; borrowed ${fmt(amount, e.dec(m.debtAsset))} ${e.sym(m.debtAsset)} of max ${fmt(max, e.dec(m.debtAsset))}; HF ${fmt(await e.healthFactor(m, a), 18)}`;
+  // Fees in both tokens: one exact-input swap each way.
+  n.swaps = [await e.swapV4(m, true, e.amountForUsd(m.token0, 10_000n)), await e.swapV4(m, false, e.amountForUsd(m.token1, 10_000n))].join("; ");
+  const owed = await e.read(e.lens, lensAbi, "getPositionFees", [m.marketId, p.key]).catch(() => undefined);
+  const accrued = owed ? (owed.amounts as bigint[]) : [];
+  n.fees = `Lens owed ${accrued.join("/") || "n/a"}`;
+  if (!accrued.some((f) => f > 0n)) return { ok: false, detail: "no fees accrued on the record, so the depositor's fee payment would not be exercised" };
+  await e.gasFor(minter);
+  await e.must("block the borrower", minter, usdc, BLOCKLIST, "setBlocked", [w, true]);
+  try {
+    n.blocked = `USDC isBlocked(${w}) ${await e.read(usdc, BLOCKLIST, "isBlocked", [w])}`;
+    const bps = Env.crashBpsFor(await e.healthFactor(m, a), 85n * 10n ** 16n, 7_000n);
+    await e.setWeth(bps, [m.lpOracle]);
+    n.crash = `WETH to ${bps} bps of ${usd8(e.prices.WETH!)}: ${usd8(pct(e.prices.WETH!, bps))}`;
+    const hf = await e.healthFactor(m, a);
+    n.hf = fmt(hf, 18);
+    if (hf >= WAD) return { ok: false, detail: `HF ${fmt(hf, 18)} not below 1 after the crash` };
+    const usdcBefore = await e.balance(usdc, w);
+    const r = await e.liquidate(m, a, keeper, "v4-blocked");
+    const usdcAfter = await e.balance(usdc, w);
+    const ok = r.ok && r.debtAfter < r.debtBefore && r.keeperOut > 0n && r.net > 0n && usdcAfter === usdcBefore;
+    if (ok) return { ok, detail: `keeper ${keeper} liquidated a blocked borrower on ${m.name}: the fees went with the principal to LPVaultSwap` };
+    return { ok, detail: r.ok ? "debt not reduced, keeper not paid, or the blocked borrower's USDC moved" : `liquidation of the blocked borrower reverted: ${r.error}` };
+  } finally {
+    await e.must("unblock the borrower", minter, usdc, BLOCKLIST, "setBlocked", [w, false]);
+    n.restored = await e.settle();
+  }
+}
+
 // ─── 5. Self-liquidation attempt ───
 
 async function selfLiquidation(e: Env) {
@@ -1688,8 +1833,10 @@ export function marketScenarios(ctx: ScenarioContext): Scenario[] {
   return [
     s("LP pledges a Uniswap v3 position, borrows GHO, collects fees, repays and withdraws", uniswapLifecycle),
     s("LP pledges a Slipstream position, borrows USDC, removes liquidity, adds collateral", slipstreamLifecycle),
+    s("LP pledges a Uniswap v4 position, borrows GHO, collects fees, repays and withdraws", uniswapV4Lifecycle),
     s("price paths: slow drift, 30/60/90 % crashes, depeg, feed staleness", pricePaths),
     s("keeper liquidates through LPVaultSwap on a Uniswap pool and on a Slipstream pool", keeperLiquidations),
+    s("keeper liquidates a borrower the USDC issuer has blocked on a Uniswap v4 market (fees go with the principal)", uniswapV4BlockedBorrowerLiquidation),
     s("self-liquidation attempt by the borrower", selfLiquidation),
     s("deficit after a 90 % crash and First-Loss Reserve coverage", deficitCoverage),
     s("cross-Hub credit line borrow (off by default: must revert)", crossHubLine),

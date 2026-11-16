@@ -194,7 +194,8 @@
       {
         "symbol": "USDC",
         "decimals": 6,
-        "price8": 100000000
+        "price8": 100000000,
+        "kind": "blocklist"
       },
       {
         "symbol": "USDT",

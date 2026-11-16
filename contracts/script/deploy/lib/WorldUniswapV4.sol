@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {UniswapV4PoolKey} from "../../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
+import {UniswapV4PoolActor} from "../local/UniswapV4PoolActor.sol";
 import {DeployBase} from "./DeployBase.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -49,6 +50,8 @@ abstract contract WorldUniswapV4 is DeployBase {
     address internal v4PoolManager;
     address internal v4PositionManager;
     address internal v4StateView;
+    /// @notice The rehearsal's swap helper on the PoolManager (`local/UniswapV4PoolActor.sol`, a test-network stand-in).
+    address internal v4PoolActor;
 
     /// @param owner The PoolManager's protocol-fee owner.
     /// @param weth The PositionManager's WETH9 (deposit and withdraw), which the Uniswap v4 LPVault reads as its wrapped
@@ -73,6 +76,7 @@ abstract contract WorldUniswapV4 is DeployBase {
             "UniswapV4StateView",
             bytes.concat(_artifactIn(UNIV4_OUT, "StateView.sol", "StateView"), abi.encode(v4PoolManager))
         );
+        v4PoolActor = address(new UniswapV4PoolActor(v4PoolManager));
     }
 
     /// @notice Initializes hookless `key` at `sqrtPriceX96` and mints a full-range position of at most `amount0` and
