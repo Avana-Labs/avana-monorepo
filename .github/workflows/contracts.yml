@@ -1246,6 +1246,9 @@ jobs:
         # slither.config.json, aderyn.toml, .solhint.json, foundry.toml [lint] and security/.
         env:
           SECURITY_BUILD_CACHED: ${{ steps.security-build.outputs.cache-hit == 'true' && '1' || '0' }}
+          # Each slither-check-upgradeability process loads the whole src/ build. With the Uniswap v4 contracts in src/,
+          # four at once got the 4-core runner shut down during the step twice (exit 143, most likely out of memory).
+          UPGRADEABILITY_JOBS: "2"
         run: script/security-fast.sh
 
       - name: Upload Slither SARIF
