@@ -20,7 +20,7 @@ Each chain has its own Timelock, governance Safe and Guardian set, and its own c
 | Stablecoin feed heartbeats | USDC/USD 82,800 s, USDT/USD 86,400 s, GHO/USD 86,400 s, USDS/USD 82,800 s (`EXT-008`) | 86,400 s for every stablecoin feed (`EXT-008`) |
 | GHO | Native GHO; GHO reserve on the Aave V3 Core Pool; GSMs exist but are not a route dependency (`EXT-013`) | CCIP burn/mint GHO with no FlashMinter and no GSM (`EXT-010`) |
 | Minimum debt | None: any amount may be borrowed; Avana's keepers liquidate every account and Avana pays the gas (`INV-096`, `Q-381`) | None (`INV-096`, `Q-381`) |
-| Liquidation gas | Gas-units model of `SPEC-CHAIN-001`, `G(n) = 1.31M + 0.24M × n` for n records; the 16-record cap keeps `G(16) = 5.15M` within the 16,777,216 per-transaction limit; gas price is a parameter of Avana's keeper budget | Same model and cap; the L1 data fee is a parameter of the keeper budget |
+| Liquidation gas | Gas-units model of `SPEC-CHAIN-001`, `G(n) = 4.61M + 0.17M × n` for n records; the 16-record cap keeps `G(16) = 7.33M` within the 7.5M liquidation gas budget and the 16,777,216 per-transaction limit; gas price is a parameter of Avana's keeper budget | Same model and cap; the L1 data fee is a parameter of the keeper budget |
 
 ## Aave V4
 

@@ -15,10 +15,11 @@ pragma solidity 0.8.28;
 /// | `sequencer().feed` | `address(0)` (no sequencer) | `0xBCF85224fc0756B9Fa45aA7892530B47e10b6433` |
 /// | `sequencer().gracePeriod` | 0 | 3,600 s |
 ///
-/// `SPEC-CHAIN-001` is the per-chain gas model of one liquidation, in gas units: `G(n) = 1,310,000 + 240,000 × n` for
+/// `SPEC-CHAIN-001` is the per-chain gas model of one liquidation, in gas units: `G(n) = 4,610,000 + 170,000 × n` for
 /// an account with `n` records, flash loan included. It sizes the record cap: the largest account, `n =
-/// AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET = 16`, needs `G(16) = 5,150,000` gas, within half the per-transaction
-/// gas limit (`16,777,216 / 2 = 8,388,608`), so one transaction always liquidates it with half the limit to spare. It also sets Avana's keeper gas budget; the gas price
+/// AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET = 16`, needs `G(16) = 7,330,000` gas, within the 7,500,000 liquidation
+/// gas budget and half the per-transaction gas limit (`16,777,216 / 2 = 8,388,608`), so one transaction always
+/// liquidates it with half the limit to spare. It also sets Avana's keeper gas budget; the gas price
 /// is an operating input, not a parameter here.
 /// @custom:spec SPEC-CHAIN-001, REQ-PSTORE-023, REQ-PSTORE-027, Q-324, Q-381
 interface IParameterStoreChain {

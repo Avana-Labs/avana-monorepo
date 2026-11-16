@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The local rehearsal's day-2 changes: the edits an operator makes to the network config after the first deployment,
-// applied to script/deploy/config/<network>.json and written to deployments-local/<network>/config-day2.json. The
+// applied to the run's base config (deployments-local/<network>/config-base.json, else script/deploy/config/<network>.json)
+// and written to deployments-local/<network>/config-day2.json. The
 // deploy steps then run again with AVANA_CONFIG pointing at that file and act only on what it adds:
 //   1. a new Hub, `growth` (tier 3), with its Lend Spoke `lendGrowth` and a Uniswap v3 CDP Spoke `uniV3Growth`
 //      (Aave side: Hub, Spokes, assets; Avana side: recordHub, CDP Spoke, First-Loss Reserves, credit line);
@@ -13,7 +14,7 @@
 //
 // Usage, from contracts/:  node script/e2e/day2-additions.ts --network anvil
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,7 +22,9 @@ type Json = Record<string, any>;
 const CONTRACTS = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const i = process.argv.indexOf("--network");
 const network = i === -1 ? "anvil" : process.argv[i + 1]!;
-const c = JSON.parse(readFileSync(join(CONTRACTS, "script/deploy/config", `${network}.json`), "utf8")) as Json;
+// The run's base config when e2e-local.sh wrote one (the anvil config with the run's generated drill signer).
+const base = join(CONTRACTS, "deployments-local", network, "config-base.json");
+const c = JSON.parse(readFileSync(existsSync(base) ? base : join(CONTRACTS, "script/deploy/config", `${network}.json`), "utf8")) as Json;
 const marketTemplate = (name: string) => {
   const m = (c.listing.markets as Json[]).find((x) => x.name === name);
   if (!m) throw new Error(`no market ${name} in the config`);

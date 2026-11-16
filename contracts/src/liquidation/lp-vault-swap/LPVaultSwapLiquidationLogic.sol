@@ -25,6 +25,7 @@ import {LiquidationParams} from "./types/LiquidationParams.sol";
 import {LiquidationResult} from "./types/LiquidationResult.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 // LiquidationSettled, BorrowerSurplusPaid and ResidueReturned report amounts known only after the transfers; the
 // whole body runs under the Lock (REQ-SWAP-002), so no Avana entry point can re-enter and reorder them.
@@ -67,8 +68,11 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         uint256 deficitBefore;
         uint256 funded;
         uint256 fundedShares;
+        uint256 collateralValue;
+        uint256 debtValueRay;
         bool otherDebt;
         bool deficit;
+        bool underwater;
     }
 
     /// @notice Fixes the implementation immutables; they must equal the implementation's.
@@ -127,6 +131,9 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         c.hf = account.healthFactor;
         // Debt in more than one reserve; nothing before `liquidationCall` changes it (the Lock is held).
         c.otherDebt = account.borrowCount > 1;
+        // The account's values before the call, for the underwater test in `_seize` (REQ-SWAP-027).
+        c.collateralValue = account.totalCollateralValue;
+        c.debtValueRay = account.totalDebtValueRay;
         if (c.hf >= _HF_ONE) revert NotLiquidatable();
         if (inGrace && c.hf >= IParameterStore(_PARAMETER_STORE).graceHealthFactor()) revert GraceHealthFactor();
     }
@@ -147,9 +154,11 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
 
     /// @dev Bonus, fee and prices; `beginSeizure`; `liquidationCall(collateral, debt, proxy, Kf, false)` with an exact
     /// allowance reset to 0; `D` and `c` as deltas (`NothingSeized` if `c == 0`).
-    /// Also records whether the call booked a deficit (REQ-SWAP-027): the funding Hub's deficit of the repaid asset for
-    /// the Spoke rose over it, or an account with debt in several reserves has none left, which only a deficit clears
-    /// (a liquidation repays one reserve).
+    /// Also records whether the account was underwater before the call (its collateral value below its debt value
+    /// times the bonus this call applies, so liquidating it to the end leaves a deficit) and whether the call booked a
+    /// deficit: the funding Hub's deficit of the repaid asset for the Spoke rose over it, or an account with debt in
+    /// several reserves has none left, which only a deficit clears (a liquidation repays one reserve). Either sends the
+    /// borrower surplus to the First-Loss Reserve (REQ-SWAP-027).
     /// @custom:spec REQ-SWAP-015, REQ-SWAP-016, REQ-SWAP-017, REQ-SWAP-027, REQ-SWAP-090, SPEC-LIQ-001, SPEC-LIQ-004
     function _seize(
         Liq memory c,
@@ -158,6 +167,7 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         IAaveV4Spoke spoke = IAaveV4Spoke(c.m.spoke);
         uint256 collateralReserve = c.m.reserveId;
         uint256 bonus = spoke.getLiquidationBonus(collateralReserve, p.proxy, c.hf);
+        c.underwater = _underwater(c.collateralValue, c.debtValueRay, bonus);
         uint32 key = spoke.getUserPosition(collateralReserve, p.proxy).dynamicConfigKey;
         c.bNet = SettlementMath.netBonus(bonus, spoke.getDynamicReserveConfig(collateralReserve, key).liquidationFee);
         c.pc = _collateralPrice(c.m);
@@ -180,6 +190,19 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         if (c.units == 0) revert NothingSeized();
         c.deficit = _spokeDeficit(c.d, address(spoke)) > c.deficitBefore
             || (c.otherDebt && spoke.getUserAccountData(p.proxy).borrowCount == 0);
+    }
+
+    /// @dev Whether an account with Aave collateral value `collateralValue` and debt value `debtValueRay` (value × RAY,
+    /// both from `getUserAccountData`) is underwater at liquidation bonus `bonus` (BPS): Aave seizes collateral worth
+    /// the repaid debt times the bonus, so below `debt × bonus` the collateral runs out before the debt and the last
+    /// call books the rest as deficit. Exact: `collateralValue × 10⁴ < ⌈debtValueRay × bonus / RAY⌉`.
+    /// @custom:spec REQ-SWAP-027, SPEC-LIQ-022
+    function _underwater(
+        uint256 collateralValue,
+        uint256 debtValueRay,
+        uint256 bonus
+    ) private pure returns (bool) {
+        return collateralValue * SettlementMath.BPS < Math.mulDiv(debtValueRay, bonus, 1e27, Math.Rounding.Ceil);
     }
 
     /// @dev The Spoke's deficit of the debt asset on its funding Hub (ray).
@@ -244,8 +267,8 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         });
     }
 
-    /// @dev A liquidation that booked a deficit pays its borrower surplus `B` into the First-Loss Reserve of the debt
-    /// asset's funding Hub (`c.d.firstLossReserve`, the MarketRegistry's `firstLossReserveOf(fundingHub, asset)`, which
+    /// @dev A liquidation of an account that was underwater before the call, or that booked a deficit, pays its borrower
+    /// surplus `B` into the First-Loss Reserve of the debt asset's funding Hub (`c.d.firstLossReserve`, the MarketRegistry's `firstLossReserveOf(fundingHub, asset)`, which
     /// it accepts only for a reserve whose `HUB`, `ASSET` and `ASSET_ID` match and never changes) rather than to the
     /// defaulted borrower (REQ-SWAP-027): exact allowance, `fund(amount)`, allowance reset to 0. Records in `c.funded`
     /// the fall of LPVaultSwap's balance over the call, at most `amount` (0 when no reserve is recorded, the address
@@ -303,7 +326,7 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         uint256[] memory residues = _residues(c.t);
         _deliver(address(asset), feeRecipient, pay.avanaFee);
         uint256 toWallet = pay.borrowerSurplus;
-        if (toWallet != 0 && c.deficit) {
+        if (toWallet != 0 && (c.deficit || c.underwater)) {
             _fundReserve(c, toWallet);
             if (c.funded != 0) {
                 toWallet -= c.funded;

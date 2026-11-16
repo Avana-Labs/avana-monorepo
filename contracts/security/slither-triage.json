@@ -2541,14 +2541,6 @@
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "ee3f25efeacbd16b",
-      "check": "unused-state",
-      "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
-      "function": "LPVaultSwapStorage._POST_CALL_GAS",
-      "reason": "Analysis artefact of the shared abstract base: LPVaultSwapStorage and LPVaultSwapSettlement are inherited by the router and the three logic contracts, and each concrete contract uses only the helpers and constants of its own body (the router has no settlement path, the pending logic no flash repayment). Every helper and constant is used by at least one of the four.",
-      "approval": "pending review (approved pattern)"
-    },
-    {
       "fingerprint": "8587574a8869e609",
       "check": "unused-state",
       "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",

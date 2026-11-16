@@ -37,7 +37,8 @@ interface ILPVaultSwapEvents {
         address indexed proxy, address indexed wallet, address indexed debtAsset, uint256 amount, bool escrowed
     );
 
-    /// @notice Emitted when a liquidation that booked a deficit paid its borrower surplus `B > 0` into the First-Loss
+    /// @notice Emitted when a liquidation of an account underwater before the call (collateral value below debt value
+    /// times the liquidation bonus), or one that booked a deficit, paid its borrower surplus `B > 0` into the First-Loss
     /// Reserve of the debt asset's funding Hub instead of to the borrower (`BorrowerSurplusPaid` follows only for a part
     /// the reserve did not take).
     /// @param proxy The liquidated PositionProxy.

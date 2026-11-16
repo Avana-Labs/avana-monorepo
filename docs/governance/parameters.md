@@ -58,7 +58,7 @@ Economic values are a proposed default; the final value is set in the listing or
 | Pledge speed per market: β, P_min, P_max ([REQ-RISK-093](../spec/02-contracts/07-risk-module.md)) | New booked collateral per window in a market, net of withdrawals (a withdrawal gives room back, never below zero); rescue top-ups exempt. | 25%; $1,000,000; $10,000,000, proposed defaults | Above L_min and L_max divided by the launch collateral factor (0.312), so the pledge limit never binds before the borrow limit. |
 | `MAX_MARKET_COUNT` ([REQ-MREG-034](../spec/02-contracts/08-market-registry.md)) | Caps how many markets the MarketRegistry ever lists on a chain, closed ones included. | 16 on each chain | Keeps the ParameterStore's chain-wide re-check of every market within one transaction, with room for the launch markets and later listings; raised only with an upgrade measured again. |
 | LPOracle `POKE_MIN_GAS_FLOOR` ([SPEC-ORC-023](../spec/02-contracts/10-lp-oracle.md)) | Smallest gas a poke may be configured to need at entry, for a two-token concentrated-liquidity LPOracle. | 1,000,000 gas | About 16 % above the measured worst-case poke, so a poke at the configured gas never runs short. |
-| `MAX_RECORDS_PER_ACCOUNT_MARKET` ([SPEC-CHAIN-001](../spec/01-architecture/05-parameters.md#chains)) | Caps the positions one account holds in one market. | 16 | A whole-account seizure costs at most 5.15M gas, under half a 16.78M-gas block (MATH-CH-01). |
+| `MAX_RECORDS_PER_ACCOUNT_MARKET` ([SPEC-CHAIN-001](../spec/01-architecture/05-parameters.md#chains)) | Caps the positions one account holds in one market. | 16 | A whole-account seizure costs at most 7.33M gas, within the 7.5M liquidation gas budget and under half a 16.78M-gas block (MATH-CH-01). |
 
 ## C. Breakers (v1)
 

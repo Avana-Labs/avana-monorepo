@@ -32,34 +32,31 @@ interface IOCR2Admin {
 /// (libocr 199a6f1, contract2/) behind an `EACAggregatorProxy` (chainlink v2.10.0, contracts/src/v0.6), one per feed,
 /// each configured with four local oracles (f = 1) and seeded with a first report the oracles sign. Prices move only by
 /// signed OCR2 reports (`transmit`), so round IDs, `updatedAt` and staleness behave as on a live feed.
-/// @dev The oracle keys are derived from `AVANA_OCR_MNEMONIC` at indices 10–13; on anvil it
-/// defaults to the public anvil test mnemonic, elsewhere it must be set. Each oracle is its own signer and transmitter.
-/// The aggregator's read access is granted to its proxy only, as on a live feed. `script/e2e/scenarios/ocr2.ts` transmits later
-/// reports with the same keys. The transmission is signed with oracle 0's key, so no network needs it unlocked.
+/// @dev The four oracles are the addresses in `AVANA_OCR_ORACLES` (comma-separated); each is its own signer and
+/// transmitter. No key enters the script: the reports are signed with `vm.sign(oracle, digest)` and sent with
+/// `vm.broadcast(oracle)` by the encrypted Foundry keystores the run loads (`--keystore`, `--password-file`). On anvil
+/// `script/deploy/step.sh` adds them from `AVANA_OCR_KEYSTORE_DIR`, which `script/e2e/e2e-local.sh` generates for each
+/// fresh deployment; elsewhere they are part of `AVANA_SIGNER_FLAGS`. The aggregator's read access is granted to its
+/// proxy only, as on a live feed. `script/e2e/scenarios/ocr2.ts` transmits later reports with the same keystores.
 abstract contract WorldFeeds is DeployBase {
     string internal constant OCR_OUT = "out-chainlink-ocr2";
     string internal constant PROXY_OUT = "out-chainlink-proxy";
-    string internal constant ANVIL_MNEMONIC = "test test test test test test test test test test test junk";
     uint8 internal constant OCR_F = 1;
     uint256 internal constant OCR_ORACLES = 4;
 
-    uint256[4] internal ocrKeys;
     address[] internal ocrOracles;
     address internal linkToken;
     uint40 internal epochAndRound;
 
-    /// @notice Oracle keys and addresses; funds the transmitters with gas on anvil.
+    /// @notice Oracle addresses; funds the transmitters with gas on anvil.
     function _ocrSetup(
         string memory network,
         address link
     ) internal {
         bool local = _eq(network, "anvil");
-        string memory mnemonic =
-            local ? vm.envOr("AVANA_OCR_MNEMONIC", string(ANVIL_MNEMONIC)) : vm.envString("AVANA_OCR_MNEMONIC");
-        ocrOracles = new address[](OCR_ORACLES);
+        ocrOracles = vm.envAddress("AVANA_OCR_ORACLES", ",");
+        require(ocrOracles.length == OCR_ORACLES, "AVANA_OCR_ORACLES must name four oracles");
         for (uint256 i = 0; i < OCR_ORACLES; ++i) {
-            ocrKeys[i] = vm.deriveKey(mnemonic, uint32(10 + i));
-            ocrOracles[i] = vm.addr(ocrKeys[i]);
             if (local) {
                 string memory method = "anvil_setBalance";
                 vm.rpc(method, string.concat('["', vm.toString(ocrOracles[i]), '","0x3635C9ADC5DEA00000"]'));
@@ -111,12 +108,12 @@ abstract contract WorldFeeds is DeployBase {
         bytes32[] memory ss = new bytes32[](OCR_F + 1);
         bytes32 rawVs;
         for (uint256 i = 0; i <= OCR_F; ++i) {
-            (uint8 v, bytes32 r, bytes32 s) = vm.sign(ocrKeys[i], h);
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(ocrOracles[i], h);
             (rs[i], ss[i]) = (r, s);
             rawVs |= bytes32(uint256(v - 27) << (248 - 8 * i));
         }
         vm.stopBroadcast();
-        vm.broadcast(ocrKeys[0]);
+        vm.broadcast(ocrOracles[0]);
         // The aggregator books its gas reimbursement from `uint32(gasleft())`, so the call gets a real transaction's
         // gas, not the script simulation's whole budget (above 2^32 it reverts "leftGas cannot exceed initialGas").
         IOCR2Admin(aggregator).transmit{gas: 1_000_000}(ctx, report, rs, ss, rawVs);

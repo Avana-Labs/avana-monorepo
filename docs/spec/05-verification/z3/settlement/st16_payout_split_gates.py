@@ -15,7 +15,7 @@ takes no flash loan (Q-404): K below is the caller funding Kf, and F = phi = phi
   keeperOut = (Kf + R') - (D + A + B)                                                  SPEC-LIQ-010
   s   = min(allow, floor(1e4 (bNet - 1e4) / bNet)) if bNet > 1e4, else 0               SPEC-LIQ-003
   listing check: minLB (1e4 - smin) >= 1e4 (1e4 + maxFlashFeeBps), which implies the 1e8 bound SPEC-LIQ-016
-  spot price never reverts (REQ-SWAP-025), sequencer gate (LIQ-086), record cap G(16) <= 16,777,216 (SPEC-CHAIN-001),
+  spot price never reverts (REQ-SWAP-025), sequencer gate (LIQ-086), record cap G(16) <= 7,500,000 (SPEC-CHAIN-001),
   the caller's gap and top-up (SPEC-SET-001, SPEC-LIQ-019), flash lender and premium (REQ-FLASH-002, REQ-FLASH-005),
   flash repayment by balance delta (REQ-SWAP-122) and the measured conservation (SPEC-LIQ-010, REQ-SWAP-108).
 """
@@ -203,28 +203,30 @@ computed("MATH-ST-107", "LIQ-089 example: restart 10:00:00, grace 3,600 s, grace
 
 # ---------------- (e) record cap sized to one transaction (SPEC-CHAIN-001, Q-381) ----------------
 # No minimum debt exists on any chain (Q-381). The 16-record limit per account per market exists so one
-# liquidation of the largest account fits one transaction: G(n) = 1,310,000 + 240,000 n <= 16,777,216.
+# liquidation of the largest account fits one transaction: G(n) = 4,610,000 + 170,000 n <= 7,500,000, the liquidation
+# gas budget (2026-11-14), under 16,777,216.
 nrec, gcap = Ints("records txGasCap")
-G_n = 1_310_000 + 240_000 * nrec
+G_n = 4_610_000 + 170_000 * nrec
 # MATH-ST-108 verifies: SPEC-CHAIN-001, INV-096, LIQ-022, REQ-AMM-CORE-015, LIQ-087, Q-381
 check("MATH-ST-108",
-      "every account with at most 16 records per market is liquidated in one call of at most G(16) = 5,150,000 gas, "
-      "within the per-transaction gas limit 16,777,216",
-      [nrec >= 1, nrec <= 16, gcap == 16_777_216, Or(G_n > 5_150_000, G_n > gcap)],
+      "every account with at most 16 records per market is liquidated in one call of at most G(16) = 7,330,000 gas, "
+      "within the 7,500,000 liquidation gas budget and the per-transaction gas limit 16,777,216",
+      [nrec >= 1, nrec <= 16, gcap == 16_777_216, Or(G_n > 7_330_000, G_n > 7_500_000, G_n > gcap)],
       "PROVED")
 # MATH-ST-108 verifies: SPEC-CHAIN-001, INV-096
 check("MATH-ST-108",
-      "boundary: the largest record count whose liquidation fits the per-transaction limit is 64, so a limit of 65 "
+      "boundary: the largest record count whose liquidation fits the per-transaction limit is 71, so a limit of 72 "
       "records would not fit (counterexample expected)",
-      [nrec == 65, G_n > 16_777_216],
+      [nrec == 72, G_n > 16_777_216],
       "COUNTEREXAMPLE", show=[nrec])
-G_rec = lambda n: 1_310_000 + 240_000 * n          # liquidation gas by records walked (gas units, no gas price)
+G_rec = lambda n: 4_610_000 + 170_000 * n          # liquidation gas by records walked (gas units, no gas price)
 # MATH-ST-108 verifies: SPEC-CHAIN-001, LIQ-087, Q-381
-computed("MATH-ST-108", "record-cap gas fit with G(n) = 1,310,000 + 240,000 n (no gas price, no minimum debt)", [
-    ("G(1)", 1_550_000, G_rec(1)), ("G(16)", 5_150_000, G_rec(16)),
+computed("MATH-ST-108", "record-cap gas fit with G(n) = 4,610,000 + 170,000 n (no gas price, no minimum debt)", [
+    ("G(1)", 4_780_000, G_rec(1)), ("G(16)", 7_330_000, G_rec(16)),
+    ("G(16) <= 7,500,000 (liquidation gas budget)", True, G_rec(16) <= 7_500_000),
     ("G(16) <= 16,777,216", True, G_rec(16) <= 16_777_216),
-    ("headroom 16,777,216 / G(16) above 3.25x", True, Fr(16_777_216, G_rec(16)) > Fr(325, 100)),
-    ("largest n with G(n) <= 16,777,216", 64, max(n for n in range(1, 200) if G_rec(n) <= 16_777_216)),
+    ("headroom 16,777,216 / G(16) above 2.25x", True, Fr(16_777_216, G_rec(16)) > Fr(225, 100)),
+    ("largest n with G(n) <= 16,777,216", 71, max(n for n in range(1, 200) if G_rec(n) <= 16_777_216)),
 ])
 
 # ---------------- (f) one shortfall rule for every caller, no shared settlement pool ----------------

@@ -25,17 +25,26 @@ fails, so no target is ever dropped.
                                               `hevm test` when test/symbolic/ holds a prove_ function
     ci-shards.py mythril <build>              {"group": "<k>", "contracts": "<A B ...>"}: the src/ contracts with
                                               runtime code, sorted by name, in groups of MYTHRIL_GROUP (8)
-    ci-shards.py mutate [--layers L]          {"layer": "<l>", "contract": "<Name>"} per implementation file of
-                                              security/mutation-layers.json (the slither-mutate and Gambit legs)
-    ci-shards.py mutator-groups               {"group": "<k>", "mutators": "<A,B,...>"}: slither-mutate's mutators in
-                                              three groups, each run as its own job per contract
+    ci-shards.py mutate --totals F [--keys F] [--chunks N]
+                                              the slither-mutate legs: each target of --totals ({"mutate:<layer>:
+                                              <Contract>": mutants}, from script/mutation-slither.py list) split into
+                                              shards of at most MUTANTS_PER_JOB (40) mutants, {"layer", "contract",
+                                              "shard", "shards", "key"} each, dealt round-robin into N lists (one
+                                              matrix job each), the largest shards first; above 256 legs per list
+                                              the shards grow. Prints {"chunks": [[...], ...], "mutants": n,
+                                              "per_job": p}. --keys: the targets' keys (script/mutation-ledger.py)
+    ci-shards.py gambit [--layers L] [--contracts C] [--keys F] [--skip F]
+                                              {"layer", "contract", "key"} per implementation file (the Gambit legs)
     ci-shards.py mutators-check               reads `slither-mutate --list-mutators` on stdin and fails when a
-                                              mutator is in no group
+                                              mutator is neither run (SLITHER_MUTATORS) nor left to Gambit
+                                              (GAMBIT_COVERED)
     ci-shards.py certora-mutate [--layers L]  {"conf": "<Name>"} per Certora conf with a `mutations` section whose
                                               verified contract's file is in a folder of the selected layers (every
                                               such conf when no layer is given)
-    ci-shards.py necessist [--layers L]       {"layer": "<l>", "test": "<path> [<path> ...]"} per test file of each
-                                              layer; above 256 legs, k files of one layer per leg (necessist_legs)
+    ci-shards.py necessist [--layers L] [--contracts C] [--keys F] [--skip F]
+                                              {"layer": "<l>", "test": "<path> [<path> ...]", "keys": "<key> ..."}
+                                              per test file of each layer; above 256 legs, k files of one layer per
+                                              leg (necessist_legs)
     ci-shards.py campaign <build> <layer> <echidna|medusa>
                                               {"harness": "<Name>", "segment": <k>} for every harness of the layer
                                               (or of no layer: `other`) and every segment 1..CAMPAIGN_SEGMENTS (8)
@@ -104,9 +113,9 @@ def src_contracts(build: str) -> list[str]:
     return sorted({row[0] for row in targets("runtime-code", build, str(scratch))})
 
 
-def mutation(what: str, layers: str) -> list[list[str]]:
+def mutation(what: str, layers: str, contracts: str = "") -> list[list[str]]:
     out = subprocess.run(
-        [sys.executable, str(ROOT / "script/mutation-targets.py"), what, "--layers", layers],
+        [sys.executable, str(ROOT / "script/mutation-targets.py"), what, "--layers", layers, "--contracts", contracts],
         check=True,
         capture_output=True,
         text=True,
@@ -176,28 +185,55 @@ def smt_only(name: str) -> int:
     return 0
 
 
-# slither-mutate runs its mutators in this order and, unless --comprehensive, skips lines where an earlier mutator left
-# a mutant uncaught. A group starts without that list, so the groups together test every mutant of a single run and
-# more: no mutant is dropped. CR (one mutant per statement) is the largest group on its own with RR.
-MUTATOR_GROUPS = [
-    "CR,RR",
-    "AOR,ASOR,BOR,LOR,ROR,UOR",
-    "FHR,LIR,MIA,MVIE,MVIV,MWA,SBR",
-]
+# The slither-mutate mutators the gate runs (script/mutation-slither.py): CR and RR (statement and revert mutants) and
+# the tweaks that Gambit has no operator for. Every mutant of them is tested; no line is skipped because another
+# mutant on it survived.
+SLITHER_MUTATORS = "CR,FHR,LIR,MIA,MVIE,MVIV,MWA,RR,SBR"
+# The operator replacements (arithmetic, assignment, bitwise, logical, relational, unary) are Gambit's
+# binary-op-mutation, assignment-mutation and unary-operator-mutation (security/mutation-layers.json `gambit`), so
+# slither-mutate does not test them a second time.
+GAMBIT_COVERED = "AOR,ASOR,BOR,LOR,ROR,UOR"
+MUTANTS_PER_JOB = int(os.environ.get("MUTANTS_PER_JOB", "40"))
 
 
 def mutators_check(table: str) -> int:
     listed = set(re.findall(r"^\|\s*\d+\s*\|\s*([A-Z]+)\s*\|", table, re.M))
-    grouped = {m for g in MUTATOR_GROUPS for m in g.split(",")}
+    known = set(SLITHER_MUTATORS.split(",")) | set(GAMBIT_COVERED.split(","))
     if not listed:
         print("ci-shards: no mutator in the slither-mutate --list-mutators output", file=sys.stderr)
         return 1
-    missing = sorted(listed - grouped)
+    missing = sorted(listed - known)
     if missing:
-        print(f"ci-shards: slither-mutate mutators in no group of MUTATOR_GROUPS: {', '.join(missing)}", file=sys.stderr)
+        print("ci-shards: slither-mutate mutators neither in SLITHER_MUTATORS nor in GAMBIT_COVERED: "
+              + ", ".join(missing), file=sys.stderr)
         return 1
-    print(f"every slither-mutate mutator is in a group: {', '.join(sorted(listed))}")
+    print(f"slither-mutate mutators run: {SLITHER_MUTATORS}; left to Gambit: {GAMBIT_COVERED}")
     return 0
+
+
+def load(path: str | None, default):
+    return json.loads(Path(path).read_text(encoding="utf8")) if path else default
+
+
+def mutate_plan(totals: dict[str, int], keys: dict, chunks: int) -> dict:
+    """The slither-mutate legs: each target in shards of at most `per_job` mutants (MUTANTS_PER_JOB, raised in steps
+    of 10 until the legs fit `chunks` matrices of MAX_LEGS), dealt round-robin into `chunks` lists, the largest
+    shards first, so every list starts with its longest jobs. A target without a mutant gets no leg."""
+    sizes = [(entry, n) for entry, n in sorted(totals.items()) if n > 0]
+    per_job = MUTANTS_PER_JOB
+    while sum(-(-n // per_job) for _, n in sizes) > MAX_LEGS * chunks:
+        per_job += 10
+    legs = []
+    for entry, n in sizes:
+        _, layer, name = entry.split(":", 2)
+        shards = -(-n // per_job)
+        legs += [(n / shards, {"layer": layer, "contract": name, "shard": k, "shards": shards,
+                               "key": keys.get(entry, "")}) for k in range(1, shards + 1)]
+    legs.sort(key=lambda x: -x[0])
+    out: list[list[dict]] = [[] for _ in range(chunks)]
+    for j, (_, leg) in enumerate(legs):
+        out[j % chunks].append(leg)
+    return {"chunks": out, "mutants": sum(n for _, n in sizes), "per_job": per_job}
 
 
 def certora_confs(layers: str) -> list[dict]:
@@ -255,11 +291,16 @@ def main(argv: list[str]) -> int:
         print(__doc__, file=sys.stderr)
         return 2
     what, rest = argv[0], argv[1:]
-    layers = ""
-    if "--layers" in rest:
-        i = rest.index("--layers")
-        layers = rest[i + 1] if i + 1 < len(rest) else ""
-        rest = rest[:i] + rest[i + 2 :]
+    opts = {}
+    for flag in ("--layers", "--contracts", "--keys", "--skip", "--totals", "--chunks"):
+        if flag in rest:
+            i = rest.index(flag)
+            opts[flag] = rest[i + 1] if i + 1 < len(rest) else ""
+            rest = rest[:i] + rest[i + 2 :]
+    layers = opts.get("--layers", "")
+    contracts = opts.get("--contracts", "")
+    keys = load(opts.get("--keys") or None, {})
+    skip = set(load(opts.get("--skip") or None, []))
     if what == "certora":
         return emit([{"conf": p.stem} for p in sorted((ROOT / "certora/conf").glob("*.conf"))], what)
     if what == "halmos":
@@ -290,15 +331,27 @@ def main(argv: list[str]) -> int:
         groups = [names[i : i + size] for i in range(0, len(names), size)]
         return emit([{"group": str(k + 1), "contracts": " ".join(g)} for k, g in enumerate(groups)], what)
     if what == "mutate":
-        return emit([{"layer": r[0], "contract": r[1]} for r in mutation("contracts", layers)], what)
-    if what == "mutator-groups":
-        return emit([{"group": str(k + 1), "mutators": g} for k, g in enumerate(MUTATOR_GROUPS)], what)
+        plan = mutate_plan(load(opts.get("--totals") or None, {}), keys, int(opts.get("--chunks") or 1))
+        for k, chunk in enumerate(plan["chunks"], 1):
+            if len(chunk) > MAX_LEGS:
+                print(f"ci-shards: mutate list {k} has {len(chunk)} legs, above GitHub's {MAX_LEGS}", file=sys.stderr)
+                return 1
+        print(json.dumps(plan, separators=(",", ":")))
+        return 0
+    if what == "gambit":
+        legs = [{"layer": r[0], "contract": r[1], "key": keys.get(f"gambit:{r[0]}:{r[1]}", "")}
+                for r in mutation("contracts", layers, contracts) if f"gambit:{r[0]}:{r[1]}" not in skip]
+        return emit(legs, what)
     if what == "mutators-check":
         return mutators_check(sys.stdin.read())
     if what == "certora-mutate":
         return emit(certora_confs(layers), what)
     if what == "necessist":
-        return emit(necessist_legs(mutation("tests", layers)), what)
+        rows = [[layer, f.replace("\\", "/")] for layer, f in mutation("tests", layers, contracts)]
+        legs = necessist_legs([r for r in rows if f"necessist:{r[0]}:{r[1]}" not in skip])
+        for leg in legs:
+            leg["keys"] = " ".join(keys.get(f"necessist:{leg['layer']}:{f}", "-") for f in leg["test"].split())
+        return emit(legs, what)
     if what == "campaign-harnesses" and len(rest) == 2:
         return emit(campaign_harnesses(rest[0], rest[1]), what)
     if what == "campaign" and len(rest) == 3:

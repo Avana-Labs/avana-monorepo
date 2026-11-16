@@ -34,14 +34,17 @@ The order follows the contract inventory and constructor immutables of [1.2 Cont
 | `check-mock-counterparts.py`, `mock-counterparts.json` | local and CI (`models.yml` contract-checklists job) | `TEST-005`: every mocked external (Chainlink aggregators and the Base sequencer-uptime feed, each AMM integration's position manager, factory and pools, the Aave V3 Pool, GSM, PSM, swap-route pools) has a fork test under `test/fork/` on each chain where it runs. `mock-counterparts.json` lists each external, its mocks (`<path>:<Contract>`) and the TEST rows whose fork test covers it; the script fails on a mock of an external the registry does not list, a stale entry, or an external with mocks and no counting fork test reading that chain's RPC variable. `--markdown` for the job summary. |
 | `halmos-outcome.py` | called by `security-slow.sh halmos` | The wall-clock budget (and optional loop bound) of a check listed in `security/halmos-bounds.json`, and the outcome of a Halmos run: `pass`, `fail` (any counterexample, `[ERROR]`, build failure or memory-cap kill, or an unlisted check that ran out of budget) or `bounded` (a listed single check that its budget or a solver timeout ended without a counterexample), written to `out-security/halmos-outcome.json` and the CI job summary. |
 | `forge-results.py` | CI (`fork` job) | Counts passed, skipped and failed tests in `forge test --json-file` output; the fork job reports "not run" when no fork test passed. |
-| `security-slow.sh` | local and CI (every push to `main`: `security-slow.yml` for the tools, `mutation-gate.yml` for `mutate`, `gambit` and `necessist`) | Slow security tier: Echidna, Medusa, Halmos, hevm and Mythril; layer-gate steps `mutate` (slither-mutate), `gambit` and `necessist`. Selectors limit a step to some targets, as each CI job does: `ECHIDNA_HARNESSES`, `ECHIDNA_MODES`, `MEDUSA_HARNESSES`, `HALMOS_CONTRACTS`, `HALMOS_TESTS`, `HEVM_TARGETS` (`harness:<Name>`, `src:<Name>`, `test`), `MYTHRIL_CONTRACTS`, `MUTATE_LAYERS`, `MUTATE_CONTRACTS`, `MUTATE_MUTATORS`, `NECESSIST_TESTS`; a selected target that does not exist fails the step, and without selectors every target runs. |
-| `ci-shards.py` | CI (`plan` jobs of `contracts.yml`, `security-slow.yml` and `mutation-gate.yml`) | Lists the targets of each long-running check as a JSON matrix, one job per target: Certora confs, Halmos test functions (one per `check_`), invariant files, SMTChecker contracts (and `smt-only`, which narrows `[profile.smt.model_checker]` to one contract), Echidna, Medusa and hevm targets and Mythril groups from the slow-tier build, mutation targets per contract, mutator group and test file, and the harnesses of a layer's pre-audit campaign. A list above GitHub's 256 legs per matrix fails. |
-| `security-gambit.sh` | called by `security-slow.sh gambit`; local and CI layer gate | Gambit expression mutants of each layer's implementation files (fixed seed, operators and per-file cap from the `gambit` object of `security/mutation-layers.json`), each run against the file's Foundry tests with a per-mutant timeout (`GAMBIT_TIMEOUT`, 300 seconds) in an isolated copy under `out-security/gambit/root`; survivors in `out-security/gambit/<layer>/survivors.txt`; fails on any survived or timed-out mutant not accepted in `security/gambit-triage.json`. |
+| `security-slow.sh` | local and CI (every push to `main`: `security-slow.yml` for the tools, `mutation-gate.yml` for `mutate`, `gambit` and `necessist`) | Slow security tier: Echidna, Medusa, Halmos, hevm and Mythril; layer-gate steps `mutate` (slither-mutate's mutants through `mutation-slither.py`), `gambit` and `necessist`, all three built in the `mutation` profile of `foundry.toml`. Selectors limit a step to some targets, as each CI job does: `ECHIDNA_HARNESSES`, `ECHIDNA_MODES`, `MEDUSA_HARNESSES`, `HALMOS_CONTRACTS`, `HALMOS_TESTS`, `HEVM_TARGETS` (`harness:<Name>`, `src:<Name>`, `test`), `MYTHRIL_CONTRACTS`, `MUTATE_LAYERS`, `MUTATE_CONTRACTS`, `MUTATE_MUTATORS`, `MUTATE_SHARD` (`k/n`), `NECESSIST_TESTS`; a selected target that does not exist fails the step, and without selectors every target runs. |
+| `ci-shards.py` | CI (`plan` jobs of `contracts.yml`, `security-slow.yml` and `mutation-gate.yml`) | Lists the targets of each long-running check as a JSON matrix, one job per target: Certora confs, Halmos test functions (one per `check_`), invariant files, SMTChecker contracts (and `smt-only`, which narrows `[profile.smt.model_checker]` to one contract), Echidna, Medusa and hevm targets and Mythril groups from the slow-tier build, slither-mutate shards of at most 40 mutants per contract (dealt over three matrices, from the counts `mutation-slither.py list` wrote), Gambit targets per contract and Necessist targets per test file (leaving out targets current in the ledger), and the harnesses of a layer's pre-audit campaign. A list above GitHub's 256 legs per matrix fails. |
+| `security-gambit.sh` | called by `security-slow.sh gambit`; local and CI layer gate | Gambit expression mutants of each layer's implementation files (fixed seed, operators and per-file cap from the `gambit` object of `security/mutation-layers.json`), each run against the file's Foundry tests by `mutation-test.py` with a per-mutant timeout for compile and tests together (`GAMBIT_TIMEOUT`, 600 seconds) in an isolated copy under `out-security/gambit/root`; survivors in `out-security/gambit/<layer>/survivors.txt`; fails on any survived or timed-out mutant not accepted in `security/gambit-triage.json`. |
 | `check-coverage.sh`, `coverage-gate.py` | local and CI (every push and pull request) | `forge coverage --report lcov` in the `coverage` profile and the per-file branch-coverage minimums of `security/coverage-thresholds.json`, none below its `floor` of 80 %; a branch leaves a file's count only through its `unreachable` entries, each with function, branch, reason and tests. |
 | `storage-layout.js` | called by `security-fast.sh layout` | Storage-layout snapshots in `security/storage-layout/` of every upgradeable `src/` contract and every contract sharing its ERC-7201 namespace; fails on any change to an existing slot. |
 | `4naly3er-run.js` | called by `security-fast.sh 4naly3er` | Runs 4naly3er without the issues excluded in `security/4naly3er-triage.json`. |
 | `mutation-targets.py` | called by `security-slow.sh mutate necessist` and `security-gambit.sh` | Implementation files and test files of each layer in `security/mutation-layers.json`, and the Gambit settings of each file (`gambit`). |
-| `mutation-records.py`, `mutation-records.test.sh` | called by `security-slow.sh mutate necessist` and `mutation-report.py`; the test in CI (`contracts.yml` build job) | Reads each uncaught slither-mutate mutant and each Necessist removal that left the tests passing from a tool log, a mutant or statement that spans several lines kept whole. |
+| `mutation-records.py`, `mutation-records.test.sh` | called by `security-slow.sh necessist` and `mutation-report.py`; the test in CI (`contracts.yml` build job) | Reads each uncaught slither-mutate mutant and each Necessist removal that left the tests passing from a tool log, a mutant or statement that spans several lines kept whole. The test also checks `mutation-report.py` (a timed-out mutant is its own outcome, never killed) and the outcomes of `mutation-test.py`. |
+| `mutation-test.py` | called by `mutation-slither.py` and `security-gambit.sh` | Runs a target's tests on one mutant: `forge test --fail-fast --match-path <tests>` in the `mutation` profile (no optimizer, via-IR only where needed; compiles `src/` and the matched tests only), then, for a survivor, the tests of the release build's gas that profile leaves out, in the default profile; outcome `killed`, `survived`, `timeout` (never counted as killed) or `invalid`. |
+| `mutation-slither.py` | CI (`mutants` job of `mutation-gate.yml`); called by `security-slow.sh mutate` | `list`: one Slither run over the project writes every mutant of slither-mutate's mutators (`ci-shards.py` `SLITHER_MUTATORS`; the operator mutators are Gambit's) for each target, in a fixed order. `run`: tests one shard of a target's list (`--shard k --shards n`) with `mutation-test.py`, without Slither; reports `shard-<k>.tsv`, `shard-<k>.json` and `shard-<k>.log`. |
+| `mutation-ledger.py`, `mutation-ledger.test.sh` | CI (`plan` and `ledger` jobs of `mutation-gate.yml`); the test in CI (`contracts.yml` build job) | Keys every mutation target by its file, its tests and everything they import, keeps the passed reports per key (the `mutation-ledger-*` cache), and lists the targets a nightly run can skip. |
 | `security-mythril.sh` | called by `security-slow.sh` | Mythril on the runtime code of every `src/` contract and library (or of those named in `MYTHRIL_CONTRACTS`), settings from `security/mythril.conf`. |
 | `security-gate.py`, `security-gate.test.sh` | called by the security runners; the test in CI (`contracts.yml` build job) | Severity gate and triage for Slither, `slither-check-upgradeability`, Aderyn, Mythril, Semgrep and 4naly3er reports, and for Gambit survivors. An accepted entry's `reviewedFiles` hashes are checked: a reviewed file that changed since the review is reported as "review reopened" (a warning, not a failure). |
 | `security-targets.py`, `security-list-upgradeable.py` | called by the security runners | Find harnesses, assertion entry points, creation and runtime code (address immutables filled as a constructor fills them, for Mythril and hevm) and upgradeable contracts in the build, so no runner keeps a list of files. |
@@ -116,7 +119,6 @@ Scripts read manifests with `vm.readFile` and `vm.parseJson*` (`fs_permissions` 
 | `AVANA_RELEASE` | `03`, `04`, `09` | Release tag used in salts and output file names, default the config's `release`. Checked on every run (see [Releases and tags](#releases-and-tags)) |
 | `AVANA_RELEASE_RECORD` | `03` | Path from `contracts/` of the release workflow's `release.json` for this tag, default `deployments-local/<network>/release.json` when present; `03` refuses to deploy unless its release, commit, CREATE3 factory, salts and (for this deployer) addresses match |
 | `AVANA_OPERATION_GAS_BUDGET` | `09` (`markets`) | Execution gas budget of each listing operation; overrides the config's `.chain.operationGasBudget` (default 40,000,000) |
-| `FOUNDRY_LIBRARIES` | `02` and the `aave` profile build | Set from `deployments-local/libraries.env` after `01` |
 | `AVANA_FIXTURE` | hostile suites | `fork` runs the hostile-component tests on the Ethereum fork |
 
 Every name is listed, without values, in [`../.env.example`](../.env.example); Foundry and the Makefile read the values from `contracts/.env`.
@@ -126,24 +128,27 @@ The deployer signs with a Foundry keystore account (`--account <name> --sender <
 ## Commands
 
 ```bash
-# Local chain with Avana's Aave V4
-anvil
-forge script script/00_Factories.s.sol --rpc-url anvil --broadcast
-FOUNDRY_PROFILE=aave forge build
-forge script script/01_LiquidationLogic.s.sol --rpc-url anvil --broadcast --account deployer
-set -a; . deployments-local/libraries.env; set +a
-FOUNDRY_PROFILE=aave forge build --force
-AVANA_RELEASE=<tag> forge script script/02_DeployAaveV4.s.sol --rpc-url anvil --broadcast --account deployer
-AVANA_RELEASE=<tag> AVANA_MANIFEST=../deployments/proposed/<file>.json \
-  forge script script/03_DeployAvana.s.sol --rpc-url anvil --broadcast --account deployer
-AVANA_MANIFEST=../deployments/proposed/<file>.json \
-  forge script script/04_ConfigureAccess.s.sol --rpc-url anvil --broadcast --account deployer
+# Builds the deploy scripts read: default and aave profiles, Uniswap v3, Slipstream, Aerodrome, Aave V3, Chainlink
+make build build-aave build-external
 
-# Dry run of a mainnet deployment on a fork
-forge script script/03_DeployAvana.s.sol --fork-url "$RPC_MAINNET" --fork-block-number "$MAINNET_FORK_BLOCK"
+# Every step in order on a fresh anvil node, then the manifest, services and scenarios (deployments/README.md)
+script/e2e/e2e-local.sh
 
-# Checks before a manifest moves to deployments/verified/
-AVANA_MANIFEST=../deployments/proposed/<file>.json forge script script/07_VerifyDeployment.s.sol --rpc-url mainnet
+# One step by hand (script/deploy/step.sh lists every step in order); on anvil every sender is unlocked
+anvil --auto-impersonate --code-size-limit 49152 --gas-limit 60000000 &
+AVANA_NETWORK=anvil AVANA_RPC_URL=http://127.0.0.1:8545 script/deploy/step.sh 00-factories
+AVANA_NETWORK=anvil AVANA_RPC_URL=http://127.0.0.1:8545 script/deploy/step.sh 01-aave-v4
+
+# Off anvil: a keystore or Ledger signer, the release tag checked out
+AVANA_NETWORK=sepolia AVANA_RPC_URL="$RPC_SEPOLIA" AVANA_RELEASE=<tag> \
+  AVANA_SIGNER_FLAGS="--account deployer --sender 0x…" script/deploy/step.sh 03-avana
+
+# Dry run of the Avana deployment on a mainnet fork (simulated, nothing broadcast)
+AVANA_NETWORK=ethereum AVANA_RELEASE=<tag> forge script script/deploy/03_DeployAvana.s.sol --fork-url "$RPC_MAINNET" --fork-block-number "$MAINNET_FORK_BLOCK"
+
+# The release manifest, checked against the chain before it moves to deployments/verified/ (from packages/protocol)
+node src/manifest/cli.ts produce --network sepolia --rpc-env RPC_SEPOLIA
+node src/manifest/cli.ts verify --manifest ../../deployments/sepolia/<release>.json --rpc-env RPC_SEPOLIA
 ```
 
 ## Makefile
@@ -183,6 +188,7 @@ From `contracts/`, after `script/install-security-tools.sh --python --gambit`:
 ```bash
 MUTATE_LAYERS=2.1 script/security-slow.sh mutate gambit necessist          # every mutation step of layer 2.1
 MUTATE_LAYERS=2.1 script/security-slow.sh gambit                           # Gambit only
+MUTATE_CONTRACTS=Lock MUTATE_SHARD=1/3 script/security-slow.sh mutate      # the first of three slither-mutate shards of Lock
 MUTATE_LAYERS=2.2 MUTATE_CONTRACTS=ClPriceMath GAMBIT_TIMEOUT=600 script/security-gambit.sh   # one file, longer budget
 script/mutation-targets.py gambit --layers 2.2                             # the files, tests, cap, seed and operators Gambit uses
 ```

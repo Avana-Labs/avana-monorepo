@@ -365,7 +365,7 @@ abstract contract LPVaultSwapSettlement is LPVaultSwapStorage {
     // ──────────────────────────────────────────────────────────────────────────────────────────── payout delivery
 
     /// @dev REQ-SWAP-076 delivery of an escrowable payout: skips 0; reads LPVaultSwap's balance; reverts
-    /// `InsufficientGas` unless `gasleft() ≥ ⌈PAYOUT_TRANSFER_GAS × 64 / 63⌉ + POST_CALL_GAS`; calls
+    /// `InsufficientGas` unless `gasleft() ≥ _PAYOUT_GAS_REQUIRED` (`⌈PAYOUT_TRANSFER_GAS × 64 / 63⌉ + 10,000`); calls
     /// `token.transfer(recipient, amount)` with exactly `PAYOUT_TRANSFER_GAS` gas and no return data copied; measures
     /// what left its balance and deposits the undelivered rest in the PayoutEscrow credited to `recipient`. Returns
     /// whether a deposit was made.

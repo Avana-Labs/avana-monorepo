@@ -10,7 +10,7 @@ import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixtu
 /// records, an unsettled seizure reconciled first, then one `settleSeizure` that debits every record (16 record
 /// updates, 16 list removals, 16 exposure releases and 16 + 1 LPVault `unwind` calls). The LPVault is the fixture's
 /// constant-cost mock, so the figure is the ledger's work alone; the fork suite of TEST-269 measures the whole
-/// liquidation with real Uniswap v3 and Slipstream unwinds against `G(16) = 5.15M`.
+/// liquidation with real unwinds against the 7.5M liquidation gas budget.
 /// forge-config: default.isolate = false
 contract CollateralizationSeizureGasTest is CollateralizationFixture {
     /// @notice Budget of the ledger's part: measured at about 1.2M with the mock LPVault, kept with margin so a
@@ -22,7 +22,7 @@ contract CollateralizationSeizureGasTest is CollateralizationFixture {
     }
 
     // TEST-269 verifies: SPEC-BACK-016, REQ-VAULT-108
-    // Sources: 2.3 SPEC-BACK-016, REQ-VAULT-108 (16 records, about 5,150,000 gas for the whole liquidation)
+    // Sources: 2.3 SPEC-BACK-016, REQ-VAULT-108 (16 records, at most 7,500,000 gas for the whole liquidation)
     /// @notice A reconcile plus a 16-record debit stays within the ledger budget.
     function test_TEST_269_sixteenRecordSeizureWithReconcile() public {
         for (uint256 i = 0; i < 16; ++i) {

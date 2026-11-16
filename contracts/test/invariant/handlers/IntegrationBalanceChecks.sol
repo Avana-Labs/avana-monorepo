@@ -3,9 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {IFlashLiquidatorEvents} from "../../../src/periphery/flash-liquidator/IFlashLiquidatorEvents.sol";
 import {FlashLiquidationRequest} from "../../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 /// @dev The debt asset held by every address a liquidation can move it between (direct or through the helper).
@@ -26,6 +28,8 @@ struct Held {
     uint256 helperEscrowed;
     // The Spoke's deficit on the Hub in this debt asset (ray): a rise marks a call that booked a deficit.
     uint256 deficit;
+    // Before the call only: the account's collateral value was below its debt value times the call's bonus.
+    bool underwater;
 }
 
 /// @title IntegrationBalanceChecks
@@ -33,13 +37,26 @@ struct Held {
 /// one liquidation, direct or through the public flash liquidation helper. External functions, so the library is
 /// deployed on its own and linked: the handler stays within EIP-170 with its steering and liveness checks.
 library IntegrationBalanceChecks {
+    /// @notice Whether `proxy` on `spoke` is underwater: its Aave collateral value below its debt value times the
+    /// liquidation bonus of collateral reserve `reserveId` at its health factor (REQ-SWAP-027), as LPVaultSwap tests it.
+    function underwater(
+        address spoke,
+        uint256 reserveId,
+        address proxy
+    ) external view returns (bool) {
+        IAaveV4Spoke.UserAccountData memory d = IAaveV4Spoke(spoke).getUserAccountData(proxy);
+        uint256 bonus = IAaveV4Spoke(spoke).getLiquidationBonus(reserveId, proxy, d.healthFactor);
+        return d.totalCollateralValue * 1e4 < Math.mulDiv(d.totalDebtValueRay, bonus, 1e27, Math.Rounding.Ceil);
+    }
+
     /// @notice A direct liquidation: the debt asset that left the caller and the sources (the LPVault and the route
     /// pools) equals what reached the Hub, the fee recipient and the borrower (paid or escrowed) and Collateralization
     /// (pool tokens of a reconcile, held for `settlePending`); LPVaultSwap's balance is unchanged, the escrow rose by
     /// exactly the escrowed credit, and the flash lender and the helper are untouched (`conserved`). The result's `D`,
     /// `A`, `B`, `R` and the caller's net equal those changes (`reported`); `funded`, the part of `B` a deficit
     /// liquidation paid into the First-Loss Reserve (`DeficitSurplusFunded`), reaches the Hub, not the borrower; it is
-    /// all of `B` on a call that raised the Spoke's deficit and 0 on any other call (REQ-SWAP-027).
+    /// all of `B` on a call of an account underwater before it or that raised the Spoke's deficit, and 0 on any other
+    /// call (REQ-SWAP-027).
     function direct(
         Held memory b,
         Held memory a,
@@ -58,7 +75,7 @@ library IntegrationBalanceChecks {
             && a.helperEscrowed == b.helperEscrowed;
         reported = toHub == int256(r.debtRepaid + funded) && toFee == int256(r.avanaFee)
             && toBorrower == int256(r.borrowerSurplus) - int256(funded) && recovered == int256(r.recovered)
-            && funded == (a.deficit > b.deficit ? r.borrowerSurplus : 0)
+            && funded == (b.underwater || a.deficit > b.deficit ? r.borrowerSurplus : 0)
             && -callerIn == int256(r.keeperOut) - int256(r.callerFunds) - int256(r.shortfall);
     }
 
