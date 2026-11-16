@@ -16069,7 +16069,7 @@
     "checks": []
   },
   "REQ-ARCH-155": {
-    "hash": "f59ff4cf2c916522",
+    "hash": "24a13510dd1c95c5",
     "checks": []
   },
   "REQ-ARCH-156": {
@@ -21981,11 +21981,12 @@
     ]
   },
   "REQ-ORACLE-037": {
-    "hash": "82ac61301245d8b6",
+    "hash": "ca4dce6c5501d929",
     "checks": [
       "FV-CTL-69",
       "ILPOracle",
-      "TEST-294"
+      "TEST-294",
+      "TEST-337"
     ]
   },
   "REQ-ORACLE-038": {
@@ -25836,7 +25837,7 @@
     ]
   },
   "REQ-RISK-090": {
-    "hash": "fe9ee97fd9ada4be",
+    "hash": "3f7834b95c3eb2a3",
     "checks": [
       "IRiskModuleChecks",
       "IRiskModuleDriftLogic",
@@ -25847,13 +25848,14 @@
     ]
   },
   "REQ-RISK-091": {
-    "hash": "a5a093a1bb7b9e0d",
+    "hash": "d189724161e5919e",
     "checks": [
       "IRiskModuleBreakerLogic",
       "IRiskModuleChecks",
       "RiskModule",
       "RiskModuleBreakerLogic",
-      "TEST-228"
+      "TEST-228",
+      "TEST-337"
     ]
   },
   "REQ-RISK-092": {
