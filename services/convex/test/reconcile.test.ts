@@ -89,5 +89,7 @@ describe("a CDP Spoke's split by market reconciles to the Spoke's owed amount", 
     expect(pools.reduce((acc, p) => acc + p.borrowedUsd, 0)).toBeCloseTo(borrowU.borrowedUsd, 4);
     expect(pools[0]).toMatchObject({ scope: "pool", suppliedUsd: 2_000_000, maxLtvPct: 80, premiumBps: 500, feeTier: "0.01%", lpPriceUsd: 2 });
     expect(pools[0]!.utilizationPct).toBeCloseTo(30, 4);
+    // Each pool row names its Hub, which the Hubs filter lists.
+    expect(pools.map((p) => p.hubId)).toEqual(markets.map((m) => m.hub));
   });
 });

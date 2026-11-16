@@ -406,7 +406,7 @@ export function LendAssetSpokes({
   }, [categoryParam])
 
   const allRows = useMemo(() => groups.flatMap((group) => group.rows), [groups])
-  const filterItems = useMemo(() => allRows.map((row) => lendFilterItem(row.symbol)), [allRows])
+  const filterItems = useMemo(() => allRows.map((row) => lendFilterItem(row)), [allRows])
   const assetOptions = useMemo(() => buildAssetOptions(allRows), [allRows])
 
   const filteredGroups = useMemo(() => {
@@ -417,7 +417,7 @@ export function LendAssetSpokes({
         const rows = group.rows.filter((row) => {
           const matchesSearch =
             query.length === 0 || row.name.toLowerCase().includes(query) || row.symbol.toLowerCase().includes(query)
-          return matchesSearch && matchesMarketFilters(lendFilterItem(row.symbol), filters)
+          return matchesSearch && matchesMarketFilters(lendFilterItem(row), filters)
         })
 
         return { ...group, rows }
