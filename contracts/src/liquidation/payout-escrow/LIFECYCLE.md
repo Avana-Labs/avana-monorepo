@@ -35,14 +35,14 @@ Aerodrome Slipstream on Base (Carol, USDC debt, 3.6 `EMG-113`). Setup: Circle bl
 4. **LPVaultSwap pays K2's helper `keeperOut = 2,030.5` USDC directly** (never escrowed; a failed transfer of it would revert the call) and emits [`LiquidationSettled`](../lp-vault-swap/ILPVaultSwapEvents.sol#L22); the helper repays 2,001 USDC and pays K2 29.5 USDC, and Carol sees the same result as in `LIQ-089`.
 5. **After 40 liquidations of this size** the Safe's credit is `40 × 8 = 320` USDC: [`claimable`](PayoutEscrow.sol#L41)`(USDC, feeRecipient)` = 320,000,000 and [`totalClaimable`](PayoutEscrow.sol#L44)`(USDC)` covers it.
 6. **AvanaTimelock → ParameterStore [`setFeeRecipient`](../../policy/parameter-store/IParameterStoreAdmin.sol#L91)`(newTreasury)`** at the normal delay; later fees go there.
-7. **The Safe → [`claim`](PayoutEscrow.sol#L106)`(USDC, newTreasury)`.** Clears the credit, then transfers 320 USDC to `newTreasury` and reverts [`TransferMismatch`](IPayoutEscrow.sol#L68) if its own balance fell by more than 320 USDC (a fee taken from the sender would otherwise come out of other credits). Event: [`RemainderClaimed`](IPayoutEscrow.sol#L46). Errors: [`LockHeld`](IPayoutEscrow.sol#L72) (no claim inside an Avana call), [`InvalidRecipient`](IPayoutEscrow.sol#L76), [`NothingToClaim`](IPayoutEscrow.sol#L80). If the token refuses the recipient, the call reverts and the credit stays for another recipient.
+7. **The Safe → [`claim`](PayoutEscrow.sol#L106)`(USDC, newTreasury)`.** Clears the credit, then transfers 320 USDC to `newTreasury` and reverts [`TransferMismatch`](IPayoutEscrow.sol#L68) if its own balance fell by more than 320 USDC (a fee taken from the sender would otherwise come out of other credits). Event: [`RemainderClaimed`](IPayoutEscrow.sol#L46). Errors: [`LockHeld`](IPayoutEscrow.sol#L72) (no claim inside an Avana call), [`InvalidRecipient`](IPayoutEscrow.sol#L76), [`NothingToClaim`](IPayoutEscrow.sol#L80). If the token refuses the recipient, the call reverts and the credit stays for another recipient. `claim(USDC, newTreasury, amount)` pays only `amount` and leaves the rest credited; it reverts `ZeroAmount` for 0 and `AmountExceedsCredit` above the credit (the flash liquidation helper uses it to claim only what its own call added).
 8. **Borrower surplus.** In Bob's variant where routes return 2,052 USDC, `B = 4.5` USDC goes to Bob's wallet; if Bob's wallet refused USDC, the 4.5 USDC would be credited to Bob here and Bob would claim it himself. Credits never expire and only the credited account can claim.
 
 ## What the UI reads and calls
 
 - Lens: [`getEscrowClaimable`](../../lens/lens/ILensAccount.sol#L63)`(account, [USDC, …])`.
 - Events to index: [`RemainderEscrowed`](IPayoutEscrow.sol#L38), [`RemainderClaimed`](IPayoutEscrow.sol#L46).
-- User calls: [`claim`](PayoutEscrow.sol#L106) (the credited account only).
+- User calls: [`claim`](PayoutEscrow.sol#L106) (the credited account only; the whole credit, or an amount up to it).
 
 ## Spec
 
