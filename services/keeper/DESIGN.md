@@ -21,7 +21,7 @@ Each chain processes one head at a time; heads arriving during a pass queue behi
 1. **Reorg check** (`discovery/stream.ts`): a head whose parent hash is not the previous head's hash is a reorg. Transactions seen mined whose nonce the new head no longer counts return to pending with their in-flight flags and reservations (`Submitter.onReorg`), then the nonce is re-read from the provider. Every account is re-read in the pass anyway.
 2. **Indexer stream** (`discovery/indexerStream.ts`): pages after the keeper's cursor, at most 20 per head, each request bounded to 2 s. Creation events add accounts; the other kinds only name what changed. A failed request is logged once and the pass goes on without it; a 409 (the cursor's block left the canonical chain) rewinds the cursor to the finalized block, and both a 409 and the first success after a failure re-read RPC logs from the finalized block before the pass.
 3. **Own status**: `isApprovedKeeper`, `isFrozenAddress` and `activeKeeperCount` of the instance's helper. A frozen helper stops every submission on that chain.
-4. **Jobs**, each through the pipeline below: liquidation, `settlePending`, oracle pokes, breaker and configuration pokes.
+4. **Jobs**, each through the pipeline below: liquidation, `settlePending`, oracle pokes, breaker and configuration pokes, and the gas vault top-up.
 5. **Follow-ups** of pending transactions (`chain/submit.ts`, `runtime/submitter.ts`).
 6. **Block-cadence alerts** (`monitoring/`), each page confirmed on the fallback provider at `B`: `M-09` per account; `M-16`, the funding Safe's balance of each debt asset less open reservations, against the largest single `debtToCover` the chain's caps allow (`KEEPER_LARGEST_DEBT_TO_COVER_<CHAIN>`, from each listing's REQ-FLASH-008 sizing; 150 % warns, 100 % pages; an asset without one warns); `M-17`, the helper's `maxFlashLoan` of each debt asset against the same size (2x / 1x) and the signer's gas balance against its daily spend (3 days / 1 day), the spend being the median of the measured daily balance decreases over 7 days, never below `KEEPER_GAS_DAILY_SPEND_WEI_<CHAIN>` (`monitoring/funding.ts`); `M-33`, the standby signer's balance against its minimum (warn). Before them, `M-31` and `M-32` from the spend log (`runtime/budget.ts`, see Fees). A failed read is logged (`keeper.fundingCheck`) and the pass ends normally.
 7. **Heartbeat**: the head is reported processed to the monitoring service.
@@ -68,13 +68,15 @@ The set is the union of the indexer stream and RPC logs read over both providers
 
 ## Fees
 
-Avana pays its keepers' gas from the `feeRecipient` treasury Safe, in lump sums to each signer (primary and standby, per chain). The fee rules keep that cost low without slowing anything urgent.
+Avana pays its keepers' gas from the `feeRecipient` treasury Safe, in lump sums to each signer (primary and standby, per chain), or, where the chain's AvanaGasVault is deployed (manifest `avana.gasVault`), in lump sums to the vault, which refills the signers. The fee rules keep that cost low without slowing anything urgent.
+
+**Gas top-up** (`jobs/gasTopUp.ts`). Each block the keeper reads the vault's view of its own signer. When the vault lists the signer, its balance is below its `minBalance` and `quoteTopUp` is above 0, it sends `topUpAll()`, which refills every listed signer below its minimum (the standby too) within each one's 24-hour cap. The call is permissionless and pays only listed signers, so it goes through the same code check and simulation as any job; it is `urgent` because a signer that runs dry stops every other job. A paused vault, a used-up cap or an empty vault is logged (`conditionFalse`) and left to the monitor's `M-35` and `M-36` and the signer's own `M-17`. With `minBalance` at 3 days of the daily spend, the top-up falls due in the block in which `M-17` would first warn.
 
 **Classes.** Every `TxPlan` carries the `JobClass` its job declares (`types.ts`); the fee rule is `classFees` in `chain/gas.ts`, with each chain's `FeePolicy` from `config.ts`:
 
 | Class | Jobs | Tip | Max fee | When |
 |---|---|---|---|---|
-| `urgent` | liquidation; breaker or configuration poke whose simulation returned non-zero; oracle poke while the oracle is not Live that would change its stored state | 90th percentile of the last 5 blocks, at least `KEEPER_MIN_TIP_URGENT_<CHAIN>` (1 gwei by default: today's rule) | 2 × base + tip | next block |
+| `urgent` | liquidation; breaker or configuration poke whose simulation returned non-zero; oracle poke while the oracle is not Live that would change its stored state; the gas vault's `topUpAll()` | 90th percentile of the last 5 blocks, at least `KEEPER_MIN_TIP_URGENT_<CHAIN>` (1 gwei by default: today's rule) | 2 × base + tip | next block |
 | `scheduled` | checkpoint and feed-round oracle pokes | `KEEPER_MIN_TIP_SCHEDULED_<CHAIN>` | 2 × base + tip | decided `POKE_LEAD_SECONDS` (60 s) before the interval ends |
 | `lazy` | `settlePending` | `KEEPER_MIN_TIP_LAZY_<CHAIN>` while the base fee is at most `KEEPER_LAZY_BASEFEE_MAX_<CHAIN>`; otherwise waits up to `KEEPER_LAZY_MAX_WAIT_<CHAIN>` seconds from when it first fell due, then scheduled fees | 2 × base + tip | hours |
 

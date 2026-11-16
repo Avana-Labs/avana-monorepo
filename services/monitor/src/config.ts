@@ -43,6 +43,8 @@ export interface MonitorConfig {
   readonly safes: ReadonlyMap<number, readonly SafeConfig[]>;
   /** The Core Hub's GHO asset each chain's Avana Hubs are compared with (M-29). */
   readonly coreHubGho: ReadonlyMap<number, CoreHubGho>;
+  /** The expected daily gas spend per chain, the floor of the gas vault's runway rate (M-35); absent: measured only. */
+  readonly gasVaultDailyWei?: ReadonlyMap<number, bigint>;
   /** Seconds between route depth and GSM headroom measurements (M-11, M-12). */
   readonly routeCheckSeconds: number;
   /** Safe signer liveness periods (M-23). */
@@ -132,6 +134,12 @@ export function loadConfig(env: NodeJS.ProcessEnv, load: (path: string) => Servi
     if (!assetId || !/^\d+$/.test(assetId)) throw new Error(`MONITOR_CORE_HUB_GHO entry ${spec} is not chain:hub:assetId`);
     coreHubGho.set(chainOf(key, "MONITOR_CORE_HUB_GHO", spec), { hub: address(hub, "MONITOR_CORE_HUB_GHO", spec), assetId: BigInt(assetId) });
   }
+  const gasVaultDailyWei = new Map<number, bigint>();
+  for (const spec of listEnv(env, "MONITOR_GAS_VAULT_DAILY_WEI")) {
+    const [key, wei] = spec.split(":");
+    if (!wei || !/^\d+$/.test(wei) || BigInt(wei) === 0n) throw new Error(`MONITOR_GAS_VAULT_DAILY_WEI entry ${spec} is not chain:wei with a positive amount`);
+    gasVaultDailyWei.set(chainOf(key, "MONITOR_GAS_VAULT_DAILY_WEI", spec), BigInt(wei));
+  }
   const statusToken = requireEnv(env, "MONITOR_STATUS_TOKEN");
   const metricsToken = optionalEnv(env, "MONITOR_METRICS_TOKEN") ?? null;
   // The metrics scraper holds its own token: it must not also read the open alerts in full.
@@ -163,6 +171,7 @@ export function loadConfig(env: NodeJS.ProcessEnv, load: (path: string) => Servi
       windowSeconds: (optionalEnv(env, "MONITOR_LIVENESS_WINDOW_HOURS") ? intEnv(env, "MONITOR_LIVENESS_WINDOW_HOURS") : 12) * 3_600,
     },
     coreHubGho,
+    gasVaultDailyWei,
     frontend,
   };
 }
