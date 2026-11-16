@@ -32,7 +32,6 @@ export const KNOWN_UNTRANSLATED: readonly string[] = [
   // Dashboard loading status — new copy awaiting the locale backfill.
   "Loading dashboard…",
   "This is taking longer than usual.",
-  "Coming soon",
   "1 Day",
   "1D",
   "6 Months",
