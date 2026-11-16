@@ -219,6 +219,60 @@
       "reason": "Equivalent: the amount slot is read only in _checkCallback, after it requires the state slot to be _STATE_OPEN, and _runFlash writes the amount slot in the same step that opens the state; _clear resets the state to _STATE_NONE, so a stale amount from an earlier deleverage in the same transaction can never be read. No view or other code reads the slot.",
       "approval": "pending",
       "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "591a58108c6b5cc3",
+      "check": "DeleteExpressionMutation",
+      "file": "src/lens/lens/Lens.sol",
+      "function": "Lens.getAccounts",
+      "reason": "Equivalent: Lens.getAccounts forwards with _forward, which copies the module's return data and ends the call with an assembly `return`, so the named return variable is never what the function returns. The `accounts;` expression statement only references it to silence solc warning 5667 (unused named return); replacing it changes no returned value.",
+      "approval": "pending",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "e18c5d7a013d909c",
+      "check": "DeleteExpressionMutation",
+      "file": "src/lens/lens/Lens.sol",
+      "function": "Lens.getApplicationState",
+      "reason": "Equivalent: Lens.getApplicationState forwards with _forward, which copies the module's return data and ends the call with an assembly `return`, so the named return variable is never what the function returns. The `state;` expression statement only references it to silence solc warning 5667 (unused named return); replacing it changes no returned value.",
+      "approval": "pending",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "29deb5fb8ef3022d",
+      "check": "DeleteExpressionMutation",
+      "file": "src/lens/lens/Lens.sol",
+      "function": "Lens.getHubAssetExposure",
+      "reason": "Equivalent: Lens.getHubAssetExposure forwards with _forward, which copies the module's return data and ends the call with an assembly `return`, so the named return variable is never what the function returns. The `view_;` expression statement only references it to silence solc warning 5667 (unused named return); replacing it changes no returned value.",
+      "approval": "pending",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "258e0fc5e1f47a5d",
+      "check": "DeleteExpressionMutation",
+      "file": "src/lens/lens/Lens.sol",
+      "function": "Lens.previewBorrowRecommended",
+      "reason": "Equivalent: Lens.previewBorrowRecommended forwards with _forward, which copies the module's return data and ends the call with an assembly `return`, so the named return variable is never what the function returns. The `(recommended, maximum);` expression statement only references it to silence solc warning 5667 (unused named return); replacing it changes no returned value.",
+      "approval": "pending",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "5afe43802c07f9ec",
+      "check": "DeleteExpressionMutation",
+      "file": "src/lens/lens/Lens.sol",
+      "function": "Lens.previewWithdrawAfter",
+      "reason": "Equivalent: Lens.previewWithdrawAfter forwards with _forward, which copies the module's return data and ends the call with an assembly `return`, so the named return variable is never what the function returns. The `preview;` expression statement only references it to silence solc warning 5667 (unused named return); replacing it changes no returned value.",
+      "approval": "pending",
+      "review": "mutation gate run 43816627319, equivalent mutant"
+    },
+    {
+      "fingerprint": "975d48f9bae712df",
+      "check": "DeleteExpressionMutation",
+      "file": "src/lens/lens/Lens.sol",
+      "function": "Lens.previewMaxWithdraw",
+      "reason": "Equivalent: Lens.previewMaxWithdraw forwards with _forward, which copies the module's return data and ends the call with an assembly `return`, so the named return variable is never what the function returns. The `sizing;` expression statement only references it to silence solc warning 5667 (unused named return); replacing it changes no returned value.",
+      "approval": "pending",
+      "review": "mutation gate run 43816627319, equivalent mutant"
     }
   ]
 }
