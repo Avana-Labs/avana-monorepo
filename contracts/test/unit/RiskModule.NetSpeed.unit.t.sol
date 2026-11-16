@@ -199,6 +199,22 @@ contract RiskModuleNetSpeedUnitTest is RiskModuleFixture {
         assertEq(w.base, 2_400_000e6);
     }
 
+    // TEST-321 verifies: REQ-RISK-092, REQ-RISK-093, REQ-RISK-097
+    /// @dev `opened` is set only by a charge: a repay or a withdrawal credit on windows no charge has opened stores them
+    /// unopened, and the first charge then opens them.
+    function test_TEST_321_aCreditNeverOpensAWindow() public {
+        bytes32 debtKey = keccak256(abi.encode(address(hub), address(usdc)));
+        _repay(10_000e6);
+        vm.prank(address(coll));
+        riskModule.creditWithdraw(mid, 5000e8);
+        assertFalse(riskModule.getSpeedWindow(SpeedScope.MarketBorrow, bytes32(mid)).opened, "market borrow");
+        assertFalse(riskModule.getSpeedWindow(SpeedScope.DebtBorrow, debtKey).opened, "debt borrow");
+        assertFalse(riskModule.getSpeedWindow(SpeedScope.MarketPledge, bytes32(mid)).opened, "market pledge");
+        _borrow(10_000e6);
+        assertTrue(riskModule.getSpeedWindow(SpeedScope.MarketBorrow, bytes32(mid)).opened, "opened by the borrow");
+        assertTrue(riskModule.getSpeedWindow(SpeedScope.DebtBorrow, debtKey).opened, "opened by the borrow");
+    }
+
     // ----------------------------------------------------------------------------------------- withdrawal credit
 
     // TEST-322 verifies: REQ-RISK-093, REQ-RISK-095, SPEC-CAP-011
