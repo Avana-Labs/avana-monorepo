@@ -280,7 +280,7 @@
       "file": "src/lens/lens/LensLiquidationSizing.sol",
       "function": "LensLiquidationSizing.size",
       "reason": "Equivalent: s.wholeDebt is read only by LensLiquidation._params, which margins debtToCover when wholeDebt, allCollateral or nearDust holds. Aave liquidates the whole premium before any drawn share, so when every drawn share is liquidated debtRepaid (drawn shares times the index rounded up plus the premium rounded up) is at least getUserTotalDebt; the remainder is 0, nearDust is true and the margined branch is taken without wholeDebt. Whole-debt margining covered by test_TEST_069_wholeDebtIsMarginedAndStaysValidLater and test_TEST_069_wholeDebtSizingIncludesThePremium.",
-      "approval": "pending",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "local Gambit rerun of LensLiquidationSizing with the fixed harness (CI run 43816627319 misread its mutants), equivalent mutant"
     },
     {
@@ -289,7 +289,7 @@
       "file": "src/lens/lens/LensLiquidationSizing.sol",
       "function": "LensLiquidationSizing.size",
       "reason": "Equivalent: s.wholeDebt = false is unobservable for the reason of fingerprint 7db53a773faf9b94: a whole-debt liquidation leaves no remainder, so LensLiquidation._params takes the margined branch through nearDust whatever wholeDebt holds.",
-      "approval": "pending",
+      "approval": "approved (Josue, 2026-11-16)",
       "review": "local Gambit rerun of LensLiquidationSizing with the fixed harness (CI run 43816627319 misread its mutants), equivalent mutant"
     }
   ]
