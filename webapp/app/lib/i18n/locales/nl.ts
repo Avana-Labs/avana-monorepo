@@ -1578,6 +1578,7 @@ const dict: TranslationDictionary = {
   "Welcome to Avana": "Welkom bij Avana",
   "Your wallet is funded.": "Je wallet is gevuld.",
   "seats already claimed.": "plekken al geclaimd.",
+  "We can't reach Avana right now.": "We kunnen Avana nu niet bereiken.",
 }
 
 export default dict

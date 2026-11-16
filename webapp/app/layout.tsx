@@ -17,7 +17,8 @@ import { Web3ProviderBoundary } from "./lib/web3/web3-provider-boundary"
 import { PageLoadingBar } from "./components/page-loading-bar"
 import { ScrollResetOnNavigate } from "./components/scroll-reset-on-navigate"
 import { ConditionalSiteChrome } from "./components/conditional-site-chrome"
-import { TransactAccessProvider } from "./components/transact-access-provider"
+import { OnboardingGate } from "./components/onboarding/onboarding-gate"
+import { ONBOARDED_COOKIE } from "./components/onboarding/onboarded-cookie"
 import { CurrencyDisplayBoundary } from "./components/currency-display-boundary"
 import { ProductRuntimeProviders } from "./components/product-runtime-providers"
 import { isLighthouseAuditMode } from "./lib/test-mode"
@@ -150,6 +151,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const sessionJwt = jar.get("avana_siwe")?.value
   const verified = sessionJwt ? verifySiweSessionJwt(sessionJwt) : null
   const serverSession = verified ? { wallet: verified.wallet } : null
+  // The onboarding gate's "done" hint for this browser, trusted only when it names the verified
+  // session wallet, so the product is server-rendered for returning users while a different/new
+  // wallet still waits for Convex behind the skeleton.
+  const onboardedCookie = jar.get(ONBOARDED_COOKIE)?.value?.toLowerCase()
+  const onboardedWallet = serverSession && onboardedCookie === serverSession.wallet.toLowerCase() ? onboardedCookie : undefined
 
   return (
     <html
@@ -191,11 +197,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                       <PageLoadingBar />
                     </Suspense>
                     <ScrollResetOnNavigate />
-                    <TransactAccessProvider>
+                    <OnboardingGate onboardedWallet={onboardedWallet}>
                       <ProductRuntimeProviders initialTokenPrices={initialTokenPrices}>
                         <CurrencyDisplayBoundary>{children}</CurrencyDisplayBoundary>
                       </ProductRuntimeProviders>
-                    </TransactAccessProvider>
+                    </OnboardingGate>
                   </ConditionalSiteChrome>
                 </Web3ProviderBoundary>
               </WalletGateProvider>

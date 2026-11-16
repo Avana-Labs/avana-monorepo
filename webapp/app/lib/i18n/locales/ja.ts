@@ -1602,6 +1602,7 @@ const dict: TranslationDictionary = {
   "Welcome to Avana": "Avana へようこそ",
   "Your wallet is funded.": "ウォレットへの入金が完了しました。",
   "seats already claimed.": "席がすでに確保されています。",
+  "We can't reach Avana right now.": "現在 Avana に接続できません。",
 }
 
 export default dict
