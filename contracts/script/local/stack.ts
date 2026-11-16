@@ -38,6 +38,8 @@ import {
   startIndexer,
   startKeeper,
   startMonitor,
+  startFaucet,
+  faucetUrl,
   startRecorders,
   stopServices,
 } from "./lib/services.ts";
@@ -95,6 +97,8 @@ async function up(): Promise<void> {
   say(`monitor: running on port ${PORTS.monitor}`);
   await startKeeper();
   say(`keeper: active on ${CHAINS.filter((c) => existsSync(manifestPath(c))).map((c) => c.label).join(", ")}`);
+  await startFaucet();
+  say(`faucet: ready on ${faucetUrl()}`);
   if (!flag("no-activity")) {
     for (const c of CHAINS.filter((x) => existsSync(manifestPath(x)))) {
       const name = `activity-${c.key}`;
@@ -146,7 +150,7 @@ function startWebapp(): void {
     say(`webapp: not started (${script} not found: the webapp's local-stack entry is the webapp session's)`);
     return;
   }
-  start("webapp", process.execPath, [script, join(STACK, "stack.env")], { cwd: WEBAPP_DIR });
+  start("webapp", process.execPath, [script, join(STACK, "stack.env")], { cwd: WEBAPP_DIR, env: { FAUCET_URL: faucetUrl() } });
   say(`webapp: starting on http://127.0.0.1:${PORTS.webapp}`);
 }
 
@@ -159,6 +163,7 @@ async function writeEnvFile(): Promise<void> {
     `STACK_CONVEX_SITE_URL=${info?.siteUrl ?? ""}`,
     `STACK_INDEXER_URL=http://127.0.0.1:${PORTS.indexer}`,
     `STACK_WEBAPP_URL=http://127.0.0.1:${PORTS.webapp}`,
+    `STACK_FAUCET_URL=${faucetUrl()}`,
     `STACK_CHAIN_IDS=${CHAINS.map((c) => c.chainId).join(",")}`,
   ];
   for (const c of CHAINS) {

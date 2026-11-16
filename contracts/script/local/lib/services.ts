@@ -360,8 +360,29 @@ export async function startMonitor(): Promise<void> {
   });
 }
 
+/** The faucet on every deployed chain (fork mode: cheatcodes, no key), its tokens and prices from each manifest. */
+export async function startFaucet(): Promise<void> {
+  if (running("faucet")) return;
+  const env: NodeJS.ProcessEnv = {
+    FAUCET_CHAIN_KIND: "fork",
+    FAUCET_CHAIN_IDS: CHAINS.map((c) => c.chainId).join(","),
+    FAUCET_PORT: String(PORTS.faucet),
+    FAUCET_DATA_DIR: join(STACK, "faucet"),
+  };
+  for (const c of deployed()) {
+    env[`FAUCET_RPC_${c.network.toUpperCase()}`] = rpcUrl(c);
+    env[`FAUCET_MANIFEST_${c.network.toUpperCase()}`] = manifestPath(c);
+  }
+  start("faucet", process.execPath, [binJs("tsx"), "src/main.ts"], { cwd: join(REPO, "services/faucet"), env });
+  await waitFor("faucet", async () => (await fetch(`${faucetUrl()}/healthz`)).ok, 90_000, 2_000).catch((e) => {
+    throw new Error(`${(e as Error).message}\n${tail("faucet", 20)}`);
+  });
+}
+
+export const faucetUrl = () => `http://127.0.0.1:${PORTS.faucet}`;
+
 /** Every service process the stack starts, in stopping order. */
-export const SERVICE_NAMES = ["webapp", ...CHAINS.map((c) => `activity-${c.key}`), "keeper", "monitor", "convex-driver", "convex", "content", "indexer", ...CHAINS.map((c) => `recorder-${c.key}`)];
+export const SERVICE_NAMES = ["webapp", "faucet", ...CHAINS.map((c) => `activity-${c.key}`), "keeper", "monitor", "convex-driver", "convex", "content", "indexer", ...CHAINS.map((c) => `recorder-${c.key}`)];
 
 export function stopServices(): string[] {
   const stopped: string[] = [];
