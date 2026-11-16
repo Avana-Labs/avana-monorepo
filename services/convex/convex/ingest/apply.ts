@@ -13,7 +13,7 @@ import { internalMutation, internalQuery, type MutationCtx } from "../_generated
 import { type Resolver, decodeRecord } from "../lib/activity.ts";
 import { blockTimes } from "../lib/exportPage.ts";
 import { noteFirstSeen } from "../lib/membership.ts";
-import { awardQuestForLog } from "../lib/rewards.ts";
+import { addSupplyVolume, awardQuestForLog, supplyUsdOfLog } from "../lib/rewards.ts";
 import { assetSlugs, defaultSlug, hubLabel } from "../lib/format.ts";
 
 /** A row of the history table every 1,000 blocks: the rebuild's starting points. */
@@ -182,6 +182,7 @@ export const applyPage = internalMutation({
       if (d.log.wallet) {
         await noteFirstSeen(ctx, d.log.wallet, d.log.at, "onchain");
         await awardQuestForLog(ctx, d.log.wallet, d.log.kind, d.log.at);
+        await addSupplyVolume(ctx, d.log.wallet, await supplyUsdOfLog(ctx, d.log), d.log.at);
       }
       if (d.account) {
         const found = await ctx.db.query("accounts").withIndex("by_key", (q) => q.eq("chainId", chainId).eq("spoke", d.account!.spoke).eq("proxy", d.account!.proxy)).unique();

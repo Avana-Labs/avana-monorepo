@@ -4,9 +4,10 @@
 // Reward points: quests awarded once from a wallet's first deposit, borrow, repay and pledge, tenure computed on read,
 // and the fee slot summed with them.
 import { convexTest } from "convex-test";
+import { fixtureHubAsset } from "@avana/services-common/fixtures";
 import { describe, expect, test } from "vitest";
 import { api } from "../../convex/_generated/api";
-import { awardPoints, awardQuestForLog, QUEST_OF_LOG, QUEST_POINTS, tenurePoints } from "../../convex/lib/rewards";
+import { addSupplyVolume, awardPoints, awardQuestForIntent, awardQuestForLog, QUEST_OF_INTENT_KIND, QUEST_OF_LOG, QUEST_POINTS, supplyUsdOfLog, tenurePoints } from "../../convex/lib/rewards";
 import { noteFirstSeen } from "../../convex/lib/membership";
 import schema from "../../convex/schema";
 
@@ -23,9 +24,9 @@ describe("tenure points", () => {
 });
 
 describe("quest points", () => {
-  test("every quest of a log has points, and the four quests are the app's", () => {
-    for (const questId of Object.values(QUEST_OF_LOG)) expect(QUEST_POINTS[questId]).toBeGreaterThan(0);
-    expect(Object.keys(QUEST_POINTS).sort()).toEqual(["first-borrow", "first-lend-deposit", "first-repay", "pledge-uniswap-v3-position"]);
+  test("every quest of a log or an intent has points, and the five action quests are the app's", () => {
+    for (const questId of [...Object.values(QUEST_OF_LOG), ...Object.values(QUEST_OF_INTENT_KIND)]) expect(QUEST_POINTS[questId]).toBeGreaterThan(0);
+    expect(Object.keys(QUEST_POINTS).sort()).toEqual(["first-borrow", "first-lend-deposit", "first-repay", "pledge-uniswap-v3-position", "supply-500-lend"]);
   });
 
   test("a log completes its quest once, whichever log of the quest comes again", async () => {
@@ -78,5 +79,54 @@ describe("rewards summary", () => {
       feePoints: 7,
       completedQuests: ["first-borrow"],
     });
+  });
+});
+
+const asset = { ...fixtureHubAsset, slug: "usdc", updatedAt: 0, decimals: 6, priceUsd8: "100000000" };
+const assetKey = `${asset.chainId}:${asset.hub}:${asset.assetId}`;
+const supplyLog = (units: string) => ({ kind: "AaveSpoke.Supply", hubAssetKey: assetKey, args: { suppliedAmount: units } });
+
+describe("intent and volume quests", () => {
+  test("a confirmed transaction completes the quest of its kind once, together with the log of the same action", async () => {
+    const t = convexTest(schema, modules);
+    await t.run(async (ctx) => {
+      await awardQuestForIntent(ctx, WALLET, "borrow", 1_000);
+      await awardQuestForIntent(ctx, WALLET, "repayWithCollateral", 2_000);
+      await awardQuestForIntent(ctx, WALLET, "swap", 3_000);
+      await awardQuestForLog(ctx, WALLET, "AaveAdapter.Borrowed", 4_000);
+    });
+    const totals = await t.run((ctx) => ctx.db.query("rewardTotals").collect());
+    expect(totals[0]).toMatchObject({ questPoints: 80 });
+    expect([...totals[0]!.questIds].sort()).toEqual(["first-borrow", "first-repay"]);
+  });
+
+  test("values a supply at the Hub asset's price, and 0 for another log, an unknown asset or a bad amount", async () => {
+    const t = convexTest(schema, modules);
+    const values = await t.run(async (ctx) => {
+      await ctx.db.insert("hubAssets", { ...asset, lendReserves: [...asset.lendReserves] });
+      return [
+        await supplyUsdOfLog(ctx, supplyLog("250000000")),
+        await supplyUsdOfLog(ctx, { ...supplyLog("1"), kind: "AaveSpoke.Withdraw" }),
+        await supplyUsdOfLog(ctx, { ...supplyLog("1"), hubAssetKey: `${asset.chainId}:${asset.hub}:99999` }),
+        await supplyUsdOfLog(ctx, supplyLog("abc")),
+      ];
+    });
+    expect(values).toEqual([250, 0, 0, 0]);
+  });
+
+  test("the volume quest is awarded once the supplied total reaches $500, and only once", async () => {
+    const t = convexTest(schema, modules);
+    await t.run(async (ctx) => {
+      await addSupplyVolume(ctx, WALLET, 300, 1_000);
+      await addSupplyVolume(ctx, WALLET, 0, 1_500);
+    });
+    expect((await t.query(api.wallet.rewards.summary, { wallet: WALLET })).completedQuests).toEqual([]);
+    await t.run(async (ctx) => {
+      await addSupplyVolume(ctx, WALLET, 200, 2_000);
+      await addSupplyVolume(ctx, WALLET, 900, 3_000);
+    });
+    const totals = await t.run((ctx) => ctx.db.query("rewardTotals").collect());
+    expect(totals).toHaveLength(1);
+    expect(totals[0]).toMatchObject({ supplyUsd: 1400, questPoints: 100, questIds: ["supply-500-lend"] });
   });
 });
