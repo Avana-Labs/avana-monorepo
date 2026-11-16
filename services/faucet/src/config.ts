@@ -15,6 +15,8 @@ export interface FaucetConfig {
   /** Chain ids the faucet accepts; any other chain is refused. */
   readonly chainIds: readonly number[];
   readonly rpc: Readonly<Partial<Record<ChainName, string>>>;
+  /** Each chain's release manifest (its token and feed addresses): FAUCET_MANIFEST_ETHEREUM, FAUCET_MANIFEST_BASE. */
+  readonly manifest: Readonly<Partial<Record<ChainName, string>>>;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv): FaucetConfig {
@@ -29,6 +31,11 @@ export function loadConfig(env: NodeJS.ProcessEnv): FaucetConfig {
   if (ethereum) rpc.ethereum = ethereum;
   if (base) rpc.base = base;
   if (!rpc.ethereum && !rpc.base) throw new Error("set FAUCET_RPC_ETHEREUM and/or FAUCET_RPC_BASE");
+  const manifest: Partial<Record<ChainName, string>> = {};
+  const ethereumManifest = optionalEnv(env, "FAUCET_MANIFEST_ETHEREUM");
+  const baseManifest = optionalEnv(env, "FAUCET_MANIFEST_BASE");
+  if (ethereumManifest) manifest.ethereum = ethereumManifest;
+  if (baseManifest) manifest.base = baseManifest;
   const host = optionalEnv(env, "FAUCET_HOST") ?? "127.0.0.1";
   if (host !== "127.0.0.1" && host !== "localhost") throw new Error("the faucet listens on 127.0.0.1 only");
   return {
@@ -38,5 +45,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): FaucetConfig {
     kind,
     chainIds,
     rpc,
+    manifest,
   };
 }
