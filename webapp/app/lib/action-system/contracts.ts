@@ -71,7 +71,8 @@ export type ActionPreviewUi = {
   balanceValue: string
   maxAmount: number | null
   metrics: ActionMetricRow[]
-  networkFeeLabel: string
+  /** The "Avana Platform Fee" row: the Q-409 front-end fee of the action. */
+  platformFeeLabel: string
   risk: {
     level: ActionRiskLevel
     title: string | null
@@ -98,12 +99,8 @@ export type ActionSuccessUi = {
     rateLabel: string
     rateValue: string
     marketValue: string
-    /**
-     * Real network fee (USD) for this receipt. Set by swaps to their quote fee so
-     * the inline receipt matches the estimate and permalink. Left undefined for
-     * non-swap actions, which fall back to the 15 bps platform fee on the amount.
-     */
-    networkFeeUsd?: number
+    /** The Q-409 front-end fee (USD) charged on this action, for the receipt's "Avana Platform Fee" row. */
+    platformFeeUsd?: number
   }
 }
 

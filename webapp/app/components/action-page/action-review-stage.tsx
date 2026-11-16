@@ -123,7 +123,7 @@ export function ActionReviewStage({
       ) : null}
 
       <ActionCard>
-        <ActionInfoRow label="Avana Platform Fee" value={preview.networkFeeLabel} tooltip="fee" />
+        <ActionInfoRow label="Avana Platform Fee" value={preview.platformFeeLabel} tooltip="fee" />
       </ActionCard>
 
       {blockedReason ? <ActionOutcomeBanner tone="error" title="Action unavailable" message={blockedReason} /> : null}

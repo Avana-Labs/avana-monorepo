@@ -18,7 +18,7 @@ contract Factories is DeployBase {
         string memory network = _network();
         if (SAFE_SINGLETON_FACTORY.code.length == 0) {
             string memory method;
-            if (_eq(network, "anvil")) method = "anvil_setCode";
+            if (_isLocalChain(block.chainid)) method = "anvil_setCode";
             else revert("Safe Singleton Factory missing on a network where it cannot be installed");
             vm.rpc(
                 method,

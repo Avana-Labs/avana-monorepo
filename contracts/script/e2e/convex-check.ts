@@ -50,7 +50,9 @@ const lower = (a: string) => a.toLowerCase();
 async function main() {
   const chainId = Number(manifest.chainId);
   for (const [k, v] of Object.entries({
-    RPC_ANVIL: env("RPC_ANVIL"),
+    // The node stands in for Ethereum: Convex reads it as RPC_MAINNET with CHAIN_ID_MAINNET.
+    RPC_MAINNET: env("RPC_ANVIL"),
+    CHAIN_ID_MAINNET: "31337",
     INDEXER_EXPORT_URL: env("E2E_EXPORT_URL"),
     INDEXER_EXPORT_KEY_ID: env("E2E_EXPORT_KEY_ID"),
     INDEXER_EXPORT_SECRET: env("E2E_EXPORT_SECRET"),

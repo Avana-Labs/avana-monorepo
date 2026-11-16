@@ -22,6 +22,8 @@ function basePreviewFields(
     rateValue: string
     amountUsd: number
     maxAmount?: number
+    /** Q-409 action of the fee row: supply for a deposit, withdraw for a withdrawal. */
+    feeAction: "supply" | "withdraw"
   },
 ): Pick<
   ActionPreviewUi,
@@ -37,7 +39,7 @@ function basePreviewFields(
   | "balanceLabel"
   | "balanceValue"
   | "maxAmount"
-  | "networkFeeLabel"
+  | "platformFeeLabel"
   | "blockedReason"
   | "validationErrors"
   | "warnings"
@@ -55,7 +57,7 @@ function basePreviewFields(
     balanceLabel: options.balanceLabel,
     balanceValue: formatActionAmount(options.balanceAmount, options.symbol, 4),
     maxAmount: options.maxAmount ?? options.balanceAmount,
-    networkFeeLabel: formatActionFeeSummary(options.amountUsd, 0.03),
+    platformFeeLabel: formatActionFeeSummary(options.feeAction, options.amountUsd),
     blockedReason: preview.allowed ? null : (preview.validationErrors[0] ?? "Action unavailable"),
     validationErrors: preview.validationErrors,
     warnings: preview.warnings,
@@ -86,6 +88,7 @@ export function mapLendDepositPreviewToActionUi(
 
   return {
     ...basePreviewFields(preview, {
+      feeAction: "supply",
       symbol: options.symbol,
       amount: options.amount,
       marketLabel: options.marketLabel,
@@ -170,6 +173,7 @@ export function mapLendWithdrawPreviewToActionUi(
 
   return {
     ...basePreviewFields(preview, {
+      feeAction: "withdraw",
       symbol: options.symbol,
       amount: options.amount,
       marketLabel: options.marketLabel,

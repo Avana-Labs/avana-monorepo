@@ -48,6 +48,10 @@
 # them). Elsewhere AVANA_SIGNER_FLAGS gives forge's signer flags (for example `--account deployer --sender 0x…`, plus
 # the oracles' `--keystore` and `--password-file` for 02), and the timelock operations are written for the governance
 # Safe instead of scheduled.
+# A run is local when the RPC's chain ID is a local node's (31337, 31338), whatever the network's name: the local stack
+# (script/local/stack.ts) names its chains `ethereum` and `base`, as on the real networks. On a local chain the deployer
+# signs from its encrypted Foundry keystore when AVANA_DEPLOYER_KEYSTORE and AVANA_DEPLOYER_PASSWORD_FILE are set
+# (AVANA_DEPLOYER is its address); the governance roles stay unlocked senders.
 
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -97,12 +101,17 @@ case "$step" in
   *) echo "unknown step $step; the steps are listed at the top of script/deploy/step.sh" >&2; exit 2 ;;
 esac
 
-if [ "$AVANA_NETWORK" = anvil ]; then
+local_net=0
+case "$(cast chain-id --rpc-url "$AVANA_RPC_URL")" in 31337 | 31338) local_net=1 ;; esac
+if [ $local_net -eq 1 ]; then
   sender="$deployer"
   # 04 broadcasts as the Safe itself; the other scheduling steps broadcast as the deployer and schedule as the Safe.
   [ "$step" = 04-access-operations ] && sender="$(config governance.governanceSafe)"
   [ $schedule -eq 1 ] && envs+=(AVANA_SCHEDULE=1)
   signer=(--unlocked --sender "$sender")
+  if [ -n "${AVANA_DEPLOYER_KEYSTORE:-}" ]; then
+    signer+=(--keystore "$AVANA_DEPLOYER_KEYSTORE" --password-file "${AVANA_DEPLOYER_PASSWORD_FILE:?set AVANA_DEPLOYER_PASSWORD_FILE}")
+  fi
   if [ "$step" = 02-test-world ] && [ -n "${AVANA_OCR_KEYSTORE_DIR:-}" ]; then
     for i in 0 1 2 3; do signer+=(--keystore "$AVANA_OCR_KEYSTORE_DIR/ocr-$i"); done
     for i in 0 1 2 3; do signer+=(--password-file "$AVANA_OCR_KEYSTORE_DIR/password"); done
@@ -115,6 +124,6 @@ fi
 # by default) as well as the block gas limit. AVANA_FORGE_FLAGS adds flags (the rehearsal's --start-fresh on resume).
 read -r -a extra <<< "${AVANA_FORGE_FLAGS:-}"
 # Off anvil the scripts check that HEAD is the AVANA_RELEASE tag with git (DeployInputs._requireReleaseCheckout).
-[ "$(config chainId)" != 31337 ] && extra+=(--ffi)
+[ $local_net -eq 0 ] && extra+=(--ffi)
 exec env FOUNDRY_GAS_LIMIT=30000000000 ${envs[@]+"${envs[@]}"} forge script "script/deploy/$script" --rpc-url "$AVANA_RPC_URL" \
   --broadcast "${signer[@]}" --slow --non-interactive --disable-block-gas-limit --memory-limit 1073741824 ${extra[@]+"${extra[@]}"}

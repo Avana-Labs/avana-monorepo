@@ -144,7 +144,7 @@ const market = (marketId: string, name: string, suppliedWhole: bigint, collatera
   suppliedUnits: (suppliedWhole * 10n ** 18n).toString(10),
   suppliedUsd8: (suppliedWhole * 2n * 10n ** 8n).toString(10),
   collateralFactorBps: 8_000,
-  maxLiquidationBonusBps: 500,
+  maxLiquidationBonusBps: 10_500,
   collateralRiskBps,
   liquidation: { targetHealthFactorWad: "1100000000000000000", healthFactorForMaxBonusWad: "950000000000000000", liquidationBonusFactorBps: 5_000 },
   marketHeadroomUsd8: (1_000_000n * 10n ** 8n).toString(10),

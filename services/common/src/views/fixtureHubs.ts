@@ -137,7 +137,7 @@ const market = (marketId: bigint, hub: Address, spoke: Address, vaultToken: Addr
   marketId, status: 1, pool: a("ee", Number(marketId)), poolId: `0x${"00".repeat(32)}`, tokens: [USDC, USDT], tokenDecimals: [6, 6], feeTier: 100, tickLower: -10,
   tickUpper: 10, integrationId: 1, ammProtocol: `0x${"00".repeat(31)}01`, vaultToken, name: `USDC/USDT ${marketId}`, symbol: `av-${marketId}`, lpOracle: a("ef", Number(marketId)),
   hub, spoke, reserveId: 10n + marketId, hubAssetId, acceptedPrice: 2n * 10n ** 8n, priceState: 0, suppliedUnits: wad(1_000), suppliedUsd: 2_000n * 10n ** 8n,
-  collateralFactorBps: 8_000n, liquidationThresholdBps: 8_000n, maxLiquidationBonusBps: 500n, marketHeadroomUsd: 0n, sliceHeadroomUsd: 0n, addHeadroom: 0n, pauseState: 0, breakerReasons: 0,
+  collateralFactorBps: 8_000n, liquidationThresholdBps: 8_000n, maxLiquidationBonusBps: 10_500n, marketHeadroomUsd: 0n, sliceHeadroomUsd: 0n, addHeadroom: 0n, pauseState: 0, breakerReasons: 0,
   collateralRiskBps: 500n, liquidationFeeBps: 1_000n, targetHealthFactor: 11n * 10n ** 17n, healthFactorForMaxBonus: 95n * 10n ** 16n, liquidationBonusFactorBps: 5_000n,
   hardHealthFloor: 0n, marketUsdCap: 5_000_000n * 10n ** 8n, topUpSliceUsd: 500_000n * 10n ** 8n, tokenUsdCaps: [10n ** 15n, 10n ** 15n],
   addCap: 5_000_000n, debtReserveIds,

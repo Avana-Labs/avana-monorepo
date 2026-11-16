@@ -24,8 +24,8 @@ const assets = new Map([[hubAssetKey(asset), asset]]);
 const sliceOf = (spoke: string) => fixtureSlices.find((s) => s.spoke === spoke)!;
 
 const lend = lendSnapshot(asset, null, "USDC");
-const borrowU = assetSnapshot(reserves[0]!, sliceOf(FIXTURE_U), asset, null, "USDC", "u");
-const borrowX = assetSnapshot(reserves[1]!, sliceOf(FIXTURE_X), asset, null, "USDC", "x");
+const borrowU = assetSnapshot(reserves[0]!, sliceOf(FIXTURE_U), asset, null, "USDC");
+const borrowX = assetSnapshot(reserves[1]!, sliceOf(FIXTURE_X), asset, null, "USDC");
 
 describe("Spoke slices reconcile to the Hub totals the Lend page shows", () => {
   it("adds the Borrow asset pages' borrowed amounts up to the Lend page's, within one unit per Spoke", () => {
@@ -50,7 +50,7 @@ describe("Spoke slices reconcile to the Hub totals the Lend page shows", () => {
     expect(borrowU.availableUsd).toBeCloseTo(3_000_000, 5);
     expect(borrowX.availableUsd).toBe(1_000_000);
     const drained = { ...asset, liquidity: (2_000_000n * 10n ** 6n).toString() };
-    expect(assetSnapshot(reserves[0]!, sliceOf(FIXTURE_U), drained, null, "USDC", "u").availableUsd).toBe(2_000_000);
+    expect(assetSnapshot(reserves[0]!, sliceOf(FIXTURE_U), drained, null, "USDC").availableUsd).toBe(2_000_000);
     expect(Number(assetBorrowable(drained, fixtureSlices)) / 1e6).toBe(2_000_000);
   });
 
@@ -89,5 +89,7 @@ describe("a CDP Spoke's split by market reconciles to the Spoke's owed amount", 
     expect(pools.reduce((acc, p) => acc + p.borrowedUsd, 0)).toBeCloseTo(borrowU.borrowedUsd, 4);
     expect(pools[0]).toMatchObject({ scope: "pool", suppliedUsd: 2_000_000, maxLtvPct: 80, premiumBps: 500, feeTier: "0.01%", lpPriceUsd: 2 });
     expect(pools[0]!.utilizationPct).toBeCloseTo(30, 4);
+    // Each pool row names its Hub, which the Hubs filter lists.
+    expect(pools.map((p) => p.hubId)).toEqual(markets.map((m) => m.hub));
   });
 });

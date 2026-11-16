@@ -129,6 +129,7 @@ export function borrowMarketFromSnapshot(
     // Aave V4: the liquidation threshold equals the collateral factor (REQ-LENS-045).
     riskConfig: { collateralFactorWad: cf, liquidationThresholdWad: cf, riskScoreWad: 0n },
     listPremiumBps: finite(snap.premiumBps),
+    ...(snap.hubId ? { hubId: snap.hubId.toLowerCase(), hubLabel: snap.hubLabel?.trim() || snap.hubId } : {}),
     reserveFactorPct: finite(snap.reserveFactorPct),
     relations: {
       supportedBorrowAssetIds: related
@@ -158,11 +159,6 @@ export function borrowMarketFromSnapshot(
   }
 }
 
-/**
- * services/convex reports a pool row's Spoke by address and an asset row's Spoke by its slug, so
- * the two only match when both use the same key; otherwise the debt reserves of the same chain
- * are offered (one CDP Spoke per chain at launch).
- */
 /**
  * A market's collateral borrows only the debt reserves of its own CDP Spoke. The chain is the
  * match only when a row does not name its Spoke.

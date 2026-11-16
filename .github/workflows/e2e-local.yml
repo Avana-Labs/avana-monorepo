@@ -72,6 +72,7 @@ jobs:
       - name: Install dependencies (soldeer.lock, npm workspace)
         run: |
           forge soldeer install
+          script/install-security-tools.sh --solc
           (cd .. && npm ci --ignore-scripts)
 
       - name: Build (default, aave and the test-network world)

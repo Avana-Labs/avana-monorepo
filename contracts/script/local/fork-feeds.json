@@ -1,0 +1,169 @@
+{
+  "_comment": "Local fork stack only; never part of a release config. The price feeds of each token on the forked chains: the real Chainlink USD feed as primary where one exists (its aggregator etched with a mock seeded from the latest round at the fork block), and local mock feeds in the alternate, standby and second slots. A token with no real USD feed gets mocks in all four slots, seeded from its pool's TWAP at the fork block against `quote` (`twap`). `primary` is the real feed proxy, filled from a read on the fork and never written from memory; empty means not read yet. A token whose only Chainlink feeds are exchange rates moves to `twap` when the read finds no USD feed. The real four-feed sets are an ARFC decision.",
+  "ethereum": {
+    "USDC": {
+      "primary": ""
+    },
+    "USDT": {
+      "primary": ""
+    },
+    "DAI": {
+      "primary": ""
+    },
+    "WETH": {
+      "primary": ""
+    },
+    "WBTC": {
+      "primary": ""
+    },
+    "wstETH": {
+      "primary": ""
+    },
+    "weETH": {
+      "primary": ""
+    },
+    "rETH": {
+      "primary": ""
+    },
+    "tBTC": {
+      "primary": ""
+    },
+    "UNI": {
+      "primary": ""
+    },
+    "LINK": {
+      "primary": ""
+    },
+    "AAVE": {
+      "primary": ""
+    },
+    "ENA": {
+      "primary": ""
+    },
+    "PYUSD": {
+      "primary": ""
+    },
+    "USDS": {
+      "primary": ""
+    },
+    "RLUSD": {
+      "primary": ""
+    },
+    "USDe": {
+      "primary": ""
+    },
+    "GHO": {
+      "primary": ""
+    },
+    "cbBTC": {
+      "primary": ""
+    },
+    "LBTC": {
+      "primary": ""
+    },
+    "BTC.b": {
+      "primary": ""
+    },
+    "AUSD": {
+      "twap": {
+        "pair": "AUSD/USDC",
+        "quote": "USDC"
+      }
+    },
+    "cirBTC": {
+      "twap": {
+        "pair": "cirBTC/WBTC",
+        "quote": "WBTC"
+      }
+    },
+    "kBTC": {
+      "twap": {
+        "pair": "kBTC/WBTC",
+        "quote": "WBTC"
+      }
+    },
+    "SKY": {
+      "twap": {
+        "pair": "SKY/USDC",
+        "quote": "USDC"
+      }
+    },
+    "ONDO": {
+      "twap": {
+        "pair": "ONDO/WETH",
+        "quote": "WETH"
+      }
+    }
+  },
+  "base": {
+    "WETH": {
+      "primary": ""
+    },
+    "USDC": {
+      "primary": ""
+    },
+    "cbBTC": {
+      "primary": ""
+    },
+    "USDT": {
+      "primary": ""
+    },
+    "AAVE": {
+      "primary": ""
+    },
+    "AERO": {
+      "twap": {
+        "pair": "AERO/WETH",
+        "quote": "WETH"
+      }
+    },
+    "MORPHO": {
+      "twap": {
+        "pair": "WETH/MORPHO",
+        "quote": "WETH"
+      }
+    },
+    "VIRTUAL": {
+      "twap": {
+        "pair": "VIRTUAL/WETH",
+        "quote": "WETH"
+      }
+    },
+    "AMZNc": {
+      "twap": {
+        "pair": "AMZNc/USDC",
+        "quote": "USDC"
+      }
+    },
+    "SNDKc": {
+      "twap": {
+        "pair": "SNDKc/USDC",
+        "quote": "USDC"
+      }
+    },
+    "GOOGLc": {
+      "twap": {
+        "pair": "GOOGLc/USDC",
+        "quote": "USDC"
+      }
+    },
+    "NVDAc": {
+      "twap": {
+        "pair": "NVDAc/USDC",
+        "quote": "USDC"
+      }
+    },
+    "SPCXc": {
+      "twap": {
+        "pair": "SPCXc/USDC",
+        "quote": "USDC"
+      }
+    },
+    "METAc": {
+      "twap": {
+        "pair": "METAc/USDC",
+        "quote": "USDC"
+      }
+    }
+  }
+}

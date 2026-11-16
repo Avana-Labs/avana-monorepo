@@ -110,10 +110,6 @@ export function symbolOf(w: World, chainId: number, token: string): string {
   return contentOf(w, "token", chainId, token)?.symbol ?? `${token.slice(0, 6)}…`;
 }
 
-export function spokeSlug(w: World, chainId: number, spoke: string): string {
-  return contentOf(w, "spoke", chainId, spoke)?.slug ?? spoke;
-}
-
 export const reserveKey = (r: { chainId: number; spoke: string; reserveId: string }) => `${r.spoke}:${r.reserveId}`;
 export const lendKey = (a: { hub: string; assetId: string }) => `${a.hub}:${a.assetId}`;
 
@@ -176,7 +172,7 @@ export async function snapshotRows(ctx: QueryCtx, w: World, now: number, only?: 
       const slice = sliceOf(w, r);
       if (!asset || !slice) continue;
       rows.push(
-        assetSnapshot(r, slice, asset, contentOf(w, "asset", r.chainId, reserveKey(r)), symbolOf(w, r.chainId, r.asset), spokeSlug(w, r.chainId, r.spoke), hubLabelOf(w, r.chainId, r.hub)),
+        assetSnapshot(r, slice, asset, contentOf(w, "asset", r.chainId, reserveKey(r)), symbolOf(w, r.chainId, r.asset), hubLabelOf(w, r.chainId, r.hub)),
       );
     }
   }
@@ -184,7 +180,7 @@ export async function snapshotRows(ctx: QueryCtx, w: World, now: number, only?: 
     for (const m of w.markets) {
       const debts = w.debts.filter((d) => d.chainId === m.chainId && d.marketId === m.marketId);
       const reserves = w.reserves.filter((r) => r.chainId === m.chainId);
-      rows.push(poolSnapshot(m, debts, reserves, w.assetsByKey, await pool24h(ctx, w, m, now), contentOf(w, "pool", m.chainId, m.marketId)));
+      rows.push(poolSnapshot(m, debts, reserves, w.assetsByKey, await pool24h(ctx, w, m, now), contentOf(w, "pool", m.chainId, m.marketId), hubLabelOf(w, m.chainId, m.hub)));
     }
   }
   return rows;

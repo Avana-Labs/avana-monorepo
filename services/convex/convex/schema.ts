@@ -39,6 +39,10 @@ export default defineSchema({
     /** Chainlink native/USD feed (8 decimals) used to value gas. */
     nativeUsdFeed: address,
     release: v.string(),
+    /** The About card's contracts from the manifest: `avana.lpVaults[]`, `avana.riskModule`, each Spoke's oracle. */
+    lpVaults: v.optional(v.array(v.object({ integrationId: v.number(), address }))),
+    riskModule: v.optional(address),
+    spokeOracles: v.optional(v.array(v.object({ spoke: address, oracle: address }))),
   }).index("by_chain", ["chainId"]),
 
   /** One row per (chain, Hub): label, tier, its Lend and CDP Spokes and lend assets. Its totals are its `hubAssets`. */

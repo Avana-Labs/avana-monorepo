@@ -52,6 +52,7 @@ import type * as lend_interestRateModel from "../lend/interestRateModel.js";
 import type * as lend_markets from "../lend/markets.js";
 import type * as lend_riskAssessment from "../lend/riskAssessment.js";
 import type * as lend_riskParameters from "../lend/riskParameters.js";
+import type * as lib_aboutContracts from "../lib/aboutContracts.js";
 import type * as lib_accounts from "../lib/accounts.js";
 import type * as lib_activity from "../lib/activity.js";
 import type * as lib_askAI_aaveMcp from "../lib/askAI/aaveMcp.js";
@@ -160,6 +161,7 @@ declare const fullApi: ApiFromModules<{
   "lend/markets": typeof lend_markets;
   "lend/riskAssessment": typeof lend_riskAssessment;
   "lend/riskParameters": typeof lend_riskParameters;
+  "lib/aboutContracts": typeof lib_aboutContracts;
   "lib/accounts": typeof lib_accounts;
   "lib/activity": typeof lib_activity;
   "lib/askAI/aaveMcp": typeof lib_askAI_aaveMcp;

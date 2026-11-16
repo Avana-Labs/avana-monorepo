@@ -132,10 +132,11 @@ describe("Hub-to-Hub credit lines", () => {
   it("adds the Borrow asset pages of a funding Hub asset, the line's included, up to the Lend page's borrowed", async () => {
     const w = worldOf(await read(fixtureHubsChain.start));
     const asset = w.hubAssets.find((x) => x.hub === HUB_B && x.underlying === USDC)!;
-    const pages = w.reserves
-      .filter((r) => r.hub === HUB_B && r.assetId === asset.assetId)
-      .map((r) => assetSnapshot(r, w.slices.find((s) => s.hub === r.hub && s.assetId === r.assetId && s.spoke === r.spoke)!, asset, null, "USDC", r.spoke, "Core"));
+    const reserves = w.reserves.filter((r) => r.hub === HUB_B && r.assetId === asset.assetId);
+    const pages = reserves.map((r) => assetSnapshot(r, w.slices.find((s) => s.hub === r.hub && s.assetId === r.assetId && s.spoke === r.spoke)!, asset, null, "USDC", "Core"));
     expect(pages.map((p) => p.hubId)).toEqual([HUB_B, HUB_B]);
+    // Keyed by the Spoke's address, as pool rows are, so a market joins its own Spoke's debt reserves.
+    expect(pages.map((p) => p.spokeId)).toEqual(reserves.map((r) => r.spoke));
     expect(pages.reduce((acc, p) => acc + p.borrowedUsd, 0)).toBeCloseTo(lendSnapshot(asset, null, "USDC").borrowedUsd, 6);
     expect(reconcileHubAsset(asset, w.slices).owedReconciles).toBe(true);
   });

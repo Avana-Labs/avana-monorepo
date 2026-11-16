@@ -173,7 +173,7 @@ jobs:
       - name: Install dependencies and pinned tools
         run: |
           forge soldeer install
-          script/install-security-tools.sh --python
+          script/install-security-tools.sh --solc --python
           .venv/bin/slither-mutate --list-mutators | python3 script/ci-shards.py mutators-check
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -237,6 +237,7 @@ jobs:
 
       - run: |
           forge soldeer install
+          script/install-security-tools.sh --solc
           for p in aave univ3 univ3-periphery slipstream-v1 slipstream-main aerodrome univ4 permit2; do FOUNDRY_PROFILE=$p forge build; done
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -295,6 +296,7 @@ jobs:
       - name: Install dependencies and pinned tools
         run: |
           forge soldeer install
+          script/install-security-tools.sh --solc
           # The dependency outputs arrive as an artifact, so no build here installs the pinned solc that
           # security-slow.sh looks up; compiling one small file into a throwaway folder makes Foundry install it.
           forge build src/types/AccountGateStatus.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
@@ -376,6 +378,7 @@ jobs:
       - name: Install dependencies and pinned tools
         run: |
           forge soldeer install
+          script/install-security-tools.sh --solc
           # The dependency outputs arrive as an artifact, so no build here installs the pinned solc that
           # security-slow.sh looks up; compiling one small file into a throwaway folder makes Foundry install it.
           forge build src/types/AccountGateStatus.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
@@ -457,6 +460,7 @@ jobs:
       - name: Install dependencies and pinned tools
         run: |
           forge soldeer install
+          script/install-security-tools.sh --solc
           # The dependency outputs arrive as an artifact, so no build here installs the pinned solc that
           # security-slow.sh looks up; compiling one small file into a throwaway folder makes Foundry install it.
           forge build src/types/AccountGateStatus.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
@@ -539,10 +543,11 @@ jobs:
       - name: Install dependencies and pinned tools
         run: |
           forge soldeer install
+          script/install-security-tools.sh --solc
           # The dependency outputs arrive as an artifact, so no build here installs the pinned solc that
           # security-slow.sh looks up; compiling one small file into a throwaway folder makes Foundry install it.
           forge build src/types/AccountGateStatus.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
-          script/install-security-tools.sh --python --gambit
+          script/install-security-tools.sh --solc --python --gambit
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -617,10 +622,11 @@ jobs:
         # Necessist has no release binaries; the runner's preinstalled cargo builds the pinned crate into tools/bin.
         run: |
           forge soldeer install
+          script/install-security-tools.sh --solc
           # The dependency outputs arrive as an artifact, so no build here installs the pinned solc that
           # security-slow.sh looks up; compiling one small file into a throwaway folder makes Foundry install it.
           forge build src/types/AccountGateStatus.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
-          script/install-security-tools.sh --python --necessist
+          script/install-security-tools.sh --solc --python --necessist
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -724,6 +730,7 @@ jobs:
         if: env.CERTORAKEY != ''
         run: |
           forge soldeer install
+          script/install-security-tools.sh --solc
           python -m venv .venv
           .venv/bin/pip install -r requirements.txt
           mkdir -p "$HOME/.local/bin"
