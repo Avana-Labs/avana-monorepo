@@ -9,8 +9,6 @@ import {SpeedLimit} from "../../parameter-store/types/SpeedLimit.sol";
 /// @notice What the borrow-speed check of one borrow needs, read by `RiskModuleSpeedLogic` (REQ-RISK-092).
 /// @custom:spec REQ-RISK-092, SPEC-CAP-012, SPEC-CAP-013, Q-411
 struct BorrowSpeedInputs {
-    // The account's market, key of the market window.
-    uint256 marketId;
     // keccak256(abi.encode(hub, asset)), key of the debt window.
     bytes32 debtKey;
     // The reserve's funding Hub.
