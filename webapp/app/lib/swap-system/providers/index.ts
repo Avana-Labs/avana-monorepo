@@ -7,10 +7,15 @@ export {
   createOnchainPoolsProvider,
   encodePoolPath,
   QUOTER_V2_ABI,
+  V4_QUOTER_ABI,
+  v4QuoteParams,
+  VENUE_NAMES,
   type OnchainPoolsConfig,
   type PoolToken,
   type PoolVenue,
   type QuoterClient,
+  type V4PoolKey,
+  type VenueConfig,
 } from "./onchain-pools"
 export { cowSwapProvider } from "./cow-swap"
 
