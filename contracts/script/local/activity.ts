@@ -19,6 +19,7 @@
 //
 // Usage, from contracts/:  node script/local/activity.ts --chain ethereum|base [--once]
 
+import { randomInt } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type Address, createWalletClient, erc20Abi, http, parseAbi } from "viem";
@@ -72,8 +73,10 @@ const nextUser = (): Address => {
   return `0x5157${chain.chainId.toString(16).padStart(8, "0")}${state.n.toString(16).padStart(28, "0")}` as Address;
 };
 
-const rand = (lo: number, hi: number) => lo + Math.random() * (hi - lo);
-const pick = <T>(xs: readonly T[]): T => xs[Math.floor(Math.random() * xs.length)]!;
+/** A uniform number in [0, 1) from the system's CSPRNG (no random() anywhere a value reaches a transaction). */
+const random = () => randomInt(0, 2 ** 47) / 2 ** 47;
+const rand = (lo: number, hi: number) => lo + random() * (hi - lo);
+const pick = <T>(xs: readonly T[]): T => xs[randomInt(0, xs.length)]!;
 const usd = (lo: number, hi: number) => BigInt(Math.round(rand(lo, hi)));
 const isUniswap = (m: Market) => !e.isSlipstream(m);
 
@@ -104,7 +107,7 @@ const reserves = await lendReserves().catch((err: Error) => {
 // ─── Actions ───
 
 async function lend(): Promise<string> {
-  const withdraw = state.lenders.length > 3 && Math.random() < 0.35;
+  const withdraw = state.lenders.length > 3 && random() < 0.35;
   if (withdraw) {
     const l = pick(state.lenders);
     const has = (await e.read(l.lendSpoke, LEND, "getUserSuppliedAssets", [BigInt(l.reserveId), l.owner])) as bigint;
@@ -114,7 +117,7 @@ async function lend(): Promise<string> {
     return `withdrew ${amount} ${e.sym(l.token)}`;
   }
   const r = pick(reserves);
-  const owner = state.lenders.length < 40 || Math.random() < 0.3 ? nextUser() : pick(state.lenders).owner;
+  const owner = state.lenders.length < 40 || random() < 0.3 ? nextUser() : pick(state.lenders).owner;
   const amount = e.amountForUsd(r.token, usd(5_000, 250_000));
   await e.gasFor(owner);
   await e.mint(r.token, owner, amount);
@@ -149,7 +152,7 @@ async function repay(): Promise<string> {
     state.borrowers = state.borrowers.filter((x) => x !== b);
     return `${b.owner} has no debt left`;
   }
-  const all = Math.random() < 0.25;
+  const all = random() < 0.25;
   const amount = all ? debt + debt / 100n + 10n ** BigInt(e.dec(m.debtAsset)) : (debt * BigInt(Math.round(rand(20, 80)))) / 100n;
   await e.gasFor(b.owner);
   await e.mint(m.debtAsset, b.owner, amount);
@@ -167,7 +170,7 @@ async function swap(): Promise<string> {
   const router = ctx.world.uniswapV3SwapRouter as Address;
   const trader = nextUser();
   const fee = Number(await e.read(m.pool, POOL, "fee"));
-  const [a, b] = Math.random() < 0.5 ? [m.token0, m.token1] : [m.token1, m.token0];
+  const [a, b] = random() < 0.5 ? [m.token0, m.token1] : [m.token1, m.token0];
   const amountIn = e.amountForUsd(a, usd(1_000, 80_000));
   await e.gasFor(trader);
   await e.mint(a, trader, amountIn);
@@ -268,7 +271,7 @@ const ACTIONS: [string, number, () => Promise<string>][] = [
   ["price", 0.1, price],
 ];
 const choose = () => {
-  let x = Math.random();
+  let x = random();
   for (const a of ACTIONS) if ((x -= a[1]) <= 0) return a;
   return ACTIONS[0]!;
 };

@@ -49,7 +49,8 @@ export function mapBorrowRewardsClaimPreviewToActionUi(options: {
               tone: "positive" as const,
             },
           ],
-    networkFeeLabel: formatActionFeeSummary(options.claimUsd, 0.02),
+    // Claiming LP fees is not a Q-409 action: no front-end fee.
+    platformFeeLabel: formatActionFeeSummary("claim", options.claimUsd),
     risk: null,
     blockedReason: options.allowed ? null : (options.blockedReason ?? "Nothing to claim"),
     validationErrors: options.blockedReason ? [options.blockedReason] : [],
