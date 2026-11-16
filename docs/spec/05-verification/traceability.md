@@ -959,7 +959,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `MKT-POST-012` | Every debt reserve is enabled only with its funding Hub recorded, the coverage bound met, … | — | — | — | — | — | Unlinked |
 | `Q-001` | Supported LP positions | Superseded by `Q-291`. | — | — | — | — | — | — | — | Unlinked |
 | `Q-002` | Avana Hub | A dedicated Avana Hub that is a standard, unmodified Aave V4 Hub owned by the … | — | — | — | — | — | Unlinked |
-| `Q-003` | Borrow Spokes | One CDP Spoke per (chain, Hub, AMM protocol, risk tier), each a standard, … | — | — | — | — | — | Unlinked |
+| `Q-003` | Borrow Spokes | One or more CDP Spokes per (chain, Hub, AMM protocol, risk tier), a new on… | — | — | — | — | — | Unlinked |
 | `Q-004` | Borrowable asset | Superseded by `Q-233`. | — | — | — | — | — | — | — | Unlinked |
 | `Q-005` | Launch chain | Superseded by `Q-279`. | — | — | — | — | — | — | — | Unlinked |
 | `Q-006` | Borrowing liquidity | Borrowing liquidity comes from capped credit lines, one for each sta… | — | — | — | — | — | Unlinked |

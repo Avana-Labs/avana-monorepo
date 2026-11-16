@@ -35,8 +35,8 @@ interface IMarketRegistryListing {
     /// `approveSpokeCodeHash`; each Aave V4 Spoke implementation embeds its own `ORACLE`, `MAX_USER_RESERVES_LIMIT`
     /// and EIP-712 domain cache, so each deployment has its own hash), records that hash for
     /// `spokeImplementationStatus`,
-    /// and, for a new Spoke, `def.hub` is recorded with tier `def.riskTier`, `def.integrationId` is registered and no
-    /// Spoke is recorded for `(hub, integrationId, riskTier)`; for a recorded Spoke, the Hub, integration, tier and
+    /// and, for a new Spoke, `def.hub` is recorded with tier `def.riskTier` and `def.integrationId` is registered
+    /// (several Spokes may share a `(hub, integrationId, riskTier)`); for a recorded Spoke, the Hub, integration, tier and
     /// oracle must be the recorded ones and only the implementation changes. Then runs
     /// `RISK_MODULE.checkAaveConfig(spoke, [])` (Spoke-wide standard-Spoke settings) and reverts `InvalidSpoke` when it
     /// fails. Every Avana collateral reserve must have `receiveSharesEnabled = false`, `liquidationFee = 0` and no

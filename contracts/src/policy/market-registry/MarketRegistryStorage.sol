@@ -85,6 +85,8 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         mapping(address pricing => bool) isPricing;
         address[] spokeList;
         mapping(address spoke => SpokeDef) spokes;
+        /// @dev No longer written or read: several CDP Spokes may share a (Hub, integration, tier). Kept so the layout
+        /// of every later field stays the same.
         mapping(bytes32 tripleKey => address) spokeOfTriple;
         address flashSource;
         mapping(address spoke => mapping(uint256 reserveId => DebtReserveDef)) debtReserves;

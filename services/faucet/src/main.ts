@@ -8,13 +8,14 @@ import { Faucet } from "./faucet.ts";
 import type { ChainName } from "./grants.ts";
 import { faucetServer } from "./server.ts";
 import { forkStrategy, testnetStrategy, type SetupStrategy } from "./setup.ts";
+import { loadExternal } from "./manifest.ts";
 import { GrantStore } from "./store.ts";
 
 const config = loadConfig(process.env);
 const strategies: Partial<Record<ChainName, SetupStrategy>> = {};
 for (const [chain, url] of Object.entries(config.rpc) as [ChainName, string][]) {
   const rpc = createPublicClient({ transport: http(url) });
-  strategies[chain] = config.kind === "fork" ? forkStrategy(rpc, config.chainIds) : testnetStrategy();
+  strategies[chain] = config.kind === "fork" ? forkStrategy(rpc, config.chainIds, loadExternal(config.manifest[chain])) : testnetStrategy();
 }
 
 const server = faucetServer(new Faucet(strategies, new GrantStore(config.dataDir)));

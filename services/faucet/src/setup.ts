@@ -10,7 +10,8 @@
 
 import type { Address, Hex } from "viem";
 import { checkLocalFork, fundToken, setNativeBalance, type Rpc } from "./chain.ts";
-import type { ChainGrant } from "./grants.ts";
+import type { GrantSpec } from "./grants.ts";
+import { LineFailed, resolveLine, type ExternalEntry } from "./manifest.ts";
 
 export type ChainKind = "fork" | "testnet";
 
@@ -19,12 +20,14 @@ export interface GrantStep {
   readonly detail: string;
   /** Transaction hash, for steps that send one; cheatcodes send none. */
   readonly txHash?: Hex;
+  /** A token line the chain's manifest cannot serve (no such token or feed); the grant goes on without it. */
+  readonly failed?: true;
 }
 
 export interface SetupStrategy {
   readonly kind: ChainKind;
   /** Runs every step in order; the first failing step stops the grant and is named in the error. */
-  run(wallet: Address, grant: ChainGrant): Promise<GrantStep[]>;
+  run(wallet: Address, grant: GrantSpec): Promise<GrantStep[]>;
 }
 
 export class StepFailed extends Error {
@@ -37,7 +40,8 @@ export class StepFailed extends Error {
   }
 }
 
-export function forkStrategy(rpc: Rpc, allowedChainIds: readonly number[]): SetupStrategy {
+/** The local fork: cheatcodes for gas and tokens, token addresses and USD prices from the chain's manifest (`external`). */
+export function forkStrategy(rpc: Rpc, allowedChainIds: readonly number[], external: readonly ExternalEntry[] = []): SetupStrategy {
   return {
     kind: "fork",
     async run(wallet, grant) {
@@ -51,8 +55,17 @@ export function forkStrategy(rpc: Rpc, allowedChainIds: readonly number[]): Setu
       };
       await step("check chain", async () => `chain ${await checkLocalFork(rpc, allowedChainIds)}, anvil`);
       await step("gas", async () => `${grant.nativeEth} ETH (${await setNativeBalance(rpc, wallet, grant.nativeEth)} wei)`);
-      for (const token of grant.tokens) {
-        await step(`token ${token.symbol}`, async () => `${token.amount} ${token.symbol} (${await fundToken(rpc, token.address, wallet, token.amount)} units)`);
+      for (const line of grant.tokens) {
+        const name = `token ${line.symbol}`;
+        let token;
+        try {
+          token = await resolveLine(rpc, external, line);
+        } catch (error) {
+          if (!(error instanceof LineFailed)) throw new StepFailed(name, done, error);
+          done.push({ step: name, detail: error.message, failed: true });
+          continue;
+        }
+        await step(name, async () => `${token.amount} ${token.symbol} (${await fundToken(rpc, token.address, wallet, token.amount)} units)`);
       }
       return done;
     },

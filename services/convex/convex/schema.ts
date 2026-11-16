@@ -565,6 +565,30 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_created_at", ["createdAt"]),
 
+  /** The /onboarding step of each wallet (onboarding.ts); the funds themselves come from the local faucet. */
+  onboardingProfiles: defineTable({
+    wallet: v.string(),
+    createdAt: v.number(),
+    seedVersion: v.number(),
+    onboardingStep: v.string(),
+    onboardedAt: v.optional(v.number()),
+    eligibilityTier: v.optional(v.number()),
+    tierSeed: v.optional(v.string()),
+    allocatedUsd: v.optional(v.number()),
+    basketSnapshot: v.optional(v.array(v.object({ tokenId: v.string(), amount: v.number(), priceUsdAtClaim: v.number() }))),
+    xHandle: v.optional(v.string()),
+    tweetUrl: v.optional(v.string()),
+    tweetedAt: v.optional(v.number()),
+    claimTxSynthetic: v.optional(v.string()),
+  }).index("by_wallet", ["wallet"]),
+
+  /** The onboarding seats taken and the USD granted (one row). */
+  onboardingEconomy: defineTable({
+    userCount: v.number(),
+    totalGrantedUsd: v.number(),
+    status: v.union(v.literal("open"), v.literal("closed")),
+  }),
+
   /** Permanent wallet identity and display preferences, independent of sign-in. */
   walletProfiles: defineTable({
     /** Lowercased, derived from the authenticated identity. */
