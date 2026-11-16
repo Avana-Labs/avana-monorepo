@@ -12,6 +12,7 @@ import type { Address, Hex } from "viem";
 import { checkLocalFork, fundToken, setNativeBalance, type Rpc } from "./chain.ts";
 import type { GrantSpec } from "./grants.ts";
 import { LineFailed, resolveLine, type ExternalEntry } from "./manifest.ts";
+import { openStartingPositions, type PositionsManifest } from "./positions.ts";
 
 export type ChainKind = "fork" | "testnet";
 
@@ -40,8 +41,16 @@ export class StepFailed extends Error {
   }
 }
 
-/** The local fork: cheatcodes for gas and tokens, token addresses and USD prices from the chain's manifest (`external`). */
-export function forkStrategy(rpc: Rpc, allowedChainIds: readonly number[], external: readonly ExternalEntry[] = []): SetupStrategy {
+/**
+ * The local fork: cheatcodes for gas and tokens, token addresses and USD prices from the chain's manifest (`external`),
+ * then, with the manifest's markets, the starting positions opened as the wallet (positions.ts).
+ */
+export function forkStrategy(
+  rpc: Rpc,
+  allowedChainIds: readonly number[],
+  external: readonly ExternalEntry[] = [],
+  positions?: PositionsManifest,
+): SetupStrategy {
   return {
     kind: "fork",
     async run(wallet, grant) {
@@ -67,6 +76,7 @@ export function forkStrategy(rpc: Rpc, allowedChainIds: readonly number[], exter
         }
         await step(name, async () => `${token.amount} ${token.symbol} (${await fundToken(rpc, token.address, wallet, token.amount)} units)`);
       }
+      if (positions) done.push(...(await openStartingPositions(rpc, wallet, positions, external)));
       return done;
     },
   };
