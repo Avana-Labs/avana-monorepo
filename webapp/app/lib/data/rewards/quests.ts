@@ -113,7 +113,7 @@ const QUESTS: Record<RewardsPromoTabId, PlaceholderQuest[]> = {
 }
 
 /** The dialogs a quest's button can open, in the Rewards tab. */
-export type QuestDialog = "primer" | "pin-pool" | "pin-lend"
+export type QuestDialog = "primer" | "pin-pool" | "pin-lend" | "referral"
 
 /** What each live quest's button does (open a page or a dialog), and its label. */
 const QUEST_ACTIONS: Record<string, { href?: string; dialog?: QuestDialog; cta: string }> = {
@@ -121,6 +121,9 @@ const QUEST_ACTIONS: Record<string, { href?: string; dialog?: QuestDialog; cta: 
   "review-risk-basics": { dialog: "primer", cta: "Read" },
   "favorite-market": { dialog: "pin-pool", cta: "Pin" },
   "favorite-lend-market": { dialog: "pin-lend", cta: "Pin" },
+  "share-referral-link": { dialog: "referral", cta: "Invite" },
+  "invite-first-wallet": { dialog: "referral", cta: "Invite" },
+  "bring-3-active-users": { dialog: "referral", cta: "Invite" },
   "first-lend-deposit": { href: "/lend", cta: "Deposit" },
   "supply-500-lend": { href: "/lend", cta: "Deposit" },
   "first-borrow": { href: "/borrow", cta: "Borrow" },

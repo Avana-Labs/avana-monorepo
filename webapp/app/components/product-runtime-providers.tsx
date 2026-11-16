@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import type { ReactNode } from "react"
 import { PreferencesProfileSync } from "@/app/components/preferences-profile-sync"
 import { FrontendFeeRulesSync } from "@/app/lib/fees/front-end-fee-sync"
+import { ReferralAttributionSync } from "@/app/lib/rewards/referral-attribution-sync"
 import { SwapContractsSync } from "@/app/lib/swap-system/swap-contracts-sync"
 import { TokenPricesProvider } from "@/app/lib/prices/token-prices-context"
 import { useSiweAuth } from "@/app/lib/siwe/use-siwe-auth"
@@ -60,6 +61,7 @@ export function ProductRuntimeProviders({
     <AvanaSessionProviders>
       <PreferencesProfileSync />
       <FrontendFeeRulesSync />
+      <ReferralAttributionSync />
       <SwapContractsSync />
       <TokenPricesProvider initialPrices={initialTokenPrices}>{children}</TokenPricesProvider>
     </AvanaSessionProviders>

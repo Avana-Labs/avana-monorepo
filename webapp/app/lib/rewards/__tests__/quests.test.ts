@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { CLIENT_QUEST_POINTS } from "@/convex/lib/clientQuests"
+import { REFERRAL_QUEST_POINTS } from "@/convex/lib/referrals"
 import { QUEST_POINTS } from "@/convex/lib/rewards"
 import { questDialog, questHref, questsByTab } from "@/app/lib/data/rewards/quests"
 import { translate, TRANSLATIONS } from "@/app/lib/i18n/translations"
@@ -46,6 +47,14 @@ describe("rewards quests", () => {
     expect(questDialog("first-borrow")).toBeUndefined()
   })
 
+  it("opens the referral dialog for the three referral quests", () => {
+    for (const id of ["share-referral-link", "invite-first-wallet", "bring-3-active-users"]) {
+      expect(byId([], id)).toMatchObject({ status: "available", cta: "Invite" })
+      expect(questDialog(id)).toBe("referral")
+    }
+    expect(byId(["bring-3-active-users"], "bring-3-active-users")).toMatchObject({ status: "claimed", cta: "Earned" })
+  })
+
   it("opens the page of a real quest that is not done and marks a done one Earned", () => {
     expect(byId([], "first-lend-deposit")).toMatchObject({ status: "available", cta: "Deposit" })
     expect(byId([], "supply-500-lend")).toMatchObject({ status: "available", cta: "Deposit" })
@@ -59,26 +68,21 @@ describe("rewards quests", () => {
     expect(questHref("first-borrow")).toBe("/borrow")
   })
 
-  it("keeps every other quest Coming soon, with no action", () => {
-    const live = new Set([
-      ...Object.keys(QUEST_POINTS),
-      "connect-wallet",
-      "review-risk-basics",
-      "favorite-market",
-      "favorite-lend-market",
-    ])
-    const rest = all([]).filter((q) => !live.has(q.id))
-    expect(rest.length).toBeGreaterThan(0)
-    for (const q of rest) {
-      expect(q, q.id).toMatchObject({ status: "coming_soon", cta: "Coming soon" })
-      expect(questHref(q.id)).toBeUndefined()
+  it("gives every quest a button that opens a page or a dialog, and none Coming soon", () => {
+    const cards = all([])
+    expect(cards).toHaveLength(12)
+    for (const q of cards) {
+      expect(q.status, q.id).toBe("available")
+      expect(Boolean(questHref(q.id)) !== Boolean(questDialog(q.id)), q.id).toBe(true)
+      const points = QUEST_POINTS[q.id] ?? CLIENT_QUEST_POINTS[q.id] ?? REFERRAL_QUEST_POINTS[q.id]
+      expect(q.reward, q.id).toBe(`${points} pts`)
     }
-    expect(all([]).some((q) => /AVA/.test(q.reward))).toBe(false)
+    expect(cards.some((q) => /AVA|Coming soon/.test(`${q.reward} ${q.cta}`))).toBe(false)
   })
 
   it("has the button labels and the Earned label translated in every locale", () => {
     for (const lang of Object.keys(TRANSLATIONS).filter((l) => l !== "EN")) {
-      for (const key of ["Deposit", "Borrow", "Repay", "Pledge", "Earned", "Connect Wallet", "Read", "Pin"]) {
+      for (const key of ["Deposit", "Borrow", "Repay", "Pledge", "Earned", "Connect Wallet", "Read", "Pin", "Invite"]) {
         expect(translate(lang as keyof typeof TRANSLATIONS, key), `${lang} ${key}`).not.toBe(key)
       }
     }
