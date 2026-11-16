@@ -1628,7 +1628,7 @@
       "file": "src/periphery/gas-vault/AvanaGasVault.sol",
       "function": "AvanaGasVault._window",
       "reason": "Not a deadline or signature: a send counts toward the cap while at + PERIOD > now, the window (now - 24 h, now] of REQ-GASV-005 (exclusive start). Covered by TEST-333 (topUp_capHoldsOverAnyWindowNotPerCalendarPeriod), TEST-334.",
-      "approval": "pending (Josue)",
+      "approval": "approved (Josue, 2026-11-16)",
       "reviewedFiles": {
         "src/periphery/gas-vault/AvanaGasVault.sol": "9c0535e8ee61474db4f651150880c624f6329d90c927cfd16ee7af4150576e4d"
       }
