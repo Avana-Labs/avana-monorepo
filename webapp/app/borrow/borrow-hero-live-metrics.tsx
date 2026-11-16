@@ -1,6 +1,7 @@
 "use client"
 
 import { HowItWorks } from "@/app/components/how-it-works"
+import { NetworkBadge } from "@/app/components/network-badge"
 import { useCurrency } from "@/app/lib/currency/use-currency"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 
@@ -22,6 +23,7 @@ function MetricsView({ metrics }: { metrics: BorrowHeroMetrics }) {
           <p className="text-[13px] text-muted-foreground">{t("Borrow TVL")}</p>
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-data text-[17px] font-medium leading-none tracking-normal tabular-nums text-foreground md:text-[18px]">
             {fc.compact(metrics.totalTvlUsd)}
+            <NetworkBadge />
           </p>
         </div>
 

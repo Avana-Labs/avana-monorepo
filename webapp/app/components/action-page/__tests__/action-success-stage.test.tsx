@@ -95,6 +95,7 @@ describe("ActionSuccessStage", () => {
               rateLabel: "",
               rateValue: "",
               marketValue: "ETH · USDC",
+              platformFeeUsd: 0.4,
             },
           }}
         />
