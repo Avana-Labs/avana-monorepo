@@ -153,15 +153,18 @@ export function writeBaseConfig(c: LocalChain): string {
   // A listing debt asset (its DebtOracle or fixed price, its rounding allowance) needs a CDP Spoke to price it: the Hub
   // file that makes the asset borrowable lists it, with the Spoke (planHub, from the test values).
   cfg.listing.debtAssets = [];
-  // The protocol's market parameters a Hub file's market starts from, per integration (1 Uniswap v3, 2 Slipstream),
+  // The protocol's market parameters a Hub file's market starts from, per integration (1 Uniswap v3, 2 Slipstream, 3 Uniswap v4),
   // taken from the anvil config's first market of each; the market list itself starts empty.
   const template = (id: number) => {
     const { name: _n, spoke: _s, pool: _p, routes: _r, content: _c, ...rest } = (src.listing.markets as Record<string, any>[]).find((m) => m.integrationId === id)!;
     return rest;
   };
-  cfg.listing.marketDefaults = { "1": template(1), "2": template(2) };
+  cfg.listing.marketDefaults = Object.fromEntries(
+    [1, 2, 3].filter((id) => (src.listing.markets as Record<string, any>[]).some((m) => m.integrationId === id)).map((id) => [String(id), template(id)]),
+  );
   cfg.listing.markets = [];
   cfg.listing.pools = {};
+  cfg.listing.uniswapV4Pools = {};
   for (const t of cfg.listing.tokens) {
     t.hubs = [label];
     Object.assign(t, tv.tokens?.default ?? {}, tv.tokens?.[t.symbol] ?? {});
@@ -171,7 +174,9 @@ export function writeBaseConfig(c: LocalChain): string {
   const extra = join(CONTRACTS, "script/deploy/hubs", c.network, "world.json");
   if (existsSync(extra)) {
     const w = JSON.parse(readFileSync(extra, "utf8")) as Record<string, { symbol?: string; name?: string }[]>;
-    for (const k of ["tokens", "uniswapPools", "slipstreamPools"]) {
+    for (const k of ["tokens", "uniswapPools", "slipstreamPools", "uniswapV4Pools"]) {
+      if (!w[k]) continue;
+      cfg.world[k] ??= [];
       const have = new Set((cfg.world[k] as { symbol?: string; name?: string }[]).map((x) => x.symbol ?? x.name));
       for (const x of w[k] ?? []) if (!have.has(x.symbol ?? x.name)) cfg.world[k].push(x);
     }

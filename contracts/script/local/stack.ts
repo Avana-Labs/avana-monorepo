@@ -112,13 +112,12 @@ async function up(): Promise<void> {
  * released yet runs through the operator flow on the running stack, so its markets appear as any later Hub's would. */
 async function applyHubFiles(): Promise<void> {
   const { readdirSync } = await import("node:fs");
-  const { addHub } = await import("./operator/hub.ts");
+  const { addHub, hubRelease } = await import("./operator/hub.ts");
   for (const c of CHAINS.filter((x) => existsSync(manifestPath(x)))) {
     const dir = join(CONTRACTS, "script/deploy/hubs", c.network);
     if (!existsSync(dir)) continue;
     for (const f of readdirSync(dir).filter((x) => x.endsWith(".json") && x !== "world.json").sort()) {
-      const label = (JSON.parse(readFileSync(join(dir, f), "utf8")) as { hub: { label: string } }).hub.label;
-      if (readStatus(c).steps[`hub-${label}:manifest`]?.outcome === "pass") continue;
+      if (readStatus(c).steps[`${hubRelease(f)}:manifest`]?.outcome === "pass") continue;
       say(`${c.label}: Hub file ${f}`);
       const r = await addHub({ chain: c.network, hubFile: join(dir, f) }, (o) => {
         if (o.outcome !== "skipped") say(`  ${o.outcome.toUpperCase().padEnd(5)} ${c.network} ${o.step}${o.outcome === "fail" ? `: ${o.detail}` : ""}`);

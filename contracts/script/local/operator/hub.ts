@@ -35,7 +35,7 @@
 // risk  = { summary, reviewedAt: "YYYY-MM-DD", factors: [{ id, label, level: low|moderate|elevated|high, text }] }
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { addRoutePools, poolOf, routePair, type Route } from "../../e2e/routes.ts";
 import { DEV_CHAIN_IDS } from "../../../../services/common/src/chains.ts";
 import { chainOf, outDir } from "../lib/env.ts";
@@ -89,7 +89,7 @@ export interface HubInput {
 }
 export interface SpokeInput extends PageText {
   label: string;
-  integration: "uniswap-v3" | "slipstream";
+  integration: "uniswap-v3" | "slipstream" | "uniswap-v4";
   /** The Spoke's group within its venue (Stable, Volatile, Blue-chip, Governance, ...). */
   category?: string;
 }
@@ -193,8 +193,25 @@ export interface HubPlan {
 const LIQUIDATION_BONUS_FACTOR = 5000;
 /** The LPOracle's TWAP window, as 09_ListMarkets sets it. */
 const TWAP_WINDOW = 1800;
-const INTEGRATION_ID = { "uniswap-v3": 1, slipstream: 2 } as const;
-const VENUE = { "uniswap-v3": "Uniswap v3", slipstream: "Slipstream" } as const;
+const INTEGRATION_ID = { "uniswap-v3": 1, slipstream: 2, "uniswap-v4": 3 } as const;
+const VENUE = { "uniswap-v3": "Uniswap v3", slipstream: "Slipstream", "uniswap-v4": "Uniswap v4" } as const;
+
+/** Whether `name` is a Uniswap v4 pool of the world. */
+function isV4(c: Json, name: string): boolean {
+  return ((c.world.uniswapV4Pools ?? []) as Json[]).some((x) => x.name === name);
+}
+/** The world pool named `name`: Uniswap v3, Slipstream, or Uniswap v4 with native ETH read as WETH (LPVaultSwap wraps a
+ *  native ETH leg before it swaps, so the market's routes start from WETH). */
+function marketPool(c: Json, name: string): Json | undefined {
+  const v4 = ((c.world.uniswapV4Pools ?? []) as Json[]).find((x) => x.name === name);
+  if (!v4) return poolOf(c, name);
+  const weth = (t: string) => (t === "ETH" ? "WETH" : t);
+  return { ...v4, a: weth(v4.a), b: weth(v4.b) };
+}
+/** The integration a world pool belongs to. */
+function poolIntegration(c: Json, name: string, p: Json): SpokeInput["integration"] {
+  return isV4(c, name) ? "uniswap-v4" : p.tickSpacing !== undefined ? "slipstream" : "uniswap-v3";
+}
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const LEVELS = ["low", "moderate", "elevated", "high"];
@@ -254,12 +271,12 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
     }
   }
   for (const m of input.markets) {
-    if (!poolOf(c, m.pool)) errors.push(`market ${m.pool}: no such pool in this chain's world`);
+    if (!marketPool(c, m.pool)) errors.push(`market ${m.pool}: no such pool in this chain's world`);
     const s = spokeOf(m.spoke);
     if (!s) errors.push(`market ${m.pool}: spoke ${m.spoke} is not one of this Hub's CDP Spokes`);
     else if (!(input.borrowable[m.spoke] ?? []).length) errors.push(`market ${m.pool}: spoke ${m.spoke} lends nothing (borrowable)`);
-    const p = poolOf(c, m.pool);
-    if (p && s && (s.integration === "slipstream") !== (p.tickSpacing !== undefined)) errors.push(`market ${m.pool}: a ${s.integration} spoke needs a ${s.integration} pool`);
+    const p = marketPool(c, m.pool);
+    if (p && s && s.integration !== poolIntegration(c, m.pool, p)) errors.push(`market ${m.pool}: a ${s.integration} spoke needs a ${s.integration} pool`);
     if (p) for (const t of [p.a, p.b]) if (!input.collateral.some((x) => x.symbol === t) && !(c.listing.tokens as Json[]).some((x) => x.symbol === t)) errors.push(`market ${m.pool}: ${t} is neither listed collateral nor in collateral`);
   }
   for (const a of input.lendAssets) sym(a.symbol, "lendAssets");
@@ -472,15 +489,22 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
   const values: Record<string, unknown> = {};
   for (const mi of input.markets) {
     const s = spokeOf(mi.spoke)!;
-    const p = poolOf(c, mi.pool)!;
+    const p = marketPool(c, mi.pool)!;
     const slip = s.integration === "slipstream";
+    const v4 = s.integration === "uniswap-v4";
     const range = mi.tickLower !== undefined ? `-r${mi.tickLower}_${mi.tickUpper}` : "";
-    const name = mi.name ?? `${slip ? "slip" : "uni"}-${mi.pool}${range}-${s.label}`;
+    const name = mi.name ?? `${slip ? "slip" : v4 ? "univ4" : "uni"}-${mi.pool}${range}-${s.label}`;
     const own = (c.world.uniswapPools as Json[]).some((x) => x.name === mi.pool) ? mi.pool : "";
     const lends = input.borrowable[s.label]!;
     const routes: Route[] = lends.flatMap((asset) => [p.a, p.b].filter((t: string) => t !== asset).map((t: string) => routePair(c, name, t, asset, own)));
     addRoutePools(c, routes);
-    c.listing.pools[mi.pool] = slip ? `$world:.slipstreamPools['${mi.pool}']` : `$world:.uniswapPools['${mi.pool}']`;
+    if (v4) {
+      // A Uniswap v4 market is keyed by its pool key; its Uniswap v3 reference pool (same pair, fee 500) is the one step
+      // 02 found or created for it.
+      const w = `$world:.uniswapV4Pools['${mi.pool}']`;
+      c.listing.uniswapV4Pools ??= {};
+      c.listing.uniswapV4Pools[mi.pool] = { currency0: `${w}.currency0`, currency1: `${w}.currency1`, fee: p.fee, tickSpacing: p.tickSpacing, referencePool: `${w}.referencePool` };
+    } else c.listing.pools[mi.pool] = slip ? `$world:.slipstreamPools['${mi.pool}']` : `$world:.uniswapPools['${mi.pool}']`;
     const mv: MarketValues = { ...tv.markets?.default, ...tv.markets?.[name] };
     if (mv.poolRiskFactorBps === undefined || mv.maxLiquidationBonus === undefined || mv.consistencyToleranceBps === undefined || !mv.marketUsdCap || !mv.topUpSliceUsd)
       throw new Error(`market ${name}: test values have no poolRiskFactorBps, maxLiquidationBonus, consistencyToleranceBps, marketUsdCap and topUpSliceUsd for it`);
@@ -526,7 +550,7 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
     });
     markets.push(name);
     checklist.push(
-      `Pool ${mi.pool} (${name}): raise its observation cardinality to at least ${need} (increaseObservationCardinalityNext; ceil(${TWAP_WINDOW} s / ${c.chain.blockTime} s blocks) + 1) and let it fill a ${TWAP_WINDOW} s window before the listing executes; until then the market's TWAP check is unavailable. On a fork the stack's fork-pools step does it.`,
+      `${v4 ? "Uniswap v3 reference pool of " : "Pool "}${mi.pool} (${name}): raise its observation cardinality to at least ${need} (increaseObservationCardinalityNext; ceil(${TWAP_WINDOW} s / ${c.chain.blockTime} s blocks) + 1) and let it fill a ${TWAP_WINDOW} s window before the listing executes; until then the market's TWAP check is unavailable. On a fork the stack's fork-pools step does it.`,
     );
   }
 
@@ -618,10 +642,15 @@ export interface AddHubResult extends ReleaseResult {
 }
 
 /** Plan, write the config, release, and return the Hub's listed markets. A rerun after a failure resumes the release. */
+/** A Hub file's release id: `hub-` and the file's name, so several files may add to one Hub, each its own release. */
+export function hubRelease(hubFile: string): string {
+  return `hub-${basename(hubFile, ".json")}`;
+}
+
 export async function addHub(args: { chain: string; hubFile: string }, onStep?: (o: StepOutcome) => void): Promise<AddHubResult> {
   const c = chainOf(args.chain);
   const input = JSON.parse(readFileSync(args.hubFile, "utf8")) as HubInput;
-  const release = `hub-${input.hub.label}`;
+  const release = hubRelease(args.hubFile);
   const configPath = join(outDir(c), `config-${release}.json`);
   let plan: HubPlan["summary"] | undefined;
   // A release that started earlier keeps its config (its steps are on record); a new one is planned on the current.

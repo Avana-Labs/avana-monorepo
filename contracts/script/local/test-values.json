@@ -133,6 +133,36 @@
       "deviationBps": 100,
       "collateralFactorBps": 6500,
       "tokenCapUsd": "10000000"
+    },
+    "AMZNc": {
+      "deviationBps": 100,
+      "collateralFactorBps": 6000,
+      "tokenCapUsd": "5000000"
+    },
+    "SNDKc": {
+      "deviationBps": 100,
+      "collateralFactorBps": 6000,
+      "tokenCapUsd": "5000000"
+    },
+    "GOOGLc": {
+      "deviationBps": 100,
+      "collateralFactorBps": 6000,
+      "tokenCapUsd": "5000000"
+    },
+    "NVDAc": {
+      "deviationBps": 100,
+      "collateralFactorBps": 6000,
+      "tokenCapUsd": "5000000"
+    },
+    "SPCXc": {
+      "deviationBps": 100,
+      "collateralFactorBps": 6000,
+      "tokenCapUsd": "5000000"
+    },
+    "METAc": {
+      "deviationBps": 100,
+      "collateralFactorBps": 6000,
+      "tokenCapUsd": "5000000"
     }
   },
   "markets": {

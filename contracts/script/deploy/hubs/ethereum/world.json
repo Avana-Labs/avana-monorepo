@@ -1,0 +1,13 @@
+{
+  "_comment": "Ethereum test world additions (local only): the Uniswap v4 pool the Uniswap v4 Correlated BTC Spoke lists. Step 02 finds or creates its Uniswap v3 reference pool (same pair, fee 500).",
+  "uniswapV4Pools": [
+    {
+      "name": "cbBTC-WBTC-v4-100",
+      "a": "cbBTC",
+      "b": "WBTC",
+      "fee": 100,
+      "tickSpacing": 1,
+      "usd": 2000000
+    }
+  ]
+}
