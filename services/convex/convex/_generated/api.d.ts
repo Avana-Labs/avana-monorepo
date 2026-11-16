@@ -79,6 +79,7 @@ import type * as lib_clientQuests from "../lib/clientQuests.js";
 import type * as lib_explorer from "../lib/explorer.js";
 import type * as lib_exportClient from "../lib/exportClient.js";
 import type * as lib_exportPage from "../lib/exportPage.js";
+import type * as lib_feePoints from "../lib/feePoints.js";
 import type * as lib_fees from "../lib/fees.js";
 import type * as lib_format from "../lib/format.js";
 import type * as lib_hubViews from "../lib/hubViews.js";
@@ -198,6 +199,7 @@ declare const fullApi: ApiFromModules<{
   "lib/explorer": typeof lib_explorer;
   "lib/exportClient": typeof lib_exportClient;
   "lib/exportPage": typeof lib_exportPage;
+  "lib/feePoints": typeof lib_feePoints;
   "lib/fees": typeof lib_fees;
   "lib/format": typeof lib_format;
   "lib/hubViews": typeof lib_hubViews;
