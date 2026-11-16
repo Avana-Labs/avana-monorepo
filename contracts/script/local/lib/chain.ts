@@ -336,6 +336,20 @@ async function fundTreasuries(c: LocalChain): Promise<string> {
   return `${n} tokens to the faucet ${a.faucet} and the activity treasury ${a.activity}`;
 }
 
+/**
+ * The OP Stack GasPriceOracle predeploy, which the keeper reads for Base's L1 data fee. A fork has the real one; a fresh
+ * local Base gets a stand-in that answers every call with 0 (no L1 data fee on a local node).
+ */
+export async function placeL1FeeOracle(c: LocalChain): Promise<string> {
+  if (c.network !== "base") return "not Base";
+  const address = "0x420000000000000000000000000000000000000F";
+  const code = await rpc<string>(rpcUrl(c), "eth_getCode", [address, "latest"]);
+  if (code !== "0x") return "already has code";
+  // PUSH1 0 PUSH1 0 MSTORE PUSH1 32 PUSH1 0 RETURN: 32 zero bytes for any call.
+  await rpc(rpcUrl(c), "anvil_setCode", [address, "0x600060005260206000f3"]);
+  return "stand-in placed";
+}
+
 /** Funds the stack's signers with gas on the chain. */
 export async function fundSigners(c: LocalChain): Promise<void> {
   for (const a of Object.values(addresses())) await rpc(rpcUrl(c), "anvil_setBalance", [a, "0x21E19E0C9BAB2400000"]);

@@ -18,7 +18,8 @@ export interface LocalChain {
   /** The deploy scripts' network name (AVANA_NETWORK), as on the real network: its outputs go to
    * deployments-local/<network>. The chain ID makes the run local (31337, 31338), not the name. */
   readonly network: string;
-  /** The services' chain key for this chain ID (services/common/src/chains.ts, network set `local`). */
+  /** The services' chain key (services/common/src/chains.ts, network set `production`): the services read this node as
+   * that chain through RPC_<envSuffix> and CHAIN_ID_<envSuffix>. */
   readonly key: string;
   readonly chainId: number;
   readonly label: string;
@@ -36,10 +37,10 @@ const int = (name: string, d: number) => (process.env[name] ? Number(process.env
 export const CHAINS: readonly LocalChain[] = [
   {
     network: "ethereum",
-    key: "anvil",
+    key: "mainnet",
     chainId: 31337,
     label: "Ethereum",
-    envSuffix: "ANVIL",
+    envSuffix: "MAINNET",
     port: int("STACK_PORT_ETHEREUM", 8545),
     recorderPort: int("STACK_RECORDER_PORT_ETHEREUM", 8549),
     blockTime: 12,
@@ -47,10 +48,10 @@ export const CHAINS: readonly LocalChain[] = [
   },
   {
     network: "base",
-    key: "anvilBase",
+    key: "base",
     chainId: 31338,
     label: "Base",
-    envSuffix: "ANVIL_BASE",
+    envSuffix: "BASE",
     port: int("STACK_PORT_BASE", 8546),
     recorderPort: int("STACK_RECORDER_PORT_BASE", 8550),
     blockTime: 2,
@@ -65,6 +66,8 @@ export const chainOf = (network: string): LocalChain => {
 };
 
 export const rpcUrl = (c: LocalChain) => `http://127.0.0.1:${c.port}`;
+/** What every service reads to know which node stands in for which chain. */
+export const chainIdEnv = (): Record<string, string> => Object.fromEntries(CHAINS.map((c) => [`CHAIN_ID_${c.envSuffix}`, String(c.chainId)]));
 /** A second spelling of the same node: the monitor and the keeper refuse a fallback equal to the primary. */
 export const fallbackUrl = (c: LocalChain) => `http://localhost:${c.port}`;
 export const recorderUrl = (c: LocalChain) => `http://127.0.0.1:${c.recorderPort}`;

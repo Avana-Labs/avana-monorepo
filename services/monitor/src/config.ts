@@ -73,7 +73,7 @@ export function deploymentOf(m: ServiceManifest): ChainDeployment {
 
 export function loadConfig(env: NodeJS.ProcessEnv, load: (path: string) => ServiceManifest = (p) => loadManifest(p, ABI_HASH)): MonitorConfig {
   const set = (optionalEnv(env, "MONITOR_NETWORK_SET") ?? "testnet") as NetworkSet;
-  if (!["production", "testnet", "local"].includes(set)) throw new Error("MONITOR_NETWORK_SET must be production, testnet or local");
+  if (!["production", "testnet"].includes(set)) throw new Error("MONITOR_NETWORK_SET must be production or testnet");
 
   const manifests = new Map(listEnv(env, "AVANA_MANIFEST").map((p) => {
     const m = load(p);

@@ -21,7 +21,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CHAINS, CONTRACTS, type LocalChain, PORTS, STACK, chainOf, manifestPath, outDir, rpcUrl } from "./lib/env.ts";
-import { FIRST_RELEASE, answers, blockNumber, currentConfig, fundSigners, miningMode, readStatus, runRelease, setMining, startNode, stopNode, writeBaseConfig } from "./lib/chain.ts";
+import { FIRST_RELEASE, answers, blockNumber, currentConfig, fundSigners, miningMode, placeL1FeeOracle, readStatus, runRelease, setMining, startNode, stopNode, writeBaseConfig } from "./lib/chain.ts";
 import { ensureKeys } from "./lib/keys.ts";
 import { names, record, running, start, stop } from "./lib/procs.ts";
 import {
@@ -58,6 +58,7 @@ async function upChain(c: LocalChain): Promise<void> {
   const node = await startNode(c);
   say(`${c.label} (${c.chainId}): node ${node} on ${rpcUrl(c)}`);
   await fundSigners(c);
+  await placeL1FeeOracle(c);
   const status = readStatus(c);
   const config = status.config ? currentConfig(c) : writeBaseConfig(c);
   const deployed = status.steps["first:manifest"]?.outcome === "pass";

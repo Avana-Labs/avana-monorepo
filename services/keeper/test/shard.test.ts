@@ -10,14 +10,13 @@ import { mayAct, standbyBlocks } from "../src/shard.ts";
 const PROXY = "0x21C57963a01605D8E4262fB4896B828da4dEF75a";
 
 describe("mayAct for the standby", () => {
-  it("waits 5 blocks on anvil and Ethereum, 30 on Base", () => {
-    expect(standbyBlocks(CHAINS.anvil)).toBe(5);
+  it("waits 5 blocks on Ethereum, 30 on Base", () => {
     expect(standbyBlocks(CHAINS.mainnet)).toBe(5);
     expect(standbyBlocks(CHAINS.base)).toBe(30);
   });
 
   it("acts on the drill's account at 7388, not at 7387, when it was first below HF 1 at 7383", () => {
-    expect(mayAct(CHAINS.anvil, "standby", null, PROXY, 7383n, 7387n)).toBe(false);
-    expect(mayAct(CHAINS.anvil, "standby", null, PROXY, 7383n, 7388n)).toBe(true);
+    expect(mayAct(CHAINS.mainnet, "standby", null, PROXY, 7383n, 7387n)).toBe(false);
+    expect(mayAct(CHAINS.mainnet, "standby", null, PROXY, 7383n, 7388n)).toBe(true);
   });
 });
