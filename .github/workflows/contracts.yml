@@ -772,6 +772,38 @@ jobs:
           rm z3.zip
           echo "LD_LIBRARY_PATH=${RUNNER_TEMP}/z3lib" >> "$GITHUB_ENV"
 
+      - name: Probe that CHC runs and reports (a contract with one overflow and one assert target, both safe)
+        # A target with no verification condition (no arithmetic, assert, division or array access) has no CHC result
+        # whether or not the solver ran; this probe, built the same way, must report its targets as proved safe, so an
+        # empty result on the target below means it has nothing to check.
+        working-directory: ${{ runner.temp }}
+        env:
+          FOUNDRY_PROFILE: default
+        run: |
+          set -euo pipefail
+          mkdir -p smt-probe/src
+          cd smt-probe
+          cat > foundry.toml <<'TOML'
+          [profile.default]
+          solc_version = "0.8.28"
+          auto_detect_solc = false
+          optimizer = false
+
+          [profile.default.model_checker]
+          engine = "chc"
+          timeout = 100_000
+          targets = ["assert", "overflow"]
+          solvers = ["z3"]
+          show_proved_safe = true
+          contracts = { "src/Probe.sol" = ["Probe"] }
+          TOML
+          printf '%s\n' '// SPDX-License-Identifier: BUSL-1.1' 'pragma solidity 0.8.28;' \
+            'contract Probe {' '    uint256 public x;' \
+            '    function set(uint8 a) external { x = uint256(a) + 1; assert(x > a); }' '}' > src/Probe.sol
+          forge build src/Probe.sol --build-info
+          python3 "$GITHUB_WORKSPACE/contracts/script/smt-report.py" --require-results out src/Probe.sol \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Model-check ${{ matrix.contract }}
         env:
           CONTRACT: ${{ matrix.contract }}

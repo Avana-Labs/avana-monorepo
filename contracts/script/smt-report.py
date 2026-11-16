@@ -8,10 +8,13 @@ which only the solc output in the build-info files keeps. Reads every <build>/bu
 whose input holds <source>, and prints one line per model-checker message about that source (severity, error code,
 line, message), then the counts. Exit status:
   1  no solc job compiled <source>, more than one did (the source would be analysed twice), the model checker reported
-     that no solver ran (7649 CHC, 8158 BMC), it reported no result for <source> at all, or found a counterexample
-  0  otherwise; unproved targets ("might happen here") are listed and counted, not failed
+     that no solver ran (7649 CHC, 8158 BMC) or found a counterexample; with --require-results also when it reported
+     no CHC result (the CI job's probe, a contract with known targets, so an empty result there means nothing ran)
+  0  otherwise; unproved targets ("might happen here") are listed and counted, not failed. A contract with no
+     verification condition (no arithmetic, assert, division or array access the targets cover) has no CHC result;
+     that is reported, not failed, since the probe in the same job showed that the solver runs and reports.
 
-Usage, from contracts/:  script/smt-report.py <build dir> <source> [<summary file>]
+Usage, from contracts/:  script/smt-report.py [--require-results] <build dir> <source> [<summary file>]
 """
 import glob
 import json
@@ -26,6 +29,9 @@ def line_of(text, offset):
 
 
 def main(argv):
+    require = bool(argv) and argv[0] == "--require-results"
+    if require:
+        argv = argv[1:]
     if len(argv) not in (2, 3):
         print(__doc__, file=sys.stderr)
         return 2
@@ -53,7 +59,7 @@ def main(argv):
     cex = [r for r in rows if "happens here" in r[3] and "might happen" not in r[3]]
     unproved = [r for r in rows if "might happen here" in r[3]]
     safe = [r for r in rows if "is safe" in r[3] or "proved safe" in r[3]]
-    chc = [r for r in rows if "CHC" in r[3]]
+    chc = [r for r in rows if "CHC" in r[3] and r[1] not in NO_SOLVER]
     out = [f"{sev} {code} {source}:{line}: {msg}" for sev, code, line, msg in rows]
     counts = (
         f"{source}: solc jobs {jobs}; CHC results {len(chc)}; proved safe {len(safe)}; unproved {len(unproved)}; "
@@ -71,8 +77,14 @@ def main(argv):
         errors.append(f"{jobs} solc jobs compiled {source} (expected 1)")
     if no_solver:
         errors.append("solc found no solver (warning 7649 or 8158): nothing was checked")
-    if not chc:
+    if not chc and require:
         errors.append(f"no CHC result for {source}: the model checker did not run on it")
+    elif not chc:
+        note = f"{source}: no verification condition (the model checker ran and reported no target)"
+        print(note)
+        if summary:
+            with open(summary, "a", encoding="utf8") as fh:
+                fh.write(note + "\n\n")
     if cex:
         errors.append(f"{len(cex)} counterexample(s)")
     for e in errors:
