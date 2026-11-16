@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The stack's checks, run against the running stack (nothing is redeployed or restarted that need not be):
-//   check   re-check only, in minutes: each chain's manifest against the chain, the indexer at both heads, and Convex
-//           against the chain (contracts/script/e2e/replay-check.ts, Convex mode) at the last closed daily sample.
+//   check   re-check only, in minutes: each chain's manifest against the chain, the indexer at both heads, Convex
+//           against the chain (contracts/script/e2e/replay-check.ts, Convex mode) at the last closed daily sample, and
+//           the liquidation fee split (feeSplit.ts).
 //   replay  the indexer replay (services/REPLAY.md) on the stack: two sampler blocks a day apart close a daily bucket on
 //           each chain, the live indexer stops at the head, a second indexer indexes every block again into a fresh
 //           schema from Ponder's sync store and the rpc-recorders, its tables must equal the live pass's
@@ -139,8 +140,18 @@ export async function check(chains: readonly LocalChain[], say: Say): Promise<bo
     say(`${live.errors.length ? "FAIL" : "PASS"} indexer log: ${live.errors.length} error or warning lines, ${live.tolerated} node timeouts or notices`);
     ok = live.errors.length === 0 && ok;
     for (const c of chains) ok = convexCheck(c, Number(readFileSync(sampleFile(c), "utf8")), say) && ok;
+    for (const c of chains) ok = (await feeSplit(c, say)) && ok;
     return ok;
   });
+}
+
+/** The liquidation fee split (feeSplit.ts): fail on any settlement that pays other than the spec says. */
+async function feeSplit(c: LocalChain, say: Say): Promise<boolean> {
+  const { checkFeeSplit } = await import("./feeSplit.ts");
+  const r = await checkFeeSplit(c);
+  for (const f of r.failures.slice(0, 10)) say(`  ${f}`);
+  say(`${r.ok ? "PASS" : "FAIL"} ${c.network} fee split: ${r.settlements} liquidations${r.settlements === 0 ? " (none yet: the activity loop's scripted liquidation makes one)" : ""}, ${r.failures.length} failures`);
+  return r.ok;
 }
 
 export async function replay(chains: readonly LocalChain[], say: Say): Promise<boolean> {

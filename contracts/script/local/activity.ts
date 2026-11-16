@@ -7,6 +7,7 @@
 //   borrow    a borrower mints a liquidity position of a market, pledges it and borrows 30-60 % of its borrow power
 //   repay     a borrower repays 20-100 % of its debt
 //   swap      a trader swaps on a market's Uniswap v3 pool and back (volume and fees, the price returns)
+//   liquidation  ten minutes after start and every six hours, a scripted liquidation (see `liquidation`)
 //   price     a volatile token's price moves (at most 0.4 % a step, 4 % from its listed price): its feeds publish it
 //             and the listed Uniswap v3 pools holding it follow
 // Every 20 minutes every feed publishes a fresh round (a Chainlink heartbeat), so the oracles stay live.
@@ -208,6 +209,42 @@ async function price(): Promise<string> {
   return `${sym} ${base} -> ${next} (${step >= 0n ? "+" : ""}${Number(step) / 100}%); pools ${moved.join(", ") || "none"}`;
 }
 
+/**
+ * A scripted liquidation (Uniswap v3 WETH markets): a borrower pledges a position and borrows 97 % of its borrow
+ * power, WETH falls 15 % on its feeds and on the market pools holding it, the keeper liquidates the account (the stack's
+ * `check` then verifies the fee split from the LiquidationSettled report), and WETH returns to its price. Runs ten
+ * minutes after start and every six hours.
+ */
+async function liquidation(): Promise<string> {
+  const weth = e.markets.filter(isUniswap).filter((m) => e.sym(m.token0) === "WETH" || e.sym(m.token1) === "WETH");
+  if (weth.length === 0) return "no Uniswap v3 WETH market";
+  const m = weth[0]!;
+  const owner = nextUser();
+  await e.gasFor(owner);
+  const p = await e.mintPosition(m, owner, 20_000n);
+  const a = await e.pledge(m, owner, p);
+  const amount = ((await e.maxBorrow(m, owner, a)) * 97n) / 100n;
+  await e.ensureLiquidity(m, amount);
+  await e.borrow(m, owner, a, amount, 1_000_000_000_000_000_001n);
+  const before = e.prices.WETH!;
+  const moveWeth = async (to: bigint) => {
+    e.prices.WETH = to;
+    await e.refresh({ WETH: to }, ["WETH"]);
+    for (const x of weth) await e.moveUniswapPool(x.pool, sqrtPriceX96(e.prices[e.sym(x.token0)]!, e.prices[e.sym(x.token1)]!, e.dec(x.token0), e.dec(x.token1)));
+  };
+  await moveWeth((before * 85n) / 100n);
+  const { lpVaultSwapAbi } = await import("@avana/protocol/abis");
+  const from = await ctx.client.getBlockNumber();
+  let settled = false;
+  for (let i = 0; i < 60 && !settled; i++) {
+    await new Promise((r) => setTimeout(r, 5_000));
+    const logs = await ctx.client.getContractEvents({ address: e.lpVaultSwap, abi: lpVaultSwapAbi as any, eventName: "LiquidationSettled", fromBlock: from });
+    settled = (logs as any[]).some((l) => l.args.proxy.toLowerCase() === a.proxy.toLowerCase());
+  }
+  await moveWeth(before);
+  return `${settled ? "liquidated" : "NOT liquidated within 5 min"}: ${owner} on ${m.name}, borrowed ${amount}, WETH -15 % and back`;
+}
+
 function isqrt(n: bigint): bigint {
   if (n < 2n) return n;
   let x = n;
@@ -237,6 +274,8 @@ const choose = () => {
 };
 
 const TICK_MS = (chain.blockTime >= 12 ? 30 : 10) * 1000;
+const LIQUIDATION_EVERY_MS = 6 * 60 * 60 * 1000;
+let nextLiquidation = Date.now() + 10 * 60 * 1000;
 const HEARTBEAT_MS = 20 * 60 * 1000;
 let lastHeartbeat = 0;
 const once = process.argv.includes("--once");
@@ -256,7 +295,9 @@ for (;;) {
       log({ action: "heartbeat", error: (err as Error).message.slice(0, 300) });
     }
   }
-  const [name, , fn] = once ? ACTIONS[0]! : choose();
+  const scripted = !once && Date.now() >= nextLiquidation;
+  if (scripted) nextLiquidation = Date.now() + LIQUIDATION_EVERY_MS;
+  const [name, , fn] = scripted ? (["liquidation", 0, liquidation] as const) : once ? ACTIONS[0]! : choose();
   const t0 = Date.now();
   try {
     const detail = await fn();
