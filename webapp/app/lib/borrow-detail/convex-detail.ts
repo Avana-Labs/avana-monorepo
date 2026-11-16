@@ -15,7 +15,7 @@ import type { PreloadedQuickStatRow } from "@/app/lib/detail-page/apply-preloade
 import { canonicalPriceMap } from "@/app/lib/prices/canonical"
 import { priceKey } from "@/app/lib/prices/format"
 import { formatOraclePrice, formatPairRate } from "@/app/lib/borrow-detail/formatters"
-import { allocationVenueLabel, formatBpsAsPct } from "@/app/lib/borrow-detail/allocation"
+import { allocationVenueLabel } from "@/app/lib/borrow-detail/allocation"
 import { formatRiskPremium } from "@/app/lib/borrow-market-rows"
 import { selectBorrowMarketSummaries } from "@/app/lib/borrow-system/selectors"
 import { buildAssetDetail, buildPoolDetail, spokeBorrowableFromRecord } from "@/app/lib/borrow-detail/detail-base"
