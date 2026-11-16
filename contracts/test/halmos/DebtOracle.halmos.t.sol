@@ -14,7 +14,6 @@ import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
 import {DebtRegistryMock, DebtStoreMock} from "../utils/mocks/DebtOracleConfigMocks.sol";
 import {MockAggregator} from "../utils/mocks/MockAggregator.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title DebtOracleHalmosTest
@@ -41,6 +40,10 @@ contract DebtOracleHalmosTest is Test {
     uint256 internal constant PRI_DRIFT_ABOVE = 97_137_500;
     /// @dev `DebtOracle._answer` caps the served price at `2^255 − 1` before the `int256` conversion.
     uint256 internal constant INT256_MAX = 2 ** 255 - 1;
+    /// @dev Basis points, and the feed agreement and second-source tolerances of `setUp`.
+    uint256 internal constant BPS = 10_000;
+    uint256 internal constant ROUTE_TOLERANCE_BPS = 225;
+    uint256 internal constant SECOND_SOURCE_TOLERANCE_BPS = 100;
 
     DebtOracle internal oracle;
     DebtRegistryMock internal reg;
@@ -250,11 +253,12 @@ contract DebtOracleHalmosTest is Test {
     // `DriftBelow` (b <= 97,789,731, the largest b with (A − b) × 10⁴ > 225 × b), `AgreeBelow` (b < A), `AgreeAbove`
     // (up to 102,239,775 = A × 10,225 / 10⁴) and `DriftAbove`. The invalid answers (b = 0 or b >= 1e12) are
     // `check_PROP_074_driftingTimestampFollowsAlternateInvalid`, which checks the revert case too, so the five checks
-    // cover every uint40. In each range the ordering of p, b and A is fixed, so each check states the outcome of the
-    // code's branchless `Math.min` and `Math.max` terms as facts the range implies (`_driftRevertOnlyForGas`): they
-    // exclude no input. Without them, the drift-below and agreement ranges did not complete within 1 hour with yices
-    // (run 43777240448), bitwuzla (run 43806465033) or other solver settings (run 43813498242); `DriftAbove` completed
-    // in 10 minutes with bitwuzla.
+    // cover every uint40. In each range the ordering of p, b and A is fixed, so each check states the results of the
+    // code's branchless `Math.min` and `Math.max` terms and of the divisions in its overflow checks as facts the range
+    // implies (`_driftRevertOnlyForGas`): they exclude no input. Without them, the drift-below and agreement ranges did
+    // not complete within 1 hour with yices (run 43777240448), bitwuzla (run 43806465033) or other solver settings
+    // (run 43813498242), nor with the min and max facts alone (run 43821179272); `DriftAbove` completed in 10 minutes
+    // with bitwuzla.
     /// @custom:halmos --solver bitwuzla
     function check_PROP_074_driftingTimestampsRevertOnlyForGasAlternateDriftBelow(
         uint32 bAnswer
@@ -347,28 +351,99 @@ contract DebtOracleHalmosTest is Test {
         _driftRevertOnlyForGas(pAnswer, B_FIXED, B_FIXED, true);
     }
 
-    /// @dev With the drift checks' routes and timestamps, `getPriceState()` reverts only with `InsufficientGas`. The
-    /// caller's range fixes the ordering of p, b and A, and this states what the code's branchless `Math.min` and
-    /// `Math.max` terms (`b ^ ((a ^ b) × [condition])`) then evaluate to, on the same terms: the lower route
-    /// `min(p, b) = low` (`DebtOracleEvaluation._serve`, `_servedRoute`); while Drifting (`drifting`, the routes
-    /// disagree) the served `max(max(low, low), A) = A`, as A exceeds the lower route in every drift range; and the
-    /// served price, below 2^40, unchanged by the `min` with `2^255 − 1` in `DebtOracle._answer` (the quote p when
-    /// the routes agree). Each fact holds for every input of the caller's range, so the assumptions exclude no input.
+    /// @dev With the drift checks' routes and timestamps, `getPriceState()` reverts only with `InsufficientGas`, with
+    /// the results of the code's arithmetic stated as facts on the terms it computes, in the form Halmos builds them.
+    /// Halmos models `mul` of two symbolic values, and `div` by anything but a constant 0, 1 or power of two, as
+    /// uninterpreted functions; a non-gas revert guarded by such a term is then satisfiable in the abstract query, and
+    /// the refined query with 256-bit `bvmul`/`bvudiv` is what ran past the budget (dumped queries of run 43828867901).
+    /// The facts:
+    /// - `min(p, b) = low` and, while Drifting, `max(max(low, low), A) = A`, as OpenZeppelin's branchless
+    ///   `b ^ ([condition] × (a ^ b))`; the caller's range fixes the ordering of p, b and A (A exceeds the lower route
+    ///   in every drift range). The served price (A, or the quote p when the routes agree), below 2^40, is unchanged by
+    ///   the `min` with `2^255 − 1` in `DebtOracle._answer`.
+    /// - `x / x = 1` for each route answer x > 0: the overflow check of `a * 10 ** 0` in `LPPriceMath.normalizeAnswer`
+    ///   (`checked_mul(x, y)` tests `div(x × y, x) = y`).
+    /// - For the routes (tolerance 225 bps) and for the quote against the second source at A (100 bps), with `lo`,
+    ///   `hi` the lower and higher value and `d = hi − lo`: `(10⁴ × d) / d = 10⁴` (d > 0) and `(tol × lo) / tol = lo`,
+    ///   the overflow checks of `(hi − lo) * BPS` and `toleranceBps * lo` in `LPPriceMath._withinTolerance` and
+    ///   `deviationBps`.
+    /// Every value is below 2^40, so no product wraps and each fact holds for every input of the caller's range: the
+    /// assumptions exclude no input.
     function _driftRevertOnlyForGas(
         uint40 pAnswer,
         uint40 bAnswer,
         uint256 low,
         bool drifting
     ) internal {
-        uint256 lowTerm = Math.min(uint256(pAnswer), uint256(bAnswer));
+        uint256 p = pAnswer;
+        uint256 b = bAnswer;
+        uint256 lowTerm = _min(p, b);
         vm.assume(lowTerm == low);
-        uint256 served = pAnswer;
+        uint256 served = p;
         if (drifting) {
-            served = Math.max(Math.max(lowTerm, lowTerm), A);
+            served = _max(_max(lowTerm, lowTerm), A);
             vm.assume(served == A);
         }
-        vm.assume(Math.min(served, INT256_MAX) == served);
+        vm.assume(_min(served, INT256_MAX) == served);
+        vm.assume(_div(p, p) == 1);
+        vm.assume(_div(b, b) == 1);
+        _toleranceFacts(p, b, ROUTE_TOLERANCE_BPS);
+        _toleranceFacts(p, A, SECOND_SOURCE_TOLERANCE_BPS);
         _driftRevertOnlyForGasNoFacts(pAnswer, bAnswer);
+    }
+
+    /// @dev The overflow-check facts of `LPPriceMath._withinTolerance(x, y, tol)` and `deviationBps(x, y)`, see
+    /// `_driftRevertOnlyForGas`.
+    function _toleranceFacts(
+        uint256 x,
+        uint256 y,
+        uint256 tol
+    ) internal pure {
+        (uint256 lo, uint256 hi) = x < y ? (x, y) : (y, x);
+        uint256 d = hi - lo;
+        vm.assume(d == 0 || _div(_mul(d, BPS), d) == BPS);
+        vm.assume(_div(_mul(tol, lo), tol) == lo);
+    }
+
+    /// @dev OpenZeppelin's `Math.min`, `b ^ ([a < b] × (a ^ b))`, with the operands of `mul` in the order of the
+    /// DebtOracle build.
+    function _min(
+        uint256 a,
+        uint256 b
+    ) internal pure returns (uint256 r) {
+        assembly ("memory-safe") {
+            r := xor(b, mul(lt(a, b), xor(a, b)))
+        }
+    }
+
+    /// @dev OpenZeppelin's `Math.max`, `b ^ ([a > b] × (a ^ b))`, as `_min`.
+    function _max(
+        uint256 a,
+        uint256 b
+    ) internal pure returns (uint256 r) {
+        assembly ("memory-safe") {
+            r := xor(b, mul(gt(a, b), xor(a, b)))
+        }
+    }
+
+    /// @dev EVM `mul`, unchecked.
+    function _mul(
+        uint256 a,
+        uint256 b
+    ) internal pure returns (uint256 r) {
+        assembly ("memory-safe") {
+            r := mul(a, b)
+        }
+    }
+
+    /// @dev EVM `div`, unchecked.
+    function _div(
+        uint256 a,
+        uint256 b
+    ) internal pure returns (uint256 r) {
+        assembly ("memory-safe") {
+            r := div(a, b)
+        }
     }
 
     /// @dev `getPriceState()` reverts only with `InsufficientGas`, with no stated facts.
