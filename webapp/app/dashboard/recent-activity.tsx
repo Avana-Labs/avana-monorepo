@@ -10,6 +10,7 @@ import { formatCompactUsd } from "@/app/lib/borrow-market-rows"
 import { useAmountDisplayPreferences } from "@/app/components/display-preferences"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { openExternal } from "@/app/lib/safe-links"
+import { useWalletActivity } from "@/app/lib/activity/use-wallet-activity"
 import { cn } from "@/lib/utils"
 
 const MASK = "••••"
@@ -190,19 +191,20 @@ export function RecentActivity({
   const router = useRouter()
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const [limit, setLimit] = React.useState(ACTIVITY_PAGE_SIZE)
-  // A wallet's history needs a wallet activity query over the indexer's logs (not in
-  // services/convex yet), so only the rows the session passes in are shown.
-  const isLoadingConvex = false
+  // The wallet's indexed activity (services/convex, last 30 days) merged with the rows the session passes in.
+  const activity = useWalletActivity(walletId)
+  const isLoadingConvex = activity.isLoading
   const isLoadingMore = false
-  const hasMore = false
-  void walletId
+  const hasMore = activity.hasMore
 
-  const sortedRows = React.useMemo(() => mergeActivityRows(seedRows), [seedRows])
+  const sortedRows = React.useMemo(() => mergeActivityRows([...activity.rows, ...seedRows]), [activity.rows, seedRows])
 
   const loadMore = React.useCallback(() => {
     if ((!hasMore && sortedRows.length <= limit) || isLoadingMore) return
+    // Read the next page before the shown rows run out.
+    if (hasMore && sortedRows.length <= limit + ACTIVITY_PAGE_SIZE) activity.loadMore()
     setLimit((current) => Math.min(current + ACTIVITY_PAGE_SIZE, ACTIVITY_MAX))
-  }, [hasMore, isLoadingMore, limit, sortedRows.length])
+  }, [activity, hasMore, isLoadingMore, limit, sortedRows.length])
 
   const amount = (row: PortfolioActivityRow) => (showDollarAmounts ? formatRowAmount(row) : MASK)
 
