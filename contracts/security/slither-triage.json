@@ -4907,6 +4907,315 @@
       "reason": "Three MarketRegistry.lastBreachAt views, one per temporary reason (ORACLE, POOL_SHARE, POOL_DEPTH), a fixed bound; per-reason breach times of SPEC-BRK-007. Covered by TEST-228."
     },
     {
+      "fingerprint": "144cf75bda9682a4",
+      "check": "timestamp",
+      "file": "src/amm/concentrated-liquidity/ClNfpmLPVault.sol",
+      "reason": "No time comparison exists: Slither associates `deadline: block.timestamp` of the decreaseLiquidity parameters with a timestamp check. Same as the entry of ClLPVaultCustody._removePrincipal before the base split moved it to ClNfpmLPVault.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "8d6917522b7ba430",
+      "check": "unimplemented-functions",
+      "file": "src/amm/concentrated-liquidity/ClNfpmLPVault.sol",
+      "reason": "Abstract by design: ClNfpmLPVault leaves the pool layout, factory check and position read to Uniswap v3 and Slipstream; same false positive of the per-compilation-unit analysis as the ClLPVaultCustody and ClLPVaultMarkets entries.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "f17505be560bdcf6",
+      "check": "unused-return",
+      "file": "src/amm/concentrated-liquidity/ClNfpmLPVault.sol",
+      "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "d0dcc92709d0d647",
+      "check": "unused-return",
+      "file": "src/amm/slipstream/SlipstreamIntegration.sol",
+      "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "3dcb252e6348cff3",
+      "check": "unused-return",
+      "file": "src/amm/uniswap-v3/UniswapV3Integration.sol",
+      "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "95fcc0d7a8645c99",
+      "check": "dead-code",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "39e0adeaa999d696",
+      "check": "uninitialized-local",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "A local deliberately left zero: a memory struct filled field by field by the next call, or a word or fee that stays zero when the guarded read before it fails, which the caller reports as a failed read (fail closed).",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "4a71d6b1bc34b009",
+      "check": "unused-return",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "abfbee4249e7a80e",
+      "check": "unused-return",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "5fb3d99170a8937e",
+      "check": "unused-return",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "40cf8b807b9ac12b",
+      "check": "unused-return",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "c24258dc43278bd0",
+      "check": "unused-return",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "ec25daaf632c78bf",
+      "check": "calls-loop",
+      "file": "src/lens/lens/LensFees.sol",
+      "reason": "View calls in the Lens's loop over at most 16 records of one account-market (REQ-LENS-020).",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "6545848fa7c29a85",
+      "check": "unused-return",
+      "file": "src/lens/lens/LensFees.sol",
+      "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "9b8db7ed1888bed0",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleCLModule.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "94ae6a10f80a6900",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "d7d7d73295d89481",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "2d15562ad419954e",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "a4dbbd84176929d5",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "19bdd56d7011a60f",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "e86ffdf007805e57",
+      "check": "assembly",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Either the ERC-7201 namespace of avana.storage.LPOracleV4 (one assignment of the compile-time slot), or one mstore that shortens the PositionManager parameter array to the actions pushed; both memory-safe.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "d43572f0dfdc010d",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "7f8d317ae1bcd17a",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "6022c8ed76f77440",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "e5dbe3a2b6b3a34f",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "8f12631d49828f2d",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "3928c5afc0e7460e",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "227ae8cd353f3494",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "7022afdd4acf4cd8",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "688bca9eb34bd69b",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "c6f14bee43ba3148",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "59c2123a506d7b9b",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "00145723c2bff201",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "3dde25f2550a4c34",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "44aa59b9fbe5c741",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "2c33909d2cdb4e8e",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "63fb4c09a0387006",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "061a92fdf4aee611",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "66654da6d3418f48",
+      "check": "uninitialized-local",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "A local deliberately left zero: a memory struct filled field by field by the next call, or a word or fee that stays zero when the guarded read before it fails, which the caller reports as a failed read (fail closed).",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "a37bf1172fa8e117",
+      "check": "uninitialized-local",
+      "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
+      "reason": "A local deliberately left zero: a memory struct filled field by field by the next call, or a word or fee that stays zero when the guarded read before it fails, which the caller reports as a failed read (fail closed).",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "21c5dc70d11ccc47",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4ModuleLogic.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "81aed8c9406810b1",
+      "check": "dead-code",
+      "file": "src/oracle/lp-oracle/LPOracleV4ModuleLogic.sol",
+      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "26f274a534d89536",
+      "check": "assembly",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "One memory-safe mstore in _payload sets the length of the batch's own parameter array, allocated at capacity 10 or 5, to the number of actions pushed, so modifyLiquidities gets one parameter per action. It only shortens the array and never grows it. Measured 2026-11-15: copying into an exact-size array gave 23,644 bytes and sizing each batch from the PoolKey gave 23,607, both inside the 1,024-byte EIP-170 margin; with the mstore the LPVault is 23,509 bytes. Covered by the UniswapV4Integration unit tests of unwind, release, collectFees, the native ETH leg and the V4-01 fallback, and by the v4 removal and whole-account seizure gas tests.",
+      "approval": "approved (Josue, 2026-11-15)"
+    },
+    {
+      "fingerprint": "dcb9d086dfed964b",
+      "check": "calls-loop",
+      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
+      "function": "FlashLiquidatorBase._clearStanding(FlashLiquidatorBase.Watch)",
+      "reason": "Bounded loop over the helper's watch list: the market's tokens (at most MAX_POOL_TOKENS = 8) and the intermediates() of each token's two registry-listed routes, each once (_watch). It runs only when some watched token has a standing PayoutEscrow credit; the claim recipient (feeRecipient on the public helper, FUNDING_SAFE on the operator variant) is then read once, before the loop. For each token with a standing credit it makes one PayoutEscrow.claim to that recipient, in try/catch, so a failed claim leaves the credit standing for claimEscrowed and never stops the liquidation (REQ-HELPER-010, audit finding L-04). It runs after the call context opens, so a token callback during a claim meets ContextActive. Covered by TEST-174: standingCreditClearedBeforeTheCall, unclearableStandingCreditNeverGoesToTheCaller (the accepted remainder) and standingClaimRunsInsideTheContext.",
+      "approval": "approved (Josue, 2026-11-15)"
+    },
+    {
       "fingerprint": "50d44d492e01f527",
       "check": "incorrect-equality",
       "file": "src/periphery/gas-vault/AvanaGasVault.sol",

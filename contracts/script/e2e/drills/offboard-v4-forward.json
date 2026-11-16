@@ -1,0 +1,14 @@
+{
+  "name": "offboard-v4-forward",
+  "description": "setMarketOffboarding of univ4-USDC-USDT-100 (timelock, short delay)",
+  "via": "timelock",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "setMarketOffboarding",
+      "args": {
+        "marketId": "market:univ4-USDC-USDT-100"
+      }
+    }
+  ]
+}

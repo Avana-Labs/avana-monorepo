@@ -78,8 +78,10 @@ abstract contract AvanaPeripheryDeploy is AvanaCoreDeploy {
     }
 
     /// @notice One LPVault (step 6): `UniswapV3Integration` with one position manager, factory and the chain's block
-    /// interval (12 s on Ethereum and Sepolia, 2 s on Base, Base Sepolia and OP Mainnet; `REQ-AMM-V3-012`), or
-    /// `SlipstreamIntegration` with the four generations of 2.21.
+    /// interval (12 s on Ethereum and Sepolia, 2 s on Base, Base Sepolia and OP Mainnet; `REQ-AMM-V3-012`),
+    /// `SlipstreamIntegration` with the four generations of 2.21, or `UniswapV4Integration` with the PositionManager, the
+    /// Uniswap v3 factory of its reference pools and the block interval (it reads the PoolManager and WETH9 from the
+    /// PositionManager).
     function _deployLpVault(
         IntegrationInput memory it,
         Predicted memory p,
@@ -93,6 +95,20 @@ abstract contract AvanaPeripheryDeploy is AvanaCoreDeploy {
                 name,
                 bytes.concat(
                     _artifact("UniswapV3Integration.sol", "UniswapV3Integration"),
+                    base,
+                    abi.encode(it.positionManagers[0], it.factories[0], uint256(blockTime))
+                )
+            );
+        }
+        if (_eq(it.kind, "uniswap-v4")) {
+            require(
+                it.positionManagers.length == 1 && it.factories.length == 1,
+                "uniswap-v4: one PositionManager and factory"
+            );
+            return _deploy3(
+                name,
+                bytes.concat(
+                    _artifact("UniswapV4Integration.sol", "UniswapV4Integration"),
                     base,
                     abi.encode(it.positionManagers[0], it.factories[0], uint256(blockTime))
                 )

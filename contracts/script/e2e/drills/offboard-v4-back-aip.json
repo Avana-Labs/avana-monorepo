@@ -1,0 +1,16 @@
+{
+  "name": "offboard-v4-back-aip",
+  "description": "AIP: the reserve unfrozen (the market stays Closed: offboarding is permanent)",
+  "via": "aip",
+  "restores": "offboard-v4-forward-aip",
+  "changes": [
+    {
+      "aave": "reserveConfig",
+      "spoke": "spoke:uniV4Stable",
+      "reserve": "collateral:univ4-USDC-USDT-100",
+      "set": {
+        "frozen": "$prior"
+      }
+    }
+  ]
+}

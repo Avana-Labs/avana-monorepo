@@ -17,7 +17,8 @@ export const RESOLUTION_SECONDS: Readonly<Record<Resolution, number>> = { hour: 
  * - `hubAssetSpoke`: one Spoke's slice of a Hub asset, `chainId:hub:assetId:spoke`.
  * - `market`: one collateral market, `chainId:marketId`.
  * - `marketReserve`: debt one market backs in one CDP debt reserve, `chainId:marketId:spoke:reserveId`.
- * - `pool`: one AMM pool's swaps and liquidity, `chainId:pool`.
+ * - `pool`: one AMM pool's swaps and liquidity, `chainId:pool`, or `chainId:poolId` for a pool keyed by identifier
+ *   (a Uniswap v4 PoolId).
  * - `position`: one account (PositionProxy), `chainId:spoke:proxy`.
  * - `creditLine`: one Hub-to-Hub credit line, `chainId:fundingHub:assetId:spoke`; its draw is the `hubAssetSpoke`
  *   series of the same Hub asset and Spoke.

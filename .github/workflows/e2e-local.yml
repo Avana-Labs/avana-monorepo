@@ -9,7 +9,7 @@ name: e2e-local
 # contracts/script/e2e/e2e-local.sh records each step as pass, fail or not-run; a not-run step (a missing tool or
 # build) is reported as a warning annotation and in the job summary,
 # never as a pass, and fails the job only when E2E_REQUIRE_ALL is true (the manual input). A failed step fails the job.
-# Runs nightly, on release tags and by hand.
+# Runs nightly, on release tags and by hand; a manual run may name the steps and drills to run.
 
 on:
   schedule:
@@ -23,7 +23,11 @@ on:
         type: boolean
         default: false
       steps:
-        description: "Steps to run (E2E_STEPS); empty runs every step"
+        description: "Steps to run (E2E_STEPS, space-separated); empty runs every step"
+        type: string
+        default: ""
+      drills:
+        description: "Drills to run (E2E_DRILLS, space-separated); empty runs every drill"
         type: string
         default: ""
 
@@ -79,6 +83,8 @@ jobs:
           FOUNDRY_PROFILE=univ3-periphery forge build
           FOUNDRY_PROFILE=slipstream-v1 forge build
           FOUNDRY_PROFILE=slipstream-main forge build
+          FOUNDRY_PROFILE=univ4 forge build
+          FOUNDRY_PROFILE=permit2 forge build
           FOUNDRY_PROFILE=aerodrome forge build
           FOUNDRY_PROFILE=aave-v3 forge build
           FOUNDRY_PROFILE=chainlink-ocr2 forge build
@@ -88,6 +94,7 @@ jobs:
         id: e2e
         env:
           E2E_STEPS: ${{ inputs.steps || 'deploy day2 exotic hostile manifest compose services drills scenarios' }}
+          E2E_DRILLS: ${{ inputs.drills }}
         run: script/e2e/e2e-local.sh
 
       - name: Summary

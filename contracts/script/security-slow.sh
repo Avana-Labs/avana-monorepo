@@ -703,7 +703,7 @@ MUTATE_OPTIMIZED_TIMEOUT=${MUTATE_OPTIMIZED_TIMEOUT:-1800}
 MUTATE_FUZZ_RUNS=${MUTATE_FUZZ_RUNS:-256}
 NECESSIST_TIMEOUT=${NECESSIST_TIMEOUT:-300}
 # The prebuilt dependency outputs the test fixtures deploy from (vm.getCode / deployCode of out-<name>/...).
-DEP_OUTS="out-aave out-univ3 out-univ3-periphery out-slipstream-v1 out-slipstream-main out-aerodrome"
+DEP_OUTS="out-aave out-univ3 out-univ3-periphery out-slipstream-v1 out-slipstream-main out-aerodrome out-univ4 out-permit2"
 
 # solc_bin: the solc of foundry.toml's solc_version, from Foundry's svm cache (macOS or Linux) or tools/bin.
 solc_bin() {

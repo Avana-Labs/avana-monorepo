@@ -42,6 +42,18 @@
         "userReservesLimit": 8
       },
       {
+        "label": "uniV4Stable",
+        "userReservesLimit": 8
+      },
+      {
+        "label": "uniV4Correlated",
+        "userReservesLimit": 8
+      },
+      {
+        "label": "uniV4Volatile",
+        "userReservesLimit": 8
+      },
+      {
         "label": "lendStable",
         "userReservesLimit": 65535
       },
@@ -94,6 +106,9 @@
       "slipStable": "$aave:.spokes.slipStable.proxy",
       "slipCorrelated": "$aave:.spokes.slipCorrelated.proxy",
       "slipVolatile": "$aave:.spokes.slipVolatile.proxy",
+      "uniV4Stable": "$aave:.spokes.uniV4Stable.proxy",
+      "uniV4Correlated": "$aave:.spokes.uniV4Correlated.proxy",
+      "uniV4Volatile": "$aave:.spokes.uniV4Volatile.proxy",
       "lendStable": "$aave:.spokes.lendStable.proxy",
       "lendCorrelated": "$aave:.spokes.lendCorrelated.proxy",
       "lendVolatile": "$aave:.spokes.lendVolatile.proxy"
@@ -160,6 +175,16 @@
         "$world:.slipstreamFactories[2]",
         "$world:.slipstreamFactories[3]"
       ]
+    },
+    {
+      "integrationId": 3,
+      "kind": "uniswap-v4",
+      "positionManagers": [
+        "$world:.uniswapV4PositionManager"
+      ],
+      "factories": [
+        "$world:.uniswapV3Factory"
+      ]
     }
   ],
   "world": {
@@ -169,7 +194,8 @@
       {
         "symbol": "USDC",
         "decimals": 6,
-        "price8": 100000000
+        "price8": 100000000,
+        "kind": "blocklist"
       },
       {
         "symbol": "USDT",
@@ -199,7 +225,8 @@
       {
         "symbol": "WETH",
         "decimals": 18,
-        "price8": 300000000000
+        "price8": 300000000000,
+        "weth9": true
       },
       {
         "symbol": "wstETH",
@@ -765,6 +792,32 @@
         "generation": 2,
         "usd": 800000
       }
+    ],
+    "uniswapV4Pools": [
+      {
+        "name": "USDC-USDT-v4-100",
+        "a": "USDC",
+        "b": "USDT",
+        "fee": 100,
+        "tickSpacing": 1,
+        "usd": 4000000
+      },
+      {
+        "name": "ETH-USDC-v4-500",
+        "a": "ETH",
+        "b": "USDC",
+        "fee": 500,
+        "tickSpacing": 10,
+        "usd": 2000000
+      },
+      {
+        "name": "wstETH-ETH-v4-100",
+        "a": "wstETH",
+        "b": "ETH",
+        "fee": 100,
+        "tickSpacing": 1,
+        "usd": 1000000
+      }
     ]
   },
   "aavePayload": {
@@ -776,7 +829,8 @@
         "lendSpoke": "lendStable",
         "cdpSpokes": [
           "uniV3Stable",
-          "slipStable"
+          "slipStable",
+          "uniV4Stable"
         ]
       },
       {
@@ -784,7 +838,8 @@
         "lendSpoke": "lendCorrelated",
         "cdpSpokes": [
           "uniV3Correlated",
-          "slipCorrelated"
+          "slipCorrelated",
+          "uniV4Correlated"
         ]
       },
       {
@@ -792,7 +847,8 @@
         "lendSpoke": "lendVolatile",
         "cdpSpokes": [
           "uniV3Volatile",
-          "slipVolatile"
+          "slipVolatile",
+          "uniV4Volatile"
         ]
       }
     ],
@@ -987,6 +1043,27 @@
         "integrationId": 2,
         "tier": 3,
         "spoke": "$aave:.spokes.slipVolatile.proxy"
+      },
+      {
+        "label": "uniV4Stable",
+        "hub": "stable",
+        "integrationId": 3,
+        "tier": 1,
+        "spoke": "$aave:.spokes.uniV4Stable.proxy"
+      },
+      {
+        "label": "uniV4Correlated",
+        "hub": "correlated",
+        "integrationId": 3,
+        "tier": 2,
+        "spoke": "$aave:.spokes.uniV4Correlated.proxy"
+      },
+      {
+        "label": "uniV4Volatile",
+        "hub": "volatile",
+        "integrationId": 3,
+        "tier": 3,
+        "spoke": "$aave:.spokes.uniV4Volatile.proxy"
       }
     ],
     "debtReserves": [
@@ -1112,6 +1189,69 @@
             {
               "question": "Which positions can back it?",
               "answer": "The Slipstream markets listed on this Spoke. Each market sets its own collateral factor."
+            }
+          ]
+        }
+      },
+      {
+        "spoke": "uniV4Stable",
+        "symbol": "GHO",
+        "content": {
+          "slug": "gho-uniswap-v4-stable",
+          "name": "GHO on Uniswap v4 (stable Hub)",
+          "symbol": "GHO",
+          "category": "stable",
+          "description": "Borrow GHO from Aave V4's stable Hub against Uniswap v4 liquidity positions.",
+          "faqs": [
+            {
+              "question": "Where does the GHO come from?",
+              "answer": "From the stable Hub of Aave V4, through the Uniswap v4 CDP Spoke. Lenders supply it on the Hub's Lend Spoke."
+            },
+            {
+              "question": "Which positions can back it?",
+              "answer": "The Uniswap v4 markets listed on this Spoke. Each market sets its own collateral factor."
+            }
+          ]
+        }
+      },
+      {
+        "spoke": "uniV4Correlated",
+        "symbol": "GHO",
+        "content": {
+          "slug": "gho-uniswap-v4-correlated",
+          "name": "GHO on Uniswap v4 (correlated Hub)",
+          "symbol": "GHO",
+          "category": "stable",
+          "description": "Borrow GHO from Aave V4's correlated Hub against Uniswap v4 liquidity positions.",
+          "faqs": [
+            {
+              "question": "Where does the GHO come from?",
+              "answer": "From the correlated Hub of Aave V4, through the Uniswap v4 CDP Spoke. Lenders supply it on the Hub's Lend Spoke."
+            },
+            {
+              "question": "Which positions can back it?",
+              "answer": "The Uniswap v4 markets listed on this Spoke. Each market sets its own collateral factor."
+            }
+          ]
+        }
+      },
+      {
+        "spoke": "uniV4Volatile",
+        "symbol": "GHO",
+        "content": {
+          "slug": "gho-uniswap-v4-volatile",
+          "name": "GHO on Uniswap v4 (volatile Hub)",
+          "symbol": "GHO",
+          "category": "stable",
+          "description": "Borrow GHO from Aave V4's volatile Hub against Uniswap v4 liquidity positions.",
+          "faqs": [
+            {
+              "question": "Where does the GHO come from?",
+              "answer": "From the volatile Hub of Aave V4, through the Uniswap v4 CDP Spoke. Lenders supply it on the Hub's Lend Spoke."
+            },
+            {
+              "question": "Which positions can back it?",
+              "answer": "The Uniswap v4 markets listed on this Spoke. Each market sets its own collateral factor."
             }
           ]
         }
@@ -1513,6 +1653,211 @@
             }
           ]
         }
+      },
+      {
+        "name": "univ4-USDC-USDT-100",
+        "integrationId": 3,
+        "spoke": "uniV4Stable",
+        "pool": "USDC-USDT-v4-100",
+        "generation": 0,
+        "tickLower": -50,
+        "tickUpper": 50,
+        "collateralFactorBps": 3500,
+        "maxLiquidationBonus": 10500,
+        "collateralRisk": 0,
+        "consistencyToleranceBps": 50,
+        "poolRiskFactorBps": 4000,
+        "slippageAllowanceBps": 195,
+        "slippageAllowanceMinBps": 30,
+        "minPledgeUsd": "10",
+        "marketUsdCap": "5000000",
+        "topUpSliceUsd": "500000",
+        "stressFloorUsd": "1",
+        "routes": [
+          {
+            "token": "USDC",
+            "asset": "GHO",
+            "depthThreshold": 5000000,
+            "primary": [
+              "GHO-USDC-100"
+            ],
+            "backup": [
+              "USDC-USDT-500",
+              "GHO-USDT-100"
+            ]
+          },
+          {
+            "token": "USDT",
+            "asset": "GHO",
+            "depthThreshold": 5000000,
+            "primary": [
+              "GHO-USDT-100"
+            ],
+            "backup": [
+              "USDC-USDT-500",
+              "GHO-USDC-100"
+            ]
+          }
+        ],
+        "content": {
+          "slug": "uniswap-v4-usdc-usdt-0-01",
+          "name": "USDC/USDT Uniswap v4",
+          "category": "stable",
+          "venueLabel": "Uniswap v4",
+          "description": "Borrow GHO against a USDC/USDT liquidity position in the Uniswap v4 pool with 0.01% fee tier.",
+          "longText": "A position in this pool is pledged as collateral through Avana's Uniswap v4 integration. The position is held in Avana's LP vault and represented on Aave V4 by the market's vault token, which the Uniswap v4 CDP Spoke of the stable Hub accepts as collateral. The position is valued from the Chainlink prices of both tokens, and the price of the Uniswap v3 pool of the same pair must agree with them within 0.5%.",
+          "faqs": [
+            {
+              "question": "What do I pledge?",
+              "answer": "A Uniswap v4 liquidity position in the USDC/USDT pool with 0.01% fee tier. The market's vault token stands for it on Aave V4."
+            },
+            {
+              "question": "What can I borrow?",
+              "answer": "GHO from the stable Hub, up to 35% of the position's value."
+            },
+            {
+              "question": "How is the position valued?",
+              "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The price of the Uniswap v3 pool of the same pair must agree with the Chainlink prices within 0.5%."
+            }
+          ]
+        }
+      },
+      {
+        "name": "univ4-ETH-USDC-500",
+        "integrationId": 3,
+        "spoke": "uniV4Volatile",
+        "pool": "ETH-USDC-v4-500",
+        "generation": 0,
+        "tickLower": 0,
+        "tickUpper": 0,
+        "collateralFactorBps": 3000,
+        "maxLiquidationBonus": 10800,
+        "collateralRisk": 0,
+        "consistencyToleranceBps": 100,
+        "poolRiskFactorBps": 4000,
+        "slippageAllowanceBps": 300,
+        "slippageAllowanceMinBps": 50,
+        "minPledgeUsd": "10",
+        "marketUsdCap": "5000000",
+        "topUpSliceUsd": "500000",
+        "stressFloorUsd": "1",
+        "routes": [
+          {
+            "token": "WETH",
+            "asset": "GHO",
+            "depthThreshold": 5000000,
+            "primary": [
+              "GHO-WETH-3000"
+            ],
+            "backup": [
+              "WETH-USDT-500",
+              "GHO-USDT-100"
+            ]
+          },
+          {
+            "token": "USDC",
+            "asset": "GHO",
+            "depthThreshold": 5000000,
+            "primary": [
+              "GHO-USDC-100"
+            ],
+            "backup": [
+              "USDC-USDT-500",
+              "GHO-USDT-100"
+            ]
+          }
+        ],
+        "content": {
+          "slug": "uniswap-v4-eth-usdc-0-05",
+          "name": "ETH/USDC Uniswap v4",
+          "category": "crypto",
+          "venueLabel": "Uniswap v4",
+          "description": "Borrow GHO against a ETH/USDC liquidity position in the Uniswap v4 pool with 0.05% fee tier.",
+          "longText": "A position in this pool is pledged as collateral through Avana's Uniswap v4 integration. The position is held in Avana's LP vault and represented on Aave V4 by the market's vault token, which the Uniswap v4 CDP Spoke of the volatile Hub accepts as collateral. The position is valued from the Chainlink prices of both tokens, and the price of the Uniswap v3 pool of the same pair must agree with them within 1%.",
+          "faqs": [
+            {
+              "question": "What do I pledge?",
+              "answer": "A Uniswap v4 liquidity position in the ETH/USDC pool with 0.05% fee tier. The market's vault token stands for it on Aave V4."
+            },
+            {
+              "question": "What can I borrow?",
+              "answer": "GHO from the volatile Hub, up to 30% of the position's value."
+            },
+            {
+              "question": "How is the position valued?",
+              "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The price of the Uniswap v3 pool of the same pair must agree with the Chainlink prices within 1%."
+            }
+          ]
+        }
+      },
+      {
+        "name": "univ4-wstETH-ETH-100",
+        "integrationId": 3,
+        "spoke": "uniV4Correlated",
+        "pool": "wstETH-ETH-v4-100",
+        "generation": 0,
+        "tickLower": 0,
+        "tickUpper": 0,
+        "collateralFactorBps": 3400,
+        "maxLiquidationBonus": 10600,
+        "collateralRisk": 0,
+        "consistencyToleranceBps": 50,
+        "poolRiskFactorBps": 4000,
+        "slippageAllowanceBps": 230,
+        "slippageAllowanceMinBps": 40,
+        "minPledgeUsd": "10",
+        "marketUsdCap": "5000000",
+        "topUpSliceUsd": "500000",
+        "stressFloorUsd": "1",
+        "routes": [
+          {
+            "token": "wstETH",
+            "asset": "GHO",
+            "depthThreshold": 5000000,
+            "primary": [
+              "wstETH-USDC-500",
+              "GHO-USDC-100"
+            ],
+            "backup": [
+              "wstETH-USDT-500",
+              "GHO-USDT-100"
+            ]
+          },
+          {
+            "token": "WETH",
+            "asset": "GHO",
+            "depthThreshold": 5000000,
+            "primary": [
+              "GHO-WETH-3000"
+            ],
+            "backup": [
+              "WETH-USDT-500",
+              "GHO-USDT-100"
+            ]
+          }
+        ],
+        "content": {
+          "slug": "uniswap-v4-wsteth-eth-0-01",
+          "name": "wstETH/ETH Uniswap v4",
+          "category": "crypto",
+          "venueLabel": "Uniswap v4",
+          "description": "Borrow GHO against a wstETH/ETH liquidity position in the Uniswap v4 pool with 0.01% fee tier.",
+          "longText": "A position in this pool is pledged as collateral through Avana's Uniswap v4 integration. The position is held in Avana's LP vault and represented on Aave V4 by the market's vault token, which the Uniswap v4 CDP Spoke of the correlated Hub accepts as collateral. The position is valued from the Chainlink prices of both tokens, and the price of the Uniswap v3 pool of the same pair must agree with them within 0.5%.",
+          "faqs": [
+            {
+              "question": "What do I pledge?",
+              "answer": "A Uniswap v4 liquidity position in the wstETH/ETH pool with 0.01% fee tier. The market's vault token stands for it on Aave V4."
+            },
+            {
+              "question": "What can I borrow?",
+              "answer": "GHO from the correlated Hub, up to 34% of the position's value."
+            },
+            {
+              "question": "How is the position valued?",
+              "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The price of the Uniswap v3 pool of the same pair must agree with the Chainlink prices within 0.5%."
+            }
+          ]
+        }
       }
     ],
     "pools": {
@@ -1529,6 +1874,29 @@
       "wstETH-USDT-500": "$world:.uniswapPools['wstETH-USDT-500']",
       "wstETH-WETH-100": "$world:.uniswapPools['wstETH-WETH-100']",
       "wstETH-WETH-cl1-g0": "$world:.slipstreamPools['wstETH-WETH-cl1-g0']"
+    },
+    "uniswapV4Pools": {
+      "USDC-USDT-v4-100": {
+        "currency0": "$world:.uniswapV4Pools['USDC-USDT-v4-100'].currency0",
+        "currency1": "$world:.uniswapV4Pools['USDC-USDT-v4-100'].currency1",
+        "fee": 100,
+        "tickSpacing": 1,
+        "referencePool": "$world:.uniswapV4Pools['USDC-USDT-v4-100'].referencePool"
+      },
+      "ETH-USDC-v4-500": {
+        "currency0": "$world:.uniswapV4Pools['ETH-USDC-v4-500'].currency0",
+        "currency1": "$world:.uniswapV4Pools['ETH-USDC-v4-500'].currency1",
+        "fee": 500,
+        "tickSpacing": 10,
+        "referencePool": "$world:.uniswapV4Pools['ETH-USDC-v4-500'].referencePool"
+      },
+      "wstETH-ETH-v4-100": {
+        "currency0": "$world:.uniswapV4Pools['wstETH-ETH-v4-100'].currency0",
+        "currency1": "$world:.uniswapV4Pools['wstETH-ETH-v4-100'].currency1",
+        "fee": 100,
+        "tickSpacing": 1,
+        "referencePool": "$world:.uniswapV4Pools['wstETH-ETH-v4-100'].referencePool"
+      }
     },
     "uniswapV3Factory": "$world:.uniswapV3Factory"
   },

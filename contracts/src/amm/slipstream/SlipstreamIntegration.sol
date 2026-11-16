@@ -8,8 +8,7 @@ import {ICLPool} from "../../interfaces/external/aerodrome/ICLPool.sol";
 import {INonfungiblePositionManager} from "../../interfaces/external/aerodrome/INonfungiblePositionManager.sol";
 import {IAmmIntegration} from "../IAmmIntegration.sol";
 import {ClLPVaultBase} from "../concentrated-liquidity/ClLPVaultBase.sol";
-import {ClLPVaultCustody} from "../concentrated-liquidity/ClLPVaultCustody.sol";
-import {ClLPVaultMarkets} from "../concentrated-liquidity/ClLPVaultMarkets.sol";
+import {ClNfpmLPVault} from "../concentrated-liquidity/ClNfpmLPVault.sol";
 import {IClPositionManager} from "../concentrated-liquidity/IClPositionManager.sol";
 import {ClMarketConfig} from "../types/ClMarketConfig.sol";
 import {ISlipstreamIntegration} from "./ISlipstreamIntegration.sol";
@@ -25,7 +24,7 @@ import {ISlipstreamIntegration} from "./ISlipstreamIntegration.sol";
 /// `SPEC-AMM-SLIP-001` and the gauge check of `REQ-AMM-SLIP-009`. The LPVault never calls a gauge mutator, the voter,
 /// `approve`, `setApprovalForAll`, `mint` or `increaseLiquidity`.
 /// @custom:spec REQ-AMM-SLIP-001, REQ-AMM-SLIP-002, REQ-AMM-SLIP-003, REQ-AMM-SLIP-004, REQ-AMM-SLIP-005, REQ-AMM-SLIP-006, REQ-AMM-SLIP-007, REQ-AMM-SLIP-008, REQ-AMM-SLIP-009, REQ-AMM-SLIP-010, REQ-AMM-SLIP-011, REQ-AMM-SLIP-012, REQ-AMM-SLIP-013, REQ-VAULT-155, REQ-AMM-CORE-002, Q-291, Q-301, Q-371
-contract SlipstreamIntegration is ClLPVaultCustody, ClLPVaultMarkets, ISlipstreamIntegration {
+contract SlipstreamIntegration is ClNfpmLPVault, ISlipstreamIntegration {
     /// @dev `AMM_PROTOCOL()`: `keccak256("AERODROME_SLIPSTREAM")`.
     bytes32 internal constant AERODROME_SLIPSTREAM = keccak256("AERODROME_SLIPSTREAM");
     /// @dev `generationCount()`: Initial, Gauge Caps, Gauges V3, Aero on Base.
@@ -188,7 +187,7 @@ contract SlipstreamIntegration is ClLPVaultCustody, ClLPVaultMarkets, ISlipstrea
     /// `getPool(token0, token1, tickSpacing)` on the key's generation factory, from the position's own fields, never a
     /// caller-supplied pool (`REQ-AMM-SLIP-002`, `REQ-AMM-SLIP-003`, `REQ-VAULT-008`).
     /// @custom:spec REQ-AMM-SLIP-002, REQ-AMM-SLIP-003, REQ-VAULT-008, REQ-VAULT-162
-    function _readPosition(
+    function _readPoolPosition(
         bytes32 positionKey
     ) internal view override returns (address pool, int24 tickLower, int24 tickUpper, uint128 liquidity) {
         (address npm, address factory) = _generation(uint256(positionKey) >> GENERATION_SHIFT);

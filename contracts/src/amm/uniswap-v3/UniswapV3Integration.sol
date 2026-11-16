@@ -8,8 +8,7 @@ import {IUniswapV3Factory} from "../../interfaces/external/uniswap/IUniswapV3Fac
 import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.sol";
 import {IAmmIntegration} from "../IAmmIntegration.sol";
 import {ClLPVaultBase} from "../concentrated-liquidity/ClLPVaultBase.sol";
-import {ClLPVaultCustody} from "../concentrated-liquidity/ClLPVaultCustody.sol";
-import {ClLPVaultMarkets} from "../concentrated-liquidity/ClLPVaultMarkets.sol";
+import {ClNfpmLPVault} from "../concentrated-liquidity/ClNfpmLPVault.sol";
 import {ClMarketConfig} from "../types/ClMarketConfig.sol";
 import {IUniswapV3Integration} from "./IUniswapV3Integration.sol";
 
@@ -22,7 +21,7 @@ import {IUniswapV3Integration} from "./IUniswapV3Integration.sol";
 /// the 12-field `positions` and 7-field `slot0` layouts, the pool derivation `FACTORY.getPool(token0, token1, fee)`,
 /// and the listing check of a pool against the factory, its CREATE2 address and the standard fee tiers.
 /// @custom:spec REQ-AMM-V3-001, REQ-AMM-V3-002, REQ-AMM-V3-003, REQ-AMM-V3-004, REQ-AMM-V3-005, REQ-AMM-V3-006, REQ-AMM-V3-007, REQ-AMM-V3-012, REQ-VAULT-155, REQ-VAULT-174, REQ-AMM-CORE-002, Q-226, Q-291, Q-305, Q-371
-contract UniswapV3Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV3Integration {
+contract UniswapV3Integration is ClNfpmLPVault, IUniswapV3Integration {
     /// @notice `keccak256("UNISWAP_V3")`.
     bytes32 public constant UNISWAP_V3 = keccak256("UNISWAP_V3");
     /// @notice Init code hash of the canonical Uniswap v3 pool, from which `FACTORY` derives every pool address.
@@ -126,7 +125,7 @@ contract UniswapV3Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV3I
     /// @dev The 12-field `positions` layout; the pool is `FACTORY.getPool(token0, token1, fee)` of the position's own
     /// fields, never a caller-supplied pool (`REQ-VAULT-008`).
     /// @custom:spec REQ-VAULT-008, REQ-VAULT-162, REQ-AMM-V3-003
-    function _readPosition(
+    function _readPoolPosition(
         bytes32 positionKey
     ) internal view override returns (address pool, int24 tickLower, int24 tickUpper, uint128 liquidity) {
         address token0;

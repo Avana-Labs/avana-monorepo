@@ -7,6 +7,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { contractTable, parseManifest, releaseManifestSchema, validate } from "../src/manifest/index.ts";
+import { integrationArtifacts } from "../src/manifest/produce.ts";
+import { profileOf } from "../src/manifest/verify.ts";
 import { A, H, sampleManifest } from "./fixtures/manifest.ts";
 
 describe("release manifest schema", () => {
@@ -47,6 +49,26 @@ describe("release manifest schema", () => {
     expect(() => parseManifest(JSON.stringify({ schemaVersion: 2 }))).toThrow(/schemaVersion/);
   });
 
+  it("accepts a Uniswap v4 integration with its PoolManager, and the PoolManager is optional", () => {
+    const m = structuredClone(sampleManifest()) as Record<string, any>;
+    m.avana.lpVaults.push({ ...m.avana.lock, integrationId: 3, kind: "uniswap-v4" });
+    m.uniswapV4 = { poolManager: { address: A(70), codeHash: H(70), startBlock: 5, artifact: null } };
+    m.external.push({ name: "PoolManager", group: "uniswap-v4", address: A(70), codeHash: H(70), implementation: null, standIn: false });
+    expect(validate(m)).toEqual([]);
+    delete m.uniswapV4;
+    expect(validate(m)).toEqual([]);
+  });
+
+  it("refuses an unknown integration kind and a malformed Uniswap v4 PoolManager", () => {
+    const m = structuredClone(sampleManifest()) as Record<string, any>;
+    m.avana.lpVaults[0].kind = "curve";
+    m.uniswapV4 = { poolManager: { address: A(70) } };
+    const paths = validate(m).map((e) => e.path);
+    expect(paths).toContain("$.avana.lpVaults[0].kind");
+    expect(paths).toContain("$.uniswapV4.poolManager.codeHash");
+    expect(paths).toContain("$.uniswapV4.poolManager.startBlock");
+  });
+
   it("the committed schema file is the schema object", () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), "../../..");
     const committed = JSON.parse(readFileSync(join(root, "deployments/release-manifest.schema.json"), "utf8"));
@@ -63,5 +85,37 @@ describe("contract table", () => {
     expect(md).toContain("AaveAdapter · AaveAdapterUserLogic");
     expect(md).toContain("USDC (test-network stand-in)");
     expect(md).toContain(H(25));
+  });
+
+  it("labels the Uniswap v4 group", () => {
+    const m = structuredClone(sampleManifest()) as Record<string, any>;
+    m.external.push({ name: "PoolManager", group: "uniswap-v4", address: A(70), codeHash: H(70), implementation: null, standIn: false });
+    expect(contractTable(m as ReturnType<typeof sampleManifest>)).toContain("## Uniswap v4");
+  });
+});
+
+describe("integration artifacts", () => {
+  it("names the LPVault, LPOracle implementation and module logic of each kind", () => {
+    expect(integrationArtifacts("uniswap-v3")).toEqual({
+      lpVault: "UniswapV3Integration.sol:UniswapV3Integration",
+      lpOracle: "LPOracleCL.sol:LPOracleCL",
+      moduleLogic: "LPOracleCLModuleLogic.sol:LPOracleCLModuleLogic",
+    });
+    expect(integrationArtifacts("slipstream").lpVault).toBe("SlipstreamIntegration.sol:SlipstreamIntegration");
+    expect(integrationArtifacts("uniswap-v4")).toEqual({
+      lpVault: "UniswapV4Integration.sol:UniswapV4Integration",
+      lpOracle: "LPOracleV4.sol:LPOracleV4",
+      moduleLogic: "LPOracleV4ModuleLogic.sol:LPOracleV4ModuleLogic",
+    });
+    expect(() => integrationArtifacts("curve")).toThrow(/unknown integration kind/);
+  });
+
+  it("maps each deployable file to its compiler profile as DeployBase._profileOf does", () => {
+    expect(profileOf("UniswapV3Integration.sol")).toBe("clvault");
+    expect(profileOf("SlipstreamIntegration.sol")).toBe("clvault");
+    expect(profileOf("UniswapV4Integration.sol")).toBe("collateralization");
+    expect(profileOf("LPOracleV4.sol")).toBe("lporacle");
+    expect(profileOf("LPOracleV4ModuleLogic.sol")).toBe("lporacle");
+    expect(profileOf("Lock.sol")).toBe("");
   });
 });

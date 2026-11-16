@@ -36,6 +36,8 @@ fs_permissions = [
   { access = "read", path = "./out-univ3-periphery" },
   { access = "read", path = "./out-aave-v3" },
   { access = "read", path = "./out-aerodrome" },
+  { access = "read", path = "./out-univ4" },
+  { access = "read", path = "./out-permit2" },
   { access = "read", path = "./out-chainlink-ocr2" },
   { access = "read", path = "./out-chainlink-proxy" },
   { access = "read", path = "./out-slipstream-v1" },
@@ -60,7 +62,9 @@ gas_reports = ["*"]
 # The concentrated-liquidity LPVaults carry the shared custody, binding and pricing base plus their AMM protocol's hooks;
 # at 10,000 runs the Slipstream LPVault is within about 140 bytes of EIP-170, and with the unit exponent of SPEC-ORC-005
 # (narrow 18/18-decimal ranges) it was 531 bytes over its 1,024-byte margin at 1,000 runs. At 200 runs both keep the
-# margin. Both deployable files take the same setting so their margins stay alike; everything compiled with them (the
+# margin. Both deployable files take the same setting so their margins stay alike; the Uniswap v4 LPVault, which adds
+# the PoolKey binding and the removal batch, takes 200 runs through via-IR (26,137 bytes in the legacy pipeline,
+# 23,112 through via-IR); everything compiled with them (the
 # shared base, the Uniswap v3 test harness, their test suites) builds with it too, and every other contract keeps the
 # default. certora/conf/LPVault.conf,
 # LPVaultSlipstream.conf, UniswapV3Integration.conf and SlipstreamIntegration.conf compile with the same runs.
@@ -86,6 +90,8 @@ compilation_restrictions = [
   { paths = "src/oracle/lp-oracle/LPOracleCLInitLogic.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/oracle/lp-oracle/LPOracleCLViewLogic.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/oracle/lp-oracle/LPOracleCLModuleLogic.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/oracle/lp-oracle/LPOracleV4.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/oracle/lp-oracle/LPOracleV4ModuleLogic.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "test/invariant/echidna/LPOracleProperties.sol", via_ir = false, optimizer_runs = 200 },
   # These Echidna harnesses deploy the real ParameterStore tighten and loosen logic, or the real LPVaultSwap
   # implementation, in their constructor; at 10,000 runs their initcode passed EIP-3860's 49,152 bytes. Optimizer
@@ -104,6 +110,7 @@ compilation_restrictions = [
   { paths = "test/invariant/handlers/IntegrationHandler.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/amm/uniswap-v4/UniswapV4Integration.sol", via_ir = true, optimizer_runs = 200 },
   { paths = "src/liquidation/lp-vault-swap/LPVaultSwap*Logic.sol", via_ir = true, optimizer_runs = 200 },
   { paths = "src/lens/lens/Lens*Module.sol", via_ir = true, optimizer_runs = 200 },
 ]
@@ -282,6 +289,49 @@ bytecode_hash = "none"
 cbor_metadata = true
 no_match_path = ""
 
+[profile.univ4]
+# Uniswap v4 core v4.0.0 (e50237c) and periphery 1.0.1 (ea2bf2e) for local and test-network deployments
+# (deployments/README.md): PoolManager, PositionManager and StateView with Uniswap's settings (Solidity 0.8.26, cancun,
+# via-IR, 44,444,444 runs, the PositionManager at 30,000, no metadata hash) into out-univ4/. Solmate, Permit2's
+# interfaces and OpenZeppelin's IERC20 come through remappings scoped to the periphery folder. Tests and scripts deploy
+# from the artifacts with deployCode/vm.getCode; nothing in src/ imports them.
+src = "external/univ4"
+test = "external/univ4"
+script = "external/univ4"
+out = "out-univ4"
+cache_path = "cache-univ4"
+solc_version = "0.8.26"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 44_444_444
+via_ir = true
+bytecode_hash = "none"
+cbor_metadata = true
+no_match_path = ""
+additional_compiler_profiles = [{ name = "posm", optimizer = true, via_ir = true, optimizer_runs = 30_000 }]
+compilation_restrictions = [
+  { paths = "dependencies/uniswap-v4-periphery-ea2bf2e/src/PositionManager.sol", optimizer_runs = 30_000 },
+]
+
+[profile.permit2]
+# Permit2 (cc56ad0, the commit Uniswap v4 periphery 1.0.1 pins) with its own settings (Solidity 0.8.17, via-IR,
+# 1,000,000 runs, no metadata hash) into out-permit2/, for local and test-network deployments of the v4 PositionManager.
+src = "external/permit2"
+test = "external/permit2"
+script = "external/permit2"
+out = "out-permit2"
+cache_path = "cache-permit2"
+solc_version = "0.8.17"
+evm_version = "london"
+optimizer = true
+optimizer_runs = 1_000_000
+via_ir = true
+bytecode_hash = "none"
+cbor_metadata = true
+no_match_path = ""
+additional_compiler_profiles = []
+compilation_restrictions = []
+
 [profile.aave-v3]
 # Aave V3 origin v3.7.0 (cff15de) for the test-network world's flash-loan lender (deployments/README.md), with its own
 # settings (Solidity 0.8.27, shanghai, 200 runs, no metadata hash) into out-aave-v3/. Its imports reach solidity-utils
@@ -405,7 +455,7 @@ fail_on_revert = false
 # import graph; solc loads the Z3 library (libz3.so.4.12 for solc 0.8.28 on Linux) and the job fails when no solver ran.
 # The model checker reads the source, not the generated code, so the build keeps only the compilation restrictions a
 # file needs to compile at all with the optimizer off, as in the coverage profile: the DebtOracle files need via-IR
-# (stack too deep in the legacy pipeline), the two AMM integrations the optimizer (stack too deep in ABI decoding).
+# (stack too deep in the legacy pipeline), the three AMM integrations the optimizer (stack too deep in ABI decoding).
 # Every other file builds once, in the legacy pipeline, so no source is analysed twice.
 optimizer = false
 via_ir = false
@@ -419,6 +469,7 @@ compilation_restrictions = [
   { paths = "src/oracle/debt-oracle/DebtOracle*.sol", via_ir = true },
   { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/amm/uniswap-v4/UniswapV4Integration.sol", via_ir = false, optimizer_runs = 200 },
 ]
 
 [profile.smt.model_checker]
@@ -454,7 +505,7 @@ contracts = { "src/amm/uniswap-v3/UniswapV3Integration.sol" = ["UniswapV3Integra
 # The default profile's compilation_restrictions would otherwise apply here too, and in a via-IR or optimized build
 # forge records a ternary as 0/0, the body of a single-statement `if` as 0 and a revert merged with an identical one as
 # 0, however often tests run them. Only files that do not compile without them keep a restriction: the DebtOracle files
-# need via-IR ("stack too deep" in the legacy pipeline), built here without the optimizer; the two AMM integrations need
+# need via-IR ("stack too deep" in the legacy pipeline), built here without the optimizer; the three AMM integrations need
 # the optimizer ("stack too deep" in ABI decoding without it), built here with the legacy pipeline.
 optimizer = false
 via_ir = false
@@ -471,6 +522,7 @@ compilation_restrictions = [
   { paths = "src/oracle/debt-oracle/DebtOracle*.sol", via_ir = true },
   { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/amm/uniswap-v4/UniswapV4Integration.sol", via_ir = false, optimizer_runs = 200 },
 ]
 
 [profile.coverage.fuzz]
@@ -480,7 +532,7 @@ runs = 64
 # Every mutation-gate job (script/slither-mutant-shard.py, script/security-gambit.sh, Necessist): each mutant is one
 # recompile of the mutated file's dependents plus its tests, so compile time is almost all of a mutant's cost. Built
 # like the coverage profile: no optimizer and no via-IR, except where a file does not compile without them (the
-# DebtOracle files need via-IR, the two AMM integrations the optimizer); none of the default profile's size-only
+# DebtOracle files need via-IR, the three AMM integrations the optimizer); none of the default profile's size-only
 # restrictions. The optimizer and the IR pipeline change gas and bytecode size, not what a test asserts, so a mutant a
 # test kills here is killed in the default build too. The three tests whose subject is the release build's gas fail
 # without the optimizer (TEST-042 worst-case poke at the minimum gas, TEST-060 exact lock cycle cost, TEST-216 the
@@ -502,6 +554,7 @@ compilation_restrictions = [
   { paths = "src/oracle/debt-oracle/DebtOracle*.sol", via_ir = true },
   { paths = "src/amm/slipstream/SlipstreamIntegration.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "src/amm/uniswap-v3/UniswapV3Integration.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "src/amm/uniswap-v4/UniswapV4Integration.sol", via_ir = false, optimizer_runs = 200 },
 ]
 
 [profile.gas]
@@ -614,3 +667,8 @@ libocr = { version = "199a6f1", git = "https://github.com/smartcontractkit/liboc
 # Multicall3 v3.1.0 (a1fa064), the source of the contract at 0xcA11bde05977b3631167028862bE2a173976CA11 that the services
 # batch reads through; on anvil the e2e rehearsal places Multicall3's deployed runtime there (external/multicall3/).
 multicall = { version = "3.1.0", git = "https://github.com/mds1/multicall.git", rev = "a1fa0644fa412cd3237ef7081458ecb2ffad7dbe" }
+# Uniswap v4 core v4.0.0, periphery 1.0.1, the Permit2 and Solmate commits they pin: univ4 and permit2 profiles only.
+uniswap-v4-core = { version = "e50237c", git = "https://github.com/Uniswap/v4-core.git", rev = "e50237c43811bd9b526eff40f26772152a42daba" }
+uniswap-v4-periphery = { version = "ea2bf2e", git = "https://github.com/Uniswap/v4-periphery.git", rev = "ea2bf2e1ba6863bb809fc2ff791744f308c4a26d" }
+permit2 = { version = "cc56ad0", git = "https://github.com/Uniswap/permit2.git", rev = "cc56ad0f3439c502c246fc5cfcc3db92bb8b7219" }
+solmate = { version = "4b47a19", git = "https://github.com/transmissions11/solmate.git", rev = "4b47a19038b798b4a33d9749d25e570443520647" }

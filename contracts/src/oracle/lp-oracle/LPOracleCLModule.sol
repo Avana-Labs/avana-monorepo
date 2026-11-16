@@ -210,12 +210,9 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
     function _clListingChecks(
         ClListingInputs memory x,
         uint256[] memory quotes
-    ) internal view returns (uint256 failed) {
+    ) internal view virtual returns (uint256 failed) {
         ClLayout storage c = _cl();
-        (bool okS, int24 spacing) = _tickSpacing(c.pool);
-        if (!okS || spacing != c.tickSpacing || !ClPriceMath.isUsableRange(c.tickLower, c.tickUpper, spacing)) {
-            failed |= CL_CHECK_RANGE;
-        }
+        if (_rangeFails()) failed |= CL_CHECK_RANGE;
         uint256 minObs = LPPriceMath.minObservations(x.twapWindow, _CHAIN_BLOCK_TIME);
         if (
             x.twapWindow == 0 || x.consistencyToleranceBps < TWAP_TOLERANCE_MIN_TICKS || x.twapMinObservations != minObs
@@ -232,6 +229,14 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         }
         if (!_noRateTokens()) failed |= CL_CHECK_RATE_TOKEN;
         if (!_unitExpMatches()) failed |= CL_CHECK_UNIT_EXP;
+    }
+
+    /// @dev `CL_CHECK_RANGE`: the pool's `tickSpacing()` read now differs from the stored one, or the range is not usable
+    /// at it.
+    function _rangeFails() internal view virtual returns (bool) {
+        ClLayout storage c = _cl();
+        (bool okS, int24 spacing) = _tickSpacing(c.pool);
+        return !okS || spacing != c.tickSpacing || !ClPriceMath.isUsableRange(c.tickLower, c.tickUpper, spacing);
     }
 
     /// @dev `integration.unitExponent(marketId)` equals the stored `k` (`SPEC-ORC-005`). Before the integration binds the
@@ -272,7 +277,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
     }
 
     /// @dev Whether the MarketRegistry has registered this feed (`marketOfLpOracle != 0`), or the read fails.
-    function _bound() private view returns (bool) {
+    function _bound() internal view returns (bool) {
         (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
             _s().marketRegistry,
             CONFIG_CALL_GAS,
@@ -294,7 +299,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         uint256[] memory prices,
         uint32 window,
         uint16 toleranceTicks
-    ) internal view returns (ClPriceStateView memory r) {
+    ) internal view virtual returns (ClPriceStateView memory r) {
         ClLayout storage c = _cl();
         (r.tickLower, r.tickUpper, r.twapToleranceTicks) = (c.tickLower, c.tickUpper, toleranceTicks);
         (, r.observationCardinality,) = _slot0(c.pool);

@@ -68,6 +68,8 @@ for a in out/AvanaTimelock.sol/AvanaTimelock.json out/AvanaAaveV4Payload.sol/Ava
   out-aave/AaveV4ConfigEngine.sol/AaveV4ConfigEngine.json \
   out-univ3/UniswapV3Factory.sol/UniswapV3Factory.json out-univ3-periphery/NonfungiblePositionManager.sol/NonfungiblePositionManager.json \
   out-slipstream-v1/CLFactory.sol/CLFactory.json out-aerodrome/Voter.sol/Voter.json \
+  out-univ4/PoolManager.sol/PoolManager.json out-univ4/PositionManager.sol/PositionManager.json \
+  out-univ4/StateView.sol/StateView.json out-permit2/Permit2.sol/Permit2.json \
   out-aave-v3/AaveV3PoolBatch.sol/AaveV3PoolBatch.json \
   out-chainlink-ocr2/AccessControlledOCR2Aggregator.sol/AccessControlledOCR2Aggregator.json \
   out-chainlink-proxy/EACAggregatorProxy.sol/EACAggregatorProxy.json external/multicall3/Multicall3.runtime.hex; do
@@ -555,10 +557,10 @@ fi
 # drill accounts and the manifest must still verify against the chain. E2E_DRILLS="caps hub-pause" runs only those
 # (between setup and teardown). They run after the services step, whose indexer reads the deployment's early blocks,
 # which anvil no longer serves once the drills have added a few thousand more.
-DRILL_LIST="${E2E_DRILLS:-caps aave-caps-zero market-breaker debt-breaker hub-freeze hub-pause pause-all freeze-address aave-freeze oracle-standby keeper-kill-switch deficit-coverage remove-debt-reserve offboard-close cancel-registration retire-spoke rate-aip rate-role}"
+DRILL_LIST="${E2E_DRILLS:-caps aave-caps-zero aave-caps-zero-v4 market-breaker debt-breaker debt-breaker-v4 hub-freeze hub-pause pause-all freeze-address aave-freeze aave-freeze-v4 oracle-standby keeper-kill-switch deficit-coverage deficit-coverage-v4 remove-debt-reserve offboard-close offboard-close-v4 cancel-registration retire-spoke retire-spoke-v4 rate-aip rate-role}"
 # These drills put the chain back with evm_snapshot and evm_revert. The replay step's live indexer cannot follow anvil
 # back: it is still reading blocks the revert removed, and fails on them. With the replay step they are not run.
-REWINDING_DRILLS="offboard-close cancel-registration retire-spoke"
+REWINDING_DRILLS="offboard-close offboard-close-v4 cancel-registration retire-spoke retire-spoke-v4"
 drill() { # name
   local name="drill:$1" log="$LOG/drill-$1.log" rc
   skipped "$name" && return 0

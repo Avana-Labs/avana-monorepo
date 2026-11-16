@@ -52,10 +52,13 @@ export function contractTable(m: ReleaseManifest, explorer: string | undefined =
   a.lensModules.forEach((x, i) => imm("Avana", `Lens module ${i}`, x));
   imm("Avana", "LensAaveSizing", a.lensAaveSizing);
   imm("Avana", "DebtOracle implementation", a.debtOracleImplementation);
+  // The contract name of an artifact `<File>.sol:<Contract>` (LPOracleCL or LPOracleV4 and their module logic).
+  const contractOf = (x: Immutable, fallback: string) => x.artifact?.split(":")[1] ?? fallback;
   for (const x of a.clOracles) {
-    imm("Avana", `LPOracleCL implementation, integration ${x.integrationId}`, x);
-    imm("Avana", `LPOracleCLModuleLogic, integration ${x.integrationId}`, x.moduleLogic);
-    for (const l of x.logics) rows.push({ group: "Avana", name: `LPOracleCL ${x.integrationId} · ${l.name}`, address: l.address, kind: "logic (delegatecall target)", codeHash: l.codeHash });
+    const name = contractOf(x, "LPOracleCL");
+    imm("Avana", `${name} implementation, integration ${x.integrationId}`, x);
+    imm("Avana", `${contractOf(x.moduleLogic, "LPOracleCLModuleLogic")}, integration ${x.integrationId}`, x.moduleLogic);
+    for (const l of x.logics) rows.push({ group: "Avana", name: `${name} ${x.integrationId} · ${l.name}`, address: l.address, kind: "logic (delegatecall target)", codeHash: l.codeHash });
   }
   for (const mk of m.markets) {
     imm("Avana markets", `Vault token, market ${mk.marketId}`, mk.vaultToken);
@@ -67,11 +70,14 @@ export function contractTable(m: ReleaseManifest, explorer: string | undefined =
     "aave-v4": "Aave V4",
     "aave-v3": "Aave V3",
     "uniswap-v3": "Uniswap v3",
+    "uniswap-v4": "Uniswap v4",
     slipstream: "Aerodrome Slipstream",
     token: "Tokens",
     feed: "Price feeds",
     safe: "Safes",
   };
+  const pm = m.uniswapV4?.poolManager;
+  if (pm && !m.external.some((e) => e.address.toLowerCase() === pm.address.toLowerCase())) imm("Uniswap v4", "PoolManager", pm);
   for (const e of m.external as External[]) {
     rows.push({
       group: groupName[e.group] ?? e.group,

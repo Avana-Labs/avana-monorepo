@@ -2,7 +2,7 @@
 
 ## What it proves
 
-Fork tests run Avana against the real deployed code at a pinned block: Uniswap v3 on an Ethereum fork, every Aerodrome Slipstream generation on a Base fork, the Aave V3 Pool flash source (`TEST-118`), the GSM and LitePSM peg-module routes (`TEST-119`, `TEST-120`), Chainlink feeds and the Base sequencer feed (`TEST-117`, `TEST-275`), the unwind rounding of each AMM integration against the pinned AMM code (`TEST-264`, `TEST-265`), every mock's fork counterpart (`TEST-005`), and the deployment checks against a manifest (`TEST-134`, `TEST-135`).
+Fork tests run Avana against the real deployed code at a pinned block: Uniswap v3 and Uniswap v4 (the PoolManager and PositionManager, `TEST-331`) on an Ethereum fork, every Aerodrome Slipstream generation on a Base fork, the Aave V3 Pool flash source (`TEST-118`), the GSM and LitePSM peg-module routes (`TEST-119`, `TEST-120`), Chainlink feeds and the Base sequencer feed (`TEST-117`, `TEST-275`), the unwind rounding of each AMM integration against the pinned AMM code (`TEST-264`, `TEST-265`), every mock's fork counterpart (`TEST-005`), and the deployment checks against a manifest (`TEST-134`, `TEST-135`).
 
 ## How to run
 

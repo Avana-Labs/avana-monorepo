@@ -49,6 +49,11 @@ const W = {
   volBorrower: "0x1000000000000000000000000000000000000d03",
   slipBorrower: "0x1000000000000000000000000000000000000d04",
   deficit: "0x1000000000000000000000000000000000000d06",
+  v4Borrower: "0x1000000000000000000000000000000000000d07",
+  v4StableBorrower: "0x1000000000000000000000000000000000000d08",
+  v4Pledger: "0x1000000000000000000000000000000000000d09",
+  v4Deficit: "0x1000000000000000000000000000000000000d0a",
+  v4Fresh: "0x1000000000000000000000000000000000000d0b",
   anyone: "0x1000000000000000000000000000000000000d0f",
 } as const satisfies Record<string, Address>;
 
@@ -56,6 +61,11 @@ const M1 = "uni-USDC-USDT-100";
 const M2 = "uni-WETH-USDC-500";
 const M4 = "slip-WETH-USDC-cl100";
 const M6 = "uni-USDC-USDT-500-growth";
+/** Uniswap v4: native ETH/USDC on the volatile Hub, USDC/USDT paid through Permit2 on the stable Hub. */
+const M7 = "univ4-ETH-USDC-500";
+const M8 = "univ4-USDC-USDT-100";
+/** Uniswap v4 wstETH/ETH, the only market of the correlated Hub's Uniswap v4 CDP Spoke (retired by retire-spoke-v4). */
+const M9 = "univ4-wstETH-ETH-100";
 
 class NotRun extends Error {}
 
@@ -71,7 +81,15 @@ interface State {
   borrower: Holder;
   volBorrower: Holder;
   slipBorrower: Holder;
-  pledger: { readonly market: string; readonly owner: Address; readonly position: Position };
+  v4Borrower: Holder;
+  v4StableBorrower: Holder;
+  pledger: Pledger;
+  v4Pledger: Pledger;
+}
+interface Pledger {
+  readonly market: string;
+  readonly owner: Address;
+  readonly position: Position;
 }
 
 const big = (_k: string, v: unknown) => (typeof v === "bigint" ? { $big: v.toString() } : v);
@@ -142,6 +160,10 @@ async function borrowProbe(e: Env, h: Holder, debtReserveId?: bigint, units = 10
   const nonce = (await e.read(e.adapter, aaveAdapterAbi, "borrowNonce", [h.account.proxy])) as bigint;
   return tryAs(e, h.owner, aaveAdapterAbi, "borrow", [m.marketId, id, units * 10n ** BigInt(decimals), h.owner, await e.deadline(), WAD, nonce]);
 }
+
+/** A pledge of the named pledger's position by a new account (s.pledger, Uniswap v3, unless named). */
+const pledgeBy = (e: Env, s: State, who: PledgerName = "pledger") => pledgeProbe(e, s, s[who].market, s[who].owner, s[who].position);
+type PledgerName = "pledger" | "v4Pledger";
 
 async function pledgeProbe(e: Env, s: State, market?: string, owner?: Address, position?: Position): Promise<Probe> {
   const m = e.market(market ?? s.pledger.market);
@@ -227,15 +249,19 @@ async function setup(e: Env, c: Checks) {
     borrower: await holder(e, M1, W.borrower, 20_000n, 2_000n),
     volBorrower: await holder(e, M2, W.volBorrower, 20_000n, 2_000n),
     slipBorrower: await holder(e, M4, W.slipBorrower, 20_000n, 2_000n),
+    v4Borrower: await holder(e, M7, W.v4Borrower, 20_000n, 2_000n),
+    v4StableBorrower: await holder(e, M8, W.v4StableBorrower, 20_000n, 2_000n),
     pledger: { market: M1, owner: W.pledger, position: await e.mintPosition(e.market(M1), W.pledger, 150_000n) },
+    v4Pledger: { market: M8, owner: W.v4Pledger, position: await e.mintPosition(e.market(M8), W.v4Pledger, 5_000n) },
   };
   mkdirSync(RECORDS, { recursive: true });
   writeFileSync(STATE, JSON.stringify(s, big, 2));
-  for (const [k, h] of Object.entries({ borrower: s.borrower, volBorrower: s.volBorrower, slipBorrower: s.slipBorrower })) {
+  for (const [k, h] of Object.entries(holders(s))) {
     const m = e.market(h.market);
     c.that(`${k} on ${h.market}`, true, `proxy ${h.account.proxy} debt ${await e.debt(m, h.account)} HF ${await e.healthFactor(m, h.account)}`);
   }
   c.works("pledger's 300k position can be pledged (simulated)", await pledgeProbe(e, s));
+  c.works("v4 pledger's 10k position can be pledged (simulated)", await pledgeBy(e, s, "v4Pledger"));
 }
 
 /**
@@ -246,7 +272,7 @@ async function setup(e: Env, c: Checks) {
 async function teardown(e: Env, c: Checks) {
   const s = loadState();
   await e.settle();
-  for (const [k, h] of Object.entries({ borrower: s.borrower, volBorrower: s.volBorrower, slipBorrower: s.slipBorrower })) {
+  for (const [k, h] of Object.entries(holders(s))) {
     const m = e.market(h.market);
     const debt = await e.debt(m, h.account);
     if (debt > 0n) {
@@ -262,29 +288,40 @@ async function teardown(e: Env, c: Checks) {
   }
 }
 
+/** The drill accounts that borrow, by name. */
+const holders = (s: State) => ({
+  borrower: s.borrower,
+  volBorrower: s.volBorrower,
+  slipBorrower: s.slipBorrower,
+  v4Borrower: s.v4Borrower,
+  v4StableBorrower: s.v4StableBorrower,
+});
+type HolderName = keyof ReturnType<typeof holders>;
+
 // ─── Drills ───
 
 type Drill = (e: Env, c: Checks, log: string[]) => Promise<void>;
 
 /** A guardian or timelock switch whose forward refuses a borrow (and optionally a pledge) and whose backward reopens it. */
-function switchDrill(forward: string, backward: string | (() => string), want: RegExp, opts: { pledge?: RegExp; holder?: keyof Pick<State, "borrower" | "volBorrower">; extra?: (keyof Pick<State, "borrower" | "volBorrower" | "slipBorrower">)[] } = {}): Drill {
+function switchDrill(forward: string, backward: string | (() => string), want: RegExp, opts: { pledge?: RegExp; holder?: HolderName; pledger?: PledgerName; extra?: HolderName[] } = {}): Drill {
   return async (e, c, log) => {
     const s = loadState();
     const h = s[opts.holder ?? "borrower"];
+    const pledge = () => pledgeBy(e, s, opts.pledger);
     await e.settle();
     c.works("before: borrow", await borrowProbe(e, h));
-    if (opts.pledge) c.works("before: pledge", await pledgeProbe(e, s));
+    if (opts.pledge) c.works("before: pledge", await pledge());
     mustApply(forward, log);
     await pokeAll(e);
     c.refused("forward: borrow", await borrowProbe(e, h), want);
     for (const x of opts.extra ?? []) c.refused(`forward: borrow on ${s[x].market}`, await borrowProbe(e, s[x]), want);
-    if (opts.pledge) c.refused("forward: pledge by a new account", await pledgeProbe(e, s), opts.pledge);
+    if (opts.pledge) c.refused("forward: pledge by a new account", await pledge(), opts.pledge);
     c.works("forward: repay stays open", await repayProbe(e, h));
     mustApply(typeof backward === "string" ? backward : backward(), log);
     await e.settle();
     c.works("backward: borrow", await borrowProbe(e, h));
     for (const x of opts.extra ?? []) c.works(`backward: borrow on ${s[x].market}`, await borrowProbe(e, s[x]));
-    if (opts.pledge) c.works("backward: pledge", await pledgeProbe(e, s));
+    if (opts.pledge) c.works("backward: pledge", await pledge());
   };
 }
 
@@ -300,7 +337,9 @@ const DRILLS: Record<string, Drill> = {
     c.works("forward: borrow by an existing account", await borrowProbe(e, s.borrower));
     mustApply("caps-zero.json", log);
     c.refused("zero: any pledge holding USDT is refused", await pledgeProbe(e, s), /CapExceeded/);
+    c.refused("zero: a Uniswap v4 pledge holding USDT is refused", await pledgeBy(e, s, "v4Pledger"), /CapExceeded/);
     c.works("zero: an existing account still borrows", await borrowProbe(e, s.borrower));
+    c.works("zero: an existing Uniswap v4 account still borrows", await borrowProbe(e, s.v4StableBorrower));
     mustApply("caps-back.json", log);
     await e.settle();
     const hub = e.market(M1).hub;
@@ -309,14 +348,17 @@ const DRILLS: Record<string, Drill> = {
     const prior = JSON.parse(readFileSync(join(out, "changes-caps-forward.json"), "utf8")).changes[0].prior.value;
     c.that("backward: USDT cap restored", cap === BigInt(prior.$big ?? prior), `${cap} (was ${prior.$big ?? prior})`);
     c.works("backward: 300k pledge", await pledgeProbe(e, s));
+    c.works("backward: Uniswap v4 pledge", await pledgeBy(e, s, "v4Pledger"));
   },
 
   // Aave: the CDP Spoke's GHO draw cap and the market's vault-token add cap to 0 by AIP, then back to their values.
   "aave-caps-zero": switchDrill("aave-caps-zero-forward.json", "aave-caps-zero-back.json", /DrawCapExceeded/, { pledge: /AddCapExceeded|HubAddCapReached/ }),
+  "aave-caps-zero-v4": switchDrill("aave-caps-zero-v4-forward.json", "aave-caps-zero-v4-back.json", /DrawCapExceeded/, { pledge: /AddCapExceeded|HubAddCapReached/, holder: "v4StableBorrower", pledger: "v4Pledger" }),
 
   "market-breaker": switchDrill("market-breaker-forward.json", "market-breaker-back.json", /BreakerTripped/, { pledge: /BreakerTripped/ }),
 
   "debt-breaker": switchDrill("debt-breaker-forward.json", "debt-breaker-back.json", /DebtBreakerTripped/),
+  "debt-breaker-v4": switchDrill("debt-breaker-v4-forward.json", "debt-breaker-v4-back.json", /DebtBreakerTripped/, { holder: "v4StableBorrower" }),
 
   // Hub freeze through the timelock (short delay), unfreeze through the timelock (normal delay).
   "hub-freeze": switchDrill("hub-freeze-forward.json", "hub-freeze-back.json", /ApplicationFrozen/, { pledge: /ApplicationFrozen/ }),
@@ -325,13 +367,14 @@ const DRILLS: Record<string, Drill> = {
   "hub-pause": switchDrill("hub-pause-forward.json", "hub-pause-back.json", /ApplicationPaused|NotRescueTopUp/, { pledge: /ApplicationPaused|NotRescueTopUp/ }),
 
   // pauseAll by the guardian; every Hub unpaused by one timelock operation (normal delay).
-  "pause-all": switchDrill("pause-all-forward.json", unpauseEveryHub, /ApplicationPaused|NotRescueTopUp/, { extra: ["volBorrower", "slipBorrower"] }),
+  "pause-all": switchDrill("pause-all-forward.json", unpauseEveryHub, /ApplicationPaused|NotRescueTopUp/, { extra: ["volBorrower", "slipBorrower", "v4Borrower", "v4StableBorrower"] }),
 
   // freezeAddress by the guardian; unfreezeAddress only through the timelock (normal delay).
   "freeze-address": switchDrill("freeze-address-forward.json", "freeze-address-back.json", /AddressIsFrozen/),
 
   // An Aave freeze of the market's vault-token reserve by AIP, and the unfreeze by AIP.
   "aave-freeze": switchDrill("aave-freeze-forward.json", "aave-freeze-back.json", /ReserveFrozen|AaveReserveUnavailable/, { pledge: /ReserveFrozen|AaveReserveUnavailable/ }),
+  "aave-freeze-v4": switchDrill("aave-freeze-v4-forward.json", "aave-freeze-v4-back.json", /ReserveFrozen|AaveReserveUnavailable/, { pledge: /ReserveFrozen|AaveReserveUnavailable/, holder: "v4StableBorrower", pledger: "v4Pledger" }),
 
   // P-02: USDC's primary feed reports 2 % low (disagreement with the alternate); the guardian switches the primary slot
   // to the listed standby; the feed is fixed and restorePriceRoute (timelock, normal delay) puts the primary back.
@@ -416,51 +459,10 @@ const DRILLS: Record<string, Drill> = {
   // P-09: a 90 % WETH crash leaves a deficit on the volatile Hub's Uniswap CDP Spoke; the guardian trips the GHO debt
   // breaker, the COVERAGE_ROLE holder covers the deficit from the First-Loss Reserve, Avana Labs refunds the reserve to
   // its minimum (07-fund-first-loss-reserves) and the guardian resets the breaker.
-  async "deficit-coverage"(e, c, log) {
-    const s = loadState();
-    const m = e.market(M2);
-    const b = W.deficit;
-    const keeper = (e.ctx.config.keepers as Address[])[0]!;
-    await e.settle();
-    c.works("before: borrow on the volatile Spoke", await borrowProbe(e, s.volBorrower));
-    const p = await e.mintPosition(m, b, 50_000n);
-    const a = await e.pledge(m, b, p);
-    const amount = ((await e.maxBorrow(m, b, a)) * 9_900n) / 10_000n;
-    await e.ensureLiquidity(m, amount);
-    await e.borrow(m, b, a, amount, WAD);
-    const d = e.dec(m.debtAsset);
-    const debtUsd = ((await e.debt(m, a)) * 100_000_000n) / 10n ** BigInt(d);
-    const coll = await e.collateralUsd8(m, a);
-    const target = (debtUsd * m.maxLiquidationBonus * 9_500n) / (10_000n * 10_000n);
-    const r = (target * target * 10_000n) / (coll * coll);
-    await e.setWeth(r < 1_000n ? r : 1_000n, [m.lpOracle]);
-    const hubAbi = aaveV4HubAbi;
-    const assetId = (await e.read(m.hub, hubAbi, "getAssetId", [m.debtAsset])) as bigint;
-    const pools = await routePoolPrices(e, m);
-    const liq = await e.liquidate(m, a, keeper, "drill", true);
-    const deficit = (await e.read(m.hub, hubAbi, "getSpokeDeficitRay", [assetId, m.spoke])) as bigint;
-    c.that("forward: deficit on the CDP Spoke", liq.ok && deficit > 0n, `liquidation ${liq.ok ? "ok" : liq.error}; deficit ${deficit} (ray units)`);
-    // The liquidation sold the seized WETH through the market's routes at the pools' (uncrashed) prices: the pools go
-    // back to where they were, or a later liquidation on these routes finds them drained (NoRouteAvailable).
-    await restorePoolPrices(e, pools, log);
-    await e.settle();
-    mustApply("deficit-breaker-forward.json", log);
-    c.refused("forward: GHO borrow on the volatile Spoke", await borrowProbe(e, s.volBorrower), /DebtBreakerTripped/);
-    mustApply("deficit-cover.json", log);
-    const left = (await e.read(m.hub, hubAbi, "getSpokeDeficitRay", [assetId, m.spoke])) as bigint;
-    c.that("forward: deficit covered by the First-Loss Reserve", left === 0n, `deficit ${deficit} -> ${left}`);
-    const reserve = e.ctx.file("coverage.json")?.[`AvanaFirstLossReserve.${e.hubLabel(m.hub)}.${e.sym(m.debtAsset)}`] as Address;
-    const below = (await e.read(reserve, firstLossReserveAbi, "isBelowMinimum")) as boolean;
-    c.that("forward: reserve below its minimum after covering", true, `isBelowMinimum ${below}`);
-    // Backward: Avana Labs refunds the reserve to its minimum, then the breaker is reset.
-    const fund = deployStep("07-fund-first-loss-reserves", log, { AVANA_CONFIG: currentConfig() });
-    c.that("backward: 07-fund-first-loss-reserves", fund.code === 0, fund.code === 0 ? "ran" : fund.text.split("\n").filter((l) => /Error|revert/.test(l)).slice(0, 2).join(" "));
-    const belowAfter = (await e.read(reserve, firstLossReserveAbi, "isBelowMinimum")) as boolean;
-    c.that("backward: reserve at or above its minimum", !belowAfter, `isBelowMinimum ${belowAfter}; funded ${await e.read(reserve, firstLossReserveAbi, "fundedBalance")}`);
-    mustApply("deficit-breaker-back.json", log);
-    await e.settle();
-    c.works("backward: GHO borrow on the volatile Spoke", await borrowProbe(e, s.volBorrower));
-  },
+  "deficit-coverage": deficitDrill({ market: M2, holder: "volBorrower", owner: W.deficit, files: ["deficit-breaker-forward.json", "deficit-cover.json", "deficit-breaker-back.json"] }),
+
+  // The same on the Uniswap v4 volatile Spoke: native ETH/USDC, the seized ETH sold through the market's WETH routes.
+  "deficit-coverage-v4": deficitDrill({ market: M7, holder: "v4Borrower", owner: W.v4Deficit, files: ["deficit-breaker-v4-forward.json", "deficit-cover-v4.json", "deficit-breaker-v4-back.json"] }),
 
   // Removing a debt reserve (USDT on slipVolatile, nothing owed): Aave makes it not borrowable by AIP, the timelock
   // removes it (normal delay); backward, Aave makes it borrowable again and the timelock enables it again.
@@ -485,53 +487,9 @@ const DRILLS: Record<string, Drill> = {
     c.works("backward: USDT borrow", await borrowProbe(e, s.slipBorrower, usdt));
   },
 
-  // Offboarding then close (permanent by design: REQ-CONFIG-013), inside a snapshot.
-  async "offboard-close"(e, c, log) {
-    const s = loadState();
-    const m = e.market(M1);
-    const snap = await snapshot(e);
-    try {
-      await e.settle();
-      c.works("before: pledge", await pledgeProbe(e, s));
-      mustApply("offboard-forward.json", log);
-      mustApply("offboard-forward-aip.json", log);
-      await pokeAll(e);
-      c.refused("forward: pledge", await pledgeProbe(e, s), /MarketOffboarding|ReserveFrozen|AaveReserveUnavailable/);
-      c.refused("forward: borrow", await borrowProbe(e, s.borrower), /MarketOffboarding|ReserveFrozen/);
-      c.works("forward: repay stays open", await repayProbe(e, s.borrower));
-      const early = await tryAs(e, W.anyone, marketRegistryAbi, "closeMarket", [m.marketId], e.registry);
-      c.refused("forward: closeMarket during the notice", early, /OffboardNoticeRunning/);
-      const debt = await e.debt(m, s.borrower.account);
-      await e.mint(m.debtAsset, s.borrower.owner, debt * 2n + 10n ** 18n);
-      await e.must("repay all", s.borrower.owner, e.adapter, aaveAdapterAbi, "repay", [s.borrower.owner, m.marketId, s.borrower.account.debtReserveId, debt * 2n + 10n ** 18n, true, await e.deadline()]);
-      // Finding: a repay sent with an estimated gas limit leaves the indebted mark set. Its `markDebtFree` reads
-      // `getUserAccountData`, whose LPOracle price read reverts `InsufficientGas` (about 442,000 gas needed) while
-      // about 434,000 are left; Collateralization treats that as a failed read (its starvation floor is 50,000) and
-      // keeps the mark, so closeMarket reverts MarketHasDebt until anyone calls refreshDebtMark (REQ-COLL-040).
-      const coll = e.ctx.manifest.avana.collateralization.address as Address;
-      const cleared = (await e.read(coll, collateralizationAbi, "getMarketDebtFree", [m.vaultToken])) as boolean;
-      if (!cleared) {
-        c.note("repay-all at an estimated gas limit left the indebted mark set (LPOracle InsufficientGas inside markDebtFree); cleared by refreshDebtMark");
-        await e.gasFor(W.anyone);
-        await e.must("refreshDebtMark by anyone", W.anyone, e.adapter, aaveAdapterAbi, "refreshDebtMark", [s.borrower.account.proxy]);
-      }
-      c.that("forward: market debt-free after repay", Boolean(await e.read(coll, collateralizationAbi, "getMarketDebtFree", [m.vaultToken])), `getMarketDebtFree after repay ${cleared}`);
-      await wait(e, 5 * 86_400 + 1);
-      await e.gasFor(W.anyone);
-      await e.must("closeMarket by anyone", W.anyone, e.registry, marketRegistryAbi, "closeMarket", [m.marketId]);
-      const st = await e.read(e.registry, marketRegistryAbi, "getMarket", [m.marketId]);
-      c.that("forward: market Closed", Number(st.status) === 5, `status ${st.status}`);
-      c.refused("closed: pledge", await pledgeProbe(e, s), /MarketNotActive|MarketClosed|ReserveFrozen|AaveReserveUnavailable/);
-      const units = await e.supplied(m, s.borrower.account);
-      c.works("closed: debt-free withdrawal, no price read", await tryAs(e, s.borrower.owner, aaveAdapterAbi, "withdraw", [m.marketId, s.borrower.position.ref, units, await e.deadline(), 0n]));
-      mustApply("offboard-back-aip.json", log);
-      const cfg = await e.read(m.spoke, aaveV4SpokeAbi, "getReserveConfig", [st.reserveId]);
-      c.that("backward: Aave reserve unfrozen", !cfg.frozen, `frozen ${cfg.frozen}; the market stays Closed (offboarding is permanent; a pool comes back only by relisting, P-19)`);
-    } finally {
-      await revertTo(e, snap);
-      c.lines.push("chain reverted to the snapshot taken before the drill");
-    }
-  },
+  // Offboarding then close (permanent by design: REQ-CONFIG-013), inside a snapshot: Uniswap v3 USDC/USDT and v4 USDC/USDT.
+  "offboard-close": offboardDrill({ market: M1, holder: "borrower", pledger: "pledger", files: ["offboard-forward.json", "offboard-forward-aip.json", "offboard-back-aip.json"] }),
+  "offboard-close-v4": offboardDrill({ market: M8, holder: "v4StableBorrower", pledger: "v4Pledger", files: ["offboard-v4-forward.json", "offboard-v4-forward-aip.json", "offboard-v4-back-aip.json"] }),
 
   // cancelRegistration of a market still Registered (a new range of USDC/USDT 0.01 % listed for the drill), then its
   // relisting under the reserved ID and activation; all inside a snapshot, so the drill market does not stay.
@@ -600,45 +558,10 @@ const DRILLS: Record<string, Drill> = {
     }
   },
 
-  // Retiring the growth Hub's credit lines (EMG-061): its only CDP Spoke's draw caps to 0 and its market's reserve
-  // frozen by AIP, the market offboarded and closed, the GHO debt reserve removed; backward, the caps and the debt
-  // reserve come back (the closed market stays closed). Inside a snapshot.
-  async "retire-spoke"(e, c, log) {
-    const m = e.market(M6);
-    const s = loadState();
-    const gho = await reserveIdOf(e, m, "GHO");
-    const snap = await snapshot(e);
-    try {
-      await e.settle();
-      const fresh = "0x1000000000000000000000000000000000000d08" as Address;
-      const p = await e.mintPosition(m, fresh, 5_000n);
-      c.works("before: pledge into the growth market", await pledgeProbe(e, s, M6, fresh, p));
-      mustApply("retire-forward-aip.json", log);
-      mustApply("retire-forward.json", log);
-      await pokeAll(e);
-      c.refused("forward: pledge into the growth market", await pledgeProbe(e, s, M6, fresh, p), /MarketOffboarding|ReserveFrozen|AaveReserveUnavailable/);
-      await wait(e, 5 * 86_400 + 1);
-      await e.gasFor(W.anyone);
-      await e.must("closeMarket by anyone", W.anyone, e.registry, marketRegistryAbi, "closeMarket", [m.marketId]);
-      mustApply("retire-forward-debt-aip.json", log);
-      mustApply("retire-forward-debt.json", log);
-      const active = (await e.read(e.registry, marketRegistryAbi, "activeMarketCount", [m.spoke])) as bigint;
-      const enabled = (await e.read(e.registry, marketRegistryAbi, "getDebtReserveIds", [m.spoke])) as bigint[];
-      const hubAbi = aaveV4HubAbi;
-      const ghoAsset = (await e.read(m.hub, hubAbi, "getAssetId", [e.token("GHO")])) as bigint;
-      const sc = await e.read(m.hub, hubAbi, "getSpokeConfig", [ghoAsset, m.spoke]);
-      c.that("forward: Spoke retired", active === 0n && !enabled.includes(gho) && BigInt(sc.drawCap) === 0n, `active markets ${active}; debt reserves [${enabled.join(",")}]; GHO drawCap ${sc.drawCap}`);
-      mustApply("retire-back-aip.json", log);
-      mustApply("retire-back-debt-aip.json", log);
-      mustApply("retire-back.json", log);
-      const sc2 = await e.read(m.hub, hubAbi, "getSpokeConfig", [ghoAsset, m.spoke]);
-      const enabled2 = (await e.read(e.registry, marketRegistryAbi, "isApprovedDebtReserve", [m.spoke, gho])) as boolean;
-      c.that("backward: draw cap and GHO debt reserve back", BigInt(sc2.drawCap) > 0n && enabled2, `GHO drawCap ${sc2.drawCap}; approved ${enabled2}; market ${m.marketId} stays Closed (relisting is rehearsal 05)`);
-    } finally {
-      await revertTo(e, snap);
-      c.lines.push("chain reverted to the snapshot taken before the drill");
-    }
-  },
+  // Retiring a Hub's credit lines on one CDP Spoke (EMG-061): the growth Hub's Uniswap v3 Spoke, and the correlated
+  // Hub's Uniswap v4 Spoke (its only market univ4-wstETH-ETH-100).
+  "retire-spoke": retireDrill({ market: M6, fresh: "0x1000000000000000000000000000000000000d08", prefix: "retire" }),
+  "retire-spoke-v4": retireDrill({ market: M9, fresh: W.v4Fresh, prefix: "retire-v4" }),
 
   // Rehearsal 10: the GHO rate curve on the stable Hub raised by 1 % by AIP, then put back by AIP.
   async "rate-aip"(e, c, log) {
@@ -668,6 +591,150 @@ const DRILLS: Record<string, Drill> = {
     c.that("rate role", true, "forward and backward applied");
   },
 };
+
+/** A deficit on the market's CDP Spoke (a crash past the bonus, then a full liquidation), the debt breaker tripped, the
+ * deficit covered from the Hub's First-Loss Reserve, the reserve refunded and the breaker reset (P-09). */
+function deficitDrill(cfg: { market: string; holder: HolderName; owner: Address; files: readonly [string, string, string] }): Drill {
+  return async (e, c, log) => {
+    const s = loadState();
+    const m = e.market(cfg.market);
+    const b = cfg.owner;
+    const keeper = (e.ctx.config.keepers as Address[])[0]!;
+    await e.settle();
+    c.works(`before: borrow on ${m.spokeLabel}`, await borrowProbe(e, s[cfg.holder]));
+    const p = await e.mintPosition(m, b, 50_000n);
+    const a = await e.pledge(m, b, p);
+    const amount = ((await e.maxBorrow(m, b, a)) * 9_900n) / 10_000n;
+    await e.ensureLiquidity(m, amount);
+    await e.borrow(m, b, a, amount, WAD);
+    const d = e.dec(m.debtAsset);
+    const debtUsd = ((await e.debt(m, a)) * 100_000_000n) / 10n ** BigInt(d);
+    const coll = await e.collateralUsd8(m, a);
+    const target = (debtUsd * m.maxLiquidationBonus * 9_500n) / (10_000n * 10_000n);
+    const r = (target * target * 10_000n) / (coll * coll);
+    await e.setWeth(r < 1_000n ? r : 1_000n, [m.lpOracle]);
+    const hubAbi = aaveV4HubAbi;
+    const assetId = (await e.read(m.hub, hubAbi, "getAssetId", [m.debtAsset])) as bigint;
+    const pools = await routePoolPrices(e, m);
+    const liq = await e.liquidate(m, a, keeper, "drill", true);
+    const deficit = (await e.read(m.hub, hubAbi, "getSpokeDeficitRay", [assetId, m.spoke])) as bigint;
+    c.that("forward: deficit on the CDP Spoke", liq.ok && deficit > 0n, `liquidation ${liq.ok ? "ok" : liq.error}; deficit ${deficit} (ray units)`);
+    // The liquidation sold the seized WETH through the market's routes at the pools' (uncrashed) prices: the pools go
+    // back to where they were, or a later liquidation on these routes finds them drained (NoRouteAvailable).
+    await restorePoolPrices(e, pools, log);
+    await e.settle();
+    mustApply(cfg.files[0], log);
+    c.refused(`forward: GHO borrow on ${m.spokeLabel}`, await borrowProbe(e, s[cfg.holder]), /DebtBreakerTripped/);
+    mustApply(cfg.files[1], log);
+    const left = (await e.read(m.hub, hubAbi, "getSpokeDeficitRay", [assetId, m.spoke])) as bigint;
+    c.that("forward: deficit covered by the First-Loss Reserve", left === 0n, `deficit ${deficit} -> ${left}`);
+    const reserve = e.ctx.file("coverage.json")?.[`AvanaFirstLossReserve.${e.hubLabel(m.hub)}.${e.sym(m.debtAsset)}`] as Address;
+    const below = (await e.read(reserve, firstLossReserveAbi, "isBelowMinimum")) as boolean;
+    c.that("forward: reserve below its minimum after covering", true, `isBelowMinimum ${below}`);
+    // Backward: Avana Labs refunds the reserve to its minimum, then the breaker is reset.
+    const fund = deployStep("07-fund-first-loss-reserves", log, { AVANA_CONFIG: currentConfig() });
+    c.that("backward: 07-fund-first-loss-reserves", fund.code === 0, fund.code === 0 ? "ran" : fund.text.split("\n").filter((l) => /Error|revert/.test(l)).slice(0, 2).join(" "));
+    const belowAfter = (await e.read(reserve, firstLossReserveAbi, "isBelowMinimum")) as boolean;
+    c.that("backward: reserve at or above its minimum", !belowAfter, `isBelowMinimum ${belowAfter}; funded ${await e.read(reserve, firstLossReserveAbi, "fundedBalance")}`);
+    mustApply(cfg.files[2], log);
+    await e.settle();
+    c.works(`backward: GHO borrow on ${m.spokeLabel}`, await borrowProbe(e, s[cfg.holder]));
+  };
+}
+
+/** Offboarding then close of the market (permanent by design: REQ-CONFIG-013), inside a snapshot. */
+function offboardDrill(cfg: { market: string; holder: HolderName; pledger: PledgerName; files: readonly [string, string, string] }): Drill {
+  return async (e, c, log) => {
+    const s = loadState();
+    const m = e.market(cfg.market);
+    const h = s[cfg.holder];
+    const pledge = () => pledgeBy(e, s, cfg.pledger);
+    const snap = await snapshot(e);
+    try {
+      await e.settle();
+      c.works("before: pledge", await pledge());
+      mustApply(cfg.files[0], log);
+      mustApply(cfg.files[1], log);
+      await pokeAll(e);
+      c.refused("forward: pledge", await pledge(), /MarketOffboarding|ReserveFrozen|AaveReserveUnavailable/);
+      c.refused("forward: borrow", await borrowProbe(e, h), /MarketOffboarding|ReserveFrozen/);
+      c.works("forward: repay stays open", await repayProbe(e, h));
+      const early = await tryAs(e, W.anyone, marketRegistryAbi, "closeMarket", [m.marketId], e.registry);
+      c.refused("forward: closeMarket during the notice", early, /OffboardNoticeRunning/);
+      const debt = await e.debt(m, h.account);
+      await e.mint(m.debtAsset, h.owner, debt * 2n + 10n ** 18n);
+      await e.must("repay all", h.owner, e.adapter, aaveAdapterAbi, "repay", [h.owner, m.marketId, h.account.debtReserveId, debt * 2n + 10n ** 18n, true, await e.deadline()]);
+      // Finding: a repay sent with an estimated gas limit leaves the indebted mark set. Its `markDebtFree` reads
+      // `getUserAccountData`, whose LPOracle price read reverts `InsufficientGas` (about 442,000 gas needed) while
+      // about 434,000 are left; Collateralization treats that as a failed read (its starvation floor is 50,000) and
+      // keeps the mark, so closeMarket reverts MarketHasDebt until anyone calls refreshDebtMark (REQ-COLL-040).
+      const coll = e.ctx.manifest.avana.collateralization.address as Address;
+      const cleared = (await e.read(coll, collateralizationAbi, "getMarketDebtFree", [m.vaultToken])) as boolean;
+      if (!cleared) {
+        c.note("repay-all at an estimated gas limit left the indebted mark set (LPOracle InsufficientGas inside markDebtFree); cleared by refreshDebtMark");
+        await e.gasFor(W.anyone);
+        await e.must("refreshDebtMark by anyone", W.anyone, e.adapter, aaveAdapterAbi, "refreshDebtMark", [h.account.proxy]);
+      }
+      c.that("forward: market debt-free after repay", Boolean(await e.read(coll, collateralizationAbi, "getMarketDebtFree", [m.vaultToken])), `getMarketDebtFree after repay ${cleared}`);
+      await wait(e, 5 * 86_400 + 1);
+      await e.gasFor(W.anyone);
+      await e.must("closeMarket by anyone", W.anyone, e.registry, marketRegistryAbi, "closeMarket", [m.marketId]);
+      const st = await e.read(e.registry, marketRegistryAbi, "getMarket", [m.marketId]);
+      c.that("forward: market Closed", Number(st.status) === 5, `status ${st.status}`);
+      c.refused("closed: pledge", await pledge(), /MarketNotActive|MarketClosed|ReserveFrozen|AaveReserveUnavailable/);
+      const units = await e.supplied(m, h.account);
+      c.works("closed: debt-free withdrawal, no price read", await tryAs(e, h.owner, aaveAdapterAbi, "withdraw", [m.marketId, h.position.ref, units, await e.deadline(), 0n]));
+      mustApply(cfg.files[2], log);
+      const rc = await e.read(m.spoke, aaveV4SpokeAbi, "getReserveConfig", [st.reserveId]);
+      c.that("backward: Aave reserve unfrozen", !rc.frozen, `frozen ${rc.frozen}; the market stays Closed (offboarding is permanent; a pool comes back only by relisting, P-19)`);
+    } finally {
+      await revertTo(e, snap);
+      c.lines.push("chain reverted to the snapshot taken before the drill");
+    }
+  };
+}
+
+/** Retiring the market's CDP Spoke (EMG-061): draw caps to 0 and the market's reserve frozen by AIP, the market
+ * offboarded and closed, the GHO debt reserve removed; backward, the caps and the debt reserve come back (the closed
+ * market stays closed). Inside a snapshot. `prefix` names the drill files (`<prefix>-forward-aip.json`, ...). */
+function retireDrill(cfg: { market: string; fresh: Address; prefix: string }): Drill {
+  return async (e, c, log) => {
+    const m = e.market(cfg.market);
+    const s = loadState();
+    const gho = await reserveIdOf(e, m, "GHO");
+    const snap = await snapshot(e);
+    try {
+      await e.settle();
+      const fresh = cfg.fresh;
+      const p = await e.mintPosition(m, fresh, 5_000n);
+      c.works(`before: pledge into ${cfg.market}`, await pledgeProbe(e, s, cfg.market, fresh, p));
+      mustApply(`${cfg.prefix}-forward-aip.json`, log);
+      mustApply(`${cfg.prefix}-forward.json`, log);
+      await pokeAll(e);
+      c.refused(`forward: pledge into ${cfg.market}`, await pledgeProbe(e, s, cfg.market, fresh, p), /MarketOffboarding|ReserveFrozen|AaveReserveUnavailable/);
+      await wait(e, 5 * 86_400 + 1);
+      await e.gasFor(W.anyone);
+      await e.must("closeMarket by anyone", W.anyone, e.registry, marketRegistryAbi, "closeMarket", [m.marketId]);
+      mustApply(`${cfg.prefix}-forward-debt-aip.json`, log);
+      mustApply(`${cfg.prefix}-forward-debt.json`, log);
+      const active = (await e.read(e.registry, marketRegistryAbi, "activeMarketCount", [m.spoke])) as bigint;
+      const enabled = (await e.read(e.registry, marketRegistryAbi, "getDebtReserveIds", [m.spoke])) as bigint[];
+      const hubAbi = aaveV4HubAbi;
+      const ghoAsset = (await e.read(m.hub, hubAbi, "getAssetId", [e.token("GHO")])) as bigint;
+      const sc = await e.read(m.hub, hubAbi, "getSpokeConfig", [ghoAsset, m.spoke]);
+      c.that("forward: Spoke retired", active === 0n && !enabled.includes(gho) && BigInt(sc.drawCap) === 0n, `active markets ${active}; debt reserves [${enabled.join(",")}]; GHO drawCap ${sc.drawCap}`);
+      mustApply(`${cfg.prefix}-back-aip.json`, log);
+      mustApply(`${cfg.prefix}-back-debt-aip.json`, log);
+      mustApply(`${cfg.prefix}-back.json`, log);
+      const sc2 = await e.read(m.hub, hubAbi, "getSpokeConfig", [ghoAsset, m.spoke]);
+      const enabled2 = (await e.read(e.registry, marketRegistryAbi, "isApprovedDebtReserve", [m.spoke, gho])) as boolean;
+      c.that("backward: draw cap and GHO debt reserve back", BigInt(sc2.drawCap) > 0n && enabled2, `GHO drawCap ${sc2.drawCap}; approved ${enabled2}; market ${m.marketId} stays Closed (relisting is rehearsal 05)`);
+    } finally {
+      await revertTo(e, snap);
+      c.lines.push("chain reverted to the snapshot taken before the drill");
+    }
+  };
+}
 
 /** Puts the saved deployment outputs back and removes the files the drill added (the drill records stay). */
 function restoreOutputs(bak: string) {

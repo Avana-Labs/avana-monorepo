@@ -323,17 +323,9 @@ abstract contract FullStackMarkets is FullStackFixture {
             : (ClTestToken(tokenOut), ClTestToken(tokenIn));
         uint24[2] memory fees = [uint24(500), uint24(3000)];
         for (uint256 k = 0; k < 2; ++k) {
-            IClPool p = IClPool(routeFactory.createPool(address(t0), address(t1), fees[k]));
-            p.initialize(
-                ClPriceMath.oracleSqrtPrice(
-                    _routeStartPrice(address(t0)), _routeStartPrice(address(t1)), t0.decimals(), t1.decimals()
-                )
-            );
-            t0.mint(address(actor), type(uint128).max);
-            t1.mint(address(actor), type(uint128).max);
-            (int24 lower, int24 upper) = _fullRange(p);
-            actor.mint(p, lower, upper, ROUTE_LIQUIDITY);
-            vm.label(address(p), string.concat("RouteDex pool ", vm.toString(uint256(fees[k]))));
+            // The pair's pools serve both directions: a route the other way reuses them.
+            IClPool p = routePoolOf[tokenOut][tokenIn][k];
+            if (address(p) == address(0)) p = _newRoutePool(t0, t1, fees[k]);
             DexHop[] memory hops = new DexHop[](1);
             hops[0] = DexHop({kind: HopKind.ConcentratedLiquidity, pool: address(p), tokenOut: tokenOut, i: 0, j: 0});
             RouteConfig memory c = RouteConfig({
@@ -354,6 +346,25 @@ abstract contract FullStackMarkets is FullStackFixture {
         }
         routeOf[tokenIn][tokenOut] = r;
         routePairs.push([tokenIn, tokenOut]);
+    }
+
+    /// @dev A full-range route-DEX pool of `t0`/`t1` at `fee`, at the `_routeStartPrice` rate.
+    function _newRoutePool(
+        ClTestToken t0,
+        ClTestToken t1,
+        uint24 fee
+    ) private returns (IClPool p) {
+        p = IClPool(routeFactory.createPool(address(t0), address(t1), fee));
+        p.initialize(
+            ClPriceMath.oracleSqrtPrice(
+                _routeStartPrice(address(t0)), _routeStartPrice(address(t1)), t0.decimals(), t1.decimals()
+            )
+        );
+        t0.mint(address(actor), type(uint128).max);
+        t1.mint(address(actor), type(uint128).max);
+        (int24 lower, int24 upper) = _fullRange(p);
+        actor.mint(p, lower, upper, ROUTE_LIQUIDITY);
+        vm.label(address(p), string.concat("RouteDex pool ", vm.toString(uint256(fee))));
     }
 
     /// @dev The USD price, 8 decimals, a new route-DEX pool starts at for `token` ($1.00 here).

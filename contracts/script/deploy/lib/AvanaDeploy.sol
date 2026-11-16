@@ -38,10 +38,13 @@ abstract contract AvanaDeploy is AvanaPeripheryDeploy {
     }
 
     /// @notice The concentrated-liquidity LPOracle of each integration, the `pricing` it registers (`Q-376`): the
-    /// immutable module logic `LPOracleCLModuleLogic`, the four logic contracts of `LPOracleLogicSet` (poke, init,
-    /// listing, view) and the `LPOracleCL` implementation, all with the same immutables. Each market's LPOracle is an
-    /// ERC-1967 proxy of this implementation, deployed and initialised at listing (`07_ListMarkets`, `MKT-019`).
-    /// @dev `slot0Words` is 7 for Uniswap v3 and 6 for Slipstream, so every integration has its own set.
+    /// immutable module logic, the four logic contracts of `LPOracleLogicSet` (poke, init, listing, view) and the
+    /// implementation, all with the same immutables. Each market's LPOracle is an ERC-1967 proxy of this
+    /// implementation, deployed and initialised at listing (`09_ListMarkets`, `MKT-019`).
+    /// @dev Uniswap v3 and Slipstream: `LPOracleCLModuleLogic` and `LPOracleCL`, `slot0Words` 7 for Uniswap v3 and 6 for
+    /// Slipstream, so every integration has its own set. Uniswap v4: `LPOracleV4ModuleLogic` and `LPOracleV4` with the
+    /// PositionManager's WETH9 as the wrapped native token; the logic contracts read the Uniswap v3 reference pool
+    /// (`slot0Words` 7).
     function _deployClOracles(
         ChainInputs memory c,
         Predicted memory p,
@@ -51,43 +54,70 @@ abstract contract AvanaDeploy is AvanaPeripheryDeploy {
         d.clOraclePricing = new address[](n);
         d.clOracleModuleLogics = new address[](n);
         d.clOracleLogics = new address[](4 * n);
-        string[4] memory names =
-            ["LPOracleCLPokeLogic", "LPOracleCLInitLogic", "LPOracleCLListingLogic", "LPOracleCLViewLogic"];
         for (uint256 i = 0; i < n; ++i) {
-            uint8 words = _eq(c.integrations[i].kind, "slipstream") ? 6 : 7;
-            string memory tag = string.concat(".", vm.toString(c.integrations[i].integrationId));
-            bytes memory args = abi.encode(
-                p.timelock, c.blockTime, CL_POKE_MIN_GAS_FLOOR, CL_POKE_MIN_GAS_CEILING, c.hasSequencer, words
-            );
-            address moduleLogic = _deploy(
-                string.concat("LPOracleCLModuleLogic", tag),
-                bytes.concat(_artifact("LPOracleCLModuleLogic.sol", "LPOracleCLModuleLogic"), args)
-            );
-            d.clOracleModuleLogics[i] = moduleLogic;
-            bytes memory withModule = bytes.concat(args, abi.encode(moduleLogic));
-            for (uint256 j = 0; j < 4; ++j) {
-                d.clOracleLogics[4 * i + j] = _deploy(
-                    string.concat(names[j], tag),
-                    bytes.concat(_artifact(string.concat(names[j], ".sol"), names[j]), withModule)
-                );
-            }
-            // LPOracleLogicSet{poke, init, listing, view}.
-            bytes memory set = abi.encode(
-                d.clOracleLogics[4 * i],
-                d.clOracleLogics[4 * i + 1],
-                d.clOracleLogics[4 * i + 2],
-                d.clOracleLogics[4 * i + 3]
-            );
-            d.clOraclePricing[i] = _deploy(
-                string.concat("LPOracleCLImplementation", tag),
-                bytes.concat(_artifact("LPOracleCL.sol", "LPOracleCL"), withModule, set)
-            );
+            _deployClOracle(c, p, d, i);
         }
     }
 
+    function _deployClOracle(
+        ChainInputs memory c,
+        Predicted memory p,
+        AvanaDeployment memory d,
+        uint256 i
+    ) private {
+        bool v4 = _eq(c.integrations[i].kind, "uniswap-v4");
+        uint8 words = _eq(c.integrations[i].kind, "slipstream") ? 6 : 7;
+        string memory tag = string.concat(".", vm.toString(c.integrations[i].integrationId));
+        bytes memory chainArgs =
+            abi.encode(p.timelock, c.blockTime, CL_POKE_MIN_GAS_FLOOR, CL_POKE_MIN_GAS_CEILING, c.hasSequencer);
+        // The wrapped native token of a v4 market's native ETH: the PositionManager's WETH9 the LPVault also reads.
+        address weth = v4 ? _addressView(c.integrations[i].positionManagers[0], "WETH9()") : address(0);
+        address moduleLogic = v4
+            ? _deploy(
+                string.concat("LPOracleV4ModuleLogic", tag),
+                bytes.concat(
+                    _artifact("LPOracleV4ModuleLogic.sol", "LPOracleV4ModuleLogic"), chainArgs, abi.encode(weth)
+                )
+            )
+            : _deploy(
+                string.concat("LPOracleCLModuleLogic", tag),
+                bytes.concat(
+                    _artifact("LPOracleCLModuleLogic.sol", "LPOracleCLModuleLogic"), chainArgs, abi.encode(words)
+                )
+            );
+        d.clOracleModuleLogics[i] = moduleLogic;
+        bytes memory withModule = bytes.concat(chainArgs, abi.encode(words, moduleLogic));
+        string[4] memory names =
+            ["LPOracleCLPokeLogic", "LPOracleCLInitLogic", "LPOracleCLListingLogic", "LPOracleCLViewLogic"];
+        for (uint256 j = 0; j < 4; ++j) {
+            d.clOracleLogics[4 * i + j] = _deploy(
+                string.concat(names[j], tag),
+                bytes.concat(_artifact(string.concat(names[j], ".sol"), names[j]), withModule)
+            );
+        }
+        // LPOracleLogicSet{poke, init, listing, view}.
+        bytes memory set = abi.encode(
+            d.clOracleLogics[4 * i],
+            d.clOracleLogics[4 * i + 1],
+            d.clOracleLogics[4 * i + 2],
+            d.clOracleLogics[4 * i + 3]
+        );
+        d.clOraclePricing[i] = v4
+            ? _deploy(
+                string.concat("LPOracleV4Implementation", tag),
+                bytes.concat(
+                    _artifact("LPOracleV4.sol", "LPOracleV4"), chainArgs, abi.encode(moduleLogic), set, abi.encode(weth)
+                )
+            )
+            : _deploy(
+                string.concat("LPOracleCLImplementation", tag),
+                bytes.concat(_artifact("LPOracleCL.sol", "LPOracleCL"), withModule, set)
+            );
+    }
+
     /// @notice The block interval is one value across the chain: the config's `chain.blockTime` is the chain's known
-    /// interval (12 s on chains 1 and 11155111, 2 s on 8453, 84532 and 10), and every Uniswap v3 LPVault's `BLOCK_TIME`
-    /// equals the ParameterStore's `CHAIN_BLOCK_TIME`, which sizes `twapMinObservations` (`REQ-AMM-V3-012`).
+    /// interval (12 s on chains 1 and 11155111, 2 s on 8453, 84532 and 10), and every Uniswap v3 and v4 LPVault's
+    /// `BLOCK_TIME` equals the ParameterStore's `CHAIN_BLOCK_TIME`, which sizes `twapMinObservations` (`REQ-AMM-V3-012`).
     function _checkBlockTime(
         ChainInputs memory c,
         AvanaDeployment memory d
@@ -99,10 +129,14 @@ abstract contract AvanaDeploy is AvanaPeripheryDeploy {
         uint256 chainBlockTime = _uintView(d.parameterStore.proxy, "CHAIN_BLOCK_TIME()");
         require(chainBlockTime == c.blockTime, "ParameterStore.CHAIN_BLOCK_TIME != chain.blockTime");
         for (uint256 i = 0; i < d.lpVaults.length; ++i) {
-            if (!_eq(c.integrations[i].kind, "uniswap-v3")) continue;
+            if (_eq(c.integrations[i].kind, "slipstream")) continue;
             require(
                 _uintView(d.lpVaults[i], "BLOCK_TIME()") == chainBlockTime,
-                "UniswapV3Integration.BLOCK_TIME != ParameterStore.CHAIN_BLOCK_TIME"
+                string.concat(
+                    "LPVault.",
+                    vm.toString(c.integrations[i].integrationId),
+                    ".BLOCK_TIME != ParameterStore.CHAIN_BLOCK_TIME"
+                )
             );
         }
     }
@@ -114,6 +148,14 @@ abstract contract AvanaDeploy is AvanaPeripheryDeploy {
         (bool ok, bytes memory ret) = target.staticcall(abi.encodeWithSignature(getter));
         require(ok && ret.length == 32, string.concat(vm.getLabel(target), ".", getter));
         return abi.decode(ret, (uint256));
+    }
+
+    function _addressView(
+        address target,
+        string memory getter
+    ) internal view returns (address a) {
+        a = address(uint160(_uintView(target, getter)));
+        require(a.code.length != 0, string.concat(getter, " of ", vm.toString(target), " has no code"));
     }
 
     /// @notice Every address equals its prediction and the immutable cross-references agree.

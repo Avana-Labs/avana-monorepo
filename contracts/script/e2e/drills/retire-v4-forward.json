@@ -1,0 +1,14 @@
+{
+  "name": "retire-v4-forward",
+  "description": "univ4-wstETH-ETH-100 offboarded (timelock, short delay)",
+  "via": "timelock",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "setMarketOffboarding",
+      "args": {
+        "marketId": "market:univ4-wstETH-ETH-100"
+      }
+    }
+  ]
+}

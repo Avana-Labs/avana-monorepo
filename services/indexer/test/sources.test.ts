@@ -93,4 +93,15 @@ describe("indexer sources with several Hubs", () => {
     });
     expect(sources.samplerSource().sepolia).toMatchObject({ startBlock: 125 });
   });
+
+  it("follows no PoolManager on a chain whose manifest names none", () => {
+    expect(sources.poolManagerSource()).toEqual({});
+  });
+
+  it("follows a manifest's PoolManager from the later of its deployment and the registry's", () => {
+    const pm = (startBlock: number) => ({ uniswapV4: { poolManager: { address: addr(0x44), startBlock } }, avana: { marketRegistry: { startBlock: 100 } } }) as never;
+    expect(sources.poolManagerOf(pm(50))).toEqual({ address: addr(0x44), startBlock: 100 });
+    expect(sources.poolManagerOf(pm(150))).toEqual({ address: addr(0x44), startBlock: 150 });
+    expect(sources.poolManagerOf({ avana: { marketRegistry: { startBlock: 100 } } } as never)).toBeNull();
+  });
 });

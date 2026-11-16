@@ -306,6 +306,13 @@
           "offset": 20,
           "bytes": "1",
           "type": "uint8"
+        },
+        {
+          "path": "poolId",
+          "slot": "3",
+          "offset": 0,
+          "bytes": "32",
+          "type": "bytes32"
         }
       ]
     }

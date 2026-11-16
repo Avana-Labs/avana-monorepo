@@ -5095,15 +5095,17 @@
     ]
   },
   "INV-096": {
-    "hash": "04e2dbf4f58e7949",
+    "hash": "9881de2d25877d12",
     "checks": [
+      "IAmmIntegration",
       "MATH-CAP-09",
       "MATH-CH-01",
       "MATH-ST-108",
       "TEST-011",
       "TEST-102",
       "TEST-123",
-      "TEST-269"
+      "TEST-269",
+      "TEST-344"
     ]
   },
   "INV-097": {
@@ -14857,10 +14859,10 @@
     ]
   },
   "REQ-AMM-CORE-011": {
-    "hash": "05c99aaec699b894",
+    "hash": "f655b1bbc3db558c",
     "checks": [
       "ClLPVaultCustody",
-      "ClLPVaultMarkets",
+      "ClNfpmLPVault",
       "FeeMode",
       "IAmmIntegration",
       "IAmmIntegrationHooks",
@@ -14870,7 +14872,8 @@
       "IntegrationCapabilities",
       "TEST-017",
       "TEST-116",
-      "TEST-238"
+      "TEST-238",
+      "TEST-331"
     ]
   },
   "REQ-AMM-CORE-012": {
@@ -14923,9 +14926,10 @@
     ]
   },
   "REQ-AMM-CORE-015": {
-    "hash": "6af58bffde4aed52",
+    "hash": "d0fee4dfe4d3ca99",
     "checks": [
-      "MATH-ST-108"
+      "MATH-ST-108",
+      "TEST-342"
     ]
   },
   "REQ-AMM-CORE-016": {
@@ -15416,9 +15420,13 @@
     ]
   },
   "REQ-AMM-V4-001": {
-    "hash": "d2124f9aae1b434a",
+    "hash": "257450daa7cbef08",
     "checks": [
-      "IAmmIntegrationHooks"
+      "IAmmIntegrationHooks",
+      "IUniswapV4Integration",
+      "LPOracleV4Module",
+      "TEST-331",
+      "UniswapV4Integration"
     ]
   },
   "REQ-AMM-V4-002": {
@@ -15426,22 +15434,41 @@
     "checks": []
   },
   "REQ-AMM-V4-003": {
-    "hash": "2b18484da5277572",
+    "hash": "fd71346096bc5c6c",
     "checks": [
-      "ILPVaultErrors"
+      "ILPVaultErrors",
+      "IUniswapV4Integration",
+      "LPOracleV4Module",
+      "TEST-331",
+      "UniswapV4Integration",
+      "UniswapV4State"
     ]
   },
   "REQ-AMM-V4-004": {
-    "hash": "2dcd6f130405a6f4",
-    "checks": []
+    "hash": "4c232bc3a889a27f",
+    "checks": [
+      "IUniswapV4Integration",
+      "TEST-331",
+      "UniswapV4Integration"
+    ]
   },
   "REQ-AMM-V4-005": {
-    "hash": "a9e484cebbd4bd49",
-    "checks": []
+    "hash": "f19d1cc4c9f2cfb7",
+    "checks": [
+      "IUniswapV4Integration",
+      "LPOracleV4",
+      "LPOracleV4Module",
+      "LPOracleV4ModuleLogic",
+      "TEST-331",
+      "UniswapV4Integration"
+    ]
   },
   "REQ-AMM-V4-006": {
-    "hash": "d64ff90a4c0d52e9",
-    "checks": []
+    "hash": "ab271a074d2330ab",
+    "checks": [
+      "TEST-331",
+      "UniswapV4Integration"
+    ]
   },
   "REQ-ARCH-001": {
     "hash": "db82fc075ad6cde5",
@@ -16728,7 +16755,7 @@
     ]
   },
   "REQ-COLL-025": {
-    "hash": "5319b683ba867c90",
+    "hash": "f6be9a1e0aa34e86",
     "checks": [
       "CollateralizationPledge",
       "FV-CUS-41",
@@ -16843,7 +16870,7 @@
     ]
   },
   "REQ-COLL-037": {
-    "hash": "c0b6081079417506",
+    "hash": "693d46d24032855e",
     "checks": [
       "ClLPVaultCustody",
       "CollateralizationPledge",
@@ -23014,9 +23041,9 @@
     ]
   },
   "REQ-ORACLE-103": {
-    "hash": "08054efaeaf7433d",
+    "hash": "0be4d61b37c225d3",
     "checks": [
-      "ClLPVaultMarkets",
+      "ClNfpmLPVault",
       "IAmmIntegrationHooks",
       "ILPOracle",
       "ILPOracleEvents",
@@ -23030,6 +23057,9 @@
       "LPOracleEval",
       "LPOraclePoke",
       "LPOracleStorage",
+      "LPOracleV4",
+      "LPOracleV4Module",
+      "LPOracleV4ModuleLogic",
       "LPOracleViewLogic",
       "LPPriceMath",
       "MATH-AMM-BAL-PRICE-02",
@@ -23077,13 +23107,14 @@
     ]
   },
   "REQ-ORACLE-105": {
-    "hash": "9654c44936c74153",
+    "hash": "d91486fcfd0de3ea",
     "checks": [
       "HYP-AMM-05",
       "LPOracleCLListingLogic",
       "LPOracleCLModule",
       "LPOracleCLModuleCaller",
       "LPOracleCLModuleLogic",
+      "LPOracleV4Module",
       "LPPriceMath",
       "MATH-UO-10",
       "MATH-UO-75",
@@ -23091,6 +23122,7 @@
       "TEST-264",
       "TEST-279",
       "TEST-306",
+      "TEST-331",
       "TEST-332"
     ]
   },
@@ -28922,7 +28954,7 @@
     ]
   },
   "REQ-VAULT-025": {
-    "hash": "74901f05ab3dfaf2",
+    "hash": "0b1170b0b0c7fa69",
     "checks": [
       "AmmConstants",
       "CollateralizationPledge",
@@ -29340,16 +29372,19 @@
     ]
   },
   "REQ-VAULT-064": {
-    "hash": "32a1d8cc76c7792d",
+    "hash": "a441f62537f1e05f",
     "checks": [
       "ClLPVaultCustody",
+      "ClNfpmLPVault",
       "IAmmIntegration",
       "ICollateralizationUser",
       "ILPVaultErrors",
       "TEST-010",
       "TEST-017",
       "TEST-091",
-      "TEST-130"
+      "TEST-130",
+      "TEST-331",
+      "UniswapV4Integration"
     ]
   },
   "REQ-VAULT-065": {
@@ -29600,7 +29635,7 @@
     ]
   },
   "REQ-VAULT-088": {
-    "hash": "fa32b18ac362144a",
+    "hash": "9610e6326c6205bf",
     "checks": [
       "CollateralizationBase",
       "CollateralizationLedger",

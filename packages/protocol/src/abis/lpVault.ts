@@ -450,6 +450,19 @@ export const lpVaultAbi = [
   },
   {
     "type": "function",
+    "name": "maxRecordsPerAccountMarket",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "records",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "positionOwner",
     "inputs": [
       {

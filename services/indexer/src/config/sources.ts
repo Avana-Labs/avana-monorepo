@@ -20,6 +20,7 @@ import {
   optionalEnv,
   requireEnv,
   rpcEnvName,
+  uniswapV4PoolManager,
 } from "@avana/services-common";
 import type { ChainDeployment } from "@avana/services-common/views";
 
@@ -170,6 +171,24 @@ export const ammPoolSource = () =>
     }),
     startBlock: registryStart(m),
   }));
+
+/**
+ * A manifest's Uniswap v4 PoolManager, from the later of its deployment and the registry's: the handlers keep only
+ * pools a market lists, and a pool's history before listing is not part of the live series. Null without one.
+ */
+export function poolManagerOf(m: Pick<ServiceManifest, "uniswapV4" | "avana">): { address: `0x${string}`; startBlock: number } | null {
+  const pm = uniswapV4PoolManager(m);
+  return pm ? { address: pm.address, startBlock: Math.max(pm.startBlock, m.avana.marketRegistry.startBlock) } : null;
+}
+
+/** The PoolManager of every active chain whose manifest names one; empty, and so inert, when none does. */
+export const poolManagerSource = () =>
+  Object.fromEntries(
+    activeChains.flatMap((c) => {
+      const pm = poolManagerOf(manifests.get(c.id)!);
+      return pm ? [[c.key, pm] as const] : [];
+    }),
+  );
 
 /** One sample an hour of block time, from the later of the Lens and the first Lend Spoke deployments. */
 export function samplerSource() {

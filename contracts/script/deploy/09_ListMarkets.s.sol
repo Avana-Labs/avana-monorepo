@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
 import {IClIntegration} from "../../src/amm/IClIntegration.sol";
+import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {DexHop, HopKind} from "../../src/liquidation/settlement-routes/types/DexHop.sol";
 import {RouteConfig} from "../../src/liquidation/settlement-routes/types/RouteConfig.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
@@ -43,6 +44,13 @@ interface ISpokeImplementationRead {
     function ORACLE() external view returns (address);
 }
 
+/// @notice The Uniswap v4 LPVault and PositionManager views a v4 listing reads.
+interface IUniswapV4Reads {
+    function POOL_MANAGER() external view returns (address);
+    function wrappedNative() external view returns (address);
+    function poolManager() external view returns (address);
+}
+
 /// @notice The vault-token views a relisting reads.
 interface IRelistedToken {
     function marketId() external view returns (uint256);
@@ -73,7 +81,11 @@ interface IRelistedToken {
 ///   from the route's `depthThreshold` in the config). `10_AaveListingPayload` (`vault-tokens`) then lists the vault
 ///   tokens.
 /// - `activate` (short delay): every LPOracle poked Live, then `activateMarket` for each market.
-/// @dev Speed limits fail closed (Q-411): a market or a (Hub, asset) without a written value refuses every pledge or
+/// @dev A Uniswap v4 market has no pool address: its config `pool` names an entry of `listing.uniswapV4Pools` (the pool
+/// key's currencies, fee and tick spacing, and the Uniswap v3 reference pool of its pair), and the market is keyed by
+/// `poolId = keccak256(abi.encode(key))` with `pool = address(0)`. Native ETH (`currency0 = address(0)`) is the
+/// LPVault's `wrappedNative()` among the market's tokens.
+/// Speed limits fail closed (Q-411): a market or a (Hub, asset) without a written value refuses every pledge or
 /// borrow, so the listing batch writes the config values (τ 6 h; borrow 25 %, $250k–$2.5M; pledge 25 %, $1M–$10M;
 /// (Hub, asset) 25 %, 500k–5M tokens). The `markets` operation's salt is keccak256 of the listing metadata file
 /// (`09-market-metadata`), so the operation commits to the pages it adds. Outputs: `listing-oracles.json` and `listing-markets.json` in
@@ -90,6 +102,7 @@ contract ListMarkets is ListingBase {
     GlobalParams internal globals;
     uint32[] internal integrationIds;
     mapping(uint32 => bool) internal isSlipstream;
+    mapping(uint32 => bool) internal isUniswapV4;
 
     function run() external {
         _loadListing();
@@ -98,6 +111,7 @@ contract ListMarkets is ListingBase {
         for (uint256 i = 0; i < c.integrations.length; ++i) {
             integrationIds.push(c.integrations[i].integrationId);
             isSlipstream[c.integrations[i].integrationId] = _eq(c.integrations[i].kind, "slipstream");
+            isUniswapV4[c.integrations[i].integrationId] = _eq(c.integrations[i].kind, "uniswap-v4");
         }
         string memory step = vm.envString("AVANA_LISTING_STEP");
         if (_eq(step, "setup")) {
@@ -150,6 +164,9 @@ contract ListMarkets is ListingBase {
                 (contracts[2 * j], contracts[2 * j + 1]) =
                 (c.integrations[i].positionManagers[j], c.integrations[i].factories[j]);
             }
+            // Uniswap v4: the PositionManager and its PoolManager; the Uniswap v3 factory of the reference pools is not
+            // recorded (routes swap through its pools).
+            if (isUniswapV4[id]) contracts[1] = IUniswapV4Reads(contracts[0]).poolManager();
             _add(
                 op,
                 address(registry),
@@ -476,7 +493,9 @@ contract ListMarkets is ListingBase {
         string spokeLabel;
         address spoke;
         address hub;
+        // address(0) for Uniswap v4, whose market is keyed by `poolId`.
         address pool;
+        bytes32 poolId;
         address token0;
         address token1;
         PositionShape shape;
@@ -707,29 +726,70 @@ contract ListMarkets is ListingBase {
         );
     }
 
-    /// @notice The VaultTokenFactory market key of config market `i`: integration, pool and position shape.
+    /// @notice The VaultTokenFactory market key of config market `i`: integration, pool (or v4 pool ID) and position
+    /// shape.
     function _marketKeyOf(
         IVaultTokenFactory f,
         uint256 i
     ) private view returns (bytes32) {
         string memory key = _at("markets", i);
-        address pool = _pool(_str(string.concat(key, ".pool")));
-        return f.marketKeyOf(uint32(_uint(string.concat(key, ".integrationId"))), pool, bytes32(0), _shapeOf(key, pool));
+        (address pool, bytes32 poolId) = _poolOf(key);
+        return f.marketKeyOf(uint32(_uint(string.concat(key, ".integrationId"))), pool, poolId, _shapeOf(key));
+    }
+
+    /// @notice The pool of a config market: its address, or for Uniswap v4 address(0) and the pool key's ID.
+    function _poolOf(
+        string memory key
+    ) private view returns (address pool, bytes32 poolId) {
+        string memory name = _str(string.concat(key, ".pool"));
+        if (!_isV4Market(key)) return (_pool(name), bytes32(0));
+        return (address(0), keccak256(abi.encode(_v4Key(name))));
+    }
+
+    function _isV4Market(
+        string memory key
+    ) private view returns (bool) {
+        return isUniswapV4[uint32(_uint(string.concat(key, ".integrationId")))];
+    }
+
+    /// @notice The hookless pool key of `listing.uniswapV4Pools[name]` (currencies sorted, address(0) for native ETH).
+    function _v4Key(
+        string memory name
+    ) private view returns (UniswapV4PoolKey memory k) {
+        string memory p = string.concat(".listing.uniswapV4Pools['", name, "']");
+        k.currency0 = _addr(cfg, string.concat(p, ".currency0"));
+        k.currency1 = _addr(cfg, string.concat(p, ".currency1"));
+        k.fee = uint24(_uint(string.concat(p, ".fee")));
+        k.tickSpacing = int24(vm.parseJsonInt(cfg, string.concat(p, ".tickSpacing")));
+        require(k.currency0 < k.currency1, string.concat("uniswapV4Pools currencies not sorted: ", name));
+    }
+
+    /// @notice The Uniswap v3 reference pool of `listing.uniswapV4Pools[name]` (same pair, native ETH as WETH).
+    function _v4ReferencePool(
+        string memory name
+    ) private view returns (address) {
+        return _addr(cfg, string.concat(".listing.uniswapV4Pools['", name, "'].referencePool"));
     }
 
     /// @notice The position shape of a config market: its tick range, or the pool's full range when both are 0.
     function _shapeOf(
-        string memory key,
-        address pool
+        string memory key
     ) private view returns (PositionShape memory) {
         int24 lower = int24(vm.parseJsonInt(cfg, string.concat(key, ".tickLower")));
         int24 upper = int24(vm.parseJsonInt(cfg, string.concat(key, ".tickUpper")));
         if (lower == 0 && upper == 0) {
-            int24 sp = IPoolTokens(pool).tickSpacing();
+            int24 sp = _tickSpacingOf(key);
             upper = (887_272 / sp) * sp;
             lower = -upper;
         }
         return PositionShape(ShapeKind.TickRange, lower, upper);
+    }
+
+    function _tickSpacingOf(
+        string memory key
+    ) private view returns (int24) {
+        string memory name = _str(string.concat(key, ".pool"));
+        return _isV4Market(key) ? _v4Key(name).tickSpacing : IPoolTokens(_pool(name)).tickSpacing();
     }
 
     /// @notice The listing's timelock salt: keccak256 of the listing metadata file `09-market-metadata` wrote
@@ -781,15 +841,11 @@ contract ListMarkets is ListingBase {
         m.spokeLabel = _str(string.concat(m.key, ".spoke"));
         m.spoke = _spokeAddr(m.spokeLabel);
         m.hub = _hub(_hubOfSpoke(m.spokeLabel));
-        m.pool = _pool(_str(string.concat(m.key, ".pool")));
-        (m.token0, m.token1) = (IPoolTokens(m.pool).token0(), IPoolTokens(m.pool).token1());
-        m.shape = _shapeOf(m.key, m.pool);
-        (uint256 p0, uint256 p1) = (_price8(m.token0), _price8(m.token1));
-        uint256 idx = _integrationIndex(m.integrationId);
-        m.integrationData = isSlipstream[m.integrationId]
-            ? abi.encode(_uint(string.concat(m.key, ".generation")), p0, p1)
-            : abi.encode(p0, p1);
-        m.lpVault = vm.parseJsonAddressArray(avanaJson, ".lpVaults")[idx];
+        m.lpVault = vm.parseJsonAddressArray(avanaJson, ".lpVaults")[_integrationIndex(m.integrationId)];
+        (m.pool, m.poolId) = _poolOf(m.key);
+        (m.token0, m.token1) = _tokensOf(m);
+        m.shape = _shapeOf(m.key);
+        m.integrationData = _integrationData(m);
         m.debtAsset = _debtAssetOf(m.spokeLabel);
         if (vaultToken != address(0)) {
             // A relisting: the integration keeps the reserved ID's binding, which listCollateralMarket checks.
@@ -803,10 +859,33 @@ contract ListMarkets is ListingBase {
         // must name the same `d`, and the market's LPOracle the same `k` (SPEC-ORC-005, `CL_CHECK_UNIT_EXP`).
         uint256 snap = vm.snapshotState();
         vm.prank(address(registry));
-        (, m.decimals) =
-            IAmmIntegration(m.lpVault).bindMarket(m.marketId, m.pool, bytes32(0), m.shape, m.integrationData);
+        (, m.decimals) = IAmmIntegration(m.lpVault).bindMarket(m.marketId, m.pool, m.poolId, m.shape, m.integrationData);
         m.unitExp = IClIntegration(m.lpVault).unitExponent(m.marketId);
         vm.revertToState(snap);
+    }
+
+    /// @notice The market's two tokens in pool order: the pool's, or a v4 key's currencies with native ETH as the
+    /// LPVault's wrapped native token.
+    function _tokensOf(
+        Mkt memory m
+    ) private view returns (address, address) {
+        if (m.poolId == bytes32(0)) return (IPoolTokens(m.pool).token0(), IPoolTokens(m.pool).token1());
+        UniswapV4PoolKey memory k = _v4Key(_str(string.concat(m.key, ".pool")));
+        address c0 = k.currency0 == address(0) ? IUniswapV4Reads(m.lpVault).wrappedNative() : k.currency0;
+        return (c0, k.currency1);
+    }
+
+    /// @notice `bindMarket`'s integration data, with the 8-decimal listing prices in the market's token order: Uniswap
+    /// v3 `(price0, price1)`, Slipstream `(generation, price0, price1)`, Uniswap v4
+    /// `(key, referencePool, price0, price1)`.
+    function _integrationData(
+        Mkt memory m
+    ) private view returns (bytes memory) {
+        (uint256 p0, uint256 p1) = (_price8(m.token0), _price8(m.token1));
+        if (isSlipstream[m.integrationId]) return abi.encode(_uint(string.concat(m.key, ".generation")), p0, p1);
+        if (m.poolId == bytes32(0)) return abi.encode(p0, p1);
+        string memory name = _str(string.concat(m.key, ".pool"));
+        return abi.encode(_v4Key(name), _v4ReferencePool(name), p0, p1);
     }
 
     function _integrationIndex(
@@ -830,8 +909,8 @@ contract ListMarkets is ListingBase {
         revert(string.concat("no debt reserve for ", spokeLabel));
     }
 
-    /// @notice `MKT-019`: the market's LPOracle, a proxy of its integration's `LPOracleCL` initialised in its deploying
-    /// transaction; `initialize` refuses a configuration that does not price Live.
+    /// @notice `MKT-019`: the market's LPOracle, a proxy of its integration's `LPOracleCL` (`LPOracleV4` for Uniswap v4)
+    /// initialised in its deploying transaction; `initialize` refuses a configuration that does not price Live.
     function _deployLpOracle(
         Mkt memory m
     ) private {
@@ -847,8 +926,7 @@ contract ListMarkets is ListingBase {
         p.description = _str(string.concat(m.key, ".name"));
         p.pokeMinGas = LP_ORACLE_POKE_MIN_GAS;
         p.config = _oracleConfig(m, p.isUsdStable[0] && p.isUsdStable[1]);
-        // `abi.encode(pool, tickLower, tickUpper, k)`: k is the pool's unit exponent (SPEC-ORC-005).
-        p.market = abi.encode(m.pool, m.shape.tickLower, m.shape.tickUpper, uint256(m.unitExp));
+        p.market = _oracleMarket(m);
         address impl = vm.parseJsonAddressArray(avanaJson, ".clOraclePricing")[_integrationIndex(m.integrationId)];
         vm.broadcast(deployerOf());
         m.lpOracle = _deploy(
@@ -856,6 +934,26 @@ contract ListMarkets is ListingBase {
             bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(impl, abi.encodeCall(ILPOracle.initialize, (p))))
         );
         console2.log("LPOracle", m.marketId, m.lpOracle);
+    }
+
+    /// @notice The LPOracle's `market`: `abi.encode(pool, tickLower, tickUpper, k)`, or for Uniswap v4
+    /// `abi.encode(poolManager, key, tickLower, tickUpper, k, referencePool)`; k is the pool's unit exponent
+    /// (SPEC-ORC-005).
+    function _oracleMarket(
+        Mkt memory m
+    ) private view returns (bytes memory) {
+        if (m.poolId == bytes32(0)) {
+            return abi.encode(m.pool, m.shape.tickLower, m.shape.tickUpper, uint256(m.unitExp));
+        }
+        string memory name = _str(string.concat(m.key, ".pool"));
+        return abi.encode(
+            IUniswapV4Reads(m.lpVault).POOL_MANAGER(),
+            _v4Key(name),
+            m.shape.tickLower,
+            m.shape.tickUpper,
+            uint256(m.unitExp),
+            _v4ReferencePool(name)
+        );
     }
 
     function _oracleConfig(
@@ -1019,7 +1117,7 @@ contract ListMarkets is ListingBase {
             spoke: m.spoke,
             integrationId: m.integrationId,
             pool: m.pool,
-            poolId: bytes32(0),
+            poolId: m.poolId,
             shape: m.shape,
             vaultToken: m.vaultToken,
             lpOracle: m.lpOracle,
@@ -1056,7 +1154,7 @@ contract ListMarkets is ListingBase {
             (
                 m.integrationId,
                 m.pool,
-                bytes32(0),
+                m.poolId,
                 m.shape,
                 m.hub,
                 m.spoke,
@@ -1206,6 +1304,7 @@ contract ListMarkets is ListingBase {
         vm.serializeAddress(k, "spoke", m.spoke);
         vm.serializeAddress(k, "hub", m.hub);
         vm.serializeAddress(k, "pool", m.pool);
+        vm.serializeBytes32(k, "poolId", m.poolId);
         vm.serializeAddress(k, "token0", m.token0);
         vm.serializeAddress(k, "token1", m.token1);
         vm.serializeInt(k, "tickLower", m.shape.tickLower);

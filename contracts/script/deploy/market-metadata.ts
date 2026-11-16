@@ -27,7 +27,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { type Address, createPublicClient, getAddress, http, keccak256, parseAbi } from "viem";
+import { type Address, createPublicClient, encodeAbiParameters, getAddress, http, keccak256, parseAbi, zeroAddress, zeroHash } from "viem";
 import { MetadataRejected, parseMetadata } from "../../../services/convex/convex/lib/metadata.ts";
 
 const CONTRACTS = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -76,13 +76,29 @@ const abi = parseAbi([
   "function symbol() view returns (string)",
 ]);
 
-/** The market's VaultTokenFactory key: integration, pool and tick range (the pool's full range when both are 0), as
- * `09-listing-markets` computes it. */
+/** The Uniswap v4 integration IDs of the config: their markets are keyed by pool ID (`listing.uniswapV4Pools`). */
+const v4Ids = new Set((config.integrations as { integrationId: number; kind: string }[]).filter((i) => i.kind === "uniswap-v4").map((i) => i.integrationId));
+
+/** A Uniswap v4 market's pool ID, keccak256 of its hookless pool key (09_ListMarkets `_v4Key`). */
+function v4PoolId(name: string): { poolId: `0x${string}`; tickSpacing: number } {
+  const k = config.listing.uniswapV4Pools?.[name] as Json | undefined;
+  if (!k) throw new Error(`listing.uniswapV4Pools has no ${name}`);
+  const key = { currency0: addr(k.currency0), currency1: addr(k.currency1), fee: Number(k.fee), tickSpacing: Number(k.tickSpacing), hooks: zeroAddress };
+  const encoded = encodeAbiParameters(
+    [{ type: "tuple", components: [{ name: "currency0", type: "address" }, { name: "currency1", type: "address" }, { name: "fee", type: "uint24" }, { name: "tickSpacing", type: "int24" }, { name: "hooks", type: "address" }] }],
+    [key],
+  );
+  return { poolId: keccak256(encoded), tickSpacing: key.tickSpacing };
+}
+
+/** The market's VaultTokenFactory key: integration, pool (or Uniswap v4 pool ID) and tick range (the pool's full range
+ * when both are 0), as `09-listing-markets` computes it. */
 async function marketKey(factory: Address, m: Json): Promise<`0x${string}`> {
-  const pool = addr(config.listing.pools[m.pool]);
+  const v4 = v4Ids.has(m.integrationId) ? v4PoolId(m.pool) : null;
+  const pool = v4 ? zeroAddress : addr(config.listing.pools[m.pool]);
   let [lower, upper] = [Number(m.tickLower), Number(m.tickUpper)];
   if (lower === 0 && upper === 0) {
-    const sp = await client.readContract({ address: pool, abi, functionName: "tickSpacing" });
+    const sp = v4 ? v4.tickSpacing : await client.readContract({ address: pool, abi, functionName: "tickSpacing" });
     upper = Math.trunc(887_272 / sp) * sp;
     lower = -upper;
   }
@@ -90,7 +106,7 @@ async function marketKey(factory: Address, m: Json): Promise<`0x${string}`> {
     address: factory,
     abi,
     functionName: "marketKeyOf",
-    args: [m.integrationId, pool, `0x${"0".repeat(64)}`, { kind: 1, tickLower: lower, tickUpper: upper }],
+    args: [m.integrationId, pool, v4 ? v4.poolId : zeroHash, { kind: 1, tickLower: lower, tickUpper: upper }],
   });
 }
 

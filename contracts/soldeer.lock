@@ -95,6 +95,12 @@ git = "https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable.git"
 rev = "fa525310e45f91eb20a6d3baa2644be8e0adba31"
 
 [[dependencies]]
+name = "permit2"
+version = "cc56ad0"
+git = "https://github.com/Uniswap/permit2.git"
+rev = "cc56ad0f3439c502c246fc5cfcc3db92bb8b7219"
+
+[[dependencies]]
 name = "slipstream"
 version = "1.0.0"
 git = "https://github.com/aerodrome-finance/slipstream.git"
@@ -114,6 +120,12 @@ checksum = "9872ac7cfd32c1eba32800508a1325c49f4a4aa8c6f670454db91971a583e26b"
 integrity = "5da4b5ca9cbad98812a4b75ad528ff34c72a0b84433204be6d1420c81de1d6ff"
 
 [[dependencies]]
+name = "solmate"
+version = "4b47a19"
+git = "https://github.com/transmissions11/solmate.git"
+rev = "4b47a19038b798b4a33d9749d25e570443520647"
+
+[[dependencies]]
 name = "uniswap-v3-core"
 version = "5ea68a7"
 git = "https://github.com/Uniswap/v3-core.git"
@@ -124,3 +136,15 @@ name = "uniswap-v3-periphery"
 version = "24ccf01"
 git = "https://github.com/Uniswap/v3-periphery.git"
 rev = "24ccf014fe7f81d74a14c1689d6fdf123f280e45"
+
+[[dependencies]]
+name = "uniswap-v4-core"
+version = "e50237c"
+git = "https://github.com/Uniswap/v4-core.git"
+rev = "e50237c43811bd9b526eff40f26772152a42daba"
+
+[[dependencies]]
+name = "uniswap-v4-periphery"
+version = "ea2bf2e"
+git = "https://github.com/Uniswap/v4-periphery.git"
+rev = "ea2bf2e1ba6863bb809fc2ff791744f308c4a26d"

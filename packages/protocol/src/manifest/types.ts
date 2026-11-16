@@ -53,7 +53,7 @@ export interface OperatorHelper extends Immutable {
 
 export interface LpVault extends Immutable {
   readonly integrationId: number;
-  /** "uniswap-v3" or "slipstream". */
+  /** "uniswap-v3", "slipstream" or "uniswap-v4". */
   readonly kind: string;
 }
 
@@ -76,7 +76,10 @@ export interface Market {
   readonly vaultToken: Immutable;
   readonly lpOracle: Upgradeable;
   readonly reserveId: string;
+  /** The pool contract; address(0) for a Uniswap v4 market, whose pool is a key in the PoolManager. */
   readonly pool: Address;
+  /** Uniswap v4 only: the PoolId, `keccak256(abi.encode(PoolKey))`, of the key the LPVault bound the market to. */
+  readonly poolId?: Hex;
   readonly tokens: readonly Address[];
   readonly feeds: readonly { readonly feed: Address; readonly heartbeatSeconds: number }[];
   readonly routes: readonly Immutable[];
@@ -92,10 +95,10 @@ export interface DebtReserve {
   readonly feeds: readonly { readonly feed: Address; readonly heartbeatSeconds: number }[];
 }
 
-/** A third-party contract the deployment names: Aave V4, Uniswap v3, Aerodrome Slipstream, tokens, feeds. */
+/** A third-party contract the deployment names: Aave V4, Uniswap v3 and v4, Aerodrome Slipstream, tokens, feeds. */
 export interface External {
   readonly name: string;
-  /** "aave-v4" | "aave-v3" | "uniswap-v3" | "slipstream" | "token" | "feed" | "safe". */
+  /** "aave-v4" | "aave-v3" | "uniswap-v3" | "uniswap-v4" | "slipstream" | "token" | "feed" | "safe". */
   readonly group: string;
   readonly address: Address;
   readonly codeHash: Hex;
@@ -183,4 +186,6 @@ export interface ReleaseManifest {
   };
   readonly roles: RoleTable;
   readonly external: readonly External[];
+  /** The chain's Uniswap v4 PoolManager (third-party, `artifact` null); present only with a Uniswap v4 integration. */
+  readonly uniswapV4?: { readonly poolManager: Immutable };
 }

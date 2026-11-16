@@ -48,4 +48,4 @@ export const ABI_ARTIFACTS = {
 } as const;
 
 /** keccak256 of the canonical JSON of every ABI above; the release manifest's abiHash must equal it (TEST-149). */
-export const ABI_HASH = "0x1b10de134d60358f093aecf22308bb4d2224ab42091a15c2a889d3d51c782ab6" as const;
+export const ABI_HASH = "0x552d00fab8c18d741115c5ab8a3d75382480e7b7a7db80b39e32d42573e316e7" as const;

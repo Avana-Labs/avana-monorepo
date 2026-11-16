@@ -1,0 +1,16 @@
+{
+  "name": "retire-v4-back-debt-aip",
+  "description": "AIP: the GHO reserve borrowable again",
+  "via": "aip",
+  "restores": "retire-v4-forward-debt-aip",
+  "changes": [
+    {
+      "aave": "reserveConfig",
+      "spoke": "spoke:uniV4Correlated",
+      "reserve": "debtReserve:uniV4Correlated:GHO",
+      "set": {
+        "borrowable": "$prior"
+      }
+    }
+  ]
+}

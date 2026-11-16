@@ -215,7 +215,7 @@ jobs:
     if: github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true'
     # The mutation jobs' isolated copies link these outputs, which the test fixtures deploy from (vm.getCode and
     # deployCode of out-aave/, out-univ3/, out-univ3-periphery/, out-slipstream-v1/, out-slipstream-main/,
-    # out-aerodrome/); the same builds as contracts.yml.
+    # out-aerodrome/, out-univ4/, out-permit2/); the same builds as contracts.yml.
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -238,7 +238,7 @@ jobs:
       - run: |
           forge soldeer install
           script/install-security-tools.sh --solc
-          for p in aave univ3 univ3-periphery slipstream-v1 slipstream-main aerodrome; do FOUNDRY_PROFILE=$p forge build; done
+          for p in aave univ3 univ3-periphery slipstream-v1 slipstream-main aerodrome univ4 permit2; do FOUNDRY_PROFILE=$p forge build; done
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -250,6 +250,8 @@ jobs:
             contracts/out-slipstream-v1
             contracts/out-slipstream-main
             contracts/out-aerodrome
+            contracts/out-univ4
+            contracts/out-permit2
           if-no-files-found: error
           retention-days: 7
 

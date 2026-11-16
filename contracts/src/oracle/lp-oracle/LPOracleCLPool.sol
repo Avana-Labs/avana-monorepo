@@ -36,6 +36,9 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         // Unit exponent `k` of the market's pool (`SPEC-ORC-005`): one vault-token unit is `10^k` liquidity, as in the
         // integration (`IClIntegration.unitExponent`).
         uint8 unitExp;
+        // Uniswap v4: the market's `PoolId`, the pool being keyed by identifier and `pool` holding the reference
+        // Uniswap v3 pool; zero for a pool keyed by address (Uniswap v3, Slipstream).
+        bytes32 poolId;
     }
 
     /// @dev keccak256(abi.encode(uint256(keccak256("avana.storage.LPOracleCL")) - 1)) & ~bytes32(uint256(0xff)).
@@ -217,8 +220,9 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         return ok0 && ok1 && ok2 && ok5 && off0 == 2 * _W && off1 == 5 * _W && len0 == 2 && len1 == 2;
     }
 
-    /// @dev The record names this implementation's pool by address with no pool identifier, a `TickRange` shape and the
-    /// exact range stored at `initialize` (REQ-ORACLE-046).
+    /// @dev The record names this implementation's pool, a `TickRange` shape and the exact range stored at `initialize`
+    /// (REQ-ORACLE-046): a pool keyed by address with no pool identifier, or for Uniswap v4 no address and the stored
+    /// `PoolId` (REQ-AMM-V4-007).
     /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-103
     function _isOwnMarket(
         uint256 poolWord,
@@ -233,7 +237,10 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         uint256 lower = uint256(int256(c.tickLower));
         // forge-lint: disable-next-line(unsafe-typecast)
         uint256 upper = uint256(int256(c.tickUpper));
-        own = poolWord == uint160(c.pool) && poolIdWord == 0 && kindWord == uint256(ShapeKind.TickRange)
-            && tickLowerWord == lower && tickUpperWord == upper;
+        bytes32 id = c.poolId;
+        bool pool = id == bytes32(0)
+            ? poolWord == uint160(c.pool) && poolIdWord == 0
+            : poolWord == 0 && poolIdWord == uint256(id);
+        own = pool && kindWord == uint256(ShapeKind.TickRange) && tickLowerWord == lower && tickUpperWord == upper;
     }
 }

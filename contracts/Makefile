@@ -25,13 +25,15 @@ build:
 build-aave:
 	FOUNDRY_PROFILE=aave forge build
 
-# The test-network world of script/deploy/02_DeployWorld: Uniswap v3, Aerodrome Slipstream and Aerodrome, Aave V3, and
+# The test-network world of script/deploy/02_DeployWorld: Uniswap v3, Uniswap v4 and Permit2, Aerodrome Slipstream and Aerodrome, Aave V3, and
 # the Chainlink OCR2 aggregator and its EACAggregatorProxy (contracts/external/README.md).
 build-external:
 	FOUNDRY_PROFILE=univ3 forge build
 	FOUNDRY_PROFILE=univ3-periphery forge build
 	FOUNDRY_PROFILE=slipstream-v1 forge build
 	FOUNDRY_PROFILE=slipstream-main forge build
+	FOUNDRY_PROFILE=univ4 forge build
+	FOUNDRY_PROFILE=permit2 forge build
 	FOUNDRY_PROFILE=aerodrome forge build
 	FOUNDRY_PROFILE=aave-v3 forge build
 	FOUNDRY_PROFILE=chainlink-ocr2 forge build

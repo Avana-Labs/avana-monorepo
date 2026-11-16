@@ -99,6 +99,11 @@ CONTRACTS: dict[str, tuple[list[str], list[str], list[str]]] = {
         ["SlipstreamIntegration", "Slipstream integration", "LPVault", "LPVaults", "AMM integrations"],
         ["SlipstreamIntegration.spec", "LPVault.spec"],
     ),
+    "UniswapV4Integration": (
+        ["19-amm-integration-interface.md", "23-uniswap-v4-integration.md"],
+        ["UniswapV4Integration", "Uniswap v4 integration", "LPVault", "LPVaults", "AMM integrations"],
+        [],
+    ),
     "AaveV3FlashSource": (
         ["11-lpvaultswap.md#Flash source"], ["AaveV3FlashSource", "IFlashSource", "flash source"], ["FlashSource.spec"]
     ),

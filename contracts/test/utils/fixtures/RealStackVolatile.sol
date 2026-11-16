@@ -465,7 +465,7 @@ abstract contract RealStackVolatile is RealStackFlows {
 
     function _storeVolatile(
         uint256 id
-    ) private {
+    ) internal {
         MarketParams memory mp;
         (mp.twapWindow, mp.consistencyToleranceBps, mp.slippageAllowanceBps, mp.slippageAllowanceMinBps) =
         (1800, 50, 195, 30);
@@ -487,7 +487,7 @@ abstract contract RealStackVolatile is RealStackFlows {
         uint8 d,
         uint16 cf,
         ClSite memory site
-    ) private {
+    ) internal {
         address hub = site.hub;
         uint24 maxRp = IAaveV4Hub(hub).MAX_RISK_PREMIUM_THRESHOLD();
         vm.startPrank(aaveDao);

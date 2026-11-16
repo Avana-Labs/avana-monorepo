@@ -1,0 +1,16 @@
+{
+  "name": "retire-v4-back",
+  "description": "enableDebtReserve with its recorded definition (timelock, normal delay)",
+  "via": "timelock",
+  "restores": "retire-v4-forward-debt",
+  "changes": [
+    {
+      "contract": "MarketRegistry",
+      "function": "enableDebtReserve",
+      "args": {
+        "spoke": "spoke:uniV4Correlated",
+        "def": "$prior"
+      }
+    }
+  ]
+}

@@ -74,7 +74,7 @@ isolated_root() {
   rm -rf "$root" && mkdir -p "$root/bin"
   cp -R src test "$root/"
   for f in dependencies foundry.toml remappings.txt out-aave out-univ3 out-univ3-periphery out-slipstream-v1 \
-    out-slipstream-main out-aerodrome; do
+    out-slipstream-main out-aerodrome out-univ4 out-permit2; do
     [ -e "$f" ] && ln -s "$ROOT/$f" "$root/$f"
   done
   ln -s "$solc" "$root/bin/solc"

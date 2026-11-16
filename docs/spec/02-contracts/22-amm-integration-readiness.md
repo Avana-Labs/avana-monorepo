@@ -1,8 +1,8 @@
 # 2.22 AMM Integration Readiness
 
-> **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-10
+> **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-14
 >
-> **Requirement prefix:** `REQ-AMM-V2-NNN`, `REQ-AMM-CURVE-NNN`, `REQ-AMM-BAL-NNN`, `REQ-AMM-V4-NNN`, `REQ-READY-NNN` (token listing rules that apply to every AMM protocol) · **Math prefix:** `SPEC-AMM-V2-NNN`, `SPEC-AMM-CURVE-NNN`, `SPEC-AMM-BAL-NNN`, `SPEC-AMM-V4-NNN`
+> **Requirement prefix:** `REQ-AMM-V2-NNN`, `REQ-AMM-CURVE-NNN`, `REQ-AMM-BAL-NNN`, `REQ-READY-NNN` (token listing rules that apply to every AMM protocol) · **Math prefix:** `SPEC-AMM-V2-NNN`, `SPEC-AMM-CURVE-NNN`, `SPEC-AMM-BAL-NNN`
 
 ## Purpose
 
@@ -17,9 +17,9 @@ The AMM-neutral core ([2.19](19-amm-integration-interface.md)) supports four AMM
 | `pool` / `poolId` | Pair address | Pool address | `poolId` | `PoolId` |
 | `positionKey`, units | `keccak256(marketId, depositor, nonce)`, LP base units | Same, LP base units | Same, BPT base units | PositionManager `tokenId` as `bytes32`, liquidity |
 | Fees separable | No (compound) | No (compound) | No (compound) | Yes |
-| Consistency price | Cumulative prices | `price_oracle()` EMA | None (feed-only check) | None without an oracle hook |
+| Consistency price | Cumulative prices | `price_oracle()` EMA | None (feed-only check) | Spot gate on `slot0` plus the same pair's Uniswap v3 TWAP |
 | Reentrancy guard before a read | Private lock; read `getReserves` outside a swap | A state-changing, reentrancy-locked pool call | `ensureNotInVaultContext` | PoolManager locked (`exttload`) |
-| Extra guards | `getReserves`, pending `feeTo` supply, spot within 1%, minimum supply | No rate token without a capped feed; reverting `D` is a price failure | `getActualSupply`-style supply | Hook allowlist with no remove-liquidity hooks or deltas; no subscriber |
+| Extra guards | `getReserves`, pending `feeTo` supply, spot within 1%, minimum supply | No rate token without a capped feed; reverting `D` is a price failure | `getActualSupply`-style supply | Hookless pools only (the mask refuses remove and delta hooks); no subscriber; token supply below 2^127; depth from the pair's v3 pool |
 
 Every one of them also needs the per-block quote-change cap (`REQ-AMM-CORE-014`).
 
@@ -63,12 +63,7 @@ Every readiness section below names the four parts [2.10](10-lp-oracle.md) `REQ-
 
 ## Uniswap v4
 
-- `REQ-AMM-V4-001` — A v4 market MUST NOT be listed unless its `PoolKey.hooks` is `address(0)` or a hook on Avana's hook allowlist whose address permission bits clear every remove-liquidity flag: `uint160(hooks) & REMOVE_MASK == 0` with `REMOVE_MASK = BEFORE_REMOVE_LIQUIDITY (1 << 9) | AFTER_REMOVE_LIQUIDITY (1 << 8) | AFTER_REMOVE_LIQUIDITY_RETURNS_DELTA (1 << 0)`, checked on-chain at `bindMarket` and again at every `receivePosition`. An allowlisted hook MUST be immutable, with its code hash pinned in the market and its removal gas measured. Why: a hook runs inside every removal, so it can revert (every position of the pool becomes unliquidatable), burn gas past the per-transaction cap, or keep part of the removed tokens through its returned delta; a 1% delta leaves 9,876 realizable against an oracle value of 9,975, and a 100% delta leaves 0 (`AMMN-RT-06`, `AMMN-GAS-03`). Example: a hook at an address ending `…0300` sets bits 8 and 9 and is refused; one ending `…0080` passes the mask. (Source: Q-302)
-- `REQ-AMM-V4-002` — `receivePosition` MUST refuse a position whose `PositionInfo` has `hasSubscriber` set (`SubscribedPosition`), and the LPVault MUST never call `subscribe`. Why: a subscriber's `notifyModifyLiquidity` runs on every liquidity change without a try/catch and can revert the removal. (Source: Q-302)
-- `REQ-AMM-V4-003` — Every v4 quote and custody read MUST require the PoolManager to be locked (not inside an `unlock` callback), read through `exttload`, and fail closed otherwise. Liquidity is read from the PoolManager, not the PositionManager. (Source: Q-302)
-- `REQ-AMM-V4-004` — The v4 unwind MUST run `modifyLiquidities` inside the PoolManager's `unlock`, take only the principal of the removal, and wrap a native-ETH currency into WETH (`REQ-AMM-CORE-004`); any fee the liquidity change pays out is sent to the depositor of record in the same call. v4 pools used as swap routes MUST be hook-free. (Source: Q-297, Q-302)
-- `REQ-AMM-V4-005` — v4 pools have no built-in TWAP; the LPOracle implementation MUST use a feed-only consistency check unless the pool's allowlisted hook is an oracle hook, and the per-block quote-change cap applies. (Source: Q-302)
-- `SPEC-AMM-V4-001` — **v4 composition.** Identical to `SPEC-AMM-V3-001` over the position's `(tickLower, tickUpper)` and the `PoolKey`'s currencies, with the market's exact range checked per `SPEC-BACK-001`. Why: v4 pools use the v3 tick and liquidity math; only the custody and hook surface differ. Units, rounding, bounds and example as `SPEC-AMM-V3-001`. Checked by: AMM-A1a, AMM-A3f, AMM-A4a, AMM-A5a, HYP-AMM-01, HYP-AMM-05. (Source: Q-302)
+The Uniswap v4 integration has its own page: [2.23 Uniswap v4 Integration](23-uniswap-v4-integration.md) holds `REQ-AMM-V4-001`–`REQ-AMM-V4-012` and `SPEC-AMM-V4-001`–`SPEC-AMM-V4-003`.
 
 ## Tokenized stocks
 
@@ -88,4 +83,3 @@ A tokenized stock is a pool token whose price follows a share traded on an excha
 | `REQ-AMM-V2-009` | A v2 quote read while the spot price is more than 1% from the oracle ratio, or after a per-block move above the cap | The market is served as `Cached`; borrowing against it stops until a later block confirms (Source: Q-302) |
 | `REQ-AMM-CURVE-008` | The pool's reentrancy probe reverts, or `get_D` does not converge | `PoolLocked` or a price failure; no quote is served (Source: Q-302) |
 | `REQ-AMM-BAL-006` | `ensureNotInVaultContext` reverts | `PoolLocked`; no quote is served (Source: Q-302) |
-| `REQ-AMM-V4-006` | A hook with a remove-liquidity bit, a non-allowlisted hook, a hook whose code hash changed, or a position with a subscriber | `bindMarket` reverts `HookNotAllowed`; `receivePosition` reverts `HookNotAllowed` or `SubscribedPosition` (Source: Q-302) |

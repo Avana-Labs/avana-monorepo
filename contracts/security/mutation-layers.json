@@ -17,9 +17,11 @@
     ],
     "2.2": [
       {"src": "src/amm/concentrated-liquidity", "files": ["ClPriceMath", "ClTickMath"], "tests": "test/{unit,fuzz}/ClPriceMath.*"},
-      {"src": "src/amm/concentrated-liquidity", "files": ["ClLPVault*"], "tests": "test/{unit,integration}/{UniswapV3Integration,SlipstreamIntegration,ClLPVault}.*"},
+      {"src": "src/amm/concentrated-liquidity", "files": ["ClLPVault*"], "tests": "test/{unit,integration}/{UniswapV3Integration,SlipstreamIntegration,UniswapV4Integration,ClLPVault}.*"},
       {"src": "src/amm/uniswap-v3", "tests": "test/{unit,integration}/UniswapV3Integration.*"},
-      {"src": "src/amm/slipstream", "tests": "test/unit/SlipstreamIntegration.*"}
+      {"src": "src/amm/slipstream", "tests": "test/unit/SlipstreamIntegration.*"},
+      {"src": "src/amm/uniswap-v4", "files": ["UniswapV4Integration"], "tests": "test/{unit,fuzz,integration}/UniswapV4Integration.*"},
+      {"src": "src/amm/uniswap-v4", "files": ["UniswapV4State"], "tests": "test/{unit,fuzz,integration}/{UniswapV4Integration,LPOracleV4}.*"}
     ],
     "2.3": [
       {"src": "src/flash", "tests": "test/{unit,fuzz}/AaveV3FlashSource.*"}

@@ -2375,6 +2375,62 @@
       "reason": "Aderyn form of unused-return: the LPOracle and DebtOracle pokes store observations, and the breaker conditions read the price state themselves (REQ-RISK-091). Covered by TEST-228."
     },
     {
+      "fingerprint": "eac4fc504e45b262",
+      "check": "unchecked-return",
+      "file": "src/amm/concentrated-liquidity/ClNfpmLPVault.sol",
+      "reason": "The principal-capped collect of SPEC-BACK-008: it collects exactly the amounts decreaseLiquidity returned, which the LPVault reports; moved unchanged from ClLPVaultCustody by the base split.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "25e745bd9a84b93d",
+      "check": "unused-import",
+      "file": "src/amm/concentrated-liquidity/ClNfpmLPVault.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "1302eba5bc701541",
+      "check": "unused-import",
+      "file": "src/amm/concentrated-liquidity/ClNfpmLPVault.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "6ba33bd61dfdab3a",
+      "check": "reentrancy-state-change",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Constructor only: the PositionManager's poolManager() and WETH9() are views read once to fix the immutables; no code of the LPVault can run before the constructor returns.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "ae864f517cc74a35",
+      "check": "reentrancy-state-change",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Constructor only: the PositionManager's poolManager() and WETH9() are views read once to fix the immutables; no code of the LPVault can run before the constructor returns.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "e9b808064008904f",
+      "check": "unused-import",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "74bd0ba18ae5e3fe",
+      "check": "unused-import",
+      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
+      "fingerprint": "9ec90db7ed7338b8",
+      "check": "contract-locks-ether",
+      "file": "src/oracle/lp-oracle/LPOracleV4.sol",
+      "reason": "Same as LPOracleCL: the only payable entry point is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by the timelock; no LPOracle function takes or holds ETH.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+    },
+    {
       "fingerprint": "feafd1a0cfc7cf0c",
       "check": "costly-loop",
       "file": "src/periphery/gas-vault/AvanaGasVault.sol",
