@@ -22,6 +22,8 @@ const EMPTY_METRICS = {
 export type ProductionBorrowTransactionSource = Partial<{
   previewTransaction: (intent: TransactionIntent) => Promise<TransactionPreview>
   executeTransaction: (intent: TransactionIntent) => Promise<ActionResult>
+  /** The position key of the one LP NFT a pledge would take, when one covers the amount. */
+  pledgePositionKey: (action: Extract<BorrowAction, { type: "supplyCollateral" }>) => `0x${string}` | undefined
   now: () => number
   generateId: (prefix: string) => string
 }>
@@ -54,6 +56,8 @@ export class ProductionTransactionAdapter implements TransactionAdapter {
   }
 
   createIntent(action: BorrowAction): TransactionIntent {
+    const positionKey =
+      action.type === "supplyCollateral" ? (action.positionKey ?? this.source.pledgePositionKey?.(action)) : undefined
     return {
       id: this.generateId("intent"),
       actionType: actionType(action),
@@ -62,6 +66,7 @@ export class ProductionTransactionAdapter implements TransactionAdapter {
       assetId: "assetId" in action ? action.assetId : undefined,
       positionId: "positionId" in action ? action.positionId : undefined,
       debtPositionId: "debtPositionId" in action ? action.debtPositionId : undefined,
+      ...(positionKey ? { positionKey } : {}),
       amountUsd6: actionAmount(action),
       requestedAt: this.now(),
       simulated: false,
