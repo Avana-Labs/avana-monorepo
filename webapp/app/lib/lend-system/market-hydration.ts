@@ -17,6 +17,9 @@ export type LendConvexSnapshot = {
   name?: string
   symbol?: string
   chainId?: number
+  /** The Hub of this asset (address) and its display label. */
+  hubId?: string
+  hubLabel?: string
   category?: string
   reserveFactorPct?: number
   rewardsApyPct?: number
@@ -51,6 +54,7 @@ export function lendMarketFromSnapshot(snap: LendConvexSnapshot, rank: number, n
   return {
     marketId: snap.slug,
     chainId: snap.chainId ?? 0,
+    ...(snap.hubId ? { hubId: snap.hubId.toLowerCase(), hubLabel: snap.hubLabel?.trim() || snap.hubId } : {}),
     rank,
     asset: { symbol, name: snap.name?.trim() || symbol, priceUsd: price },
     assetPriceUsd: price,

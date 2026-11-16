@@ -43,24 +43,16 @@ export function chainFilterId(chainId: number | undefined): ChainId | null {
 
 // ----- Hubs ------------------------------------------------------------------
 
-export type HubId = "stable" | "correlated" | "volatile"
-
-export const HUB_OPTIONS: ReadonlyArray<FilterOption<HubId>> = [
-  { id: "stable", label: "Stable" },
-  { id: "correlated", label: "Correlated" },
-  { id: "volatile", label: "Volatile" },
-]
-
 /**
- * Risk hub from the market's tokens. Stable: every token is a stablecoin. Correlated: every token
- * tracks the same asset (the ETH family or the BTC family). Volatile: anything else.
+ * The Hubs filter lists the Hubs the page's rows belong to, by Hub address, with the label
+ * services/convex gives each Hub ("Avana Ethereum Hub"). Hub names are proper nouns.
  */
-export function hubForSymbols(symbols: readonly string[]): HubId {
-  const families = symbols.map((symbol) => categorizeMarket(symbol))
-  if (families.length === 0) return "volatile"
-  if (families.every((family) => family === "forex")) return "stable"
-  if (families.every((family) => family === "eth") || families.every((family) => family === "btc")) return "correlated"
-  return "volatile"
+export function hubFilterOptions(items: readonly FilterableItem[]): FilterOption[] {
+  const byId = new Map<string, FilterOption>()
+  for (const item of items) {
+    if (item.hub && !byId.has(item.hub)) byId.set(item.hub, { id: item.hub, label: item.hubLabel || item.hub, brand: true })
+  }
+  return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label, "en"))
 }
 
 // ----- Markets ---------------------------------------------------------------
@@ -131,7 +123,9 @@ export type FacetId = "chains" | "hubs" | "markets" | "assets"
 
 export type FilterableItem = {
   chains: readonly string[]
+  /** The row's Hub address ("" when unknown) and its label. */
   hub: string
+  hubLabel?: string
   markets: readonly string[]
   /** Uppercase token symbols. */
   assets: readonly string[]
@@ -181,10 +175,12 @@ export function activeFilterCount(state: MarketFilterState): number {
 
 // ----- Row adapters ----------------------------------------------------------
 
-export function lendFilterItem(symbol: string): FilterableItem {
+export function lendFilterItem(row: { symbol: string; hub: string; hubLabel?: string }): FilterableItem {
+  const { symbol } = row
   return {
     chains: MARKET_CHAINS,
-    hub: hubForSymbols([symbol]),
+    hub: row.hub,
+    ...(row.hubLabel ? { hubLabel: row.hubLabel } : {}),
     markets: [categorizeMarket(symbol)],
     assets: [symbol.toUpperCase()],
   }
@@ -208,6 +204,8 @@ export function borrowPoolSymbols(pool: {
 
 export function borrowPoolFilterItem(pool: {
   spoke: string
+  hubId?: string
+  hubLabel?: string
   dexId?: string
   visuals: ReadonlyArray<{ symbol: string }>
   constituents?: ReadonlyArray<{ symbol: string }>
@@ -216,7 +214,8 @@ export function borrowPoolFilterItem(pool: {
   const market = borrowMarketForSpoke(pool.dexId ?? pool.spoke)
   return {
     chains: MARKET_CHAINS,
-    hub: hubForSymbols(symbols),
+    hub: pool.hubId ?? "",
+    ...(pool.hubLabel ? { hubLabel: pool.hubLabel } : {}),
     markets: market ? [market] : [],
     assets: symbols.map((symbol) => symbol.toUpperCase()),
   }

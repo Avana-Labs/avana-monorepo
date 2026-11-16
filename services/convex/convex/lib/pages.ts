@@ -128,6 +128,7 @@ export function poolSnapshot(
   assets: ReadonlyMap<string, HubAssetRow>,
   pool24h: { volumeUsd: number; feesUsd: number; lpFeeAprPct?: number },
   content: PageContent | null,
+  hubLabel?: string,
 ): MarketSnapshotRow {
   const collateralUsd = Number(BigInt(market.suppliedUsd8)) / 1e8;
   const debtUsd = marketDebtUsd(debts, reserves, assets);
@@ -139,6 +140,8 @@ export function poolSnapshot(
     chainId: market.chainId,
     ...identity(content, { name: market.name, symbol: market.symbol }),
     spokeId: market.spoke,
+    hubId: market.hub,
+    ...(hubLabel ? { hubLabel } : {}),
     feeTier: feeTierLabel(market.feeTier),
     maxLtvPct: bpsToPct(market.collateralFactorBps),
     premiumBps: market.collateralRiskBps,

@@ -129,6 +129,7 @@ export function borrowMarketFromSnapshot(
     // Aave V4: the liquidation threshold equals the collateral factor (REQ-LENS-045).
     riskConfig: { collateralFactorWad: cf, liquidationThresholdWad: cf, riskScoreWad: 0n },
     listPremiumBps: finite(snap.premiumBps),
+    ...(snap.hubId ? { hubId: snap.hubId.toLowerCase(), hubLabel: snap.hubLabel?.trim() || snap.hubId } : {}),
     reserveFactorPct: finite(snap.reserveFactorPct),
     relations: {
       supportedBorrowAssetIds: related

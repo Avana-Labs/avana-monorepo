@@ -15,6 +15,9 @@ export type LendAsset = {
 export type LendMarket = {
   marketId: string
   chainId: number
+  /** The Hub this asset is supplied to (address), and its label: the Hubs filter lists these. */
+  hubId?: string
+  hubLabel?: string
   rank: number
   asset: LendAsset
   assetPriceUsd: number
