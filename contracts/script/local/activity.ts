@@ -12,8 +12,8 @@
 // Every 20 minutes every feed publishes a fresh round (a Chainlink heartbeat), so the oracles stay live.
 //
 // The simulated users are fixed addresses with no key, sending through anvil's unlocked senders, and gas comes from
-// anvil_setBalance. Their tokens come from the activity treasury, the `activity` keystore, which the stack funds once
-// from the token minter; nothing here signs as the deployer. The loop pauses while STACK/activity.paused exists (the
+// anvil_setBalance. Their tokens come from the `activity-funds` keystore, which the stack funds once from the token
+// minter; nothing here signs as the deployer. The loop pauses while STACK/activity.paused exists (the
 // stack's checks hold the chains still).
 //
 // Usage, from contracts/:  node script/local/activity.ts --chain ethereum|base [--once]
@@ -45,7 +45,7 @@ const log = (o: Record<string, unknown>) => process.stdout.write(`${JSON.stringi
 // ─── The treasury: tokens for the simulated users ───
 
 const password = readFileSync(PASSWORD_FILE, "utf8").trim();
-const treasury = privateKeyToAccount(await decryptKeystore(readFileSync(keystorePath("activity"), "utf8"), password));
+const treasury = privateKeyToAccount(await decryptKeystore(readFileSync(keystorePath("activity-funds"), "utf8"), password));
 const treasuryWallet = createWalletClient({ account: treasury, transport: http(rpcUrl(chain)) });
 
 class ActivityEnv extends Env {

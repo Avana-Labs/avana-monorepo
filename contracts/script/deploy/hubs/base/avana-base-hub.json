@@ -1,0 +1,34 @@
+{
+  "hub": {
+    "label": "base",
+    "tier": 3,
+    "name": "Avana Base Hub",
+    "description": "Avana's Aave V4 Hub on Base: lenders supply stablecoins, borrowers pledge Aerodrome Slipstream liquidity positions."
+  },
+  "spokes": [
+    { "label": "slipStable", "integration": "slipstream", "category": "Stable" },
+    { "label": "slipVolatile", "integration": "slipstream", "category": "Volatile" },
+    { "label": "slipBlueChip", "integration": "slipstream", "category": "Blue-chip" }
+  ],
+  "lendAssets": [
+    { "symbol": "USDC", "category": "stable" },
+    { "symbol": "USDT", "category": "stable" },
+    { "symbol": "GHO", "category": "stable" }
+  ],
+  "borrowable": {
+    "slipStable": ["USDC"],
+    "slipVolatile": ["USDC"],
+    "slipBlueChip": ["USDC"]
+  },
+  "collateral": [
+    { "symbol": "USDC" },
+    { "symbol": "USDT" },
+    { "symbol": "WETH" },
+    { "symbol": "wstETH" }
+  ],
+  "markets": [
+    { "pool": "USDC-USDT-cl1-g0", "spoke": "slipStable", "poolRiskFactorBps": 4000, "maxLiquidationBonus": 10500, "consistencyToleranceBps": 50 },
+    { "pool": "wstETH-WETH-cl1-g0", "spoke": "slipVolatile", "poolRiskFactorBps": 4000, "maxLiquidationBonus": 10800, "consistencyToleranceBps": 100 },
+    { "pool": "WETH-USDC-cl100-g0", "spoke": "slipBlueChip", "poolRiskFactorBps": 4000, "maxLiquidationBonus": 10800, "consistencyToleranceBps": 100 }
+  ]
+}

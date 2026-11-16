@@ -25,7 +25,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { addRoutePools, poolOf, routePair, type Route } from "../../e2e/routes.ts";
 import { chainOf, outDir } from "../lib/env.ts";
-import { LATER_RELEASE, type StepOutcome, currentConfig, miningMode, runRelease, setMining } from "../lib/chain.ts";
+import { LATER_RELEASE, type StepOutcome, currentConfig, miningMode, runRelease, setMining, testValues } from "../lib/chain.ts";
 
 type Json = Record<string, any>;
 
@@ -55,23 +55,26 @@ export interface RateModel {
   rateGrowthBeforeOptimalBps: number;
   rateGrowthAfterOptimalBps: number;
 }
+/**
+ * A token new to Aave on the chain. Its risk parameters are the file's; the amounts the Aave DAO sets (draw cap,
+ * bootstrap supply, First-Loss Reserve and offset minimums, credit line, debt speed limit) are never in a Hub file:
+ * on the local stack they come from test-values.json (`TestValues`).
+ */
 export interface NewDebtAsset {
-  drawCap: number;
-  bootstrapSupply: string;
-  coverageMinimum: number;
-  offsetMinimum: number;
   stressRiseBps: number;
   floorRoundingAllowance: string;
-  creditLineWhole?: number;
-  debtMinWhole?: number;
-  debtMaxWhole?: number;
+}
+/** The values the DAO sets, for the local stack only (contracts/script/local/test-values.json). */
+export interface TestValues {
+  debtAssets?: Record<string, { drawCap: number; bootstrapSupply: string; coverageMinimum: number; offsetMinimum: number; creditLineWhole?: number; debtMinWhole?: number; debtMaxWhole?: number }>;
+  tokenCapUsd?: Record<string, string>;
+  markets?: Record<string, { marketUsdCap: string; topUpSliceUsd: string }>;
 }
 export interface CollateralInput {
   symbol: string;
   isUsdStable?: boolean;
   deviationBps?: number;
   collateralFactorBps?: number;
-  tokenCapUsd?: string;
 }
 export interface MarketInput {
   pool: string;
@@ -83,8 +86,6 @@ export interface MarketInput {
   poolRiskFactorBps: number;
   maxLiquidationBonus: number;
   consistencyToleranceBps?: number;
-  marketUsdCap: string;
-  topUpSliceUsd: string;
   minPledgeUsd?: string;
   name?: string;
   slug?: string;
@@ -119,7 +120,7 @@ const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").repla
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** The next config: `config` (the chain's current one, unchanged) with everything `input` adds. Throws on any error. */
-export function planHub(config: Json, input: HubInput): HubPlan {
+export function planHub(config: Json, input: HubInput, tv: TestValues = {}): HubPlan {
   const c = structuredClone(config) as Json;
   const errors: string[] = [];
   const label = input.hub.label;
@@ -201,17 +202,19 @@ export function planHub(config: Json, input: HubInput): HubPlan {
       if (d.hubs && !d.hubs.includes(label)) d.hubs.push(label);
       if (d.lendOnly && (Object.values(input.borrowable) as string[][]).some((x) => x.includes(a.symbol))) throw new Error(`${a.symbol} is lend-only on this chain and cannot be borrowed`);
     } else {
-      if (!a.new) throw new Error(`lendAssets: ${a.symbol} is new to Aave on this chain: give its sizing in "new"`);
+      if (!a.new) throw new Error(`lendAssets: ${a.symbol} is new to Aave on this chain: give its risk parameters in "new"`);
+      const dao = tv.debtAssets?.[a.symbol];
+      if (!dao) throw new Error(`lendAssets: ${a.symbol} has no DAO-set amounts in the test values`);
       newDebt.push(a.symbol);
       c.aavePayload.debtAssets.push({
         symbol: a.symbol,
         token: `$world:.tokens.${a.symbol}`,
         decimals: w.decimals,
         priceSource: `$world:.feeds.${a.symbol}.primary`,
-        drawCap: a.new.drawCap,
-        bootstrapSupply: a.new.bootstrapSupply,
-        coverageMinimum: a.new.coverageMinimum,
-        offsetMinimum: a.new.offsetMinimum,
+        drawCap: dao.drawCap,
+        bootstrapSupply: dao.bootstrapSupply,
+        coverageMinimum: dao.coverageMinimum,
+        offsetMinimum: dao.offsetMinimum,
         hubs: [label],
       });
     }
@@ -233,8 +236,8 @@ export function planHub(config: Json, input: HubInput): HubPlan {
         stressRiseBps: a.new.stressRiseBps,
         floorRoundingAllowance: a.new.floorRoundingAllowance,
         debtOraclePokeMinGas: 1000000,
-        ...(a.new.creditLineWhole ? { creditLineWhole: a.new.creditLineWhole } : {}),
-        ...(a.new.debtMinWhole ? { debtMinWhole: a.new.debtMinWhole, debtMaxWhole: a.new.debtMaxWhole } : {}),
+        ...(tv.debtAssets?.[a.symbol]?.creditLineWhole ? { creditLineWhole: tv.debtAssets[a.symbol]!.creditLineWhole } : {}),
+        ...(tv.debtAssets?.[a.symbol]?.debtMinWhole ? { debtMinWhole: tv.debtAssets[a.symbol]!.debtMinWhole, debtMaxWhole: tv.debtAssets[a.symbol]!.debtMaxWhole } : {}),
         address: `$world:.tokens.${a.symbol}`,
         feeds: { primary: `$world:.feeds.${a.symbol}.primary` },
       });
@@ -284,7 +287,7 @@ export function planHub(config: Json, input: HubInput): HubPlan {
       collateralFactorBps: t.collateralFactorBps ?? 6000,
       agreementToleranceBps: tol,
       secondToleranceBps: tol,
-      tokenCapUsd: t.tokenCapUsd ?? "5000000",
+      tokenCapUsd: tv.tokenCapUsd?.[t.symbol] ?? tv.tokenCapUsd?.default ?? "0",
       hubs: [label],
       address: `$world:.tokens.${t.symbol}`,
       feeds: { primary: `$world:.feeds.${t.symbol}.primary`, alternate: `$world:.feeds.${t.symbol}.alternate`, standby: `$world:.feeds.${t.symbol}.standby`, second: `$world:.feeds.${t.symbol}.second` },
@@ -295,8 +298,8 @@ export function planHub(config: Json, input: HubInput): HubPlan {
   // 5. Markets, from the chain's first market of the same venue as a template; routes from each pool token into each
   // asset the Spoke lends, two pool-disjoint paths each, found over the world's pools.
   const template = (id: number) => {
-    const m = (c.listing.markets as Json[]).find((x) => x.integrationId === id);
-    if (!m) throw new Error(`no listed market with integration ${id} to start from`);
+    const m = (c.listing.markets as Json[]).find((x) => x.integrationId === id) ?? c.listing.marketDefaults?.[String(id)];
+    if (!m) throw new Error(`no market parameters for integration ${id} to start from (listing.marketDefaults)`);
     return m;
   };
   const tokenCf = (s: string) => (c.listing.tokens as Json[]).find((x) => x.symbol === s)!.collateralFactorBps as number;
@@ -333,8 +336,9 @@ export function planHub(config: Json, input: HubInput): HubPlan {
       slippageAllowanceBps: Math.floor(((10_000 - f) * (minLb - 10_000)) / minLb),
       slippageAllowanceMinBps: 50,
       ...(mi.minPledgeUsd ? { minPledgeUsd: mi.minPledgeUsd } : {}),
-      marketUsdCap: mi.marketUsdCap,
-      topUpSliceUsd: mi.topUpSliceUsd,
+      // Caps are the DAO's: the local stack's test values (per market name, else the default).
+      marketUsdCap: (tv.markets?.[name] ?? tv.markets?.default)?.marketUsdCap ?? "0",
+      topUpSliceUsd: (tv.markets?.[name] ?? tv.markets?.default)?.topUpSliceUsd ?? "0",
       routes,
       content: {
         slug: mi.slug ?? slugify(`${venue}-${p.a}-${p.b}-${slip ? `cl${p.tickSpacing}` : String(p.fee)}${range}-${s.label}`),
@@ -438,7 +442,7 @@ export async function addHub(args: { chain: string; hubFile: string }, onStep?: 
   // A release that started earlier keeps its config (its steps are on record); a new one is planned on the current.
   if (!existsSync(configPath)) {
     try {
-      const p = planHub(JSON.parse(readFileSync(currentConfig(c), "utf8")), input);
+      const p = planHub(JSON.parse(readFileSync(currentConfig(c), "utf8")), input, testValues());
       writeFileSync(configPath, `${JSON.stringify(p.config, null, 2)}\n`);
       writeFileSync(join(outDir(c), `plan-${release}.json`), `${JSON.stringify(p.summary, null, 2)}\n`);
       plan = p.summary;

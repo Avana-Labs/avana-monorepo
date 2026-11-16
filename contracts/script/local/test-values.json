@@ -1,0 +1,23 @@
+{
+  "_comment": "Local stack only. The values the Aave DAO and governance set on a real network (caps, credit lines, First-Loss Reserve and DAO offset amounts, speed limits), so the local chains can run. Never part of a release config or a Hub file.",
+  "debtAssets": {
+    "GHO": { "drawCap": 10000000, "bootstrapSupply": "20000000000000000000000000", "coverageMinimum": 100000, "offsetMinimum": 75000 },
+    "USDC": { "drawCap": 10000000, "bootstrapSupply": "20000000000000", "coverageMinimum": 100000, "offsetMinimum": 75000 },
+    "USDT": { "drawCap": 5000000, "bootstrapSupply": "10000000000000", "coverageMinimum": 50000, "offsetMinimum": 25000 }
+  },
+  "creditLineWhole": 50000000,
+  "speedLimits": {
+    "window": 21600,
+    "borrowRateBps": 2500,
+    "pledgeRateBps": 2500,
+    "borrowMinUsd": 250000,
+    "borrowMaxUsd": 2500000,
+    "pledgeMinUsd": 1000000,
+    "pledgeMaxUsd": 10000000,
+    "debtRateBps": 2500,
+    "debtMinWhole": 500000,
+    "debtMaxWhole": 5000000
+  },
+  "tokenCapUsd": { "default": "50000000" },
+  "markets": { "default": { "marketUsdCap": "5000000", "topUpSliceUsd": "500000" } }
+}

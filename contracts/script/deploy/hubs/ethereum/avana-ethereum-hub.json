@@ -1,0 +1,38 @@
+{
+  "hub": {
+    "label": "ethereum",
+    "tier": 3,
+    "name": "Avana Ethereum Hub",
+    "description": "Avana's Aave V4 Hub on Ethereum: lenders supply stablecoins, borrowers pledge Uniswap v3 liquidity positions."
+  },
+  "spokes": [
+    { "label": "uniV3Stable", "integration": "uniswap-v3", "category": "Stable" },
+    { "label": "uniV3Volatile", "integration": "uniswap-v3", "category": "Volatile" },
+    { "label": "uniV3BlueChip", "integration": "uniswap-v3", "category": "Blue-chip" },
+    { "label": "uniV3Governance", "integration": "uniswap-v3", "category": "Governance" }
+  ],
+  "lendAssets": [
+    { "symbol": "USDC", "category": "stable" },
+    { "symbol": "USDT", "category": "stable" },
+    { "symbol": "GHO", "category": "stable" }
+  ],
+  "borrowable": {
+    "uniV3Stable": ["GHO", "USDC"],
+    "uniV3Volatile": ["GHO", "USDC"],
+    "uniV3BlueChip": ["GHO", "USDC"],
+    "uniV3Governance": ["GHO", "USDC"]
+  },
+  "collateral": [
+    { "symbol": "USDC" },
+    { "symbol": "USDT" },
+    { "symbol": "WETH" },
+    { "symbol": "wstETH" },
+    { "symbol": "AAVE", "deviationBps": 100, "collateralFactorBps": 6500 }
+  ],
+  "markets": [
+    { "pool": "USDC-USDT-100", "spoke": "uniV3Stable", "poolRiskFactorBps": 4000, "maxLiquidationBonus": 10500, "consistencyToleranceBps": 50 },
+    { "pool": "wstETH-WETH-100", "spoke": "uniV3Volatile", "poolRiskFactorBps": 4000, "maxLiquidationBonus": 10800, "consistencyToleranceBps": 100 },
+    { "pool": "WETH-USDC-500", "spoke": "uniV3BlueChip", "poolRiskFactorBps": 4000, "maxLiquidationBonus": 10800, "consistencyToleranceBps": 100 },
+    { "pool": "AAVE-WETH-3000", "spoke": "uniV3Governance", "poolRiskFactorBps": 4000, "maxLiquidationBonus": 10800, "consistencyToleranceBps": 100 }
+  ]
+}

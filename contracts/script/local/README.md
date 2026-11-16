@@ -6,7 +6,7 @@ The chains, contracts and services the webapp runs on locally, started by one co
 |---|---|
 | Ethereum (local) | anvil, chain 31337, network name `ethereum`, a block every 12 s, port 8545 (`STACK_PORT_ETHEREUM`) |
 | Base (local) | anvil, chain 31338, network name `base`, a block every 2 s, port 8546 (`STACK_PORT_BASE`) |
-| Avana | The deploy steps of `script/deploy/step.sh` on each chain, from `script/deploy/config/anvil.json` with the chain's ID and block time |
+| Avana | The deploy steps of `script/deploy/step.sh` on each chain. The first release holds one Aave Hub per chain ("Avana Ethereum Hub", "Avana Base Hub", tier 3) with its Lend Spoke and debt assets; the chain's Hub file adds its CDP Spokes and markets. Protocol parameters come from `script/deploy/config/anvil.json`; the values the Aave DAO sets come from `test-values.json` |
 | Indexer | One Ponder process for both chains (PGlite), port 42070, reading each node through `script/e2e/rpc-recorder.ts` |
 | Convex | One anonymous local deployment of `services/convex` (no account), fed by the indexer export; `convex-driver.ts` runs its chain jobs on the local chains |
 | Keeper | Active on both chains, signing from the `keeper` keystore |
@@ -69,10 +69,11 @@ No key is written in clear, passed on a command line or kept in an env file. Eac
 
 | Keystore | Signs |
 |---|---|
-| `deployer` | Every deploy and release step on both chains |
-| `keeper` | The keeper's transactions; it is also the operator helper's signer in each chain's config |
+| `deployer` | Every deploy and release step on both chains; the test tokens' minter and the First-Loss Reserves' funder |
+| `keeper` | The liquidation bot's transactions; it is also the operator helper's signer in each chain's config |
+| `treasury` | The fee recipient (`ParameterStore.feeRecipient`): the liquidation fee share and the front-end fee. Never the deployer or the keeper: the stack refuses to start if any two of the three are one account |
 | `faucet` | The webapp's test funds |
-| `activity` | Transfers test tokens to the activity loop's simulated users |
+| `activity-funds` | Transfers test tokens to the activity loop's simulated users |
 | `ocr-0` … `ocr-3` | The four OCR2 oracles that sign every price report |
 
 The governance Safe, the guardians and the Aave governance executor stand in for multisigs and governance. They send through anvil's unlocked senders (`--auto-impersonate`), as in the rehearsal. So do the activity loop's simulated users, which are addresses with no key.
@@ -117,3 +118,7 @@ The collateral factor, slippage allowance and routes are derived as the rehearsa
 A debt asset with no `hubs` list in the config is lent on every Hub, a new one included.
 
 Tokens and pools a Hub file needs that the test world lacks go in `contracts/script/deploy/hubs/<chain>/world.json` (`tokens`, `uniswapPools`, `slipstreamPools`, as in the config's `world`). Step 02 deploys them with the rest of the world, so they must be there before the chain's first deploy.
+
+## Values the DAO sets
+
+Caps, credit lines, First-Loss Reserve and DAO offset amounts, and speed limits are set by the Aave DAO and governance on a real network, never by a release config or a Hub file. The local stack needs some to run: `test-values.json` holds them (per debt asset, per collateral token with a default, per market with a default), and the stack merges them into each chain's config. Hub files carry structure and risk parameters only.
