@@ -47,15 +47,18 @@ node webapp/scripts/local-convex-seed.ts                                        
 
 Every variable is listed with a comment in [`.env.example`](.env.example). `next build` succeeds with all of them empty.
 
-| Variable                                                | Needed for                                                                                                                                        |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CONVEX_SITE_URL` | Market data (services/convex deployment)                                                                                                          |
-| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`                  | WalletConnect wallets                                                                                                                             |
-| `NEXT_PUBLIC_SIWE_ISSUER`, `SIWE_JWT_PRIVATE_JWK`       | SIWE sign-in and the JWTs Convex accepts (`SIWE_JWT_ISSUER` on the Convex deployment must equal the issuer)                                       |
-| `CONVEX_RATE_LIMIT_SECRET`                              | Rate limit of the SIWE routes (same value on the Convex deployment)                                                                               |
-| `ASK_AI_GUEST_SECRET`                                   | Ask AI for visitors without sign-in                                                                                                               |
-| `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`           | Error reporting and source map upload (Vercel builds)                                                                                             |
-| `NEXT_PUBLIC_AVANA_CHAIN_ID`, `NEXT_PUBLIC_RPC_*`       | Reserved for contract calls; the first target is the local anvil deployment (chain 31337) read through the manifest loader in `packages/protocol` |
+| Variable                                                | Needed for                                                                                                             |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CONVEX_SITE_URL` | Market data (services/convex deployment)                                                                               |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`                  | WalletConnect wallets                                                                                                  |
+| `NEXT_PUBLIC_SIWE_ISSUER`, `SIWE_JWT_PRIVATE_JWK`       | SIWE sign-in and the JWTs Convex accepts (`SIWE_JWT_ISSUER` on the Convex deployment must equal the issuer)            |
+| `CONVEX_RATE_LIMIT_SECRET`                              | Rate limit of the SIWE routes (same value on the Convex deployment)                                                    |
+| `ASK_AI_GUEST_SECRET`                                   | Ask AI for visitors without sign-in                                                                                    |
+| `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`           | Error reporting and source map upload (Vercel builds)                                                                  |
+| `NEXT_PUBLIC_AVANA_ETHEREUM_CHAIN_ID`                   | Chain id of Ethereum on the network the app runs on (default 1); chain filters, labels and the network switcher use it |
+| `NEXT_PUBLIC_AVANA_BASE_CHAIN_ID`                       | Chain id of Base on the network the app runs on (default 8453)                                                         |
+| `NEXT_PUBLIC_AVANA_CHAIN_ID`                            | The chain the app opens on                                                                                             |
+| `NEXT_PUBLIC_RPC_ETHEREUM`, `NEXT_PUBLIC_RPC_BASE`      | Reserved for contract calls, read through the manifest loader in `packages/protocol`                                   |
 
 Ask AI's OpenAI key and models (`OPENAI_API_KEY`, `ASK_AI_MODEL`, ...) are set on the Convex deployment, not here.
 

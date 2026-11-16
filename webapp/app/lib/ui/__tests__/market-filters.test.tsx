@@ -127,7 +127,7 @@ describe("MarketFiltersBar", () => {
     expect(onChange).toHaveBeenLastCalledWith({ ...EMPTY_MARKET_FILTERS, chains: ["ethereum"] })
     expect(within(panel).getByRole("checkbox", { name: /Ethereum/ })).toHaveAttribute("aria-checked", "true")
     expect(screen.getByRole("button", { name: /^Ethereum/ })).toBeInTheDocument()
-    fireEvent.click(within(panel).getByRole("checkbox", { name: /Local/ }))
+    fireEvent.click(within(panel).getByRole("checkbox", { name: /Base/ }))
     expect(screen.getByRole("button", { name: /Chains \(2\)/ })).toBeInTheDocument()
   })
 
