@@ -13,6 +13,7 @@ import { internalMutation, internalQuery, type MutationCtx } from "../_generated
 import { type Resolver, decodeRecord } from "../lib/activity.ts";
 import { blockTimes } from "../lib/exportPage.ts";
 import { noteFirstSeen } from "../lib/membership.ts";
+import { activateReferral } from "../lib/referrals.ts";
 import { addSupplyVolume, awardQuestForLog, supplyUsdOfLog } from "../lib/rewards.ts";
 import { assetSlugs, defaultSlug, hubLabel } from "../lib/format.ts";
 
@@ -182,6 +183,7 @@ export const applyPage = internalMutation({
       if (d.log.wallet) {
         await noteFirstSeen(ctx, d.log.wallet, d.log.at, "onchain");
         await awardQuestForLog(ctx, d.log.wallet, d.log.kind, d.log.at);
+        await activateReferral(ctx, d.log.wallet, { log: d.log.kind }, d.log.at);
         await addSupplyVolume(ctx, d.log.wallet, await supplyUsdOfLog(ctx, d.log), d.log.at);
       }
       if (d.account) {
