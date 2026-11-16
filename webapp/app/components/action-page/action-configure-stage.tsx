@@ -460,7 +460,7 @@ export function ActionConfigureStage({
 
       {preview && showHomeDetails && showDeferredDetails ? (
         <ActionCard>
-          <ActionInfoRow label="Avana Platform Fee" value={preview.networkFeeLabel} tooltip="fee" />
+          <ActionInfoRow label="Avana Platform Fee" value={preview.platformFeeLabel} tooltip="fee" />
         </ActionCard>
       ) : null}
 

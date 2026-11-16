@@ -28,6 +28,7 @@ import { CurrencyFlag } from "./currency-flag"
 import { CURRENCY_OPTIONS, LANGUAGE_OPTIONS, useLocaleDisplayPreferences } from "./display-preferences"
 import { useTheme } from "./theme-provider"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
+import { CHAIN_NAMES, defaultChainKey } from "@/app/lib/chains"
 import { useEffect, useState } from "react"
 
 import { AVANA_EXTERNAL_LINKS } from "./external-links"
@@ -36,10 +37,9 @@ import { preferencesTriggerClassName } from "./desktop-preference-trigger"
 type PreferencesView = "root" | "language" | "currency" | "network"
 
 const NETWORK_OPTIONS = [
-  { code: "Local", label: "Local", unavailable: false },
-  { code: "Ethereum", label: "Ethereum", unavailable: true },
+  { code: "Ethereum", label: "Ethereum", unavailable: false },
   { code: "Avalanche", label: "Avalanche", unavailable: true },
-  { code: "Base", label: "Base", unavailable: true },
+  { code: "Base", label: "Base", unavailable: false },
   { code: "Arbitrum", label: "Arbitrum", unavailable: true },
   { code: "Robinhood", label: "Robinhood", unavailable: true },
 ] as const
@@ -66,7 +66,8 @@ export function DesktopPreferenceMenu({ initialOpen = false }: { initialOpen?: b
 
   const currentLanguage = LANGUAGE_OPTIONS.find((option) => option.code === language) ?? LANGUAGE_OPTIONS[0]
   const currentCurrency = CURRENCY_OPTIONS.find((option) => option.code === currency) ?? CURRENCY_OPTIONS[0]
-  const currentNetwork = NETWORK_OPTIONS[0]
+  const currentNetwork =
+    NETWORK_OPTIONS.find((option) => option.code === CHAIN_NAMES[defaultChainKey()]) ?? NETWORK_OPTIONS[0]
 
   return (
     <DropdownMenu

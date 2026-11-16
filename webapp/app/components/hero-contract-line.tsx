@@ -1,6 +1,7 @@
 "use client"
 
 import { ArrowUpRight, Copy } from "@/app/components/icons"
+import { NetworkBadge, networkBadgeLabel } from "@/app/components/network-badge"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import type { HeroContract } from "@/app/lib/detail-page/hero-contract"
 
@@ -28,7 +29,7 @@ export function HeroContractLine({
     <div className="mt-0 flex flex-wrap items-center gap-3 text-[15px] font-medium text-foreground/75">
       <span className="inline-flex items-center gap-2">
         <span className="leading-none">{t(contextLabel)}</span>
-        <span className="leading-none text-foreground">{t(chainLabel)}</span>
+        {networkBadgeLabel() ? <NetworkBadge /> : <span className="leading-none text-foreground">{t(chainLabel)}</span>}
       </span>
       {contract ? (
         <>

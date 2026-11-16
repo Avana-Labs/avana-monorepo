@@ -32,10 +32,10 @@ describe("action formatters", () => {
     expect(formatActionNetworkFee(0.04)).toBe("~ $0.04")
   })
 
-  it("fee summary is 15 bps of the action amount (#30, #F1)", () => {
-    expect(formatActionFeeSummary(1000, 0.04)).toBe("~ $1.50")
-    expect(formatActionFeeSummary(100, 0.24)).toBe("~ $0.15")
-    expect(formatActionFeeSummary(0)).toBe("~ $0.00")
+  it("fee summary is the action's front-end fee, 10 bps by default (#30, #F1, Q-409)", () => {
+    expect(formatActionFeeSummary("borrow", 1000)).toBe("~ $1.00")
+    expect(formatActionFeeSummary("supply", 100)).toBe("~ $0.10")
+    expect(formatActionFeeSummary("supply", 0)).toBe("~ $0.00")
   })
 
   it("formats approx usd under amount input", () => {

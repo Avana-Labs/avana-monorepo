@@ -1470,8 +1470,8 @@ const dict: TranslationDictionary = {
   "If something looks off, send the details and our team can help you triage the issue.":
     "إذا بدا شيء غير صحيح، أرسل التفاصيل ويمكن لفريقنا مساعدتك في فرز المشكلة.",
   "Avana Platform Fee": "رسوم منصة Avana",
-  "A 15 bps (0.15%) upfront Avana interface fee applies to transactions initiated through the Avana platform. Interest rates, returns, and other transaction costs may vary depending on the market, position, and execution route.":
-    "تُطبَّق رسوم واجهة Avana بنسبة 15 نقطة أساس (0.15%) مقدمًا على المعاملات التي تبدأ عبر منصة Avana. قد تختلف أسعار الفائدة والعوائد وتكاليف المعاملات الأخرى حسب السوق والمركز ومسار التنفيذ.",
+  "A {bps} bps ({pct}%) upfront Avana interface fee applies to transactions initiated through the Avana platform. Interest rates, returns, and other transaction costs may vary depending on the market, position, and execution route.":
+    "تُطبَّق رسوم واجهة Avana بنسبة {bps} نقطة أساس ({pct}%) مقدمًا على المعاملات التي تبدأ عبر منصة Avana. قد تختلف أسعار الفائدة والعوائد وتكاليف المعاملات الأخرى حسب السوق والمركز ومسار التنفيذ.",
   "Complete onboarding": "أكمل الإعداد",
   "Get Started": "ابدأ",
   "Too many new Ask AI sessions from this network. Try again later.":
