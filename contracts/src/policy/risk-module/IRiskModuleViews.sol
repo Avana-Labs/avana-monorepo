@@ -60,7 +60,7 @@ interface IRiskModuleViews {
     /// @notice LP collateral factor the Spoke reserve may carry at most.
     /// @dev `floor(min_i CF_i * poolRiskFactor / 1e4)` in bps over every pool token `i` of the market (n tokens), from
     /// the ParameterStore; rounds down. Example: a 3-token Curve market with token factors 9000, 9000 and 8500 bps
-    /// and `poolRiskFactor = 9500` gives `floor(8500 * 9500 / 1e4) = 8075` bps; the weakest token sets the bound
+    /// and `poolRiskFactor = 9000` gives `floor(8500 * 9000 / 1e4) = 7650` bps; the weakest token sets the bound
     /// because an unwind can return the whole position in that token.
     /// @param marketId MarketRegistry market identifier.
     /// @return cfBps The collateral factor, bps.

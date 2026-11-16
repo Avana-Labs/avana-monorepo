@@ -179,7 +179,7 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         p.slippageAllowanceBps = 29;
         _initialParamsRevert(p, IParameterStoreErrors.LivenessBound.selector);
         p = _defaultMarketParams();
-        p.poolRiskFactor = 4001;
+        p.poolRiskFactor = 9001;
         _initialParamsRevert(p, IParameterStoreErrors.OutOfBounds.selector);
         p = _defaultMarketParams();
         p.minPledgeUsd = 100_000e8 + 1;

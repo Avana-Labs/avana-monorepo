@@ -78,7 +78,7 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
     uint32 internal constant HEARTBEAT_MARGIN_MAX = 3600;
     uint32 internal constant FEED_HEARTBEAT_MAX = 86_400;
     uint8 internal constant FEED_DECIMALS_MAX = 18;
-    uint16 internal constant POOL_RISK_FACTOR_MAX = 4000;
+    uint16 internal constant POOL_RISK_FACTOR_MAX = 9000;
     uint16 internal constant COLLATERAL_FACTOR_MAX = 9999;
     uint256 internal constant MIN_PLEDGE_USD_MAX = 100_000e8;
     uint16 internal constant FEE_SHARE_MAX_BPS = 5000;
