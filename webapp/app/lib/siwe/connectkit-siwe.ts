@@ -1,6 +1,7 @@
 "use client"
 
 import type { SIWEConfig } from "connectkit"
+import { TARGET_CHAIN_ID } from "@/app/lib/web3/target-chain"
 import { buildSiweMessage } from "./message"
 import { clearSiweToken, getSiweSession, setSiweSession } from "./auth-store"
 
@@ -46,7 +47,7 @@ export const siweConfig: SIWEConfig = {
   getSession: async () => {
     const session = getSiweSession()
     if (!session?.wallet) return null
-    return { address: session.wallet as `0x${string}`, chainId: 1 }
+    return { address: session.wallet as `0x${string}`, chainId: TARGET_CHAIN_ID }
   },
 
   signOut: async () => {

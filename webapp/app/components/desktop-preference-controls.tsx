@@ -28,7 +28,8 @@ import { CurrencyFlag } from "./currency-flag"
 import { CURRENCY_OPTIONS, LANGUAGE_OPTIONS, useLocaleDisplayPreferences } from "./display-preferences"
 import { useTheme } from "./theme-provider"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
-import { CHAIN_NAMES, defaultChainKey } from "@/app/lib/chains"
+import { CHAIN_KEYS, CHAIN_NAMES } from "@/app/lib/chains"
+import { setActiveChainKey, useActiveChainKey } from "@/app/lib/web3/active-chain"
 import { useEffect, useState } from "react"
 
 import { AVANA_EXTERNAL_LINKS } from "./external-links"
@@ -66,8 +67,8 @@ export function DesktopPreferenceMenu({ initialOpen = false }: { initialOpen?: b
 
   const currentLanguage = LANGUAGE_OPTIONS.find((option) => option.code === language) ?? LANGUAGE_OPTIONS[0]
   const currentCurrency = CURRENCY_OPTIONS.find((option) => option.code === currency) ?? CURRENCY_OPTIONS[0]
-  const currentNetwork =
-    NETWORK_OPTIONS.find((option) => option.code === CHAIN_NAMES[defaultChainKey()]) ?? NETWORK_OPTIONS[0]
+  const activeChain = useActiveChainKey()
+  const currentNetwork = NETWORK_OPTIONS.find((option) => option.code === CHAIN_NAMES[activeChain]) ?? NETWORK_OPTIONS[0]
 
   return (
     <DropdownMenu
@@ -290,6 +291,8 @@ export function DesktopPreferenceMenu({ initialOpen = false }: { initialOpen?: b
                   onSelect={(event) => {
                     event.preventDefault()
                     if (option.unavailable) return
+                    const key = CHAIN_KEYS.find((k) => CHAIN_NAMES[k] === option.code)
+                    if (key) setActiveChainKey(key)
                     setView("root")
                   }}
                   disabled={option.unavailable}

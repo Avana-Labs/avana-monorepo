@@ -73,6 +73,7 @@ export const swapContractsOf = query({
   args: { chainId: v.number() },
   handler: async (ctx, { chainId }) => {
     const d = await ctx.db.query("deployments").withIndex("by_chain", (q) => q.eq("chainId", chainId)).unique();
-    return d ? swapContracts(d.chainId, d.nativeUsdFeed, d.external ?? []) : null;
+    // The Lens is where the app reads the ParameterStore, whose feeRecipient takes the swap's front-end fee.
+    return d ? { ...swapContracts(d.chainId, d.nativeUsdFeed, d.external ?? []), lens: d.lens } : null;
   },
 });
