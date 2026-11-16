@@ -69,6 +69,42 @@ describe("listing metadata version 2", () => {
   });
 });
 
+describe("listing metadata version 2: review day, factor bps, dependencies, disclosures, tokens", () => {
+  const v2 = (entries: unknown[]) => parse({ version: 2, chainId: 1, entries });
+  const pool = { scope: "pool", key: "7", slug: "usdc-usdt", name: "USDC / USDT", description: "", stats: [], history: [], faqs: [] };
+  const dep = { kind: "oracle", label: "USDC / USD (primary)", address: "0x2222222222222222222222222222222222222222" };
+
+  it("loads a market's review day, factor bps and dependencies", () => {
+    const r = { ...risk, reviewedAt: "2026-11-16", factors: [{ ...risk.factors[0], bps: 40 }], dependencies: [dep] };
+    const e = v2([{ ...pool, risk: r }])().entries[0]!;
+    expect(e.risk).toMatchObject({ reviewedAt: "2026-11-16", factors: [{ bps: 40 }], dependencies: [dep] });
+  });
+
+  it("refuses a malformed review day, bps or dependency", () => {
+    const bad = (r: Record<string, unknown>) => v2([{ ...pool, risk: { ...risk, ...r } }]);
+    expect(bad({ reviewedAt: "16/11/2026" })).toThrow(/reviewedAt/);
+    expect(bad({ reviewedAt: "2026-02-30" })).toThrow(/reviewedAt/);
+    expect(bad({ factors: [{ ...risk.factors[0], bps: 12.5 }] })).toThrow(/bps/);
+    expect(bad({ factors: [{ ...risk.factors[0], bps: 10_001 }] })).toThrow(/bps/);
+    expect(bad({ dependencies: [{ ...dep, kind: "bridge" }] })).toThrow(/dependency/);
+    expect(bad({ dependencies: [{ ...dep, address: "0xABCDEF0000000000000000000000000000000000" }] })).toThrow(/lower-case address/);
+  });
+
+  it("takes disclosures on a Hub entry only", () => {
+    const hub = { scope: "hub", key: "0x3333333333333333333333333333333333333333", slug: "avana-ethereum-hub", name: "Avana Ethereum Hub", description: "", stats: [], history: [], faqs: [] };
+    expect(v2([{ ...hub, disclosures: { borrow: "Borrowing risks.", lend: "Supplying risks." } }])().entries[0]!.disclosures).toEqual({ borrow: "Borrowing risks.", lend: "Supplying risks." });
+    expect(v2([{ ...hub, disclosures: { swap: "x" } }])).toThrow(/unknown disclosure/);
+    expect(v2([{ ...pool, disclosures: { borrow: "x" } }])).toThrow(/only a Hub entry/);
+    expect(parse({ version: 1, chainId: 1, entries: [{ ...hub, disclosures: { borrow: "x" } }] })).toThrow(/version 2/);
+  });
+
+  it("requires a token entry to name its symbol", () => {
+    const token = { scope: "token", key: "0x4444444444444444444444444444444444444444", slug: "aero", name: "Aerodrome", description: "", stats: [], history: [], faqs: [] };
+    expect(v2([{ ...token, symbol: "AERO", iconUrl: "https://example.org/aero.png" }])().entries[0]!.symbol).toBe("AERO");
+    expect(v2([token])).toThrow(/token entry names its symbol/);
+  });
+});
+
 describe("risk cards from listed risk text", () => {
   it("rates a Lend or asset card by its worst factor and hides it without text", () => {
     expect(contentRiskAssessment(risk, "USDC risk")).toMatchObject({ level: "moderate", summary: risk.summary, breakdown: [{ id: "issuer" }, { id: "depeg" }] });
