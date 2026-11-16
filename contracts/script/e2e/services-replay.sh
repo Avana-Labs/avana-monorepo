@@ -51,8 +51,8 @@ status_block() { # The block the indexer's checkpoint has reached, 0 when it doe
 
 start_indexer() { # schema log
   # The subshell's PID is the handle: stop_indexer stops its children (ponder) and then it.
-  (cd "$INDEXER_DIR" && AVANA_MANIFEST="$MANIFEST" RPC_ANVIL="$INDEXER_RPC" RPC_ANVIL_FALLBACK="$INDEXER_RPC" RPC_ANVIL_WS="${RPC/http/ws}" \
-    INDEXER_NETWORK_SET=local DATABASE_SCHEMA="$1" PONDER_TELEMETRY_DISABLED=true \
+  (cd "$INDEXER_DIR" && AVANA_MANIFEST="$MANIFEST" CHAIN_ID_MAINNET=31337 RPC_MAINNET="$INDEXER_RPC" RPC_MAINNET_FALLBACK="$INDEXER_RPC" RPC_MAINNET_WS="${RPC/http/ws}" \
+    INDEXER_NETWORK_SET=production INDEXER_DATABASE=pglite DATABASE_SCHEMA="$1" PONDER_TELEMETRY_DISABLED=true \
     INDEXER_EXPORT_KEYS="$EXPORT_KEY_ID:$(cat "$STATE/export-secret")" \
     exec "$REPO/node_modules/.bin/ponder" start --port "$PORT" --log-format json > "$2" 2>&1) &
   echo $! > "$STATE/indexer.pid"
@@ -211,7 +211,7 @@ case "$CMD" in
         convex_wait "Convex functions ready"
       fi
       if grep -q "Convex functions ready" "$STATE/convex.log"; then
-        RPC_ANVIL="$RPC" E2E_EXPORT_URL="http://127.0.0.1:${PORT}" E2E_EXPORT_KEY_ID="$EXPORT_KEY_ID" \
+        RPC_ANVIL="$RPC" CHAIN_ID_MAINNET=31337 E2E_EXPORT_URL="http://127.0.0.1:${PORT}" E2E_EXPORT_KEY_ID="$EXPORT_KEY_ID" \
           E2E_EXPORT_SECRET="$(cat "$STATE/export-secret")" E2E_SAMPLE_BLOCK="$S1" \
           node "$E2E/replay-check.ts" "$MANIFEST" "$REPO" 2>&1 | tee "$STATE/replay-check.log"
         [ "${PIPESTATUS[0]}" -eq 0 ] || ok=0
