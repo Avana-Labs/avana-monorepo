@@ -212,6 +212,8 @@ export type BorrowAction =
       walletId: string
       marketId: string
       amountUsd6: bigint
+      /** The one LP NFT pledged (bytes32 position key), when one covers the amount; set by the production adapter. */
+      positionKey?: `0x${string}`
       at?: number
     }
   | {

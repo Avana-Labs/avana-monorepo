@@ -17,10 +17,10 @@ import type {
   TransactionIntent,
 } from "@/app/lib/borrow-system/contracts"
 import { ProductionTransactionAdapter } from "@/app/lib/borrow-system/production-transaction-adapter"
-import { executeBorrowOnChain } from "@/app/lib/borrow-system/chain-execution"
+import { executeBorrowOnChain, pledgePositionKey } from "@/app/lib/borrow-system/chain-execution"
 import { previewBorrowOnChain } from "@/app/lib/borrow-system/chain-preview"
 import { connectedBorrowWallet, viemBorrowChain } from "@/app/lib/borrow-system/chain-execution-viem"
-import { chainBorrowRefs, requestBorrowPositionsRefresh } from "@/app/lib/borrow-system/chain-refs"
+import { chainBorrowRefs, pledgeableLps, requestBorrowPositionsRefresh } from "@/app/lib/borrow-system/chain-refs"
 import { ProductionBorrowReadAdapter } from "@/app/lib/borrow-system/production-read-adapter"
 import {
   selectBorrowableAssets,
@@ -100,10 +100,13 @@ export function useBorrowSession({
       new ProductionTransactionAdapter({
         previewTransaction: (intent) =>
           previewBorrowOnChain({ refs: chainBorrowRefs, chain: viemBorrowChain, state: () => stateRef.current }, intent),
+        pledgePositionKey: (action) =>
+          pledgePositionKey(chainBorrowRefs(action.walletId), pledgeableLps(action.walletId), action.marketId, action.amountUsd6),
         executeTransaction: (intent) =>
           executeBorrowOnChain(
             {
               refs: chainBorrowRefs,
+              lps: pledgeableLps,
               chain: viemBorrowChain,
               wallet: connectedBorrowWallet,
               state: () => stateRef.current,

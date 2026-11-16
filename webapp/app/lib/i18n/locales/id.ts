@@ -1208,6 +1208,8 @@ const dict: TranslationDictionary = {
     "Belum ada kumpulan likuiditas. Sediakan likuiditas untuk mulai memperoleh biaya trading.",
   "No supplied position to withdraw": "Tidak ada posisi pasokan untuk ditarik",
   "No wallet balances found.": "Tidak ada saldo dompet ditemukan.",
+  "Not supported yet": "Belum didukung",
+  "Request support": "Minta dukungan",
   NONE: "TIDAK ADA",
   now: "sekarang",
   Optimal: "Optimal",

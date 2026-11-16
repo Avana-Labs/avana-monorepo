@@ -14,7 +14,7 @@ import { chainPublicClient } from "@/app/lib/chain/public-client"
 import { chainIds } from "@/app/lib/chains"
 import { useActiveChainKey } from "@/app/lib/web3/active-chain"
 import { SWAP_ASSETS } from "./catalog"
-import { readChainWalletBalances } from "./chain-wallet-balances"
+import { readChainWallet, type WalletLpPosition } from "./chain-wallet-balances"
 import type { UserAssetBalance } from "./contracts"
 
 /**
@@ -52,6 +52,32 @@ export function useConvexProductWalletBalances(walletId: string | null | undefin
 }
 
 function useChainWalletBalances(walletId: string | null | undefined): UserAssetBalance[] | undefined {
+  const read = useChainWalletRead(walletId)
+  // Rows carry the session's wallet id as given (it may be checksummed), as the row builders match on it.
+  return useMemo(
+    () => (read === null ? NO_BALANCES : read?.rows.map((row) => ({ ...row, walletId: walletId ?? row.walletId }))),
+    [read, walletId],
+  )
+}
+
+const NO_LP_POSITIONS: WalletLpPosition[] = []
+
+/**
+ * The wallet's LP NFTs on the active chain, from the same read as its balances: each with the market that accepts it
+ * (`market`, with the position key, units and value to pledge it), or `market: null` for an NFT no market accepts,
+ * which cannot be pledged. Undefined while loading; empty for a guest id, without Convex or without an RPC.
+ */
+export function useWalletLpPositions(walletId: string | null | undefined): WalletLpPosition[] | undefined {
+  if (!hasConvexClient) return NO_LP_POSITIONS
+  // `hasConvexClient` is a build-time constant, so every render takes the same branch.
+  const read = useChainWalletRead(walletId)
+  return read === null ? NO_LP_POSITIONS : read?.lpPositions
+}
+
+type ChainWalletRead = { rows: UserAssetBalance[]; lpPositions: WalletLpPosition[] }
+
+/** The shared chain read of a wallet on the active chain: null when there is nothing to read, undefined while loading. */
+function useChainWalletRead(walletId: string | null | undefined): ChainWalletRead | null | undefined {
   const chainId = chainIds()[useActiveChainKey()]
   const wallet = walletId && isAddress(walletId) ? (walletId.toLowerCase() as Address) : null
   const contracts = useQuery(api.deployments.swapContractsOf, wallet ? { chainId } : "skip")
@@ -61,7 +87,7 @@ function useChainWalletBalances(walletId: string | null | undefined): UserAssetB
   const key = wallet && client ? `${chainId}:${wallet}` : null
   const balances = useSyncExternalStore(
     useCallback((listener: () => void) => (key ? subscribeBalances(key, listener) : () => {}), [key]),
-    () => (key ? balancesSnapshot(key) : NO_BALANCES),
+    () => (key ? balancesSnapshot(key) : null),
     () => undefined,
   )
 
@@ -70,7 +96,7 @@ function useChainWalletBalances(walletId: string | null | undefined): UserAssetB
     return startBalanceReads(
       key,
       () =>
-        readChainWalletBalances({
+        readChainWallet({
           client,
           chainId,
           wallet,
@@ -82,21 +108,17 @@ function useChainWalletBalances(walletId: string | null | undefined): UserAssetB
     )
   }, [key, wallet, client, chainId, contracts, markets])
 
-  // Rows carry the session's wallet id as given (it may be checksummed), as the row builders match on it.
-  return useMemo(
-    () => (!key ? NO_BALANCES : balances?.map((row) => ({ ...row, walletId: walletId ?? row.walletId }))),
-    [balances, key, walletId],
-  )
+  return key ? balances : null
 }
 
-type BalanceEntry = { rows: UserAssetBalance[] | undefined; listeners: Set<() => void>; refresh: (() => void) | null }
+type BalanceEntry = { read: ChainWalletRead | undefined; listeners: Set<() => void>; refresh: (() => void) | null }
 
 const entries = new Map<string, BalanceEntry>()
 
 function entryOf(key: string): BalanceEntry {
   let entry = entries.get(key)
   if (!entry) {
-    entry = { rows: undefined, listeners: new Set(), refresh: null }
+    entry = { read: undefined, listeners: new Set(), refresh: null }
     entries.set(key, entry)
   }
   return entry
@@ -108,19 +130,19 @@ function subscribeBalances(key: string, listener: () => void) {
   return () => entry.listeners.delete(listener)
 }
 
-function balancesSnapshot(key: string): UserAssetBalance[] | undefined {
-  return entries.get(key)?.rows
+function balancesSnapshot(key: string): ChainWalletRead | undefined {
+  return entries.get(key)?.read
 }
 
 /**
  * Reads now, then on each new block, one read at a time; returns the stop function. Several hooks on the same wallet
  * and chain share one read: a second start only adds a reference.
  */
-const readers = new Map<string, { count: number; read: () => Promise<UserAssetBalance[]>; stop: () => void }>()
+const readers = new Map<string, { count: number; read: () => Promise<ChainWalletRead>; stop: () => void }>()
 
 function startBalanceReads(
   key: string,
-  read: () => Promise<UserAssetBalance[]>,
+  read: () => Promise<ChainWalletRead>,
   client: { watchBlockNumber(args: { onBlockNumber: () => void; emitOnBegin?: boolean }): () => void },
 ): () => void {
   const running = readers.get(key)
@@ -140,8 +162,8 @@ function startBalanceReads(
     }
     inFlight = true
     ;(readers.get(key)?.read ?? read)()
-      .then((rows) => {
-        entry.rows = rows
+      .then((next) => {
+        entry.read = next
         for (const listener of entry.listeners) listener()
       })
       .catch(() => {

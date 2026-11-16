@@ -23,33 +23,28 @@ export const listForWallet = query({
 });
 
 /**
- * What the app needs to read a wallet's Borrow accounts from the chain and show them on its pages: each account's
- * market (with the Borrow list's pool slug), the Lens of each chain to read it with (`getAccounts`), and the debt
- * reserves of those accounts' Spokes (with the Borrow list's asset slug, decimals and USD price) to value each debt.
+ * What the app needs to read a wallet's Borrow accounts from the chain and act on them: each account's market (with
+ * the Borrow list's pool slug), every listed market with its Spoke (a first pledge opens an account), the Lens of each
+ * chain (`getAccounts`, `ADAPTER`), and the debt reserves of the markets' Spokes (with the Borrow list's asset slug,
+ * decimals and USD price) to value each debt and pay the fee.
  */
 export const borrowAccounts = query({
   args: { wallet: v.string() },
   handler: async (ctx, { wallet }) => {
     const owner = wallet.toLowerCase();
     const rows = await ctx.db.query("accounts").withIndex("by_wallet", (q) => q.eq("wallet", owner)).collect();
-    if (rows.length === 0) return { lenses: [], accounts: [], debtReserves: [] };
     const w = await loadWorld(ctx);
-    const chainIds = [...new Set(rows.map((a) => a.chainId))];
-    const lenses = (
-      await Promise.all(
-        chainIds.map(async (chainId) => {
-          const lens = (await ctx.db.query("deployments").withIndex("by_chain", (q) => q.eq("chainId", chainId)).unique())?.lens;
-          return lens ? { chainId, lens } : null;
-        }),
-      )
-    ).filter((l) => l !== null);
+    const lenses = (await ctx.db.query("deployments").collect()).map((d) => ({ chainId: d.chainId, lens: d.lens }));
     return { lenses, ...borrowAccountRefs(w, rows) };
   },
 });
 
 type AccountRow = { readonly chainId: number; readonly marketId: string; readonly spoke: string; readonly proxy: string };
 
-/** Each account with its market's pool slug, and the debt reserves of the accounts' Spokes with their slug and USD price. */
+/**
+ * Each account with its market's pool slug, every listed market with its Spoke, and the debt reserves of those
+ * Spokes with their slug and USD price.
+ */
 export function borrowAccountRefs(w: World, rows: readonly AccountRow[]) {
   const accounts = rows.map((a) => ({
     chainId: a.chainId,
@@ -58,7 +53,8 @@ export function borrowAccountRefs(w: World, rows: readonly AccountRow[]) {
     proxy: a.proxy,
     poolSlug: w.markets.find((m) => m.chainId === a.chainId && m.marketId === a.marketId)?.slug ?? null,
   }));
-  const spokes = new Set(rows.map((a) => `${a.chainId}:${a.spoke}`));
+  const markets = w.markets.map((m) => ({ chainId: m.chainId, marketId: m.marketId, spoke: m.spoke, poolSlug: m.slug }));
+  const spokes = new Set([...rows, ...markets].map((a) => `${a.chainId}:${a.spoke}`));
   const debtReserves = w.reserves
     .filter((r) => spokes.has(`${r.chainId}:${r.spoke}`))
     .map((r) => ({
@@ -70,5 +66,5 @@ export function borrowAccountRefs(w: World, rows: readonly AccountRow[]) {
       decimals: r.decimals,
       priceUsd8: priceAsset(w, r.chainId, r.asset, r.hub)?.priceUsd8 ?? null,
     }));
-  return { accounts, debtReserves };
+  return { accounts, markets, debtReserves };
 }

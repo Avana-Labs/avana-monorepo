@@ -23,6 +23,8 @@ export type TransactionIntent = {
   marketId?: string
   assetId?: string
   positionId?: string
+  /** A pledge's LP NFT (bytes32 position key), when one covers the amount: what the preview and the send both use. */
+  positionKey?: `0x${string}`
   debtPositionId?: string
   amountUsd6: bigint
   requestedAt: number

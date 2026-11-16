@@ -32,6 +32,14 @@ describe("wallet borrow accounts", () => {
     if (priced) expect(priced.priceUsd8).toBe(asset.priceUsd8);
   });
 
+  it("names every listed market and its Spoke's reserves without an account, for a first pledge", () => {
+    const refs = borrowAccountRefs(world, []);
+    expect(refs.accounts).toEqual([]);
+    expect(refs.markets).toEqual([{ chainId: market.chainId, marketId: market.marketId, spoke: market.spoke, poolSlug: market.slug }]);
+    const own = reserves.filter((r) => r.chainId === market.chainId && r.spoke === market.spoke);
+    expect(refs.debtReserves).toHaveLength(own.length);
+  });
+
   it("keeps an account whose market is not listed yet, without a pool slug", () => {
     const refs = borrowAccountRefs(world, [{ ...account, marketId: "999" }]);
     expect(refs.accounts[0]!.poolSlug).toBeNull();

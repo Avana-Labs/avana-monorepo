@@ -13,7 +13,7 @@ import {
   type ChainDebtReserveRef,
 } from "@/app/lib/borrow-system/chain-positions"
 import { lensAccountAbi } from "@/app/lib/borrow-system/lens-account-abi"
-import { onBorrowPositionsRefresh, setChainBorrowRefs } from "@/app/lib/borrow-system/chain-refs"
+import { onBorrowPositionsRefresh, setChainBorrowRefs, type ChainMarketRef } from "@/app/lib/borrow-system/chain-refs"
 
 /** How often the wallet's accounts are re-read at the chain head. */
 export const BORROW_POSITIONS_REFRESH_MS = 15_000
@@ -23,6 +23,7 @@ const isAddress = (value: string): value is Address => /^0x[0-9a-fA-F]{40}$/.tes
 type BorrowAccountsResult = {
   lenses: readonly { chainId: number; lens: string }[]
   accounts: readonly ChainBorrowAccountRef[]
+  markets?: readonly ChainMarketRef[]
   debtReserves: readonly ChainDebtReserveRef[]
 }
 

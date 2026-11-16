@@ -1,6 +1,6 @@
 "use client"
 
-import { lazy, Suspense, useCallback, useMemo, useRef, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
@@ -286,12 +286,24 @@ function getSupportCategories(t: Translate): SupportCategory[] {
 
 type SendStatus = "idle" | "sending" | "sent" | "error"
 
+/** Longest drafted message taken from the URL. */
+const MAX_PREFILL = 1_000
+
 function SupportCenterForm({ submit }: { submit: SupportSubmit }) {
   const { t } = useTranslation()
   const [stage, setStage] = useState<1 | 2 | 3>(1)
   const [categoryValue, setCategoryValue] = useState("")
   const [topicValue, setTopicValue] = useState("")
   const [message, setMessage] = useState("")
+  // A message another page drafted (`/support-center?message=…`, e.g. a request to support an LP pool): it fills the
+  // message box, and comes back when the topic changes.
+  const [prefill, setPrefill] = useState("")
+  useEffect(() => {
+    const drafted = new URLSearchParams(window.location.search).get("message")?.trim().slice(0, MAX_PREFILL) ?? ""
+    if (!drafted) return
+    setPrefill(drafted)
+    setMessage(drafted)
+  }, [])
   const [sendStatus, setSendStatus] = useState<SendStatus>("idle")
   const [sendError, setSendError] = useState<string | null>(null)
 
@@ -313,13 +325,13 @@ function SupportCenterForm({ submit }: { submit: SupportSubmit }) {
   const handleCategoryChange = (value: string) => {
     setCategoryValue(value)
     setTopicValue("")
-    setMessage("")
+    setMessage(prefill)
     setStage(2)
   }
 
   const handleTopicChange = (value: string) => {
     setTopicValue(value)
-    setMessage("")
+    setMessage(prefill)
   }
 
   const handleBack = () => {
@@ -330,14 +342,14 @@ function SupportCenterForm({ submit }: { submit: SupportSubmit }) {
 
     if (topicValue) {
       setTopicValue("")
-      setMessage("")
+      setMessage(prefill)
       return
     }
 
     if (categoryValue) {
       setCategoryValue("")
       setTopicValue("")
-      setMessage("")
+      setMessage(prefill)
       setStage(1)
     }
   }
