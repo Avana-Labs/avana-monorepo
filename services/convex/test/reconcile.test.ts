@@ -91,5 +91,7 @@ describe("a CDP Spoke's split by market reconciles to the Spoke's owed amount", 
     expect(pools[0]!.utilizationPct).toBeCloseTo(30, 4);
     // Available is what the market can borrow now under the speed limits ($250,000 of USDC), not its cap headroom.
     expect(pools[0]!.availableUsd).toBeCloseTo(250_000, 6);
+    // Each pool row names its Hub, which the Hubs filter lists.
+    expect(pools.map((p) => p.hubId)).toEqual(markets.map((m) => m.hub));
   });
 });

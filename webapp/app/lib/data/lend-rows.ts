@@ -12,7 +12,9 @@ export type LendAssetRow = {
   availableLiquidityPrimary: string
   availableLiquiditySecondary: string
   availableLiquidityValue: number
+  /** The row's Hub (address) and its label, for the Hubs filter. */
   hub: string
+  hubLabel?: string
   market: string
   logoSrc?: string
   logoAlt?: string

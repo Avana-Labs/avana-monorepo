@@ -9,7 +9,7 @@ import {
   borrowPoolFilterItem,
   buildAssetOptions,
   facetCounts,
-  hubForSymbols,
+  hubFilterOptions,
   chainFilterId,
   lendFilterItem,
   matchesMarketFilters,
@@ -25,21 +25,28 @@ describe("market filter model", () => {
   })
 
   it("matches every chain while rows carry no chain", () => {
-    expect(lendFilterItem("USDC").chains).toEqual(["ethereum", "base"])
+    expect(lendFilterItem({ symbol: "USDC", hub: "" }).chains).toEqual(["ethereum", "base"])
     expect(borrowPoolFilterItem({ spoke: "aero-slipstream", visuals: [{ symbol: "USDC" }] }).chains).toEqual([
       "ethereum",
       "base",
     ])
-    expect(matchesMarketFilters(lendFilterItem("USDC"), { ...EMPTY_MARKET_FILTERS, chains: ["base"] })).toBe(true)
+    expect(matchesMarketFilters(lendFilterItem({ symbol: "USDC", hub: "" }), { ...EMPTY_MARKET_FILTERS, chains: ["base"] })).toBe(true)
   })
 
-  it("derives the hub from the token mix", () => {
-    expect(hubForSymbols(["USDC"])).toBe("stable")
-    expect(hubForSymbols(["USDC", "USDT"])).toBe("stable")
-    expect(hubForSymbols(["wstETH", "WETH"])).toBe("correlated")
-    expect(hubForSymbols(["cbBTC", "WBTC"])).toBe("correlated")
-    expect(hubForSymbols(["WETH", "USDC"])).toBe("volatile")
-    expect(hubForSymbols(["AAVE"])).toBe("volatile")
+  it("lists the Hubs of the rows, by address, with their labels", () => {
+    const eth = { hub: "0xe1", hubLabel: "Avana Ethereum Hub" }
+    const base = { hub: "0xb1", hubLabel: "Avana Base Hub" }
+    const items = [
+      lendFilterItem({ symbol: "USDC", ...eth }),
+      lendFilterItem({ symbol: "WETH", ...base }),
+      borrowPoolFilterItem({ spoke: "0xs1", hubId: "0xe1", hubLabel: "Avana Ethereum Hub", visuals: [{ symbol: "USDC" }] }),
+      lendFilterItem({ symbol: "GHO", hub: "" }),
+    ]
+    expect(hubFilterOptions(items)).toEqual([
+      { id: "0xb1", label: "Avana Base Hub", brand: true },
+      { id: "0xe1", label: "Avana Ethereum Hub", brand: true },
+    ])
+    expect(items.filter((item) => matchesMarketFilters(item, { ...EMPTY_MARKET_FILTERS, hubs: ["0xe1"] }))).toHaveLength(2)
   })
 
   it("maps a borrow row to the DEX its CDP Spoke accepts", () => {
@@ -72,23 +79,25 @@ describe("market filter model", () => {
   })
 
   it("ANDs facets and ORs options inside a facet", () => {
-    const usdc = lendFilterItem("USDC")
-    const weth = lendFilterItem("WETH")
+    const usdc = lendFilterItem({ symbol: "USDC", hub: "0xe1" })
+    const weth = lendFilterItem({ symbol: "WETH", hub: "0xb1" })
     expect(matchesMarketFilters(usdc, EMPTY_MARKET_FILTERS)).toBe(true)
-    expect(matchesMarketFilters(usdc, { ...EMPTY_MARKET_FILTERS, hubs: ["stable", "correlated"] })).toBe(true)
-    expect(matchesMarketFilters(weth, { ...EMPTY_MARKET_FILTERS, hubs: ["stable", "correlated"] })).toBe(true)
-    expect(matchesMarketFilters(weth, { ...EMPTY_MARKET_FILTERS, hubs: ["correlated"], markets: ["forex"] })).toBe(
-      false,
-    )
+    expect(matchesMarketFilters(usdc, { ...EMPTY_MARKET_FILTERS, hubs: ["0xe1", "0xb1"] })).toBe(true)
+    expect(matchesMarketFilters(weth, { ...EMPTY_MARKET_FILTERS, hubs: ["0xe1", "0xb1"] })).toBe(true)
+    expect(matchesMarketFilters(weth, { ...EMPTY_MARKET_FILTERS, hubs: ["0xb1"], markets: ["forex"] })).toBe(false)
     expect(matchesMarketFilters(usdc, { ...EMPTY_MARKET_FILTERS, assets: ["usdc"] })).toBe(true)
     expect(matchesMarketFilters(usdc, { ...EMPTY_MARKET_FILTERS, chains: ["polygon"] })).toBe(false)
   })
 
   it("counts each facet's options against the other active facets only", () => {
-    const items = [lendFilterItem("USDC"), lendFilterItem("USDT"), lendFilterItem("WETH")]
-    const state = { ...EMPTY_MARKET_FILTERS, hubs: ["stable"] }
+    const items = [
+      lendFilterItem({ symbol: "USDC", hub: "0xe1" }),
+      lendFilterItem({ symbol: "USDT", hub: "0xe1" }),
+      lendFilterItem({ symbol: "WETH", hub: "0xb1" }),
+    ]
+    const state = { ...EMPTY_MARKET_FILTERS, hubs: ["0xe1"] }
     // Hub counts ignore the hub selection itself...
-    expect(facetCounts(items, state, "hubs").get("correlated")).toBe(1)
+    expect(facetCounts(items, state, "hubs").get("0xb1")).toBe(1)
     // ...but chain counts honour it.
     expect(facetCounts(items, state, "chains").get("ethereum")).toBe(2)
     expect(facetCounts(items, state, "chains").get("polygon") ?? 0).toBe(0)
