@@ -73,7 +73,9 @@ describe("local rehearsal keystore", () => {
   it("refuses a wrong password or a changed file", async () => {
     await expect(decryptKeystore(encrypt(key, password), "wrong")).rejects.toThrow(/MAC mismatch/);
     const changed = JSON.parse(encrypt(key, password));
-    changed.crypto.ciphertext = `${changed.crypto.ciphertext.slice(0, -2)}00`;
+    // Change the last byte to a value it does not already have (setting it to 00 changes nothing 1 time in 256).
+    const last = changed.crypto.ciphertext.slice(-2);
+    changed.crypto.ciphertext = `${changed.crypto.ciphertext.slice(0, -2)}${last === "00" ? "01" : "00"}`;
     await expect(decryptKeystore(JSON.stringify(changed), password)).rejects.toThrow(/MAC mismatch/);
   });
 });
