@@ -394,10 +394,17 @@ step_halmos() {
   # still shows which checks passed and every counterexample found. --solver-threads 1: one solver process at a time,
   # so a check's queries do not multiply its memory by the number of CPUs; with SECURITY_MEMORY_MAX the run is capped
   # (`capped`) and a check that reaches the cap is reported.
+  # The loop bound is passed in a config file, not on the command line: Halmos ranks the command line above a check's
+  # `/// @custom:halmos` annotation and a config file below it, so a check can set its own `--loop`. A check that the
+  # bound cuts short fails (script/halmos-outcome.py). --forge-build-out: the output directory of the active Foundry
+  # profile (FOUNDRY_PROFILE=halmos in CI, out-halmos/).
+  local config="$OUT/halmos.toml" build_out
+  printf '[global]\nloop = %s\n' "$loop" >"$config"
+  build_out=$(forge config --json | "$PY" -c 'import json, sys; print(json.load(sys.stdin)["out"])') || return 1
   local start=$SECONDS
   capped halmos ${wrap[@]+"${wrap[@]}"} env PYTHONUNBUFFERED=1 FOUNDRY_DYNAMIC_TEST_LINKING=false halmos --root . \
-    --match-contract "$match" ${tests[@]+"${tests[@]}"} --loop "$loop" --solver-timeout-assertion 0 \
-    --solver-threads 1 2>&1 | tee "$OUT/halmos.txt"
+    --forge-build-out "$build_out" --config "$config" --match-contract "$match" ${tests[@]+"${tests[@]}"} \
+    --solver-timeout-assertion 0 --solver-threads 1 2>&1 | tee "$OUT/halmos.txt"
   local rc=${PIPESTATUS[0]} exhausted=0
   # The budget ran out when timeout reports it (124), or when it had to kill Halmos (137) once the budget had passed;
   # a 137 before that is the memory cap, which `capped` reports in the log.

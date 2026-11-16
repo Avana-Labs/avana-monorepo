@@ -16,8 +16,9 @@ run that the budget ends still shows every counterexample found before it):
     fail     the build failed; the run reached the memory cap (SECURITY_MEMORY_MAX) or was killed outside the budget;
              any `Counterexample` line (also "potentially invalid") or `[FAIL]` result; any `[ERROR]` result (an
              exception, a stuck path, every path reverting)
-    fail     the wall-clock budget ended the run, or Halmos reported `[TIMEOUT]` (a solver query answered unknown):
-             the check did not run to completion, which is not a proof
+    fail     the wall-clock budget ended the run, Halmos reported `[TIMEOUT]` (a solver query answered unknown), or
+             Halmos warned that the loop unrolling bound cut paths short (it still prints `[PASS]` then): the check
+             did not run to completion, which is not a proof
     pass     Halmos exited 0 with "Symbolic test result: <n> passed; 0 failed" (exactly "1 passed" for a single check)
     fail     anything else (no result line, a non-zero exit)
 """
@@ -32,6 +33,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BOUNDS = ROOT / "security/halmos-bounds.json"
+LOOP_BOUND = "paths have not been fully explored due to the loop unrolling bound"
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
@@ -64,6 +66,10 @@ def classify(log: str, rc: int, exhausted: bool, check: tuple[str, str] | None) 
         return "fail", "the wall-clock budget ran out before the check completed"
     if re.search(r"^\[TIMEOUT\]", text, re.M):
         return "fail", "a solver query timed out ([TIMEOUT]), so the check did not complete"
+    # Halmos prints [PASS] for a check whose paths the loop unrolling bound cut short, with a warning that links its
+    # wiki's loop-bound section; the warning's text may wrap across lines.
+    if "warnings#loop-bound" in text or LOOP_BOUND in re.sub(r"\s+", " ", text):
+        return "fail", "the loop unrolling bound cut paths short (Halmos warning loop-bound), so the check did not complete"
     want = r"1 passed; 0 failed" if check else r"[0-9]+ passed; 0 failed"
     if rc == 0 and re.search(rf"Symbolic test result: {want}", text):
         return "pass", "ran to completion"

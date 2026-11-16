@@ -19,6 +19,8 @@ contracts/out-univ3/
 contracts/cache-univ3/
 contracts/out-lite/
 contracts/cache-lite/
+contracts/out-halmos/
+contracts/cache-halmos/
 contracts/dependencies/
 contracts/deployments-local/
 contracts/out-univ3/

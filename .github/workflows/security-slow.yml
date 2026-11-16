@@ -105,14 +105,28 @@ jobs:
       - run: forge soldeer install
 
       - name: Build src/, test/ and script/ with build info
+        # The strict pass and the build-info build serve Echidna, Medusa, hevm and Mythril; a run of the Halmos jobs
+        # alone (`tools: halmos`) skips both. The full tier keeps the strict warnings check.
+        if: env.TOOLS != 'halmos'
         run: |
           script/security-slow.sh build
           test -d out-security/build/all/build-info
+
+      # The Halmos build's output and cache from an earlier run: forge then recompiles only the files that changed.
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: env.CAMPAIGN == 'none'
+        with:
+          path: |
+            contracts/out-halmos
+            contracts/cache-halmos
+          key: halmos-build-${{ hashFiles('contracts/.foundry-version', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/src/**/*.sol', 'contracts/test/**/*.sol') }}
+          restore-keys: halmos-build-
 
       - name: Build for Halmos (the command Halmos runs, so each Halmos job finds it compiled)
         if: env.CAMPAIGN == 'none'
         env:
           FOUNDRY_DYNAMIC_TEST_LINKING: "false"
+          FOUNDRY_PROFILE: halmos
         run: forge build --ast --root . --extra-output storageLayout metadata
 
       - name: Upload the build
@@ -122,8 +136,8 @@ jobs:
           path: |
             contracts/out-security/build
             contracts/out-security/build-all.txt
-            contracts/out
-            contracts/cache
+            contracts/out-halmos
+            contracts/cache-halmos
           if-no-files-found: error
           retention-days: 7
 
@@ -386,6 +400,8 @@ jobs:
 
       - name: Halmos on ${{ matrix.contract }}.${{ matrix.check }} (${{ matrix.file }})
         env:
+          # The build job's Halmos build (out-halmos/), so Halmos finds every file compiled.
+          FOUNDRY_PROFILE: halmos
           HALMOS_CONTRACTS: ${{ matrix.contract }}
           HALMOS_TESTS: ${{ matrix.check }}
           # Halmos and its solver run in a systemd scope capped at 14 GB of the runner's 16 GB, without swap, so a
