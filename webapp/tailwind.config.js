@@ -22,10 +22,10 @@ module.exports = {
     },
     extend: {
       fontFamily: {
-        sans: ["var(--font-diatype-sans)", "sans-serif"],
-        compact: ["var(--font-diatype-sans)", "sans-serif"],
-        data: ["var(--font-diatype-sans)", "sans-serif"],
-        brand: ["var(--font-diatype-sans)", "sans-serif"],
+        sans: ["var(--font-body)", "sans-serif"],
+        compact: ["var(--font-body)", "sans-serif"],
+        data: ["var(--font-body)", "sans-serif"],
+        brand: ["var(--font-body)", "sans-serif"],
       },
       fontWeight: {
         thin: "400",

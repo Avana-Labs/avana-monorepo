@@ -372,6 +372,24 @@
 }
 
 @layer base {
+  /* Body font. On 1x screens (an external monitor at 100% Windows scaling) Windows ignores
+     -webkit-font-smoothing and draws Diatype Regular at one pixel per point, so text looks heavier
+     than on a laptop or Retina screen. There, use the Diatype variable font at weight 360. It loads
+     only on 1x screens; until it arrives the preloaded Regular font shows. */
+  :root {
+    --font-body: var(--font-diatype-sans);
+  }
+
+  @media (max-resolution: 1dppx) {
+    :root {
+      --font-body: var(--font-diatype-variable), var(--font-diatype-sans);
+    }
+
+    body {
+      font-variation-settings: "wght" 360;
+    }
+  }
+
   * {
     @apply border-border;
     font-synthesis: none;
@@ -379,7 +397,7 @@
   body {
     @apply text-foreground;
     background-color: hsl(var(--background)) !important;
-    font-family: var(--font-diatype-sans), sans-serif;
+    font-family: var(--font-body), sans-serif;
     font-size: 14px;
     font-weight: 400;
     line-height: 1.4;
@@ -483,15 +501,15 @@
 /* Diatype font utilities implemented in plain CSS, not Tailwind config. */
 .font-sans,
 .font-compact {
-  font-family: var(--font-diatype-sans), sans-serif;
+  font-family: var(--font-body), sans-serif;
 }
 
 .font-data {
-  font-family: var(--font-diatype-sans), sans-serif;
+  font-family: var(--font-body), sans-serif;
 }
 
 .font-brand {
-  font-family: var(--font-diatype-sans), sans-serif;
+  font-family: var(--font-body), sans-serif;
 }
 
 @layer utilities {
