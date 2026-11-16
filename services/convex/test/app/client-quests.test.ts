@@ -45,6 +45,8 @@ describe("client quests", () => {
     await expect(asUser.mutation(api.wallet.clientQuests.record, { wallet: OTHER, questId: "connect-wallet" })).rejects.toThrow(/WALLET_MISMATCH/)
     await expect(asUser.mutation(api.wallet.clientQuests.record, { wallet: WALLET, questId: "first-borrow" })).rejects.toThrow(/INVALID_QUEST/)
     await expect(asUser.mutation(api.wallet.clientQuests.record, { wallet: WALLET, questId: "toString" })).rejects.toThrow(/INVALID_QUEST/)
+    // Pin quests are earned by pinning a market, not by a bare call.
+    await expect(asUser.mutation(api.wallet.clientQuests.record, { wallet: WALLET, questId: "favorite-market" })).rejects.toThrow(/INVALID_QUEST/)
     expect(await t.query(api.wallet.rewards.summary, { wallet: WALLET })).toMatchObject({ earnedPoints: 0, completedQuests: [] })
   })
 })

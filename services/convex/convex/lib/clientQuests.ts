@@ -16,12 +16,16 @@ export const CLIENT_QUEST_POINTS: Readonly<Record<string, number>> = {
   "share-referral-link": 15,
 };
 
+/** Quests completed by pinning a market: `wallet.pinnedMarkets.pin` awards them, after checking the market exists. */
+export const PIN_QUEST_OF_SCOPE: Readonly<Record<"lend" | "pool", string>> = { pool: "favorite-market", lend: "favorite-lend-market" };
+
+/** Whether `wallet.clientQuests.record` accepts the quest: a client quest that is not earned by pinning a market. */
 export function isClientQuest(questId: string): boolean {
-  return Object.hasOwn(CLIENT_QUEST_POINTS, questId);
+  return Object.hasOwn(CLIENT_QUEST_POINTS, questId) && !Object.values(PIN_QUEST_OF_SCOPE).includes(questId);
 }
 
 /** Completes a client quest once for the wallet; returns whether points were awarded now. Unknown ids award nothing. */
 export async function awardClientQuest(ctx: Pick<MutationCtx, "db">, wallet: string, questId: string, at: number): Promise<boolean> {
-  if (!isClientQuest(questId)) return false;
+  if (!Object.hasOwn(CLIENT_QUEST_POINTS, questId)) return false;
   return awardPoints(ctx, { wallet, kind: "quest", key: `quest:${questId}`, points: CLIENT_QUEST_POINTS[questId]!, at, questId });
 }

@@ -636,6 +636,14 @@ export default defineSchema({
     at: v.number(),
   }).index("by_wallet_key", ["wallet", "key"]),
 
+  /** Markets a wallet pinned to its watchlist (`wallet/pinnedMarkets.ts`); one row per wallet and market page. */
+  pinnedMarkets: defineTable({
+    wallet: address,
+    scope: v.union(v.literal("lend"), v.literal("pool")),
+    slug: v.string(),
+    pinnedAt: v.number(),
+  }).index("by_wallet_slug", ["wallet", "slug"]),
+
   /** Running sums of a wallet's `rewardEvents`, so a read never scans the ledger; `questIds` are the completed quests. */
   rewardTotals: defineTable({
     wallet: address,
