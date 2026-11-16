@@ -1,5 +1,5 @@
 import { parseAbi, type Address } from "viem"
-import type { ChainBorrowRefs } from "@/app/lib/borrow-system/chain-refs"
+import type { ChainBorrowRefs, PledgeableLp } from "@/app/lib/borrow-system/chain-refs"
 import type { ChainBorrowAccountRef, ChainDebtReserveRef } from "@/app/lib/borrow-system/chain-positions"
 import type {
   TransactionIntent,
@@ -8,13 +8,17 @@ import type {
   TransactionRiskLabel,
 } from "@/app/lib/borrow-system/contracts"
 import type { BorrowSystemState } from "@/app/lib/borrow-system/model"
-import { currentDebtValueUsd6 } from "@/app/lib/borrow-system/model"
-import { ACTION_DEADLINE_SECONDS, type BorrowChain } from "@/app/lib/borrow-system/chain-execution"
+import { currentCollateralValueUsd6, currentDebtValueUsd6 } from "@/app/lib/borrow-system/model"
+import { ACTION_DEADLINE_SECONDS, pickCovering, type BorrowChain } from "@/app/lib/borrow-system/chain-execution"
+import { lensAccountAbi } from "@/app/lib/borrow-system/lens-account-abi"
 
 /**
- * Previews of a borrow or a repay from the Lens at the latest block (`previewBorrowAfter`, `previewRepayAfter`,
- * `previewBorrowMax`), in the shape the action pages already read. The account, reserve and Lens come from the same
- * references the chain executor uses (`chainBorrowRefs`). Other actions answer "not available yet".
+ * Previews of a borrow, a repay, a pledge or a collateral withdrawal from the Lens at the latest block
+ * (`previewBorrowAfter`, `previewRepayAfter`, `previewBorrowMax`, `previewPledgeAfter`, `previewWithdrawAfter`), in the
+ * shape the action pages already read. The account, reserve, market and Lens come from the same references the chain
+ * executor uses (`chainBorrowRefs`), and a withdrawal previews the record the executor would withdraw. A pledge or a
+ * withdrawal spanning several LP positions is allowed without a health factor preview (the Lens previews one position
+ * per call). Other actions answer "not available yet".
  */
 
 export const LENS_PREVIEW_ABI = parseAbi([
@@ -22,6 +26,8 @@ export const LENS_PREVIEW_ABI = parseAbi([
   "function previewBorrowAfter(address wallet, uint256 marketId, uint256 debtReserveId, uint256 amount) view returns (ActionPreview)",
   "function previewRepayAfter(address wallet, uint256 marketId, uint256 debtReserveId, uint256 amount) view returns (ActionPreview)",
   "function previewBorrowMax(address wallet, uint256 marketId, uint256 debtReserveId, uint256 deadline) view returns (uint256)",
+  "function previewPledgeAfter(address wallet, uint256 marketId, bytes32 positionKey) view returns (ActionPreview)",
+  "function previewWithdrawAfter(address wallet, uint256 marketId, bytes32 positionKey) view returns (ActionPreview)",
 ])
 
 export type ActionPreviewView = {
@@ -34,11 +40,17 @@ export type ActionPreviewView = {
 
 export type BorrowPreviewDeps = {
   refs(wallet: string): ChainBorrowRefs | null
+  /** The wallet's LP NFTs a market accepts (`pledgeableLps`), for the value of the NFT a pledge sends. */
+  lps?(wallet: string): readonly PledgeableLp[]
   chain(chainId: number): Pick<BorrowChain, "readContract" | "latestBlockTimestamp"> | null
   state(): BorrowSystemState
 }
 
 export const PREVIEWS_UNAVAILABLE = "Previews are not available yet."
+/** Shown when the action spans several LP positions: the Lens previews one position per call. */
+export const NOT_PREVIEWED = "The health factor after this action is not previewed."
+/** Records read per account, as the executor reads them. */
+const MAX_RECORDS = 16n
 
 const MAX_UINT = (1n << 256n) - 1n
 const WAD = 1_000_000_000_000_000_000n
@@ -251,6 +263,144 @@ async function previewRepay(deps: BorrowPreviewDeps, intent: TransactionIntent, 
   }
 }
 
+/** `collateral:<chainId>:<marketId>`, as chainBorrowPositions names a collateral position. */
+function parseCollateralId(id: string): { chainId: number; marketId: string } | null {
+  const m = /^collateral:(\d+):(\d+)$/.exec(id)
+  return m ? { chainId: Number(m[1]), marketId: m[2]! } : null
+}
+
+/** The account as it is now (the session's chain-read positions), for an action the Lens does not preview. */
+function unpreviewed(
+  deps: BorrowPreviewDeps,
+  intent: TransactionIntent,
+  poolSlug: string | null | undefined,
+): TransactionPreview {
+  const state = deps.state()
+  const account = state.accounts[intent.walletId]
+  const market = poolSlug ? state.markets[poolSlug] : undefined
+  const collateral = market
+    ? (account?.collateralPositions ?? [])
+        .filter((p) => p.marketId === poolSlug)
+        .reduce((sum, p) => sum + currentCollateralValueUsd6(p, market), 0n)
+    : 0n
+  const debt = (account?.debtPositions ?? []).reduce((sum, d) => sum + currentDebtValueUsd6(d), 0n)
+  const cf = collateralFactorWad(deps, poolSlug)
+  const now = snapshot(collateral, debt, cf, (collateral * cf) / WAD - debt, null)
+  return {
+    intent,
+    allowed: true,
+    warnings: [NOT_PREVIEWED],
+    validationErrors: [],
+    riskLabel: "safe",
+    before: now,
+    after: now,
+  }
+}
+
+/** A pledge or withdrawal preview: debt does not move, the collateral before is given. */
+function fromLens(
+  intent: TransactionIntent,
+  preview: ActionPreviewView,
+  cf: bigint,
+  collateralBefore: bigint,
+  errors: string[],
+): TransactionPreview {
+  const collateral = preview.collateralValueAfter / AAVE_VALUE_PER_USD6
+  const debt = preview.debtValueAfterRay / AAVE_VALUE_RAY_PER_USD6
+  const hfAfter = healthFactor(preview.healthFactorAfter)
+  return {
+    intent,
+    allowed: errors.length === 0,
+    warnings: [],
+    validationErrors: errors,
+    riskLabel: riskLabel(hfAfter),
+    before: snapshot(
+      collateralBefore,
+      debt,
+      cf,
+      (collateralBefore * cf) / WAD - debt,
+      healthFactor(preview.healthFactorBefore),
+    ),
+    after: snapshot(collateral, debt, cf, (collateral * cf) / WAD - debt, hfAfter),
+  }
+}
+
+async function previewPledge(deps: BorrowPreviewDeps, intent: TransactionIntent, refs: ChainBorrowRefs) {
+  const market = refs.markets?.find((m) => m.poolSlug === intent.marketId)
+  const lens = market ? (refs.lenses.find((l) => l.chainId === market.chainId)?.lens as Address | undefined) : undefined
+  const chain = market ? deps.chain(market.chainId) : null
+  if (!market || !lens || !chain) return blocked(intent, "This market cannot take collateral here.")
+  if (intent.amountUsd6 <= 0n) return blocked(intent, "Enter an amount to pledge.")
+  // No single position key: the pledge sends several NFTs, and the Lens previews one position per call.
+  const key = intent.positionKey
+  if (!key) return unpreviewed(deps, intent, intent.marketId)
+  const preview = (await chain.readContract({
+    address: lens,
+    abi: LENS_PREVIEW_ABI,
+    functionName: "previewPledgeAfter",
+    args: [intent.walletId as Address, BigInt(market.marketId), key],
+  })) as ActionPreviewView
+  const lp = deps.lps?.(intent.walletId).find((l) => l.positionKey.toLowerCase() === key.toLowerCase())
+  const collateralAfter = preview.collateralValueAfter / AAVE_VALUE_PER_USD6
+  const added = lp?.valueUsd6 ?? 0n
+  const before = collateralAfter > added ? collateralAfter - added : 0n
+  return fromLens(intent, preview, collateralFactorWad(deps, intent.marketId), before, [])
+}
+
+type RecordViewLike = { positionKey: `0x${string}`; creditedAfterReconcile: bigint }
+
+async function previewWithdraw(deps: BorrowPreviewDeps, intent: TransactionIntent, refs: ChainBorrowRefs) {
+  const id = intent.positionId ? parseCollateralId(intent.positionId) : null
+  const account = id ? refs.accounts.find((a) => a.chainId === id.chainId && a.marketId === id.marketId) : undefined
+  const lens = account
+    ? (refs.lenses.find((l) => l.chainId === account.chainId)?.lens as Address | undefined)
+    : undefined
+  const chain = account ? deps.chain(account.chainId) : null
+  if (!account || !lens || !chain) return blocked(intent, "This collateral cannot be withdrawn here.")
+  const records = (
+    (await chain.readContract({
+      address: lens,
+      abi: lensAccountAbi,
+      functionName: "getRecords",
+      args: [account.proxy as Address, 0n, MAX_RECORDS],
+    })) as readonly RecordViewLike[]
+  ).filter((r) => r.creditedAfterReconcile > 0n)
+  const totalUnits = records.reduce((sum, r) => sum + r.creditedAfterReconcile, 0n)
+  if (totalUnits === 0n) return blocked(intent, "This account has no collateral to withdraw.")
+
+  // The records the executor withdraws: all of them, or the fewest whole records covering the share asked for.
+  const state = deps.state()
+  const position = state.accounts[intent.walletId]?.collateralPositions.find((p) => p.id === intent.positionId)
+  const market = position ? state.markets[position.marketId] : undefined
+  const valueUsd6 = position && market ? currentCollateralValueUsd6(position, market) : 0n
+  const payload = intent.payload?.type === "removeCollateral" ? intent.payload : undefined
+  const bps = BigInt(
+    payload?.percentBps ??
+      (valueUsd6 > 0n && intent.amountUsd6 > 0n ? Number((intent.amountUsd6 * 10_000n) / valueUsd6) : 0),
+  )
+  if (bps <= 0n) return blocked(intent, "Enter an amount to withdraw.")
+  const picked =
+    bps >= 10_000n
+      ? records
+      : (pickCovering(records, (r) => r.creditedAfterReconcile, (totalUnits * bps) / 10_000n) ?? records)
+  const record = picked.length === 1 ? picked[0]! : null
+  if (!record) return unpreviewed(deps, intent, account.poolSlug)
+
+  const preview = (await chain.readContract({
+    address: lens,
+    abi: LENS_PREVIEW_ABI,
+    functionName: "previewWithdrawAfter",
+    args: [intent.walletId as Address, BigInt(account.marketId), record.positionKey],
+  })) as ActionPreviewView
+  const collateralAfter = preview.collateralValueAfter / AAVE_VALUE_PER_USD6
+  const removed = (valueUsd6 * record.creditedAfterReconcile) / totalUnits
+  const hfAfter = healthFactor(preview.healthFactorAfter)
+  // The executor sends a withdrawal with Aave's health factor floor (1.0): below it the chain refuses it.
+  const errors =
+    hfAfter !== null && hfAfter < WAD ? ["This withdrawal would leave the position below a health factor of 1."] : []
+  return fromLens(intent, preview, collateralFactorWad(deps, account.poolSlug), collateralAfter + removed, errors)
+}
+
 /**
  * The preview of an action at the latest block. Never throws: a Lens revert, a missing reference or an action without
  * a chain preview yet comes back not allowed, with the reason in `validationErrors`.
@@ -264,6 +414,8 @@ export async function previewBorrowOnChain(
   try {
     if (intent.actionType === "borrow") return await previewBorrow(deps, intent, refs)
     if (intent.actionType === "repay") return await previewRepay(deps, intent, refs)
+    if (intent.actionType === "deposit") return await previewPledge(deps, intent, refs)
+    if (intent.actionType === "withdraw") return await previewWithdraw(deps, intent, refs)
     return blocked(intent, PREVIEWS_UNAVAILABLE)
   } catch (error) {
     return blocked(intent, revertReason(error))

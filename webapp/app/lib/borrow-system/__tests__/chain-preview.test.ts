@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { previewBorrowOnChain, PREVIEWS_UNAVAILABLE, type BorrowPreviewDeps } from "../chain-preview"
+import { NOT_PREVIEWED, previewBorrowOnChain, PREVIEWS_UNAVAILABLE, type BorrowPreviewDeps } from "../chain-preview"
 import type { ChainBorrowRefs } from "../chain-refs"
 import type { TransactionIntent } from "../contracts"
 import type { BorrowSystemState } from "../model"
@@ -33,6 +33,7 @@ function state(debtUsd6 = 0n): BorrowSystemState {
     markets: { "weth-usdc": { riskConfig: { collateralFactorWad: (75n * WAD) / 100n } } },
     accounts: {
       [WALLET]: {
+        collateralPositions: [],
         debtPositions: debtUsd6
           ? [
               {
@@ -176,7 +177,90 @@ describe("previewBorrowOnChain", () => {
     expect(reverted).toMatchObject({ allowed: false, validationErrors: ["MarketPaused()"] })
     const unknown = await previewBorrowOnChain(deps({}), intent({ marketId: "other" }))
     expect(unknown.validationErrors).toEqual(["Pledge collateral in this market before borrowing."])
-    const pledge = await previewBorrowOnChain(deps({}), intent({ actionType: "deposit" }))
-    expect(pledge.validationErrors).toEqual([PREVIEWS_UNAVAILABLE])
+    const claim = await previewBorrowOnChain(deps({}), intent({ actionType: "claim" }))
+    expect(claim.validationErrors).toEqual([PREVIEWS_UNAVAILABLE])
+  })
+})
+
+const KEY = `0x${"0".repeat(62)}07` as const
+const KEY_2 = `0x${"0".repeat(62)}08` as const
+const withMarkets = (d: BorrowPreviewDeps): BorrowPreviewDeps => ({
+  ...d,
+  refs: () => ({ ...refs, markets: [{ chainId: 31337, marketId: "3", spoke: "0xspoke", poolSlug: "weth-usdc" }] }),
+  lps: () => [
+    {
+      chainId: 31337,
+      marketId: "3",
+      integrationId: 1,
+      positionKey: KEY,
+      npm: "0xnpm",
+      tokenId: 7n,
+      lpVault: "0xvault",
+      valueUsd6: 400_000_000n,
+    },
+  ],
+})
+
+describe("pledge and withdrawal previews", () => {
+  const lens = {
+    amount: 1n,
+    healthFactorBefore: 2n * WAD,
+    healthFactorAfter: 3n * WAD,
+    collateralValueAfter: value(1_200_000_000n),
+    debtValueAfterRay: value(300_000_000n) * 10n ** 27n,
+  }
+
+  it("previews the pledge of the intent's LP NFT, the collateral before less that NFT's value", async () => {
+    const calls: Call[] = []
+    const preview = await previewBorrowOnChain(
+      withMarkets(deps({ previewPledgeAfter: lens }, 0n, calls)),
+      intent({ actionType: "deposit", positionKey: KEY, amountUsd6: 400_000_000n }),
+    )
+    expect(calls[0]).toEqual({ functionName: "previewPledgeAfter", args: [WALLET, 3n, KEY] })
+    expect(preview.allowed).toBe(true)
+    expect(preview.before.collateralValueUsd6).toBe(800_000_000n)
+    expect(preview.after.collateralValueUsd6).toBe(1_200_000_000n)
+    expect(preview.before.totalBorrowedUsd6).toBe(300_000_000n)
+    expect([preview.before.healthFactorWad, preview.after.healthFactorWad]).toEqual([2n * WAD, 3n * WAD])
+  })
+
+  it("allows a pledge of several NFTs without a health factor preview", async () => {
+    const calls: Call[] = []
+    const preview = await previewBorrowOnChain(
+      withMarkets(deps({}, 0n, calls)),
+      intent({ actionType: "deposit", amountUsd6: 900_000_000n }),
+    )
+    expect(calls).toEqual([])
+    expect(preview).toMatchObject({ allowed: true, warnings: [NOT_PREVIEWED] })
+  })
+
+  it("previews withdrawing the one record the executor would withdraw, and refuses one below a health factor of 1", async () => {
+    const calls: Call[] = []
+    const records = [{ integrationId: 1, positionKey: KEY, creditedAfterReconcile: 5n }]
+    const removeAll = intent({
+      actionType: "withdraw",
+      positionId: "collateral:31337:3",
+      amountUsd6: 0n,
+      payload: { type: "removeCollateral", walletId: WALLET, positionId: "collateral:31337:3", percentBps: 10_000 },
+    })
+    const ok = await previewBorrowOnChain(
+      deps({ getRecords: records, previewWithdrawAfter: lens }, 0n, calls),
+      removeAll,
+    )
+    expect(calls.map((c) => c.functionName)).toEqual(["getRecords", "previewWithdrawAfter"])
+    expect(calls[1]?.args).toEqual([WALLET, 3n, KEY])
+    expect(ok.allowed).toBe(true)
+
+    const unsafe = await previewBorrowOnChain(
+      deps({ getRecords: records, previewWithdrawAfter: { ...lens, healthFactorAfter: WAD / 2n } }),
+      removeAll,
+    )
+    expect(unsafe.allowed).toBe(false)
+
+    const several = await previewBorrowOnChain(
+      deps({ getRecords: [...records, { integrationId: 1, positionKey: KEY_2, creditedAfterReconcile: 5n }] }),
+      removeAll,
+    )
+    expect(several).toMatchObject({ allowed: true, warnings: [NOT_PREVIEWED] })
   })
 })
