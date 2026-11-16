@@ -359,6 +359,71 @@ contract MarketRegistryListingBoundsUnitTest is MarketRegistryFixture {
         registry.useStandbyRoute(t, RouteSlot.Primary);
     }
 
+    /// @dev `setPriceSource(t, p, a, s)` as the timelock is refused with `ListingCheckFailed(check)` and leaves the
+    /// token's route version unchanged.
+    function _expectPriceSourceRefused(
+        address t,
+        address[] memory p,
+        address[] memory a,
+        address[] memory s,
+        bytes32 check
+    ) internal {
+        uint64 v = registry.priceRouteVersion(t);
+        vm.prank(address(timelock));
+        _expectListing(check);
+        registry.setPriceSource(t, p, a, s);
+        assertEq(registry.priceRouteVersion(t), v, "version unchanged");
+    }
+
+    // TEST-231 verifies: REQ-CONFIG-021, REQ-MREG-027
+    // setPriceSource runs the route-leg checks on a token no market uses: a route of zero or three feeds is refused in
+    // each slot.
+    function test_TEST_231_setPriceSourceRouteLengthInEverySlot() public {
+        address t = _newListedToken("t");
+        (address[] memory p, address[] memory a, address[] memory s) = _routes("t2");
+        address[] memory three = new address[](3);
+        (three[0], three[1], three[2]) = (a[0], a[1], _newFeed("extra"));
+        _expectPriceSourceRefused(t, new address[](0), a, s, "routeLength");
+        _expectPriceSourceRefused(t, p, three, s, "routeLength");
+        _expectPriceSourceRefused(t, p, a, new address[](0), "routeLength");
+    }
+
+    // TEST-231 verifies: REQ-CONFIG-021, REQ-MREG-027
+    // setPriceSource refuses a zero feed and a feed with no ParameterStore definition.
+    function test_TEST_231_setPriceSourceRefusesAnUndefinedFeed() public {
+        address t = _newListedToken("t");
+        (address[] memory p, address[] memory a, address[] memory s) = _routes("t2");
+        _expectPriceSourceRefused(t, p, a, new address[](1), "feed");
+        _expectPriceSourceRefused(t, p, _two(a[0], address(0)), s, "feed");
+        _expectPriceSourceRefused(t, _one(makeAddr("undefinedFeed")), a, s, "feed");
+    }
+
+    // TEST-231 verifies: REQ-CONFIG-021, REQ-MREG-027
+    // setPriceSource refuses a feed whose ParameterStore definition has no heartbeat.
+    function test_TEST_231_setPriceSourceRefusesAFeedWithoutHeartbeat() public {
+        address t = _newListedToken("t");
+        (address[] memory p, address[] memory a, address[] memory s) = _routes("t2");
+        address noBeat = makeAddr("noHeartbeatFeed");
+        ps.setFeed(noBeat, 8, 0, 25, 25);
+        _expectPriceSourceRefused(t, _one(noBeat), a, s, "heartbeat");
+        // The same token accepts three well-formed routes.
+        vm.prank(address(timelock));
+        registry.setPriceSource(t, p, a, s);
+        assertEq(registry.getToken(t).primaryRoute[0], p[0], "routes written");
+    }
+
+    // TEST-231 verifies: REQ-CONFIG-021, REQ-MREG-027
+    // setPriceSource refuses routes that share a feed: each of the three pairs alone, and a two-leg route repeating its
+    // own feed.
+    function test_TEST_231_setPriceSourceRoutesMayNotShareAFeed() public {
+        address t = _newListedToken("t");
+        (address[] memory p, address[] memory a, address[] memory s) = _routes("t2");
+        _expectPriceSourceRefused(t, p, a, _one(p[0]), "sharedFeed");
+        _expectPriceSourceRefused(t, p, a, _one(a[1]), "sharedFeed");
+        _expectPriceSourceRefused(t, _two(a[0], p[0]), a, s, "sharedFeed");
+        _expectPriceSourceRefused(t, _two(p[0], p[0]), a, s, "sharedFeed");
+    }
+
     // TEST-231 verifies: REQ-CONFIG-026, REQ-MREG-027
     // A Cancelled market using the token is not re-checked: its failing LPOracle does not block the change.
     function test_TEST_231_setPriceSourceSkipsCancelledMarkets() public {
