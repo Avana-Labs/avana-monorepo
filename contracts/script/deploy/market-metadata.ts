@@ -2,8 +2,10 @@
 // Copyright (c) 2026 Avana Labs
 // Step 09-market-metadata: writes the listing metadata file of the next `09-listing-markets` operation, the pages that
 // listing adds: one `pool` entry per market of `listing.markets` and one `asset` entry per debt reserve of
-// `listing.debtReserves`, with the text of their `content` in the network config. The format is the one Convex loads
-// (services/convex/convex/lib/metadata.ts, version 1). The listing operation's timelock salt is keccak256 of the file's
+// `listing.debtReserves`, with the text of their `content` in the network config (and, for a Hub whose first market
+// this listing adds, the Hub's page and its Lend pages from `aavePayload.hubs[].content` and `.lendContent`, and for a
+// CDP Spoke whose first market it adds, the Spoke's page from `listing.spokes[].content`). The format is the one Convex
+// loads (services/convex/convex/lib/metadata.ts, version 1). The listing operation's timelock salt is keccak256 of the file's
 // exact bytes, so the file is written once here and `09-listing-markets` reads the same bytes back and checks the hash.
 //
 // Only what the listing adds gets a page: the config's markets not listed yet, which take the IDs after
@@ -137,6 +139,32 @@ async function main() {
       ],
       history: [{ date, title: "Listing scheduled", description: "Governance scheduled the listing on the Avana timelock." }],
     });
+  }
+  // A Hub's own page and its Lend pages (scopes `hub` and `lend`), from `aavePayload.hubs[].content` and
+  // `.lendContent`, in the listing that adds the Hub's first market: a Hub with a market listed earlier kept its pages.
+  const hubOfSpoke = (label: string) => spokes.find((x) => x.label === label)?.hub;
+  const listedOn = new Set<string>();
+  const newOn = new Set<string>();
+  for (const m of config.listing.markets as Json[]) {
+    const listed = await client.readContract({ address: registry, abi, functionName: "marketOfKey", args: [await marketKey(factory, m)] });
+    for (const k of [hubOfSpoke(m.spoke) ?? "", `spoke:${m.spoke}`]) (listed !== 0n ? listedOn : newOn).add(k);
+  }
+  // A CDP Spoke's page (scope `spoke`) from `listing.spokes[].content`, in the listing that adds its first market.
+  for (const [i, s] of spokes.entries()) {
+    const c = (s as Json).content as Json | undefined;
+    if (!c || listedOn.has(`spoke:${s.label}`) || !newOn.has(`spoke:${s.label}`)) continue;
+    entries.push({ scope: "spoke", key: lower(addr(s.spoke)), ...text(`listing.spokes[${i}]`, c), stats: [], history: [] });
+  }
+  for (const h of (config.aavePayload.hubs ?? []) as Json[]) {
+    if (!h.content || listedOn.has(h.label) || !newOn.has(h.label)) continue;
+    const hubAddr = addr((config.aave.hubs as { label: string; hub: string }[]).find((x) => x.label === h.label)!.hub);
+    entries.push({ scope: "hub", key: lower(hubAddr), ...text(`aavePayload.hubs.${h.label}`, h.content), stats: [], history: [] });
+    for (const [symbol, content] of Object.entries((h.lendContent ?? {}) as Record<string, Json>)) {
+      const d = (config.aavePayload.debtAssets as Json[]).find((x) => x.symbol === symbol);
+      if (!d) throw new Error(`aavePayload.hubs.${h.label}.lendContent names ${symbol}, which is no debt asset`);
+      const assetId = await client.readContract({ address: hubAddr, abi, functionName: "getAssetId", args: [addr(d.token)] });
+      entries.push({ scope: "lend", key: `${lower(hubAddr)}:${assetId}`, ...text(`aavePayload.hubs.${h.label}.lendContent.${symbol}`, content), stats: [], history: [] });
+    }
   }
   for (const [i, d] of (config.listing.debtReserves as Json[]).entries()) {
     const { spoke, hub } = spokeOf(d.spoke);

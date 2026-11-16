@@ -143,11 +143,17 @@ export const hubRecordedSource = () =>
 export const spokeApprovedSource = () =>
   perChain((m) => ({ address: factory({ address: m.avana.marketRegistry.address, event: factoryEvents.spokeApproved, parameter: "spoke" }), startBlock: registryStart(m) }));
 
-/** Every Spoke a manifest Hub adds to one of its assets, a Lend Spoke added after the manifest included. */
+/**
+ * Every Spoke a manifest Hub adds to one of its assets, a Lend Spoke added after the manifest included. On the local
+ * network set, every Spoke any Hub adds: the local chains hold only Avana's Hubs, and a Hub the operator adds to a
+ * running local stack (contracts/script/local) is not in the manifest the indexer started on, so its Lend Spoke is
+ * followed from its `AddSpoke` too. Elsewhere a new Hub comes with a new release manifest.
+ */
 export const spokeAddedSource = () =>
   perChain((m) => {
     const hubs = earliest(aaveTopology(m).hubs);
-    return { address: factory({ address: hubs.address, event: factoryEvents.addSpoke, parameter: "spoke" }), startBlock: hubs.startBlock };
+    const from = NETWORK_SET === "local" ? {} : { address: hubs.address };
+    return { address: factory({ ...from, event: factoryEvents.addSpoke, parameter: "spoke" }), startBlock: hubs.startBlock };
   });
 
 /**

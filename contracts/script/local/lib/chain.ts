@@ -106,6 +106,16 @@ export function writeBaseConfig(c: LocalChain): string {
   // The MarketRegistry's MAX_MARKET_COUNT is fixed at deployment: room for every Hub the stack may add (the rehearsal's
   // 16 is sized to its own listings).
   cfg.parameters.maxMarketCount = Number(process.env.STACK_MAX_MARKETS ?? 128);
+  // The chain's Hub files may need tokens and pools the rehearsal's world lacks: script/deploy/hubs/<network>/world.json
+  // adds them to the world step 02 deploys (an entry already in the world is kept as it is).
+  const extra = join(CONTRACTS, "script/deploy/hubs", c.network, "world.json");
+  if (existsSync(extra)) {
+    const w = JSON.parse(readFileSync(extra, "utf8")) as Record<string, { symbol?: string; name?: string }[]>;
+    for (const k of ["tokens", "uniswapPools", "slipstreamPools"]) {
+      const have = new Set((cfg.world[k] as { symbol?: string; name?: string }[]).map((x) => x.symbol ?? x.name));
+      for (const x of w[k] ?? []) if (!have.has(x.symbol ?? x.name)) cfg.world[k].push(x);
+    }
+  }
   const dst = join(outDir(c), "config-base.json");
   mkdirSync(outDir(c), { recursive: true });
   writeFileSync(dst, `${JSON.stringify(cfg, null, 2)}\n`);
