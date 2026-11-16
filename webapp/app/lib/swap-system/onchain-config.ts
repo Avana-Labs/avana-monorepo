@@ -17,6 +17,8 @@ export type SwapContracts = {
   nativeUsdFeed: string
   venues: ReadonlyArray<{ venue: PoolVenue; router: string; quoter: string }>
   tokens: ReadonlyArray<{ symbol: string; address: string }>
+  /** The chain's Lens: `PARAMETER_STORE()` gives the ParameterStore that names the fee recipient. */
+  lens?: string
 }
 
 /** Uniswap v3 fee tiers tried for each hop (hundredths of a bp). */
@@ -43,19 +45,32 @@ export function poolTokens(contracts: SwapContracts, assets: readonly SwapAsset[
   })
 }
 
-/** The provider config of a chain, or null when its manifest names no swap venue. */
+/** Seconds a quote stays valid; an expired quote is quoted again on submit, never sent. */
+export const QUOTE_VALIDITY_SECONDS = 120
+
+/**
+ * The provider config of a chain, or null when its manifest names no venue it can send a swap on.
+ * Uniswap v4 is left out of route choice until v4 swaps can be sent (Permit2 and the v4 router in
+ * the manifest), so a v4 route is never the one offered.
+ */
 export function onchainPoolsConfig(
   contracts: SwapContracts,
   assets: readonly SwapAsset[],
   extra: Pick<OnchainPoolsConfig, "networkFeeUsd" | "priceUsd"> = {},
 ): OnchainPoolsConfig | null {
-  const venues = contracts.venues.map((v): VenueConfig => {
-    const quoter = v.quoter as Address
-    if (v.venue === "uniswap-v4") return { venue: "uniswap-v4", quoter, poolKeys: V4_POOL_KEYS }
-    return { venue: v.venue, quoter, poolKeys: v.venue === "slipstream" ? SLIPSTREAM_TICK_SPACINGS : V3_FEE_TIERS }
+  const venues = contracts.venues.flatMap((v): VenueConfig[] => {
+    if (v.venue === "uniswap-v4") return []
+    return [{ venue: v.venue, quoter: v.quoter as Address, poolKeys: v.venue === "slipstream" ? SLIPSTREAM_TICK_SPACINGS : V3_FEE_TIERS }]
   })
   if (venues.length === 0) return null
-  return { chainId: contracts.chainId, tokens: poolTokens(contracts, assets), venues, connectorAssetIds: CONNECTOR_ASSET_IDS, ...extra }
+  return {
+    chainId: contracts.chainId,
+    tokens: poolTokens(contracts, assets),
+    venues,
+    connectorAssetIds: CONNECTOR_ASSET_IDS,
+    quoteValiditySeconds: QUOTE_VALIDITY_SECONDS,
+    ...extra,
+  }
 }
 
 const CHAINLINK_ABI = [

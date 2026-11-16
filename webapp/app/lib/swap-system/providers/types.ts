@@ -1,4 +1,5 @@
 import type { SwapQuote, SwapQuoteRequest } from "../quote-types"
+import type { ExecutionRoute } from "./onchain-pools"
 
 /**
  * Where swap quotes come from. CoW Swap on the public networks; on a network CoW Swap does not
@@ -12,4 +13,6 @@ export type SwapQuoteProvider = {
   /** Shown as the quote's provider. */
   readonly name: string
   quote(request: SwapQuoteRequest): Promise<SwapQuote>
+  /** The route a valid quote was priced on, kept so that exact route is the one sent (on-chain pools only). */
+  executionRoute?(quoteId: string): ExecutionRoute | undefined
 }

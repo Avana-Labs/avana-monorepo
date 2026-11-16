@@ -69,6 +69,19 @@ export default defineConfig({
           testTimeout: 60_000,
         },
       },
+      {
+        // Real transactions on the local Ethereum fork, signed by a Foundry keystore. They skip unless
+        // AVANA_FORK_RPC_ETHEREUM, AVANA_LOCAL_CONVEX_URL and AVANA_FORK_KEYSTORE are set (`npm run test:local-fork`).
+        extends: true,
+        test: {
+          name: "local-fork",
+          environment: "node",
+          include: ["tests/local-fork/**/*.test.ts"],
+          exclude: sharedExclude,
+          testTimeout: 180_000,
+          fileParallelism: false,
+        },
+      },
     ],
   },
 })

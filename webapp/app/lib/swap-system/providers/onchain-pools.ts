@@ -205,6 +205,17 @@ function routeFeeBps(venue: PoolVenue, route: PoolRoute): number {
 
 type RouteQuote = { venue: VenueConfig; route: PoolRoute; amountOut: bigint; gasEstimate: bigint }
 
+/** What sending a quoted swap needs: its venue, route and quoted amounts in token units. */
+export type ExecutionRoute = {
+  venue: "uniswap-v3" | "slipstream"
+  route: PoolRoute<number>
+  amountIn: bigint
+  amountOut: bigint
+}
+
+/** Quotes whose route is kept for sending; older ones are dropped first. */
+const KEPT_ROUTES = 32
+
 async function quoteRoute(
   client: QuoterClient,
   venue: VenueConfig,
@@ -269,9 +280,11 @@ export function createOnchainPoolsProvider(
   clock: () => number = Date.now,
 ): SwapQuoteProvider {
   const name = providerName(config)
+  const routes = new Map<string, ExecutionRoute>()
   return {
     id: "onchain-pools",
     name,
+    executionRoute: (quoteId) => routes.get(quoteId),
     async quote(request) {
       const now = clock()
       const input = config.tokens.find((token) => token.assetId === request.inputAssetId)
@@ -310,8 +323,15 @@ export function createOnchainPoolsProvider(
       const priceImpactPct = probeRate > 0 ? Math.max(0, (1 - exchangeRate / probeRate) * 100) : 0
       const feeBps = routeFeeBps(best.quote.venue.venue, best.quote.route)
 
+      const id = `quote-${request.inputAssetId}-${request.outputAssetId}-${now}`
+      const venue = best.quote.venue.venue
+      if (venue !== "uniswap-v4") {
+        routes.set(id, { venue, route: best.quote.route as PoolRoute<number>, amountIn, amountOut: best.quote.amountOut })
+        if (routes.size > KEPT_ROUTES) routes.delete(routes.keys().next().value!)
+      }
+
       return {
-        id: `quote-${request.inputAssetId}-${request.outputAssetId}-${now}`,
+        id,
         status: "valid",
         provider: VENUE_NAMES[best.quote.venue.venue],
         chainId: request.chainId,

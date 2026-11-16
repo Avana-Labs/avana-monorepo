@@ -41,7 +41,7 @@ const appOrigin = resolveAppOrigin()
  * fires on every navigation even for users who never pick Coinbase. The Aave Account
  * connector (which preloads an app.family.co iframe) is opt-in and left off.
  */
-const wagmiConfig = createConfig(
+export const wagmiConfig = createConfig(
   getDefaultConfig({
     appName: "Avana",
     appDescription: "Borrow against LP positions, lend and swap on Avana.",
