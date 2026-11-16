@@ -177,6 +177,11 @@ contract VaultTokenFactoryHalmosTest is Test {
     /// @notice A listing by the timelock reaches deployment only for a registered integration, non-zero and pairwise
     /// distinct bindings none of which is the predicted token address, a canonical range (`lower < upper`), decimals in
     /// [6, 18], a market ID in `[1, 2^32)` and an empty pair.
+    /// @dev Loop bound 21: the deployed token's constructor compares its 7 symbolic bindings pairwise
+    /// (`VaultToken._checkAddressBindings`), 7 × 6 / 2 = 21 visits of one symbolic branch on a path, and Halmos follows
+    /// a branch while its visits are below the bound. At the slow tier's bound of 16 the deployment paths were cut
+    /// short (run 43742353540, Halmos warning loop-bound).
+    /// @custom:halmos --loop 21
     function check_PROP_099_onlyValidListingsReachDeployment(
         uint32 id,
         int24 lower,
