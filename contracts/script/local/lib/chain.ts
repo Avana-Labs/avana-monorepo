@@ -149,6 +149,9 @@ export function writeBaseConfig(c: LocalChain): string {
   cfg.listing.speedLimits = tv.speedLimits;
   cfg.listing.spokes = [];
   cfg.listing.debtReserves = [];
+  // A listing debt asset (its DebtOracle or fixed price, its rounding allowance) needs a CDP Spoke to price it: the Hub
+  // file that makes the asset borrowable lists it, with the Spoke (planHub, from the test values).
+  cfg.listing.debtAssets = [];
   // The protocol's market parameters a Hub file's market starts from, per integration (1 Uniswap v3, 2 Slipstream),
   // taken from the anvil config's first market of each; the market list itself starts empty.
   const template = (id: number) => {

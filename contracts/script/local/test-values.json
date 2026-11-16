@@ -5,13 +5,18 @@
       "drawCap": 10000000,
       "bootstrapSupply": "20000000000000000000000000",
       "coverageMinimum": 100000,
-      "offsetMinimum": 75000
+      "offsetMinimum": 75000,
+      "fixedPrice": true,
+      "deviationBps": 25,
+      "floorRoundingAllowance": "1000000000000000000"
     },
     "USDC": {
       "drawCap": 10000000,
       "bootstrapSupply": "20000000000000",
       "coverageMinimum": 100000,
-      "offsetMinimum": 75000
+      "offsetMinimum": 75000,
+      "stressRiseBps": 500,
+      "floorRoundingAllowance": "1000000"
     },
     "USDT": {
       "drawCap": 5000000,

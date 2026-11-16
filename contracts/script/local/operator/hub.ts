@@ -108,6 +108,9 @@ export interface DebtAssetValues {
   offsetMinimum?: number;
   stressRiseBps?: number;
   floorRoundingAllowance?: string;
+  /** A fixed-price debt asset (no DebtOracle): its primary feed's deviation instead of a stress rise. */
+  fixedPrice?: boolean;
+  deviationBps?: number;
   creditLineWhole?: number;
   debtMinWhole?: number;
   debtMaxWhole?: number;
@@ -364,15 +367,16 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
     // A debt asset borrowable on a CDP Spoke needs its listing entry (its DebtOracle) once per chain.
     const borrowed = (Object.values(input.borrowable) as string[][]).some((x) => x.includes(a.symbol));
     if (borrowed && !(c.listing.debtAssets as Json[]).some((x) => x.symbol === a.symbol)) {
-      if (dv?.stressRiseBps === undefined || !dv.floorRoundingAllowance) throw new Error(`${a.symbol} has no DebtOracle on this chain and test values have no stressRiseBps and floorRoundingAllowance for it`);
+      const fixed = dv?.fixedPrice === true;
+      if (!dv?.floorRoundingAllowance || (fixed ? dv.deviationBps === undefined : dv.stressRiseBps === undefined))
+        throw new Error(`${a.symbol} has no listing on this chain and test values have no ${fixed ? "deviationBps" : "stressRiseBps"} and floorRoundingAllowance for it`);
       c.listing.debtAssets.push({
         symbol: a.symbol,
-        fixedPrice: false,
-        stressRiseBps: dv.stressRiseBps,
+        fixedPrice: fixed,
+        ...(fixed ? { deviationBps: dv.deviationBps } : { stressRiseBps: dv.stressRiseBps, debtOraclePokeMinGas: 1000000 }),
         floorRoundingAllowance: dv.floorRoundingAllowance,
-        debtOraclePokeMinGas: 1000000,
-        ...(tv.debtAssets?.[a.symbol]?.creditLineWhole ? { creditLineWhole: tv.debtAssets[a.symbol]!.creditLineWhole } : {}),
-        ...(tv.debtAssets?.[a.symbol]?.debtMinWhole ? { debtMinWhole: tv.debtAssets[a.symbol]!.debtMinWhole, debtMaxWhole: tv.debtAssets[a.symbol]!.debtMaxWhole } : {}),
+        ...(dv.creditLineWhole ? { creditLineWhole: dv.creditLineWhole } : {}),
+        ...(dv.debtMinWhole ? { debtMinWhole: dv.debtMinWhole, debtMaxWhole: dv.debtMaxWhole } : {}),
         address: `$world:.tokens.${a.symbol}`,
         feeds: { primary: `$world:.feeds.${a.symbol}.primary` },
       });
