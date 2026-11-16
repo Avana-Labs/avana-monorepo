@@ -8,7 +8,6 @@ import {
   BORROW_MARKET_OPTIONS,
   CHAIN_OPTIONS,
   EMPTY_MARKET_FILTERS,
-  HUB_OPTIONS,
   LEND_MARKET_OPTIONS,
   buildAssetOptions,
   lendFilterItem,
@@ -43,12 +42,15 @@ afterEach(() => {
   i18n.language = "EN"
 })
 
+const ETHEREUM_HUB = { hub: "0x00000000000000000000000000000000000000e1", hubLabel: "Avana Ethereum Hub" }
+const BASE_HUB = { hub: "0x00000000000000000000000000000000000000b1", hubLabel: "Avana Base Hub" }
+
 const ROWS = [
-  { symbol: "USDC", name: "USD Coin" },
-  { symbol: "USDT", name: "Tether USD" },
-  { symbol: "WETH", name: "Wrapped Ether" },
-  { symbol: "WBTC", name: "Wrapped BTC" },
-  { symbol: "AAVE", name: "Aave Token" },
+  { symbol: "USDC", name: "USD Coin", ...ETHEREUM_HUB },
+  { symbol: "USDT", name: "Tether USD", ...ETHEREUM_HUB },
+  { symbol: "WETH", name: "Wrapped Ether", ...BASE_HUB },
+  { symbol: "WBTC", name: "Wrapped BTC", ...BASE_HUB },
+  { symbol: "AAVE", name: "Aave Token", ...ETHEREUM_HUB },
 ]
 
 function Harness({ onChange }: { onChange?: (next: MarketFilterState) => void }) {
@@ -56,7 +58,7 @@ function Harness({ onChange }: { onChange?: (next: MarketFilterState) => void })
   const [search, setSearch] = useState("")
   return (
     <MarketFiltersBar
-      items={ROWS.map((row) => lendFilterItem(row.symbol))}
+      items={ROWS.map((row) => lendFilterItem(row))}
       value={value}
       onChange={(update) => {
         setValue((current) => {
@@ -137,14 +139,14 @@ describe("MarketFiltersBar", () => {
     const panel = openFacet(/^Hubs$/)
     const clear = within(panel).getByRole("button", { name: "Clear" })
     expect(clear).toBeDisabled()
-    fireEvent.click(within(panel).getByRole("checkbox", { name: /Stable/ }))
-    fireEvent.click(within(panel).getByRole("checkbox", { name: /Correlated/ }))
+    fireEvent.click(within(panel).getByRole("checkbox", { name: /Avana Ethereum Hub/ }))
+    fireEvent.click(within(panel).getByRole("checkbox", { name: /Avana Base Hub/ }))
     expect(screen.getByRole("button", { name: "Hubs (2)" })).toBeInTheDocument()
     expect(clear).toBeEnabled()
     fireEvent.click(clear)
     expect(onChange).toHaveBeenLastCalledWith(EMPTY_MARKET_FILTERS)
 
-    fireEvent.click(within(panel).getByRole("checkbox", { name: /Volatile/ }))
+    fireEvent.click(within(panel).getByRole("checkbox", { name: /Avana Ethereum Hub/ }))
     fireEvent.click(screen.getByRole("button", { name: "Clear Hubs filter" }))
     expect(onChange).toHaveBeenLastCalledWith(EMPTY_MARKET_FILTERS)
     expect(screen.getByRole("button", { name: /^Hubs$/ })).toBeInTheDocument()
@@ -164,10 +166,14 @@ describe("MarketFiltersBar", () => {
   it("shows per-option counts that follow the other active filters", async () => {
     await renderBar(<Harness />)
     const hubs = openFacet(/^Hubs$/)
-    // 2 stablecoins, WETH + WBTC correlated, AAVE volatile.
-    expect(within(hubs).getByRole("checkbox", { name: /Stable/ })).toHaveTextContent("2")
-    expect(within(hubs).getByRole("checkbox", { name: /Correlated/ })).toHaveTextContent("2")
-    fireEvent.click(within(hubs).getByRole("checkbox", { name: /Stable/ }))
+    // USDC, USDT and AAVE on the Ethereum Hub; WETH and WBTC on the Base Hub.
+    expect(within(hubs).getAllByRole("checkbox").map((row) => row.textContent?.replace(/\d+$/, ""))).toEqual([
+      "Avana Base Hub",
+      "Avana Ethereum Hub",
+    ])
+    expect(within(hubs).getByRole("checkbox", { name: /Avana Ethereum Hub/ })).toHaveTextContent("3")
+    expect(within(hubs).getByRole("checkbox", { name: /Avana Base Hub/ })).toHaveTextContent("2")
+    fireEvent.click(within(hubs).getByRole("checkbox", { name: /Avana Ethereum Hub/ }))
     fireEvent.keyDown(hubs, { key: "Escape" })
 
     const markets = openFacet(/^Markets$/)
@@ -206,7 +212,7 @@ describe("MarketFiltersBar", () => {
     await renderBar(<Harness onChange={onChange} />)
     expect(screen.queryByRole("button", { name: "Clear all" })).toBeNull()
     const panel = openFacet(/^Hubs$/)
-    fireEvent.click(within(panel).getByRole("checkbox", { name: /Stable/ }))
+    fireEvent.click(within(panel).getByRole("checkbox", { name: /Avana Ethereum Hub/ }))
     fireEvent.keyDown(panel, { key: "Escape" })
     fireEvent.click(screen.getByRole("button", { name: "Clear all" }))
     expect(onChange).toHaveBeenLastCalledWith(EMPTY_MARKET_FILTERS)
@@ -235,7 +241,8 @@ describe("MarketFiltersBar", () => {
     await renderBar(<Harness />)
     expect(screen.getByRole("button", { name: /Alle Chains/ })).toBeInTheDocument()
     const panel = openFacet(/^Knotenpunkte$/)
-    expect(within(panel).getByRole("checkbox", { name: /Stabil/ })).toBeInTheDocument()
+    // Hub names are proper nouns: shown as Convex names them in every locale.
+    expect(within(panel).getByRole("checkbox", { name: /Avana Ethereum Hub/ })).toBeInTheDocument()
     expect(within(panel).getByRole("button", { name: "Löschen" })).toBeInTheDocument()
     act(() => {
       fireEvent.keyDown(panel, { key: "Escape" })
@@ -249,7 +256,6 @@ describe("filter labels are translated in every locale", () => {
   // gate can't see them; check them here. Acronym tabs (ETH, BTC) read the same everywhere.
   const RUNTIME_KEYS = [
     ...CHAIN_OPTIONS.filter((option) => !option.brand).map((option) => option.label),
-    ...HUB_OPTIONS.map((option) => option.label),
     ...LEND_MARKET_OPTIONS.map((option) => option.label),
     ...ASSET_TABS.filter((tab) => tab.id !== "eth" && tab.id !== "btc").map((tab) => tab.label),
     "Chains",

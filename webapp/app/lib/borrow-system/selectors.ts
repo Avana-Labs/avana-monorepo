@@ -100,6 +100,7 @@ export function selectBorrowMarketSummaries(state: BorrowSystemState, walletId: 
           ? fixedToNumber((market.snapshot.fees24hUsd6 * 10_000n) / market.snapshot.totalLiquidityUsd6, 2)
           : 0,
       spoke: market.spokeId,
+      ...(market.hubId ? { hubId: market.hubId, hubLabel: market.hubLabel ?? market.hubId } : {}),
       spokeLabel: market.display.venue || market.spokeId,
       dexId: slugify(dexLabel) || "dex",
       dexLabel,

@@ -180,7 +180,7 @@ export async function snapshotRows(ctx: QueryCtx, w: World, now: number, only?: 
     for (const m of w.markets) {
       const debts = w.debts.filter((d) => d.chainId === m.chainId && d.marketId === m.marketId);
       const reserves = w.reserves.filter((r) => r.chainId === m.chainId);
-      rows.push(poolSnapshot(m, debts, reserves, w.assetsByKey, await pool24h(ctx, w, m, now), contentOf(w, "pool", m.chainId, m.marketId)));
+      rows.push(poolSnapshot(m, debts, reserves, w.assetsByKey, await pool24h(ctx, w, m, now), contentOf(w, "pool", m.chainId, m.marketId), hubLabelOf(w, m.chainId, m.hub)));
     }
   }
   return rows;
