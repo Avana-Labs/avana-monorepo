@@ -105,23 +105,68 @@ export async function miningMode(c: LocalChain): Promise<"auto" | "interval"> {
 
 // ─── Config ───
 
-/** The chain's base config: the anvil config with this chain's name, ID and block time, and the stack's keeper as the
- * keeper and operator helper signer (replaced in the text, so every other value is kept). */
+/** The values the Aave DAO and governance set on a real network, for the local stack only (test-values.json). */
+export const testValues = (): Record<string, any> => JSON.parse(readFileSync(join(CONTRACTS, "script/local/test-values.json"), "utf8"));
+
+/**
+ * The chain's first-release config: one Aave Hub for the chain (label `ethereum` or `base`, page "Avana <Chain> Hub",
+ * tier 3, which takes stable, correlated and volatile markets) with its Lend Spoke and the debt assets, and no CDP Spoke
+ * or market: the chain's Hub files add those (script/deploy/hubs/<chain>/). Built from the anvil config's protocol
+ * parameters; the values the DAO sets (caps, credit lines, First-Loss Reserve and offset amounts, speed limits) come
+ * from test-values.json. The stack's keystores fill every role: the deployer is also the test tokens' minter and the
+ * First-Loss Reserves' funder, the keeper is the keeper and the operator helper's signer, the treasury is the fee
+ * recipient, the guardian is the Aave Protocol Guardian.
+ */
 export function writeBaseConfig(c: LocalChain): string {
-  const src = join(CONTRACTS, "script/deploy/config/anvil.json");
-  const text = readFileSync(src, "utf8");
-  const parsed = JSON.parse(text) as Record<string, any>;
-  let out = text;
-  const keeper = addresses().keeper;
-  for (const a of new Set<string>([...parsed.keepers, ...parsed.operatorHelpers.map((h: { signer: string }) => h.signer)])) out = out.split(`"${a}"`).join(`"${keeper}"`);
-  const cfg = JSON.parse(out) as Record<string, any>;
+  const src = JSON.parse(readFileSync(join(CONTRACTS, "script/deploy/config/anvil.json"), "utf8")) as Record<string, any>;
+  const a = addresses();
+  const tv = testValues();
+  const label = c.network;
+  const lend = `lend${label.charAt(0).toUpperCase()}${label.slice(1)}`;
+  const cfg = structuredClone(src);
   cfg.network = c.network;
   cfg.chainId = c.chainId;
   cfg.chain.blockTime = c.blockTime;
-  // The MarketRegistry's MAX_MARKET_COUNT is fixed at deployment: room for every Hub the stack may add (the rehearsal's
-  // 16 is sized to its own listings).
+  // The MarketRegistry's MAX_MARKET_COUNT is fixed at deployment: room for every Hub file the stack may add.
   cfg.parameters.maxMarketCount = Number(process.env.STACK_MAX_MARKETS ?? 128);
-  // The chain's Hub files may need tokens and pools the rehearsal's world lacks: script/deploy/hubs/<network>/world.json
+  cfg.parameters.globals.feeRecipient = a.treasury;
+  cfg.governance.aaveProtocolGuardian = a.guardian;
+  cfg.keepers = [a.keeper];
+  for (const h of cfg.operatorHelpers) h.signer = a.keeper;
+  cfg.aavePayload.tokenMinter = a.deployer;
+  cfg.coverage.funder = a.deployer;
+  cfg.aaveLocal.hubs = [label];
+  cfg.aaveLocal.spokes = [{ label: lend, userReservesLimit: 65535 }];
+  cfg.aave.hubs = [{ hub: `$aave:.hubs.${label}.proxy`, tier: 3, label }];
+  cfg.aave.irStrategies = { [label]: `$aave:.hubs.${label}.irStrategy` };
+  cfg.aave.spokes = { [lend]: `$aave:.spokes.${lend}.proxy` };
+  const name = `Avana ${c.label} Hub`;
+  cfg.aavePayload.hubs = [{ label, lendSpoke: lend, cdpSpokes: [], content: { slug: `avana-${label}-hub`, name, description: `Avana's Aave V4 Hub on ${c.label}.`, faqs: [] } }];
+  for (const d of cfg.aavePayload.debtAssets) {
+    const v = tv.debtAssets?.[d.symbol] ?? {};
+    for (const k of ["drawCap", "bootstrapSupply", "coverageMinimum", "offsetMinimum", "rateModel", "liquidityFeeBps"]) if (v[k] !== undefined) d[k] = v[k];
+  }
+  cfg.listing.creditLineWhole = tv.creditLineWhole;
+  cfg.listing.speedLimits = tv.speedLimits;
+  cfg.listing.spokes = [];
+  cfg.listing.debtReserves = [];
+  // A listing debt asset (its DebtOracle or fixed price, its rounding allowance) needs a CDP Spoke to price it: the Hub
+  // file that makes the asset borrowable lists it, with the Spoke (planHub, from the test values).
+  cfg.listing.debtAssets = [];
+  // The protocol's market parameters a Hub file's market starts from, per integration (1 Uniswap v3, 2 Slipstream),
+  // taken from the anvil config's first market of each; the market list itself starts empty.
+  const template = (id: number) => {
+    const { name: _n, spoke: _s, pool: _p, routes: _r, content: _c, ...rest } = (src.listing.markets as Record<string, any>[]).find((m) => m.integrationId === id)!;
+    return rest;
+  };
+  cfg.listing.marketDefaults = { "1": template(1), "2": template(2) };
+  cfg.listing.markets = [];
+  cfg.listing.pools = {};
+  for (const t of cfg.listing.tokens) {
+    t.hubs = [label];
+    Object.assign(t, tv.tokens?.default ?? {}, tv.tokens?.[t.symbol] ?? {});
+  }
+  // The chain's Hub files may need tokens and pools the test world lacks: script/deploy/hubs/<network>/world.json
   // adds them to the world step 02 deploys (an entry already in the world is kept as it is).
   const extra = join(CONTRACTS, "script/deploy/hubs", c.network, "world.json");
   if (existsSync(extra)) {
@@ -170,6 +215,20 @@ export function setConfig(c: LocalChain, configPath: string) {
   writeStatus(c, s);
 }
 
+/** The chain's forge broadcast and cache directories (relative to contracts/), the cache seeded from the shared one so
+ * nothing recompiles. */
+export function forgeDirs(c: LocalChain): Record<string, string> {
+  const broadcast = `deployments-local/${c.network}/forge-broadcast`;
+  const cache = `deployments-local/${c.network}/forge-cache`;
+  const seeded = join(CONTRACTS, cache, "solidity-files-cache.json");
+  const shared = join(CONTRACTS, "cache", "solidity-files-cache.json");
+  if (!existsSync(seeded) && existsSync(shared)) {
+    mkdirSync(join(CONTRACTS, cache), { recursive: true });
+    writeFileSync(seeded, readFileSync(shared));
+  }
+  return { FOUNDRY_BROADCAST: broadcast, FOUNDRY_CACHE_PATH: cache };
+}
+
 /** Git Bash on Windows (never WSL's bash, which would run the steps in another system); bash elsewhere. */
 export function bash(): string {
   if (process.env.STACK_BASH) return process.env.STACK_BASH;
@@ -189,6 +248,10 @@ export interface StepOutcome {
 /** The environment of every step of the chain: its network, RPC, config and the stack's signers. */
 export function stepEnv(c: LocalChain, config = currentConfig(c)): NodeJS.ProcessEnv {
   return {
+    // Each chain's forge runs keep their broadcast records and script cache in the chain's own output directory, so
+    // the two chains' steps never share a file (Windows refuses a file another forge has mapped, os error 1224). The
+    // compiled artifacts stay shared in out/.
+    ...forgeDirs(c),
     AVANA_NETWORK: c.network,
     AVANA_RPC_URL: rpcUrl(c),
     AVANA_CONFIG: relative(CONTRACTS, config).split("\\").join("/"),
@@ -203,12 +266,16 @@ export function stepEnv(c: LocalChain, config = currentConfig(c)): NodeJS.Proces
  * changes file of deployments-local/<network>), or one of the stack's own (`multicall3`, `place-executor`,
  * `advance:<seconds>`, `manifest`, `treasury`). Passed steps are skipped.
  */
-export async function runStep(c: LocalChain, release: string, step: string, config = currentConfig(c)): Promise<StepOutcome> {
-  const key = `${release}:${step}`;
+/**
+ * `id` names the step in the ledger and its log: the step itself for its first run in a release, `<step>#<n>` for its
+ * n-th (a release runs `advance:<s>` more than once, and each must run).
+ */
+export async function runStep(c: LocalChain, release: string, step: string, config = currentConfig(c), id = step): Promise<StepOutcome> {
+  const key = `${release}:${id}`;
   const status = readStatus(c);
   const prev = status.steps[key];
   if (prev?.outcome === "pass") return { chain: c.network, step: key, outcome: "skipped", detail: prev.detail };
-  const log = logPath(`${c.key}.${release}.${step.replace(/[:/]/g, "-")}`);
+  const log = logPath(`${c.key}.${release}.${id.replace(/[:/#]/g, "-")}`);
   mkdirSync(join(log, ".."), { recursive: true });
   const t0 = Date.now();
   let ok = false;
@@ -220,8 +287,12 @@ export async function runStep(c: LocalChain, release: string, step: string, conf
     else if (step.startsWith("advance:")) detail = await advance(c, Number(step.slice(8)), env, log);
     else if (step === "manifest") detail = manifest(c, env, log);
     else if (step === "treasury") detail = await fundTreasuries(c);
+    else if (step === "swap-contracts") detail = await swapContracts(c);
     else if (step.startsWith("changes:")) detail = runShell("11-changes", env, log, false, [join(outDir(c), step.slice(8))]);
     else detail = runShell(step, env, log, prev?.outcome === "fail");
+    // An execute step whose timelock operation is not ready yet exits 0 and broadcasts nothing: that is a failure.
+    const notReady = /^\s*not ready: .*$/m.exec(existsSync(log) ? readFileSync(log, "utf8") : "");
+    if (notReady) throw new Error(notReady[0].trim());
     ok = true;
   } catch (e) {
     detail = (e as Error).message;
@@ -304,7 +375,7 @@ function manifest(c: LocalChain, env: NodeJS.ProcessEnv, log: string): string {
 export const FIRST_RELEASE = [
   "multicall3", "00-factories", "01-aave-v4", "place-executor", "02-test-world", "03-avana", "04-access-operations",
   "advance:432001", "05-execute-access-operations", "06-aave-deployment-aip", "07-deploy-first-loss-reserves",
-  "08-aave-loss-layers-aip", "07-fund-first-loss-reserves", ...listingSteps(), "manifest", "treasury",
+  "08-aave-loss-layers-aip", "07-fund-first-loss-reserves", ...listingSetupSteps(), "swap-contracts", "manifest", "treasury",
 ];
 
 /** The steps of a later release: each acts only on what the config adds (the rehearsal's day-2 phase). */
@@ -313,16 +384,63 @@ export const LATER_RELEASE = [
   "07-deploy-first-loss-reserves", "08-aave-loss-layers-aip", "07-fund-first-loss-reserves", ...listingSteps(), "manifest",
 ];
 
+/** The listing's setup: integrations, tokens, debt assets and Spokes, the debt oracles and the Aave debt reserves. */
+function listingSetupSteps() {
+  return ["09-listing-setup", "advance:432001", "09-execute-listing-setup", "09-debt-oracles", "10-aave-debt-reserves-aip"];
+}
+
+/** A listing: its setup, then the markets (metadata, listing operation, Aave side) and their activation. */
 function listingSteps() {
   return [
-    "09-listing-setup", "advance:432001", "09-execute-listing-setup", "09-debt-oracles", "10-aave-debt-reserves-aip",
+    ...listingSetupSteps(),
     "09-market-metadata", "09-listing-markets", "advance:432001", "09-execute-listing-markets", "10-aave-markets-aip",
     "09-listing-activate", "advance:43201", "09-execute-listing-activate",
   ];
 }
 
 /**
- * The faucet and the activity treasury hold every test token of the world: the deployer, the tokens' minter, mints
+ * The swap screen's contracts on the test world, listed in the manifest's `external` (world.json `external`, which the
+ * manifest producer reads): each venue's SwapRouter (step 02 deploys them) and a QuoterV2 deployed here against the
+ * venue's factory and WETH, signed by the deployer keystore. Names: group `uniswap-v3` UniswapV3SwapRouter and
+ * UniswapV3QuoterV2; group `slipstream` SlipstreamSwapRouter and SlipstreamQuoterV2 (generation 0's factory). The swap
+ * tokens are the `token` group step 02 already lists. A quoter already listed is kept.
+ */
+async function swapContracts(c: LocalChain): Promise<string> {
+  const { createPublicClient, createWalletClient, http } = await import("viem");
+  const { privateKeyToAccount } = await import("viem/accounts");
+  const { PASSWORD_FILE, keystorePath } = await import("./keys.ts");
+  const { decryptKeystore } = await import("../../../../services/keeper/src/adapters/localKeystore.ts");
+  const worldPath = join(outDir(c), "world.json");
+  const world = JSON.parse(readFileSync(worldPath, "utf8")) as Record<string, any>;
+  world.external ??= {};
+  const account = privateKeyToAccount(await decryptKeystore(readFileSync(keystorePath("deployer"), "utf8"), readFileSync(PASSWORD_FILE, "utf8").trim()));
+  const wallet = createWalletClient({ account, transport: http(rpcUrl(c)) });
+  const client = createPublicClient({ transport: http(rpcUrl(c)) });
+  const deploy = async (out: string, factory: `0x${string}`): Promise<`0x${string}`> => {
+    const art = JSON.parse(readFileSync(join(CONTRACTS, out, "QuoterV2.sol", "QuoterV2.json"), "utf8")) as { abi: unknown[]; bytecode: { object: `0x${string}` } };
+    const hash = await wallet.deployContract({ abi: art.abi, bytecode: art.bytecode.object, args: [factory, world.tokens.WETH], chain: null });
+    const r = await client.waitForTransactionReceipt({ hash });
+    if (r.status !== "success" || !r.contractAddress) throw new Error(`QuoterV2 from ${out} did not deploy`);
+    return r.contractAddress;
+  };
+  const venues = [
+    { group: "uniswap-v3", prefix: "UniswapV3", out: "out-univ3-periphery", factory: world.uniswapV3Factory, router: world.uniswapV3SwapRouter },
+    { group: "slipstream", prefix: "Slipstream", out: "out-slipstream-v1", factory: world.slipstreamFactories?.[0], router: world.slipstreamSwapRouter },
+  ];
+  const done: string[] = [];
+  for (const v of venues) {
+    if (!v.factory || !v.router) continue;
+    const g = (world.external[v.group] ??= {});
+    g[`${v.prefix}SwapRouter`] ??= { address: v.router, standIn: false };
+    g[`${v.prefix}QuoterV2`] ??= { address: await deploy(v.out, v.factory), standIn: false };
+    done.push(`${v.prefix}QuoterV2 ${g[`${v.prefix}QuoterV2`].address}`);
+  }
+  writeFileSync(worldPath, `${JSON.stringify(world, null, 2)}\n`);
+  return done.join(", ");
+}
+
+/**
+ * The faucet and the activity funds hold every test token of the world: the deployer, the tokens' minter, mints
  * each the equivalent of $1T once, signing from its keystore.
  */
 async function fundTreasuries(c: LocalChain): Promise<string> {
@@ -341,14 +459,14 @@ async function fundTreasuries(c: LocalChain): Promise<string> {
   for (const t of cfg.world.tokens) {
     if (t.kind || !world.tokens[t.symbol]) continue;
     const amount = (10n ** 12n * 10n ** 8n * 10n ** BigInt(t.decimals)) / BigInt(t.price8);
-    for (const to of [a.faucet, a.activity]) {
+    for (const to of [a.faucet, a["activity-funds"]]) {
       const hash = await wallet.writeContract({ address: world.tokens[t.symbol]!, abi, functionName: "mint", args: [to, amount], chain: null });
       const r = await client.waitForTransactionReceipt({ hash });
       if (r.status !== "success") throw new Error(`mint ${t.symbol} to ${to} reverted`);
     }
     n++;
   }
-  return `${n} tokens to the faucet ${a.faucet} and the activity treasury ${a.activity}`;
+  return `${n} tokens to the faucet ${a.faucet} and the activity funds ${a["activity-funds"]}`;
 }
 
 /**
@@ -374,8 +492,11 @@ export async function fundSigners(c: LocalChain): Promise<void> {
 export async function runRelease(c: LocalChain, release: string, steps: readonly string[], config: string, onStep?: (o: StepOutcome) => void): Promise<StepOutcome[]> {
   setConfig(c, config);
   const done: StepOutcome[] = [];
+  const seen = new Map<string, number>();
   for (const s of steps) {
-    const o = await runStep(c, release, s, config);
+    const n = (seen.get(s) ?? 0) + 1;
+    seen.set(s, n);
+    const o = await runStep(c, release, s, config, n === 1 ? s : `${s}#${n}`);
     done.push(o);
     onStep?.(o);
     if (o.outcome === "fail") break;

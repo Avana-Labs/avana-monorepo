@@ -7,6 +7,7 @@ import {
   assetTabFor,
   borrowMarketForSpoke,
   borrowPoolFilterItem,
+  borrowSpokeOptions,
   buildAssetOptions,
   facetCounts,
   hubFilterOptions,
@@ -55,6 +56,27 @@ describe("market filter model", () => {
     expect(borrowMarketForSpoke("aerodrome-slipstream")).toBe("aerodrome-slipstream")
     expect(borrowMarketForSpoke("unknown")).toBeNull()
     expect(BORROW_MARKET_OPTIONS.map((option) => option.label)).toEqual(["Uniswap V3", "Aerodrome Slipstream"])
+  })
+
+  it("lists each CDP Spoke on its own, even two on one venue", () => {
+    const spokeA = "0x00000000000000000000000000000000000000Aa"
+    const spokeB = "0x00000000000000000000000000000000000000bb"
+    const spokeC = "0x00000000000000000000000000000000000000cc"
+    const options = borrowSpokeOptions([
+      { spoke: spokeA, spokeName: "Avana Uniswap Blue Chip", venue: "Uniswap V3", dexId: "uniswap-v3" },
+      { spoke: spokeA, venue: "Uniswap V3", dexId: "uniswap-v3" },
+      { spoke: spokeB, venue: "Uniswap V3", dexId: "uniswap-v3" },
+      { spoke: spokeC, venue: "Aero Slipstream", dexId: "aero-slipstream" },
+    ])
+    expect(options).toEqual([
+      { id: spokeC, label: "Aero Slipstream", brand: true, iconSrc: "/asset-icons/aero.png" },
+      { id: spokeA.toLowerCase(), label: "Avana Uniswap Blue Chip", brand: true, iconSrc: "/asset-icons/uni.png" },
+      { id: spokeB, label: "Uniswap V3", brand: true, iconSrc: "/asset-icons/uni.png" },
+    ])
+    const item = borrowPoolFilterItem({ spoke: spokeA, dexId: "uniswap-v3", visuals: [{ symbol: "WETH" }, { symbol: "USDC" }] })
+    expect(item.markets).toEqual([spokeA.toLowerCase()])
+    expect(matchesMarketFilters(item, { ...EMPTY_MARKET_FILTERS, markets: [spokeB] })).toBe(false)
+    expect(matchesMarketFilters(item, { ...EMPTY_MARKET_FILTERS, markets: [spokeA.toLowerCase()] })).toBe(true)
   })
 
   it("includes every constituent of a 3-token pool in its assets, once", () => {

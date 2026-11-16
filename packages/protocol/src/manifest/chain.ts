@@ -36,7 +36,9 @@ export async function adminOf(client: PublicClient, proxy: Address): Promise<big
  */
 export function broadcastBlocks(contractsDir: string, chainId: number): Map<string, number> {
   const blocks = new Map<string, number>();
-  const root = join(contractsDir, "broadcast");
+  // FOUNDRY_BROADCAST when the steps ran with a broadcast directory of their own (the local stack gives each chain one),
+  // relative to contracts/ as Foundry reads it.
+  const root = join(contractsDir, process.env.FOUNDRY_BROADCAST ?? "broadcast");
   if (!existsSync(root)) return blocks;
   // Every run of every script, not only run-latest.json: a script run in several steps (07 deploy then fund) or
   // rerun from a saved state keeps its earlier deployments in the timestamped run files.

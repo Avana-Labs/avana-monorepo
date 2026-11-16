@@ -11,7 +11,7 @@ import { hubLabel } from "./lib/format.ts";
 import { creditLineView } from "./lib/hubViews.ts";
 import { type PoolPricing, lpFeeAprPct } from "./lib/windows.ts";
 import { hubAssetKey, lendSnapshot, assetSnapshot, poolSnapshot } from "./lib/pages.ts";
-import type { CreditLineView, MarketSnapshotRow, PageContent, PageScope } from "./lib/uiTypes.ts";
+import type { CreditLineView, MarketSnapshotRow, PageContent, PageScope, Visual } from "./lib/uiTypes.ts";
 
 export type ContentScope = Doc<"marketContent">["scope"];
 
@@ -160,6 +160,24 @@ export async function pool24h(ctx: QueryCtx, w: World, m: MarketDoc, now: number
 
 const lpFeeAprPct24h = (buckets: readonly Values[], current: { sqrtPriceX96: string; tickLower: number; tickUpper: number }, p: PoolPricing) => lpFeeAprPct(buckets, 1, current, p);
 
+/** A Spoke's name from its listing entry; none until the listing names it. */
+export function spokeNameOf(w: World, chainId: number, spoke: string): string | undefined {
+  return contentOf(w, "spoke", chainId, spoke.toLowerCase())?.name?.trim() || undefined;
+}
+
+/**
+ * A market's pair icons from its two tokens' listing entries (symbol and iconUrl), in the neutral style the app gives
+ * a token without a listed visual. None until both tokens have an entry.
+ */
+export function pairVisuals(w: World, m: MarketDoc): Visual[] | undefined {
+  const entries = m.tokens.map((t) => contentOf(w, "token", m.chainId, t.toLowerCase()));
+  if (entries.length < 2 || entries.some((c) => !c)) return undefined;
+  return entries.map((c) => {
+    const symbol = c!.symbol ?? c!.name;
+    return { symbol, shortLabel: symbol.slice(0, 4), bgClassName: "bg-muted", textClassName: "text-foreground", ...(c!.iconUrl ? { iconUrl: c!.iconUrl } : {}) };
+  });
+}
+
 /** Every list row, one per Lend asset, CDP debt reserve and market. */
 export async function snapshotRows(ctx: QueryCtx, w: World, now: number, only?: PageScope): Promise<MarketSnapshotRow[]> {
   const rows: MarketSnapshotRow[] = [];
@@ -180,7 +198,9 @@ export async function snapshotRows(ctx: QueryCtx, w: World, now: number, only?: 
     for (const m of w.markets) {
       const debts = w.debts.filter((d) => d.chainId === m.chainId && d.marketId === m.marketId);
       const reserves = w.reserves.filter((r) => r.chainId === m.chainId);
-      rows.push(poolSnapshot(m, debts, reserves, w.assetsByKey, await pool24h(ctx, w, m, now), contentOf(w, "pool", m.chainId, m.marketId), hubLabelOf(w, m.chainId, m.hub)));
+      const row = poolSnapshot(m, debts, reserves, w.assetsByKey, await pool24h(ctx, w, m, now), contentOf(w, "pool", m.chainId, m.marketId), hubLabelOf(w, m.chainId, m.hub), pairVisuals(w, m));
+      const spokeName = spokeNameOf(w, m.chainId, m.spoke);
+      rows.push(spokeName ? { ...row, spokeName } : row);
     }
   }
   return rows;

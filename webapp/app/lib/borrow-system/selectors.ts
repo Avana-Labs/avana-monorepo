@@ -101,6 +101,7 @@ export function selectBorrowMarketSummaries(state: BorrowSystemState, walletId: 
           : 0,
       spoke: market.spokeId,
       ...(market.hubId ? { hubId: market.hubId, hubLabel: market.hubLabel ?? market.hubId } : {}),
+      ...(market.spokeName ? { spokeName: market.spokeName } : {}),
       spokeLabel: market.display.venue || market.spokeId,
       dexId: slugify(dexLabel) || "dex",
       dexLabel,

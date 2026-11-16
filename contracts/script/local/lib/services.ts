@@ -212,26 +212,53 @@ export async function startConvex(): Promise<ConvexInfo> {
   await waitFor("Convex functions pushed", async () => /Convex functions ready/.test(log()), 300_000, 2_000).catch((e) => {
     throw new Error(`${(e as Error).message}\n${tail("convex", 20)}`);
   });
-  for (const c of deployed()) await convex("mutation", "deployments:setDeployment", deploymentRow(c));
+  for (const c of deployed()) {
+    const row = await deploymentRow(c);
+    try {
+      await convex("mutation", "deployments:setDeployment", row);
+    } catch (e) {
+      // A Convex checkout from before the About-card and swap fields takes the row without them.
+      if (!/ArgumentValidationError|extra field/i.test((e as Error).message)) throw e;
+      const { lpVaults: _l, riskModule: _r, spokeOracles: _o, external: _x, ...base } = row;
+      await convex("mutation", "deployments:setDeployment", base);
+    }
+  }
   return info;
 }
 
-/** The chain's `deployments` row, from its release manifest (as replay-check.ts writes it). */
-export function deploymentRow(c: LocalChain): Record<string, unknown> {
+/** ORACLE() of an Aave V4 Spoke. */
+const ORACLE = "0x38013f02";
+
+/** The chain's `deployments` row, from its release manifest (as replay-check.ts writes it), with each Spoke's oracle
+ * read on chain (the manifest does not carry it). */
+export async function deploymentRow(c: LocalChain): Promise<Record<string, unknown>> {
   const m = JSON.parse(readFileSync(manifestPath(c), "utf8")) as Record<string, any>;
   const world = JSON.parse(readFileSync(join(outDir(c), "world.json"), "utf8")) as Record<string, any>;
+  const lendSpokes = m.aave.lendSpokes.map((s: Record<string, any>) => s.address as string);
+  const cdpSpokes = m.aave.borrowSpokes.map((s: Record<string, any>) => s.address as string);
+  const spokeOracles: { spoke: string; oracle: string }[] = [];
+  for (const spoke of [...lendSpokes, ...cdpSpokes]) {
+    const out = await rpc<string>(rpcUrl(c), "eth_call", [{ to: spoke, data: ORACLE }, "latest"]);
+    const oracle = `0x${out.slice(-40)}`;
+    if (!/^0x0{40}$/.test(oracle)) spokeOracles.push({ spoke, oracle });
+  }
   return {
     chainId: c.chainId,
     lens: m.avana.lens.address,
     hubs: m.aave.hubs.map((h: Record<string, any>) => ({ address: h.address, label: h.label, tier: h.tier })),
-    lendSpokes: m.aave.lendSpokes.map((s: Record<string, any>) => s.address),
-    cdpSpokes: m.aave.borrowSpokes.map((s: Record<string, any>) => s.address),
+    lendSpokes,
+    cdpSpokes,
     firstLossReserves: m.avana.firstLossReserves.map((r: Record<string, any>) => ({ address: r.address, asset: r.asset, hub: r.hub })),
     marketRegistry: m.avana.marketRegistry.address,
     timelock: m.avana.timelock.address,
     explorerUrl: rpcUrl(c),
     nativeUsdFeed: world.feeds.WETH.primary,
     release: m.release,
+    // The About card's contract rows and the swap venues (optional in Convex; a slot without an address is left out).
+    lpVaults: (m.avana.lpVaults ?? []).filter((v: Record<string, any>) => v.address).map((v: Record<string, any>) => ({ integrationId: v.integrationId, address: v.address })),
+    ...(m.avana.riskModule?.address ? { riskModule: m.avana.riskModule.address } : {}),
+    spokeOracles,
+    external: (m.external ?? []).filter((x: Record<string, any>) => x.address).map((x: Record<string, any>) => ({ group: x.group, name: x.name, address: x.address, standIn: x.standIn })),
   };
 }
 

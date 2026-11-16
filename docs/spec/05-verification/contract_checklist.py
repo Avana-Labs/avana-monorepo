@@ -166,7 +166,7 @@ DEFERRED_ROWS: dict[str, tuple[str, str]] = {}
 # TEST-214, TEST-224), the live-config check and the spec-stage sizing models own them.
 OUTSIDE_CONTRACTS: dict[str, str] = {
     "REQ-ACCESS-023": "the live-config check reads hasRole for every release-manifest pair on a deployed chain",
-    "REQ-ACCESS-070": "the Aave Protocol Guardian's permissions on the Aave SpokeConfigurator are Aave's AccessManager",
+    "REQ-ACCESS-070": "the Aave Protocol Guardian's chain-wide freezeReserve and pauseReserve on the Aave SpokeConfigurator are Aave's AccessManager (the deployment AIP grants them; the stack's check reads canCall); keeping to Avana's Spokes and freeze-only on Lend Spokes is playbook P-18",
     "REQ-ACCESS-071": "who holds SPOKE_USER_POSITION_UPDATER_ROLE and Aave-side authority is Aave's configuration",
     "REQ-ACCESS-102": "Safe owners and threshold of each chain's governance multisig (getOwners, getThreshold)",
     "REQ-ACCESS-103": "Safe owners and threshold of each chain's Emergency Guardian",

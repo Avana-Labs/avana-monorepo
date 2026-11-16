@@ -3,15 +3,12 @@
 import type { Dispatch, SetStateAction } from "react"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { MarketFiltersBar } from "@/app/lib/ui/market-filters"
-import {
-  BORROW_MARKET_OPTIONS,
-  type AssetOption,
-  type FilterableItem,
-  type MarketFilterState,
-} from "@/app/lib/markets/filters"
+import type { AssetOption, FilterableItem, FilterOption, MarketFilterState } from "@/app/lib/markets/filters"
 
 type TabsBarProps = {
   items: readonly FilterableItem[]
+  /** The page's CDP Spokes (`borrowSpokeOptions`). */
+  marketOptions: ReadonlyArray<FilterOption>
   filters: MarketFilterState
   onFiltersChange: Dispatch<SetStateAction<MarketFilterState>>
   assetOptions: readonly AssetOption[]
@@ -20,7 +17,7 @@ type TabsBarProps = {
 }
 
 /** Borrow's filter row: chains, hubs, DEX markets and LP assets, plus the market search. */
-export function TabsBar({ items, filters, onFiltersChange, assetOptions, search, onSearchChange }: TabsBarProps) {
+export function TabsBar({ items, marketOptions, filters, onFiltersChange, assetOptions, search, onSearchChange }: TabsBarProps) {
   const { t } = useTranslation()
 
   return (
@@ -29,7 +26,7 @@ export function TabsBar({ items, filters, onFiltersChange, assetOptions, search,
         items={items}
         value={filters}
         onChange={onFiltersChange}
-        marketOptions={BORROW_MARKET_OPTIONS}
+        marketOptions={marketOptions}
         assetOptions={assetOptions}
         search={search}
         onSearchChange={onSearchChange}

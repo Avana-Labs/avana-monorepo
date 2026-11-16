@@ -75,6 +75,21 @@ export function frontendFeeUsd(action: string, amountUsd: number, rules: FeeRule
   return Number(quote.feeAmount) / 1e6
 }
 
+/**
+ * The fee in token units on an action's token amount, through `quoteFee` (rounded down). With no
+ * price the USD cap does not apply. 0 for anything that is not a Q-409 action.
+ */
+export function frontendFeeAmount(
+  action: string,
+  amount: bigint,
+  decimals: number,
+  rules: FeeRules = currentRules,
+  priceUsd8 = 0n,
+): bigint {
+  if (!isFeeAction(action) || LP_VALUE_ACTIONS.has(action) || amount <= 0n) return 0n
+  return quoteFee(rules, { action, basis: { kind: "amount", amount, decimals, priceUsd8 }, gas: NO_GAS }).feeAmount
+}
+
 /** Languages whose fee sentence writes the decimal with a comma ("0,10 %"). */
 const COMMA_DECIMAL_LANGUAGES = new Set(["DE", "FR", "ID", "NL", "PT", "RU", "TR"])
 

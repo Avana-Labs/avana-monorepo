@@ -10,7 +10,7 @@ Status is the row's implementation state: **Verified** (a counting test or prope
 
 No run results are given to this matrix (it is committed and must not depend on a run), so no Foundry test counts as Verified here; a CVL rule or Halmos check counts when contracts/certora/RUNS.md or docs/audit/halmos/results/ records its pass with a job id or log. The CI evidence job writes the same matrix from the run's results.
 
-**3603 requirements · 118 verified · 0 failed · 1924 not run · 1561 unlinked · 0 changed — re-verify · 0 errors · 3526 warnings**
+**3603 requirements · 118 verified · 0 failed · 1924 not run · 1561 unlinked · 0 changed — re-verify · 0 errors · 3532 warnings**
 
 | Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |
 |---|---|---|---|---|---|---|---|
@@ -1496,7 +1496,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-ACCESS-067` | No selector exists for any parameter whose 1.5 change class is Immutable (`stableCeilingUs… | — | — | — | `TEST-062`°, `TEST-194`°, `TEST-244`° | — | Not run |
 | `REQ-ACCESS-068` | Repay (anyone, for any borrower, through `AaveAdapter.repay`), fee collection (`AaveAdapte… | `MATH-GOV-08` | — | — | `TEST-029`°, `TEST-132`°, `TEST-162`°, `TEST-174`°, `TEST-192`°, `TEST-192`‡, `TEST-193`°, `TEST-193`‡, `TEST-229`°, `TEST-237`°, `TEST-243`° | — | Not run |
 | `REQ-ACCESS-069` | `AaveAdapter.pledge`, `recredit`, `borrow`, `withdraw` and `removeLiquidity` with debt, an… | — | — | — | `TEST-019`°, `TEST-229`° | — | Not run |
-| `REQ-ACCESS-070` | On each CDP Spoke's SpokeConfigurator the Aave Protocol Guardian holds only the one-way `f… | — | — | — | — | — | Unlinked |
+| `REQ-ACCESS-070` | The deployment AIP asks the Aave DAO to grant the Aave Protocol Guardian the one-way `free… | — | — | — | — | — | Unlinked |
 | `REQ-ACCESS-071` | No Avana contract, multisig or keeper holds `SPOKE_USER_POSITION_UPDATER_ROLE`, which stay… | — | — | — | — | — | Unlinked |
 | `REQ-ACCESS-072` | `None` | Nothing | Every action, subject to the price-state, Aave-side and RiskModule chec… | `MATH-GOV-08` | — | — | `TEST-192`° | — | Not run |
 | `REQ-ACCESS-073` | `Frozen` | New pledges and re-credits by accounts with no debt on any debt reserve (`Appli… | `MATH-GOV-08` | — | — | `TEST-019`°, `TEST-192`° | — | Not run |
@@ -2918,7 +2918,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-ROLE-054` | AvanaTimelock | `cancel(id)` | `CANCELLER_ROLE`; `DAO_CANCELLER_ROLE` for a role-change or… | — | — | — | — | — | Unlinked |
 | `REQ-ROLE-055` | Every Avana contract | Any function that would stop repay, fee collection, debt-free withd… | — | — | — | — | — | Unlinked |
 | `REQ-ROLE-056` | HubConfigurator, SpokeConfigurator | Every configuration function for Avana markets, debt … | — | — | — | — | — | Unlinked |
-| `REQ-ROLE-057` | SpokeConfigurator | `freezeReserve`, `pauseReserve` on each CDP Spoke reserve; `freezeRese… | — | — | — | — | — | Unlinked |
+| `REQ-ROLE-057` | SpokeConfigurator | `freezeReserve`, `pauseReserve`, chain-wide (every reserve of every Sp… | — | — | — | — | — | Unlinked |
 | `REQ-ROLE-058` | CDP Spoke | `updateUserRiskPremium`, `updateUserDynamicConfig` | `SPOKE_USER_POSITION_UPDA… | — | — | — | — | — | Unlinked |
 | `REQ-ROLE-059` | CDP Spoke | `updatePositionManager`, `setUserPositionManager` | No position manager is act… | — | — | — | — | — | Unlinked |
 | `REQ-ROLE-060` | First-Loss Reserve of each (Hub, debt asset) → Hub | `coverDeficit(cdpSpoke, maxAmount)` →… | — | — | — | — | — | Unlinked |

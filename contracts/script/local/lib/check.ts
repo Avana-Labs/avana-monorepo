@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The stack's checks, run against the running stack (nothing is redeployed or restarted that need not be):
-//   check   re-check only, in minutes: each chain's manifest against the chain, the indexer at both heads, and Convex
-//           against the chain (contracts/script/e2e/replay-check.ts, Convex mode) at the last closed daily sample.
+//   check   re-check only, in minutes: each chain's manifest against the chain, the indexer at both heads, Convex
+//           against the chain (contracts/script/e2e/replay-check.ts, Convex mode) at the last closed daily sample, and
+//           the liquidation fee split (feeSplit.ts).
 //   replay  the indexer replay (services/REPLAY.md) on the stack: two sampler blocks a day apart close a daily bucket on
 //           each chain, the live indexer stops at the head, a second indexer indexes every block again into a fresh
 //           schema from Ponder's sync store and the rpc-recorders, its tables must equal the live pass's
@@ -14,7 +15,8 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { CONTRACTS, EXPORT_KEY_ID, type LocalChain, PORTS, REPO, STACK, chainIdEnv, manifestPath, rpcUrl } from "./env.ts";
+import { encodeFunctionData, parseAbi, toFunctionSelector } from "viem";
+import { CONTRACTS, EXPORT_KEY_ID, type LocalChain, PORTS, REPO, STACK, chainIdEnv, manifestPath, outDir, rpcUrl } from "./env.ts";
 import { answers, blockNumber, refreshFeeds, rpc, setMining, stepEnv } from "./chain.ts";
 import { logPath, running, sleep, stop } from "./procs.ts";
 import { PGLITE, indexerAtHead, indexerUrl, secret, startIndexer } from "./services.ts";
@@ -139,8 +141,44 @@ export async function check(chains: readonly LocalChain[], say: Say): Promise<bo
     say(`${live.errors.length ? "FAIL" : "PASS"} indexer log: ${live.errors.length} error or warning lines, ${live.tolerated} node timeouts or notices`);
     ok = live.errors.length === 0 && ok;
     for (const c of chains) ok = convexCheck(c, Number(readFileSync(sampleFile(c), "utf8")), say) && ok;
+    for (const c of chains) ok = (await feeSplit(c, say)) && ok;
+    for (const c of chains) ok = (await guardianAccess(c, say)) && ok;
     return ok;
   });
+}
+
+/** REQ-ACCESS-070 on the deployed chain: the Aave Protocol Guardian can call the SpokeConfigurator's one-way
+ * `freezeReserve` and `pauseReserve`, and not their two-way setters nor any other configurator selector checked. */
+async function guardianAccess(c: LocalChain, say: Say): Promise<boolean> {
+  const { addresses } = await import("./keys.ts");
+  const aave = JSON.parse(readFileSync(join(outDir(c), "aave.json"), "utf8")) as Record<string, string>;
+  const abi = parseAbi(["function canCall(address caller, address target, bytes4 selector) view returns (bool immediate, uint32 delay)"]);
+  const want: Record<string, boolean> = {
+    "freezeReserve(address,uint256)": true,
+    "pauseReserve(address,uint256)": true,
+    "updateFrozen(address,uint256,bool)": false,
+    "updatePaused(address,uint256,bool)": false,
+    "freezeAllReserves(address)": false,
+    "pauseAllReserves(address)": false,
+    "updateBorrowable(address,uint256,bool)": false,
+  };
+  const wrong: string[] = [];
+  for (const [sig, allowed] of Object.entries(want)) {
+    const data = encodeFunctionData({ abi, functionName: "canCall", args: [addresses().guardian, aave.spokeConfigurator as `0x${string}`, toFunctionSelector(sig)] });
+    const out = await rpc<string>(rpcUrl(c), "eth_call", [{ to: aave.accessManager, data }, "latest"]);
+    if ((BigInt(out.slice(0, 66)) === 1n) !== allowed) wrong.push(`${sig} ${allowed ? "refused" : "allowed"}`);
+  }
+  say(`${wrong.length ? "FAIL" : "PASS"} ${c.network} Aave Protocol Guardian: freezeReserve and pauseReserve only${wrong.length ? ` (${wrong.join(", ")})` : ""}`);
+  return wrong.length === 0;
+}
+
+/** The liquidation fee split (feeSplit.ts): fail on any settlement that pays other than the spec says. */
+async function feeSplit(c: LocalChain, say: Say): Promise<boolean> {
+  const { checkFeeSplit } = await import("./feeSplit.ts");
+  const r = await checkFeeSplit(c);
+  for (const f of r.failures.slice(0, 10)) say(`  ${f}`);
+  say(`${r.ok ? "PASS" : "FAIL"} ${c.network} fee split: ${r.settlements} liquidations${r.settlements === 0 ? " (none yet: the activity loop's scripted liquidation makes one)" : ""}, ${r.failures.length} failures`);
+  return r.ok;
 }
 
 export async function replay(chains: readonly LocalChain[], say: Say): Promise<boolean> {

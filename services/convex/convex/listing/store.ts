@@ -48,7 +48,19 @@ export const store = internalMutation({
               },
             }
           : {}),
-        ...(e.risk ? { risk: { summary: e.risk.summary, factors: e.risk.factors.map((x) => ({ id: x.id, label: x.label, level: x.level, text: x.text })) } } : {}),
+        ...(e.risk
+          ? {
+              risk: {
+                summary: e.risk.summary,
+                ...(e.risk.reviewedAt ? { reviewedAt: e.risk.reviewedAt } : {}),
+                factors: e.risk.factors.map((x) => ({ id: x.id, label: x.label, level: x.level, text: x.text, ...(x.bps !== undefined ? { bps: x.bps } : {}) })),
+                ...(e.risk.dependencies ? { dependencies: e.risk.dependencies.map((d) => ({ kind: d.kind, label: d.label, address: d.address })) } : {}),
+              },
+            }
+          : {}),
+        ...(e.disclosures
+          ? { disclosures: { ...(e.disclosures.borrow ? { borrow: e.disclosures.borrow } : {}), ...(e.disclosures.lend ? { lend: e.disclosures.lend } : {}) } }
+          : {}),
         contentHash,
         operationId,
         loadedAt: now,

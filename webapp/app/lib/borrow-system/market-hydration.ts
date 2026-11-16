@@ -25,6 +25,7 @@ export type ConvexMarketSnapshot = {
   category?: string
   description?: string
   spokeId?: string
+  spokeName?: string
   hubId?: string
   hubLabel?: string
   feeTier?: string
@@ -130,6 +131,7 @@ export function borrowMarketFromSnapshot(
     riskConfig: { collateralFactorWad: cf, liquidationThresholdWad: cf, riskScoreWad: 0n },
     listPremiumBps: finite(snap.premiumBps),
     ...(snap.hubId ? { hubId: snap.hubId.toLowerCase(), hubLabel: snap.hubLabel?.trim() || snap.hubId } : {}),
+    ...(snap.spokeName?.trim() ? { spokeName: snap.spokeName.trim() } : {}),
     reserveFactorPct: finite(snap.reserveFactorPct),
     relations: {
       supportedBorrowAssetIds: related
