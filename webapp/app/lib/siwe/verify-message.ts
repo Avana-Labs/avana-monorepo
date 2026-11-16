@@ -11,8 +11,8 @@ export type SiweCheck = {
   host: string
   /** The nonce issued to this browser. */
   nonce: string
-  /** The app's chain. */
-  chainId: number
+  /** The app's chain, or its chains (Ethereum and Base of this network). */
+  chainId: number | readonly number[]
   now?: Date
 }
 
@@ -52,7 +52,8 @@ export function checkSiweMessage(message: string, check: SiweCheck): SiweCheckRe
   }
   if (domain !== check.host) return fail(401, "SIWE domain does not match this origin")
   if (uriHost !== check.host) return fail(401, "SIWE URI does not match this origin")
-  if (chainId !== check.chainId) return fail(401, "SIWE chain does not match this app")
+  const allowed = typeof check.chainId === "number" ? [check.chainId] : check.chainId
+  if (!allowed.includes(chainId)) return fail(401, "SIWE chain does not match this app")
   if (nonce !== check.nonce) return fail(401, "invalid or expired nonce")
 
   const issued = issuedAt.getTime()

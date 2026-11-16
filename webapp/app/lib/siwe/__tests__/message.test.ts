@@ -61,6 +61,12 @@ describe("checkSiweMessage", () => {
     expect(checkSiweMessage(message({ chainId: 8453 }), CHECK)).toMatchObject({ ok: false, status: 401 })
   })
 
+  it("accepts any of the app's chains when given both", () => {
+    const both = { ...CHECK, chainId: [1, 8453] }
+    expect(checkSiweMessage(message({ chainId: 8453 }), both)).toMatchObject({ ok: true })
+    expect(checkSiweMessage(message({ chainId: 10 }), both)).toMatchObject({ ok: false, status: 401 })
+  })
+
   it("checks Issued At against the clock skew and the nonce lifetime", () => {
     const at = (ms: number) => new Date(NOW.getTime() + ms).toISOString()
     expect(checkSiweMessage(message({ issuedAt: at(SIWE_CLOCK_SKEW_MS) }), CHECK).ok).toBe(true)

@@ -12,7 +12,8 @@ import { ConnectKitProvider, SIWEProvider, getDefaultConfig, useModal } from "co
 import { siweConfig } from "@/app/lib/siwe/connectkit-siwe"
 import { AVANA_EXTERNAL_LINKS } from "@/app/components/external-links"
 import { IS_DEV_SHORTCUT_MODE } from "@/app/lib/test-mode"
-import { TARGET_CHAIN } from "@/app/lib/web3/target-chain"
+import { APP_CHAINS, chainRpcUrl } from "@/app/lib/web3/target-chain"
+import { CHAIN_KEYS } from "@/app/lib/chains"
 import { useWalletGate } from "@/app/lib/web3/wallet-gate"
 import { useWrongNetwork } from "@/app/lib/web3/use-wrong-network"
 import { publishWrongNetworkState, WrongNetworkStateProvider } from "@/app/lib/web3/wrong-network-context"
@@ -49,8 +50,9 @@ const wagmiConfig = createConfig(
     appIcon: `${appOrigin}/avana-icon.png`,
     walletConnectProjectId,
     coinbaseWalletPreference: "smartWalletOnly",
-    chains: [TARGET_CHAIN],
-    transports: { [TARGET_CHAIN.id]: http() },
+    // Ethereum and Base of this network (ids and RPCs from env), each over its own transport.
+    chains: APP_CHAINS,
+    transports: Object.fromEntries(APP_CHAINS.map((chain, index) => [chain.id, http(chainRpcUrl(CHAIN_KEYS[index]!))])),
     // Hydrate wallet state on the client so static generation is preserved.
     ssr: true,
     // The @aave/account connector eagerly calls AaveAccountSdk.connect(), which throws
