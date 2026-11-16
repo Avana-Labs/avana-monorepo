@@ -98,6 +98,7 @@ import type * as listing_store from "../listing/store.js";
 import type * as marketContent from "../marketContent.js";
 import type * as markets from "../markets.js";
 import type * as model from "../model.js";
+import type * as onboarding from "../onboarding.js";
 import type * as prices from "../prices.js";
 import type * as rateLimits from "../rateLimits.js";
 import type * as riskScores from "../riskScores.js";
@@ -208,6 +209,7 @@ declare const fullApi: ApiFromModules<{
   marketContent: typeof marketContent;
   markets: typeof markets;
   model: typeof model;
+  onboarding: typeof onboarding;
   prices: typeof prices;
   rateLimits: typeof rateLimits;
   riskScores: typeof riskScores;
