@@ -140,6 +140,31 @@ contract LensLiquidationUnitTest is LensFixture {
         assertEq(seized, p.expectedUnitsSeized, "seizure from the RAY debt");
     }
 
+    // TEST-069 verifies: REQ-LENS-017, REQ-LENS-029
+    /// @dev A 20 % collateral risk gives the account a risk premium, so a premium debt accrues beside the drawn debt.
+    /// The dust rule makes Aave liquidate the whole debt: every drawn share and the whole premium, which the drawn
+    /// shares alone do not cover.
+    function test_TEST_069_wholeDebtSizingIncludesThePremium() public {
+        _spokeConfig(
+            abi.encodeWithSignature("updateCollateralRisk(address,uint256,uint256)", aave.cdpSpoke, vtReserveId, 2000)
+        );
+        _open(bob, bobProxy, 2, 600e6);
+        _borrow(bobProxy, 900e18);
+        vm.warp(block.timestamp + 60 days);
+        _setVtPrice(1.7e8);
+        (bool ok, bytes memory ret) = aave.cdpSpoke
+            .staticcall(abi.encodeWithSignature("getUserPremiumDebtRay(uint256,address)", debtReserveId, bobProxy));
+        assertTrue(ok && abi.decode(ret, (uint256)) >= 1e27, "at least one GHO unit of premium accrued");
+        LiquidationPreview memory p = lens.previewLiquidation(bobProxy, debtReserveId, DEADLINE);
+        assertTrue(p.aaveLiquidatable, "liquidatable");
+        uint256 total = _debtOf(bobProxy, debtReserveId);
+        assertEq(p.expectedDebtRepaid, total, "drawn debt and premium: the whole debt");
+        (uint256 repaid, uint256 seized) = _execute(address(debt), debtReserveId, bobProxy, p.params.debtToCover);
+        assertEq(repaid, p.expectedDebtRepaid, "Aave pulls the premium too");
+        assertEq(seized, p.expectedUnitsSeized, "seizure for the drawn debt and the premium");
+        assertEq(_debtOf(bobProxy, debtReserveId), 0, "nothing left");
+    }
+
     // TEST-069 verifies: REQ-LENS-017, REQ-LENS-028, Q-235, Q-268
     function test_TEST_069_dustRemainderAsksForMarginedWholeDebt() public {
         // 1,060 GHO owed; Aave's own sizing would leave a remainder under $1,050.
