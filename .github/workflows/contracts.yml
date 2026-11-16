@@ -109,7 +109,9 @@ jobs:
 
       - name: Install dependencies (soldeer.lock)
         # TEST-001: install fails if foundry.toml and soldeer.lock disagree.
-        run: forge soldeer install
+        run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
 
       - name: Check formatting
         run: forge fmt --check
@@ -247,7 +249,9 @@ jobs:
           path: contracts/dependencies
           key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
 
-      - run: forge soldeer install
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
 
       - name: Reuse the build job's compiled output
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -339,7 +343,9 @@ jobs:
           path: contracts/dependencies
           key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
 
-      - run: forge soldeer install
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
 
       - name: Reuse the build job's compiled output
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -378,7 +384,9 @@ jobs:
           path: contracts/dependencies
           key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
 
-      - run: forge soldeer install
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
 
       - name: Download the build
         # The build job's full output and cache. Building only test/gas/ here would compile some contracts only under
@@ -421,7 +429,9 @@ jobs:
           path: contracts/dependencies
           key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
 
-      - run: forge soldeer install
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
 
       - name: Reuse the build job's compiled output
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -523,7 +533,9 @@ jobs:
           path: contracts/dependencies
           key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
 
-      - run: forge soldeer install
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
 
       - name: Reuse the build job's compiled output
         # The whole project's build, as the test shards use it, with the out-aave/ and other pinned third-party
@@ -621,7 +633,9 @@ jobs:
           key: rpc-${{ hashFiles('contracts/test/utils/fixtures/ForkConstants.sol') }}
 
       - if: steps.ready.outputs.ready == 'true'
-        run: forge soldeer install
+        run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
 
       - name: Build Aave V4 artifacts for the fork fixture
         if: steps.ready.outputs.ready == 'true'
@@ -700,7 +714,9 @@ jobs:
           path: contracts/dependencies
           key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
 
-      - run: forge soldeer install
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
 
       - name: Install the Python reference
         run: |
@@ -780,7 +796,9 @@ jobs:
           path: contracts/dependencies
           key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
 
-      - run: forge soldeer install
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
 
       - name: Install the Z3 library solc loads (libz3.so.4.12, Z3 ${{ env.Z3_VERSION }}, checked by sha256)
         working-directory: ${{ runner.temp }}
@@ -974,6 +992,7 @@ jobs:
         if: env.CERTORAKEY != ''
         run: |
           forge soldeer install
+          script/install-security-tools.sh --solc
           python -m venv .venv
           .venv/bin/pip install -r requirements.txt
           mkdir -p "$HOME/.local/bin"
@@ -1131,7 +1150,9 @@ jobs:
           path: contracts/dependencies
           key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
 
-      - run: forge soldeer install
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
 
       - name: Reuse the build job's compiled output
         # out-aave and out-univ3 for the fixtures; out/ for the tests that read build artifacts (TEST-247 reads the Lens
@@ -1203,7 +1224,7 @@ jobs:
           BINARIES: aderyn
         run: |
           forge soldeer install
-          script/install-security-tools.sh --binaries --python --node --rules --4naly3er
+          script/install-security-tools.sh --solc --binaries --python --node --rules --4naly3er
 
       - name: Restore the security build of src/ (out-security/build/src)
         # Keyed on every input of that build, exact match only, with no restore-keys: an older build compiled
