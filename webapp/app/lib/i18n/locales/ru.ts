@@ -1211,6 +1211,8 @@ const dict: TranslationDictionary = {
     "Пулов ликвидности пока нет. Предоставьте ликвидность, чтобы зарабатывать на торговых комиссиях.",
   "No supplied position to withdraw": "Нет внесённой позиции для вывода",
   "No wallet balances found.": "Балансы кошелька не найдены.",
+  "Not supported yet": "Пока не поддерживается",
+  "Request support": "Запросить поддержку",
   NONE: "НЕТ",
   now: "сейчас",
   Optimal: "Оптимально",

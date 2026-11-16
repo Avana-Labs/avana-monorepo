@@ -1264,6 +1264,8 @@ const dict: TranslationDictionary = {
     "尚无流动性池。提供流动性以开始赚取交易手续费。",
   "No supplied position to withdraw": "没有可提取的供应仓位",
   "No wallet balances found.": "未找到钱包余额。",
+  "Not supported yet": "暂不支持",
+  "Request support": "请求支持",
   NONE: "无",
   now: "现在",
   Optimal: "最优",

@@ -2,7 +2,7 @@ import { SWAP_CHAIN_ID, getSwapAsset } from "./catalog"
 import { getSwapEligibility } from "./eligibility"
 import { formatTokenDisplaySymbol } from "@/app/lib/token-icons"
 import { extraTokenName } from "@/app/lib/markets/extra-token-names"
-import type { SwapContext, SwapRestrictionReason, UserAssetBalance } from "./contracts"
+import type { SwapContext, SwapRestrictionReason, UnsupportedLp, UserAssetBalance } from "./contracts"
 
 export type DashboardWalletBalanceRow = {
   id: string
@@ -20,6 +20,7 @@ export type DashboardWalletBalanceRow = {
   sourcePositionId?: string
   unitPriceUsd?: number
   ltvPct?: number
+  unsupportedLp?: UnsupportedLp
 }
 
 function sourceLabel(sourceType: UserAssetBalance["sourceType"]) {
@@ -84,7 +85,7 @@ export function buildDashboardWalletBalanceRows({
   const merged = new Map<string, UserAssetBalance>()
   for (const balance of getUserSwapBalances(walletId, balances)) {
     const valueUsd = balance.valueUsd ?? balance.amount * (getSwapAsset(balance.assetId)?.priceUsd ?? 0)
-    if (balance.amount <= 0 && valueUsd <= 0) continue
+    if (balance.amount <= 0 && valueUsd <= 0 && !balance.unsupportedLp) continue
     const asset = getSwapAsset(balance.assetId)
     const isLpToken = balance.isLpToken ?? asset?.isLpToken ?? false
     const key = isLpToken ? `${balance.assetId}:${balance.sourceType}` : balance.id
@@ -132,6 +133,7 @@ export function buildDashboardWalletBalanceRows({
         swappable: eligibility.eligible,
         restrictionReason: eligibility.eligible ? null : eligibility.reason,
         sourcePositionId: balance.sourcePositionId,
+        ...(balance.unsupportedLp ? { unsupportedLp: balance.unsupportedLp } : {}),
       }
     })
     .sort((left, right) => right.valueUsd - left.valueUsd)

@@ -1253,6 +1253,8 @@ const dict: TranslationDictionary = {
   "No results found": "Keine Ergebnisse gefunden",
   "No supplied position to withdraw": "Keine bereitgestellte Position zum Abheben",
   "No wallet balances found.": "Keine Wallet-Guthaben gefunden.",
+  "Not supported yet": "Noch nicht unterstützt",
+  "Request support": "Unterstützung anfragen",
   NONE: "KEINE",
   now: "jetzt",
   "Out of range": "Außerhalb des Bereichs",

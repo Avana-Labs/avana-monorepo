@@ -1205,6 +1205,8 @@ const dict: TranslationDictionary = {
   "No results found": "Sonuç bulunamadı",
   "No supplied position to withdraw": "Çekilecek tedarik pozisyonu yok",
   "No wallet balances found.": "Cüzdan bakiyesi bulunamadı.",
+  "Not supported yet": "Henüz desteklenmiyor",
+  "Request support": "Destek iste",
   NONE: "YOK",
   now: "şimdi",
   Optimal: "Optimal",

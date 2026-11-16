@@ -1190,6 +1190,8 @@ const dict: TranslationDictionary = {
   "No results found": "لم يُعثر على نتائج",
   "No supplied position to withdraw": "لا يوجد مركز مورَّد للسحب",
   "No wallet balances found.": "لم يُعثر على أرصدة في المحفظة.",
+  "Not supported yet": "غير مدعوم بعد",
+  "Request support": "طلب الدعم",
   NONE: "لا شيء",
   now: "الآن",
   Optimal: "الأمثل",

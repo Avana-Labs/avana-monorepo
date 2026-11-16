@@ -1203,6 +1203,8 @@ const dict: TranslationDictionary = {
     "Nog geen liquiditeitspools. Verstrek liquiditeit om handelskosten te gaan verdienen.",
   "No supplied position to withdraw": "Geen geleverde positie om op te nemen",
   "No wallet balances found.": "Geen walletsaldi gevonden.",
+  "Not supported yet": "Nog niet ondersteund",
+  "Request support": "Ondersteuning aanvragen",
   NONE: "GEEN",
   now: "nu",
   Optimal: "Optimaal",

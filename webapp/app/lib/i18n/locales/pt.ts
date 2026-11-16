@@ -1254,6 +1254,8 @@ const dict: TranslationDictionary = {
     "Nenhum pool de liquidez ainda. Forneça liquidez para começar a ganhar taxas de trading.",
   "No supplied position to withdraw": "Nenhuma posição fornecida para sacar",
   "No wallet balances found.": "Nenhum saldo de carteira encontrado.",
+  "Not supported yet": "Ainda não suportado",
+  "Request support": "Solicitar suporte",
   NONE: "NENHUM",
   now: "agora",
   Optimal: "Ótimo",

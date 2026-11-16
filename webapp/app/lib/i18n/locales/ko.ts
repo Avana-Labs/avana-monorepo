@@ -1188,6 +1188,8 @@ const dict: TranslationDictionary = {
     "아직 유동성 풀이 없습니다. 유동성을 공급하여 거래 수수료를 받기 시작하세요.",
   "No supplied position to withdraw": "출금할 공급 포지션이 없습니다",
   "No wallet balances found.": "지갑 잔액을 찾을 수 없습니다.",
+  "Not supported yet": "아직 지원되지 않음",
+  "Request support": "지원 요청",
   NONE: "없음",
   now: "지금",
   Optimal: "최적",

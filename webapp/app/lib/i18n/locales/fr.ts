@@ -1250,6 +1250,8 @@ const dict: TranslationDictionary = {
     "Aucun pool de liquidité pour l'instant. Fournissez de la liquidité pour commencer à gagner des frais de trading.",
   "No supplied position to withdraw": "Aucune position apportée à retirer",
   "No wallet balances found.": "Aucun solde de portefeuille trouvé.",
+  "Not supported yet": "Pas encore pris en charge",
+  "Request support": "Demander la prise en charge",
   NONE: "AUCUN",
   now: "maintenant",
   optional: "facultatif",
