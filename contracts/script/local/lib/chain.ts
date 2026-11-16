@@ -203,12 +203,16 @@ export function stepEnv(c: LocalChain, config = currentConfig(c)): NodeJS.Proces
  * changes file of deployments-local/<network>), or one of the stack's own (`multicall3`, `place-executor`,
  * `advance:<seconds>`, `manifest`, `treasury`). Passed steps are skipped.
  */
-export async function runStep(c: LocalChain, release: string, step: string, config = currentConfig(c)): Promise<StepOutcome> {
-  const key = `${release}:${step}`;
+/**
+ * `id` names the step in the ledger and its log: the step itself for its first run in a release, `<step>#<n>` for its
+ * n-th (a release runs `advance:<s>` more than once, and each must run).
+ */
+export async function runStep(c: LocalChain, release: string, step: string, config = currentConfig(c), id = step): Promise<StepOutcome> {
+  const key = `${release}:${id}`;
   const status = readStatus(c);
   const prev = status.steps[key];
   if (prev?.outcome === "pass") return { chain: c.network, step: key, outcome: "skipped", detail: prev.detail };
-  const log = logPath(`${c.key}.${release}.${step.replace(/[:/]/g, "-")}`);
+  const log = logPath(`${c.key}.${release}.${id.replace(/[:/#]/g, "-")}`);
   mkdirSync(join(log, ".."), { recursive: true });
   const t0 = Date.now();
   let ok = false;
@@ -222,6 +226,9 @@ export async function runStep(c: LocalChain, release: string, step: string, conf
     else if (step === "treasury") detail = await fundTreasuries(c);
     else if (step.startsWith("changes:")) detail = runShell("11-changes", env, log, false, [join(outDir(c), step.slice(8))]);
     else detail = runShell(step, env, log, prev?.outcome === "fail");
+    // An execute step whose timelock operation is not ready yet exits 0 and broadcasts nothing: that is a failure.
+    const notReady = /^\s*not ready: .*$/m.exec(existsSync(log) ? readFileSync(log, "utf8") : "");
+    if (notReady) throw new Error(notReady[0].trim());
     ok = true;
   } catch (e) {
     detail = (e as Error).message;
@@ -374,8 +381,11 @@ export async function fundSigners(c: LocalChain): Promise<void> {
 export async function runRelease(c: LocalChain, release: string, steps: readonly string[], config: string, onStep?: (o: StepOutcome) => void): Promise<StepOutcome[]> {
   setConfig(c, config);
   const done: StepOutcome[] = [];
+  const seen = new Map<string, number>();
   for (const s of steps) {
-    const o = await runStep(c, release, s, config);
+    const n = (seen.get(s) ?? 0) + 1;
+    seen.set(s, n);
+    const o = await runStep(c, release, s, config, n === 1 ? s : `${s}#${n}`);
     done.push(o);
     onStep?.(o);
     if (o.outcome === "fail") break;
