@@ -131,8 +131,11 @@ async function convexMode() {
   const { readChainSnapshot } = await import("@avana/services-common/views");
 
   // ── Import ──
+  // The chain's own RPC variable (RPC_ANVIL on the local Ethereum, RPC_ANVIL_BASE on the local Base of the local
+  // stack), so a check of one chain never repoints Convex's reads of another.
+  const { chainById } = await import("@avana/services-common/chains");
   for (const [k, v] of Object.entries({
-    RPC_ANVIL: rpc,
+    [`RPC_${chainById(chainId).envSuffix}`]: rpc,
     INDEXER_EXPORT_URL: env("E2E_EXPORT_URL"),
     INDEXER_EXPORT_KEY_ID: env("E2E_EXPORT_KEY_ID"),
     INDEXER_EXPORT_SECRET: env("E2E_EXPORT_SECRET"),
@@ -149,7 +152,7 @@ async function convexMode() {
     firstLossReserves: manifest.avana.firstLossReserves.map((c: Json) => ({ address: c.address, asset: c.asset, hub: c.hub })),
     marketRegistry: manifest.avana.marketRegistry.address,
     timelock: manifest.avana.timelock.address,
-    explorerUrl: "http://127.0.0.1:8545",
+    explorerUrl: rpc,
     nativeUsdFeed: world.feeds.WETH.primary,
     release: manifest.release,
   };
