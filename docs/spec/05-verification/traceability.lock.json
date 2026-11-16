@@ -25830,18 +25830,20 @@
     ]
   },
   "REQ-RISK-088": {
-    "hash": "1814ba4d75e97d65",
+    "hash": "9081269fb971cab6",
     "checks": [
       "IMarketRegistryApprovals",
       "IRiskModuleDriftLogic",
       "MarketRegistryViews",
       "PROP-078",
+      "PROP-114",
       "RiskModuleDriftLogic",
       "TEST-031",
       "TEST-033",
       "TEST-181",
       "TEST-182",
-      "TEST-187"
+      "TEST-187",
+      "TEST-268"
     ]
   },
   "REQ-RISK-089": {

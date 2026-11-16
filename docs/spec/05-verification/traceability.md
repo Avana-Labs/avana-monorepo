@@ -10,7 +10,7 @@ Status is the row's implementation state: **Verified** (a counting test or prope
 
 No run results are given to this matrix (it is committed and must not depend on a run), so no Foundry test counts as Verified here; a CVL rule or Halmos check counts when contracts/certora/RUNS.md or docs/audit/halmos/results/ records its pass with a job id or log. The CI evidence job writes the same matrix from the run's results.
 
-**3591 requirements · 118 verified · 0 failed · 1904 not run · 1569 unlinked · 0 changed — re-verify · 0 errors · 3526 warnings**
+**3591 requirements · 118 verified · 0 failed · 1905 not run · 1568 unlinked · 0 changed — re-verify · 0 errors · 3526 warnings**
 
 | Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |
 |---|---|---|---|---|---|---|---|
@@ -1305,7 +1305,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `Q-349` | Exits never depend on PositionProxy code | The PositionProxy is a logic-free immutable acc… | — | — | — | — | — | Unlinked |
 | `Q-350` | No pool spot gate before a liquidation unwind | There is no pool spot gate: LPVaultSwap ne… | `MATH-ST-106` | — | — | — | `ILPVaultSwapLiquidation` (decl.) | Unlinked |
 | `Q-351` | Aave-side halts are containment, never the first tool | A Hub `haltSpoke` of a CDP Spoke, … | — | — | — | — | — | Unlinked |
-| `Q-352` | Liquidation exclusivity on a standard Spoke | CDP Spokes are standard, unmodified Aave V4 … | — | — | — | — | — | Unlinked |
+| `Q-352` | Liquidation exclusivity on a standard Spoke | CDP Spokes are standard, unmodified Aave V4 … | — | — | — | `PROP-114`° | — | Not run |
 | `Q-353` | Lenders' loss rule for uncovered deficits | Every credit line is bounded by first-loss cov… | — | — | — | `TEST-247`°, `TEST-273`° | `IParameterStoreCoverage` (decl.) | Not run |
 | `Q-354` | Debt-free pledges cannot fill the borrowers' cap budget | Superseded by `Q-396`. | — | Res… | — | — | — | — | — | Unlinked |
 | `Q-355` | Wind-down ends; ledger-bug exit | Delisting is `Offboarding` → `Closed`. At offboarding th… | — | — | — | `TEST-024`°, `TEST-099`°, `TEST-213`°, `TEST-272`° | `CollateralizationDebtMark`, `IAaveAdapterUser` (decl.), `ICollateralizationDebtMark` (decl.), `ICollateralizationViews` (decl.), `IMarketRegistryWindDown` (decl.), `IVaultTokenFactory` (decl.), `MarketRegistryWindDownLogic`, `VaultTokenFactory` | Not run |
@@ -2620,7 +2620,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-PROXY-005` | `WALLET`, `SPOKE` and `MARKET_ID` MUST never change; no function transfers, renounces, rec… | — | — | — | `PROP-010`°, `TEST-025`° | `IPositionProxy` (decl.), `PositionProxy` | Not run |
 | `REQ-PROXY-006` | Neither the proxy nor the ProxyManager MAY use `tx.origin` or check whether a caller or a … | — | — | — | `TEST-172`° | `IPositionProxy` (decl.), `PositionProxy`, `ProxyManager` | Not run |
 | `REQ-PROXY-007` | The proxy MUST expose exactly one state-changing function, `execute(target, data)`, which … | — | — | — | `PROP-010`°, `TEST-032`°, `TEST-172`°, `TEST-187`°, `TEST-271`° | `IPositionProxy` (decl.), `PositionProxy` | Not run |
-| `REQ-PROXY-008` | The Adapter MUST NOT make the proxy call `Spoke.liquidationCall`, `setUserPositionManager`… | — | — | — | `TEST-031`°, `TEST-172`°, `TEST-187`°, `TEST-189`° | `AaveAdapterSteps`, `IPositionProxy` (decl.) | Not run |
+| `REQ-PROXY-008` | The Adapter MUST NOT make the proxy call `Spoke.liquidationCall`, `setUserPositionManager`… | — | — | — | `PROP-114`°, `TEST-031`°, `TEST-172`°, `TEST-187`°, `TEST-189`° | `AaveAdapterSteps`, `IPositionProxy` (decl.) | Not run |
 | `REQ-PROXY-009` | The Adapter MUST make the proxy borrow only a debt reserve in the MarketRegistry's enabled… | — | — | — | `TEST-030`°, `TEST-114`° | `IPositionProxy` (decl.) | Not run |
 | `REQ-PROXY-010` | The Adapter MUST make the proxy call only `SPOKE`, the market's vault token and the debt a… | — | — | — | `PROP-010`°, `TEST-031`°, `TEST-032`° | `AaveAdapterSteps`, `IPositionProxy` (decl.), `PositionProxy` | Not run |
 | `REQ-PROXY-011` | The proxy MUST NOT read any state: no pause state, price state, parameter, cap or health f… | — | — | — | `TEST-032`°, `TEST-172`°, `TEST-187`° | `IPositionProxy` (decl.), `PositionProxy` | Not run |
@@ -2840,7 +2840,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-RISK-085` | A borrow of a cross-Hub debt reserve while cross-Hub lines are off, or with the line's `dr… | — | — | — | `TEST-273`° | — | Not run |
 | `REQ-RISK-086` | A standard-Spoke setting drifts (`receiveSharesEnabled`, `liquidationFee`, reinvestment co… | — | — | — | `TEST-268`° | — | Not run |
 | `REQ-RISK-087` | A pledge into a market whose `Regular` budget is held by accounts with no debt (AMMN-FLOW-… | — | — | — | `TEST-013`° | — | Not run |
-| `REQ-RISK-088` | **Halted Spoke, position managers and oracle switch.** `checkAaveConfig` MUST also report … | — | — | — | `PROP-078`°, `TEST-031`‡, `TEST-033`°, `TEST-181`°, `TEST-182`°, `TEST-182`‡, `TEST-187`‡, `TEST-268`° | `IMarketRegistryApprovals` (decl.), `IRiskModuleDriftLogic` (decl.), `MarketRegistryViews`, `RiskModuleDriftLogic` | Not run |
+| `REQ-RISK-088` | **Halted Spoke, position managers and oracle switch.** `checkAaveConfig` MUST also report … | — | — | — | `PROP-078`°, `PROP-114`°, `TEST-031`‡, `TEST-033`°, `TEST-181`°, `TEST-182`°, `TEST-182`‡, `TEST-187`‡, `TEST-268`° | `IMarketRegistryApprovals` (decl.), `IRiskModuleDriftLogic` (decl.), `MarketRegistryViews`, `RiskModuleDriftLogic` | Not run |
 | `REQ-RISK-089` | **Gas floor before a gas-limited probe.** Before each issuer-probe `staticcall` with `ISSU… | `MATH-UO-57` | — | — | `TEST-221`°, `TEST-228`°, `TEST-287`‡ | `IRiskModuleErrors` (decl.), `RiskModuleBreakerLogic`, `RiskModuleCalls`, `RiskModuleMath` | Not run |
 | `REQ-RISK-090` | **Per-block drift check.** `pokeConfig(spoke)` MUST be callable by anyone, MUST run `check… | — | — | — | `PROP-078`°, `TEST-268`° | `IRiskModuleChecks` (decl.), `IRiskModuleDriftLogic` (decl.), `RiskModuleDriftLogic`, `RiskModule` | Not run |
 | `REQ-RISK-091` | **Breaker poke.** `pokeBreakers(marketId)` MUST be callable by anyone; it MUST first poke … | — | — | — | `TEST-228`°, `TEST-337`° | `IRiskModuleBreakerLogic` (decl.), `IRiskModuleChecks` (decl.), `RiskModuleBreakerLogic`, `RiskModule` | Not run |
