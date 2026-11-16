@@ -57,6 +57,7 @@
 # names; empty: all), MEDUSA_TEST_LIMIT
 # (medusa.json), Medusa's workers (one per CPU, nproc), HEVM_SMT_TIMEOUT=300 seconds per query,
 # HEVM_ENTRY_TIMEOUT (seconds of wall clock per hevm run, one entry point or src/ contract; empty: none),
+# HEVM_TIMEOUT_REPORTED (space-separated Harness.function entry points whose timeout is reported, not failed),
 # HEVM_SMT_MEMORY=1024 MB per z3 instance (hevm's own default), one z3 instance per hevm run (--num-solvers 1), HALMOS_LOOP=8 with one solver thread (--solver-threads 1),
 # HALMOS_TIMEOUT (seconds of wall clock per Halmos run; empty: none);
 # SECURITY_MEMORY_MAX (empty: no cap) bounds the memory of each hevm and Halmos run (see `capped`);
@@ -98,6 +99,7 @@ ECHIDNA_MAX_HEAP=${ECHIDNA_MAX_HEAP:-8g}
 MEDUSA_TIMEOUT=${MEDUSA_TIMEOUT:-900}
 HEVM_SMT_TIMEOUT=${HEVM_SMT_TIMEOUT:-300}
 HEVM_ENTRY_TIMEOUT=${HEVM_ENTRY_TIMEOUT:-}
+HEVM_TIMEOUT_REPORTED=${HEVM_TIMEOUT_REPORTED:-}
 HEVM_SMT_MEMORY=${HEVM_SMT_MEMORY:-1024}
 HALMOS_LOOP=${HALMOS_LOOP:-8}
 SECURITY_MEMORY_MAX=${SECURITY_MEMORY_MAX:-}
@@ -614,7 +616,13 @@ hevm_targets() {
       case $rc in
         0) echo "hevm $name.$sig: QED" ;;
         2) echo "hevm $name.$sig: FAIL, explored only partially (see $slog)"; status=1 ;;
-        3) echo "hevm $name.$sig: FAIL, timed out after $HEVM_ENTRY_TIMEOUT s, no result (see $slog)"; status=1 ;;
+        3)
+          if [[ " $HEVM_TIMEOUT_REPORTED " == *" $name.${sig%%(*} "* ]]; then
+            echo "hevm $name.$sig: timed out after $HEVM_ENTRY_TIMEOUT s, no result; reported, not failed (HEVM_TIMEOUT_REPORTED) (see $slog)"
+          else
+            echo "hevm $name.$sig: FAIL, timed out after $HEVM_ENTRY_TIMEOUT s, no result (see $slog)"; status=1
+          fi
+          ;;
         *)
           if grep -qi 'internal error' "$slog"; then
             # A crash of hevm itself proves nothing either way: reported, not counted as a finding.

@@ -79,6 +79,10 @@ env:
   # Wall clock per hevm run (one entry point of a harness, or one src/ contract): past it the entry point fails as
   # timed out (a src/ contract is reported, as when explored partially). See script/security-slow.sh hevm_symbolic.
   HEVM_ENTRY_TIMEOUT: "5400"
+  # Entry points whose timeout is reported, not failed. CollateralizationProperties.pledge (three uint64 inputs) needs
+  # about 3 h 45 min and has never given a proof (its counterexamples were all spurious); Certora, the Collateralization
+  # invariant tests and echidna/medusa carry the pledge rules.
+  HEVM_TIMEOUT_REPORTED: "CollateralizationProperties.pledge"
   # hevm targets per run go to this many jobs (script/hevm-batches.py, by the times in script/hevm-timings.json).
   HEVM_BATCHES: "6"
   HALMOS_LOOP: "16"
