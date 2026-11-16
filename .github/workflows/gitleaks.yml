@@ -1,6 +1,7 @@
 name: gitleaks
 
-# Secret scan of the full git history (every branch and tag) on every pull request, every push to main and once a week.
+# Secret scan: each pull request's own commits, and the full git history (every branch and tag) on every push to main
+# and once a week.
 # Runs the Gitleaks CLI (MIT) directly, checksum-verified; the gitleaks-action wrapper needs a paid licence for
 # organisations. Rules: the upstream defaults plus the allowlists in .gitleaks.toml. Findings are redacted in the log and
 # uploaded to code scanning.
@@ -49,12 +50,20 @@ jobs:
           sudo install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
           gitleaks version
 
-      - name: Scan full history
+      # A pull request scans its own commits, so a finding on one branch never fails another branch's pull request; the
+      # push to main and the weekly run scan every branch and tag. The pre-commit hook (.githooks/pre-commit) runs the
+      # same rules on staged changes, so a finding is fixed before it enters history.
+      - name: Scan the pull request's commits, or the full history
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          if [ "$EVENT" = "pull_request" ]; then range="${BASE_SHA}..${HEAD_SHA}"; else range="--all"; fi
           gitleaks git . \
             --config .gitleaks.toml \
             --redact=100 \
-            --log-opts="--all" \
+            --log-opts="$range" \
             --report-format=sarif \
             --report-path=gitleaks.sarif \
             --exit-code=1
