@@ -13,7 +13,7 @@
 #   survived     at least one rule verified and none failed, timed out or ended unknown, and the Prover exited 0
 #   timeout      the run took longer than CERTORA_MUTANT_TIMEOUT seconds, or a rule timed out with none violated
 #   invalid      the mutant did not compile
-#   error        the Prover wrote no report (see the mutant's log)
+#   error        the Prover wrote no report (see the mutant's log), or the mutant could not be applied
 #
 # The unmutated conf runs first; a conf that does not verify unmutated is skipped, since every mutant would count as
 # caught. Reports: out-security/certora-mutate/<Conf>/status.tsv (file, mutant id, result), the Gambit output under
@@ -138,15 +138,28 @@ for conf in "$@"; do
       continue
     fi
     cp "$root/$file" "$gdir/original.sol"
-    for id in $(cut -d, -f1 "$gdir/mutants.log" 2>/dev/null); do
-      cp "$gdir/mutants/$id/$file" "$root/$file"
-      result=$(prove "$conf" "$gdir/$id.log")
+    # The mutants come from gambit_results.json through a JSON parser: mutants.log is CSV whose quoted fields can
+    # span lines, so reading it line by line takes a continuation line for a mutant id.
+    if ! mutants=$(python3 -I script/mutation-records.py gambit "$gdir"); then
+      echo "  cannot read the mutants of $file (see $gdir/gambit_results.json)"
+      n[error]=$((n[error] + 1))
+      continue
+    fi
+    while IFS=$'\t' read -r id path record <&3; do
+      [ -n "$id" ] || continue
+      # A mutant that cannot be applied (its file missing, or identical to the original) is an error, never a
+      # survivor: the Prover would run on the unmutated code.
+      if ! cp "$gdir/$path" "$root/$file" || cmp -s "$gdir/original.sol" "$root/$file"; then
+        result=error
+      else
+        result=$(prove "$conf" "$gdir/$id.log")
+      fi
       cp "$gdir/original.sol" "$root/$file"
       n[$result]=$((n[$result] + 1))
       total=$((total + 1))
-      printf '%s\t%s\t%s\t%s\n' "$file" "$id" "$result" "$(grep -m1 "^$id," "$gdir/mutants.log")" >>"$dir/status.tsv"
+      printf '%s\t%s\t%s\t%s\n' "$file" "$id" "$result" "$record" >>"$dir/status.tsv"
       echo "  $file mutant $id: $result"
-    done
+    done 3<<<"$mutants"
   done
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$conf" "$total" "${n[caught]}" "${n[survived]}" "${n[timeout]}" \
     "${n[invalid]}" "${n[error]}" >>"$OUT/summary.tsv.new"

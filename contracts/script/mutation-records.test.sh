@@ -14,6 +14,10 @@
 #      it with the survivors; script/mutation-test.py names a run past its budget `timeout`, a compiler error in a
 #      src/ file `invalid` and one only in a test file `killed` (with --test-compile-kills, as slither-mutate counted
 #      it), `invalid` without.
+#   5. gambit: the mutants of a Gambit outdir come from gambit_results.json, one line each with its id and mutated
+#      file, also when the mutated text spans lines and holds a quote, `&` or a comma (Gambit's mutants.log then
+#      spans several lines, and a line-by-line read took "&" and a quote for mutant ids); a malformed results file
+#      fails instead of naming no mutant.
 #
 # Usage, from contracts/:  script/mutation-records.test.sh
 
@@ -102,6 +106,32 @@ sed -n '3,5p' "$TMP/necessist.log" >"$TMP/want-removal"
 check "necessist: one line per passing removal, failed one left out" lines_are "$TMP/necessist.txt" 2
 check "necessist: one-line removal as logged" grep -qxF 'test/Foo.t.sol:5:9-5:20: `vm.prank(a);` passed' "$TMP/necessist.txt"
 check "necessist: multi-line removal whole" read_back "$TMP/necessist.txt" 2 "$TMP/want-removal"
+
+# A Gambit outdir as Gambit 2.1 writes it: mutant 2 replaces an `&` that starts a continuation line, so its
+# mutants.log record spans two lines and its second line begins with spaces, `&` and a quote.
+mkdir -p "$TMP/gambit/mutants/1/src" "$TMP/gambit/mutants/2/src"
+cat >"$TMP/gambit/mutants.log" <<'LOG'
+1,BinaryOpMutation,src/Foo.sol,10:9, | ,-
+2,BinaryOpMutation,src/Foo.sol,12:20,"
+            & ",+
+LOG
+cat >"$TMP/gambit/gambit_results.json" <<'JSON'
+[
+  {"description": "BinaryOpMutation", "diff": "--- original\n+++ mutant\n@@ -10,1 +10,2 @@\n-        x = a | b;\n+        /// BinaryOpMutation(`|` |==> `-`) of: `x = a | b;`\n+        x = a-b;\n", "id": "1", "name": "mutants/1/src/Foo.sol", "original": "src/Foo.sol", "sourceroot": "."},
+  {"description": "BinaryOpMutation", "diff": "--- original\n+++ mutant\n@@ -12,2 +12,3 @@\n-        y = f(\"a, b\") & c\n-            & d;\n+        /// BinaryOpMutation(`&` |==> `+`) of: `& d`\n+        y = f(\"a, b\") & c\n+            + d;\n", "id": "2", "name": "mutants/2/src/Foo.sol", "original": "src/Foo.sol", "sourceroot": "."}
+]
+JSON
+python3 script/mutation-records.py gambit "$TMP/gambit" >"$TMP/gambit.txt"
+check "gambit: one line per mutant of gambit_results.json" lines_are "$TMP/gambit.txt" 2
+check "gambit: ids and mutated files" test "$(cut -f1,2 "$TMP/gambit.txt" | tr '\t\n' ' |')" = \
+  "1 mutants/1/src/Foo.sol|2 mutants/2/src/Foo.sol|"
+check "gambit: a multi-line mutant whole, from its diff" grep -qxF \
+  $'2\tmutants/2/src/Foo.sol\t2,BinaryOpMutation,src/Foo.sol,line 12,y = f("a, b") & c & d;,y = f("a, b") & c + d;' \
+  "$TMP/gambit.txt"
+printf '[{"id": "&", "name": "mutants/&/src/Foo.sol"}]' >"$TMP/gambit/gambit_results.json"
+check "gambit: a malformed mutant entry fails" bash -c '! python3 script/mutation-records.py gambit "$1"' _ "$TMP/gambit"
+printf 'not json' >"$TMP/gambit/gambit_results.json"
+check "gambit: an unreadable results file fails" bash -c '! python3 script/mutation-records.py gambit "$1"' _ "$TMP/gambit"
 
 # mutation-report.py on a run of one slither-mutate shard and one Necessist job. The shard report holds one mutant of
 # each outcome; its texts are escaped as script/mutation-slither.py writes them (backslash, newline, tab).
