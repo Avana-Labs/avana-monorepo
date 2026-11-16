@@ -5,9 +5,10 @@
 // keeper, the monitor, a market-activity loop per chain and the webapp.
 //
 // Usage, from contracts/:
-//   node script/local/stack.ts up [--chains ethereum,base] [--no-activity] [--no-webapp]
+//   node script/local/stack.ts up [--chains ethereum,base] [--no-activity] [--no-hubs] [--no-webapp]
 //   node script/local/stack.ts deploy [--chains ...]   the chains and their first release only, no services
 //   node script/local/stack.ts status
+//   node script/local/stack.ts secrets          store the fork RPC URLs, encrypted next to the keystores (prompted)
 //   node script/local/stack.ts check            re-check only: manifests, indexer at head, Convex against the chain
 //   node script/local/stack.ts replay           the indexer replay and replay-check.ts against the local Convex
 //   node script/local/stack.ts add-hub <hub.json> --chain ethereum|base
@@ -18,12 +19,12 @@
 // is already running is kept. A failure stops `up` with the step and its log and leaves every node and service running,
 // so the fix is checked by running `up` (or `check`) again, in minutes, without a redeploy.
 
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CHAINS, CONTRACTS, type LocalChain, PORTS, STACK, chainOf, manifestPath, outDir, rpcUrl } from "./lib/env.ts";
-import { FIRST_RELEASE, answers, blockNumber, currentConfig, fundSigners, miningMode, readStatus, runRelease, setMining, startNode, stopNode, writeBaseConfig } from "./lib/chain.ts";
+import { FIRST_RELEASE, answers, blockNumber, currentConfig, fundSigners, miningMode, placeL1FeeOracle, readStatus, runRelease, setMining, startNode, stopNode, writeBaseConfig } from "./lib/chain.ts";
 import { ensureKeys } from "./lib/keys.ts";
-import { names, record, running, start } from "./lib/procs.ts";
+import { names, record, running, start, stop } from "./lib/procs.ts";
 import {
   CONVEX_DIR,
   PGLITE,
@@ -58,6 +59,7 @@ async function upChain(c: LocalChain): Promise<void> {
   const node = await startNode(c);
   say(`${c.label} (${c.chainId}): node ${node} on ${rpcUrl(c)}`);
   await fundSigners(c);
+  await placeL1FeeOracle(c);
   const status = readStatus(c);
   const config = status.config ? currentConfig(c) : writeBaseConfig(c);
   const deployed = status.steps["first:manifest"]?.outcome === "pass";
@@ -100,9 +102,40 @@ async function up(): Promise<void> {
     }
     say("activity: running on every deployed chain");
   }
+  if (!flag("no-hubs")) await applyHubFiles();
   if (!flag("no-webapp")) startWebapp();
   await writeEnvFile();
   say(`stack up: ${join(STACK, "stack.env")} lists the endpoints`);
+}
+
+/** The Hub files of each chain (script/deploy/hubs/<network>/*.json, world.json aside), in name order: each one not
+ * released yet runs through the operator flow on the running stack, so its markets appear as any later Hub's would. */
+async function applyHubFiles(): Promise<void> {
+  const { readdirSync } = await import("node:fs");
+  const { addHub } = await import("./operator/hub.ts");
+  for (const c of CHAINS.filter((x) => existsSync(manifestPath(x)))) {
+    const dir = join(CONTRACTS, "script/deploy/hubs", c.network);
+    if (!existsSync(dir)) continue;
+    for (const f of readdirSync(dir).filter((x) => x.endsWith(".json") && x !== "world.json").sort()) {
+      const label = (JSON.parse(readFileSync(join(dir, f), "utf8")) as { hub: { label: string } }).hub.label;
+      if (readStatus(c).steps[`hub-${label}:manifest`]?.outcome === "pass") continue;
+      say(`${c.label}: Hub file ${f}`);
+      const r = await addHub({ chain: c.network, hubFile: join(dir, f) }, (o) => {
+        if (o.outcome !== "skipped") say(`  ${o.outcome.toUpperCase().padEnd(5)} ${c.network} ${o.step}${o.outcome === "fail" ? `: ${o.detail}` : ""}`);
+      });
+      if (!r.ok) throw new Stop(`${c.label}: Hub file ${f}: ${r.error ?? r.steps.find((s) => s.outcome === "fail")?.detail}. Everything is still running: fix it and run \`up\` again.`);
+      say(`${c.label}: ${f} released: ${r.markets?.length ?? 0} markets`);
+      restartActivity(c);
+    }
+  }
+}
+
+/** The activity loop reads the chain's markets at start: restarted after a release adds some. */
+function restartActivity(c: LocalChain): void {
+  const name = `activity-${c.key}`;
+  if (!running(name)) return;
+  stop(name);
+  start(name, process.execPath, [join(CONTRACTS, "script/local/activity.ts"), "--chain", c.network], { cwd: CONTRACTS });
 }
 
 /** The webapp's dev server on the stack (its environment from stack.env), when its start command is known. */
@@ -199,6 +232,12 @@ async function main() {
       case "up":
         await up();
         break;
+      case "secrets": {
+        ensureKeys();
+        const { promptSecrets } = await import("./lib/secrets.ts");
+        await promptSecrets(say);
+        break;
+      }
       case "deploy":
         ensureKeys();
         for (const c of selected()) await upChain(c);
@@ -226,6 +265,7 @@ async function main() {
         const { addHub } = await import("./operator/hub.ts");
         const chain = chainOf(opt("chain") ?? "ethereum");
         const result = await addHub({ chain: chain.network, hubFile: argv[1]! }, (o) => say(JSON.stringify(o)));
+        if (result.ok) restartActivity(chain);
         say(JSON.stringify(result, null, 2));
         process.exitCode = result.ok ? 0 : 1;
         break;

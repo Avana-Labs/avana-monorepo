@@ -50,15 +50,17 @@ writeFileSync(path, encrypt(key, password));
 writeFileSync(passwordFile, `${password}\n`, { mode: 0o600 });
 
 describe("local rehearsal keystore", () => {
-  it("is read on the local network set, with its password file", () => {
-    expect(localKeystore({ KEEPER_LOCAL_KEYSTORE_ANVIL: path, KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE: passwordFile }, CHAINS.anvil)).toEqual({ path, passwordFile });
-    expect(localKeystore({}, CHAINS.anvil)).toBeUndefined();
-    expect(() => localKeystore({ KEEPER_LOCAL_KEYSTORE_ANVIL: path }, CHAINS.anvil)).toThrow(/PASSWORD_FILE/);
+  // A development node standing in for Ethereum (CHAIN_ID_MAINNET=31337).
+  const dev = { ...CHAINS.mainnet, id: 31337 };
+  it("is read on a development node, with its password file", () => {
+    expect(localKeystore({ KEEPER_LOCAL_KEYSTORE_MAINNET: path, KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE: passwordFile }, dev)).toEqual({ path, passwordFile });
+    expect(localKeystore({}, dev)).toBeUndefined();
+    expect(() => localKeystore({ KEEPER_LOCAL_KEYSTORE_MAINNET: path }, dev)).toThrow(/PASSWORD_FILE/);
   });
 
   it("is refused on production and test networks", () => {
     for (const chain of [CHAINS.mainnet, CHAINS.base, CHAINS.sepolia, CHAINS.baseSepolia]) {
-      expect(() => localKeystore({ [`KEEPER_LOCAL_KEYSTORE_${chain.envSuffix}`]: path, KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE: passwordFile }, chain)).toThrow(/only on the local network set/);
+      expect(() => localKeystore({ [`KEEPER_LOCAL_KEYSTORE_${chain.envSuffix}`]: path, KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE: passwordFile }, chain)).toThrow(/only on a development node/);
     }
   });
 

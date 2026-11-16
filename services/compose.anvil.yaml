@@ -7,7 +7,7 @@
 #   docker compose -f services/compose.yaml -f services/compose.anvil.yaml up --build
 #
 # The rehearsal manifest is mounted from contracts/deployments-local/<network>/ at /local; the indexer runs with
-# INDEXER_NETWORK_SET=local, which keeps its rows in an embedded PGlite store, so PostgreSQL is not started. The services
+# INDEXER_DATABASE=pglite, which keeps its rows in an embedded PGlite store, so PostgreSQL is not started. The services
 # reach the anvil node on the host through host.docker.internal, and through anvil-fallback as their second provider (the
 # same node: the monitor refuses a fallback equal to its primary). compose.yaml still needs POSTGRES_PASSWORD and
 # KEEPER_TLS_DIR set; the script sets both (a throwaway password and kill-switch certificates).
