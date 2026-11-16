@@ -368,6 +368,18 @@ contract LensLiquidationUnitTest is LensFixture {
         assertEq(uint8(p.params.routeMode), uint8(RouteMode.BackupOnly), "a token without a route, a primary down");
     }
 
+    // TEST-069 verifies: REQ-LENS-028
+    /// @dev The token without a usable route is the second one: USDC's routes, listed first, are both usable, so the
+    /// primary that is down is found past the first entry of the route list.
+    function test_TEST_069_routeModeFindsALaterPrimaryDown() public {
+        reg.setRoute(MARKET_ID, address(usdt), address(debt), 0, address(0), false);
+        reg.setRoute(MARKET_ID, address(usdt), address(debt), 1, address(0), false);
+        LiquidationPreview memory p = lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE);
+        assertTrue(p.routeUsable[0].usable && p.routeUsable[1].usable, "USDC primary and backup usable");
+        assertFalse(p.routeUsable[2].usable || p.routeUsable[3].usable, "USDT has no usable route");
+        assertEq(uint8(p.params.routeMode), uint8(RouteMode.BackupOnly), "USDT's primary is down");
+    }
+
     // TEST-069 verifies: REQ-LENS-016, Q-242
     function test_TEST_069_informationalFields() public {
         reg.setPause(aave.hub, PauseState.Paused, PauseReason.General);
@@ -426,6 +438,35 @@ contract LensLiquidationUnitTest is LensFixture {
         assertEq(p.expectedPayout, p.params.debtToCover + v - d - a, "keeperOut = Kf + V - D - A");
         assertEq(p.expectedNetPayout, p.expectedPayout - p.params.debtToCover, "reward beyond the funding");
         assertEq(p.expectedCallerLoss, 0, "unwound value covers D");
+    }
+
+    // TEST-069 verifies: REQ-LENS-029, SPEC-LIQ-010
+    /// @dev A collateral factor of 40 % with a 140 % maximum bonus (their product stays under 1, as Aave requires) and
+    /// no Avana fee: Aave seizes every unit for less than half their value, so the net payout exceeds the funding
+    /// itself and `expectedNetPayout` must be the whole `expectedPayout - debtToCover`.
+    function test_TEST_069_netPayoutAboveTheFunding() public {
+        _spokeConfig(
+            abi.encodeWithSignature(
+                "updateDynamicReserveConfig(address,uint256,uint32,(uint16,uint32,uint16))",
+                aave.cdpSpoke,
+                vtReserveId,
+                uint32(0),
+                uint16(4000),
+                uint32(24_000),
+                uint16(0)
+            )
+        );
+        store.setFees(0, store.maxFlashFeeBps());
+        _borrow(aliceProxy, 5000e18);
+        _setVtPrice(1.1e8);
+        LiquidationPreview memory p = lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE);
+        assertTrue(p.aaveLiquidatable, "HF 0.88");
+        assertEq(p.expectedUnitsSeized, UNITS, "every unit seized");
+        uint256 kf = p.params.debtToCover;
+        uint256 v = UNITS * 1.1e8 * 1e18 / (1e6 * 1e8);
+        assertEq(p.expectedPayout, kf + v - p.expectedDebtRepaid, "keeperOut = Kf + V - D with no fee");
+        assertGe(p.expectedPayout - kf, kf, "the reward beyond the funding exceeds the funding");
+        assertEq(p.expectedNetPayout, p.expectedPayout - kf, "the whole reward beyond the funding");
     }
 
     // TEST-069 verifies: REQ-LENS-029
