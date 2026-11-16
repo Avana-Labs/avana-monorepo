@@ -61,6 +61,13 @@ contract ClModuleProbe is LPOracleCLMathHarness {
     ) external view returns (ClPriceStateView memory) {
         return _clReport(priced, quotes, prices, window, toleranceTicks);
     }
+
+    function listingChecks(
+        OracleConfig calldata config,
+        uint256[] memory quotes
+    ) external pure returns (uint256) {
+        return _listingChecks(config, quotes);
+    }
 }
 
 /// @notice A logic contract's pricing-hook caller on its own storage, delegating to a real `LPOracleCLModuleLogic`.
@@ -110,8 +117,8 @@ contract ClModuleCallerProbe is LPOracleCLModuleCaller {
 /// @notice The concentrated-liquidity module's guards on inputs the core never passes, run on the module's own code:
 /// the pool hook, the `PoolTwap` hook and the report on a missing quote, `SPEC-ORC-009`'s clamp to a square-root bound,
 /// the shock check on an invalid quote, the TWAP quote above the `uint128` root, the mean tick of a zero window, the
-/// logic contracts' hook caller on a refused composition and a short quote vector, and the module contract refusing
-/// every direct call.
+/// logic contracts' hook caller on a refused composition and a short quote vector, the module contract refusing
+/// every direct call, and the module's own listing-checks override failing closed.
 contract LPOracleCLModuleEdgesTest is LPOracleCLFixture {
     ClModuleProbe internal probe;
 
@@ -343,5 +350,15 @@ contract LPOracleCLModuleEdgesTest is LPOracleCLFixture {
         m.listingChecks(x, 1e8, 1e8);
         vm.expectRevert(ILPOracleErrors.NotDelegated.selector);
         m.clReport(true, _pair(1e8, 1e8), _pair(1e8, 1e8), WINDOW, TOLERANCE);
+    }
+
+    // TEST-306 verifies: REQ-ORACLE-105
+    /// @notice The module's own listing-checks override runs in no deployed contract (the listing checks run only
+    /// delegated, through the logic contracts' hook caller), so reached on the module's code it fails closed: every
+    /// module check bit set.
+    function test_TEST_306_moduleOwnListingChecksFailClosed() public {
+        probe = new ClModuleProbe();
+        OracleConfig memory c;
+        assertEq(probe.listingChecks(c, _pair(1e8, 1e8)), type(uint256).max, "every check fails");
     }
 }

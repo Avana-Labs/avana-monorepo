@@ -193,13 +193,13 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         own = poolRef == bytes32(uint256(uint160(_cl().pool)));
     }
 
-    /// @dev The module's listing checks on `config` (`_clListingChecks`).
-    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-105
+    /// @dev Never runs: listing checks run only delegated, via `LPOracleCLModuleCaller`. Fails closed if reached.
+    /// @custom:spec REQ-ORACLE-105
     function _listingChecks(
-        OracleConfig calldata config,
-        uint256[] memory quotes
-    ) internal view virtual override returns (uint256 failedChecks) {
-        failedChecks = _clListingChecks(_listingInputs(config), quotes);
+        OracleConfig calldata,
+        uint256[] memory
+    ) internal pure virtual override returns (uint256) {
+        return type(uint256).max;
     }
 
     /// @dev `REQ-ORACLE-105` and `REQ-ORACLE-055` on the pool and the configuration words `x`, `SPEC-ORC-009`'s lower

@@ -6,8 +6,6 @@ pragma solidity 0.8.28;
 import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
 import {SpeedLimit} from "../../src/policy/parameter-store/types/SpeedLimit.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {IRiskModuleSpeedLogic} from "../../src/policy/risk-module/IRiskModuleSpeedLogic.sol";
-import {BorrowSpeedInputs} from "../../src/policy/risk-module/types/BorrowSpeedInputs.sol";
 import {PledgeCharge} from "../../src/policy/risk-module/types/PledgeCharge.sol";
 import {SpeedScope} from "../../src/policy/risk-module/types/SpeedScope.sol";
 import {SpeedView} from "../../src/policy/risk-module/types/SpeedView.sol";
@@ -218,34 +216,31 @@ contract RiskModuleNetSpeedUnitTest is RiskModuleFixture {
     }
 
     // TEST-321 verifies: REQ-RISK-092, REQ-RISK-093, REQ-RISK-097
-    /// @dev The speed logic's input views: a borrow's market, keys, USD charge and limits; the same with no charge for
-    /// the market and reserve; and a market's pledge limits with its booked value `regularUsed + sliceUsed`.
-    function test_TEST_321_speedInputViews() public {
-        IRiskModuleSpeedLogic logic = IRiskModuleSpeedLogic(rmLogics.speed);
+    /// @dev The speed logic's inputs through the live entry points: a borrow charges the proxy's market window in USD
+    /// and the (funding Hub, asset) window in base units, each against its own limits; the borrow views read the window
+    /// of the market asked for; and the pledge view's limit is on the booked value `regularUsed + sliceUsed`.
+    function test_TEST_321_speedInputsThroughLiveEntryPoints() public {
         bytes32 debtKey = keccak256(abi.encode(address(hub), address(usdc)));
-        BorrowSpeedInputs memory b = logic.borrowInputs(address(proxy), USDC_RESERVE, 10_000e6);
-        assertEq(b.marketId, mid, "market of the proxy");
-        assertEq(b.debtKey, debtKey, "(funding Hub, asset) key");
-        assertEq(b.amountUsd, 10_000 * E8, "charge in USD");
-        assertEq(b.market.window, TAU, "market limits");
-        assertEq(b.debt.window, TAU, "debt limits");
-        b = logic.borrowInputsOf(mid, USDC_RESERVE);
-        assertEq(b.marketId, mid, "market");
-        assertEq(b.debtKey, debtKey, "key");
-        assertEq(b.amountUsd, 0, "no charge");
-        // The market reported is the one asked for: a second identifier, whose record the registry is set to answer
-        // with this market's, comes back as itself.
+        _borrow(10_000e6);
+        assertEq(riskModule.getSpeedWindow(SpeedScope.MarketBorrow, bytes32(mid)).curr, 10_000 * E8, "charge in USD");
+        assertEq(riskModule.getSpeedWindow(SpeedScope.DebtBorrow, debtKey).curr, 10_000e6, "(funding Hub, asset) key");
+        (SpeedView memory m, SpeedView memory d) = _views();
+        assertEq(m.limit, 850_000 * E8, "market limits");
+        assertEq(d.limit, 600_000e6, "debt limits");
+        // The window read is the one of the market asked for: a second identifier, whose record and limits are set to
+        // this market's, shows an empty window on the same limit.
         uint256 other = mid + 1;
         vm.mockCall(address(registry), abi.encodeCall(registry.getMarket, (other)), abi.encode(registry.getMarket(mid)));
-        assertEq(logic.borrowInputsOf(other, USDC_RESERVE).marketId, other, "the market asked for");
+        store.setMarketSpeed(other, store.marketSpeedLimits(mid));
+        (m,) = riskModule.getBorrowSpeed(other, USDC_RESERVE);
+        assertFalse(m.unavailable, "read");
+        assertEq(m.used, 0, "the market asked for");
+        assertEq(m.limit, 850_000 * E8, "same limit");
         vm.clearMockedCalls();
         PledgeCounters memory k = _counters();
         (k.regularUsed, k.sliceUsed) = (6_000_000e8, 250_000e8);
         coll.setCounters(k);
-        (MarketSpeedLimits memory limits, uint256 booked) = logic.pledgeInputsOf(mid);
-        assertEq(limits.window, TAU, "pledge limits");
-        assertEq(limits.pledgeRateBps, 2500, "pledge rate");
-        assertEq(booked, 6_250_000e8, "booked value");
+        assertEq(riskModule.getPledgeSpeed(mid).limit, 1_562_500e8, "2,500 bps of $6,250,000 booked");
     }
 
     // ----------------------------------------------------------------------------------------- withdrawal credit
