@@ -43,6 +43,8 @@ export default defineSchema({
     lpVaults: v.optional(v.array(v.object({ integrationId: v.number(), address }))),
     riskModule: v.optional(address),
     spokeOracles: v.optional(v.array(v.object({ spoke: address, oracle: address }))),
+    /** The manifest's `external` list: third-party contracts (swap venues, tokens, feeds) by group and name. */
+    external: v.optional(v.array(v.object({ group: v.string(), name: v.string(), address, standIn: v.boolean() }))),
   }).index("by_chain", ["chainId"]),
 
   /** One row per (chain, Hub): label, tier, its Lend and CDP Spokes and lend assets. Its totals are its `hubAssets`. */
