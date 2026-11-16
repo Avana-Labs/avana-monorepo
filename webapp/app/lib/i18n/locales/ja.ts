@@ -1250,6 +1250,8 @@ const dict: TranslationDictionary = {
     "まだ流動性プールがありません。流動性を提供して取引手数料を得始めましょう。",
   "No supplied position to withdraw": "引き出せる供給ポジションがありません",
   "No wallet balances found.": "ウォレット残高が見つかりません。",
+  "Not supported yet": "未対応",
+  "Request support": "対応をリクエスト",
   NONE: "なし",
   now: "現在",
   Optimal: "最適",

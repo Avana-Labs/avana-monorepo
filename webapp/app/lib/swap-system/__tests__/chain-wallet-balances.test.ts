@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest"
 import { keccak256, toHex, type Address } from "viem"
-import { readChainWalletBalances, type BalanceChainClient, type BalanceMarket } from "../chain-wallet-balances"
+import {
+  readChainWalletBalances,
+  readWalletLpPositions,
+  type BalanceChainClient,
+  type BalanceMarket,
+} from "../chain-wallet-balances"
 import type { SwapAsset } from "../contracts"
 
 const WALLET = "0x00000000000000000000000000000000000000aa" as Address
@@ -13,6 +18,8 @@ const V3_VAULT = "0x0000000000000000000000000000000000000e01"
 const SLIP_VAULT = "0x0000000000000000000000000000000000000e02"
 const VT_A = "0x0000000000000000000000000000000000000f01"
 const VT_B = "0x0000000000000000000000000000000000000f02"
+const FACTORY = "0x0000000000000000000000000000000000000a01"
+const POOL = "0x0000000000000000000000000000000000000b01"
 
 const asset = (id: string, symbol: string, decimals: number, isNative = false): SwapAsset => ({
   id,
@@ -39,6 +46,7 @@ const market = (over: Partial<BalanceMarket>): BalanceMarket => ({
   tickLower: -600,
   tickUpper: 600,
   ammProtocol: keccak256(toHex("UNISWAP_V3")),
+  integrationId: 1,
   vaultToken: VT_A,
   vaultDecimals: 6,
   acceptedPrice: "250000000", // $2.50 per vault token
@@ -46,7 +54,15 @@ const market = (over: Partial<BalanceMarket>): BalanceMarket => ({
   ...over,
 })
 
-type Nft = { id: bigint; token0: string; token1: string; tickLower: number; tickUpper: number }
+type Nft = {
+  id: bigint
+  token0: string
+  token1: string
+  tickLower: number
+  tickUpper: number
+  fee?: number
+  liquidity?: bigint
+}
 
 /** A chain with balances, two NFT managers and two LPVaults; `units` maps `${vault}:${marketId}:${key}` to units. */
 function fakeChain({
@@ -68,6 +84,9 @@ function fakeChain({
       if (functionName === "balanceOf" && a === WETH) return 0n
       if (functionName === "balanceOf" && a === AERO) return 3n * 10n ** 17n
       if (functionName === "decimals" && a === AERO) return 18
+      if (functionName === "symbol") return a === USDC ? "USDC" : a === WETH ? "WETH" : "AERO"
+      if (functionName === "factory") return FACTORY
+      if (functionName === "getPool") return args[2] === 3000 ? POOL : "0x0000000000000000000000000000000000000000"
       if (functionName === "integration") return bindings[a]!.vault
       if (functionName === "clMarket") {
         const npm = a === V3_VAULT ? V3_NPM : SLIP_NPM
@@ -80,7 +99,20 @@ function fakeChain({
       if (functionName === "tokenOfOwnerByIndex") return nfts[a]![Number(args[1])]!.id
       if (functionName === "positions") {
         const n = nfts[a]!.find((x) => x.id === args[0])!
-        return [0n, WALLET, n.token0, n.token1, 0, n.tickLower, n.tickUpper, 1n, 0n, 0n, 0n, 0n]
+        return [
+          0n,
+          WALLET,
+          n.token0,
+          n.token1,
+          n.fee ?? 3000,
+          n.tickLower,
+          n.tickUpper,
+          n.liquidity ?? 1n,
+          0n,
+          0n,
+          0n,
+          0n,
+        ]
       }
       if (functionName === "validatePosition") {
         const value = units[`${a}:${args[0]}:${args[2]}`]
@@ -122,7 +154,7 @@ describe("readChainWalletBalances", () => {
     ])
   })
 
-  it("sums a market's accepted NFTs into one LP row and leaves out NFTs no market accepts", async () => {
+  it("sums a market's accepted NFTs into one LP row and shows each NFT no market accepts as unsupported", async () => {
     const rows = await readChainWalletBalances({
       client: fakeChain({
         nfts: {
@@ -131,8 +163,10 @@ describe("readChainWalletBalances", () => {
             { id: 8n, token0: USDC, token1: WETH, tickLower: -600, tickUpper: 600 },
             // Another range: no market.
             { id: 9n, token0: USDC, token1: WETH, tickLower: -60, tickUpper: 60 },
-            // Same range but the vault rejects it (e.g. another fee tier's pool).
-            { id: 10n, token0: USDC, token1: WETH, tickLower: -600, tickUpper: 600 },
+            // Same range but the vault rejects it (another fee tier's pool, which the factory does not know).
+            { id: 10n, token0: USDC, token1: WETH, tickLower: -600, tickUpper: 600, fee: 500 },
+            // No liquidity left: not shown.
+            { id: 11n, token0: USDC, token1: WETH, tickLower: -60, tickUpper: 60, liquidity: 0n },
           ],
         },
         units: { [`${V3_VAULT}:1:${key(7n)}`]: 1_000_000n, [`${V3_VAULT}:1:${key(8n)}`]: 3_000_000n },
@@ -157,6 +191,54 @@ describe("readChainWalletBalances", () => {
         ltvPct: 76.5,
         sourceType: "borrow_collateral_unpledged",
         sourcePositionId: "weth-usdc-v3",
+      },
+      ...[
+        [9n, POOL],
+        [10n, null],
+      ].map(([id, pool]) => ({
+        id: `${WALLET}:lp:31337:${V3_NPM}:${id}:unsupported`,
+        walletId: WALLET,
+        assetId: `lp:31337:${V3_NPM}:${id}`,
+        amount: 0,
+        valueUsd: 0,
+        symbol: "USDC / WETH",
+        name: "USDC / WETH",
+        isLpToken: true,
+        sourceType: "borrow_collateral_unpledged",
+        unsupportedLp: { chainId: 31337, venue: "uniswap-v3", pool },
+      })),
+    ])
+  })
+
+  it("gives each accepted NFT its position key, market and USD value for a pledge", async () => {
+    const positions = await readWalletLpPositions({
+      client: fakeChain({
+        nfts: { [V3_NPM]: [{ id: 7n, token0: USDC, token1: WETH, tickLower: -600, tickUpper: 600 }] },
+        units: { [`${V3_VAULT}:1:${key(7n)}`]: 1_000_000n },
+      }),
+      chainId: 31337,
+      wallet: WALLET,
+      markets: [market({})],
+    })
+    expect(positions).toEqual([
+      {
+        chainId: 31337,
+        venue: "uniswap-v3",
+        npm: V3_NPM,
+        tokenId: 7n,
+        positionKey: key(7n),
+        token0: USDC,
+        token1: WETH,
+        pair: "USDC / WETH",
+        pool: null,
+        market: {
+          marketId: "1",
+          poolSlug: "weth-usdc-v3",
+          integrationId: 1,
+          lpVault: V3_VAULT,
+          units: 1_000_000n,
+          valueUsd6: 2_500_000n,
+        },
       },
     ])
   })

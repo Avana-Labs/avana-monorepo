@@ -69,7 +69,11 @@ export type UserAssetBalance = {
   unitPriceUsd?: number
   /** Pool maximum loan-to-value percentage from the canonical market risk config. */
   ltvPct?: number
+  /** An LP NFT no Avana market accepts: shown with a support request, never pledged. */
+  unsupportedLp?: UnsupportedLp
 }
+
+export type UnsupportedLp = { chainId: number; venue: "uniswap-v3" | "slipstream"; pool: string | null }
 
 export type SwapContext = {
   originProduct: SwapOriginProduct

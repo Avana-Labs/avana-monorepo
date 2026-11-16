@@ -69,6 +69,8 @@ import { useCurrency } from "@/app/lib/currency/use-currency"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import type { BorrowAssetVisual } from "@/app/lib/data/borrow-domain"
 import { formatLtvPct, formatRiskPremium, type BorrowSpokeId } from "@/app/lib/borrow-market-rows"
+import { BORROW_MARKET_OPTIONS } from "@/app/lib/markets/filters"
+import { chainName } from "@/app/lib/chains"
 
 const DASH = "\u2014"
 const MASK = "••••"
@@ -203,8 +205,24 @@ function PoolIdentity({ row, markets }: { row: DashboardWalletBalanceRow; market
 }
 
 function poolDetailHref(row: DashboardWalletBalanceRow) {
+  if (row.unsupportedLp) return supportRequestHref(row)
   const poolId = poolIdForRow(row)
   return borrowMarketDetailPath(poolId)
+}
+
+const LP_VENUE_LABELS: Readonly<Record<string, string>> = {
+  "uniswap-v3": BORROW_MARKET_OPTIONS.find((option) => option.id === "uniswap-v3")?.label ?? "Uniswap V3",
+  slipstream:
+    BORROW_MARKET_OPTIONS.find((option) => option.id === "aerodrome-slipstream")?.label ?? "Aerodrome Slipstream",
+}
+
+/** The support center with a request to support an LP NFT's pool, prefilled with the pool's pair, venue, chain and address. */
+function supportRequestHref(row: DashboardWalletBalanceRow) {
+  const lp = row.unsupportedLp!
+  const venue = LP_VENUE_LABELS[lp.venue] ?? lp.venue
+  const chain = chainName(lp.chainId) ?? `chain ${lp.chainId}`
+  const message = `Please add support for the ${row.name} pool on ${venue} (${chain})${lp.pool ? `, pool address ${lp.pool}` : ""}.`
+  return `/support-center?message=${encodeURIComponent(message)}`
 }
 
 function poolIdForRow(row: DashboardWalletBalanceRow) {
@@ -212,6 +230,7 @@ function poolIdForRow(row: DashboardWalletBalanceRow) {
 }
 
 function poolUiDetail(row: DashboardWalletBalanceRow, markets?: DashboardBorrowMarkets) {
+  if (row.unsupportedLp) return { protocol: LP_VENUE_LABELS[row.unsupportedLp.venue] ?? row.sourceLabel }
   const poolId = poolIdForRow(row)
   const venue = markets?.[poolId]?.display?.venue
   return { protocol: venue || row.sourceLabel }
@@ -239,11 +258,16 @@ function PoolBalanceCell({
   row,
   exact,
   mask,
+  notSupported,
+  requestSupport,
 }: {
   row: DashboardWalletBalanceRow
   exact: (usd: number) => string
   mask: (value: string) => string
+  notSupported: string
+  requestSupport: string
 }) {
+  if (row.unsupportedLp) return <TokenUsdCell token={notSupported} usd={requestSupport} />
   if (row.unitPriceUsd && row.unitPriceUsd > 0) {
     return <TokenUsdCell token={mask(`${formatPoolAmount(row.amount)} LP`)} usd={mask(exact(row.valueUsd))} />
   }
@@ -251,7 +275,16 @@ function PoolBalanceCell({
   return <TokenUsdCell token={mask(exact(row.valueUsd))} />
 }
 
-function PoolLtvCell({ row, mask }: { row: DashboardWalletBalanceRow; mask: (value: string) => string }) {
+function PoolLtvCell({
+  row,
+  mask,
+  notSupported,
+}: {
+  row: DashboardWalletBalanceRow
+  mask: (value: string) => string
+  notSupported: string
+}) {
+  if (row.unsupportedLp) return <span className={cn(TABLE_CELL_NUMERIC)}>{notSupported}</span>
   const value = row.ltvPct != null && Number.isFinite(row.ltvPct) ? formatLtvPct(row.ltvPct) : DASH
   return <span className={cn(TABLE_CELL_NUMERIC)}>{mask(value)}</span>
 }
@@ -616,7 +649,7 @@ function PoolsBalanceSection({
                   </td>
                   <td className={cn(TABLE_ROW_HOVER_BG)}>
                     <Link href={href} className={cn("block h-full", TABLE_CELL_PADDING)}>
-                      <PoolLtvCell row={row} mask={m} />
+                      <PoolLtvCell row={row} mask={m} notSupported={t("Not supported yet")} />
                     </Link>
                   </td>
                   <td className={cn(TABLE_ROW_HOVER_BG)}>
@@ -626,7 +659,13 @@ function PoolsBalanceSection({
                   </td>
                   <td className={cn(TABLE_ROW_HOVER_BG)}>
                     <Link href={href} className={cn("block h-full", TABLE_CELL_PADDING)}>
-                      <PoolBalanceCell row={row} exact={exact} mask={m} />
+                      <PoolBalanceCell
+                        row={row}
+                        exact={exact}
+                        mask={m}
+                        notSupported={t("Not supported yet")}
+                        requestSupport={t("Request support")}
+                      />
                     </Link>
                   </td>
                 </tr>

@@ -1199,6 +1199,8 @@ const dict: TranslationDictionary = {
   "No results found": "कोई परिणाम नहीं मिला",
   "No supplied position to withdraw": "निकालने के लिए कोई सप्लाई की गई पोज़िशन नहीं",
   "No wallet balances found.": "कोई वॉलेट बैलेंस नहीं मिला।",
+  "Not supported yet": "अभी समर्थित नहीं",
+  "Request support": "समर्थन का अनुरोध करें",
   NONE: "कोई नहीं",
   now: "अभी",
   Optimal: "इष्टतम",
