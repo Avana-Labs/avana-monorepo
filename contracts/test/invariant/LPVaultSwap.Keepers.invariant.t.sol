@@ -24,6 +24,8 @@ import {Test} from "forge-std/Test.sol";
 /// roles.
 /// forge-config: default.invariant.runs = 64
 /// forge-config: default.invariant.depth = 64
+/// forge-config: invariant.invariant.runs = 2000
+/// forge-config: invariant.invariant.depth = 400
 contract LPVaultSwapKeepersInvariantTest is Test, HandlerReach {
     LPVaultSwapKeeperHandler internal handler;
     ILPVaultSwap internal lvs;
