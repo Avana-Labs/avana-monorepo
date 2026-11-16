@@ -48,6 +48,7 @@ The order follows the contract inventory and constructor immutables of [1.2 Cont
 | `security-mythril.sh` | called by `security-slow.sh` | Mythril on the runtime code of every `src/` contract and library (or of those named in `MYTHRIL_CONTRACTS`), settings from `security/mythril.conf`. |
 | `security-gate.py`, `security-gate.test.sh` | called by the security runners; the test in CI (`contracts.yml` build job) | Severity gate and triage for Slither, `slither-check-upgradeability`, Aderyn, Mythril, Semgrep and 4naly3er reports, and for Gambit survivors. An accepted entry's `reviewedFiles` hashes are checked: a reviewed file that changed since the review is reported as "review reopened" (a warning, not a failure). |
 | `security-targets.py`, `security-list-upgradeable.py` | called by the security runners | Find harnesses, assertion entry points, creation and runtime code (address immutables filled as a constructor fills them, for Mythril and hevm) and upgradeable contracts in the build, so no runner keeps a list of files. |
+| `hevm-batches.py`, `hevm-timings.json` | CI (`security-slow.yml` plan job) | Groups the hevm targets of the slow tier into `HEVM_BATCHES` jobs of about equal time, heaviest first, by the per-target seconds in `hevm-timings.json` (job times of run 43677588077, capped at 7,200 s); a target with no entry weighs the median |
 
 ## Deployment order
 

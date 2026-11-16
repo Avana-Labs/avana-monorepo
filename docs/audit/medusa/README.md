@@ -10,10 +10,10 @@ From `contracts/`, Medusa 1.5.1 from `tools/bin/`:
 
 ```bash
 script/security-slow.sh build medusa
-MEDUSA_TIMEOUT=1800 script/security-slow.sh build medusa       # full budget
+MEDUSA_TIMEOUT=600 script/security-slow.sh build medusa        # nightly CI budget
 ```
 
-Configuration: `contracts/medusa.json` (8 workers); `MEDUSA_TIMEOUT` 900 s per harness by default; corpus in `out-security/corpus/medusa/`.
+Configuration: `contracts/medusa.json`, with one worker per CPU (`script/security-slow.sh` sets `workers` to nproc); `MEDUSA_TIMEOUT` 900 s per harness by default; corpus in `out-security/corpus/medusa/`.
 
 Each harness is fuzzed on a build of its own file and imports (`out-security/build/medusa/<Name>`, slow-tier settings), with a copy of `medusa.json` (`out-security/medusa/<Name>.json`) that points crytic-compile, Medusa's Slither pass and their caches at that build. On the build of all of `src/`, `test/` and `script/` (446 MB compressed on commit `c07ddca`), every Medusa job of run 43387180884 lost its 16 GB runner 10 to 16 minutes in with no log, as Echidna did on that build. The log is streamed to the job output as well as kept in `out-security/medusa/<Name>.log`, so a run that dies still shows how far it got.
 

@@ -3,9 +3,10 @@ name: security-slow
 # Slow security tier every night on main (06:00 UTC), on every release tag (`v*`), by hand (workflow_dispatch): Echidna, Medusa, Halmos, hevm and Mythril with the slow-tier budgets. Pull requests run contracts.yml only.
 # The `build` job compiles once (script/security-slow.sh build, and the build Halmos runs); `plan` lists the targets
 # from that build with script/ci-shards.py; every target then runs in its own job, reusing the build: one per Echidna
-# harness (both modes), one per Medusa harness, one per Halmos test function (a 1-hour budget), one per
-# hevm target (each harness's assertion entry points, each src/ contract), and one per group of eight src/ contracts
-# for Mythril; every other job has at most 4 hours. A new harness, Halmos test or src/ contract gets its own job on the
+# harness (both modes), one per Medusa harness, one per Halmos test function (a 1-hour budget), six for hevm (its
+# targets, each harness's assertion entry points and each src/ contract, in batches of about equal time), and one per
+# group of eight src/ contracts for Mythril. hevm and Mythril analyse each src/ source once, from the artifact of the
+# compiler profile it is deployed with (script/security-targets.py `deployed`); every other job has at most 4 hours. A new harness, Halmos test or src/ contract gets its own job on the
 # next run. `slow-gate` passes only when every job passed; a Halmos check that does not complete within its budget
 # fails its job (see the halmos job). By hand, `tools: halmos` runs only the Halmos jobs (of `halmos_contracts` and `halmos_checks`).
 # By hand, `campaign` runs the pre-audit fuzzing campaign of one layer instead: every harness of the layer gets 24
@@ -49,6 +50,13 @@ on:
         required: false
         type: string
         default: ""
+      only:
+        # One or a few slow-tier targets, to prove a change to them without the whole tier: the plan keeps only these
+        # (Halmos then runs none), and a name that matches no target fails the plan.
+        description: "Only these targets, space-separated: echidna:<Harness>, medusa:<Harness>, hevm:harness:<Name>, hevm:src:<Name>, mythril:<Contract> (empty: all)"
+        required: false
+        type: string
+        default: ""
 
 concurrency:
   # A newer run waits for the running slow tier instead of cancelling it; a campaign has its own group.
@@ -60,11 +68,19 @@ permissions:
 
 env:
   UV_VERSION: "0.13.1"
-  # Slow-tier budgets: per harness and mode for the fuzzers, per query for hevm. The fuzz seed is fresh every run.
-  ECHIDNA_TEST_LIMIT: "1000000"
-  ECHIDNA_TIMEOUT: "1800"
-  MEDUSA_TIMEOUT: "1800"
+  # Slow-tier budgets: per harness and mode for the fuzzers, per query and per entry point for hevm. The fuzz seed is
+  # fresh every run and each harness starts from its stored corpus. In runs 43595414156 to 43677588077 coverage stopped
+  # growing between 3 s and 12 minutes into a 30-minute campaign (Echidna) and branches stayed flat after 2 to 6
+  # minutes (Medusa), so each campaign gets 10 minutes; the pre-audit campaign (`campaign`) keeps its 24 hours.
+  ECHIDNA_TEST_LIMIT: "100000"
+  ECHIDNA_TIMEOUT: "600"
+  MEDUSA_TIMEOUT: "600"
   HEVM_SMT_TIMEOUT: "600"
+  # Wall clock per hevm run (one entry point of a harness, or one src/ contract): past it the entry point fails as
+  # timed out (a src/ contract is reported, as when explored partially). See script/security-slow.sh hevm_symbolic.
+  HEVM_ENTRY_TIMEOUT: "5400"
+  # hevm targets per run go to this many jobs (script/hevm-batches.py, by the times in script/hevm-timings.json).
+  HEVM_BATCHES: "6"
   HALMOS_LOOP: "16"
   # A campaign job fuzzes one harness in one mode for 3 hours (ECHIDNA_TIMEOUT and MEDUSA_TIMEOUT 10,800 in the
   # campaign jobs); eight of them make the 24 hours.
@@ -73,6 +89,7 @@ env:
   TOOLS: ${{ inputs.tools || 'all' }}
   HALMOS_ONLY_CONTRACTS: ${{ inputs.halmos_contracts || '' }}
   HALMOS_ONLY_CHECKS: ${{ inputs.halmos_checks || '' }}
+  ONLY: ${{ inputs.only || '' }}
 
 defaults:
   run:
@@ -175,10 +192,39 @@ jobs:
           if [ "$CAMPAIGN" = none ]; then
             # By hand, `tools: halmos` runs the Halmos jobs alone, `halmos_contracts` keeps those of the named test
             # contracts and `halmos_checks` those of the named check functions.
+            # `only`: the names given for a tool ("<tool>:<name>"), space-separated; the tool runs nothing when none.
+            pick() { tr ' ' '\n' <<<"$ONLY" | sed -n "s/^$1://p" | tr '\n' ' '; }
+            # keep <legs> <field> <names>: the legs whose <field> is one of <names>; fails when a name matches none.
+            keep() {
+              local kept
+              kept=$(jq -c --arg f "$2" --arg names "$3" '($names | split(" ") | map(select(. != ""))) as $n
+                | map(select(.[$f] as $v | $n | index($v)))' <<<"$1")
+              for n in $3; do
+                jq -e --arg f "$2" --arg n "$n" 'any(.[]; .[$f] == $n)' <<<"$kept" >/dev/null || { echo "no target: $n" >&2; return 1; }
+              done
+              echo "$kept"
+            }
+            for w in $ONLY; do
+              [[ "$w" =~ ^(echidna|medusa|hevm|mythril):. ]] || { echo "only: $w is not <echidna|medusa|hevm|mythril>:<name>"; exit 1; }
+            done
             for t in echidna medusa hevm mythril; do
-              if [ "$TOOLS" = halmos ]; then out "$t" '[]'; else legs=$(python3 script/ci-shards.py "$t" "$B"); out "$t" "$legs"; fi
+              if [ "$TOOLS" = halmos ]; then out "$t" '[]'; continue; fi
+              legs=$(python3 script/ci-shards.py "$t" "$B")
+              if [ -n "$ONLY" ]; then
+                names=$(pick "$t")
+                if [ -z "$names" ]; then legs='[]'
+                elif [ "$t" = mythril ]; then
+                  # One group of the named contracts; security-mythril.sh fails on a name it does not find.
+                  legs=$(jq -cn --arg c "${names% }" '[{group: "only", contracts: $c}]')
+                elif [ "$t" = hevm ]; then legs=$(keep "$legs" target "$names")
+                else legs=$(keep "$legs" harness "$names"); fi
+              fi
+              # hevm: the targets in HEVM_BATCHES jobs of about equal time instead of one job each.
+              [ "$t" != hevm ] || [ "$legs" = '[]' ] || legs=$(python3 script/hevm-batches.py "$HEVM_BATCHES" <<<"$legs")
+              out "$t" "$legs"
             done
             legs=$(python3 script/ci-shards.py halmos)
+            [ -z "$ONLY" ] || legs='[]'
             if [ -n "$HALMOS_ONLY_CONTRACTS" ]; then
               legs=$(echo "$legs" | jq -c --arg names "$HALMOS_ONLY_CONTRACTS"                 '($names | split(" ") | map(select(. != ""))) as $n | map(select(.contract as $c | $n | index($c)))')
               [ "$legs" != '[]' ] || { echo "no Halmos check in: $HALMOS_ONLY_CONTRACTS"; exit 1; }
@@ -201,8 +247,8 @@ jobs:
     needs: plan
     if: needs.plan.outputs.echidna != '[]'
     runs-on: ubuntu-24.04
-    # Property and assertion mode at ECHIDNA_TIMEOUT (30 minutes) each: about 1 hour 10 minutes with set-up.
-    timeout-minutes: 180
+    # Property and assertion mode at ECHIDNA_TIMEOUT (10 minutes) each: about 30 minutes with set-up.
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -280,9 +326,9 @@ jobs:
     # campaign-medusa) to a larger runner, for example `runs-on: ubuntu-24.04-8core` once one is set up for the
     # organisation; the workers, timeout and test limit stay as they are.
     runs-on: ubuntu-24.04
-    # A build of the harness, one campaign at MEDUSA_TIMEOUT (30 minutes) plus Medusa's Slither pass: under 1 hour
-    # with set-up.
-    timeout-minutes: 120
+    # A build of the harness, one campaign at MEDUSA_TIMEOUT (10 minutes) with one worker per CPU, plus Medusa's
+    # Slither pass: about 25 minutes with set-up.
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -426,13 +472,14 @@ jobs:
           retention-days: 30
 
   hevm:
-    name: hevm ${{ matrix.target }}
+    name: hevm batch ${{ matrix.batch }}
     needs: plan
     if: needs.plan.outputs.hevm != '[]'
     runs-on: ubuntu-24.04
-    # One harness's assertion entry points, or one src/ contract's runtime code, at HEVM_SMT_TIMEOUT per query. hevm
-    # has no wall-clock bound of its own; the job timeout is the bound.
-    timeout-minutes: 240
+    # A batch of targets (each harness's assertion entry points, each src/ contract's runtime code), about 2.2 hours
+    # each by the measured times, at HEVM_SMT_TIMEOUT per query and HEVM_ENTRY_TIMEOUT per entry point, so no target
+    # takes the job's time from the others. The job limit stays under GitHub's 6 hours.
+    timeout-minutes: 350
     strategy:
       fail-fast: false
       matrix:
@@ -477,9 +524,9 @@ jobs:
           name: slow-build
           path: contracts
 
-      - name: hevm on ${{ matrix.target }}
+      - name: hevm on batch ${{ matrix.batch }} (${{ matrix.targets }})
         env:
-          HEVM_TARGETS: ${{ matrix.target }}
+          HEVM_TARGETS: ${{ matrix.targets }}
           # One z3 instance per hevm run with 10 GB (hevm's default is one instance per CPU at 1 GB each, and z3 ran
           # out of memory at 1 GB in run 43387180884), and hevm with its solver in a systemd scope capped at 14 GB of
           # the runner's 16 GB, without swap, so a run that needs more ends with "OUT OF MEMORY" in this log instead
@@ -504,7 +551,7 @@ jobs:
     needs: plan
     if: needs.plan.outputs.mythril != '[]'
     runs-on: ubuntu-24.04
-    # Up to eight contracts at MYTHRIL_EXECUTION_TIMEOUT (15 minutes) each, plus the issue checks: about 2 hours.
+    # Up to eight contracts at MYTHRIL_EXECUTION_TIMEOUT (5 minutes) each, plus the issue checks: under 1 hour.
     timeout-minutes: 240
     strategy:
       fail-fast: false

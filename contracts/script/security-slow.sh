@@ -55,8 +55,9 @@
 # Budgets (environment, with defaults): ECHIDNA_TEST_LIMIT (echidna.yaml), ECHIDNA_TIMEOUT=900 and MEDUSA_TIMEOUT=900
 # seconds per harness and mode, ECHIDNA_MAX_HEAP=8g (GHC heap limit), ECHIDNA_HARNESSES (space-separated harness
 # names; empty: all), MEDUSA_TEST_LIMIT
-# (medusa.json), HEVM_SMT_TIMEOUT=300 seconds per query, HEVM_SMT_MEMORY=1024 MB per z3 instance (hevm's own
-# default), one z3 instance per hevm run (--num-solvers 1), HALMOS_LOOP=8 with one solver thread (--solver-threads 1),
+# (medusa.json), Medusa's workers (one per CPU, nproc), HEVM_SMT_TIMEOUT=300 seconds per query,
+# HEVM_ENTRY_TIMEOUT (seconds of wall clock per hevm run, one entry point or src/ contract; empty: none),
+# HEVM_SMT_MEMORY=1024 MB per z3 instance (hevm's own default), one z3 instance per hevm run (--num-solvers 1), HALMOS_LOOP=8 with one solver thread (--solver-threads 1),
 # HALMOS_TIMEOUT (seconds of wall clock per Halmos run; empty: none);
 # SECURITY_MEMORY_MAX (empty: no cap) bounds the memory of each hevm and Halmos run (see `capped`);
 # BUILD_CHUNK=60 files per strict build group;
@@ -96,6 +97,7 @@ ECHIDNA_TIMEOUT=${ECHIDNA_TIMEOUT:-900}
 ECHIDNA_MAX_HEAP=${ECHIDNA_MAX_HEAP:-8g}
 MEDUSA_TIMEOUT=${MEDUSA_TIMEOUT:-900}
 HEVM_SMT_TIMEOUT=${HEVM_SMT_TIMEOUT:-300}
+HEVM_ENTRY_TIMEOUT=${HEVM_ENTRY_TIMEOUT:-}
 HEVM_SMT_MEMORY=${HEVM_SMT_MEMORY:-1024}
 HALMOS_LOOP=${HALMOS_LOOP:-8}
 SECURITY_MEMORY_MAX=${SECURITY_MEMORY_MAX:-}
@@ -327,7 +329,7 @@ step_medusa() {
     # build of all of src/, test/ and script/ (446 MB compressed on c07ddca, up from 254 MB on a6d7acd) every CI job
     # of run 43387180884 died 10 to 16 minutes in with the runner shut down and no log, as Echidna did on that build.
     # So each harness gets a build of its own file and imports, with the slow-tier settings, and a copy of medusa.json
-    # that points crytic-compile, Slither and their caches at it. Workers, timeout and test limit are unchanged.
+    # that points crytic-compile, Slither and their caches at it, with one worker per CPU.
     hbuild="$OUT/build/medusa/$name"
     config="$OUT/medusa/$name.json"
     log="$OUT/medusa/$name.log"
@@ -340,9 +342,11 @@ step_medusa() {
       continue
     fi
     if ! "$PY" - medusa.json "$config" "$hbuild" "$OUT/medusa/$name" <<'PYCONF'
-import json, sys
+import json, os, sys
 src, dst, build, work = sys.argv[1:5]
 c = json.load(open(src))
+# One worker per CPU (nproc), not medusa.json's fixed 8: on a 4-vCPU runner 8 workers only share the CPUs.
+c["fuzzing"]["workers"] = len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else os.cpu_count()
 old = "out-security/build/all"
 for args in (c["compilation"]["platformConfig"]["args"], c["slither"]["args"]):
     if old not in args:
@@ -493,7 +497,10 @@ hevm_chain_start() {
 hevm_chain_stop() { [ -n "$HEVM_ANVIL_PID" ] && kill "$HEVM_ANVIL_PID" 2>/dev/null; HEVM_ANVIL_PID=""; }
 
 # hevm_symbolic <log> <args...>: hevm against the chain's latest block; 0 on QED, 1 on a counterexample or error, 2 on
-# a partial exploration.
+# a partial exploration, 3 when HEVM_ENTRY_TIMEOUT ended the run (no result). The bound is per run, so a CI job that
+# runs a batch of targets ends each one in time: CollateralizationProperties.pledge took 3 h 51 min in run 43677588077
+# (24 counterexamples, none reproduced, no iteration bound reached) and an AvanaTimelockProperties entry point ran
+# into the 4-hour job limit.
 # Block context: hevm 0.58 takes the block number, coinbase, base fee and prevrandao of the fetched block but leaves
 # the timestamp symbolic unless --timestamp is given, and sets the chain id to 1 unless --chainid is given. A symbolic
 # timestamp includes times before the state it explores was written and times at or above 2^64, which no chain
@@ -520,11 +527,17 @@ hevm_symbolic() {
   for entry in $HEVM_MAX_ITERATIONS_FOR; do
     [ "${entry%=*}" = "$key" ] && iters=(--max-iterations "${entry#*=}")
   done
-  capped "hevm $key" hevm symbolic --solver z3 --num-solvers 1 --smt-memory "$HEVM_SMT_MEMORY" \
-    --smt-timeout "$HEVM_SMT_TIMEOUT" ${iters[@]+"${iters[@]}"} --rpc "$HEVM_RPC" --block "$block" \
-    --number "$block" --timestamp "$ts" --chainid "$chain" "$@" >"$log" 2>&1
+  local bound=()
+  [ -n "$HEVM_ENTRY_TIMEOUT" ] && bound=(timeout --kill-after=60 "$HEVM_ENTRY_TIMEOUT")
+  capped "hevm $key" ${bound[@]+"${bound[@]}"} hevm symbolic --solver z3 --num-solvers 1 \
+    --smt-memory "$HEVM_SMT_MEMORY" --smt-timeout "$HEVM_SMT_TIMEOUT" ${iters[@]+"${iters[@]}"} --rpc "$HEVM_RPC" \
+    --block "$block" --number "$block" --timestamp "$ts" --chainid "$chain" "$@" >"$log" 2>&1
   local rc=$?
   grep -E 'OUT OF MEMORY|killed by SIGKILL' "$log" || true
+  if [ -n "$HEVM_ENTRY_TIMEOUT" ] && [ "$rc" -eq 124 ]; then
+    echo "hevm: timed out after $HEVM_ENTRY_TIMEOUT s (HEVM_ENTRY_TIMEOUT)" >>"$log"
+    return 3
+  fi
   if grep -q 'QED' "$log" && ! grep -qi 'partially explore' "$log"; then return 0; fi
   if grep -qiE 'counterexample|discovered the following|internal error' "$log"; then return 1; fi
   if grep -qi 'partially explore' "$log"; then return 2; fi
@@ -601,6 +614,7 @@ hevm_targets() {
       case $rc in
         0) echo "hevm $name.$sig: QED" ;;
         2) echo "hevm $name.$sig: FAIL, explored only partially (see $slog)"; status=1 ;;
+        3) echo "hevm $name.$sig: FAIL, timed out after $HEVM_ENTRY_TIMEOUT s, no result (see $slog)"; status=1 ;;
         *)
           if grep -qi 'internal error' "$slog"; then
             # A crash of hevm itself proves nothing either way: reported, not counted as a finding.
@@ -643,6 +657,7 @@ hevm_targets() {
     case $rc in
       0) echo "hevm src $name: QED" ;;
       2) echo "hevm src $name: no assertion violation found, explored partially (see $OUT/hevm/src-$name.log)" ;;
+      3) echo "hevm src $name: no assertion violation found, timed out after $HEVM_ENTRY_TIMEOUT s (see $OUT/hevm/src-$name.log)" ;;
       *) echo "hevm src $name: FAIL (see $OUT/hevm/src-$name.log)"; status=1 ;;
     esac
   done <<<"$list"
