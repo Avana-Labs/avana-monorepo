@@ -306,6 +306,7 @@ contract AvanaGasVaultUnitTest is Test, IAvanaGasVaultEvents {
     /// (`SendFailed` from `topUp`, `TopUpFailed` from `topUpAll`) without consuming the caller's gas, and the others are
     /// still paid.
     function test_TEST_333_transferGasIsBounded() public {
+        assertEq(vault.TRANSFER_GAS(), 100_000);
         GasBurningSigner b = new GasBurningSigner();
         vm.prank(timelock);
         vault.addSigner(address(b), MIN, TARGET, CAP);
@@ -594,6 +595,27 @@ contract AvanaGasVaultUnitTest is Test, IAvanaGasVaultEvents {
         vault.withdraw(40 ether);
         vm.stopPrank();
         assertEq(treasury.balance, 50 ether);
+    }
+
+    // TEST-333 verifies: REQ-GASV-011, REQ-GASV-012
+    /// @notice No ETH is ever locked: after the vault is retired (paused, every signer removed) and ETH still arrives,
+    /// the timelock withdraws the whole balance to TREASURY.
+    function test_TEST_333_retiredVaultReturnsAllEth() public {
+        vm.startPrank(guardian);
+        vault.pause();
+        vault.removeSigner(primary);
+        vault.removeSigner(standby);
+        vm.stopPrank();
+        vm.deal(stranger, 3 ether);
+        vm.prank(stranger);
+        (bool ok,) = address(vault).call{value: 3 ether}("");
+        assertTrue(ok);
+        uint256 held = address(vault).balance;
+        uint256 before = treasury.balance;
+        vm.prank(timelock);
+        vault.withdraw(held);
+        assertEq(address(vault).balance, 0);
+        assertEq(treasury.balance, before + held);
     }
 
     // TEST-333 verifies: REQ-GASV-012

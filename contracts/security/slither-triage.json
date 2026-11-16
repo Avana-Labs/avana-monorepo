@@ -4922,7 +4922,7 @@
       "reason": "amount == 0 tests the computed top-up (a min of stored values and the vault balance), not an exact match on a balance: an empty vault or a used cap sends nothing and reverts NothingToSend; ETH sent to the vault only raises what can be sent, never above the signer's target or cap. Covered by TEST-333 (topUp_cappedByVaultBalance), TEST-334.",
       "approval": "pending (Josue)",
       "reviewedFiles": {
-        "src/periphery/gas-vault/AvanaGasVault.sol": "871809167bd88013595e0d262c8d1c4796b12e33580a0159a67692d50b551c4a"
+        "src/periphery/gas-vault/AvanaGasVault.sol": "9c0535e8ee61474db4f651150880c624f6329d90c927cfd16ee7af4150576e4d"
       }
     },
     {
@@ -4933,7 +4933,7 @@
       "reason": "amount == 0 skips a signer with nothing to send (cap used, vault empty); it tests the computed top-up, not an exact balance, and ETH sent to the vault only raises what can be sent within target and cap. Covered by TEST-333 (topUpAll_skipsRefusingAndCappedSigners), TEST-335.",
       "approval": "pending (Josue)",
       "reviewedFiles": {
-        "src/periphery/gas-vault/AvanaGasVault.sol": "871809167bd88013595e0d262c8d1c4796b12e33580a0159a67692d50b551c4a"
+        "src/periphery/gas-vault/AvanaGasVault.sol": "9c0535e8ee61474db4f651150880c624f6329d90c927cfd16ee7af4150576e4d"
       }
     },
     {
@@ -4944,7 +4944,7 @@
       "reason": "The cap window is defined on block.timestamp (REQ-GASV-005: sends in (now - 24 h, now]); a validator's few seconds of drift cannot matter against a 24 h window. Covered by TEST-333 (topUp_capHoldsOverAnyWindowNotPerCalendarPeriod), TEST-334, PROP-113.",
       "approval": "pending (Josue)",
       "reviewedFiles": {
-        "src/periphery/gas-vault/AvanaGasVault.sol": "871809167bd88013595e0d262c8d1c4796b12e33580a0159a67692d50b551c4a"
+        "src/periphery/gas-vault/AvanaGasVault.sol": "9c0535e8ee61474db4f651150880c624f6329d90c927cfd16ee7af4150576e4d"
       }
     },
     {
@@ -4955,7 +4955,7 @@
       "reason": "One CALL with empty calldata, the value and at most TRANSFER_GAS = 100,000 gas, copying no return data (out size 0), the same no-copy gas-limited transfer as LPVaultSwap's payouts (LPVaultSwapSettlement._deliver): a reverting, gas-burning or return-bombing recipient only makes the transfer fail, which the callers handle (SendFailed in topUp and withdraw, TopUpFailed in topUpAll). memory-safe: it touches no memory. Covered by TEST-333 (transferGasIsBounded, topUp_refusingSignerReverts, withdraw_refusingTreasuryReverts, topUpAll_skipsRefusingAndCappedSigners).",
       "approval": "pending (Josue)",
       "reviewedFiles": {
-        "src/periphery/gas-vault/AvanaGasVault.sol": "871809167bd88013595e0d262c8d1c4796b12e33580a0159a67692d50b551c4a"
+        "src/periphery/gas-vault/AvanaGasVault.sol": "9c0535e8ee61474db4f651150880c624f6329d90c927cfd16ee7af4150576e4d"
       }
     }
   ]

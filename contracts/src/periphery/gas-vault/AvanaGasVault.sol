@@ -32,6 +32,9 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
     uint256 public constant override MAX_SIGNERS_LIMIT = 8;
 
     /// @inheritdoc IAvanaGasVault
+    uint256 public constant override TRANSFER_GAS = 100_000;
+
+    /// @inheritdoc IAvanaGasVault
     address public immutable override TREASURY;
 
     /// @inheritdoc IAvanaGasVault
@@ -52,9 +55,6 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
     }
 
     uint256 private constant AMOUNT_BITS = 80;
-    /// @dev Gas forwarded with each ETH transfer, as for LPVaultSwap's payouts: ample for an EOA or a Safe's `receive`,
-    /// and it bounds what a recipient's code can burn of the caller's gas (`topUpAll` at most 8 of them).
-    uint256 private constant TRANSFER_GAS = 100_000;
     uint256 private constant AMOUNT_MASK = (1 << AMOUNT_BITS) - 1;
 
     /// @inheritdoc IAvanaGasVault

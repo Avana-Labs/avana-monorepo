@@ -57,6 +57,11 @@ interface IAvanaGasVault is IAvanaGasVaultErrors, IAvanaGasVaultEvents {
     /// @custom:spec REQ-GASV-005
     function MAX_SENDS_PER_PERIOD() external view returns (uint256);
 
+    /// @notice Most gas forwarded with each ETH transfer: 100,000, as LPVaultSwap's payouts. Ample for an EOA or a Safe's
+    /// `receive`; it bounds what a recipient's code can burn of the caller's gas, and no return data is copied.
+    /// @custom:spec REQ-GASV-013
+    function TRANSFER_GAS() external view returns (uint256);
+
     // ─── Anyone ───
 
     /// @notice Accepts ETH from anyone, as `fund` does.
