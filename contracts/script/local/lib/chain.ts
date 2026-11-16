@@ -211,6 +211,20 @@ export function setConfig(c: LocalChain, configPath: string) {
   writeStatus(c, s);
 }
 
+/** The chain's forge broadcast and cache directories (relative to contracts/), the cache seeded from the shared one so
+ * nothing recompiles. */
+export function forgeDirs(c: LocalChain): Record<string, string> {
+  const broadcast = `deployments-local/${c.network}/forge-broadcast`;
+  const cache = `deployments-local/${c.network}/forge-cache`;
+  const seeded = join(CONTRACTS, cache, "solidity-files-cache.json");
+  const shared = join(CONTRACTS, "cache", "solidity-files-cache.json");
+  if (!existsSync(seeded) && existsSync(shared)) {
+    mkdirSync(join(CONTRACTS, cache), { recursive: true });
+    writeFileSync(seeded, readFileSync(shared));
+  }
+  return { FOUNDRY_BROADCAST: broadcast, FOUNDRY_CACHE_PATH: cache };
+}
+
 /** Git Bash on Windows (never WSL's bash, which would run the steps in another system); bash elsewhere. */
 export function bash(): string {
   if (process.env.STACK_BASH) return process.env.STACK_BASH;
@@ -230,6 +244,10 @@ export interface StepOutcome {
 /** The environment of every step of the chain: its network, RPC, config and the stack's signers. */
 export function stepEnv(c: LocalChain, config = currentConfig(c)): NodeJS.ProcessEnv {
   return {
+    // Each chain's forge runs keep their broadcast records and script cache in the chain's own output directory, so
+    // the two chains' steps never share a file (Windows refuses a file another forge has mapped, os error 1224). The
+    // compiled artifacts stay shared in out/.
+    ...forgeDirs(c),
     AVANA_NETWORK: c.network,
     AVANA_RPC_URL: rpcUrl(c),
     AVANA_CONFIG: relative(CONTRACTS, config).split("\\").join("/"),
