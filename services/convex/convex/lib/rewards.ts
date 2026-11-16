@@ -109,3 +109,13 @@ export async function addSupplyVolume(ctx: Pick<MutationCtx, "db">, wallet: stri
   else await ctx.db.insert("rewardTotals", { wallet: w, questPoints: 0, feePoints: 0, questIds: [], supplyUsd, updatedAt: Date.now() });
   if (supplyUsd >= SUPPLY_QUEST_USD) await awardPoints(ctx, { wallet: w, kind: "quest", key: `quest:${SUPPLY_QUEST_ID}`, points: QUEST_POINTS[SUPPLY_QUEST_ID]!, at, questId: SUPPLY_QUEST_ID });
 }
+
+/** Raises the wallet's supply total to `usd` when that is more (the history's total counts what the live logs already did); the volume quest follows the total. */
+export async function raiseSupplyVolume(ctx: Pick<MutationCtx, "db">, wallet: string, usd: number, at: number): Promise<void> {
+  if (!Number.isFinite(usd) || usd <= 0) return;
+  const w = wallet.toLowerCase();
+  const totals = await ctx.db.query("rewardTotals").withIndex("by_wallet", (q) => q.eq("wallet", w)).unique();
+  const current = totals?.supplyUsd ?? 0;
+  if (usd > current) await addSupplyVolume(ctx, w, usd - current, at);
+}
+
