@@ -25,7 +25,8 @@ import { useTheme } from "./theme-provider"
 import { OVERLAY_SCRIM_CLASS } from "./card-surface-tokens"
 import { useNavigationPrefetch } from "./navigation-prefetch"
 import { MenuToggleIcon } from "./menu-toggle-icon"
-import { CHAIN_NAMES, defaultChainKey } from "@/app/lib/chains"
+import { CHAIN_KEYS, CHAIN_NAMES } from "@/app/lib/chains"
+import { setActiveChainKey, useActiveChainKey } from "@/app/lib/web3/active-chain"
 
 const siteRoutes = {
   home: "/",
@@ -185,7 +186,7 @@ export function MobileMenu({ initialOpen = false }: MobileMenuProps) {
 
   const currentLanguage = LANGUAGE_OPTIONS.find((option) => option.code === language) ?? LANGUAGE_OPTIONS[0]
   const currentCurrency = CURRENCY_OPTIONS.find((option) => option.code === currency) ?? CURRENCY_OPTIONS[0]
-  const currentNetwork = CHAIN_NAMES[defaultChainKey()]
+  const currentNetwork = CHAIN_NAMES[useActiveChainKey()]
   const lightModeEnabled = mounted ? resolvedTheme === "light" : false
   const isVisible = open && isShown
   const isSelectorSheetOpen = view !== "root"
@@ -530,7 +531,11 @@ export function MobileMenu({ initialOpen = false }: MobileMenuProps) {
                 <button
                   type="button"
                   className="flex w-full items-center justify-between gap-4 rounded-radius-lg px-3 py-4 text-start"
-                  onClick={closeSelectorSheet}
+                  onClick={() => {
+                    const key = CHAIN_KEYS.find((k) => CHAIN_NAMES[k] === network)
+                    if (key) setActiveChainKey(key)
+                    closeSelectorSheet()
+                  }}
                 >
                   <span className="text-[1.15rem] font-medium leading-tight text-foreground">{network}</span>
                 </button>

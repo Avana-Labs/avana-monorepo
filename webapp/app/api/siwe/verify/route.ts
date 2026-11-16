@@ -3,7 +3,7 @@ import type { Hex } from "viem"
 import { checkSiweMessage } from "@/app/lib/siwe/verify-message"
 import { mintSiweSessionJwt, resolveIssuer } from "@/app/lib/siwe/jwt"
 import { verifySiweSignature } from "@/app/lib/siwe/signature"
-import { TARGET_CHAIN_ID } from "@/app/lib/web3/target-chain"
+import { APP_CHAIN_IDS } from "@/app/lib/web3/target-chain"
 import { assertSameOrigin, clientKey, rateLimitShared } from "../../_lib/request-guards"
 
 export const dynamic = "force-dynamic"
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   const expectedNonce = jar.get("siwe-nonce")?.value
   if (!host) return Response.json({ error: "missing host" }, { status: 400 })
   if (!expectedNonce) return Response.json({ error: "invalid or expired nonce" }, { status: 401 })
-  const checked = checkSiweMessage(message, { host, nonce: expectedNonce, chainId: TARGET_CHAIN_ID })
+  const checked = checkSiweMessage(message, { host, nonce: expectedNonce, chainId: APP_CHAIN_IDS })
   if (!checked.ok) return Response.json({ error: checked.error }, { status: checked.status })
   const { address } = checked
 
