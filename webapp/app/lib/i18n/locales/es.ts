@@ -1664,6 +1664,18 @@ const dict: TranslationDictionary = {
   Volatile: "Volátil",
   Chains: "Cadenas",
   Other: "Otros",
+  "Leverage loops": "Bucles de apalancamiento",
+  "Your practice portfolio is ready.": "Tu cartera de práctica está lista.",
+  "Fund my wallet": "Financiar mi billetera",
+  "Let's fund your wallet.": "Financiemos tu billetera.",
+  "Multiply": "Multiplicar",
+  "Onboarding requires a Convex connection. Set": "La incorporación requiere una conexión con Convex. Configura",
+  "This risk-free Avana test setup lets you borrow against practice LP positions, lend, and loop strategies using test funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.": "Esta configuración de prueba de Avana, sin riesgos, te permite pedir préstamos con posiciones LP de práctica, prestar y hacer bucles de estrategias con fondos de prueba. Sin activos reales. Sin firmas de billetera. Solo una forma rápida de entender cómo funciona Avana antes de pasar a la app real.",
+  "We'll set up your wallet and scope it to your address.": "Configuraremos tu billetera y la vincularemos a tu dirección.",
+  "We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.": "Repartiremos fondos de práctica entre los mercados para que puedas prestar, pedir prestado y hacer bucles sin riesgo.",
+  "Welcome to Avana": "Bienvenido a Avana",
+  "Your wallet is funded.": "Tu billetera tiene fondos.",
+  "seats already claimed.": "plazas ya reclamadas.",
 }
 
 export default dict

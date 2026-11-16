@@ -1590,6 +1590,18 @@ const dict: TranslationDictionary = {
   Chains: "チェーン",
   Other: "その他",
   "Filter markets": "マーケットを絞り込む",
+  "Leverage loops": "レバレッジループ",
+  "Your practice portfolio is ready.": "練習用ポートフォリオの準備が整いました。",
+  "Fund my wallet": "ウォレットに入金",
+  "Let's fund your wallet.": "ウォレットに入金しましょう。",
+  "Multiply": "マルチプライ",
+  "Onboarding requires a Convex connection. Set": "オンボーディングには Convex への接続が必要です。設定してください:",
+  "This risk-free Avana test setup lets you borrow against practice LP positions, lend, and loop strategies using test funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.": "このリスクのない Avana テスト環境では、練習用 LP ポジションを担保に借り入れ、貸し出し、テスト資金で戦略をループできます。実際の資産は不要。ウォレット署名も不要。本番アプリに移る前に Avana の仕組みをすばやく理解できます。",
+  "We'll set up your wallet and scope it to your address.": "ウォレットを設定し、あなたのアドレスに紐付けます。",
+  "We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.": "練習用資金を各マーケットに分配するので、リスクなしで貸し出し、借り入れ、ループができます。",
+  "Welcome to Avana": "Avana へようこそ",
+  "Your wallet is funded.": "ウォレットへの入金が完了しました。",
+  "seats already claimed.": "席がすでに確保されています。",
 }
 
 export default dict

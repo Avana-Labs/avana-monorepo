@@ -1567,6 +1567,18 @@ const dict: TranslationDictionary = {
   Chains: "Сети",
   Other: "Другое",
   "Filter markets": "Фильтр рынков",
+  "Leverage loops": "Циклы с кредитным плечом",
+  "Your practice portfolio is ready.": "Ваш тренировочный портфель готов.",
+  "Fund my wallet": "Пополнить кошелёк",
+  "Let's fund your wallet.": "Давайте пополним ваш кошелёк.",
+  "Multiply": "Умножение",
+  "Onboarding requires a Convex connection. Set": "Для онбординга нужно подключение к Convex. Задайте",
+  "This risk-free Avana test setup lets you borrow against practice LP positions, lend, and loop strategies using test funds. No real assets. No wallet signatures. Just a fast way to understand how Avana works before switching to the live app.": "Эта безрисковая тестовая среда Avana позволяет занимать под тренировочные LP-позиции, кредитовать и зацикливать стратегии на тестовых средствах. Никаких реальных активов. Никаких подписей кошелька. Просто быстрый способ понять, как работает Avana, перед переходом в рабочее приложение.",
+  "We'll set up your wallet and scope it to your address.": "Мы настроим ваш кошелёк и привяжем его к вашему адресу.",
+  "We'll spread practice funds across markets so you can lend, borrow, and loop with zero risk.": "Мы распределим тренировочные средства по рынкам, чтобы вы могли кредитовать, занимать и зацикливать без риска.",
+  "Welcome to Avana": "Добро пожаловать в Avana",
+  "Your wallet is funded.": "Ваш кошелёк пополнен.",
+  "seats already claimed.": "мест уже занято.",
 }
 
 export default dict
