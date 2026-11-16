@@ -58,6 +58,13 @@ contract RefusingSigner {
     }
 }
 
+/// @dev A signer whose `receive` burns every gas unit it is given.
+contract GasBurningSigner {
+    receive() external payable {
+        while (true) {}
+    }
+}
+
 /// @notice AvanaGasVault (2.23): the top-up rule and its three caps, the exact 24 h window, `topUpAll`, reentry, the
 /// timelock and guardian split, tighten-only, the allowlist bound, pause and withdrawal to `TREASURY` only.
 contract AvanaGasVaultUnitTest is Test, IAvanaGasVaultEvents {
@@ -293,6 +300,28 @@ contract AvanaGasVaultUnitTest is Test, IAvanaGasVaultEvents {
     }
 
     // ─── topUpAll ───
+
+    // TEST-333 verifies: REQ-GASV-013
+    /// @notice A recipient's code gets at most 100,000 gas: a signer that burns all it is given fails its transfer
+    /// (`SendFailed` from `topUp`, `TopUpFailed` from `topUpAll`) without consuming the caller's gas, and the others are
+    /// still paid.
+    function test_TEST_333_transferGasIsBounded() public {
+        GasBurningSigner b = new GasBurningSigner();
+        vm.prank(timelock);
+        vault.addSigner(address(b), MIN, TARGET, CAP);
+        uint256 before = gasleft();
+        vm.expectRevert(abi.encodeWithSelector(IAvanaGasVaultErrors.SendFailed.selector, address(b), 1 ether));
+        vault.topUp(address(b));
+        assertLt(before - gasleft(), 250_000, "topUp burned the caller's gas");
+        vm.deal(primary, 0);
+        vm.deal(standby, TARGET);
+        before = gasleft();
+        (uint256 count,) = vault.topUpAll();
+        assertLt(before - gasleft(), 400_000, "topUpAll burned the caller's gas");
+        assertEq(count, 1);
+        assertEq(primary.balance, 1 ether);
+        assertEq(vault.sentInPeriod(address(b)), 0, "failed send recorded");
+    }
 
     // TEST-333 verifies: REQ-GASV-006
     function test_TEST_333_topUpAll_skipsFunded() public {

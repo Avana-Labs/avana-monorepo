@@ -10,7 +10,7 @@ Status is the row's implementation state: **Verified** (a counting test or prope
 
 No run results are given to this matrix (it is committed and must not depend on a run), so no Foundry test counts as Verified here; a CVL rule or Halmos check counts when contracts/certora/RUNS.md or docs/audit/halmos/results/ records its pass with a job id or log. The CI evidence job writes the same matrix from the run's results.
 
-**3589 requirements · 121 verified · 0 failed · 1899 not run · 1569 unlinked · 0 changed — re-verify · 0 errors · 3522 warnings**
+**3589 requirements · 121 verified · 0 failed · 1899 not run · 1569 unlinked · 0 changed — re-verify · 0 errors · 3523 warnings**
 
 | Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |
 |---|---|---|---|---|---|---|---|
@@ -2234,7 +2234,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-FLR-050` | `coverDeficit` on a DAO deficit offset while its Avana Umbrella is active on the Hub and i… | — | — | — | `TEST-298`° | `DaoDeficitOffset`, `IDaoDeficitOffset` (decl.) | Not run |
 | `REQ-GASV-001` | The AvanaGasVault MUST be immutable periphery outside the audited core: no proxy, no `dele… | — | — | — | `PROP-113`°, `TEST-333`° | `AvanaGasVault`, `IAvanaGasVault` (decl.) | Not run |
 | `REQ-GASV-002` | The constructor MUST take `treasury`, `timelock`, `guardian` and `maxSigners`, revert `Inv… | — | — | — | `TEST-333`° | `AvanaGasVault`, `IAvanaGasVaultErrors` (decl.), `IAvanaGasVault` (decl.) | Not run |
-| `REQ-GASV-003` | `fund()` and a plain transfer MUST accept ETH from anyone and emit `Funded(from, amount)`.… | — | — | — | `TEST-333`°, `TEST-335`° | `AvanaGasVault`, `IAvanaGasVaultEvents` (decl.), `IAvanaGasVault` (decl.) | Not run |
+| `REQ-GASV-003` | `fund()` and a plain transfer MUST accept ETH from anyone and emit `Funded(from, amount)`.… | — | — | — | `TEST-333`°, `TEST-335`° | `IAvanaGasVaultEvents` (decl.), `IAvanaGasVault` (decl.) | Not run |
 | `REQ-GASV-004` | `topUp(signer)` MUST revert `VaultPaused` while paused, `UnknownSigner` unless `signer` is… | — | — | — | `PROP-113`°, `TEST-333`°, `TEST-334`°, `TEST-335`°, `TEST-336`° | `AvanaGasVault`, `IAvanaGasVaultErrors` (decl.), `IAvanaGasVaultEvents` (decl.), `IAvanaGasVault` (decl.) | Not run |
 | `REQ-GASV-005` | The ETH sent to a signer in any window `(t − 86,400 s, t]` MUST NOT exceed the `periodCap`… | — | — | — | `PROP-113`°, `TEST-333`°, `TEST-334`°, `TEST-335`° | `AvanaGasVault`, `IAvanaGasVaultErrors` (decl.), `IAvanaGasVaultEvents` (decl.), `IAvanaGasVault` (decl.) | Not run |
 | `REQ-GASV-006` | `topUpAll()` MUST revert `VaultPaused` while paused and otherwise apply the rule of `REQ-G… | — | — | — | `PROP-113`°, `TEST-333`°, `TEST-336`° | `IAvanaGasVaultEvents` (decl.), `IAvanaGasVault` (decl.) | Not run |

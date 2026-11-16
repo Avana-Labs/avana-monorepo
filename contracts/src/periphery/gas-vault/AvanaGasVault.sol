@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAvanaGasVault} from "./IAvanaGasVault.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title AvanaGasVault
 /// @notice Holds the chain's native gas token and refills Avana's own keeper signers (2.23 `REQ-GASV-001`…). A top-up
@@ -51,6 +52,9 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
     }
 
     uint256 private constant AMOUNT_BITS = 80;
+    /// @dev Gas forwarded with each ETH transfer, as for LPVaultSwap's payouts: ample for an EOA or a Safe's `receive`,
+    /// and it bounds what a recipient's code can burn of the caller's gas (`topUpAll` at most 8 of them).
+    uint256 private constant TRANSFER_GAS = 100_000;
     uint256 private constant AMOUNT_MASK = (1 << AMOUNT_BITS) - 1;
 
     /// @inheritdoc IAvanaGasVault
@@ -103,9 +107,8 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         MAX_SIGNERS = maxSigners;
     }
 
-    /// @notice Accepts ETH from anyone.
-    /// @custom:spec REQ-GASV-003
-    receive() external payable {
+    /// @inheritdoc IAvanaGasVault
+    receive() external payable override {
         emit Funded(msg.sender, msg.value);
     }
 
@@ -119,7 +122,6 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
     /// @inheritdoc IAvanaGasVault
     /// @dev `signer` needs no zero check: an unlisted address reverts `UnknownSigner`, and `addSigner` never lists 0.
     function topUp(
-        // forge-lint: disable-next-line(missing-zero-check)
         address signer
     ) external override nonReentrant whenNotPaused returns (uint256 amount) {
         Signer memory s = _signer[signer];
@@ -134,9 +136,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         _record(signer, slot, amount);
         emit ToppedUp(signer, msg.sender, amount, requested);
         // The destination is a listed signer (checked above), never the caller, and the amount is capped by `_quote`.
-        // forge-lint: disable-next-line(arbitrary-send-eth)
-        (bool ok,) = signer.call{value: amount}("");
-        if (!ok) revert SendFailed(signer, amount);
+        if (!_send(signer, amount)) revert SendFailed(signer, amount);
     }
 
     /// @inheritdoc IAvanaGasVault
@@ -144,11 +144,10 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         uint256 n = _signerList.length;
         // The loop is bounded by `MAX_SIGNERS ≤ 8`; each destination is a listed signer and each amount capped by
         // `_quote`; a signer whose transfer fails is skipped, so no signer can block the others; reentry is refused by
-        // `nonReentrant`; the record is written before the transfer and restored (a
-        // storage write in the loop) only when the transfer fails, and `ToppedUp` follows the transfer because a failed
-        // one emits `TopUpFailed` instead.
-        // forge-lint: disable-start(calls-loop, costly-loop, reentrancy-events, reentrancy-eth, arbitrary-send-eth)
-        for (uint256 i; i < n; ++i) {
+        // `nonReentrant`; the record is written before the transfer and restored (a storage write in the loop) only
+        // when the transfer fails, and `ToppedUp` follows the transfer because a failed one emits `TopUpFailed` instead.
+        // forge-lint: disable-start(costly-loop, reentrancy-events)
+        for (uint256 i = 0; i < n; ++i) {
             address signer = _signerList[i];
             Signer memory s = _signer[signer];
             uint256 balance = signer.balance;
@@ -157,8 +156,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
             if (amount == 0) continue;
             uint128 previous = _sends[signer][slot];
             _record(signer, slot, amount);
-            (bool ok,) = signer.call{value: amount}("");
-            if (!ok) {
+            if (!_send(signer, amount)) {
                 // Nothing left the vault: the record is undone so the failed send does not use the cap.
                 _sends[signer][slot] = previous;
                 emit TopUpFailed(signer, amount);
@@ -168,7 +166,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
             ++count;
             total += amount;
         }
-        // forge-lint: disable-end(calls-loop, costly-loop, reentrancy-events, reentrancy-eth, arbitrary-send-eth)
+        // forge-lint: disable-end(costly-loop, reentrancy-events)
     }
 
     // ─── TIMELOCK ───
@@ -187,15 +185,13 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         if (_signerList.length >= MAX_SIGNERS) revert TooManySigners();
         _checkConfig(minBalance, targetBalance, periodCap, false);
         _signerList.push(signer);
-        // Each value is ≤ 2^80 − 1 (`_checkConfig`) and the position ≤ MAX_SIGNERS ≤ 8.
-        // forge-lint: disable-start(unsafe-typecast)
+        // Each value is ≤ 2^80 − 1 (`_checkConfig`) and the position ≤ MAX_SIGNERS ≤ 8, so no cast reverts.
         _signer[signer] = Signer({
-            minBalance: uint80(minBalance),
-            targetBalance: uint80(targetBalance),
-            periodCap: uint80(periodCap),
-            position: uint8(_signerList.length)
+            minBalance: SafeCast.toUint80(minBalance),
+            targetBalance: SafeCast.toUint80(targetBalance),
+            periodCap: SafeCast.toUint80(periodCap),
+            position: SafeCast.toUint8(_signerList.length)
         });
-        // forge-lint: disable-end(unsafe-typecast)
         emit SignerAdded(signer, minBalance, targetBalance, periodCap);
     }
 
@@ -206,7 +202,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         uint256 targetBalance,
         uint256 periodCap
     ) external override onlyTimelock {
-        _listed(signer);
+        if (_signer[signer].position == 0) revert UnknownSigner(signer);
         _checkConfig(minBalance, targetBalance, periodCap, false);
         _setConfig(signer, minBalance, targetBalance, periodCap);
     }
@@ -224,8 +220,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         uint256 held = address(this).balance;
         if (amount == 0 || amount > held) revert InvalidWithdrawal(amount, held);
         emit Withdrawn(amount);
-        (bool ok,) = TREASURY.call{value: amount}("");
-        if (!ok) revert SendFailed(TREASURY, amount);
+        if (!_send(TREASURY, amount)) revert SendFailed(TREASURY, amount);
     }
 
     // ─── GUARDIAN or TIMELOCK ───
@@ -254,8 +249,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         if (index != last) {
             address moved = _signerList[last];
             _signerList[index] = moved;
-            // forge-lint: disable-next-line(unsafe-typecast)
-            _signer[moved].position = uint8(index + 1);
+            _signer[moved].position = SafeCast.toUint8(index + 1);
         }
         _signerList.pop();
         delete _signer[signer];
@@ -310,15 +304,16 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
 
     // ─── Internals ───
 
-    /// @dev The top-up for a signer below its minimum: `requested = targetBalance − balance` (0 if the balance is at or
-    /// above the target, which a lowered target can cause), `capRoom = periodCap − sent` (0 when sent ≥ cap or no slot is
-    /// free), and `amount = min(requested, capRoom, address(this).balance)`.
+    /// @dev The top-up for a signer below its minimum: `requested = targetBalance − balance`, never 0 because every
+    /// configuration keeps `minBalance ≤ targetBalance` (`_checkConfig`) and the callers pass only `balance < minBalance`;
+    /// `capRoom = periodCap − sent` (0 when sent ≥ cap or no slot is free); `amount = min(requested, capRoom,
+    /// address(this).balance)`.
     function _quote(
         address signer,
         Signer memory s,
         uint256 balance
     ) private view returns (uint256 amount, uint256 requested, uint256 capRoom, uint256 slot) {
-        requested = balance < s.targetBalance ? s.targetBalance - balance : 0;
+        requested = s.targetBalance - balance;
         uint256 sent;
         (sent, slot) = _window(signer);
         capRoom = slot < MAX_SENDS_PER_PERIOD && sent < s.periodCap ? s.periodCap - sent : 0;
@@ -334,7 +329,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
     ) private view returns (uint256 sent, uint256 free) {
         free = MAX_SENDS_PER_PERIOD;
         uint128[MAX_SENDS_PER_PERIOD] storage sends = _sends[signer];
-        for (uint256 i; i < MAX_SENDS_PER_PERIOD; ++i) {
+        for (uint256 i = 0; i < MAX_SENDS_PER_PERIOD; ++i) {
             uint256 entry = sends[i];
             uint256 at = entry >> AMOUNT_BITS;
             if (entry != 0 && at + PERIOD > block.timestamp) {
@@ -351,8 +346,19 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         uint256 slot,
         uint256 amount
     ) private {
-        // forge-lint: disable-next-line(unsafe-typecast)
-        _sends[signer][slot] = uint128((uint256(uint48(block.timestamp)) << AMOUNT_BITS) | amount);
+        _sends[signer][slot] = SafeCast.toUint128((uint256(SafeCast.toUint48(block.timestamp)) << AMOUNT_BITS) | amount);
+    }
+
+    /// @dev Sends `amount` wei to `to` with empty calldata, forwarding at most `TRANSFER_GAS` and copying no return data
+    /// (as LPVaultSwap's payouts): a reverting, gas-burning or return-bombing recipient only makes the transfer fail.
+    function _send(
+        address to,
+        uint256 amount
+    ) private returns (bool ok) {
+        // solhint-disable-next-line no-inline-assembly
+        assembly ("memory-safe") {
+            ok := call(TRANSFER_GAS, to, amount, 0, 0, 0, 0)
+        }
     }
 
     function _setConfig(
@@ -362,8 +368,8 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         uint256 periodCap
     ) private {
         Signer storage s = _signer[signer];
-        // forge-lint: disable-next-line(unsafe-typecast)
-        (s.minBalance, s.targetBalance, s.periodCap) = (uint80(minBalance), uint80(targetBalance), uint80(periodCap));
+        (s.minBalance, s.targetBalance, s.periodCap) =
+        (SafeCast.toUint80(minBalance), SafeCast.toUint80(targetBalance), SafeCast.toUint80(periodCap));
         emit SignerConfigChanged(signer, msg.sender, minBalance, targetBalance, periodCap);
     }
 

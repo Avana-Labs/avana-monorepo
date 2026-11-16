@@ -238,8 +238,8 @@ Measured gas per keeper call, each its own transaction with every account and sl
 | `MarketRegistry.syncDrawCap` | Raise | 67,457 | `Maintenance.json` |
 | `LPVaultSwap.liquidate` | Direct, 1 market | 3,396,466 | `Maintenance.json` |
 | `OperatorFlashLiquidator` | Flash liquidation, 1 market / overhead over direct (stand-in pool; the real Aave V3 Pool's own cost is not included) | 3,710,086 / 313,620 | `Maintenance.json` |
-| `AvanaGasVault.topUp` | One due signer | 65,077 | `AvanaGasVault.json` |
-| `AvanaGasVault.topUpAll` | 8 due signers, send slots in use / first sends / none due | 236,800 / 372,944 / 84,808 | `AvanaGasVault.json` |
+| `AvanaGasVault.topUp` | One due signer | 65,095 | `AvanaGasVault.json` |
+| `AvanaGasVault.topUpAll` | 8 due signers, send slots in use / first sends / none due | 236,944 / 373,088 / 84,808 | `AvanaGasVault.json` |
 
 ## Implementation limits
 

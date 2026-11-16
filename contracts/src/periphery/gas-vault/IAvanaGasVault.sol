@@ -59,6 +59,10 @@ interface IAvanaGasVault is IAvanaGasVaultErrors, IAvanaGasVaultEvents {
 
     // ─── Anyone ───
 
+    /// @notice Accepts ETH from anyone, as `fund` does.
+    /// @custom:spec REQ-GASV-003
+    receive() external payable;
+
     /// @notice Adds ETH to the vault (as does a plain transfer).
     /// @custom:spec REQ-GASV-003
     function fund() external payable;

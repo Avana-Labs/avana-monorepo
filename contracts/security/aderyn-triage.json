@@ -2373,6 +2373,17 @@
       "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
       "function": "pokeOracles",
       "reason": "Aderyn form of unused-return: the LPOracle and DebtOracle pokes store observations, and the breaker conditions read the price state themselves (REQ-RISK-091). Covered by TEST-228."
+    },
+    {
+      "fingerprint": "feafd1a0cfc7cf0c",
+      "check": "costly-loop",
+      "file": "src/periphery/gas-vault/AvanaGasVault.sol",
+      "function": "topUpAll",
+      "reason": "At most MAX_SIGNERS <= 8 iterations; the storage writes are each paid signer's send record (needed for the 24 h cap) and, on a failed transfer only, its restore. Measured: 236,800 gas for 8 due signers (TEST-336).",
+      "approval": "pending (Josue)",
+      "reviewedFiles": {
+        "src/periphery/gas-vault/AvanaGasVault.sol": "871809167bd88013595e0d262c8d1c4796b12e33580a0159a67692d50b551c4a"
+      }
     }
   ]
 }

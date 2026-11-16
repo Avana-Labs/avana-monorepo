@@ -4913,6 +4913,50 @@
       "function": "FlashLiquidatorBase._clearStanding(FlashLiquidatorBase.Watch)",
       "reason": "Bounded loop over the helper's watch list: the market's tokens (at most MAX_POOL_TOKENS = 8) and the intermediates() of each token's two registry-listed routes, each once (_watch). It runs only when some watched token has a standing PayoutEscrow credit; the claim recipient (feeRecipient on the public helper, FUNDING_SAFE on the operator variant) is then read once, before the loop. For each token with a standing credit it makes one PayoutEscrow.claim to that recipient, in try/catch, so a failed claim leaves the credit standing for claimEscrowed and never stops the liquidation (REQ-HELPER-010, audit finding L-04). It runs after the call context opens, so a token callback during a claim meets ContextActive. Covered by TEST-174: standingCreditClearedBeforeTheCall, unclearableStandingCreditNeverGoesToTheCaller (the accepted remainder) and standingClaimRunsInsideTheContext.",
       "approval": "approved (Josue, 2026-11-15)"
+    },
+    {
+      "fingerprint": "50d44d492e01f527",
+      "check": "incorrect-equality",
+      "file": "src/periphery/gas-vault/AvanaGasVault.sol",
+      "function": "AvanaGasVault.topUp(address)",
+      "reason": "amount == 0 tests the computed top-up (a min of stored values and the vault balance), not an exact match on a balance: an empty vault or a used cap sends nothing and reverts NothingToSend; ETH sent to the vault only raises what can be sent, never above the signer's target or cap. Covered by TEST-333 (topUp_cappedByVaultBalance), TEST-334.",
+      "approval": "pending (Josue)",
+      "reviewedFiles": {
+        "src/periphery/gas-vault/AvanaGasVault.sol": "871809167bd88013595e0d262c8d1c4796b12e33580a0159a67692d50b551c4a"
+      }
+    },
+    {
+      "fingerprint": "af92b8bfb489217f",
+      "check": "incorrect-equality",
+      "file": "src/periphery/gas-vault/AvanaGasVault.sol",
+      "function": "AvanaGasVault.topUpAll()",
+      "reason": "amount == 0 skips a signer with nothing to send (cap used, vault empty); it tests the computed top-up, not an exact balance, and ETH sent to the vault only raises what can be sent within target and cap. Covered by TEST-333 (topUpAll_skipsRefusingAndCappedSigners), TEST-335.",
+      "approval": "pending (Josue)",
+      "reviewedFiles": {
+        "src/periphery/gas-vault/AvanaGasVault.sol": "871809167bd88013595e0d262c8d1c4796b12e33580a0159a67692d50b551c4a"
+      }
+    },
+    {
+      "fingerprint": "e530c949ffef1615",
+      "check": "timestamp",
+      "file": "src/periphery/gas-vault/AvanaGasVault.sol",
+      "function": "AvanaGasVault._window(address)",
+      "reason": "The cap window is defined on block.timestamp (REQ-GASV-005: sends in (now - 24 h, now]); a validator's few seconds of drift cannot matter against a 24 h window. Covered by TEST-333 (topUp_capHoldsOverAnyWindowNotPerCalendarPeriod), TEST-334, PROP-113.",
+      "approval": "pending (Josue)",
+      "reviewedFiles": {
+        "src/periphery/gas-vault/AvanaGasVault.sol": "871809167bd88013595e0d262c8d1c4796b12e33580a0159a67692d50b551c4a"
+      }
+    },
+    {
+      "fingerprint": "41776e4788277bde",
+      "check": "assembly",
+      "file": "src/periphery/gas-vault/AvanaGasVault.sol",
+      "function": "AvanaGasVault._send(address,uint256)",
+      "reason": "One CALL with empty calldata, the value and at most TRANSFER_GAS = 100,000 gas, copying no return data (out size 0), the same no-copy gas-limited transfer as LPVaultSwap's payouts (LPVaultSwapSettlement._deliver): a reverting, gas-burning or return-bombing recipient only makes the transfer fail, which the callers handle (SendFailed in topUp and withdraw, TopUpFailed in topUpAll). memory-safe: it touches no memory. Covered by TEST-333 (transferGasIsBounded, topUp_refusingSignerReverts, withdraw_refusingTreasuryReverts, topUpAll_skipsRefusingAndCappedSigners).",
+      "approval": "pending (Josue)",
+      "reviewedFiles": {
+        "src/periphery/gas-vault/AvanaGasVault.sol": "871809167bd88013595e0d262c8d1c4796b12e33580a0159a67692d50b551c4a"
+      }
     }
   ]
 }
