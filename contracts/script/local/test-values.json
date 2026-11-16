@@ -167,31 +167,31 @@
   },
   "spokes": {
     "uniV3Stable": {
-      "collateralRisk": 20
+      "collateralRisk": 400
     },
     "uniV4Stable": {
-      "collateralRisk": 20
+      "collateralRisk": 400
     },
     "uniV3CorrelatedEth": {
-      "collateralRisk": 50
+      "collateralRisk": 1000
     },
     "uniV4CorrelatedBtc": {
-      "collateralRisk": 50
+      "collateralRisk": 1000
     },
     "uniV3BlueChip": {
-      "collateralRisk": 100
+      "collateralRisk": 2000
     },
     "slipBlueChip": {
-      "collateralRisk": 100
+      "collateralRisk": 2000
     },
     "uniV3GovDefi": {
-      "collateralRisk": 150
+      "collateralRisk": 3000
     },
     "slipGovDefi": {
-      "collateralRisk": 150
+      "collateralRisk": 3000
     },
     "slipStocks": {
-      "collateralRisk": 200
+      "collateralRisk": 4000
     }
   },
   "markets": {
