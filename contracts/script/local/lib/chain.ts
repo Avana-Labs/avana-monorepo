@@ -53,8 +53,10 @@ export async function startNode(c: LocalChain): Promise<"running" | "started" | 
     "--code-size-limit", "49152", "--gas-limit", "60000000",
   ];
   const restore = existsSync(statePath(c));
-  if (c.forkUrl) args.push("--fork-url", c.forkUrl);
-  else if (!restore) args.push("--timestamp", String(genesisTimestamp()));
+  if (c.fork) {
+    await startForkProxy(c);
+    args.push("--fork-url", `http://127.0.0.1:${c.fork.proxyPort}`, "--fork-block-number", String(c.fork.block), "--retries", "10", "--fork-retry-backoff", "2000", "--timeout", "60000");
+  } else if (!restore) args.push("--timestamp", String(genesisTimestamp()));
   start(nodeName(c), "anvil", args);
   await waitFor(`${c.label} node`, () => answers(c), 30_000, 300);
   if (restore) {
@@ -64,6 +66,18 @@ export async function startNode(c: LocalChain): Promise<"running" | "started" | 
   return "started";
 }
 
+/** The chain's fork proxy, holding the network's RPC endpoints (environment or encrypted secrets) in its environment. */
+async function startForkProxy(c: LocalChain): Promise<void> {
+  const name = `fork-proxy-${c.key}`;
+  if (running(name)) return;
+  const { secretValue } = await import("./secrets.ts");
+  const varName = `${c.network.toUpperCase()}_FORK_RPC_URL` as "ETHEREUM_FORK_RPC_URL" | "BASE_FORK_RPC_URL";
+  const urls = secretValue(varName);
+  if (!urls) throw new Error(`fork mode needs ${varName}: set it in the environment, or store it encrypted with \`node script/local/stack.ts secrets\``);
+  start(name, process.execPath, [join(CONTRACTS, "script/local/fork-proxy.ts"), String(c.fork!.proxyPort)], { env: { FORK_UPSTREAMS: urls } });
+  await waitFor(`${c.label} fork proxy`, async () => (await fetch(`http://127.0.0.1:${c.fork!.proxyPort}`)).ok, 15_000, 300);
+}
+
 /** Saves the node's state (anvil_dumpState) and stops it. */
 export async function stopNode(c: LocalChain, save = true): Promise<void> {
   if (save && (await answers(c))) {
@@ -71,6 +85,7 @@ export async function stopNode(c: LocalChain, save = true): Promise<void> {
     writeFileSync(statePath(c), hex);
   }
   stop(nodeName(c));
+  stop(`fork-proxy-${c.key}`);
 }
 
 export const nodeRunning = (c: LocalChain) => running(nodeName(c));
@@ -106,6 +121,16 @@ export function writeBaseConfig(c: LocalChain): string {
   // The MarketRegistry's MAX_MARKET_COUNT is fixed at deployment: room for every Hub the stack may add (the rehearsal's
   // 16 is sized to its own listings).
   cfg.parameters.maxMarketCount = Number(process.env.STACK_MAX_MARKETS ?? 128);
+  // The chain's Hub files may need tokens and pools the rehearsal's world lacks: script/deploy/hubs/<network>/world.json
+  // adds them to the world step 02 deploys (an entry already in the world is kept as it is).
+  const extra = join(CONTRACTS, "script/deploy/hubs", c.network, "world.json");
+  if (existsSync(extra)) {
+    const w = JSON.parse(readFileSync(extra, "utf8")) as Record<string, { symbol?: string; name?: string }[]>;
+    for (const k of ["tokens", "uniswapPools", "slipstreamPools"]) {
+      const have = new Set((cfg.world[k] as { symbol?: string; name?: string }[]).map((x) => x.symbol ?? x.name));
+      for (const x of w[k] ?? []) if (!have.has(x.symbol ?? x.name)) cfg.world[k].push(x);
+    }
+  }
   const dst = join(outDir(c), "config-base.json");
   mkdirSync(outDir(c), { recursive: true });
   writeFileSync(dst, `${JSON.stringify(cfg, null, 2)}\n`);
@@ -174,8 +199,9 @@ export function stepEnv(c: LocalChain, config = currentConfig(c)): NodeJS.Proces
 }
 
 /**
- * A step of the chain's release `release`: a named step of script/deploy/step.sh, or one of the stack's own
- * (`multicall3`, `place-executor`, `advance:<seconds>`, `manifest`). Passed steps are skipped.
+ * A step of the chain's release `release`: a named step of script/deploy/step.sh, `changes:<file>` (11-changes with a
+ * changes file of deployments-local/<network>), or one of the stack's own (`multicall3`, `place-executor`,
+ * `advance:<seconds>`, `manifest`, `treasury`). Passed steps are skipped.
  */
 export async function runStep(c: LocalChain, release: string, step: string, config = currentConfig(c)): Promise<StepOutcome> {
   const key = `${release}:${step}`;
@@ -194,6 +220,7 @@ export async function runStep(c: LocalChain, release: string, step: string, conf
     else if (step.startsWith("advance:")) detail = await advance(c, Number(step.slice(8)), env, log);
     else if (step === "manifest") detail = manifest(c, env, log);
     else if (step === "treasury") detail = await fundTreasuries(c);
+    else if (step.startsWith("changes:")) detail = runShell("11-changes", env, log, false, [join(outDir(c), step.slice(8))]);
     else detail = runShell(step, env, log, prev?.outcome === "fail");
     ok = true;
   } catch (e) {
@@ -205,10 +232,10 @@ export async function runStep(c: LocalChain, release: string, step: string, conf
   return { chain: c.network, step: key, outcome: ok ? "pass" : "fail", detail, log };
 }
 
-function runShell(step: string, env: NodeJS.ProcessEnv, log: string, fresh: boolean): string {
+function runShell(step: string, env: NodeJS.ProcessEnv, log: string, fresh: boolean, args: string[] = []): string {
   // A step whose earlier broadcast stopped part-way is run again from the start, its old broadcast record archived.
   const e = { ...env, AVANA_FORGE_FLAGS: fresh ? "--start-fresh" : "" };
-  const r = spawnSync(bash(), ["script/deploy/step.sh", step], { cwd: CONTRACTS, env: e, encoding: "utf8", maxBuffer: 1 << 28 });
+  const r = spawnSync(bash(), ["script/deploy/step.sh", step, ...args], { cwd: CONTRACTS, env: e, encoding: "utf8", maxBuffer: 1 << 28 });
   const text = `${r.stdout ?? ""}${r.stderr ?? ""}`;
   writeFileSync(log, text);
   if (r.status !== 0) {
@@ -322,6 +349,20 @@ async function fundTreasuries(c: LocalChain): Promise<string> {
     n++;
   }
   return `${n} tokens to the faucet ${a.faucet} and the activity treasury ${a.activity}`;
+}
+
+/**
+ * The OP Stack GasPriceOracle predeploy, which the keeper reads for Base's L1 data fee. A fork has the real one; a fresh
+ * local Base gets a stand-in that answers every call with 0 (no L1 data fee on a local node).
+ */
+export async function placeL1FeeOracle(c: LocalChain): Promise<string> {
+  if (c.network !== "base") return "not Base";
+  const address = "0x420000000000000000000000000000000000000F";
+  const code = await rpc<string>(rpcUrl(c), "eth_getCode", [address, "latest"]);
+  if (code !== "0x") return "already has code";
+  // PUSH1 0 PUSH1 0 MSTORE PUSH1 32 PUSH1 0 RETURN: 32 zero bytes for any call.
+  await rpc(rpcUrl(c), "anvil_setCode", [address, "0x600060005260206000f3"]);
+  return "stand-in placed";
 }
 
 /** Funds the stack's signers with gas on the chain. */

@@ -10,6 +10,7 @@ import { ABI_HASH } from "@avana/protocol/abis";
 import { factoryEvents } from "./abis.ts";
 import {
   type ChainInfo,
+  DEV_CHAIN_IDS,
   type NetworkSet,
   type ServiceManifest,
   aaveTopology,
@@ -23,8 +24,8 @@ import {
 import type { ChainDeployment } from "@avana/services-common/views";
 
 const NETWORK_SET = (optionalEnv(process.env, "INDEXER_NETWORK_SET") ?? "testnet") as NetworkSet;
-if (NETWORK_SET !== "production" && NETWORK_SET !== "testnet" && NETWORK_SET !== "local") {
-  throw new Error("INDEXER_NETWORK_SET must be production, testnet or local");
+if (NETWORK_SET !== "production" && NETWORK_SET !== "testnet") {
+  throw new Error("INDEXER_NETWORK_SET must be production or testnet");
 }
 
 const manifests = new Map<number, ServiceManifest>(
@@ -143,11 +144,17 @@ export const hubRecordedSource = () =>
 export const spokeApprovedSource = () =>
   perChain((m) => ({ address: factory({ address: m.avana.marketRegistry.address, event: factoryEvents.spokeApproved, parameter: "spoke" }), startBlock: registryStart(m) }));
 
-/** Every Spoke a manifest Hub adds to one of its assets, a Lend Spoke added after the manifest included. */
+/**
+ * Every Spoke a manifest Hub adds to one of its assets, a Lend Spoke added after the manifest included. On a development
+ * node (CHAIN_ID_<SUFFIX> 31337 or 31338), every Spoke any Hub adds: it holds only Avana's Hubs, and a Hub the operator
+ * adds to a running local stack (contracts/script/local) is not in the manifest the indexer started on, so its Lend
+ * Spoke is followed from its `AddSpoke` too. Elsewhere a new Hub comes with a new release manifest.
+ */
 export const spokeAddedSource = () =>
   perChain((m) => {
     const hubs = earliest(aaveTopology(m).hubs);
-    return { address: factory({ address: hubs.address, event: factoryEvents.addSpoke, parameter: "spoke" }), startBlock: hubs.startBlock };
+    const from = DEV_CHAIN_IDS.has(m.chainId) ? {} : { address: hubs.address };
+    return { address: factory({ ...from, event: factoryEvents.addSpoke, parameter: "spoke" }), startBlock: hubs.startBlock };
   });
 
 /**

@@ -1324,7 +1324,7 @@ const PAGE_AFTER_BLOCKS = 300 / BLOCK_SECONDS;
  * account within the M-09 warning window". Two accounts (a Uniswap v3 and a Slipstream market) fall below HF 1 with no
  * primary running; only a standby keeper runs, in active mode, signing as the operator helper's signer (the drill
  * signer e2e-local.sh generates for the deployment) from its encrypted keystore (E2E_DRILL_KEYSTORE and E2E_DRILL_KEYSTORE_PASSWORD_FILE,
- * passed as KEEPER_LOCAL_KEYSTORE_ANVIL, which the keeper refuses on every other network set). Blocks are mined 12 s apart. Pass: neither account is
+ * passed as KEEPER_LOCAL_KEYSTORE_MAINNET, which the keeper refuses on any chain but a development node). Blocks are mined 12 s apart. Pass: neither account is
  * liquidated before the standby's 60 s, and both are by 300 s (the M-09 page).
  */
 async function failoverDrill(e: Env) {
@@ -1379,18 +1379,19 @@ async function failoverDrill(e: Env) {
   const metricsPort = Number(process.env.E2E_DRILL_METRICS_PORT ?? 9484);
   const env = {
     ...process.env,
-    KEEPER_NETWORK_SET: "local",
+    KEEPER_NETWORK_SET: "production",
+    CHAIN_ID_MAINNET: "31337",
     KEEPER_MODE: "active",
     KEEPER_ROLE: "standby",
     AVANA_MANIFEST: joinPath(e.ctx.out, "manifest.json"),
-    RPC_ANVIL: rpcUrl,
-    RPC_ANVIL_FALLBACK: rpcUrl,
-    RPC_ANVIL_WS: rpcUrl.replace(/^http/, "ws"),
-    RPC_ANVIL_PRIVATE: rpcUrl,
-    KEEPER_LOCAL_KEYSTORE_ANVIL: keystore,
+    RPC_MAINNET: rpcUrl,
+    RPC_MAINNET_FALLBACK: rpcUrl,
+    RPC_MAINNET_WS: rpcUrl.replace(/^http/, "ws"),
+    RPC_MAINNET_PRIVATE: rpcUrl,
+    KEEPER_LOCAL_KEYSTORE_MAINNET: keystore,
     KEEPER_LOCAL_KEYSTORE_PASSWORD_FILE: passwordFile,
-    KEEPER_GAS_CEILING_WEI_ANVIL: String(10n ** 18n),
-    KEEPER_GAS_DAILY_SPEND_WEI_ANVIL: String(10n ** 16n),
+    KEEPER_GAS_CEILING_WEI_MAINNET: String(10n ** 18n),
+    KEEPER_GAS_DAILY_SPEND_WEI_MAINNET: String(10n ** 16n),
     KEEPER_KILL_SWITCH_PORT: String(metricsPort + 1),
     KEEPER_KILL_SWITCH_TLS_CERT: joinPath(dir, "cert.pem"),
     KEEPER_KILL_SWITCH_TLS_KEY: joinPath(dir, "key.pem"),

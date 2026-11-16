@@ -27,9 +27,9 @@ const a = (x: { address: `0x${string}`; startBlock: number }) => ({ address: x.a
 
 export default createConfig({
   ordering: "multichain",
-  // PostgreSQL in production and on the test networks; the embedded PGlite store only for the local anvil
-  // rehearsal (INDEXER_NETWORK_SET=local), so the end-to-end run needs no database server.
-  database: process.env.INDEXER_NETWORK_SET === "local" ? { kind: "pglite", directory: ".ponder/pglite" } : { kind: "postgres" },
+  // PostgreSQL in production and on the test networks; the embedded PGlite store (INDEXER_DATABASE=pglite) only for a
+  // local run on development nodes, so the rehearsal and the local stack need no database server.
+  database: process.env.INDEXER_DATABASE === "pglite" ? { kind: "pglite", directory: ".ponder/pglite" } : { kind: "postgres" },
   chains: chainSources(),
   contracts: {
     AaveAdapter: { abi: abis.AaveAdapter, chain: perChain((m) => a(m.avana.aaveAdapter)) },

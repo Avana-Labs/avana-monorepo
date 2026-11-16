@@ -13,7 +13,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { CHAINS, CONTRACTS, EXPORT_KEY_ID, type LocalChain, PORTS, REPO, STACK, fallbackUrl, manifestPath, outDir, recorderUrl, rpcUrl } from "./env.ts";
+import { CHAINS, CONTRACTS, EXPORT_KEY_ID, type LocalChain, PORTS, REPO, STACK, chainIdEnv, fallbackUrl, manifestPath, outDir, recorderUrl, rpcUrl } from "./env.ts";
 import { PASSWORD_FILE, keystorePath } from "./keys.ts";
 import { rpc } from "./chain.ts";
 import { binJs, logPath, running, start, stop, tail, waitFor } from "./procs.ts";
@@ -53,7 +53,9 @@ export async function startRecorders(): Promise<void> {
 export function indexerEnv(schema: string): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     AVANA_MANIFEST: manifests(),
-    INDEXER_NETWORK_SET: "local",
+    ...chainIdEnv(),
+    INDEXER_NETWORK_SET: "production",
+    INDEXER_DATABASE: "pglite",
     DATABASE_SCHEMA: schema,
     PONDER_TELEMETRY_DISABLED: "true",
     INDEXER_EXPORT_KEYS: `${EXPORT_KEY_ID}:${secret("export-secret")}`,
@@ -191,6 +193,7 @@ export async function startConvex(): Promise<ConvexInfo> {
     INDEXER_EXPORT_SECRET: secret("export-secret"),
     LISTING_CONTENT_URL: `http://127.0.0.1:${PORTS.content}`,
     CONVEX_SESSION_SECRET: secret("convex-session-secret", 48),
+    ...chainIdEnv(),
   };
   for (const c of CHAINS) {
     vars[`RPC_${c.envSuffix}`] = rpcUrl(c);
@@ -266,7 +269,8 @@ export async function startKeeper(): Promise<void> {
   mkdirSync(join(STACK, "keeper"), { recursive: true });
   const env: NodeJS.ProcessEnv = {
     AVANA_MANIFEST: manifests(),
-    KEEPER_NETWORK_SET: "local",
+    ...chainIdEnv(),
+    KEEPER_NETWORK_SET: "production",
     KEEPER_MODE: "active",
     KEEPER_ROLE: "primary",
     KEEPER_SHARD: "0",
@@ -306,7 +310,8 @@ export async function startMonitor(): Promise<void> {
   mkdirSync(join(STACK, "monitor"), { recursive: true });
   const env: NodeJS.ProcessEnv = {
     AVANA_MANIFEST: manifests(),
-    MONITOR_NETWORK_SET: "local",
+    ...chainIdEnv(),
+    MONITOR_NETWORK_SET: "production",
     MONITOR_CHANNELS: "log:log",
     MONITOR_KEEPER_INSTANCES: deployed().map((c) => `keeper-${c.key}:${c.key}`).join(","),
     MONITOR_STATUS_TOKEN: secret("monitor-status-token"),
