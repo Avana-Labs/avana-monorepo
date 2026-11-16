@@ -1,11 +1,15 @@
 import { aaveNumber, aaveObject, aavePlainText, aaveRows, type AaveObject } from "@/convex/lib/askAI/aaveMcp"
 import type { AskAIFinancialResult } from "./ask-ai-financial-result-card"
+import { formatActionUsd } from "@/app/lib/action-system/formatters"
 
 const number = (value: unknown, suffix = "") => {
   const n = aaveNumber(value)
   return n === undefined ? "Unavailable" : `${n.toLocaleString("en-US", { maximumFractionDigits: 4 })}${suffix}`
 }
-const dollars = (value: unknown) => (aaveNumber(value) === undefined ? "Unavailable" : `$${number(value)}`)
+const dollars = (value: unknown) => {
+  const n = aaveNumber(value)
+  return n === undefined ? "Unavailable" : formatActionUsd(n, { exact: true })
+}
 const pct = (value: unknown) => number(value, "%")
 const bool = (value: unknown) => (value === true ? "Met" : value === false ? "Not met" : "Unavailable")
 
