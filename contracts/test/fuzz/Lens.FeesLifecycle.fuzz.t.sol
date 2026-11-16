@@ -61,10 +61,10 @@ contract LensFeesLifecycleFuzzTest is LensFeesV3Fixture {
     // TEST-247 verifies: REQ-LENS-050
     function test_TEST_247_ciCounterexample20261115() public {
         testFuzz_TEST_247_feesSurviveUnwindsAndDonations(
-            245003304183075693693629,
-            3402992956809132418596140100660247210,
-            2026024998,
-            [uint64(10528), 2500000000000000000, 8431, 7623]
+            245_003_304_183_075_693_693_629,
+            3_402_992_956_809_132_418_596_140_100_660_247_210,
+            2_026_024_998,
+            [uint64(10_528), 2_500_000_000_000_000_000, 8431, 7623]
         );
     }
 }
