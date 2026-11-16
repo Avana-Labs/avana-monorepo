@@ -408,7 +408,8 @@ function listingSteps() {
  * manifest producer reads): each venue's SwapRouter (step 02 deploys them) and a QuoterV2 deployed here against the
  * venue's factory and WETH, signed by the deployer keystore. Names: group `uniswap-v3` UniswapV3SwapRouter and
  * UniswapV3QuoterV2; group `slipstream` SlipstreamSwapRouter and SlipstreamQuoterV2 (generation 0's factory). The swap
- * tokens are the `token` group step 02 already lists. A quoter already listed is kept.
+ * tokens are the `token` group step 02 already lists. A quoter already listed is kept. Also each venue's LP position
+ * manager: UniswapV3PositionManager, UniswapV4PositionManager, SlipstreamPositionManager (and `.n` per generation n).
  */
 async function swapContracts(c: LocalChain): Promise<string> {
   const { createPublicClient, createWalletClient, http } = await import("viem");
@@ -440,6 +441,16 @@ async function swapContracts(c: LocalChain): Promise<string> {
     g[`${v.prefix}QuoterV2`] ??= { address: await deploy(v.out, v.factory), standIn: false };
     done.push(`${v.prefix}QuoterV2 ${g[`${v.prefix}QuoterV2`].address}`);
   }
+  // The LP position managers (the faucet's starting positions, the webapp's LP NFT reader): Slipstream's generation 0
+  // is SlipstreamPositionManager, a later generation n SlipstreamPositionManager.n.
+  const pm = (group: string, name: string, address: string | undefined) => {
+    if (!address) return;
+    (world.external[group] ??= {})[name] ??= { address, standIn: false };
+    done.push(`${name} ${address}`);
+  };
+  pm("uniswap-v3", "UniswapV3PositionManager", world.uniswapV3PositionManager);
+  pm("uniswap-v4", "UniswapV4PositionManager", world.uniswapV4PositionManager);
+  ((world.slipstreamPositionManagers ?? []) as string[]).forEach((a, i) => pm("slipstream", i ? `SlipstreamPositionManager.${i}` : "SlipstreamPositionManager", a));
   writeFileSync(worldPath, `${JSON.stringify(world, null, 2)}\n`);
   return done.join(", ");
 }
