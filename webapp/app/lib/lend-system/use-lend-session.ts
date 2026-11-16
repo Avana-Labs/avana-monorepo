@@ -12,6 +12,11 @@ import type {
 } from "./contracts"
 import { ProductionLendReadAdapter } from "./production-read-adapter"
 import { ProductionLendTransactionAdapter } from "./production-transaction-adapter"
+import { executeLendOnChain } from "./chain-execution"
+import { lendHubAssets } from "./chain-lend-refs"
+import { chainBorrowRefs } from "@/app/lib/borrow-system/chain-refs"
+import { connectedBorrowWallet, viemBorrowChain } from "@/app/lib/borrow-system/chain-execution-viem"
+import { requestLendPositionsRefresh } from "./use-chain-lend-positions"
 import { emptyLendSystemState, mergeConvexLendSnapshots, type LendConvexSnapshot } from "./market-hydration"
 import { mergeChainLendPositions, type ChainLendRead } from "./chain-lend-positions"
 import { buildLendPageData, buildLendWalletSnapshot, buildPortfolioLendData } from "./read-model"
@@ -36,14 +41,29 @@ export function useLendSession({
   const [transactionHistory] = useState<LendTransactionHistoryItem[]>([])
   const [transactionReceipts] = useState<LendTransactionResult[]>([])
   const [isPending, setIsPending] = useState(false)
-
-  const transactionAdapter = useMemo(
-    () => injectedTransactionAdapter ?? new ProductionLendTransactionAdapter(),
-    [injectedTransactionAdapter],
-  )
-  // The latest state, for the read adapter's builders without re-creating the adapter on every change.
+  // The latest state, for the adapters' builders without re-creating them on every change.
   const stateRef = useRef(state)
   stateRef.current = state
+
+  const transactionAdapter = useMemo(
+    () =>
+      injectedTransactionAdapter ??
+      new ProductionLendTransactionAdapter({
+        executeTransaction: (intent) =>
+          executeLendOnChain(
+            {
+              hubAssets: lendHubAssets,
+              lens: (wallet, chainId) => chainBorrowRefs(wallet)?.lenses.find((l) => l.chainId === chainId)?.lens,
+              chain: viemBorrowChain,
+              wallet: connectedBorrowWallet,
+              state: () => stateRef.current,
+              onConfirmed: requestLendPositionsRefresh,
+            },
+            intent,
+          ),
+      }),
+    [injectedTransactionAdapter],
+  )
   const readAdapter = useMemo(
     () =>
       injectedReadAdapter ??
