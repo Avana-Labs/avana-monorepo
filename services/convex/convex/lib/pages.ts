@@ -124,7 +124,7 @@ export function headlineReserve(reserves: readonly SpokeReserveRow[], spoke: str
 export function poolSnapshot(
   market: WithSlug<MarketRow>,
   debts: readonly MarketReserveDebtRow[],
-  reserves: readonly SpokeReserveRow[],
+  reserves: readonly WithSlug<SpokeReserveRow>[],
   assets: ReadonlyMap<string, HubAssetRow>,
   pool24h: { volumeUsd: number; feesUsd: number; lpFeeAprPct?: number },
   content: PageContent | null,
@@ -150,7 +150,8 @@ export function poolSnapshot(
     premiumBps: market.collateralRiskBps,
     suppliedUsd: collateralUsd,
     borrowedUsd: debtUsd,
-    availableUsd: Number(BigInt(market.marketHeadroomUsd8)) / 1e8,
+    // What the market can borrow now: Σ over its Spoke's debt reserves of Lens.getBorrowSpeed's availableNow (not the cap headroom).
+    availableUsd: poolBorrowables(market, reserves, assets, () => "").reduce((acc, b) => acc + (b.availableNowUsd ?? 0), 0),
     utilizationPct: collateralUsd > 0 ? Math.min(100, (debtUsd / collateralUsd) * 100) : 0,
     // The LP fee APR of the market's range over the last 24 h (lib/windows.ts); 0 before the pool's first swap.
     supplyApyPct: pool24h.lpFeeAprPct ?? 0,
