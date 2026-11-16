@@ -44,7 +44,7 @@ node script/local/stack.ts add-hub script/local/hubs/growth.json --chain ethereu
 node script/local/stack.ts down
 ```
 
-- `up` starts both nodes, deploys Avana on each, starts every service, then switches the chains to their own block time. It resumes: a deploy step that passed is never run again, the first step that failed runs again, and a process that is running is kept. `deploy` runs only the chains and their first release.
+- `up` starts both nodes, deploys Avana on each, starts every service, switches the chains to their own block time and releases the chain's pending Hub files (`--no-hubs` skips them). It resumes: a deploy step that passed is never run again, the first step that failed runs again, and a process that is running is kept. `deploy` runs only the chains and their first release.
 - When a step fails, `up` stops with the step and its log. The nodes, the indexer store and Convex keep running. Fix the cause and run `up` again: only the failed step and what follows run.
 - `check` is the fast re-check: each manifest against its chain, the indexer at both heads with no error line, and Convex against each chain (`script/e2e/replay-check.ts`). It changes nothing, so a fix to a check or to the data layer is checked in minutes.
 - `replay` runs the indexer replay ([services/REPLAY.md](../../../services/REPLAY.md)) on the running stack. It closes a daily sample on each chain (the chain clock moves two days), then stops the live indexer at the head. A second indexer indexes every block again into a fresh schema, and its tables must equal the live ones. The live indexer then starts again, and `replay-check.ts` checks the local Convex against each chain.
@@ -55,7 +55,9 @@ Logs are in `deployments-local/stack/logs/<process>.log`, one per process and on
 
 | Variable | Default | Effect |
 |---|---|---|
-| `STACK_FORK_ETHEREUM`, `STACK_FORK_BASE` | none | Fork a network (anvil `--fork-url`); the chain keeps its local ID |
+| `STACK_FORK` | off | `1` forks Ethereum and Base at the blocks pinned in `fork.json`. The chains keep their local IDs (31337, 31338) |
+| `ETHEREUM_FORK_RPC_URL`, `BASE_FORK_RPC_URL` | none | The networks' RPC endpoints (comma-separated for several). Never in the repository: set in the environment, or stored encrypted next to the keystores with `stack.ts secrets`. anvil reads them through a local proxy (`fork-proxy.ts`, retries with backoff), so they appear on no command line. `up` stops if one is missing in fork mode |
+| `STACK_FORK_BLOCK_ETHEREUM`, `STACK_FORK_BLOCK_BASE` | `fork.json` | Another fork block |
 | `STACK_GENESIS_DAYS_AGO` | 35 | Chain time at genesis. Each release moves the clock past its timelock delays (about 15.5 days), so the first release lands near the present |
 | `STACK_MAX_MARKETS` | 64 | The MarketRegistry's market limit, fixed at deployment |
 | `STACK_CONVEX_DIR`, `STACK_WEBAPP_DIR` | this checkout | Run another checkout's `services/convex` or `webapp` (its `node_modules` installed) |
@@ -77,7 +79,7 @@ The governance Safe, the guardians and the Aave governance executor stand in for
 
 ## Adding a Hub
 
-One input file per Hub (`hubs/growth.json` is an example) and one command:
+One input file per Hub and one command. The chain's Hub files live in `contracts/script/deploy/hubs/<chain>/<hub>.json` (`<chain>` is `ethereum` or `base`); `up` releases every one not released yet, in name order, once the services run. `hubs/growth.json` here is an example to add by hand:
 
 ```bash
 node script/local/stack.ts add-hub script/local/hubs/growth.json --chain ethereum
@@ -99,13 +101,13 @@ The indexer follows the new Hub, its CDP Spokes and its markets from their event
 
 | Field | Contents |
 |---|---|
-| `hub` | `label` (config name), `tier` (1 stable, 2 correlated, 3 volatile), `name` and `description` (its page) |
+| `hub` | `label` (config name), `tier` (1 stable, 2 correlated, 3 volatile), `name` and `description` (its page). A label already on the chain extends that Hub: only its new Spokes, assets and markets are added |
 | `lendSpoke` | The Hub's Lend Spoke label (default `lend<Label>`) |
-| `spokes` | CDP Spokes: `label`, `integration` (`uniswap-v3` or `slipstream`) |
+| `spokes` | CDP Spokes, many per venue: `label`, `integration` (`uniswap-v3` or `slipstream`), `category` (Stable, Volatile, Blue-chip, …), optional `name` (default `<venue> <category>`) and `description` (the Spoke's page) |
 | `lendAssets` | What the Hub lends: `symbol`, `category`. A token new to Aave on the chain also takes `new`: `drawCap`, `bootstrapSupply`, `coverageMinimum`, `offsetMinimum` (whole tokens), `stressRiseBps`, `floorRoundingAllowance` (base units, at most $1), optional `creditLineWhole`, `debtMinWhole`, `debtMaxWhole` |
 | `borrowable` | Per CDP Spoke, the symbols it lends; the first is each market's default debt asset |
 | `collateral` | Pool tokens. A listed token only gains this Hub; a new one takes `deviationBps`, `collateralFactorBps`, `tokenCapUsd`, `isUsdStable` |
-| `markets` | `pool` (a pool of the chain's world), `spoke`, `poolRiskFactorBps`, `maxLiquidationBonus`, `consistencyToleranceBps`, `marketUsdCap`, `topUpSliceUsd`, optional `name`, `slug`, `category`, `description` |
+| `markets` | `pool` (a pool of the chain's world), `spoke`, optional `tickLower` and `tickUpper` (full range when omitted), `poolRiskFactorBps`, `maxLiquidationBonus`, `consistencyToleranceBps`, `marketUsdCap`, `topUpSliceUsd`, optional `name`, `slug`, `category`, `description`. The market key is (integration, pool, range) on the whole chain: one pool on two Spokes needs two ranges |
 
 The collateral factor, slippage allowance and routes are derived as the rehearsal does:
 - the collateral factor is min(token collateral factors) × the pool risk factor;
@@ -113,3 +115,5 @@ The collateral factor, slippage allowance and routes are derived as the rehearsa
 - each pool token gets two pool-disjoint routes into each asset its Spoke lends.
 
 A debt asset with no `hubs` list in the config is lent on every Hub, a new one included.
+
+Tokens and pools a Hub file needs that the test world lacks go in `contracts/script/deploy/hubs/<chain>/world.json` (`tokens`, `uniswapPools`, `slipstreamPools`, as in the config's `world`). Step 02 deploys them with the rest of the world, so they must be there before the chain's first deploy.

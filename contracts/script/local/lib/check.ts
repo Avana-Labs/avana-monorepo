@@ -14,7 +14,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { CONTRACTS, EXPORT_KEY_ID, type LocalChain, PORTS, REPO, STACK, manifestPath, rpcUrl } from "./env.ts";
+import { CONTRACTS, EXPORT_KEY_ID, type LocalChain, PORTS, REPO, STACK, chainIdEnv, manifestPath, rpcUrl } from "./env.ts";
 import { answers, blockNumber, refreshFeeds, rpc, setMining, stepEnv } from "./chain.ts";
 import { logPath, running, sleep, stop } from "./procs.ts";
 import { PGLITE, indexerAtHead, indexerUrl, secret, startIndexer } from "./services.ts";
@@ -80,6 +80,7 @@ function convexCheck(c: LocalChain, sample: number, say: Say): boolean {
   rmSync(log, { force: true });
   const r = node([join(CONTRACTS, "script/e2e/replay-check.ts"), manifestPath(c), REPO], {
     RPC_ANVIL: rpcUrl(c),
+    ...chainIdEnv(),
     E2E_EXPORT_URL: indexerUrl(),
     E2E_EXPORT_KEY_ID: EXPORT_KEY_ID,
     E2E_EXPORT_SECRET: secret("export-secret"),
@@ -175,7 +176,7 @@ export async function replay(chains: readonly LocalChain[], say: Say): Promise<b
     if (ok) {
       const log = logPath("check-indexer-tables");
       rmSync(log, { force: true });
-      const r = node([join(CONTRACTS, "script/e2e/replay-check.ts"), "--indexer", REPO, PGLITE, "live", schema], {}, log);
+      const r = node([join(CONTRACTS, "script/e2e/replay-check.ts"), "--indexer", REPO, PGLITE, "live", schema], chainIdEnv(), log);
       say(`${r.ok ? "PASS" : "FAIL"} indexer tables: ${r.out.trim().split(/\r?\n/).filter((l) => /replay: /.test(l)).join(" | ").slice(0, 800)}`);
       ok = r.ok && ok;
     }
