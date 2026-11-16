@@ -55,6 +55,22 @@ const diatypeSans = localFont({
   adjustFontFallback: "Arial",
 })
 
+// Lighter weight of Diatype for 1x screens only (see --font-body in globals.css). Not preloaded:
+// the browser fetches it only when the 1x media query uses it.
+const diatypeVariable = localFont({
+  src: [
+    {
+      path: "../public/fonts/diatype/core/ABCDiatypeVariable-Trial.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+  ],
+  variable: "--font-diatype-variable",
+  display: "swap",
+  preload: false,
+  adjustFontFallback: false,
+})
+
 const themeBootstrapScript = `(()=>{const storageKey="avana-theme";const root=document.documentElement;const storedTheme=window.localStorage.getItem(storageKey);const theme=storedTheme==="light"||storedTheme==="dark"||storedTheme==="system"?storedTheme:"light";const systemTheme=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";const resolvedTheme=theme==="system"?systemTheme:theme;root.classList.toggle("dark",resolvedTheme==="dark");root.style.colorScheme=resolvedTheme})()`
 
 export const metadata: Metadata = {
@@ -160,7 +176,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang="en"
-      className={diatypeSans.variable}
+      className={`${diatypeSans.variable} ${diatypeVariable.variable}`}
       data-lighthouse-audit={isAuditMode ? "true" : undefined}
       suppressHydrationWarning
     >
