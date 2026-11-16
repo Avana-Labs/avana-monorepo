@@ -10,13 +10,14 @@ pragma solidity 0.8.28;
 /// `feeRecipient` and the `settlePending` route residue. If a transfer reverts,
 /// returns `false` or runs out of its gas (for example a recipient blocklisted by the token's issuer), LPVaultSwap
 /// deposits the amount here, credited to that account and token, so a failed payout never reverts a liquidation
-/// (REQ-SWAP-076, AMMN N2a). The credited account later claims its whole credit to any recipient it names.
+/// (REQ-SWAP-076, AMMN N2a). The credited account later claims its whole credit, or any part of it, to any
+/// recipient it names.
 /// @dev Immutable: no proxy, `delegatecall`, `selfdestruct`, owner, role, setter, pause, sweep, rescue or
 /// arbitrary-call function. Constructor arguments, both immutable: `lpVaultSwap` (LPVaultSwap's fixed proxy address,
 /// the only depositor) and `lock` (the protocol Lock, deployed before the escrow); the constructor reverts with
 /// `ZeroAddress` unless both are non-zero and with `LockMismatch` unless `lock` has code and its `LP_VAULT_SWAP()` is
 /// `lpVaultSwap`. Storage: `claimable[token][account]` and `totalClaimable[token]` in token base units, plus a transient
-/// (EIP-1153) reentrancy flag at `avana.escrow.reentrancy` held for the whole of `deposit` and `claim`. Tokens leave the escrow only through `claim`, to the
+/// (EIP-1153) reentrancy flag at `avana.escrow.reentrancy` held for the whole of `deposit` and either `claim`. Tokens leave the escrow only through `claim`, to the
 /// recipient the credited account names, so a compromised Avana or Aave key or a hostile LPVaultSwap upgrade cannot
 /// take a credited payout. For every token, `totalClaimable[token]` equals the sum of `claimable[token][b]` over
 /// all accounts and, while only the escrow moves its own balance, the balance is at least `totalClaimable[token]`;
@@ -28,7 +29,7 @@ pragma solidity 0.8.28;
 /// breaker and for a frozen account; the escrow is in the address-freeze protected set. Example: deposits of 1,627,460 raw USDC for `b1` and 3,100,000 for `b2` give
 /// `totalClaimable[USDC] = 4,727,460`; a direct 10 USDC transfer makes the balance 14,727,460 with `totalClaimable`
 /// unchanged; after `b1` claims, both fall by 1,627,460.
-/// @custom:spec REQ-ESCROW-001, REQ-ESCROW-005, REQ-ESCROW-006, REQ-ESCROW-007, REQ-ESCROW-008, REQ-ACCESS-066, REQ-ROLE-099, REQ-ROLE-100, REQ-ARCH-047, REQ-ARCH-149, REQ-ARCH-150, INV-052, INV-061, Q-124, Q-148, Q-214, Q-217, Q-226, Q-227, Q-241, Q-242, Q-271, Q-401
+/// @custom:spec REQ-ESCROW-001, REQ-ESCROW-005, REQ-ESCROW-006, REQ-ESCROW-007, REQ-ESCROW-008, REQ-ESCROW-020, REQ-ACCESS-066, REQ-ROLE-099, REQ-ROLE-100, REQ-ARCH-047, REQ-ARCH-149, REQ-ARCH-150, INV-052, INV-061, Q-124, Q-148, Q-214, Q-217, Q-226, Q-227, Q-241, Q-242, Q-271, Q-401
 interface IPayoutEscrow {
     /// @notice Emitted when `deposit` credits a payout to an account.
     /// @param token The token: the debt asset, or a pool token for route residue.
@@ -37,7 +38,7 @@ interface IPayoutEscrow {
     /// @custom:spec REQ-ESCROW-003, Q-214, Q-271
     event RemainderEscrowed(address indexed token, address indexed account, uint256 amount);
 
-    /// @notice Emitted when `claim` pays an account's whole credit of a token.
+    /// @notice Emitted when `claim` pays an account's whole credit of a token, or the amount it named.
     /// @param token The token.
     /// @param account The credited account (`msg.sender`).
     /// @param recipient The recipient the account named.
@@ -53,9 +54,9 @@ interface IPayoutEscrow {
     /// @custom:spec REQ-ESCROW-002, REQ-ESCROW-009
     error NotLocked();
 
-    /// @notice `deposit` with `amount == 0`; LPVaultSwap never deposits a zero payout, so only a faulty caller
-    /// reaches it.
-    /// @custom:spec REQ-ESCROW-002, REQ-ESCROW-010, Q-217
+    /// @notice `deposit` with `amount == 0` (LPVaultSwap never deposits a zero payout, so only a faulty caller
+    /// reaches it), or the amount-limited `claim` with `amount == 0`.
+    /// @custom:spec REQ-ESCROW-002, REQ-ESCROW-010, REQ-ESCROW-021, Q-217
     error ZeroAmount();
 
     /// @notice `deposit` with `account == address(0)`.
@@ -79,8 +80,12 @@ interface IPayoutEscrow {
     /// @custom:spec REQ-ESCROW-004, REQ-ESCROW-008, REQ-ESCROW-013
     error NothingToClaim();
 
-    /// @notice `deposit` or `claim` was entered while the transient reentrancy flag is set.
-    /// @dev The first check of both functions, so a reentrant call reverts with it whatever its caller and arguments.
+    /// @notice The amount-limited `claim` asked for more than `claimable[token][msg.sender]`.
+    /// @custom:spec REQ-ESCROW-020, REQ-ESCROW-021
+    error AmountExceedsCredit();
+
+    /// @notice `deposit` or either `claim` was entered while the transient reentrancy flag is set.
+    /// @dev The first check of every one of them, so a reentrant call reverts with it whatever its caller and arguments.
     /// @custom:spec REQ-ESCROW-007, REQ-ESCROW-016
     error Reentrancy();
 
@@ -136,6 +141,27 @@ interface IPayoutEscrow {
         address token,
         address recipient
     ) external returns (uint256 amount);
+
+    /// @notice Pays `amount` of the caller's credit of `token` to `recipient`, leaving the rest of the credit standing.
+    /// @dev The same caller, Lock, recipient, reentrancy, checks-effects-interactions and balance rules as the
+    /// whole-credit `claim`, in the same order, with two checks added after `InvalidRecipient`: it reverts with
+    /// `ZeroAmount` if `amount == 0`, with `NothingToClaim` if the credit is 0 and with `AmountExceedsCredit` if
+    /// `amount` is above the credit, so no account can take more than its own credit. It subtracts `amount` from
+    /// `claimable[token][msg.sender]` and `totalClaimable[token]` before the transfer and emits `RemainderClaimed` with
+    /// `amount`. Used by the flash liquidation helper to claim only the credit its own call created, so a credit that
+    /// stood before the call stays where it was (2.11 `REQ-HELPER-010`). Example: with a credit of 0.8 WETH,
+    /// `claim(WETH, carol, 0.4e18)` pays carol 0.4 WETH and leaves 0.4 WETH credited; `claim(WETH, carol, 0.5e18)`
+    /// then reverts with `AmountExceedsCredit`.
+    /// @param token The token.
+    /// @param recipient Address that receives the tokens.
+    /// @param amount Amount to pay, token base units: non-zero and at most the caller's credit.
+    /// @return paid Amount paid, equal to `amount`.
+    /// @custom:spec REQ-ESCROW-004, REQ-ESCROW-005, REQ-ESCROW-007, REQ-ESCROW-012, REQ-ESCROW-013, REQ-ESCROW-014, REQ-ESCROW-015, REQ-ESCROW-016, REQ-ESCROW-020, REQ-ESCROW-021, Q-214
+    function claim(
+        address token,
+        address recipient,
+        uint256 amount
+    ) external returns (uint256 paid);
 
     /// @notice Amount of `token` credited to `account` and not yet claimed.
     /// @param token The token.

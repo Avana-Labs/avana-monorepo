@@ -91,6 +91,15 @@ contract PayoutActor {
         amount = escrow.claim(token, recipient);
     }
 
+    function claimAmount(
+        IPayoutEscrow escrow,
+        address token,
+        address recipient,
+        uint256 amount
+    ) external returns (uint256 paid) {
+        paid = escrow.claim(token, recipient, amount);
+    }
+
     function execute(
         address target,
         bytes calldata data

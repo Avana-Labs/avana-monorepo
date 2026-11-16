@@ -12,7 +12,8 @@ import {Test} from "forge-std/Test.sol";
 /// @title PayoutEscrowHalmosTest
 /// @notice Symbolic checks of the payout escrow (2.18) for every caller, account, recipient, amount and Lock state:
 /// a deposit succeeds only from LPVaultSwap while it holds the Lock and credits exactly what arrived; a claim succeeds
-/// only for the caller's own non-zero credit, outside the Lock, and pays all of it to the named recipient; every
+/// only for the caller's own non-zero credit, outside the Lock, and pays all of it (or, with an amount, exactly that
+/// amount and never more than the credit) to the named recipient; every
 /// refusal carries the error of the first failing check and changes nothing; conservation holds across a sequence with
 /// a donation.
 /// @dev LPVaultSwap and the AaveAdapter are fixed concrete addresses driven by `vm.prank`; the token is a plain
@@ -24,6 +25,10 @@ contract PayoutEscrowHalmosTest is Test {
     address internal constant B1 = address(0xB1);
     address internal constant B2 = address(0xB2);
     address internal constant DONOR = address(0xD0);
+
+    /// @notice The two `claim` overloads, which `IPayoutEscrow.claim.selector` cannot name apart.
+    bytes4 internal constant CLAIM_ALL = bytes4(keccak256("claim(address,address)"));
+    bytes4 internal constant CLAIM_AMOUNT = bytes4(keccak256("claim(address,address,uint256)"));
 
     Lock internal lock;
     PayoutEscrow internal escrow;
@@ -125,8 +130,7 @@ contract PayoutEscrowHalmosTest is Test {
         Snap memory before = _snap(caller, recipient);
 
         vm.prank(caller);
-        (bool ok, bytes memory ret) =
-            address(escrow).call(abi.encodeCall(IPayoutEscrow.claim, (address(token), recipient)));
+        (bool ok, bytes memory ret) = address(escrow).call(abi.encodeWithSelector(CLAIM_ALL, address(token), recipient));
 
         if (ok) _assertPaid(before, caller, recipient, ret);
         else _assertRefused(before, caller, recipient, ret);
@@ -192,6 +196,59 @@ contract PayoutEscrowHalmosTest is Test {
         }
     }
 
+    /// @notice The amount-limited claim, for every caller, recipient, amount and Lock state: it succeeds only for the
+    /// caller's own credit, outside the Lock, with `0 < amount <= credit`, pays exactly `amount` to the named recipient
+    /// and lowers that credit and the total by `amount`, leaving every other credit; every refusal carries the error of
+    /// the first failing check and changes nothing.
+    // PROP-052 verifies: REQ-ESCROW-020, REQ-ESCROW-021, REQ-ESCROW-004, REQ-ESCROW-005, REQ-ESCROW-012, REQ-ESCROW-013, REQ-ESCROW-014, ATTACK-118, INV-061, Q-214, Q-217
+    function check_PROP_052_claimAmountPaysAtMostOwnCredit(
+        address caller,
+        address recipient,
+        uint256 a1,
+        uint256 a2,
+        uint256 amount,
+        uint8 lockState
+    ) public {
+        vm.assume(a1 > 0 && a1 <= type(uint128).max && a2 > 0 && a2 <= type(uint128).max);
+        _deposit(B1, a1);
+        _deposit(B2, a2);
+        _setLock(lockState);
+        Snap memory s = _snap(caller, recipient);
+
+        vm.prank(caller);
+        (bool ok, bytes memory ret) =
+            address(escrow).call(abi.encodeWithSelector(CLAIM_AMOUNT, address(token), recipient, amount));
+
+        if (ok) {
+            assert(!s.locked && recipient != address(0) && recipient != address(escrow));
+            assert(amount > 0 && amount <= s.credit);
+            assert(abi.decode(ret, (uint256)) == amount);
+            assert(escrow.claimable(address(token), caller) == s.credit - amount);
+            assert(escrow.totalClaimable(address(token)) == s.total - amount);
+            assert(token.balanceOf(recipient) == s.recipientBalance + amount);
+            assert(token.balanceOf(address(escrow)) == s.escrowBalance - amount);
+            if (caller != B1) assert(escrow.claimable(address(token), B1) == s.creditB1);
+            if (caller != B2) assert(escrow.claimable(address(token), B2) == s.creditB2);
+        } else {
+            assert(escrow.claimable(address(token), caller) == s.credit);
+            assert(escrow.totalClaimable(address(token)) == s.total);
+            assert(token.balanceOf(address(escrow)) == s.escrowBalance);
+            if (s.locked) {
+                assert(_is(ret, IPayoutEscrow.LockHeld.selector));
+            } else if (recipient == address(0) || recipient == address(escrow)) {
+                assert(_is(ret, IPayoutEscrow.InvalidRecipient.selector));
+            } else if (amount == 0) {
+                assert(_is(ret, IPayoutEscrow.ZeroAmount.selector));
+            } else if (s.credit == 0) {
+                assert(_is(ret, IPayoutEscrow.NothingToClaim.selector));
+            } else if (amount > s.credit) {
+                assert(_is(ret, IPayoutEscrow.AmountExceedsCredit.selector));
+            } else {
+                assert(false);
+            }
+        }
+    }
+
     /// @notice Deposits for two accounts, a donation, a claim and a second claim: `totalClaimable` is always the sum
     /// of the credits, each credit is at most the total, the balance covers the total, and the excess is the donation.
     // PROP-052 verifies: REQ-ESCROW-006, REQ-ESCROW-013, INV-061, Q-214
@@ -218,8 +275,7 @@ contract PayoutEscrowHalmosTest is Test {
         _conserved(dust);
 
         vm.prank(B1);
-        (bool ok, bytes memory ret) =
-            address(escrow).call(abi.encodeCall(IPayoutEscrow.claim, (address(token), recipient)));
+        (bool ok, bytes memory ret) = address(escrow).call(abi.encodeWithSelector(CLAIM_ALL, address(token), recipient));
         assert(!ok && _is(ret, IPayoutEscrow.NothingToClaim.selector));
 
         vm.prank(B2);

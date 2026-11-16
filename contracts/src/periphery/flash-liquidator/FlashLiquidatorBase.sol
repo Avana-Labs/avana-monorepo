@@ -27,7 +27,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// @notice The flash liquidation helper's whole flow (2.11 Flash liquidation helper), shared by the public helper and
 /// the operator variant: request checks, the bound single-use context, the loan from the chain's Aave V3 Pool, the
 /// liquidation inside the Pool's callback, the repayment with a bounded top-up, the net payout after the loan returns
-/// and the claim of the helper's escrowed credits.
+/// and the claim of the PayoutEscrow credit each call creates, limited to that call's increase.
 /// @dev Immutable, with no owner, role, setter, sweep, rescue, arbitrary call, `delegatecall`, fallback or `receive`;
 /// no persistent storage. The context lives in transient storage at an ERC-7201 base slot, so it is empty at the start
 /// of every transaction and a reverted call leaves nothing. A variant fixes only who may call (`_callerAllowed`), who
@@ -141,8 +141,6 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         uint256 assetBefore = asset.balanceOf(address(this));
         Watch memory w = _watch(request.params.marketId, market.tokens, address(asset));
         address payer = _openContext(lender, address(asset), request);
-        // After the context opens: a token callback during a claim finds it active and cannot reenter.
-        _clearStanding(w);
         // Inventory X - F and the SPEC-LIQ-019 shortfall budget; the unused part returns in the payout.
         uint256 prefund = request.params.debtToCover - flashAmount + request.params.maxShortfall;
         // The payer is fixed by the variant, never by the request: `msg.sender` (public) or the immutable
@@ -190,6 +188,9 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
     function claimEscrowed(
         address token
     ) external override returns (uint256 amount) {
+        // Not while a call is open: a token callback could otherwise move the open call's new credit to the claim
+        // recipient before the call claims it to its own recipient.
+        if (STATE_SLOT.asUint256().tload() != STATE_NONE) revert ContextActive();
         address recipient = _claimRecipient();
         address escrow = ILPVaultSwapViews(LP_VAULT_SWAP).PAYOUT_ESCROW();
         amount = IPayoutEscrow(escrow).claim(token, recipient);
@@ -219,12 +220,6 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
     /// @return recipient `feeRecipient` (public helper) or `FUNDING_SAFE` (operator variant, `SIGNER` only).
     /// @custom:spec REQ-HELPER-010, REQ-HELPER-011
     function _claimRecipient() internal view virtual returns (address recipient);
-
-    /// @notice Where a PayoutEscrow credit already standing when a call starts is claimed before the liquidation: the
-    /// address `claimEscrowed` pays, or `address(0)` to leave it standing. Never reverts.
-    /// @return recipient `feeRecipient`, possibly `address(0)` (public helper), or `FUNDING_SAFE` (operator variant).
-    /// @custom:spec REQ-HELPER-010, REQ-HELPER-011
-    function _standingRecipient() internal view virtual returns (address recipient);
 
     /// @notice The most top-up one call may pull.
     /// @param maxTopUp The request's `maxTopUp`.
@@ -363,8 +358,8 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
 
     /// @notice After the loan returned: computes the net payout as the rise of the `T` balance over the whole call,
     /// enforces `minPayout` and the variant's outlay bound, withdraws any Pool allowance left, sends the payout, every
-    /// rise of a watched token and every PayoutEscrow credit this call created to the recipient and emits
-    /// `FlashLiquidated`.
+    /// rise of a watched token and the rise of each watched token's PayoutEscrow credit over this call to the recipient
+    /// and emits `FlashLiquidated`.
     /// @dev A `T` balance that ended below its start (only possible when `T` charges a transfer fee and the helper held
     /// `T` before the call) reverts `PayoutTooLow(0, minPayout)`, so nothing the helper held before pays for a call.
     /// @param asset `T`.
@@ -478,42 +473,14 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         ++w.count;
     }
 
-    /// @notice Claims every watched token's PayoutEscrow credit that stands before the liquidation to the address
-    /// `claimEscrowed` pays, then re-reads it, so a credit this call creates is its caller's alone and is never merged
-    /// into one an earlier caller left (REQ-HELPER-010). A credit whose claim fails, or with no such address, keeps
-    /// standing and is left to `claimEscrowed`, as before. Runs once the call's context is open, so a token callback
-    /// during a claim cannot reenter the helper (`ContextActive`).
-    /// @param w The watch list; its credits are updated to what still stands.
-    /// @custom:spec REQ-HELPER-010
-    function _clearStanding(
-        Watch memory w
-    ) private {
-        // The recipient is read only when a credit stands, and once, outside the claim loop. It is never zero (the
-        // ParameterStore refuses a zero feeRecipient and the operator variant a zero FUNDING_SAFE); a claim to it that
-        // fails anyway leaves the credit standing.
-        uint256 k = 0;
-        while (k < w.count && w.credits[k] == 0) {
-            ++k;
-        }
-        if (k == w.count) return;
-        address to = _standingRecipient();
-        for (uint256 i = k; i < w.count; ++i) {
-            if (w.credits[i] == 0) continue;
-            // Bounded by the watch list: at most 8 market tokens and their routes' intermediates. `claim` pays the
-            // whole credit, so what still stands is the credit less the amount it reports.
-            // forge-lint: disable-next-line(calls-loop)
-            try IPayoutEscrow(w.escrow).claim(w.tokens[i], to) returns (uint256 claimed) {
-                w.credits[i] -= claimed;
-            } catch {}
-        }
-    }
-
     /// @notice Sends the recipient the rise of the helper's balance of each watched token (route residues, route
     /// intermediates of a partly filled multi-hop route and dust legs LPVaultSwap paid it), then claims to the
-    /// recipient every PayoutEscrow credit of a watched token that this call created: one that was 0 before the call
-    /// and is not now (a residue LPVaultSwap could not deliver to the helper). A credit already standing before the
-    /// call and not cleared by `_clearStanding`, or one whose claim the recipient cannot receive, is left to
-    /// `claimEscrowed`.
+    /// recipient the rise of the helper's PayoutEscrow credit of each watched token over its value before the call (a
+    /// residue LPVaultSwap could not deliver to the helper), with the amount-limited `PayoutEscrow.claim`. Only this
+    /// call can raise the helper's credit while its context is open (LPVaultSwap credits the helper only for a
+    /// liquidation the helper called, and `flashLiquidate` and `claimEscrowed` refuse to run inside an open context),
+    /// so the rise is this call's alone. A credit already standing before the call stays as it was, and a rise whose
+    /// claim the recipient cannot receive joins it; both are left to `claimEscrowed`.
     /// @param recipient The payout recipient.
     /// @param w The watch list with its balances and credits before the call.
     /// @custom:spec REQ-HELPER-001, REQ-HELPER-008, REQ-HELPER-010
@@ -528,12 +495,13 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
             // forge-lint: disable-next-line(calls-loop)
             if (balance > w.balances[i]) IERC20(w.tokens[i]).safeTransfer(recipient, balance - w.balances[i]);
             // forge-lint: disable-next-line(calls-loop)
-            if (w.credits[i] == 0 && IPayoutEscrow(w.escrow).claimable(w.tokens[i], address(this)) != 0) {
-                // The whole credit is this call's: it was 0 when the call started (REQ-HELPER-010). A claim the
-                // recipient cannot receive leaves the credit standing for `claimEscrowed`, so the call itself never
-                // fails on a residue.
+            uint256 credit = IPayoutEscrow(w.escrow).claimable(w.tokens[i], address(this));
+            if (credit > w.credits[i]) {
+                // Only the rise is this call's (REQ-HELPER-010): the credit read before the call stays standing. A
+                // claim the recipient cannot receive leaves the rise standing too, for `claimEscrowed`, so the call
+                // itself never fails on a residue.
                 // forge-lint: disable-next-line(calls-loop)
-                try IPayoutEscrow(w.escrow).claim(w.tokens[i], recipient) {} catch {}
+                try IPayoutEscrow(w.escrow).claim(w.tokens[i], recipient, credit - w.credits[i]) {} catch {}
             }
         }
     }

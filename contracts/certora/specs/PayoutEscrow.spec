@@ -7,8 +7,9 @@
  * `settlePending` residue, whose transfer failed, AMMN N2a): every credit comes from a deposit by LPVaultSwap while
  * LPVaultSwap holds the Lock and equals the tokens received, capped at the request; every claim is made by the
  * credited account (a borrower's wallet, `feeRecipient` or a liquidation's caller) while the Lock is free, pays exactly
- * its whole credit to the recipient it names and clears it, and reverts if the escrow's balance falls by more than
- * the credit; `totalClaimable[t]` is the sum of the credits and the escrow's balance covers it; no function pays any
+ * its whole credit (or, with the amount-limited overload, exactly the amount it names, never more than its credit) to
+ * the recipient it names and lowers the credit by what it paid, and reverts if the escrow's balance falls by more than
+ * the amount paid; `totalClaimable[t]` is the sum of the credits and the escrow's balance covers it; no function pays any
  * other address and no computed zero amount moves (Q-214, Q-217). The escrow reads no pause state, breaker or freeze
  * and calls no Avana contract other than the Lock, so a claim runs in every application state and for a frozen
  * account.
@@ -28,6 +29,7 @@ import "setup/LockModel.spec";
 methods {
     function deposit(address, address, uint256) external;
     function claim(address, address) external returns (uint256);
+    function claim(address, address, uint256) external returns (uint256);
     function claimable(address, address) external returns (uint256) envfree;
     function totalClaimable(address) external returns (uint256) envfree;
     function LP_VAULT_SWAP() external returns (address) envfree;
@@ -162,6 +164,40 @@ rule claimPaysWholeCreditToNamedRecipient(address t, address recipient, address 
     assert erc20Bal[t][recipient] == recipientBefore + credit, "the recipient did not receive the credit";
 }
 
+// PROP-052 verifies: INV-061, Q-214, REQ-ESCROW-020, REQ-ESCROW-021
+rule claimAmountPaysOnlyThatAmountToNamedRecipient(address t, address recipient, uint256 amount, address b2) {
+    env e;
+    address b = e.msg.sender;
+    require b != currentContract;
+    resetEscrowCall(recipient);
+    mathint credit = claimable(t, b);
+    mathint otherCredit = claimable(t, b2);
+    mathint total = totalClaimable(t);
+    mathint recipientBefore = erc20Bal[t][recipient];
+
+    uint256 paid = claim(e, t, recipient, amount);
+
+    assert lockHolder == 0, "a claim ran while the Lock was held";
+    assert recipient != 0 && recipient != currentContract, "a claim paid the zero address or the escrow";
+    assert amount > 0 && to_mathint(amount) <= credit, "a claim paid zero or more than the caller's credit";
+    assert paid == amount, "the claim reported other than the amount";
+    assert to_mathint(claimable(t, b)) == credit - amount, "the credit fell by other than the amount";
+    assert to_mathint(totalClaimable(t)) == total - amount, "the total fell by other than the amount";
+    assert b2 != b => to_mathint(claimable(t, b2)) == otherCredit, "a claim changed another borrower's credit";
+    assert paidInCall == to_mathint(amount) && !paidOther && !zeroAmountMoved, "the claim paid other than the amount to the recipient";
+    assert erc20Bal[t][recipient] == recipientBefore + amount, "the recipient did not receive the amount";
+}
+
+// PROP-052 verifies: INV-061, Q-214, REQ-ESCROW-021
+rule claimAmountAboveCreditReverts(address t, address recipient, uint256 amount) {
+    env e;
+    require to_mathint(amount) > to_mathint(claimable(t, e.msg.sender));
+
+    claim@withrevert(e, t, recipient, amount);
+
+    assert lastReverted, "a claim paid more than the caller's credit";
+}
+
 // PROP-052 verifies: INV-061, Q-214
 rule onlyTheBorrowerMovesItsCredit(method f, address t, address b) filtered { f -> !f.isView } {
     env e;
@@ -170,7 +206,8 @@ rule onlyTheBorrowerMovesItsCredit(method f, address t, address b) filtered { f 
 
     f(e, args);
 
-    assert to_mathint(claimable(t, b)) < before => (f.selector == sig:claim(address, address).selector && e.msg.sender == b),
+    assert to_mathint(claimable(t, b)) < before => ((f.selector == sig:claim(address, address).selector
+        || f.selector == sig:claim(address, address, uint256).selector) && e.msg.sender == b),
         "a credit fell other than by the borrower's own claim";
     assert to_mathint(claimable(t, b)) > before => (f.selector == sig:deposit(address, address, uint256).selector
         && e.msg.sender == LP_VAULT_SWAP()), "a credit rose other than by an LPVaultSwap deposit";
@@ -181,6 +218,13 @@ rule claimIsReachable(address t, address recipient) {
     env e;
     uint256 amount = claim(e, t, recipient);
     satisfy amount > 0;
+}
+
+// PROP-052 verifies: INV-061, Q-214, REQ-ESCROW-020
+rule partialClaimIsReachable(address t, address recipient, uint256 amount) {
+    env e;
+    uint256 paid = claim(e, t, recipient, amount);
+    satisfy paid > 0 && claimable(t, e.msg.sender) > 0;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

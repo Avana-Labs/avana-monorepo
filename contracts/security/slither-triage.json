@@ -4017,7 +4017,7 @@
       "check": "unused-return",
       "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
       "function": "FlashLiquidatorBase._forwardTokens(address,FlashLiquidatorBase.Watch)",
-      "reason": "PayoutEscrow.claim pays the helper's whole credit of the token to the recipient and returns the amount; the helper reads nothing back, since the credit was 0 when the call started and the escrow pays it straight to the caller (REQ-HELPER-010). The claim runs in try/catch so a recipient that cannot receive leaves the credit for claimEscrowed. Covered by TEST-174 (escrowedIntermediateClaimedToTheCaller, standingCreditClearedBeforeTheCall), TEST-289.",
+      "reason": "PayoutEscrow.claim(token, recipient, amount) pays exactly the amount asked, the rise of the helper's credit of the token over this call, and returns it; the helper reads nothing back, since the escrow pays that amount straight to the recipient or reverts (REQ-HELPER-010, REQ-ESCROW-020). The claim runs in try/catch so a recipient that cannot receive leaves the rise standing for claimEscrowed. Covered by TEST-174 (escrowedIntermediateClaimedToTheCaller, onlyTheCallsIncreaseClaimedToTheCaller, helperAndFeeRecipientBlockedCallerGetsOnlyItsOwn), TEST-289.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "fixmed (adversarial-review fixes 2026-11-12); new site"
     },
@@ -4905,14 +4905,6 @@
       "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
       "function": "RiskModuleBreakerLogic._tripped(uint32,uint32,bytes32)",
       "reason": "Three MarketRegistry.lastBreachAt views, one per temporary reason (ORACLE, POOL_SHARE, POOL_DEPTH), a fixed bound; per-reason breach times of SPEC-BRK-007. Covered by TEST-228."
-    },
-    {
-      "fingerprint": "dcb9d086dfed964b",
-      "check": "calls-loop",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "FlashLiquidatorBase._clearStanding(FlashLiquidatorBase.Watch)",
-      "reason": "Bounded loop over the helper's watch list: the market's tokens (at most MAX_POOL_TOKENS = 8) and the intermediates() of each token's two registry-listed routes, each once (_watch). It runs only when some watched token has a standing PayoutEscrow credit; the claim recipient (feeRecipient on the public helper, FUNDING_SAFE on the operator variant) is then read once, before the loop. For each token with a standing credit it makes one PayoutEscrow.claim to that recipient, in try/catch, so a failed claim leaves the credit standing for claimEscrowed and never stops the liquidation (REQ-HELPER-010, audit finding L-04). It runs after the call context opens, so a token callback during a claim meets ContextActive. Covered by TEST-174: standingCreditClearedBeforeTheCall, unclearableStandingCreditNeverGoesToTheCaller (the accepted remainder) and standingClaimRunsInsideTheContext.",
-      "approval": "approved (Josue, 2026-11-15)"
     },
     {
       "fingerprint": "50d44d492e01f527",
