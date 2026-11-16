@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import type { RewardsPromoTabId, RewardsQuest } from "@/app/lib/data/rewards/catalog"
-import { placeholderQuestsByTab } from "@/app/lib/data/rewards/quests"
+import { questHref, questsByTab as buildQuestsByTab } from "@/app/lib/data/rewards/quests"
+import { useWalletRewards } from "@/app/lib/rewards/use-wallet-rewards"
 import { useAvanaSessions } from "@/app/lib/avana-session/avana-sessions-provider"
 import { PortfolioStatCards } from "@/app/dashboard/portfolio-stat-cards"
 import { PortfolioRewardsCards } from "@/app/dashboard/_rewards-components/rewards-balance-hero"
@@ -18,7 +19,6 @@ import { primaryCtaClass } from "@/app/components/action-page/action-cta"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { UnderlineTabStrip } from "@/app/components/tab-primitives"
 import { RewardsPromoContent, RewardsQuestSection } from "@/app/dashboard/_rewards-components/quests-tab"
-import { MerklRewardsSection } from "@/app/dashboard/_rewards-components/merkl-rewards-section"
 
 type DashboardPromoTabId = Extract<RewardsPromoTabId, "getting-started" | "lend" | "borrow" | "referrals">
 type DashboardAccountTabId = Extract<RewardsPromoTabId, "lend" | "borrow">
@@ -49,7 +49,13 @@ function resolveDashboardTab(tab: string | null): DashboardTabId {
   }
 }
 
-function DashboardRewardsTab({ questsByTab }: { questsByTab: Record<RewardsPromoTabId, RewardsQuest[]> }) {
+function DashboardRewardsTab({
+  questsByTab,
+  onTaskAction,
+}: {
+  questsByTab: Record<RewardsPromoTabId, RewardsQuest[]>
+  onTaskAction: (questId: string) => Promise<unknown>
+}) {
   const sections: Array<{ id: DashboardPromoTabId; title: string }> = [
     { id: "getting-started", title: "Getting Started" },
     { id: "lend", title: "Lend Rewards" },
@@ -62,15 +68,11 @@ function DashboardRewardsTab({ questsByTab }: { questsByTab: Record<RewardsPromo
       {sections.map(({ id, title }) => {
         const quests = questsByTab[id] ?? []
         if (quests.length === 0) return null
-        return <RewardsQuestSection key={id} title={title} quests={quests} onTaskAction={noTaskAction} />
+        return <RewardsQuestSection key={id} title={title} quests={quests} onTaskAction={onTaskAction} />
       })}
-      <MerklRewardsSection />
     </div>
   )
 }
-
-/** Quests are placeholders until a rewards source exists: their actions do nothing. */
-const noTaskAction = async () => undefined
 
 export function DashboardPageClient() {
   const router = useRouter()
@@ -85,7 +87,20 @@ export function DashboardPageClient() {
     setActiveDashboardTab(resolveDashboardTab(searchTab))
   }, [searchTab])
 
-  const questsByTab = useMemo(() => placeholderQuestsByTab(t("Coming soon")), [t])
+  const rewards = useWalletRewards(walletId)
+  const questsByTab = useMemo(
+    () =>
+      buildQuestsByTab({ comingSoon: t("Coming soon"), earned: t("Earned") }, rewards?.completedQuests ?? new Set()),
+    [t, rewards],
+  )
+  // A quest's button opens the page where it is done; quests that are not live have no action.
+  const openQuest = useCallback(
+    async (questId: string) => {
+      const href = questHref(questId)
+      if (href) router.push(href)
+    },
+    [router],
+  )
 
   const handleDashboardTabChange = useCallback(
     (tab: DashboardTabId) => {
@@ -97,7 +112,6 @@ export function DashboardPageClient() {
     [router],
   )
 
-  // No rewards source exists yet: nothing is earned or claimable.
   const combinedActivityRows = [
     ...mapTransactionHistoryToActivityRows(avana.borrow.transactionHistory, avana.borrow.state.markets),
     ...buildLendActivityHistory(avana.lend.walletId, avana.lend.transactionHistory, avana.lend.state),
@@ -120,8 +134,9 @@ export function DashboardPageClient() {
 
           <aside className="min-w-0 lg:col-start-2 lg:row-start-2 lg:pt-8">
             <PortfolioRewardsCards
-              earnedAmount={0}
-              claimableAmount={0}
+              earnedAmount={rewards?.earnedPoints ?? 0}
+              // Nothing is redeemed yet, so every earned point is available.
+              claimableAmount={rewards?.earnedPoints ?? 0}
               activeTab={activeDashboardTab}
               showQuickActions
             />
@@ -158,12 +173,12 @@ export function DashboardPageClient() {
                 {activeDashboardTab === "wallet" ? (
                   <DashboardWalletTab walletId={walletId} />
                 ) : activeDashboardTab === "rewards" ? (
-                  <DashboardRewardsTab questsByTab={questsByTab} />
+                  <DashboardRewardsTab questsByTab={questsByTab} onTaskAction={openQuest} />
                 ) : (
                   <RewardsPromoContent
                     activePromoTab={activeDashboardTab}
                     questsByTab={questsByTab}
-                    onTaskAction={noTaskAction}
+                    onTaskAction={openQuest}
                     returnHref={`/dashboard?tab=${activeDashboardTab}`}
                     showRewards={false}
                   />

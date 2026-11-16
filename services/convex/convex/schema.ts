@@ -624,6 +624,28 @@ export default defineSchema({
   }).index("by_wallet", ["wallet"]),
 
   /**
+   * Reward points ledger: one row per award, unique by (wallet, key) so replaying a log or an intent never awards twice.
+   * `quest` rows come from the wallet's first on-chain deposit, borrow, repay or pledge; `fee` rows from verified fee
+   * payments. Tenure points are not stored: they are computed from the membership at read time (lib/rewards.ts).
+   */
+  rewardEvents: defineTable({
+    wallet: address,
+    kind: v.union(v.literal("quest"), v.literal("fee")),
+    key: v.string(),
+    points: v.number(),
+    at: v.number(),
+  }).index("by_wallet_key", ["wallet", "key"]),
+
+  /** Running sums of a wallet's `rewardEvents`, so a read never scans the ledger; `questIds` are the completed quests. */
+  rewardTotals: defineTable({
+    wallet: address,
+    questPoints: v.number(),
+    feePoints: v.number(),
+    questIds: v.array(v.string()),
+    updatedAt: v.number(),
+  }).index("by_wallet", ["wallet"]),
+
+  /**
    * Shared per-key rate-limit buckets for the Next API route guards (SIWE nonce/verify/
    * dev-token). Must live here, not in process memory, so a horizontally-scaled deploy
    * enforces ONE limit across instances. `resetAt` = epoch ms the window ends.

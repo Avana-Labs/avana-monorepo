@@ -1336,6 +1336,9 @@ const dict: TranslationDictionary = {
   "View wallet": "查看钱包",
   "Wallet balances": "钱包余额",
   "Wallet Value": "钱包价值",
+  "{points} pts": "{points} 积分",
+  "Total points you've earned from quests, membership time and fees paid.": "通过任务、会员时长和已付费用获得的积分总数。",
+  "Points you can redeem for a temporary fee discount.": "可兑换临时费用折扣的积分。",
   "Fee discount": "费用折扣",
   "{bps} bps off": "减免 {bps} bps",
   "Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days.": "会员时间越长，Avana 费用越低：满 30 天减免 1 bps，满 90 天减免 2 bps，满 180 天减免 3 bps。",
@@ -1398,7 +1401,6 @@ const dict: TranslationDictionary = {
   "Available to deposit": "可存入",
   "against {pool}": "对 {pool}",
   Locked: "已锁定",
-  "Merkl Rewards": "Merkl 奖励",
   "Next rewards": "下一批奖励",
   "Open on Launch Date": "在发布日开启",
   "Previous rewards": "上一批奖励",
@@ -1441,9 +1443,6 @@ const dict: TranslationDictionary = {
   "Prices may be stale": "价格可能已过时",
   "The current annual borrow rate on this debt. Below, the interest accrued so far, ticking live.":
     "该债务当前的年化借款利率。下方为已累计的利息，实时跳动更新。",
-  "Total AVA you've earned across completed quests and staking rewards.":
-    "您通过已完成的任务和质押奖励累计赚取的 AVA 总量。",
-  "AVA you can claim to your wallet right now.": "您现在可领取到钱包的 AVA。",
   "Core Concepts": "核心概念",
   "What is Avana?": "什么是 Avana？",
   "Protocol overview": "协议概览",

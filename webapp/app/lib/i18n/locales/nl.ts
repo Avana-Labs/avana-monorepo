@@ -1277,6 +1277,9 @@ const dict: TranslationDictionary = {
   "View wallet": "Wallet bekijken",
   "Wallet balances": "Walletsaldi",
   "Wallet Value": "Walletwaarde",
+  "{points} pts": "{points} punten",
+  "Total points you've earned from quests, membership time and fees paid.": "Totaal aantal punten uit opdrachten, lidmaatschapsduur en betaalde kosten.",
+  "Points you can redeem for a temporary fee discount.": "Punten die kunnen worden ingewisseld voor een tijdelijke kostenkorting.",
   "Fee discount": "Kostenkorting",
   "{bps} bps off": "{bps} bps korting",
   "Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days.": "De Avana-kosten dalen met de duur van het lidmaatschap: 1 bps korting na 30 dagen, 2 na 90 dagen en 3 na 180 dagen.",
@@ -1359,7 +1362,6 @@ const dict: TranslationDictionary = {
   "Available to deposit": "Beschikbaar om te storten",
   "against {pool}": "tegen {pool}",
   Locked: "Vergrendeld",
-  "Merkl Rewards": "Merkl-beloningen",
   "Next rewards": "Volgende beloningen",
   "Open on Launch Date": "Opent op de lanceringsdatum",
   "Previous rewards": "Vorige beloningen",
@@ -1411,9 +1413,6 @@ const dict: TranslationDictionary = {
   "Prices may be stale": "Prijzen kunnen verouderd zijn",
   "The current annual borrow rate on this debt. Below, the interest accrued so far, ticking live.":
     "De huidige jaarlijkse leenrente op deze schuld. Hieronder de tot nu toe opgebouwde rente, die live oploopt.",
-  "Total AVA you've earned across completed quests and staking rewards.":
-    "Totale AVA die je hebt verdiend uit voltooide quests en staking-beloningen.",
-  "AVA you can claim to your wallet right now.": "AVA die je op dit moment naar je wallet kunt claimen.",
   "Core Concepts": "Kernconcepten",
   "What is Avana?": "Wat is Avana?",
   "Protocol overview": "Protocoloverzicht",

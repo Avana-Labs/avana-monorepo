@@ -11,19 +11,18 @@ import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { DashboardQuickActions, type DashboardQuickActionsTab } from "@/app/dashboard/dashboard-quick-actions"
 
 /**
- * Reward balances are denominated in AVA (the card shows the AVA coin icon), not
- * USD — so format the real earned/claimable totals as AVA amounts rather than a
- * hardcoded "$0". (#26b)
+ * Reward balances are points (not USD, and not a token): format the earned and claimable totals as whole points.
  */
-function formatAva(amount: number): string {
+function formatPoints(amount: number, template: string): string {
   const safe = Number.isFinite(amount) ? amount : 0
-  return `${safe.toLocaleString(undefined, { maximumFractionDigits: 0 })} AVA`
+  return template.replace("{points}", safe.toLocaleString(undefined, { maximumFractionDigits: 0 }))
 }
 
-function AvanaCoin() {
+/** The rewards illustration of stacked coins that stands for points. */
+function PointsIcon() {
   return (
     <Image
-      src="/asset-icons/ava.png"
+      src="/asset-rewards/7.png"
       alt=""
       width={32}
       height={32}
@@ -56,7 +55,7 @@ function FeeCard({
       </div>
       <div className="mt-3 flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <AvanaCoin />
+          <PointsIcon />
           <span className="truncate text-[24px] font-normal leading-none tracking-[-0.01em] text-foreground sm:text-[26px]">
             {hidden ? "••••" : value}
           </span>
@@ -80,9 +79,9 @@ export function PortfolioRewardsCards({
   showQuickActions = false,
 }: {
   claimHref?: string
-  /** Total AVA earned across completed quests. */
+  /** Total points earned: tenure, quests and fees. */
   earnedAmount?: number
-  /** AVA currently claimable. */
+  /** Points available to redeem for a fee discount. */
   claimableAmount?: number
   activeTab?: DashboardQuickActionsTab
   /** When true, render the compact quick-action icon rail under the claim cards. */
@@ -103,15 +102,15 @@ export function PortfolioRewardsCards({
       <div className="space-y-3">
         <FeeCard
           label={t("Total Rewards earned")}
-          value={formatAva(earnedAmount)}
+          value={formatPoints(earnedAmount, t("{points} pts"))}
           hidden={!showDollarAmounts}
-          help={t("Total AVA you've earned across completed quests and staking rewards.")}
+          help={t("Total points you've earned from quests, membership time and fees paid.")}
         />
         <FeeCard
           label={t("Claimable Rewards")}
-          value={formatAva(claimableAmount)}
+          value={formatPoints(claimableAmount, t("{points} pts"))}
           hidden={!showDollarAmounts}
-          help={t("AVA you can claim to your wallet right now.")}
+          help={t("Points you can redeem for a temporary fee discount.")}
           action={
             claimHref ? (
               <Button asChild size="sm" className="shrink-0 gap-2 font-normal [&_svg]:size-4">

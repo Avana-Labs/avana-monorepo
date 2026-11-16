@@ -1324,6 +1324,9 @@ const dict: TranslationDictionary = {
   "View wallet": "Voir le portefeuille",
   "Wallet balances": "Soldes du portefeuille",
   "Wallet Value": "Valeur du portefeuille",
+  "{points} pts": "{points} points",
+  "Total points you've earned from quests, membership time and fees paid.": "Total des points gagnés grâce aux quêtes, à l'ancienneté et aux frais payés.",
+  "Points you can redeem for a temporary fee discount.": "Points échangeables contre une remise temporaire sur les frais.",
   "Fee discount": "Remise sur les frais",
   "{bps} bps off": "{bps} bps de remise",
   "Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days.": "Les frais Avana baissent avec l'ancienneté : 1 bps de remise après 30 jours, 2 après 90 jours et 3 après 180 jours.",
@@ -1411,7 +1414,6 @@ const dict: TranslationDictionary = {
   "Available to deposit": "Disponible au dépôt",
   "against {pool}": "contre {pool}",
   Locked: "Verrouillé",
-  "Merkl Rewards": "Récompenses Merkl",
   "Next rewards": "Récompenses suivantes",
   "Open on Launch Date": "Ouvre le jour du lancement",
   "Previous rewards": "Récompenses précédentes",
@@ -1461,9 +1463,6 @@ const dict: TranslationDictionary = {
   "Prices may be stale": "Les prix peuvent être obsolètes",
   "The current annual borrow rate on this debt. Below, the interest accrued so far, ticking live.":
     "Le taux d'emprunt annuel actuel sur cette dette. Ci-dessous, les intérêts courus jusqu'à présent, qui s'actualisent en direct.",
-  "Total AVA you've earned across completed quests and staking rewards.":
-    "Total d'AVA que vous avez gagné sur les quêtes terminées et les récompenses de staking.",
-  "AVA you can claim to your wallet right now.": "AVA que vous pouvez réclamer vers votre portefeuille dès maintenant.",
   "Core Concepts": "Concepts de base",
   "What is Avana?": "Qu'est-ce qu'Avana ?",
   "Protocol overview": "Aperçu du protocole",
