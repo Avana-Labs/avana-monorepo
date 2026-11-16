@@ -16,14 +16,17 @@ import { executeLendOnChain } from "./chain-execution"
 import { lendHubAssets } from "./chain-lend-refs"
 import { chainBorrowRefs } from "@/app/lib/borrow-system/chain-refs"
 import { connectedBorrowWallet, viemBorrowChain } from "@/app/lib/borrow-system/chain-execution-viem"
+import { requestLendPositionsRefresh } from "./use-chain-lend-positions"
 import { emptyLendSystemState, mergeConvexLendSnapshots, type LendConvexSnapshot } from "./market-hydration"
+import { mergeChainLendPositions, type ChainLendRead } from "./chain-lend-positions"
+import { buildLendPageData, buildLendWalletSnapshot, buildPortfolioLendData } from "./read-model"
 
 export { emptyLendSystemState }
 
 /**
- * Lend state of one wallet: the Hub assets services/convex reports and the wallet's supplies.
- * Supplies and wallet balances stay empty until the chain reads (Lend Spoke
- * `getUserSuppliedAssets`, ERC-20 `balanceOf`) are wired; actions answer "not available yet".
+ * Lend state of one wallet: the Hub assets services/convex reports, and the wallet's supplies and token balances read
+ * from the chain (Lend Spoke `getUserSuppliedAssets`, ERC-20 `balanceOf`, through `hydratePositions`). Actions answer
+ * "not available yet".
  */
 export function useLendSession({
   walletId,
@@ -38,6 +41,7 @@ export function useLendSession({
   const [transactionHistory] = useState<LendTransactionHistoryItem[]>([])
   const [transactionReceipts] = useState<LendTransactionResult[]>([])
   const [isPending, setIsPending] = useState(false)
+  // The latest state, for the adapters' builders without re-creating them on every change.
   const stateRef = useRef(state)
   stateRef.current = state
 
@@ -53,17 +57,35 @@ export function useLendSession({
               chain: viemBorrowChain,
               wallet: connectedBorrowWallet,
               state: () => stateRef.current,
+              onConfirmed: requestLendPositionsRefresh,
             },
             intent,
           ),
       }),
     [injectedTransactionAdapter],
   )
-  const readAdapter = useMemo(() => injectedReadAdapter ?? new ProductionLendReadAdapter(), [injectedReadAdapter])
+  const readAdapter = useMemo(
+    () =>
+      injectedReadAdapter ??
+      new ProductionLendReadAdapter({
+        readWalletSnapshot: async (id) => buildLendWalletSnapshot(id, stateRef.current, transactionHistory),
+        readMarkets: async () => Object.values(stateRef.current.markets),
+        readLendPage: async (id) => buildLendPageData(id, stateRef.current),
+        readPortfolioLend: async (id) => buildPortfolioLendData(id, stateRef.current, transactionHistory),
+      }),
+    [injectedReadAdapter, transactionHistory],
+  )
 
   const hydrateMarketData = useCallback((snapshots: readonly LendConvexSnapshot[]) => {
     setState((prev) => mergeConvexLendSnapshots(prev, snapshots))
   }, [])
+  /** The wallet's supplies and token balances, read from the chain (`chain-lend-positions.ts`). */
+  const hydratePositions = useCallback(
+    (read: ChainLendRead) => {
+      setState((prev) => mergeChainLendPositions(prev, walletId, read))
+    },
+    [walletId],
+  )
 
   const createIntent = useCallback(
     (action: LendAction) => transactionAdapter.createIntent(action),
@@ -103,6 +125,7 @@ export function useLendSession({
       transactionHistory,
       transactionReceipts,
       hydrateMarketData,
+      hydratePositions,
       createIntent,
       previewTransaction,
       executeTransaction,
@@ -118,6 +141,7 @@ export function useLendSession({
       transactionHistory,
       transactionReceipts,
       hydrateMarketData,
+      hydratePositions,
       createIntent,
       previewTransaction,
       executeTransaction,
