@@ -212,19 +212,24 @@ export function liquidationRisk(slug: string, day: string, last: LiquidationWind
   };
 }
 
+/** Days the cashflow rows total. */
+export const CASHFLOW_ROW_DAYS = 90;
+
 /**
- * Interest paid over the last 12 months from daily Hub samples: each day's owed amount × that day's drawn rate /
- * 365, valued at that day's price. Lenders receive it less the reserve factor; the Hub keeps the rest. A Spoke's
- * cashflow uses its own owed amount, so the Spokes' cashflows add up to the Hub's.
+ * Interest paid from daily Hub samples: each day's owed amount × that day's drawn rate / 365, valued at that day's
+ * price. Lenders receive it less the reserve factor; the Hub keeps the rest. A Spoke's cashflow uses its own owed
+ * amount, so the Spokes' cashflows add up to the Hub's. The bars cover every day given (12 months); the rows are the
+ * last 90 days, the period the card's 1D / 30D / 90D columns are scaled from.
  */
 export function cashflow(days: readonly { t: number; hub: Values; owed?: string }[], decimals: number, liquidityFeeBps: number): Cashflow {
   const monthly = new Map<string, number>();
+  const rowsFrom = (days.at(-1)?.t ?? 0) - CASHFLOW_ROW_DAYS * 86_400;
   let interest = 0;
   for (const d of days) {
     const owed = d.owed ?? d.hub.owed ?? "0";
     const rateApr = rayToAprPct(d.hub.drawnRateRay ?? "0") / 100;
     const value = (usd(owed, decimals, d.hub.priceUsd8 ?? "0") * rateApr) / 365;
-    interest += value;
+    if (d.t > rowsFrom) interest += value;
     const month = new Date(d.t * 1000).toISOString().slice(0, 7) + "-01";
     monthly.set(month, (monthly.get(month) ?? 0) + value);
   }

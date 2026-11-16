@@ -5,7 +5,6 @@ import type { ActionSuccessUi } from "@/app/lib/action-system/contracts"
 import { ActionFooter } from "@/app/components/action-page/action-amount-card"
 import { TransactionReceipt, type TransactionReceiptData } from "@/app/components/action-page/transaction-receipt"
 import { syntheticBlockFromHash } from "@/app/lib/action-system/synthetic-receipt"
-import { avanaPlatformFeeUsd } from "@/app/lib/action-system/formatters"
 
 export function ActionSuccessStage({
   success,
@@ -40,10 +39,8 @@ export function ActionSuccessStage({
     rateLabel: receipt?.rateLabel ?? null,
     rateValue: receipt?.rateValue ?? null,
     marketValue: receipt?.marketValue ?? null,
-    // Swaps carry their real quote fee on the receipt context; every other action
-    // uses the canonical flat fee so the inline receipt matches the estimate and
-    // the permalink instead of drifting to a hash-derived amount.
-    networkFeeUsd: hash ? (receipt?.networkFeeUsd ?? avanaPlatformFeeUsd(receipt?.amountUsd ?? 0)) : null,
+    // The front-end fee the action's mapper computed (Q-409), the same figure as the review row.
+    platformFeeUsd: hash ? (receipt?.platformFeeUsd ?? null) : null,
     block: hash ? syntheticBlockFromHash(hash) : null,
     dateMs,
     hash,
