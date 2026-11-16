@@ -108,11 +108,10 @@ contract FlashLiquidatorOperatorUnitTest is FlashLiquidatorFixture {
         opHelper.claimEscrowed(address(usdtToken));
     }
 
-    /// @notice A credit standing before an operator call is cleared to the Safe when that call opens, so the call's own
-    /// escrowed residue is a new credit, claimed to the Safe in the same call: the Safe ends with both and nothing is
-    /// left in the PayoutEscrow.
-    // TEST-174 verifies: REQ-HELPER-010, REQ-HELPER-011
-    function test_TEST_174_operatorStandingCreditClearedToSafe() public {
+    /// @notice A credit standing before an operator call stays standing: the call claims to the Safe only the rise of
+    /// the helper's credit over the call, and the signer claims the standing credit to the Safe with `claimEscrowed`.
+    // TEST-174 verifies: REQ-HELPER-010, REQ-HELPER-011, REQ-ESCROW-020
+    function test_TEST_174_operatorClaimsOnlyItsIncreaseToSafe() public {
         usdtToken.setBlocked(address(opHelper), true);
         usdtToken.setBlocked(safe, true);
         lvs.addResidue(usdtToken, 0.4e6);
@@ -121,7 +120,10 @@ contract FlashLiquidatorOperatorUnitTest is FlashLiquidatorFixture {
         usdtToken.setBlocked(safe, false);
         // The second call escrows its own 0.4 USDT residue again.
         _signerLiquidates(_exampleRequest());
-        assertEq(escrow.claimable(address(usdtToken), address(opHelper)), 0, "standing and new credit both claimed");
+        assertEq(usdtToken.balanceOf(safe), 0.4e6, "only the call's own residue to the Safe");
+        assertEq(escrow.claimable(address(usdtToken), address(opHelper)), 0.4e6, "the standing credit stays");
+        vm.prank(signer);
+        assertEq(opHelper.claimEscrowed(address(usdtToken)), 0.4e6);
         assertEq(usdtToken.balanceOf(safe), 0.8e6, "both to the Safe");
         assertEq(usdtToken.balanceOf(signer), 0);
     }

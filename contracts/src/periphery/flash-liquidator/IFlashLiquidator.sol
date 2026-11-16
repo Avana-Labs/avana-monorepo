@@ -83,13 +83,14 @@ interface IFlashLiquidator is IFlashLiquidatorErrors, IFlashLiquidatorEvents {
         bytes calldata params
     ) external returns (bool success);
 
-    /// @notice Claims the helper's PayoutEscrow credit of `token` to the variant's claim recipient: a credit that stood
-    /// before some call and so could not be matched to its caller (`flashLiquidate` itself claims every credit its own
-    /// call created to its recipient).
-    /// @dev Public helper: callable by anyone, pays `feeRecipient` read from the ParameterStore (as LPVaultSwap reads
-    /// it), reverting `InvalidFeeRecipient` while it is unset. Operator variant: `SIGNER` only (`NotSigner`), pays
-    /// `FUNDING_SAFE`. The escrow is the one LPVaultSwap credits (`LP_VAULT_SWAP.PAYOUT_ESCROW()`); it reverts
-    /// `NothingToClaim` for a zero credit and `LockHeld` while the Lock is held.
+    /// @notice Claims the helper's whole PayoutEscrow credit of `token` to the variant's claim recipient: what a call's
+    /// recipient could not receive (`flashLiquidate` itself claims the rise of the credit over its own call to its
+    /// recipient, with the amount-limited `PayoutEscrow.claim`, and leaves any earlier credit standing).
+    /// @dev Reverts `ContextActive` while a `flashLiquidate` context is open, so a token callback cannot move an open
+    /// call's new credit. Public helper: callable by anyone, pays `feeRecipient` read from the ParameterStore (as
+    /// LPVaultSwap reads it), reverting `InvalidFeeRecipient` while it is unset. Operator variant: `SIGNER` only
+    /// (`NotSigner`), pays `FUNDING_SAFE`. The escrow is the one LPVaultSwap credits (`LP_VAULT_SWAP.PAYOUT_ESCROW()`);
+    /// it reverts `NothingToClaim` for a zero credit and `LockHeld` while the Lock is held.
     /// @param token The credited token.
     /// @return amount Amount claimed.
     /// @custom:spec REQ-HELPER-010, REQ-HELPER-011

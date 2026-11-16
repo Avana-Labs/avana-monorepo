@@ -116,28 +116,34 @@ contract FlashLiquidatorResiduesUnitTest is FlashLiquidatorFixture {
         assertEq(weth.balanceOf(caller), 0.4e18, "to the caller");
     }
 
-    // TEST-174 verifies: REQ-HELPER-010
-    /// @notice A credit standing before the call is not this caller's: the call first claims it to `claimEscrowed`'s
-    /// recipient, so the credit the call creates is the caller's alone and is claimed to it (audit finding L-04, fresh
-    /// audit 2026-11-15: a later caller's residue was merged into the standing credit and went to `feeRecipient`).
-    function test_TEST_174_standingCreditClearedBeforeTheCall() public {
+    // TEST-174 verifies: REQ-HELPER-010, REQ-ESCROW-020
+    /// @notice Audit finding L-04 (fresh audit 2026-11-15), option A: a credit standing before the call is not this
+    /// caller's, so the call claims to its caller only the rise of the helper's credit over the call, with the
+    /// amount-limited `PayoutEscrow.claim`. The standing 0.4 WETH is neither paid to the caller nor merged with its
+    /// residue, and stays for `claimEscrowed`.
+    function test_TEST_174_onlyTheCallsIncreaseClaimedToTheCaller() public {
         weth.setBlocked(address(helper), true);
         weth.setBlocked(caller, true);
         lvs.addResidue(weth, 0.4e18);
         _run(address(helper));
-        assertEq(escrow.claimable(address(weth), address(helper)), 0.4e18, "caller blocked: credit stands");
+        assertEq(escrow.claimable(address(weth), address(helper)), 0.4e18, "caller blocked: the credit stands");
         weth.setBlocked(caller, false);
+        // The next call is paid two WETH residues, 0.4 and 0.3, both escrowed for the helper.
+        lvs.addResidue(weth, 0.3e18);
         _run(address(helper));
-        assertEq(weth.balanceOf(feeRecipient), 0.4e18, "the standing credit went where claimEscrowed sends it");
-        assertEq(weth.balanceOf(caller), 0.4e18, "the later caller received its own residue");
-        assertEq(escrow.claimable(address(weth), address(helper)), 0, "nothing merged, nothing left");
+        assertEq(weth.balanceOf(caller), 0.7e18, "the caller received exactly its own residues");
+        assertEq(escrow.claimable(address(weth), address(helper)), 0.4e18, "the standing credit is untouched");
+        assertEq(weth.balanceOf(feeRecipient), 0, "nothing claimed to feeRecipient during the call");
+        assertEq(helper.claimEscrowed(address(weth)), 0.4e18, "the standing credit goes through claimEscrowed");
+        assertEq(weth.balanceOf(feeRecipient), 0.4e18, "to feeRecipient");
+        assertEq(escrow.claimable(address(weth), address(helper)), 0, "nothing left");
     }
 
-    // TEST-174 verifies: REQ-HELPER-010
-    /// @notice The accepted remainder of audit finding L-04: with a token that blocks both the helper and `feeRecipient`,
-    /// the standing credit cannot be cleared, the later call's own credit joins it, and the whole credit goes only to
-    /// `feeRecipient` through `claimEscrowed`, never to either caller (REQ-HELPER-010).
-    function test_TEST_174_unclearableStandingCreditNeverGoesToTheCaller() public {
+    // TEST-174 verifies: REQ-HELPER-010, REQ-ESCROW-020
+    /// @notice A token that blocks both the helper and `feeRecipient` (the remainder option B of L-04 left): the later
+    /// caller still receives only its own residue, the standing credit stays standing while `feeRecipient` cannot
+    /// receive it, and `claimEscrowed` pays exactly the standing credit once it can.
+    function test_TEST_174_helperAndFeeRecipientBlockedCallerGetsOnlyItsOwn() public {
         weth.setBlocked(address(helper), true);
         weth.setBlocked(caller, true);
         lvs.addResidue(weth, 0.4e18);
@@ -145,31 +151,40 @@ contract FlashLiquidatorResiduesUnitTest is FlashLiquidatorFixture {
         weth.setBlocked(caller, false);
         weth.setBlocked(feeRecipient, true);
         _run(address(helper));
-        assertEq(weth.balanceOf(caller), 0, "a standing credit never goes to a later caller");
+        assertEq(weth.balanceOf(caller), 0.4e18, "the later caller received its own residue");
         assertEq(weth.balanceOf(address(helper)), 0, "the helper holds nothing");
-        assertEq(escrow.claimable(address(weth), address(helper)), 0.8e18, "both credits stand");
+        assertEq(escrow.claimable(address(weth), address(helper)), 0.4e18, "only the standing credit remains");
+        vm.expectRevert();
+        helper.claimEscrowed(address(weth));
         weth.setBlocked(feeRecipient, false);
-        assertEq(helper.claimEscrowed(address(weth)), 0.8e18);
-        assertEq(weth.balanceOf(feeRecipient), 0.8e18, "to feeRecipient");
+        assertEq(helper.claimEscrowed(address(weth)), 0.4e18);
+        assertEq(weth.balanceOf(feeRecipient), 0.4e18, "to feeRecipient");
+        assertEq(weth.balanceOf(caller), 0.4e18, "the caller never received the standing credit");
     }
 
     // TEST-174 verifies: REQ-HELPER-010, REQ-HELPER-004
-    /// @notice The standing credit is cleared only once the call's context is open: a token callback during that claim
-    /// that tries to reenter the helper meets `ContextActive`.
-    function test_TEST_174_standingClaimRunsInsideTheContext() public {
+    /// @notice `claimEscrowed` refuses to run while a call's context is open: a market-token callback during the call
+    /// that tries it meets `ContextActive`, so it cannot move the call's new WETH credit, or the standing one, to
+    /// `feeRecipient` before the call claims its rise to the caller.
+    function test_TEST_174_claimEscrowedRefusedInsideTheContext() public {
         weth.setBlocked(address(helper), true);
         weth.setBlocked(caller, true);
         lvs.addResidue(weth, 0.4e18);
         _run(address(helper));
         weth.setBlocked(caller, false);
         ReentryRecorder recorder =
-            new ReentryRecorder(address(helper), abi.encodeCall(helper.flashLiquidate, (_exampleRequest())));
-        weth.setHook(address(recorder), abi.encodeCall(ReentryRecorder.poke, ()));
+            new ReentryRecorder(address(helper), abi.encodeCall(helper.claimEscrowed, (address(weth))));
+        // The USDT residue moves to the helper and on to the caller before the WETH credit is claimed.
+        lvs.addResidue(usdtToken, 0.2e6);
+        usdtToken.setHook(address(recorder), abi.encodeCall(ReentryRecorder.poke, ()));
         _run(address(helper));
-        // The claim is the call's first move of WETH, so the first callback is the one made during the claim.
-        assertGt(recorder.attempts(), 0, "the claim's transfer called back");
-        assertEq(recorder.firstSelector(), IFlashLiquidatorErrors.ContextActive.selector, "reentry refused");
-        assertEq(weth.balanceOf(feeRecipient), 0.4e18, "standing credit cleared to feeRecipient");
+        usdtToken.setHook(address(0), "");
+        assertGt(recorder.attempts(), 0, "the USDT transfers called back");
+        assertEq(recorder.firstSelector(), IFlashLiquidatorErrors.ContextActive.selector, "claim refused in the call");
+        assertEq(weth.balanceOf(caller), 0.4e18, "the caller received its own residue");
+        assertEq(weth.balanceOf(feeRecipient), 0, "nothing moved to feeRecipient during the call");
+        assertEq(escrow.claimable(address(weth), address(helper)), 0.4e18, "the standing credit stands");
+        assertEq(helper.claimEscrowed(address(weth)), 0.4e18, "claimEscrowed runs once the call is over");
     }
 
     // TEST-174 verifies: REQ-HELPER-008
