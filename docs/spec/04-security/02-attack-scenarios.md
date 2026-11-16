@@ -30,6 +30,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | AMM-neutral core, Hubs and chains | `ATTACK-153` … `ATTACK-199` |
 | Aave configuration liveness and adversarial review fixes | `ATTACK-200` … `ATTACK-203` |
 | Speed limits | `ATTACK-204` … `ATTACK-206` |
+| Keeper gas | `ATTACK-207` … `ATTACK-209` |
 
 ## Custody and minting
 
@@ -2953,3 +2954,46 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Result | Accepted risk — owner: Aave DAO; bound: the accounts liquidatable while the setting is on and what their liquidators borrow against the shares taken, which the debt reserves' caps and credit lines limit |
 | Checks | TEST-055 |
 
+## Keeper gas
+
+### ATTACK-207: Draining the gas vault
+
+| Field | Value |
+|---|---|
+| Target | AvanaGasVault |
+| Objective | Take the vault's ETH, or make it pay more than its signers need |
+| Affected steps | `EMG-115` refill |
+| Prerequisites | A wallet; optionally a builder relationship to recover a high tip |
+| Attack approach | Call `topUp` and `topUpAll` repeatedly or with a signer chosen to profit; set a high `tx.gasprice` to claim a refund; re-enter a top-up from a signer's code; call a privileged function |
+| Impact | Without the design: a gas refund at the caller's own gas price was drained for about 204 ETH in 2022 |
+| Expected protection | `REQ-GASV-001`: no refund, no read of `tx.gasprice` or `gasleft()`. `REQ-GASV-004`: the caller chooses only which listed signer, the amount is `min(target − balance, cap room, vault balance)`, paid to the signer, never to the caller, and only while the signer is below its minimum. `REQ-GASV-005`: at most `periodCap` per signer over any 24 h. `REQ-GASV-012`: withdrawal only to `TREASURY`, only by the timelock. `REQ-GASV-013`: re-entry refused. |
+| Result | Mitigated: repeated calls do nothing after the first; no caller gains |
+| Checks | TEST-333, TEST-334, TEST-335, PROP-113 |
+
+### ATTACK-208: Stolen keeper signer key
+
+| Field | Value |
+|---|---|
+| Target | A keeper signer and the AvanaGasVault |
+| Objective | Turn a stolen signing permission into ETH |
+| Affected steps | `EMG-081` step 5 |
+| Prerequisites | Signing access to one KMS key |
+| Attack approach | Burn the signer's ETH, trigger `topUp`, repeat; time the sends around a period boundary to take two caps |
+| Impact | At most the signer's balance plus one `periodCap` before the guardian removes the signer; a calendar-period cap would allow two caps across a reset |
+| Expected protection | `REQ-GASV-005`: the cap holds over any 24 h window, not per calendar period, and at most four sends per window. `REQ-GASV-010`: the Emergency Guardian removes the signer at once. The operator helper pays only `FUNDING_SAFE` and its signer can only start liquidations (`Q-404`). |
+| Result | Mitigated: loss bounded to 2 × `targetBalance` with `periodCap = targetBalance` |
+| Checks | TEST-333, TEST-334, PROP-113 |
+
+### ATTACK-209: Making Avana's keeper spend gas
+
+| Field | Value |
+|---|---|
+| Target | Avana's keeper and its signers |
+| Objective | Run up Avana's gas bill or empty the keeper's balance |
+| Affected steps | `EMG-114`, `REQ-RISK-090`, `REQ-RISK-091`, `REQ-ORACLE-037` |
+| Prerequisites | Capital to move a pool, toggle an oracle state, or open dust accounts |
+| Attack approach | Hold a pool's TWAP off so the oracle stays non-Live and the keeper pokes every block; flap a temporary breaker reason; open many dust accounts for the keeper to liquidate at its own gas |
+| Impact | Without send-on-change: about 0.86M gas per block per market for a held non-Live state, about 6B gas per day |
+| Expected protection | `REQ-ORACLE-037`, `REQ-RISK-090`, `REQ-RISK-091`: check every block, send on change, so a held episode costs one send; security reasons latch. `EMG-114`: `scheduled` and `lazy` stop at their daily budget, every class keeps the per-transaction ceiling, M-31 pages on a spend anomaly. Dust: the attacker pays about 1.5× Avana's gas per account and loses collateral above `minPledgeUsd`; the cost is reported daily (`Q-413`). |
+| Result | Mitigated for oracle and breaker toggling; dust liquidations accepted and tracked |
+| Checks | TEST-338 |

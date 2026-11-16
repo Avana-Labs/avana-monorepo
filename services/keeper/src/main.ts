@@ -6,7 +6,8 @@
 
 import { createServer } from "node:http";
 import { KMSClient } from "@aws-sdk/client-kms";
-import { type Address, type PublicClient, createPublicClient, http, parseAbiItem, webSocket } from "viem";
+import { type Address, type PublicClient, createPublicClient, http, parseAbi, parseAbiItem, webSocket } from "viem";
+import { debtOracleAbi, marketRegistryAbi } from "@avana/protocol/abis";
 import { awsKmsKey } from "./adapters/awsKms.ts";
 import { localKeystoreSigner } from "./adapters/localKeystore.ts";
 import { logAlertSink } from "./adapters/logAlertSink.ts";
@@ -19,12 +20,14 @@ import { getLogsChunked } from "./discovery/backfill.ts";
 import { IndexerStream, applyStreamRecords } from "./discovery/indexerStream.ts";
 import { headWatchdog } from "./discovery/stream.ts";
 import { InventoryBook } from "./inventory.ts";
-import { ChainMetrics, renderMetrics } from "./metrics.ts";
+import { ChainMetrics, renderMetrics, valueInWei } from "./metrics.ts";
 import type { AlertSink } from "./monitoring/alerts.ts";
 import { DiscoveryWatch, discoveryThrough } from "./monitoring/discovery.ts";
 import { SpendTracker, fundingCheck } from "./monitoring/funding.ts";
+import { HubBook, SpendBook, attributeSubject, liquidationReward } from "./runtime/budget.ts";
 import { chainLoop } from "./runtime/chainLoop.ts";
-import { Submitter } from "./runtime/submitter.ts";
+import { type IncludedSpend, type SpendSink, Submitter } from "./runtime/submitter.ts";
+import type { JobClass } from "./types.ts";
 import { type SafetyState, effectiveMode } from "./safety/guards.ts";
 import { startKillSwitch } from "./safety/killSwitch.ts";
 
@@ -38,6 +41,8 @@ process.on("unhandledRejection", fatal("unhandledRejection"));
 const USER_PROXY_CREATED = parseAbiItem("event UserProxyCreated(address indexed wallet, address indexed spoke, uint256 indexed marketId, address proxy)");
 const OPERATOR_HELPER_ABI = [parseAbiItem("function MAX_TOP_UP_BPS() view returns (uint256)")] as const;
 const SWEEP_MS = 10 * 60 * 1000;
+const NATIVE_FEED_ABI = parseAbi(["function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)", "function decimals() view returns (uint8)"]);
+const CLASSES: readonly JobClass[] = ["urgent", "scheduled", "lazy"];
 const line = (record: Record<string, unknown>) => process.stdout.write(`${JSON.stringify(record, (_k, v: unknown) => (typeof v === "bigint" ? v.toString(10) : v))}\n`);
 
 const config = loadConfig(process.env);
@@ -85,6 +90,20 @@ function reportOneSided(cfg: ChainConfig, cache: AccountCache, rpcThrough: bigin
   line({ type: "keeper.discoveryMismatch", chainId: cfg.chain.id, through, accounts: oneSided.map((a) => ({ spoke: a.spoke, proxy: a.proxy, indexer: a.seenBy.indexer, rpc: a.seenBy.rpc })) });
 }
 
+/**
+ * The block-cadence spend alerts, then M-16, M-17 and M-33: the rolling 24 h spend per class for the metrics, M-32 for a
+ * class at its budget and M-31 for a spend anomaly, from the spend log; they are judged before the funding reads, so a
+ * failed read never hides them.
+ */
+function spendAndFunding(book: SpendBook, m: ChainMetrics, alerts: AlertSink, funding: (head: { number: bigint; timestamp: bigint }) => Promise<void>) {
+  return async (head: { number: bigint; timestamp: bigint }) => {
+    book.watchFrom(head.timestamp);
+    m.spend24h = new Map(CLASSES.map((c) => [c, book.spent24h(head.timestamp, c)] as const));
+    for (const a of book.alerts(head)) await alerts.send(a);
+    await funding(head);
+  };
+}
+
 for (const cfg of config.chains) {
   const primary = createPublicClient({ transport: http(cfg.rpc.primary) }) as PublicClient;
   const fallback = createPublicClient({ transport: http(cfg.rpc.fallback) }) as PublicClient;
@@ -114,12 +133,55 @@ for (const cfg of config.chains) {
     ? cfg.manifest.avana.operatorHelpers.find((h) => h.signer.toLowerCase() === signerAddress.toLowerCase())
     : cfg.manifest.avana.operatorHelpers[0];
   if (!helperEntry) throw new Error(`no operator helper in the manifest for chain ${cfg.chain.id}`);
+  // The spend log (runtime/budget.ts): each included transaction's cost by class, market and Hub; the class budgets
+  // (M-32) and the spend anomaly (M-31) are judged from it at each head.
+  const spendBook = new SpendBook(cfg.chain.id, cfg.dailyBudgetWei, cfg.gasDailySpendWei ?? 0n);
+  const hubs = new HubBook((spoke) => primary.readContract({ address: cfg.manifest.avana.marketRegistry.address, abi: marketRegistryAbi, functionName: "hubOf", args: [spoke] }));
+  /**
+   * D4: a liquidation's reward Kr valued in wei of the gas token, from the debt asset's accepted USD price (its
+   * DebtOracle; GHO's is fixed at 1 USD) and KEEPER_NATIVE_USD_FEED_<CHAIN>, at the block it was mined. Without that
+   * feed the metric is not reported; the spend line still carries the cost.
+   */
+  const smallAccount = async (s: IncludedSpend) => {
+    const feed = cfg.nativeUsdFeed;
+    const reward = liquidationReward(s.logs, cfg.manifest.avana.lpVaultSwap.address);
+    if (!feed || !reward) return;
+    const reserve = cfg.manifest.debtReserves.find((r) => r.asset.toLowerCase() === reward.debtAsset.toLowerCase());
+    if (!reserve) return;
+    const at = { blockNumber: s.blockNumber } as const;
+    const assetUsd8 = reserve.debtOracle
+      ? (await primary.readContract({ ...at, address: reserve.debtOracle.address, abi: debtOracleAbi, functionName: "lastAcceptedPrice" }))[0]
+      : 10n ** 8n;
+    const [round, feedDecimals] = await Promise.all([
+      primary.readContract({ ...at, address: feed, abi: NATIVE_FEED_ABI, functionName: "latestRoundData" }),
+      primary.readContract({ ...at, address: feed, abi: NATIVE_FEED_ABI, functionName: "decimals" }),
+    ]);
+    if (round[1] <= 0n) return;
+    const rewardWei = valueInWei(reward.keeperReward, reserve.decimals, assetUsd8 * 10n ** BigInt(feedDecimals), round[1] * 10n ** 8n);
+    chainMetrics.smallAccounts.record({ hub: s.hub, gasCostWei: s.costWei, rewardWei });
+  };
+  const spendSink: SpendSink = {
+    attribute: async (plan) => {
+      const a = attributeSubject(cfg.manifest, plan.subject, (proxy) => cache.ofChain(cfg.chain.id).find((x) => x.proxy.toLowerCase() === proxy.toLowerCase())?.marketId);
+      return { market: a.market, hub: await hubs.of(a.spoke) };
+    },
+    record: (s) => {
+      spendBook.record({ chainId: cfg.chain.id, jobClass: s.plan.jobClass, at: s.at, costWei: s.costWei, market: s.market, hub: s.hub });
+      chainMetrics.spent({ jobClass: s.plan.jobClass, hub: s.hub, costWei: s.costWei });
+      if (s.plan.job === "liquidation") {
+        smallAccount(s).catch((err: unknown) => line({ type: "keeper.smallAccountSpend", chainId: cfg.chain.id, txHash: s.txHash, error: String(err) }));
+      }
+    },
+  };
   const submitter = signer
     ? new Submitter(cfg, primary, signer, inventory, post, helperEntry.fundingSafe, {
         ceilingWei: cfg.gasCeilingWei!,
         l1Fee: paysL1DataFee(cfg.chain) ? (tx) => l1DataFee(primary, tx) : null,
         onCeiling: (detail) =>
           void alerts.send({ signal: "M-17", level: "page", chainId: cfg.chain.id, blockNumber: 0n, subject: detail.subject ?? "", detail: { ...detail, note: "gas ceiling" } }),
+        fees: cfg.feePolicy,
+        budget: spendBook,
+        spend: spendSink,
       })
     : null;
 
@@ -193,7 +255,7 @@ for (const cfg of config.chains) {
       await pollStream();
       judgeDiscovery(head.number);
     },
-    funding: fundingCheck({
+    funding: spendAndFunding(spendBook, chainMetrics, alerts, fundingCheck({
       chainId: cfg.chain.id,
       primary,
       fallback,
@@ -204,7 +266,8 @@ for (const cfg of config.chains) {
       largest: cfg.largestDebtToCover,
       free: (asset, safeBalance) => inventory.free(cfg.chain.id, asset, safeBalance),
       gas: signerAddress ? { signer: signerAddress, dailyFloorWei: cfg.gasDailySpendWei!, spend: new SpendTracker() } : null,
-    }),
+      standby: cfg.standby,
+    })),
     processed: (head) => {
       lastHead = head.number;
       chainMetrics.processed(head.number);

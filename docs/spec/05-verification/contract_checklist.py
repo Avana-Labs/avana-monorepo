@@ -118,6 +118,7 @@ CONTRACTS: dict[str, tuple[list[str], list[str], list[str]]] = {
     "LPVaultSwap": (["11-lpvaultswap.md"], ["LPVaultSwap"], ["LPVaultSwap.spec"]),
     "AvanaFirstLossReserve": (["14-first-loss-reserve.md"], ["AvanaFirstLossReserve", "First-Loss Reserve", "First-Loss Reserves"], ["AvanaFirstLossReserve.spec"]),
     "Lens": (["17-lens.md"], ["Lens", "LensSpeedModule"], []),
+    "AvanaGasVault": (["23-gas-vault.md"], ["AvanaGasVault", "gas vault"], ["AvanaGasVault.spec"]),
     "FlashLiquidator": (
         ["11-lpvaultswap.md#Flash liquidation helper"],
         ["FlashLiquidator", "OperatorFlashLiquidator", "Flash liquidation helper", "flash liquidation helper"],
@@ -220,8 +221,11 @@ OUTSIDE_CONTRACTS: dict[str, str] = {
     "TEST-148": "Convex and web app; no test there carries the ID yet",
     "TEST-149": "web, Ponder and keeper; no test there carries the ID yet",
     "TEST-297": "Lend page builders in packages/protocol; no test there carries the ID yet",
+    "TEST-338": "keeper gas: services/keeper/test/{gasClass,budget,oraclePoke,metrics,funding}.test.ts and "
+                "services/monitor/test/checkpoint.test.ts (services.yml keeper and monitor tests)",
     "REQ-ORACLE-037": "keeper poke schedule (3.6), services/keeper/src/jobs/oraclePoke.ts: every LPOracle and "
-                      "DebtOracle at least once per min(3,600 s, fastest leg's heartbeat); checked by "
+                      "DebtOracle at least once per min(3,600 s, fastest leg's heartbeat), and while not Live checked every block "
+                      "and sent on change; checked by "
                       "services/keeper/test/oraclePoke.test.ts (services.yml keeper tests)",
     # CI tool rows: the row is the CI step itself, and the step's own result is the evidence (no Foundry test can be).
     "TEST-001": "contracts.yml build job: `forge soldeer install` against soldeer.lock, the solc and EVM pins of "

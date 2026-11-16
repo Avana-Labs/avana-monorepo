@@ -3,12 +3,14 @@
 // Live reads pinned to one block. Every decision reads through a ChainReader created for that block, so the
 // health factor, prices, gates and sizing of one decision come from the same state.
 
-import { type Address, type Hex, type PublicClient, keccak256, parseAbi } from "viem";
+import { type Address, type Hex, type PublicClient, decodeFunctionResult, encodeFunctionData, keccak256, multicall3Abi, parseAbi } from "viem";
 import {
   aaveV4SpokeAbi,
   collateralizationAbi,
+  debtOracleAbi,
   flashLiquidatorAbi,
   lensAbi,
+  lpOracleAbi,
   lpVaultSwapAbi,
   marketRegistryAbi,
 } from "@avana/protocol/abis";
@@ -27,6 +29,12 @@ const v3PoolAbi = parseAbi(["function getReserveAToken(address asset) view retur
 const aggregatorAbi = parseAbi([
   "function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)",
 ]);
+
+/** An LPOracle (`lp`) or a DebtOracle (`debt`); both expose `poke()` and `getPriceState()`. */
+export type OracleKind = "lp" | "debt";
+
+/** `poke()` calldata, the same selector on both oracles. */
+export const POKE_DATA: Hex = encodeFunctionData({ abi: lpOracleAbi, functionName: "poke" });
 
 export interface AccountData {
   readonly healthFactor: bigint;
@@ -143,6 +151,48 @@ export function createChainReader(client: PublicClient, manifest: { avana: { len
     },
 
     feedRound: (feed: Address) => client.readContract({ ...at, address: feed, abi: aggregatorAbi, functionName: "latestRoundData" }),
+
+    /** The oracle's price state at this block (`getPriceState().state`: 0 Live, 1 Drifting, 2 Cached, 3 Expired). */
+    async oracleState(oracle: Address, kind: OracleKind): Promise<number> {
+      const report = kind === "lp"
+        ? await client.readContract({ ...at, address: oracle, abi: lpOracleAbi, functionName: "getPriceState" })
+        : await client.readContract({ ...at, address: oracle, abi: debtOracleAbi, functionName: "getPriceState" });
+      return Number(report.state);
+    },
+
+    /**
+     * The logs `poke()` would emit if sent from `from` on top of this block (`eth_simulateV1`); null when the provider
+     * does not answer the method, so the caller falls back to `pokeEffect`. A reverting poke emits nothing: [].
+     */
+    async simulateLogs(oracle: Address, from: Address): Promise<readonly { readonly address: Address; readonly topics: readonly Hex[] }[] | null> {
+      try {
+        const [block] = await client.simulateBlocks({ ...at, blocks: [{ calls: [{ to: oracle, data: POKE_DATA, account: from }] }] });
+        const call = block?.calls[0];
+        if (!call || call.status !== "success") return [];
+        return (call.logs ?? []).map((l) => ({ address: l.address, topics: l.topics as readonly Hex[] }));
+      } catch {
+        return null;
+      }
+    },
+
+    /**
+     * Without `eth_simulateV1`: one `eth_call` of Multicall3 at this block runs `getPriceState()`, `poke()` and
+     * `getPriceState()` in order, so the second report reads the storage the poke wrote. Returns both raw reports and
+     * whether the poke succeeded; a report the call could not read is null.
+     */
+    async pokeEffect(oracle: Address): Promise<{ readonly before: Hex | null; readonly after: Hex | null; readonly pokeOk: boolean }> {
+      const view = encodeFunctionData({ abi: lpOracleAbi, functionName: "getPriceState" });
+      const data = encodeFunctionData({
+        abi: multicall3Abi,
+        functionName: "aggregate3",
+        args: [[{ target: oracle, allowFailure: true, callData: view }, { target: oracle, allowFailure: true, callData: POKE_DATA }, { target: oracle, allowFailure: true, callData: view }]],
+      });
+      const { data: ret } = await client.call({ ...at, to: MULTICALL3_ADDRESS, data });
+      if (!ret) return { before: null, after: null, pokeOk: false };
+      const [before, poke, after] = decodeFunctionResult({ abi: multicall3Abi, functionName: "aggregate3", data: ret });
+      const ok = (r: { success: boolean; returnData: Hex } | undefined) => (r?.success ? r.returnData : null);
+      return { before: ok(before), after: ok(after), pokeOk: poke?.success ?? false };
+    },
 
     /** eth_call of a state-changing function at this block (pokeBreakers, pokeConfig): its return, without sending. */
     callAt: (to: Address, data: Hex, from?: Address) => client.call({ ...at, to, data, account: from }),

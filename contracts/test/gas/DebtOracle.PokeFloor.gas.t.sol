@@ -118,3 +118,52 @@ contract DebtOraclePokeFloorGasTest is LPOracleGasFixture, GasCalibration {
         return uint64(word >> 136);
     }
 }
+
+/// @notice Typical keeper pokes of the same USDC DebtOracle (`REQ-ORACLE-037`), beside the worst case above: USDC on its
+/// one-leg primary route (`USDC/USD`) with its two-leg alternate and oracle-network second source read for agreement,
+/// every feed fresh and the oracle Live; the initialized `pokeMinGas` (600,000) in force. Each poke is its own
+/// transaction (`isolate = true`, `GasCalibration._txGas`: intrinsic gas included, every account and slot cold at its
+/// first access, as for any keeper transaction), recorded in group `PokeFloor`:
+/// - `DebtOracle_typical_hourly_txGas`: the hourly poke 3,600 s after the last one with no new feed round.
+/// - `DebtOracle_typical_newRound_txGas`: the poke one block later after one new round of USDC/USD at the same answer.
+/// forge-config: default.isolate = true
+contract DebtOraclePokeTypicalGasTest is LPOracleGasFixture, GasCalibration {
+    address internal poker = makeAddr("poker");
+    IDebtOracle internal debtOracle;
+
+    function setUp() public {
+        _setUpGas(false, FLOOR);
+        IDebtOracle impl = IDebtOracle(deployCode("DebtOracle.sol:DebtOracle", abi.encode(address(timelock))));
+        DebtOracleInitParams memory p = DebtOracleInitParams({
+            timelock: address(timelock),
+            asset: usdc,
+            marketRegistry: address(registry),
+            parameterStore: address(store),
+            description: "USDC / USD",
+            pokeMinGas: 600_000
+        });
+        debtOracle = IDebtOracle(address(new ERC1967Proxy(address(impl), abi.encodeCall(IDebtOracle.initialize, (p)))));
+        assertEq(uint8(debtOracle.poke()), uint8(PriceState.Live), "Live after the first poke");
+    }
+
+    function _poke() internal returns (uint256) {
+        return _txGas(poker, address(debtOracle), abi.encodeCall(IDebtOracle.poke, ()));
+    }
+
+    // TEST-337 verifies: REQ-ORACLE-037, REQ-ORACLE-092
+    /// @notice An hourly poke with no new feed round, then a poke after one new feed round.
+    function test_TEST_337_typicalDebtOraclePokeGas() public {
+        vm.warp(block.timestamp + 3600);
+        vm.roll(block.number + 300);
+        uint256 hourly = _poke();
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + BLOCK_TIME);
+        _round(0, 1e8, block.timestamp);
+        uint256 newRound = _poke();
+        assertEq(uint8(debtOracle.poke()), uint8(PriceState.Live), "still Live");
+        vm.snapshotValue("PokeFloor", "DebtOracle_typical_hourly_txGas", hourly);
+        vm.snapshotValue("PokeFloor", "DebtOracle_typical_newRound_txGas", newRound);
+        emit log_named_uint("DebtOracle typical: hourly poke, no new round (tx gas)", hourly);
+        emit log_named_uint("DebtOracle typical: poke after one new feed round (tx gas)", newRound);
+    }
+}

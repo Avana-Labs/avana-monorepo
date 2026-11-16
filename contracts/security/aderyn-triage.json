@@ -2373,6 +2373,39 @@
       "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
       "function": "pokeOracles",
       "reason": "Aderyn form of unused-return: the LPOracle and DebtOracle pokes store observations, and the breaker conditions read the price state themselves (REQ-RISK-091). Covered by TEST-228."
+    },
+    {
+      "fingerprint": "feafd1a0cfc7cf0c",
+      "check": "costly-loop",
+      "file": "src/periphery/gas-vault/AvanaGasVault.sol",
+      "function": "topUpAll",
+      "reason": "At most MAX_SIGNERS <= 8 iterations; the storage writes are each paid signer's send record (needed for the 24 h cap) and, on a failed transfer only, its restore. Measured: 236,989 gas for 8 due signers (TEST-336).",
+      "approval": "approved (Josue, 2026-11-16)",
+      "reviewedFiles": {
+        "src/periphery/gas-vault/AvanaGasVault.sol": "9c0535e8ee61474db4f651150880c624f6329d90c927cfd16ee7af4150576e4d"
+      }
+    },
+    {
+      "fingerprint": "beaf37ce38f23c07",
+      "check": "contract-locks-ether",
+      "file": "src/periphery/gas-vault/AvanaGasVault.sol",
+      "function": "AvanaGasVault (withdraw, topUp, topUpAll)",
+      "reason": "ETH always has a way out: withdraw(amount) (TIMELOCK only, any amount up to the whole balance, open while paused and with no signer listed) sends to the immutable TREASURY, and topUp/topUpAll pay listed signers (REQ-GASV-012, REQ-GASV-004). Aderyn does not see the transfer because it is the gas-limited, no-copy CALL in _send (inline assembly, the LPVaultSwap payout pattern). Covered by TEST-333 (withdraw_onlyTreasury: the whole balance reaches TREASURY; retiredVaultReturnsAllEth: paused, no signers, ETH sent afterwards, all withdrawn), TEST-335 (fundedEqualsHeldPlusSentPlusWithdrawn, with withdraw in the handler), PROP-113 (withdrawOnlyToTreasury).",
+      "approval": "approved (Josue, 2026-11-16)",
+      "reviewedFiles": {
+        "src/periphery/gas-vault/AvanaGasVault.sol": "9c0535e8ee61474db4f651150880c624f6329d90c927cfd16ee7af4150576e4d"
+      }
+    },
+    {
+      "fingerprint": "72cbd52e8041ab62",
+      "check": "require-revert-in-loop",
+      "file": "src/periphery/gas-vault/AvanaGasVault.sol",
+      "function": "topUpAll",
+      "reason": "The only reverts reachable in the loop are SafeCast's in _record, which cannot fire: the amount is at most periodCap < 2^80 (_checkConfig) and block.timestamp < 2^48. A signer that cannot be paid (nothing to send, or a failed transfer) is skipped, never reverted (REQ-GASV-006). Covered by TEST-333 (topUpAll_skipsRefusingAndCappedSigners, transferGasIsBounded), TEST-335.",
+      "approval": "approved (Josue, 2026-11-16)",
+      "reviewedFiles": {
+        "src/periphery/gas-vault/AvanaGasVault.sol": "9c0535e8ee61474db4f651150880c624f6329d90c927cfd16ee7af4150576e4d"
+      }
     }
   ]
 }

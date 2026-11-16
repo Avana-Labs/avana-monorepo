@@ -115,10 +115,10 @@ describe("probesFor", () => {
   const base = { safes: new Map(), coreHubGho: new Map(), frontend: null, routeCheckSeconds: 86_400 } as unknown as MonitorConfig;
   const deps = { fetchText: async () => ({ body: "", server: "" }), resolve: async () => "" };
 
-  it("runs the five protocol probes everywhere and the others only where configured", () => {
-    expect(probesFor(chain, base, deps).map((p) => p.name)).toEqual(["snapshot", "oracle", "coverage", "events", "issuers", "routes"]);
+  it("runs the protocol probes everywhere and the others only where configured", () => {
+    expect(probesFor(chain, base, deps).map((p) => p.name)).toEqual(["snapshot", "oracle", "coverage", "events", "issuers", "routes", "checkpoint"]);
     const full = { ...base, safes: new Map([[1, [{ label: "g", address: SAFE }]]]), coreHubGho: new Map([[1, { hub: SAFE, assetId: 1n }]]), frontend: { url: "https://x", expectedSha256: null, chainId: 1 } } as unknown as MonitorConfig;
-    expect(probesFor(chain, full, deps).map((p) => p.name)).toEqual(["snapshot", "oracle", "coverage", "events", "issuers", "routes", "safes", "ghoRate", "frontend"]);
-    expect(probesFor({ chain: CHAINS.base } as ChainConfig, full, deps).map((p) => p.name)).toEqual(["snapshot", "oracle", "coverage", "events", "issuers", "routes"]);
+    expect(probesFor(chain, full, deps).map((p) => p.name)).toEqual(["snapshot", "oracle", "coverage", "events", "issuers", "routes", "checkpoint", "safes", "ghoRate", "frontend"]);
+    expect(probesFor({ chain: CHAINS.base } as ChainConfig, full, deps).map((p) => p.name)).toEqual(["snapshot", "oracle", "coverage", "events", "issuers", "routes", "checkpoint"]);
   });
 });

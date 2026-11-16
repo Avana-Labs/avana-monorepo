@@ -37,6 +37,8 @@ export function settlePendingJob(): Job<ManifestMarket, Decision> {
       const m = ctx.config.manifest;
       return {
         job: "settlePending",
+        // No deadline in blocks: waits for a low base fee (keeper DESIGN.md, Fees).
+        jobClass: "lazy",
         subject: `${ctx.config.chain.id}:market:${market.marketId}`,
         to: m.avana.lpVaultSwap.address,
         data: encodeFunctionData({ abi: lpVaultSwapAbi, functionName: "settlePending", args: [market.marketId, debtReserveId] }),

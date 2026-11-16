@@ -40,7 +40,7 @@ describe("second-provider confirmation", () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
-  const plan: TxPlan = { job: "liquidation", subject: "1:0xs:0xp", to: "0x0000000000000000000000000000000000000001", data: "0x", deadline: 10n, reservations: [], targets: [], params: {} };
+  const plan: TxPlan = { job: "liquidation", jobClass: "urgent", subject: "1:0xs:0xp", to: "0x0000000000000000000000000000000000000001", data: "0x", deadline: 10n, reservations: [], targets: [], params: {} };
   const job: Job<string, string> = { kind: "liquidation", discover: async () => ["a"], check: async (_c, x) => ({ act: true, decision: x }), build: async () => plan };
   const ctx = { config: { chain: CHAINS.mainnet } as ChainConfig, blockNumber: 5n, blockTimestamp: 0n, reader: {} as ChainReader } satisfies BlockContext;
   const deps = (confirmed: boolean) =>

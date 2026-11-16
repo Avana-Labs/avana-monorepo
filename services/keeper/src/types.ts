@@ -9,6 +9,17 @@ import type { Revert } from "./jobs/failureReasons.ts";
 
 export type JobKind = "liquidation" | "settlePending" | "oraclePoke" | "breakerPoke" | "configPoke";
 
+/**
+ * Fee class of a transaction, declared by its job (keeper DESIGN.md, Fees):
+ * - `urgent`: a liquidation, a breaker or configuration poke whose simulation returned non-zero, and an oracle poke
+ *   while the oracle is not Live that would change its stored state. Tip: the 90th percentile of the last 5 blocks,
+ *   at least `minTipUrgent`; never budget-limited.
+ * - `scheduled`: the checkpoint and feed-round oracle pokes, which have the POKE_LEAD_SECONDS window. Tip `minTipScheduled`.
+ * - `lazy`: `settlePending`, with no deadline measured in blocks. Tip `minTipLazy`, sent only at a low base fee or
+ *   after `lazyMaxWait`, then at scheduled fees.
+ */
+export type JobClass = "urgent" | "scheduled" | "lazy";
+
 /** Why a candidate was not acted on in this block; logged with the block and published for liquidations. */
 export type SkipReason =
   | "healthy"
@@ -32,7 +43,11 @@ export type SkipReason =
   | "observeOnly"
   | "insufficientInventory"
   /** The second provider does not read the account below HF 1 at the decision block (or cannot read it). */
-  | "hfNotConfirmed";
+  | "hfNotConfirmed"
+  /** A lazy transaction waits: the base fee is above `lazyBaseFeeMax` and `lazyMaxWait` has not passed since it fell due. */
+  | "lazyBaseFeeHigh"
+  /** A scheduled or lazy transaction is not sent: its class spent its daily budget in the last 24 hours (M-32). */
+  | "budgetReached";
 
 /** Everything a decision in block `blockNumber` may read; every read goes through `reader`, pinned to that block. */
 export interface BlockContext {
@@ -56,6 +71,8 @@ export interface Reservation {
 /** A transaction ready to simulate: no signature, no nonce, no fees yet. */
 export interface TxPlan {
   readonly job: JobKind;
+  /** The fee class the job declared for this transaction: it sets the tip, the base-fee gate and the daily budget. */
+  readonly jobClass: JobClass;
   /** Account key `chainId:spoke:proxy`, market ID or oracle address: the in-flight flag and logs use it. */
   readonly subject: string;
   readonly to: Address;

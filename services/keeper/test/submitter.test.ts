@@ -28,6 +28,7 @@ const L2_COST = LIMIT * MAX_FEE;
 
 const plan: TxPlan = {
   job: "liquidation",
+  jobClass: "urgent",
   subject: `1:${addr(0x5)}:${addr(0xbeef)}`,
   to: addr(0xf1),
   data: "0x1234",

@@ -208,6 +208,39 @@ The 30-minute recovery window is a provisional launch setting.
 | `proposerCount` | Holders of `PROPOSER_ROLE` on the AvanaTimelock: the governance multisig and the Aave governance executor | count | ≥ 2 (live-configuration check) | 2 (`Q-245`) | AvanaTimelock | Role change |
 | `reserveWithdrawalDelay` (`RESERVE_WITHDRAWAL_DELAY`) | Delay before unused First-Loss Reserve funds can be withdrawn from an Avana Umbrella (with DAO approval) | seconds | Fixed | 1,209,600 (14 days, `Q-101`) | Each Avana Umbrella | Immutable |
 
+## Keeper gas
+
+Values of the AvanaGasVault ([2.23](../02-contracts/23-gas-vault.md)) and the keeper's gas policy (`Q-413`). `D` is a signer's measured median daily spend and `B` the burst reserve; per-signer values are re-derived from the gas measurements (`contracts/snapshots/`) before each listing.
+
+| Name | Meaning | Unit | Bounds | Launch value | Stored in | Change |
+|---|---|---|---|---|---|---|
+| `minBalance` | A signer's refill trigger: a top-up is allowed only below it | wei | `0 < minBalance ≤ targetBalance < 2^80` | 3 × `D` | AvanaGasVault, per signer | Timelock (normal) either way; guardian lowers at once |
+| `targetBalance` | Level a top-up fills a signer to | wei | `< 2^80` | 7 × `D` + `B` | AvanaGasVault, per signer | Timelock (normal) either way; guardian lowers at once |
+| `periodCap` | Most ETH sent to a signer in any 24 h | wei | `0 < periodCap < 2^80` | = `targetBalance` | AvanaGasVault, per signer | Timelock (normal) either way; guardian lowers at once |
+| `B` (burst reserve) | Gas to liquidate every account the listing's stress shock makes liquidatable | wei | — | `N` × 7.3M gas × (2 × p99 base fee of 90 days + tip) | Off-chain sizing | Re-derived per listing |
+| `MAX_SIGNERS` | Allowlist bound per vault | count | 1 – 8 (`MAX_SIGNERS_LIMIT`) | 8 | AvanaGasVault | Immutable |
+| `PERIOD`, `MAX_SENDS_PER_PERIOD` | Cap window and most sends per signer in it | seconds, count | Fixed | 86,400; 4 | AvanaGasVault | Immutable |
+| Vault funding | Lump sum from the `feeRecipient` treasury Safe | wei | — | 30 days of the chain's measured daily spend + `B` | — | Treasury |
+| `KEEPER_MIN_TIP_{URGENT,SCHEDULED,LAZY}_<CHAIN>`, `KEEPER_LAZY_BASEFEE_MAX_<CHAIN>`, `KEEPER_LAZY_MAX_WAIT_<CHAIN>`, `KEEPER_DAILY_BUDGET_WEI_{SCHEDULED,LAZY}_<CHAIN>` | Keeper fee classes and budgets (`EMG-114`) | wei, seconds | Urgent tip default 1 gwei | From the measured inclusion delay by tip | Keeper configuration | Operations |
+
+Measured gas per keeper call, each its own transaction with every account and slot cold and intrinsic gas included unless noted (local real stack, `TEST-337`, `TEST-336`, `TEST-042`; `contracts/snapshots/`). These replace the earlier estimates of the keeper gas model.
+
+| Call | Case | Gas (measured) | Snapshot |
+|---|---|---|---|
+| `RiskModule.pokeBreakers(marketId)` | One market's poke with 1 / 16 / 32 markets on the Spoke, first poke after new feed rounds | 1,382,027 / 3,235,272 / 5,239,090 | `PokeBreakers.json` |
+| `RiskModule.pokeBreakers(marketId)` | Same, next block with nothing changed (what the keeper simulates every block) | 1,322,215 / 3,175,460 / 5,179,278 | `PokeBreakers.json` |
+| `RiskModule.pokeBreakers(marketId)` | Same, first poke of a breach episode (what the keeper sends) | 1,375,751 / 3,228,996 / 5,232,814 | `PokeBreakers.json` |
+| `LPOracle.poke` (two-token CL) | Typical: hourly checkpoint / new feed round | 585,477 / 586,191 | `PokeFloor.json` |
+| `LPOracle.poke` (two-token CL) | Worst case, execution gas only | 861,791 | `PokeFloor.json` |
+| `DebtOracle.poke` | Typical: hourly / new feed round | 307,026 / 317,967 | `PokeFloor.json` |
+| `LPVaultSwap.settlePending` | 1 market | 1,707,821 | `Maintenance.json` |
+| `AaveAdapter.refreshDebtMark` | Clears the mark | 480,829 | `Maintenance.json` |
+| `MarketRegistry.syncDrawCap` | Raise | 67,457 | `Maintenance.json` |
+| `LPVaultSwap.liquidate` | Direct, 1 market | 3,396,466 | `Maintenance.json` |
+| `OperatorFlashLiquidator` | Flash liquidation, 1 market / overhead over direct (stand-in pool; the real Aave V3 Pool's own cost is not included) | 3,710,086 / 313,620 | `Maintenance.json` |
+| `AvanaGasVault.topUp` | One due signer | 65,140 | `AvanaGasVault.json` |
+| `AvanaGasVault.topUpAll` | 8 due signers, send slots in use / first sends / none due | 236,989 / 373,133 / 84,853 | `AvanaGasVault.json` |
+
 ## Implementation limits
 
 | Name | Meaning | Unit | Bounds | Launch value | Stored in | Change |

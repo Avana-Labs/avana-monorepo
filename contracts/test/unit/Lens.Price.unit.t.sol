@@ -108,6 +108,11 @@ contract LensPriceUnitTest is LensFixture {
         assertEq(uint8(lens.getPriceState(vt).liquidationState), uint8(PriceState.Cached), "from Live too");
         lpo.setState(PriceState.Expired, 1 << 12, true);
         assertEq(uint8(lens.getPriceState(vt).liquidationState), uint8(PriceState.Expired), "Expired stays");
+        // Other reason bits without bit 12 leave the state as it is.
+        lpo.setState(PriceState.Drifting, (1 << 9) | (1 << 10) | (1 << 13), true);
+        assertEq(uint8(lens.getPriceState(vt).liquidationState), uint8(PriceState.Drifting), "other reasons only");
+        lpo.setState(PriceState.Live, 1 << 10, true);
+        assertEq(uint8(lens.getPriceState(vt).liquidationState), uint8(PriceState.Live), "in grace, Live");
     }
 
     // TEST-247 verifies: REQ-LENS-015
