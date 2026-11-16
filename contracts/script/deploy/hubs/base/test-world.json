@@ -1,5 +1,5 @@
 {
-  "_comment": "Local test world only: the rehearsal's six markets on the test world's pools, through the operator flow, until the real pool list replaces them. Structure and page text only (the text is local test content); every number is in contracts/script/local/test-values.json.",
+  "_comment": "Local test world: the approved Spoke set and names on the test world's pools (off-fork). Structure and page text only; every number is in contracts/script/local/test-values.json.",
   "hub": {
     "label": "base",
     "tier": 3,
@@ -10,34 +10,16 @@
   },
   "spokes": [
     {
-      "label": "uniV3Stable",
-      "integration": "uniswap-v3",
-      "category": "Stable"
-    },
-    {
-      "label": "uniV3Correlated",
-      "integration": "uniswap-v3",
-      "category": "Correlated"
-    },
-    {
-      "label": "uniV3Volatile",
-      "integration": "uniswap-v3",
-      "category": "Volatile"
-    },
-    {
-      "label": "slipStable",
+      "label": "slipBlueChip",
       "integration": "slipstream",
-      "category": "Stable"
+      "category": "Blue-chip",
+      "name": "Aero Slipstream Blue-chip"
     },
     {
-      "label": "slipCorrelated",
+      "label": "slipGovDefi",
       "integration": "slipstream",
-      "category": "Correlated"
-    },
-    {
-      "label": "slipVolatile",
-      "integration": "slipstream",
-      "category": "Volatile"
+      "category": "Gov/DeFi",
+      "name": "Aero Slipstream Gov-DeFi"
     }
   ],
   "lendAssets": [
@@ -49,28 +31,16 @@
         "reviewedAt": "2026-11-16",
         "factors": [
           {
-            "id": "depegTail",
-            "label": "De-peg tail",
-            "level": "low",
-            "text": "The asset is a US dollar stablecoin. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "withdrawalLiquidity",
-            "label": "Withdrawal liquidity",
+            "id": "pairVolatility",
+            "label": "Pair volatility",
             "level": "moderate",
-            "text": "Withdrawals depend on the Hub's unborrowed balance. Local test content for the development chains; not a risk review."
+            "text": "Local test content for the development chains; not a risk review."
           },
           {
-            "id": "reserveCoverage",
-            "label": "Reserve coverage",
-            "level": "low",
-            "text": "First-loss reserves cover bad debt before lenders. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "contractSurface",
-            "label": "Smart-contract surface",
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
             "level": "moderate",
-            "text": "Aave V4's Hub and Avana's CDP Spokes. Local test content for the development chains; not a risk review."
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
@@ -83,28 +53,16 @@
         "reviewedAt": "2026-11-16",
         "factors": [
           {
-            "id": "depegTail",
-            "label": "De-peg tail",
-            "level": "low",
-            "text": "The asset is a US dollar stablecoin. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "withdrawalLiquidity",
-            "label": "Withdrawal liquidity",
+            "id": "pairVolatility",
+            "label": "Pair volatility",
             "level": "moderate",
-            "text": "Withdrawals depend on the Hub's unborrowed balance. Local test content for the development chains; not a risk review."
+            "text": "Local test content for the development chains; not a risk review."
           },
           {
-            "id": "reserveCoverage",
-            "label": "Reserve coverage",
-            "level": "low",
-            "text": "First-loss reserves cover bad debt before lenders. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "contractSurface",
-            "label": "Smart-contract surface",
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
             "level": "moderate",
-            "text": "Aave V4's Hub and Avana's CDP Spokes. Local test content for the development chains; not a risk review."
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
@@ -117,28 +75,16 @@
         "reviewedAt": "2026-11-16",
         "factors": [
           {
-            "id": "depegTail",
-            "label": "De-peg tail",
-            "level": "low",
-            "text": "The asset is a US dollar stablecoin. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "withdrawalLiquidity",
-            "label": "Withdrawal liquidity",
+            "id": "pairVolatility",
+            "label": "Pair volatility",
             "level": "moderate",
-            "text": "Withdrawals depend on the Hub's unborrowed balance. Local test content for the development chains; not a risk review."
+            "text": "Local test content for the development chains; not a risk review."
           },
           {
-            "id": "reserveCoverage",
-            "label": "Reserve coverage",
-            "level": "low",
-            "text": "First-loss reserves cover bad debt before lenders. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "contractSurface",
-            "label": "Smart-contract surface",
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
             "level": "moderate",
-            "text": "Aave V4's Hub and Avana's CDP Spokes. Local test content for the development chains; not a risk review."
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
@@ -152,22 +98,16 @@
         "reviewedAt": "2026-11-16",
         "factors": [
           {
-            "id": "depegTail",
-            "label": "De-peg tail",
-            "level": "low",
-            "text": "The asset is a US dollar stablecoin. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "issuerSolvency",
-            "label": "Issuer solvency",
-            "level": "low",
-            "text": "The issuer's reserves back the token. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "contractSurface",
-            "label": "Smart-contract surface",
+            "id": "pairVolatility",
+            "label": "Pair volatility",
             "level": "moderate",
-            "text": "Aave V4's Hub and Avana's CDP Spokes. Local test content for the development chains; not a risk review."
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
@@ -179,45 +119,29 @@
         "reviewedAt": "2026-11-16",
         "factors": [
           {
-            "id": "depegTail",
-            "label": "De-peg tail",
-            "level": "low",
-            "text": "The asset is a US dollar stablecoin. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "issuerSolvency",
-            "label": "Issuer solvency",
-            "level": "low",
-            "text": "The issuer's reserves back the token. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "contractSurface",
-            "label": "Smart-contract surface",
+            "id": "pairVolatility",
+            "label": "Pair volatility",
             "level": "moderate",
-            "text": "Aave V4's Hub and Avana's CDP Spokes. Local test content for the development chains; not a risk review."
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
     }
   ],
   "borrowable": {
-    "uniV3Stable": [
+    "slipBlueChip": [
+      "USDC",
       "GHO"
     ],
-    "uniV3Correlated": [
+    "slipGovDefi": [
+      "USDC",
       "GHO"
-    ],
-    "uniV3Volatile": [
-      "GHO"
-    ],
-    "slipStable": [
-      "USDC"
-    ],
-    "slipCorrelated": [
-      "USDC"
-    ],
-    "slipVolatile": [
-      "USDC"
     ]
   },
   "collateral": [
@@ -226,223 +150,159 @@
       "isUsdStable": true
     },
     {
-      "symbol": "USDT",
-      "isUsdStable": true
-    },
-    {
       "symbol": "WETH"
     },
     {
-      "symbol": "wstETH"
+      "symbol": "cbBTC"
+    },
+    {
+      "symbol": "AERO"
+    },
+    {
+      "symbol": "LINK"
     }
   ],
   "markets": [
     {
-      "name": "uni-USDC-USDT-100",
-      "pool": "USDC-USDT-100",
-      "spoke": "uniV3Stable",
-      "risk": {
-        "summary": "A stable pair. Local test content for the development chains; not a risk review.",
-        "reviewedAt": "2026-11-16",
-        "factors": [
-          {
-            "id": "pairVolatility",
-            "label": "Pair volatility",
-            "level": "low",
-            "text": "Both tokens track the US dollar. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "liquidityDepth",
-            "label": "Liquidity depth",
-            "level": "moderate",
-            "text": "Depth of the pool and of the routes a liquidation swaps through. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "oracle",
-            "label": "Oracle",
-            "level": "low",
-            "text": "Four independent feeds per token, checked against the pool's TWAP. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "contractSurface",
-            "label": "Smart-contract surface",
-            "level": "moderate",
-            "text": "Avana's CDP Spoke, the AMM and Aave V4. Local test content for the development chains; not a risk review."
-          }
-        ]
-      }
-    },
-    {
-      "name": "uni-WETH-USDC-500",
-      "pool": "WETH-USDC-500",
-      "spoke": "uniV3Volatile",
-      "risk": {
-        "summary": "A volatile pair. Local test content for the development chains; not a risk review.",
-        "reviewedAt": "2026-11-16",
-        "factors": [
-          {
-            "id": "pairVolatility",
-            "label": "Pair volatility",
-            "level": "elevated",
-            "text": "One token is not a stablecoin, so the position's value moves with its price. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "liquidityDepth",
-            "label": "Liquidity depth",
-            "level": "moderate",
-            "text": "Depth of the pool and of the routes a liquidation swaps through. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "oracle",
-            "label": "Oracle",
-            "level": "low",
-            "text": "Four independent feeds per token, checked against the pool's TWAP. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "expectedIl",
-            "label": "Expected impermanent loss",
-            "level": "elevated",
-            "text": "A price move shifts the position into the falling token. Local test content for the development chains; not a risk review."
-          }
-        ]
-      }
-    },
-    {
-      "name": "uni-wstETH-WETH-100",
-      "pool": "wstETH-WETH-100",
-      "spoke": "uniV3Correlated",
-      "risk": {
-        "summary": "A correlated pair. Local test content for the development chains; not a risk review.",
-        "reviewedAt": "2026-11-16",
-        "factors": [
-          {
-            "id": "pairVolatility",
-            "label": "Pair volatility",
-            "level": "moderate",
-            "text": "The tokens move together; a de-peg of the liquid staking token is the main risk. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "liquidityDepth",
-            "label": "Liquidity depth",
-            "level": "moderate",
-            "text": "Depth of the pool and of the routes a liquidation swaps through. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "oracle",
-            "label": "Oracle",
-            "level": "low",
-            "text": "Four independent feeds per token, checked against the pool's TWAP. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "contractSurface",
-            "label": "Smart-contract surface",
-            "level": "moderate",
-            "text": "Avana's CDP Spoke, the AMM and Aave V4. Local test content for the development chains; not a risk review."
-          }
-        ]
-      }
-    },
-    {
-      "name": "slip-USDC-USDT-cl1",
-      "pool": "USDC-USDT-cl1-g0",
-      "spoke": "slipStable",
-      "risk": {
-        "summary": "A stable pair. Local test content for the development chains; not a risk review.",
-        "reviewedAt": "2026-11-16",
-        "factors": [
-          {
-            "id": "pairVolatility",
-            "label": "Pair volatility",
-            "level": "low",
-            "text": "Both tokens track the US dollar. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "liquidityDepth",
-            "label": "Liquidity depth",
-            "level": "moderate",
-            "text": "Depth of the pool and of the routes a liquidation swaps through. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "oracle",
-            "label": "Oracle",
-            "level": "low",
-            "text": "Four independent feeds per token, checked against the pool's TWAP. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "contractSurface",
-            "label": "Smart-contract surface",
-            "level": "moderate",
-            "text": "Avana's CDP Spoke, the AMM and Aave V4. Local test content for the development chains; not a risk review."
-          }
-        ]
-      }
-    },
-    {
       "name": "slip-WETH-USDC-cl100",
       "pool": "WETH-USDC-cl100-g0",
-      "spoke": "slipVolatile",
+      "spoke": "slipBlueChip",
+      "category": "crypto",
       "risk": {
-        "summary": "A volatile pair. Local test content for the development chains; not a risk review.",
+        "summary": "A test-world pair. Local test content for the development chains; not a risk review.",
         "reviewedAt": "2026-11-16",
         "factors": [
           {
             "id": "pairVolatility",
             "label": "Pair volatility",
-            "level": "elevated",
-            "text": "One token is not a stablecoin, so the position's value moves with its price. Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Local test content for the development chains; not a risk review."
           },
           {
             "id": "liquidityDepth",
             "label": "Liquidity depth",
             "level": "moderate",
-            "text": "Depth of the pool and of the routes a liquidation swaps through. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "oracle",
-            "label": "Oracle",
-            "level": "low",
-            "text": "Four independent feeds per token, checked against the pool's TWAP. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "expectedIl",
-            "label": "Expected impermanent loss",
-            "level": "elevated",
-            "text": "A price move shifts the position into the falling token. Local test content for the development chains; not a risk review."
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
     },
     {
-      "name": "slip-wstETH-WETH-cl1",
-      "pool": "wstETH-WETH-cl1-g0",
-      "spoke": "slipCorrelated",
+      "name": "slip-cbBTC-USDC-cl100",
+      "pool": "cbBTC-USDC-cl100-g1",
+      "spoke": "slipBlueChip",
+      "category": "crypto",
       "risk": {
-        "summary": "A correlated pair. Local test content for the development chains; not a risk review.",
+        "summary": "A test-world pair. Local test content for the development chains; not a risk review.",
         "reviewedAt": "2026-11-16",
         "factors": [
           {
             "id": "pairVolatility",
             "label": "Pair volatility",
             "level": "moderate",
-            "text": "The tokens move together; a de-peg of the liquid staking token is the main risk. Local test content for the development chains; not a risk review."
+            "text": "Local test content for the development chains; not a risk review."
           },
           {
             "id": "liquidityDepth",
             "label": "Liquidity depth",
             "level": "moderate",
-            "text": "Depth of the pool and of the routes a liquidation swaps through. Local test content for the development chains; not a risk review."
-          },
+            "text": "Local test content for the development chains; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "name": "slip-cbBTC-WETH-cl100",
+      "pool": "cbBTC-WETH-cl100-g3",
+      "spoke": "slipBlueChip",
+      "category": "crypto",
+      "risk": {
+        "summary": "A test-world pair. Local test content for the development chains; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
           {
-            "id": "oracle",
-            "label": "Oracle",
-            "level": "low",
-            "text": "Four independent feeds per token, checked against the pool's TWAP. Local test content for the development chains; not a risk review."
-          },
-          {
-            "id": "contractSurface",
-            "label": "Smart-contract surface",
+            "id": "pairVolatility",
+            "label": "Pair volatility",
             "level": "moderate",
-            "text": "Avana's CDP Spoke, the AMM and Aave V4. Local test content for the development chains; not a risk review."
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Local test content for the development chains; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "name": "slip-AERO-USDC-cl200",
+      "pool": "AERO-USDC-cl200-g0",
+      "spoke": "slipGovDefi",
+      "category": "crypto",
+      "risk": {
+        "summary": "A test-world pair. Local test content for the development chains; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Local test content for the development chains; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "name": "slip-AERO-WETH-cl200",
+      "pool": "AERO-WETH-cl200-g3",
+      "spoke": "slipGovDefi",
+      "category": "crypto",
+      "risk": {
+        "summary": "A test-world pair. Local test content for the development chains; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Local test content for the development chains; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "name": "slip-LINK-WETH-cl200",
+      "pool": "LINK-WETH-cl200-g2",
+      "spoke": "slipGovDefi",
+      "category": "crypto",
+      "risk": {
+        "summary": "A test-world pair. Local test content for the development chains; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
