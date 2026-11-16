@@ -26,3 +26,7 @@ eb94547b0cd55254456b1c62ada199b46f16c335:contracts/security/slither-mutate-triag
 6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:14699
 6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:17395
 6eb757bff337f7c42a92fd8f850da89f7d16ed54:contracts/security/slither-mutate-triage.json:generic-api-key:17396
+# A doc comment in the faucet ("whole tokens: anvil_dealERC20 when the node has it"), not a key; reworded in fed48e2e.
+# The second line is the same finding as reported on the pull-request merge ref.
+6cd015081453157e805b65e6268c51d0df826c69:services/faucet/src/chain.ts:generic-api-key:57
+9a39d14a77a6fd7584eab9b6fff1516cea884cff:services/faucet/src/chain.ts:generic-api-key:57
