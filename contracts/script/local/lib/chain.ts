@@ -150,6 +150,9 @@ export function writeBaseConfig(c: LocalChain): string {
   cfg.listing.speedLimits = tv.speedLimits;
   cfg.listing.spokes = [];
   cfg.listing.debtReserves = [];
+  // A listing debt asset (its DebtOracle or fixed price, its rounding allowance) needs a CDP Spoke to price it: the Hub
+  // file that makes the asset borrowable lists it, with the Spoke (planHub, from the test values).
+  cfg.listing.debtAssets = [];
   // The protocol's market parameters a Hub file's market starts from, per integration (1 Uniswap v3, 2 Slipstream),
   // taken from the anvil config's first market of each; the market list itself starts empty.
   const template = (id: number) => {
@@ -372,7 +375,7 @@ function manifest(c: LocalChain, env: NodeJS.ProcessEnv, log: string): string {
 export const FIRST_RELEASE = [
   "multicall3", "00-factories", "01-aave-v4", "place-executor", "02-test-world", "03-avana", "04-access-operations",
   "advance:432001", "05-execute-access-operations", "06-aave-deployment-aip", "07-deploy-first-loss-reserves",
-  "08-aave-loss-layers-aip", "07-fund-first-loss-reserves", ...listingSteps(), "swap-contracts", "manifest", "treasury",
+  "08-aave-loss-layers-aip", "07-fund-first-loss-reserves", ...listingSetupSteps(), "swap-contracts", "manifest", "treasury",
 ];
 
 /** The steps of a later release: each acts only on what the config adds (the rehearsal's day-2 phase). */
@@ -381,9 +384,15 @@ export const LATER_RELEASE = [
   "07-deploy-first-loss-reserves", "08-aave-loss-layers-aip", "07-fund-first-loss-reserves", ...listingSteps(), "manifest",
 ];
 
+/** The listing's setup: integrations, tokens, debt assets and Spokes, the debt oracles and the Aave debt reserves. */
+function listingSetupSteps() {
+  return ["09-listing-setup", "advance:432001", "09-execute-listing-setup", "09-debt-oracles", "10-aave-debt-reserves-aip"];
+}
+
+/** A listing: its setup, then the markets (metadata, listing operation, Aave side) and their activation. */
 function listingSteps() {
   return [
-    "09-listing-setup", "advance:432001", "09-execute-listing-setup", "09-debt-oracles", "10-aave-debt-reserves-aip",
+    ...listingSetupSteps(),
     "09-market-metadata", "09-listing-markets", "advance:432001", "09-execute-listing-markets", "10-aave-markets-aip",
     "09-listing-activate", "advance:43201", "09-execute-listing-activate",
   ];

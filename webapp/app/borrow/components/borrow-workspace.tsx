@@ -24,6 +24,7 @@ import {
   activeFilterCount,
   borrowPoolFilterItem,
   borrowPoolSymbols,
+  borrowSpokeOptions,
   buildAssetOptions,
   matchesMarketFilters,
   type MarketFilterState,
@@ -85,6 +86,7 @@ export function BorrowWorkspace({ pageData, initialIsDesktop = true }: BorrowWor
     [pageData.poolCatalog],
   )
   const filterItems = useMemo(() => [...filterItemById.values()], [filterItemById])
+  const marketOptions = useMemo(() => borrowSpokeOptions(pageData.poolCatalog), [pageData.poolCatalog])
   const assetOptions = useMemo(
     () =>
       buildAssetOptions(pageData.poolCatalog.flatMap((pool) => borrowPoolSymbols(pool).map((symbol) => ({ symbol })))),
@@ -196,6 +198,7 @@ export function BorrowWorkspace({ pageData, initialIsDesktop = true }: BorrowWor
     <section id="markets" className="scroll-mt-24 pb-16">
       <TabsBar
         items={filterItems}
+        marketOptions={marketOptions}
         filters={filters}
         onFiltersChange={setFilters}
         assetOptions={assetOptions}

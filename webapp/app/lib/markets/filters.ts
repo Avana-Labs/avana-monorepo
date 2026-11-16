@@ -72,6 +72,26 @@ export const BORROW_MARKET_OPTIONS: ReadonlyArray<FilterOption<BorrowMarketId>> 
   { id: "aerodrome-slipstream", label: "Aerodrome Slipstream", brand: true, iconSrc: "/asset-icons/aero.png" },
 ]
 
+/**
+ * The Borrow Markets filter lists every CDP Spoke the page's rows come from, by Spoke address,
+ * one option per Spoke even when several share a venue. The label is the Spoke's listing name,
+ * else its venue; the icon is the venue's.
+ */
+export function borrowSpokeOptions(
+  pools: ReadonlyArray<{ spoke: string; spokeName?: string; venue?: string; dexId?: string }>,
+): FilterOption[] {
+  const byId = new Map<string, FilterOption>()
+  for (const pool of pools) {
+    const id = pool.spoke.toLowerCase()
+    if (!id || byId.has(id)) continue
+    const venue = borrowMarketForSpoke(pool.dexId ?? pool.venue ?? "")
+    const iconSrc = BORROW_MARKET_OPTIONS.find((option) => option.id === venue)?.iconSrc
+    const label = pool.spokeName?.trim() || pool.venue?.trim() || pool.spoke
+    byId.set(id, { id, label, brand: true, ...(iconSrc ? { iconSrc } : {}) })
+  }
+  return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label, "en") || a.id.localeCompare(b.id))
+}
+
 /** The DEX market of a row, from its DEX label or Spoke id. */
 export function borrowMarketForSpoke(spokeOrDex: string): BorrowMarketId | null {
   const key = spokeOrDex.toLowerCase()
@@ -211,12 +231,12 @@ export function borrowPoolFilterItem(pool: {
   constituents?: ReadonlyArray<{ symbol: string }>
 }): FilterableItem {
   const symbols = borrowPoolSymbols(pool)
-  const market = borrowMarketForSpoke(pool.dexId ?? pool.spoke)
   return {
     chains: MARKET_CHAINS,
     hub: pool.hubId ?? "",
     ...(pool.hubLabel ? { hubLabel: pool.hubLabel } : {}),
-    markets: market ? [market] : [],
+    // The row's Spoke, the id `borrowSpokeOptions` lists it under.
+    markets: pool.spoke ? [pool.spoke.toLowerCase()] : [],
     assets: symbols.map((symbol) => symbol.toUpperCase()),
   }
 }
