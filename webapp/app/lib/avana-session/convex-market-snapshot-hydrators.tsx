@@ -28,9 +28,15 @@ export function ConvexMarketSnapshotHydrators({ scope }: { scope: ProductRuntime
 
   useEffect(() => {
     if (!scope.hydrateBorrowMarkets || !snapshots) return
-    const rows = snapshots.filter((row) => row.scope === "pool" || row.scope === "asset")
+    const rows = snapshots
+      .filter((row) => row.scope === "pool" || row.scope === "asset")
+      .map((row) => {
+        if (row.scope !== "asset") return row
+        const assetPriceUsd = priceFor(row.symbol)
+        return assetPriceUsd != null ? { ...row, assetPriceUsd } : row
+      })
     if (rows.length > 0) borrow.hydrateMarketData(rows as ConvexMarketSnapshot[])
-  }, [borrow.hydrateMarketData, scope.hydrateBorrowMarkets, snapshots])
+  }, [borrow.hydrateMarketData, priceFor, scope.hydrateBorrowMarkets, snapshots])
 
   useEffect(() => {
     if (!scope.hydrateLendMarkets || !snapshots) return

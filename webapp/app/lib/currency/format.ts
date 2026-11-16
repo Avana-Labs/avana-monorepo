@@ -34,6 +34,7 @@ export function convertFromUsd(usd: number, ctx: CurrencyContext): number {
 
 /** Compact currency formatting (e.g. $1.6M / ¥11.5M / €1.5M) from a USD value. */
 export function formatCompactCurrency(usd: number, ctx: CurrencyContext): string {
+  if (!Number.isFinite(usd)) return "—"
   const value = convertFromUsd(usd, ctx)
   const abs = Math.abs(value)
   const sign = value < 0 ? "-" : ""
@@ -86,6 +87,7 @@ export function formatActivityTokenAmount(amount: number, symbol: string): strin
 
 /** Exact currency formatting from a USD value, with currency-appropriate decimals. */
 export function formatExactCurrency(usd: number, ctx: CurrencyContext): string {
+  if (!Number.isFinite(usd)) return "—"
   const value = convertFromUsd(usd, ctx)
   const decimals = ZERO_DECIMAL_CURRENCIES.has(ctx.currency) ? 0 : 2
   return `${value < 0 ? "-" : ""}${ctx.symbol}${formatNumber(Math.abs(value), {
@@ -102,6 +104,7 @@ export function formatExactCurrency(usd: number, ctx: CurrencyContext): string {
  * the currency's usual decimals.
  */
 export function formatPriceCurrency(usd: number, ctx: CurrencyContext): string {
+  if (!Number.isFinite(usd)) return "—"
   const value = convertFromUsd(usd, ctx)
   const abs = Math.abs(value)
   const minDecimals = ZERO_DECIMAL_CURRENCIES.has(ctx.currency) ? 0 : 2

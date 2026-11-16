@@ -1,8 +1,9 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { DetailTransactionTable } from "@/app/components/detail-transaction-table/DetailTransactionTable"
 import { BORROW_POOL_KIND_CONFIG, LEND_KIND_CONFIG } from "@/app/components/detail-transaction-table/kind-configs"
 import type { DetailTransactionRow } from "@/app/lib/detail-page/transaction-history"
+import { resetCanonicalPrices, setCanonicalPrices } from "@/app/lib/prices/canonical"
 
 function makeRows(count: number): DetailTransactionRow[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -25,7 +26,11 @@ vi.mock("@/app/lib/i18n/use-translation", () => ({
 }))
 
 describe("DetailTransactionTable", () => {
-  afterEach(cleanup)
+  beforeEach(() => setCanonicalPrices({ USDC: 1, GHO: 1 }))
+  afterEach(() => {
+    cleanup()
+    resetCanonicalPrices()
+  })
 
   it("renders title without filter pills", () => {
     render(<DetailTransactionTable transactions={[]} kindConfig={LEND_KIND_CONFIG} context={{ assetSymbol: "USDC" }} />)

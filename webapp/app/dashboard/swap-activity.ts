@@ -1,5 +1,6 @@
 import type { PortfolioActivityRow } from "@/app/lib/data/providers/portfolio"
 import { getSwapAsset, type SwapTransactionRecord } from "@/app/lib/swap-system"
+import { canonicalPriceUsd } from "@/app/lib/prices/canonical"
 
 function activityStatus(status: SwapTransactionRecord["status"]): PortfolioActivityRow["status"] {
   if (status === "confirmed") return "confirmed"
@@ -29,7 +30,11 @@ export function mapSwapTransactionHistoryToActivityRows(transactions: SwapTransa
       status: activityStatus(transaction.status),
       // Only a confirmed swap actually debits the wallet; a failed/expired/rejected
       // (or still-pending) swap moved no funds, so it must not show a debit. (#31)
-      amountUsd: transaction.status === "confirmed" ? -(transaction.inputAmount * (inputAsset?.priceUsd ?? 0)) : 0,
+      // At the sold token's live price; with no price the amount is unknown (NaN reads "—").
+      amountUsd:
+        transaction.status === "confirmed"
+          ? -(transaction.inputAmount * (canonicalPriceUsd(inputSymbol) ?? Number.NaN))
+          : 0,
       primaryLabel: `${formatAmount(transaction.inputAmount)} ${inputSymbol} → ${formatAmount(transaction.outputAmount)} ${outputSymbol}`,
       secondaryLabel:
         transaction.status === "confirmed"
