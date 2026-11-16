@@ -609,7 +609,7 @@ Every row of 5.1 with the test files under `contracts/test/` that link it: a fun
 | TEST-333 | unit, fork | `fork/UniswapV4Integration.fork.t.sol` (1), `unit/UniswapV4Integration.Guards.unit.t.sol` (3), `unit/UniswapV4Integration.unit.t.sol` (7) | — |
 | TEST-334 | unit, gas | `gas/UniswapV4.Removal.gas.t.sol` (2), `unit/UniswapV4Integration.Donations.unit.t.sol` (1), `unit/UniswapV4Integration.Guards.unit.t.sol` (3), `unit/UniswapV4Integration.unit.t.sol` (9) | — |
 | TEST-335 | unit, integration, gas | `gas/UniswapV4.Removal.gas.t.sol` (1), `integration/MultiMarket.UniswapV4.integration.t.sol` (1), `unit/LPOracleV4.Guards.unit.t.sol` (3), `unit/LPOracleV4.unit.t.sol` (4) | — |
-| TEST-336 | integration, gas | `gas/Liquidation.WholeAccount.UniswapV4.gas.t.sol` (4), `integration/MultiMarket.UniswapV4.integration.t.sol` (3), `unit/UniswapV4Integration.unit.t.sol` (1) | — |
+| TEST-336 | integration, gas | `gas/Liquidation.WholeAccount.UniswapV4.gas.t.sol` (7), `integration/MultiMarket.UniswapV4.integration.t.sol` (3), `unit/UniswapV4Integration.unit.t.sol` (1) | — |
 
 ## 8. INV map
 

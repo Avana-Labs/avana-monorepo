@@ -1795,8 +1795,8 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-AMM-V4-009` | A v4 market MUST NOT be listed unless both of its tokens report `totalSupply() < 2^127` at… | — | — | — | `TEST-331`° | `IUniswapV4Integration` (decl.), `UniswapV4Integration` | Not run |
 | `REQ-AMM-V4-010` | Every fee read of a v4 position (the Lens's uncollected-fee view, `ILensV4FeeReads`) MUST … | — | — | — | `TEST-334`°, `TEST-336`° | `ILensV4FeeReads` (decl.), `UniswapV4Integration`, `UniswapV4State` | Not run |
 | `REQ-AMM-V4-011` | The PoolManager is unlocked (a read inside an `unlock` callback), the v4 pool is uninitial… | — | — | — | `TEST-331`°, `TEST-333`°, `TEST-335`° | — | Not run |
-| `REQ-AMM-V4-012` | The v4 LPVault's `maxRecordsPerAccountMarket()` MUST return 12 (`REQ-AMM-CORE-020`): an ac… | — | — | — | `TEST-336`° | `UniswapV4Integration` | Not run |
-| `REQ-AMM-V4-013` | When the recipient of a removal is not the depositor of record (a seizure to LPVaultSwap, … | — | — | — | `TEST-334`° | `UniswapV4Integration` | Not run |
+| `REQ-AMM-V4-012` | The v4 LPVault's `maxRecordsPerAccountMarket()` MUST return 8 (`REQ-AMM-CORE-020`): an acc… | — | — | — | `TEST-336`° | `UniswapV4Integration` | Not run |
+| `REQ-AMM-V4-013` | When the recipient of a removal is not the depositor of record (a seizure to LPVaultSwap, … | — | — | — | `TEST-334`°, `TEST-336`° | `UniswapV4Integration` | Not run |
 | `REQ-AMM-V4-014` | A pledged v4 position MUST be treated as unable to take more liquidity: `topUpPosition` re… | — | — | — | `TEST-334`° | — | Not run |
 | `REQ-ARCH-001` | Avana MUST use Aave V4 contracts owned by the Aave DAO for collateral accounting, debt, in… | — | — | — | — | — | Unlinked |
 | `REQ-ARCH-002` | A pledged position MUST stay in its AMM pool, with its listed shape, for the life of the p… | — | — | — | — | — | Unlinked |

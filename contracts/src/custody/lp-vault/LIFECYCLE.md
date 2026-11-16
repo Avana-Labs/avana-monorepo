@@ -38,7 +38,7 @@ Setup (Base market 3, Aerodrome Slipstream USDC/USDT, tick spacing 1, exact rang
 9. **Collateralization → [`returnPosition`](../../amm/IAmmIntegration.sol#L102)`(keyB)`** when Carol withdraws: the NFT goes back to Carol with every fee it accrued. Event: [`PositionReturned`](ILPVaultEvents.sol#L33).
 10. **AvanaTimelock → [`returnStray`](ILPVault.sol#L41)** for an NFT sent to the LPVault outside a pledge (recorded by `onERC721Received` as [`StrayReceived`](ILPVaultEvents.sol#L49)); normal delay. Event: [`StrayReturned`](ILPVaultEvents.sol#L53). Errors: [`NotTimelock`](ILPVaultErrors.sol#L90), [`NotStray`](ILPVaultErrors.sol#L78).
 
-The Uniswap v4 LPVault runs the same steps through the v4 PositionManager ([Uniswap v4 lifecycle](../../amm/uniswap-v4/LIFECYCLE.md)). Steps 5 to 7 are each one `modifyLiquidities` batch that pays the fees to the depositor before any principal moves, because a v4 decrease pays both in one delta. A native ETH leg arrives as WETH. An account holds at most 12 open records in a v4 market (`REQ-AMM-V4-012`), against 16 for Uniswap v3 and Slipstream.
+The Uniswap v4 LPVault runs the same steps through the v4 PositionManager ([Uniswap v4 lifecycle](../../amm/uniswap-v4/LIFECYCLE.md)). Steps 5 to 7 are each one `modifyLiquidities` batch that pays the fees to the depositor before any principal moves, because a v4 decrease pays both in one delta. A native ETH leg arrives as WETH. An account holds at most 8 open records in a v4 market (`REQ-AMM-V4-012`), against 16 for Uniswap v3 and Slipstream.
 
 ## What the UI reads and calls
 

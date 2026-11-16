@@ -56,9 +56,10 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     /// @dev Token supply bound at listing (`REQ-AMM-V4-009`).
     uint256 internal constant SUPPLY_BOUND = 1 << 127;
     /// @notice Open records per account and market (`REQ-AMM-V4-012`): a v4 record's removal costs about 253k gas in a
-    /// whole-account seizure against 167k for Uniswap v3, so 12 records with 4 debts stay within the 7.5M liquidation
-    /// budget where 16 would not.
-    uint256 internal constant MAX_RECORDS = 12;
+    /// whole-account seizure against 167k for Uniswap v3, 279k when it pays fees in both tokens, and 344k when the
+    /// depositor's fee transfer reverts and the fallback batch runs (`REQ-AMM-V4-013`), so 8 such records with 4 debts
+    /// stay within the 7.5M liquidation budget where 10 would not.
+    uint256 internal constant MAX_RECORDS = 8;
     /// @dev Bytes of `bindMarket`'s `integrationData`: `abi.encode(UniswapV4PoolKey key, address referencePool,
     /// uint256 price0, uint256 price1)`.
     uint256 internal constant INTEGRATION_DATA_LENGTH = 8 * 32;

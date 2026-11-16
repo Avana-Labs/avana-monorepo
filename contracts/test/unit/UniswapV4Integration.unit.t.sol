@@ -427,8 +427,8 @@ contract UniswapV4IntegrationUnitTest is UniswapV4IntegrationFixture {
     }
 
     // TEST-336 verifies: REQ-AMM-V4-012, REQ-AMM-CORE-020
-    function test_TEST_336_recordCapIsTwelve() public view {
-        assertEq(vault.maxRecordsPerAccountMarket(), 12);
+    function test_TEST_336_recordCapIsEight() public view {
+        assertEq(vault.maxRecordsPerAccountMarket(), 8);
     }
 
     /// @dev The fees the PoolManager would credit a PositionManager position now (`Position.update`).

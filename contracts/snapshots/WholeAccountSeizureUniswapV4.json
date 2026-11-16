@@ -1,6 +1,9 @@
 {
-  "liquidate_12records_1debt": "6551524",
-  "liquidate_12records_4debts": "7391349",
-  "liquidate_1records_1debt": "3772337",
-  "liquidate_1records_4debts": "4612161"
+  "liquidate_1records_1debt": "3772341",
+  "liquidate_1records_1debt_fees": "3800240",
+  "liquidate_1records_4debts": "4612165",
+  "liquidate_8records_1debt": "5540897",
+  "liquidate_8records_4debts": "6380722",
+  "liquidate_8records_4debts_fees": "6589900",
+  "liquidate_8records_4debts_fees_blocked": "7138037"
 }

@@ -89,7 +89,7 @@ Decided by Josue on 2026-11-15. Regression tests are in `contracts/test/unit/` (
 | S5 | Fixed | As V4-05 | — |
 | S6 | Fixed | `SPEC-AMM-V4-003` states the price-based form and the equivalence | — |
 | S7 | Fixed | `consistencyDeviation` reports unavailable while the PoolManager is unlocked; `REQ-AMM-V4-003` lists the guarded reads | `test_TEST_333_readsFailClosedWhileThePoolManagerIsUnlocked` |
-| S8 | Open | `REQ-AMM-V4-012` states the measured record state (no accrued fees); the worst case with fee-bearing records is not measured yet | — |
+| S8 | Fixed | Measured (4 debts, native ETH/USDC, fees owed in both tokens): 12 records 7,704,121 gas, above the 7.5M budget; a depositor whose USDC transfers revert adds the fallback batch to every record, 10 records 7,826,979. The v4 cap is lowered to 8 (decision of 2026-11-15): 8 fee-bearing records 6,589,900, and of a blocked depositor 7,138,037. `REQ-AMM-V4-012` states the record state of each measurement | `test_TEST_336_v4EightFeeBearingRecordsFourDebts`, `test_TEST_336_v4EightFeeBearingRecordsBlockedDepositor`, `test_TEST_336_recordCapIsEight` |
 | S9 | Fixed | As V4-03 | as V4-03 |
 | S10 | Fixed | As V4-04 | — |
 
