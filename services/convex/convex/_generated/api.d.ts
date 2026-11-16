@@ -89,6 +89,7 @@ import type * as lib_riskScore from "../lib/riskScore.js";
 import type * as lib_riskViews from "../lib/riskViews.js";
 import type * as lib_rollups from "../lib/rollups.js";
 import type * as lib_rpc from "../lib/rpc.js";
+import type * as lib_swapContracts from "../lib/swapContracts.js";
 import type * as lib_uiTypes from "../lib/uiTypes.js";
 import type * as lib_windows from "../lib/windows.js";
 import type * as liquidity from "../liquidity.js";
@@ -198,6 +199,7 @@ declare const fullApi: ApiFromModules<{
   "lib/riskViews": typeof lib_riskViews;
   "lib/rollups": typeof lib_rollups;
   "lib/rpc": typeof lib_rpc;
+  "lib/swapContracts": typeof lib_swapContracts;
   "lib/uiTypes": typeof lib_uiTypes;
   "lib/windows": typeof lib_windows;
   liquidity: typeof liquidity;

@@ -21,7 +21,7 @@ import {
   usd,
 } from "@avana/services-common/views";
 import { feeTierLabel } from "./format.ts";
-import type { MarketSnapshotRow, PageContent, PoolBorrowable, AllocationRow, InterestRateModel } from "./uiTypes.ts";
+import type { MarketSnapshotRow, PageContent, PoolBorrowable, AllocationRow, InterestRateModel, Visual } from "./uiTypes.ts";
 
 export type WithSlug<T> = T & { readonly slug: string };
 
@@ -129,6 +129,7 @@ export function poolSnapshot(
   pool24h: { volumeUsd: number; feesUsd: number; lpFeeAprPct?: number },
   content: PageContent | null,
   hubLabel?: string,
+  tokenVisuals?: readonly Visual[],
 ): MarketSnapshotRow {
   const collateralUsd = Number(BigInt(market.suppliedUsd8)) / 1e8;
   const debtUsd = marketDebtUsd(debts, reserves, assets);
@@ -139,6 +140,8 @@ export function poolSnapshot(
     scope: "pool",
     chainId: market.chainId,
     ...identity(content, { name: market.name, symbol: market.symbol }),
+    // The pair's icons from its tokens' listing entries when the market's own entry gives none.
+    ...(!content?.visuals && tokenVisuals ? { visuals: tokenVisuals } : {}),
     spokeId: market.spoke,
     hubId: market.hub,
     ...(hubLabel ? { hubLabel } : {}),

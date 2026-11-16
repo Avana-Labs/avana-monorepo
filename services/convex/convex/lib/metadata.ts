@@ -8,14 +8,17 @@
 // Version 2 adds, per entry, the project links (website, X, docs, GitHub, audits) and the risk text of the page's
 // risk card (a summary and rated factors), bounds the FAQs, and requires a Lend entry to name its symbol and
 // category. Version 1 files stay valid; a version 1 entry that carries a version 2 field is refused.
+// Version 2 risk text may also carry the review day, a bps share per factor and the contracts the market relies on;
+// a Hub entry may carry the risk disclosures of its Borrow and Lend pages; a token entry names its symbol.
 
 import { keccak256 } from "viem";
-import type { Category, PageContent, PageLinks, PageRisk, RiskLevel } from "./uiTypes.ts";
+import type { Category, PageContent, PageDisclosures, PageLinks, PageRisk, RiskDependency, RiskLevel } from "./uiTypes.ts";
 
 export const METADATA_VERSION = 2;
 export const METADATA_VERSIONS: readonly number[] = [1, 2];
 export const MAX_FAQS = 30;
 export const MAX_RISK_FACTORS = 12;
+export const MAX_RISK_DEPENDENCIES = 64;
 
 export type MetadataScope = "lend" | "asset" | "pool" | "spoke" | "token" | "hub";
 
@@ -37,6 +40,8 @@ export class MetadataRejected extends Error {}
 const SCOPES: readonly MetadataScope[] = ["lend", "asset", "pool", "spoke", "token", "hub"];
 const CATEGORIES: readonly Category[] = ["stable", "crypto", "stock"];
 const LEVELS: readonly RiskLevel[] = ["low", "moderate", "elevated", "high"];
+const DEPENDENCY_KINDS: readonly RiskDependency["kind"][] = ["amm", "oracle", "hub", "spoke"];
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const LINK_KEYS = ["website", "x", "docs", "github"] as const;
 const HTTPS = /^https:\/\/[^\s/?#]+(\/[^\s]*)?$/;
 const X_PROFILE = /^https:\/\/(www\.)?(x|twitter)\.com\/[A-Za-z0-9_]{1,15}\/?$/;
@@ -83,8 +88,28 @@ function checkRisk(where: string, raw: unknown): PageRisk {
     if (typeof x.id !== "string" || !ID.test(x.id) || ids.has(x.id)) throw new MetadataRejected(`${where}: each risk factor needs a unique camelCase id`);
     ids.add(x.id);
     if (!str(x.label, 128) || !str(x.text, 1_000) || !LEVELS.includes(x.level as RiskLevel)) throw new MetadataRejected(`${where}: risk factor ${x.id} needs a label, a level and text up to 1,000`);
+    if (x.bps !== undefined && !(Number.isInteger(x.bps) && (x.bps as number) >= 0 && (x.bps as number) <= 10_000)) throw new MetadataRejected(`${where}: risk factor ${x.id} bps must be a whole number from 0 to 10,000`);
+  }
+  if (r.reviewedAt !== undefined && !(typeof r.reviewedAt === "string" && DAY.test(r.reviewedAt) && !Number.isNaN(Date.parse(`${r.reviewedAt}T00:00:00Z`)) && new Date(`${r.reviewedAt}T00:00:00Z`).toISOString().startsWith(r.reviewedAt))) {
+    throw new MetadataRejected(`${where}: risk reviewedAt must be a YYYY-MM-DD day`);
+  }
+  if (r.dependencies !== undefined) {
+    if (!list(r.dependencies) || r.dependencies.length > MAX_RISK_DEPENDENCIES) throw new MetadataRejected(`${where}: risk dependencies are a list of up to ${MAX_RISK_DEPENDENCIES}`);
+    for (const d of r.dependencies) {
+      if (!DEPENDENCY_KINDS.includes(d.kind as RiskDependency["kind"]) || !str(d.label, 128) || typeof d.address !== "string" || !ADDRESS.test(d.address)) {
+        throw new MetadataRejected(`${where}: each risk dependency needs a kind (${DEPENDENCY_KINDS.join(", ")}), a label and a lower-case address`);
+      }
+    }
   }
   return r as unknown as PageRisk;
+}
+
+function checkDisclosures(where: string, raw: unknown): PageDisclosures {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) throw new MetadataRejected(`${where}: disclosures must be an object`);
+  const d = raw as Record<string, unknown>;
+  for (const k of Object.keys(d)) if (k !== "borrow" && k !== "lend") throw new MetadataRejected(`${where}: unknown disclosure ${k}`);
+  for (const k of ["borrow", "lend"] as const) if (d[k] !== undefined && !str(d[k], 4_000)) throw new MetadataRejected(`${where}: disclosure ${k} must be text up to 4,000`);
+  return d as PageDisclosures;
 }
 
 /** keccak256 of the file's bytes, the value the listing operation's salt must equal. */
@@ -127,13 +152,18 @@ export function parseMetadata(bytes: Uint8Array, committedHash: string, chainId:
     if ((e.faqs as readonly Record<string, unknown>[]).some((f) => !str(f.question, 500) || !str(f.answer, 5_000))) throw new MetadataRejected(`${where}: every FAQ needs a question and an answer`);
     if (e.iconUrl !== undefined && (typeof e.iconUrl !== "string" || !e.iconUrl.startsWith("https://"))) throw new MetadataRejected(`${where}: iconUrl must be https`);
     if (!v2) {
-      if (e.links !== undefined || e.risk !== undefined) throw new MetadataRejected(`${where}: links and risk need version 2`);
+      if (e.links !== undefined || e.risk !== undefined || e.disclosures !== undefined) throw new MetadataRejected(`${where}: links, risk and disclosures need version 2`);
       continue;
     }
     if ((e.faqs as readonly unknown[]).length > MAX_FAQS) throw new MetadataRejected(`${where}: at most ${MAX_FAQS} FAQs`);
     if (e.scope === "lend" && (!str(e.symbol, 32) || e.category === undefined)) throw new MetadataRejected(`${where}: a Lend entry names its symbol and category`);
     if (e.links !== undefined) checkLinks(where, e.links);
+    if (e.scope === "token" && !str(e.symbol, 32)) throw new MetadataRejected(`${where}: a token entry names its symbol`);
     if (e.risk !== undefined) checkRisk(where, e.risk);
+    if (e.disclosures !== undefined) {
+      if (e.scope !== "hub") throw new MetadataRejected(`${where}: only a Hub entry carries disclosures`);
+      checkDisclosures(where, e.disclosures);
+    }
   }
   return file as MetadataFile;
 }
