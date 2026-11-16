@@ -7,7 +7,7 @@ import type { ChainConfig } from "./config.ts";
 import type { ChainReader } from "./chain/reads.ts";
 import type { Revert } from "./jobs/failureReasons.ts";
 
-export type JobKind = "liquidation" | "settlePending" | "oraclePoke" | "breakerPoke" | "configPoke";
+export type JobKind = "liquidation" | "settlePending" | "oraclePoke" | "breakerPoke" | "configPoke" | "gasTopUp";
 
 /**
  * Fee class of a transaction, declared by its job (keeper DESIGN.md, Fees):
@@ -15,6 +15,7 @@ export type JobKind = "liquidation" | "settlePending" | "oraclePoke" | "breakerP
  *   while the oracle is not Live that would change its stored state. Tip: the 90th percentile of the last 5 blocks,
  *   at least `minTipUrgent`; never budget-limited.
  * - `scheduled`: the checkpoint and feed-round oracle pokes, which have the POKE_LEAD_SECONDS window. Tip `minTipScheduled`.
+ * - `urgent` also covers the gas vault's `topUpAll` when the signer is below its `minBalance` (jobs/gasTopUp.ts).
  * - `lazy`: `settlePending`, with no deadline measured in blocks. Tip `minTipLazy`, sent only at a low base fee or
  *   after `lazyMaxWait`, then at scheduled fees.
  */

@@ -43,7 +43,7 @@ Harness entry points of AvanaRoles, Lock and LockSlot; runtime code of AmmConsta
 
 ## How often it runs
 
-Slow tier at each layer gate and on every push to `main` in CI (`security-slow.yml`), one job per target: each harness's assertion entry points and each `src/` contract (`HEVM_TARGETS`).
+Slow tier at each layer gate and on every push to `main` in CI (`security-slow.yml`), in six jobs of about equal time (`script/hevm-batches.py`, by the measured times in `script/hevm-timings.json`): each harness's assertion entry points and each `src/` contract (`HEVM_TARGETS`), each `src/` source once, from the artifact of the compiler profile it is deployed with. Each hevm run (one entry point, or one `src/` contract) has `HEVM_ENTRY_TIMEOUT` (5,400 s) of wall clock; an entry point it ends fails as timed out, a `src/` contract it ends is reported as explored partially.
 
 ## Latest result
 

@@ -258,9 +258,32 @@ place_executor() {
     { record place-executor fail "could not place the executor stand-in at $dao"; return 1; }
 }
 
+# The gas vault after its steps: the configured signers listed, the vault funded, and a keeper signer drained below its
+# minimum is refilled by a permissionless topUpAll (sent by the deployer, who receives nothing). The fund step is not in
+# the rerun list below: after this top-up it refills the vault, which is its job.
+check_gas_vault() {
+  skipped gas-vault-check && return 0
+  local vault signer before after orig
+  vault="$(node -e 'console.log(require(process.argv[1]).AvanaGasVault)' "$OUT/gas-vault.json")" || { record gas-vault-check fail "no gas-vault.json"; return 1; }
+  signer="$(node -e 'console.log(require(process.argv[1]).gasVault.signers[0].signer)' "$CONTRACTS/$AVANA_CONFIG")"
+  [ "$(cast call "$vault" 'isSigner(address)(bool)' "$signer" --rpc-url "$RPC_ANVIL")" = true ] ||
+    { record gas-vault-check fail "signer $signer not listed after 12-execute-gas-vault-signers"; return 1; }
+  orig="$(cast balance "$signer" --rpc-url "$RPC_ANVIL")"
+  cast rpc anvil_setBalance "$signer" 0x1 --rpc-url "$RPC_ANVIL" >/dev/null
+  before="$(cast balance "$vault" --rpc-url "$RPC_ANVIL")"
+  cast send "$vault" 'topUpAll()' --unlocked --from "$DEPLOYER" --rpc-url "$RPC_ANVIL" >/dev/null 2>&1 ||
+    { record gas-vault-check fail "topUpAll reverted"; return 1; }
+  after="$(cast balance "$signer" --rpc-url "$RPC_ANVIL")"
+  [ "$after" = "$(node -e 'console.log(require(process.argv[1]).gasVault.signers[0].targetBalanceWei)' "$CONTRACTS/$AVANA_CONFIG")" ] ||
+    { record gas-vault-check fail "signer at $after wei after topUpAll, not its target"; return 1; }
+  # The signer gets its earlier balance back, so the later steps run as before.
+  cast rpc anvil_setBalance "$signer" "$(cast to-hex "$orig")" --rpc-url "$RPC_ANVIL" >/dev/null
+  record gas-vault-check pass "vault $vault held $before wei; signer refilled to $after wei by topUpAll"
+}
+
 if [[ " $STEPS " == *" deploy "* ]]; then
   # A fresh deployment: no output of an earlier run may stand in for this one's.
-  [ -z "$RESUME" ] && rm -f "$OUT"/{aave,world,avana,coverage,deficit-offsets,manifest,scenarios,listing-oracles,listing-markets,listing-metadata,config-day2,config-exotic,config-hostile-fot,config-hostile-rebase,config-hostile-nodec,config-hostile-feeswitch}.json \
+  [ -z "$RESUME" ] && rm -f "$OUT"/{aave,world,avana,coverage,deficit-offsets,gas-vault,manifest,scenarios,listing-oracles,listing-markets,listing-metadata,config-day2,config-exotic,config-hostile-fot,config-hostile-rebase,config-hostile-nodec,config-hostile-feeswitch}.json \
     "$OUT"/operation-*.json "$OUT"/aip-*.json
   [ -z "$RESUME" ] && rm -rf broadcast/*/31337 cache/*.s.sol/31337 "$OUT/listing-content" &&
     find "$LOG" -name '*.log' ! -name anvil.log -delete
@@ -292,7 +315,13 @@ if [[ " $STEPS " == *" deploy "* ]]; then
     run_script 10-aave-markets-aip &&
     run_script 09-listing-activate &&
     advance 43201 wait-listing-activate &&
-    run_script 09-execute-listing-activate
+    run_script 09-execute-listing-activate &&
+    run_script 12-gas-vault &&
+    run_script 12-gas-vault-signers &&
+    advance 432001 wait-gas-vault-signers &&
+    run_script 12-execute-gas-vault-signers &&
+    run_script 12-fund-gas-vault &&
+    check_gas_vault
 fi
 
 # Later releases: the operator's changes after the first deployment, through the same named steps, each acting only
@@ -384,7 +413,7 @@ if [ -n "$GROW_FAILED" ]; then
 elif [ -n "$GREW" ]; then
   for s in 01-aave-v4 04-access-operations 06-aave-deployment-aip 07-deploy-first-loss-reserves 08-aave-loss-layers-aip \
     07-fund-first-loss-reserves 09-listing-setup 09-debt-oracles 10-aave-debt-reserves-aip 09-market-metadata \
-    09-listing-markets 10-aave-markets-aip 09-listing-activate; do run_idle "$s" || break; done
+    09-listing-markets 10-aave-markets-aip 09-listing-activate 12-gas-vault 12-gas-vault-signers; do run_idle "$s" || break; done
 fi
 
 # Hostile tokens (REQ-ARCH-014): each case of script/e2e/hostile-additions.ts runs the release steps from an anvil

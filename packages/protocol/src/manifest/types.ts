@@ -9,6 +9,14 @@ import type { Address, Hex } from "viem";
 export const MANIFEST_SCHEMA_VERSION = 1;
 
 /** An immutable contract (or a plain implementation): `codeHash = keccak256(runtime code)`. */
+/** The AvanaGasVault: refills Avana's own keeper signers; withdraws only to `treasury`, the `feeRecipient` Safe. */
+export interface GasVault extends Immutable {
+  readonly treasury: Address;
+  readonly timelock: Address;
+  readonly guardian: Address;
+  readonly maxSigners: number;
+}
+
 export interface Immutable {
   readonly address: Address;
   readonly codeHash: Hex;
@@ -161,6 +169,8 @@ export interface ReleaseManifest {
     /** Null while the concentrated-liquidity LPOracle implementation is not deployed. */
     readonly clOracles: readonly ClOracle[];
     readonly proxyCreationCodeHash: Hex;
+    /** The chain's AvanaGasVault (2.23) and its immutables; null while it is not deployed (step 12-gas-vault). */
+    readonly gasVault: GasVault | null;
   };
   readonly markets: readonly Market[];
   readonly debtReserves: readonly DebtReserve[];

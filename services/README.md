@@ -7,7 +7,7 @@ Data path: contracts and their events → Ponder indexer with PostgreSQL → pri
 | Path | Contents |
 |---|---|
 | `indexer/` | Ponder indexer with a Postgres database: Avana and Aave events for the app, the keeper, monitoring and DAO refresh payloads, an hourly sampler of every Hub asset, Spoke slice, market and account, and the series of every listed market's pool. [EVENTS.md](indexer/EVENTS.md) lists every event, sample and live read; [EXPORT.md](indexer/EXPORT.md) specifies the private export |
-| `monitor/` | The monitoring service: the signals `M-01` to `M-34` below, routed to their responders, pages confirmed on a second provider, keeper alerts and heartbeats ingested. [README](monitor/README.md) lists the signals wired so far |
+| `monitor/` | The monitoring service: the signals `M-01` to `M-36` below, routed to their responders, pages confirmed on a second provider, keeper alerts and heartbeats ingested. [README](monitor/README.md) lists the signals wired so far |
 | `keeper/` | Avana's liquidation keeper, run as primary and standby instances on each chain, including observe-only mode. [DESIGN.md](keeper/DESIGN.md) maps the rules below onto its code |
 | `convex/` | The Convex backend the app reads ([README](convex/README.md)): rows by scope (Hub asset, Spoke slice, CDP debt reserve, market), chart series, listing content, the frontend fee quote, and the import of the export. The frontend fee is 10 bps of every app action (never above the 25 bps ceiling of the ARFC; for pledge and withdraw collateral, of the position's oracle USD value, paid in the debt stablecoin), rounded down and added as one transfer to the action's batch; it goes to the ParameterStore's `feeRecipient`, which the app reads on chain, and the app drops the fee leg if its simulation shows that transfer would revert. No contract charges it, and keeper liquidations pay none |
 | `common/` | `@avana/services-common`: chains, environment names, the manifest view the services read, provenance keys, the export and series wire types, and the chain snapshot (`/views`): its rows by scope, the reader that fills them at one block, and their integer math |
@@ -270,13 +270,15 @@ Each instance exposes metrics on a port separate from the kill switch: blocks be
 
 ### Gas funding runbook
 
-Each chain has two funded keeper signers, the primary's and the standby's, on different providers. Signers are funded by lump-sum transfers from the `feeRecipient` treasury Safe, each to its target balance before a market's `activateMarket` and again when its runway warns.
+Each chain has two funded keeper signers, the primary's and the standby's, on different providers. Before a market's `activateMarket` each signer is funded to its target balance. Where the chain's AvanaGasVault is deployed (deploy steps `12-*`, [docs/keeper-gas.md](../docs/keeper-gas.md)), it refills both: the keeper calls the vault's permissionless `topUpAll()` as an urgent transaction whenever its own signer is below its vault `minBalance` and the vault would send something (`keeper/src/jobs/gasTopUp.ts`), and the `feeRecipient` treasury Safe funds the vault by lump sums. Without a vault, the treasury Safe refills each signer directly.
 
 - **Signer runway warn (`M-17` gas, below 3 days of median spend).** Look at the spend anomaly first. If spend is normal, refill the signer from the treasury Safe. If it pages (below 1 day), refill now and find out why the warn was not acted on.
 - **Spend anomaly (`M-31`, 24-hour spend above 3× the 7-day median warns, above 5× pages).** Read the spend per class (`keeper_gas_spend_24h_wei`) and per Hub. A poke or breaker loop points to a griefing case: raise nothing until the cause is known. A liquidation burst is expected in a crash: refill and keep watching the runway.
 - **Class budget reached (`M-32`).** The scheduled or lazy class has stopped; urgent transactions continue. Find the cause in the spend log before raising `KEEPER_DAILY_BUDGET_WEI_<CLASS>_<CHAIN>`; scheduled pokes resume by themselves once older spend leaves the 24-hour window. While scheduled pokes are stopped, `M-34` will page within 2 hours.
 - **Poke overdue (`M-34`, a market's `priceCheckpoint().at` older than 7,200 s, read by the monitor from the chain).** Check the keeper's heartbeat, its gas balance, `M-32` and the attempt log for that oracle. Anyone may call `poke()`; an operator can send one by hand while the keeper is fixed.
-- **Standby unfunded (`M-33`, the standby signer below its minimum balance).** Refill the standby from the treasury Safe; it must be able to take over at any time.
+- **Standby unfunded (`M-33`, the standby signer below its minimum balance).** Anyone may call the vault's `topUp(standby)`; without a vault, refill the standby from the treasury Safe. It must be able to take over at any time.
+- **Vault runway (`M-35`, below 30 days of top-ups warns, below 14 days pages).** Check `M-31` first: a drain by a spend anomaly is fixed at its cause. Otherwise the treasury Safe sends the vault a lump sum of 30 days of measured daily spend plus the burst reserve (`fund()`); on a second chain the treasury bridges the native token by hand first.
+- **Top-up capped (`M-36`).** A signer asked for more than its 24-hour cap or the vault's balance allowed. After a liquidation burst, wait for the window to roll or raise the signer's cap through the timelock (`setSignerConfig`, normal delay); with an empty vault, follow `M-35`. A `TopUpFailed` means the signer could not receive: check that it is still an EOA the keeper controls. If a signer key is stolen, the guardian removes it from the vault at once (`removeSigner`) and the standby takes over.
 - **Keeper profits.** Liquidation payouts go to the instance's `FUNDING_SAFE` in the debt asset. Converting them into gas is a manual treasury decision; no path refills a signer from them automatically.
 
 ### Tests before deployment
@@ -327,6 +329,8 @@ The monitoring service, run by Avana Labs on the indexer's data and direct RPC r
 | M-32 | Keeper class budget reached: the rolling 24-hour spend of the scheduled or lazy class against `KEEPER_DAILY_BUDGET_WEI_{SCHEDULED,LAZY}_<CHAIN>` | — | the class reaches its budget and stops sending | keeper on-call, Avana Labs | P-08 (`EMG-082`) |
 | M-33 | Standby keeper signer gas balance against `KEEPER_STANDBY_MIN_BALANCE_WEI_<CHAIN>` | below its minimum | — | Avana Labs | P-08 (`EMG-082`) |
 | M-34 | Oracle poke overdue: each market's LPOracle `priceCheckpoint().at`, read by the monitor from the chain, not from the keeper | — | older than 7,200 s on any market | keeper on-call, operators | P-08 (`EMG-082`) |
+| M-35 | Gas vault runway: the chain's AvanaGasVault balance against what it sent (`ToppedUp`) per day over the last 30 days, never below `MONITOR_GAS_VAULT_DAILY_WEI` | below 30 days | below 14 days | Avana Labs, keeper on-call | P-22 (`EMG-115`) |
+| M-36 | Gas vault top-up capped: a `ToppedUp` whose amount is below what the signer requested (its 24-hour cap or the vault's balance limited it), or a `TopUpFailed` | — | every one | Avana Labs, keeper on-call | P-22 (`EMG-115`) |
 
 Rules:
 

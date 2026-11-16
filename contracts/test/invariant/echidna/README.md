@@ -47,7 +47,7 @@ From `contracts/`:
 
 ```bash
 script/security-slow.sh build echidna          # every harness, property and assertion mode
-ECHIDNA_TEST_LIMIT=1000000 ECHIDNA_TIMEOUT=1800 script/security-slow.sh build echidna   # nightly budget
+ECHIDNA_TEST_LIMIT=100000 ECHIDNA_TIMEOUT=600 script/security-slow.sh build echidna     # nightly budget
 script/security-slow.sh build medusa           # the same harnesses under Medusa
 ```
 

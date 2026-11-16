@@ -130,6 +130,22 @@ contract LensRiskUnitTest is LensFixture {
     }
 
     // TEST-247 verifies: REQ-LENS-034
+    /// @dev A second registered Spoke that draws no GHO, listed after the CDP Spoke: the market on it is matched past
+    /// the first Spoke and left out.
+    function test_TEST_247_tailCoverageSkipsMarketsOnASpokeThatDoesNotDraw() public {
+        address other = makeAddr("otherSpoke");
+        reg.addSpoke(other, aave.hub);
+        Market memory m = reg.getMarket(SECOND);
+        m.spoke = other;
+        reg.setMarket(SECOND, m);
+        store.setTokenCap(aave.hub, address(usdc), 0);
+        TailCoverageView memory t = lens.getTailCoverage(aave.hub, address(debt));
+        assertEq(t.drawCapUsd, 600_000e8, "only the CDP Spoke's draw cap");
+        assertEq(t.worstToken, address(usdt), "USDT");
+        assertEq(t.tailUsd, 216_000e8, "(250,000 + 20,000) x 0.8, without the second market's slice");
+    }
+
+    // TEST-247 verifies: REQ-LENS-034
     function test_TEST_247_tailCoverageZeroTail() public {
         store.setTokenCap(aave.hub, address(usdc), 0);
         store.setTokenCap(aave.hub, address(usdt), 0);

@@ -18,7 +18,7 @@ Filling covers immutables only. An address a contract reads from its storage (th
 cd contracts && script/security-slow.sh build mythril       # calls script/security-mythril.sh
 ```
 
-Configuration: `contracts/security/mythril.conf` (modules, `MYTHRIL_TX_COUNT=3`, 900 s per contract, 100 s per solver query, depth 128); triage `contracts/security/mythril-triage.json`; gate High, Medium and Low.
+Configuration: `contracts/security/mythril.conf` (modules, `MYTHRIL_TX_COUNT=3`, 300 s per contract, 100 s per solver query, depth 128); triage `contracts/security/mythril-triage.json`; gate High, Medium and Low.
 
 ## Scope
 

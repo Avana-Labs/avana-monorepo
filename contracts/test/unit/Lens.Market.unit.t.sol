@@ -3,6 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {Pending} from "../../src/custody/collateralization/types/Pending.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
@@ -11,6 +13,7 @@ import {RecordBackingView} from "../../src/lens/lens/types/RecordBackingView.sol
 import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
 import {CapView} from "../../src/types/CapView.sol";
 import {PendingView} from "../../src/types/PendingView.sol";
+import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensMarketUnitTest
@@ -422,6 +425,32 @@ contract LensMarketUnitTest is LensFixture {
     function test_TEST_247_capHeadroomUnknownVaultTokenReverts() public {
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 0));
         lens.getCapHeadroom(makeAddr("x"), alice);
+    }
+
+    // ─── Lock ───
+
+    // TEST-060 verifies: REQ-LENS-006
+    /// @dev Collateralization's own views refuse while the Lock is held, with an error of the same selector; here they
+    /// answer, so only the Lens's own check can refuse. The Lens never reads mid-operation state on the strength of a
+    /// dependency's guard.
+    function test_TEST_060_pendingAndCapHeadroomRefuseOnTheLensCheck() public {
+        Pending memory none;
+        PledgeCounters memory zero;
+        vm.mockCall(
+            address(coll), abi.encodeWithSelector(ICollateralizationViews.getPending.selector), abi.encode(none)
+        );
+        vm.mockCall(
+            address(coll), abi.encodeWithSelector(ICollateralizationViews.getCounters.selector), abi.encode(zero)
+        );
+        _holdLock();
+        vm.expectRevert(ILensErrors.Locked.selector);
+        lens.getPendingSettlement(vt);
+        vm.expectRevert(ILensErrors.Locked.selector);
+        lens.getCapHeadroom(vt, alice);
+        _releaseLock();
+        assertEq(lens.getPendingSettlement(vt).units, 0, "answers once the Lock is free");
+        assertEq(lens.getCapHeadroom(vt, alice).vaultToken, vt, "answers once the Lock is free");
+        vm.clearMockedCalls();
     }
 
     /// @notice Repays the account's GHO debt and withdraws the record in full, which reconciles the seizure into the

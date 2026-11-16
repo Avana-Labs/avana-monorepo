@@ -14,6 +14,7 @@ import { createChainReader } from "../chain/reads.ts";
 import type { AccountCache } from "../discovery/accountCache.ts";
 import { type Head, ProcessedHeads, isReorg } from "../discovery/stream.ts";
 import { breakerPokeJob } from "../jobs/breakerPoke.ts";
+import { gasTopUpJob } from "../jobs/gasTopUp.ts";
 import { liquidationJob } from "../jobs/liquidation.ts";
 import { PokeBook, oraclePokeJob } from "../jobs/oraclePoke.ts";
 import { settlePendingJob } from "../jobs/settlePending.ts";
@@ -103,6 +104,7 @@ export function chainLoop(d: ChainLoopDeps) {
     settlePendingJob(),
     oraclePokeJob(book, { from: d.from }),
     breakerPokeJob(),
+    gasTopUpJob(d.from),
   ];
   const chainId = d.cfg.chain.id;
   const pipeline: PipelineDeps = {
