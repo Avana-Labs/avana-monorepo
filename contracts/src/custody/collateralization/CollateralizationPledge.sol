@@ -12,6 +12,7 @@ import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {CollateralizationLedger} from "./CollateralizationLedger.sol";
 import {ICollateralizationAdapter} from "./ICollateralizationAdapter.sol";
 import {BackingRecord} from "./types/BackingRecord.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 // Every external call in this file goes to the market's registered LPVault, the vault token, the VaultTokenFactory, the
@@ -77,6 +78,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
             // forge-lint: disable-next-line(unsafe-typecast)
             pledgedAt: uint40(block.timestamp),
             lastDebitedAt: 0,
+            windowedBps: charge.rescue ? 0 : WINDOW_BPS,
             credited: credited,
             originalUnits: credited,
             rescueUnits: charge.rescueUnits,
@@ -153,6 +155,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         uint256 rebased = r.currentUsdCharge + charge.usdCharge;
         if (rebased >= CHARGE_BOUND) revert InvalidCharge();
         rescueUnits = charge.rescueUnits;
+        r.windowedBps = _windowedBps(r.currentUsdCharge, r.windowedBps, charge, rebased);
         // credited + added <= 2^120 - 1 (`_uncredited`) and rebased < 2^64.
         uint128 units = r.credited + added;
         r.credited = units;
@@ -166,6 +169,21 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         r.rescueUnits += rescueUnits;
         _credit(c, r.proxy, added, rescueUnits);
         _book(c, charge);
+    }
+
+    /// @dev The record's `windowedBps` after a re-credit: the pledge window was charged `bps` of the `current` USD still
+    /// booked plus the new charge unless it is a rescue (`REQ-RISK-093`), as a share of the rebased total, rounded
+    /// down so an exit never credits more than was charged (`REQ-RISK-095`).
+    function _windowedBps(
+        uint256 current,
+        uint16 bps,
+        PledgeCharge memory charge,
+        uint256 rebased
+    ) private pure returns (uint16) {
+        if (rebased == 0) return WINDOW_BPS;
+        uint256 windowed = current * bps / WINDOW_BPS + (charge.rescue ? 0 : charge.usdCharge);
+        // windowed <= rebased, so the share is at most WINDOW_BPS and fits uint16; `rebased` is non-zero here.
+        return SafeCast.toUint16(Math.mulDiv(windowed, WINDOW_BPS, rebased));
     }
 
     /// @notice Start of `recredit`: caller and lock, vault token, the open record naming `proxy` and `depositor` in

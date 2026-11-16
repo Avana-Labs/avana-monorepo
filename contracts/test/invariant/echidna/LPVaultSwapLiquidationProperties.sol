@@ -10,7 +10,6 @@ import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/type
 import {LiquidationParams} from "../../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {RouteMode} from "../../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
-import {PayoutEscrow} from "../../../src/liquidation/payout-escrow/PayoutEscrow.sol";
 import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
 import {Market} from "../../../src/types/Market.sol";
@@ -319,6 +318,14 @@ contract LiqWorld {
         return 1;
     }
 
+    /// @notice The Spoke's deficit on this Hub, which rises when a liquidation books one (REQ-SWAP-027 reads it).
+    function getSpokeDeficitRay(
+        uint256,
+        address
+    ) external view returns (uint256) {
+        return deficit;
+    }
+
     // ─── MarketRegistry ───
 
     function getMarket(
@@ -487,6 +494,38 @@ contract LiqRoute {
     }
 }
 
+/// @notice The PayoutEscrow's deposit as LPVaultSwap uses it, with the real escrow's checks: only LPVaultSwap (the
+/// harness) deposits, only while it holds the Lock, and the credit is the measured rise of the escrow's balance, at
+/// most the amount. The escrow itself (claims, donations, every caller) is `PayoutEscrowProperties`'; this stand-in
+/// keeps the harness under EIP-3860's initcode limit.
+contract LiqEscrow {
+    address internal immutable LVS;
+    LiqWorld internal immutable LOCK;
+    mapping(address token => mapping(address account => uint256 amount)) public claimable;
+    mapping(address token => uint256 amount) public totalClaimable;
+
+    constructor(
+        address lvs,
+        LiqWorld lock
+    ) {
+        (LVS, LOCK) = (lvs, lock);
+    }
+
+    function deposit(
+        address token,
+        address account,
+        uint256 amount
+    ) external {
+        require(msg.sender == LVS && LOCK.holder() == LVS, NotHolder());
+        uint256 before = LiqToken(token).balanceOf(address(this));
+        LiqToken(token).transferFrom(msg.sender, address(this), amount);
+        uint256 received = LiqToken(token).balanceOf(address(this)) - before;
+        if (received > amount) received = amount;
+        claimable[token][account] += received;
+        totalClaimable[token] += received;
+    }
+}
+
 /// @notice A keeper, borrower wallet or fee recipient: an account only the harness drives.
 contract LiqActor {
     address internal immutable OWNER = msg.sender;
@@ -503,7 +542,7 @@ contract LiqActor {
 /// @title LPVaultSwapLiquidationProperties
 /// @notice Echidna and Medusa properties of the liquidation path (2.11, 2.18): the production
 /// `LPVaultSwapLiquidationLogic` run by delegatecall from this harness, which stands at LPVaultSwap's address as the
-/// implementation does, with the real `PayoutEscrow`, over `LiqWorld` (Spoke, Aave oracle, Hub, MarketRegistry,
+/// implementation does, with `LiqEscrow` (the PayoutEscrow's deposit and its checks), over `LiqWorld` (Spoke, Aave oracle, Hub, MarketRegistry,
 /// ParameterStore, LPOracle, Collateralization, AaveAdapter and Lock stand-ins) and two `LiqRoute`s. Three
 /// borrowers hold positions; price moves put them at health factors 0.70–0.99, keepers liquidate them over the primary
 /// or the backup route, with or without a shortfall top-up, and blocked recipients send payouts to the escrow.
@@ -539,7 +578,7 @@ contract LPVaultSwapLiquidationProperties {
     LiqToken internal VT;
     LiqRoute internal PRIMARY;
     LiqRoute internal BACKUP;
-    PayoutEscrow internal ESCROW;
+    LiqEscrow internal ESCROW;
     address internal LOGIC;
     /// @dev The borrower wallets 0–2, then the fee recipient, the keeper, the second keeper and the frozen caller.
     LiqActor[7] internal actors;
@@ -566,7 +605,7 @@ contract LPVaultSwapLiquidationProperties {
         }
         W.init(USDC, XT, VT, address(PRIMARY), address(BACKUP), address(actors[3]));
         W.setFrozen(address(actors[6]), true);
-        ESCROW = new PayoutEscrow(address(this), address(W));
+        ESCROW = new LiqEscrow(address(this), W);
         LOGIC = address(
             new LPVaultSwapLiquidationLogic(
                 LPVaultSwapImmutables({
@@ -902,8 +941,8 @@ contract LPVaultSwapLiquidationProperties {
     }
 
     /// @notice INV-061: for USDC and X, the escrow's total equals the sum of its credits over every account that can
-    /// hold one and is covered by its balance. Claims are fuzzed by `PayoutEscrowProperties`; this harness has no claim
-    /// entry point, which kept its initcode under EIP-3860's limit.
+    /// hold one and is covered by its balance. The escrow is `LiqEscrow`, and claims are fuzzed by `PayoutEscrowProperties`
+    /// against the real escrow; both keep this harness's initcode under EIP-3860's limit.
     function property_escrowCreditsSum() external view returns (bool) {
         LiqToken[2] memory tokens = [USDC, XT];
         for (uint256 t = 0; t < 2; ++t) {

@@ -39,7 +39,7 @@ abstract contract CollateralizationRelease is
     ) external override {
         (Ctx memory c, uint256 id, BackingRecord storage r) = _prepareExit(vaultToken, positionKey, proxy, units, 0);
         if (units == 0 || units != r.credited) revert UnitsMismatch();
-        _creditSpeed(c.marketId, _debitRecord(c, r, units));
+        _creditSpeed(c.marketId, _windowed(r, _debitRecord(c, r, units)));
         emit CollateralReleased(id, positionKey, r.depositor, proxy, vaultToken, units);
         _close(c, id, r);
         _returnPosition(c, positionKey);
@@ -60,7 +60,7 @@ abstract contract CollateralizationRelease is
         if (units == 0) revert UnitsMismatch();
         if (units >= credited) revert PartialRemovalTooLarge(units, credited);
         uint256 released = _debitRecord(c, r, units);
-        _creditSpeed(c.marketId, released);
+        _creditSpeed(c.marketId, _windowed(r, released));
         remaining = credited - units;
         emit RecordReduced(id, units, released);
         address depositor = r.depositor;
@@ -84,7 +84,7 @@ abstract contract CollateralizationRelease is
             _prepareExit(vaultToken, positionKey, proxy, units, minAmounts.length + 1);
         if (units == 0 || units > r.credited) revert UnitsMismatch();
         uint256 released = _debitRecord(c, r, units);
-        _creditSpeed(c.marketId, released);
+        _creditSpeed(c.marketId, _windowed(r, released));
         closed = r.credited == 0;
         emit RecordReduced(id, units, released);
         if (closed) {
@@ -151,6 +151,15 @@ abstract contract CollateralizationRelease is
         }
         _withReserve(c);
         _reconcile(c, proxy, _supplied(c, proxy) + units);
+    }
+
+    /// @dev The part of `released` USD the market's pledge window was charged: the record's `windowedBps` share, rounded
+    /// down. A rescue top-up was never charged (`REQ-RISK-093`), so its release credits nothing back (`REQ-RISK-095`).
+    function _windowed(
+        BackingRecord storage r,
+        uint256 released
+    ) private view returns (uint256) {
+        return released * r.windowedBps / WINDOW_BPS;
     }
 
     /// @notice Gives the booked value a withdrawal released back to the market's pledge-speed window (REQ-RISK-093).

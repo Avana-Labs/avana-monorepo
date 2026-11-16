@@ -97,6 +97,13 @@ contract OperatorFlashLiquidator is FlashLiquidatorBase, IOperatorFlashLiquidato
         recipient = FUNDING_SAFE;
     }
 
+    /// @notice A standing credit is cleared to the funding Safe, as `claimEscrowed` would pay it.
+    /// @return recipient `FUNDING_SAFE`.
+    /// @custom:spec REQ-HELPER-011
+    function _standingRecipient() internal view override returns (address recipient) {
+        recipient = FUNDING_SAFE;
+    }
+
     /// @notice The request's `maxTopUp`, capped at `⌊D × MAX_TOP_UP_BPS / 10⁴⌋`.
     /// @param maxTopUp The request's bound.
     /// @param debtRepaid `D`.
