@@ -1295,6 +1295,9 @@ const dict: TranslationDictionary = {
   "View wallet": "Открыть кошелёк",
   "Wallet balances": "Балансы кошелька",
   "Wallet Value": "Стоимость кошелька",
+  "{points} pts": "{points} очк.",
+  "Total points you've earned from quests, membership time and fees paid.": "Всего очков за задания, стаж участия и уплаченные комиссии.",
+  "Points you can redeem for a temporary fee discount.": "Очки, которые можно обменять на временную скидку на комиссию.",
   "Fee discount": "Скидка на комиссию",
   "{bps} bps off": "Скидка {bps} bps",
   "Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days.": "Комиссия Avana снижается с ростом стажа участия: скидка 1 bps через 30 дней, 2 bps через 90 дней и 3 bps через 180 дней.",
@@ -1359,7 +1362,6 @@ const dict: TranslationDictionary = {
   "Available to deposit": "Доступно для депозита",
   "against {pool}": "против {pool}",
   Locked: "Заблокировано",
-  "Merkl Rewards": "Награды Merkl",
   "Next rewards": "Следующие награды",
   "Open on Launch Date": "Откроется в день запуска",
   "Previous rewards": "Предыдущие награды",
@@ -1411,9 +1413,6 @@ const dict: TranslationDictionary = {
   "Prices may be stale": "Цены могут быть устаревшими",
   "The current annual borrow rate on this debt. Below, the interest accrued so far, ticking live.":
     "Текущая годовая ставка займа по этому долгу. Ниже — проценты, начисленные на данный момент, которые обновляются в реальном времени.",
-  "Total AVA you've earned across completed quests and staking rewards.":
-    "Всего AVA, заработанного за выполненные квесты и награды за стейкинг.",
-  "AVA you can claim to your wallet right now.": "AVA, который вы можете получить в свой кошелёк прямо сейчас.",
   "Core Concepts": "Основные понятия",
   "What is Avana?": "Что такое Avana?",
   "Protocol overview": "Обзор протокола",

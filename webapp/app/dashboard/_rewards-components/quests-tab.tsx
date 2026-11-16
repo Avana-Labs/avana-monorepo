@@ -43,10 +43,11 @@ const QUEST_ICON_MAP: Record<RewardsQuestIconId, typeof Wallet> = {
   wallet: Wallet,
 }
 
-function AvaCoin({ size = 20 }: { size?: number }) {
+/** The rewards illustration of stacked coins that stands for points. */
+function PointsIcon({ size = 20 }: { size?: number }) {
   return (
     <Image
-      src="/asset-icons/ava.png"
+      src="/asset-rewards/7.png"
       alt=""
       width={size}
       height={size}
@@ -109,7 +110,7 @@ function AvanaQuestCard({
 
         {/* The prize — coin + amount, the hero of the card. */}
         <div className={`mt-2.5 flex items-center justify-center gap-1.5 ${isClaimed ? "opacity-55" : ""}`}>
-          <AvaCoin size={22} />
+          <PointsIcon size={22} />
           <span className="font-data text-[22px] font-normal leading-none tracking-tight text-foreground">
             {rewardValue}
           </span>

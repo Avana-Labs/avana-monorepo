@@ -1274,6 +1274,9 @@ const dict: TranslationDictionary = {
   "View wallet": "عرض المحفظة",
   "Wallet balances": "أرصدة المحفظة",
   "Wallet Value": "قيمة المحفظة",
+  "{points} pts": "{points} نقطة",
+  "Total points you've earned from quests, membership time and fees paid.": "إجمالي النقاط التي ربحتها من المهام ومدة العضوية والرسوم المدفوعة.",
+  "Points you can redeem for a temporary fee discount.": "النقاط التي يمكنك استبدالها بخصم مؤقت على الرسوم.",
   "Fee discount": "خصم الرسوم",
   "{bps} bps off": "خصم {bps} bps",
   "Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days.": "تنخفض رسوم Avana مع طول مدة العضوية: خصم 1 bps بعد 30 يومًا، و2 بعد 90 يومًا، و3 بعد 180 يومًا.",
@@ -1335,7 +1338,6 @@ const dict: TranslationDictionary = {
   "Available to deposit": "متاح للإيداع",
   "against {pool}": "مقابل {pool}",
   Locked: "مقفل",
-  "Merkl Rewards": "مكافآت Merkl",
   "Next rewards": "المكافآت التالية",
   "Open on Launch Date": "تُفتح في تاريخ الإطلاق",
   "Previous rewards": "المكافآت السابقة",
@@ -1381,9 +1383,6 @@ const dict: TranslationDictionary = {
   "Prices may be stale": "قد تكون الأسعار غير محدَّثة",
   "The current annual borrow rate on this debt. Below, the interest accrued so far, ticking live.":
     "سعر الاقتراض السنوي الحالي على هذا الدين. وأدناه، الفائدة المتراكمة حتى الآن، تتزايد بشكل حي.",
-  "Total AVA you've earned across completed quests and staking rewards.":
-    "إجمالي AVA الذي كسبته عبر المهام المكتملة ومكافآت الرهن.",
-  "AVA you can claim to your wallet right now.": "AVA الذي يمكنك المطالبة به إلى محفظتك الآن.",
   "Core Concepts": "المفاهيم الأساسية",
   "What is Avana?": "ما هو Avana؟",
   "Protocol overview": "نظرة عامة على البروتوكول",

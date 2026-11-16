@@ -1291,6 +1291,9 @@ const dict: TranslationDictionary = {
   "View wallet": "Lihat dompet",
   "Wallet balances": "Saldo dompet",
   "Wallet Value": "Nilai Dompet",
+  "{points} pts": "{points} poin",
+  "Total points you've earned from quests, membership time and fees paid.": "Total poin dari misi, lama keanggotaan, dan biaya yang dibayar.",
+  "Points you can redeem for a temporary fee discount.": "Poin yang dapat ditukar dengan diskon biaya sementara.",
   "Fee discount": "Diskon biaya",
   "{bps} bps off": "Diskon {bps} bps",
   "Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days.": "Biaya Avana turun seiring lama keanggotaan: diskon 1 bps setelah 30 hari, 2 setelah 90 hari, dan 3 setelah 180 hari.",
@@ -1358,7 +1361,6 @@ const dict: TranslationDictionary = {
   "Available to deposit": "Tersedia untuk disetor",
   "against {pool}": "terhadap {pool}",
   Locked: "Terkunci",
-  "Merkl Rewards": "Hadiah Merkl",
   "Next rewards": "Hadiah berikutnya",
   "Open on Launch Date": "Terbuka pada tanggal peluncuran",
   "Previous rewards": "Hadiah sebelumnya",
@@ -1408,9 +1410,6 @@ const dict: TranslationDictionary = {
   "Prices may be stale": "Harga mungkin sudah usang",
   "The current annual borrow rate on this debt. Below, the interest accrued so far, ticking live.":
     "Suku bunga pinjaman tahunan saat ini atas utang ini. Di bawah, bunga yang terkumpul sejauh ini, terus bertambah secara langsung.",
-  "Total AVA you've earned across completed quests and staking rewards.":
-    "Total AVA yang telah Anda peroleh dari misi yang telah diselesaikan dan hadiah staking.",
-  "AVA you can claim to your wallet right now.": "AVA yang dapat Anda klaim ke dompet Anda sekarang juga.",
   "Core Concepts": "Konsep inti",
   "What is Avana?": "Apa itu Avana?",
   "Protocol overview": "Ikhtisar protokol",

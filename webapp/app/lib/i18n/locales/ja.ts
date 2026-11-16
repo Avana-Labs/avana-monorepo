@@ -1332,6 +1332,9 @@ const dict: TranslationDictionary = {
   "View wallet": "ウォレットを表示",
   "Wallet balances": "ウォレット残高",
   "Wallet Value": "ウォレット価値",
+  "{points} pts": "{points} pt",
+  "Total points you've earned from quests, membership time and fees paid.": "クエスト、メンバー期間、支払った手数料で獲得した合計ポイント。",
+  "Points you can redeem for a temporary fee discount.": "手数料の一時的な割引に交換できるポイント。",
   "Fee discount": "手数料割引",
   "{bps} bps off": "{bps} bps 割引",
   "Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days.": "メンバー期間が長くなるほどAvanaの手数料が下がります。30日後に1 bps、90日後に2 bps、180日後に3 bps割引。",
@@ -1396,7 +1399,6 @@ const dict: TranslationDictionary = {
   "Available to deposit": "預入可能",
   "against {pool}": "{pool} に対して",
   Locked: "ロック中",
-  "Merkl Rewards": "Merkl リワード",
   "Next rewards": "次のリワード",
   "Open on Launch Date": "ローンチ日に開放",
   "Previous rewards": "前のリワード",
@@ -1442,9 +1444,6 @@ const dict: TranslationDictionary = {
   "Prices may be stale": "価格が古い可能性があります",
   "The current annual borrow rate on this debt. Below, the interest accrued so far, ticking live.":
     "この負債に対する現在の年率の借入金利。下の数値はこれまでに発生した利息で、リアルタイムで増加します。",
-  "Total AVA you've earned across completed quests and staking rewards.":
-    "完了したクエストとステーキング報酬から獲得したAVAの合計。",
-  "AVA you can claim to your wallet right now.": "今すぐウォレットに請求できるAVA。",
   "Core Concepts": "基本概念",
   "What is Avana?": "Avanaとは？",
   "Protocol overview": "プロトコル概要",

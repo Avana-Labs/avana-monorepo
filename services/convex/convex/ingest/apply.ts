@@ -13,6 +13,7 @@ import { internalMutation, internalQuery, type MutationCtx } from "../_generated
 import { type Resolver, decodeRecord } from "../lib/activity.ts";
 import { blockTimes } from "../lib/exportPage.ts";
 import { noteFirstSeen } from "../lib/membership.ts";
+import { awardQuestForLog } from "../lib/rewards.ts";
 import { assetSlugs, defaultSlug, hubLabel } from "../lib/format.ts";
 
 /** A row of the history table every 1,000 blocks: the rebuild's starting points. */
@@ -178,7 +179,10 @@ export const applyPage = internalMutation({
       }
       const d = await decodeRecord(r, times.get(r.blockNumber) ?? 0, res);
       await ctx.db.insert("ingestedLogs", { ...d.log, args: d.log.args });
-      if (d.log.wallet) await noteFirstSeen(ctx, d.log.wallet, d.log.at, "onchain");
+      if (d.log.wallet) {
+        await noteFirstSeen(ctx, d.log.wallet, d.log.at, "onchain");
+        await awardQuestForLog(ctx, d.log.wallet, d.log.kind, d.log.at);
+      }
       if (d.account) {
         const found = await ctx.db.query("accounts").withIndex("by_key", (q) => q.eq("chainId", chainId).eq("spoke", d.account!.spoke).eq("proxy", d.account!.proxy)).unique();
         if (!found) await ctx.db.insert("accounts", { chainId, ...d.account, blockNumber: r.blockNumber });

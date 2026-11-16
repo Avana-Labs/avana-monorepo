@@ -1285,6 +1285,9 @@ const dict: TranslationDictionary = {
   "View wallet": "वॉलेट देखें",
   "Wallet balances": "वॉलेट बैलेंस",
   "Wallet Value": "वॉलेट मूल्य",
+  "{points} pts": "{points} पॉइंट",
+  "Total points you've earned from quests, membership time and fees paid.": "क्वेस्ट, सदस्यता अवधि और चुकाए गए शुल्क से अर्जित कुल पॉइंट।",
+  "Points you can redeem for a temporary fee discount.": "वे पॉइंट जिन्हें आप शुल्क पर अस्थायी छूट के लिए भुना सकते हैं।",
   "Fee discount": "शुल्क छूट",
   "{bps} bps off": "{bps} bps की छूट",
   "Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days.": "सदस्यता की अवधि बढ़ने के साथ Avana शुल्क घटता है: 30 दिन बाद 1 bps, 90 दिन बाद 2 bps और 180 दिन बाद 3 bps की छूट।",
@@ -1349,7 +1352,6 @@ const dict: TranslationDictionary = {
   "Available to deposit": "जमा के लिए उपलब्ध",
   "against {pool}": "{pool} के विरुद्ध",
   Locked: "लॉक्ड",
-  "Merkl Rewards": "Merkl पुरस्कार",
   "Next rewards": "अगले पुरस्कार",
   "Open on Launch Date": "लॉन्च तिथि पर खुलेगा",
   "Previous rewards": "पिछले पुरस्कार",
@@ -1399,9 +1401,6 @@ const dict: TranslationDictionary = {
   "Prices may be stale": "कीमतें पुरानी हो सकती हैं",
   "The current annual borrow rate on this debt. Below, the interest accrued so far, ticking live.":
     "इस ऋण पर मौजूदा वार्षिक उधार दर। नीचे, अब तक संचित ब्याज दिखाया गया है, जो लाइव अपडेट होता रहता है।",
-  "Total AVA you've earned across completed quests and staking rewards.":
-    "पूर्ण किए गए क्वेस्ट और स्टेकिंग रिवॉर्ड्स से आपके द्वारा अर्जित कुल AVA।",
-  "AVA you can claim to your wallet right now.": "AVA जिसे आप अभी अपने वॉलेट में क्लेम कर सकते हैं।",
   "Core Concepts": "मुख्य अवधारणाएँ",
   "What is Avana?": "Avana क्या है?",
   "Protocol overview": "प्रोटोकॉल अवलोकन",

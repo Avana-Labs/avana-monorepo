@@ -1292,6 +1292,9 @@ const dict: TranslationDictionary = {
   "View wallet": "Cüzdanı görüntüle",
   "Wallet balances": "Cüzdan bakiyeleri",
   "Wallet Value": "Cüzdan Değeri",
+  "{points} pts": "{points} puan",
+  "Total points you've earned from quests, membership time and fees paid.": "Görevlerden, üyelik süresinden ve ödenen ücretlerden kazanılan toplam puan.",
+  "Points you can redeem for a temporary fee discount.": "Geçici bir ücret indirimi için kullanılabilecek puanlar.",
   "Fee discount": "Ücret indirimi",
   "{bps} bps off": "{bps} bps indirim",
   "Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days.": "Avana ücreti üyelik süresi uzadıkça düşer: 30 günden sonra 1 bps, 90 günden sonra 2 bps ve 180 günden sonra 3 bps indirim.",
@@ -1358,7 +1361,6 @@ const dict: TranslationDictionary = {
   "Available to deposit": "Yatırmaya hazır",
   "against {pool}": "{pool} karşılığında",
   Locked: "Kilitli",
-  "Merkl Rewards": "Merkl Ödülleri",
   "Next rewards": "Sonraki ödüller",
   "Open on Launch Date": "Lansman tarihinde açılır",
   "Previous rewards": "Önceki ödüller",
@@ -1407,9 +1409,6 @@ const dict: TranslationDictionary = {
   "Prices may be stale": "Fiyatlar güncel olmayabilir",
   "The current annual borrow rate on this debt. Below, the interest accrued so far, ticking live.":
     "Bu borç üzerindeki güncel yıllık borçlanma oranı. Aşağıda, şimdiye kadar biriken ve canlı olarak artan faiz.",
-  "Total AVA you've earned across completed quests and staking rewards.":
-    "Tamamlanan görevler ve stake ödülleri genelinde kazandığınız toplam AVA.",
-  "AVA you can claim to your wallet right now.": "Şu anda cüzdanınıza talep edebileceğiniz AVA.",
   "Core Concepts": "Temel kavramlar",
   "What is Avana?": "Avana nedir?",
   "Protocol overview": "Protokol özeti",

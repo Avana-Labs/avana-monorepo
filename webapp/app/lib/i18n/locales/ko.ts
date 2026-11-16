@@ -1267,6 +1267,9 @@ const dict: TranslationDictionary = {
   "View wallet": "지갑 보기",
   "Wallet balances": "지갑 잔액",
   "Wallet Value": "지갑 가치",
+  "{points} pts": "{points} 포인트",
+  "Total points you've earned from quests, membership time and fees paid.": "퀘스트, 회원 기간, 납부한 수수료로 얻은 총 포인트입니다.",
+  "Points you can redeem for a temporary fee discount.": "수수료 임시 할인으로 교환할 수 있는 포인트입니다.",
   "Fee discount": "수수료 할인",
   "{bps} bps off": "{bps} bps 할인",
   "Your Avana fee drops the longer you have been a member: 1 bps off after 30 days, 2 after 90 days and 3 after 180 days.": "회원 기간이 길수록 Avana 수수료가 낮아집니다. 30일 후 1 bps, 90일 후 2 bps, 180일 후 3 bps 할인.",
@@ -1330,7 +1333,6 @@ const dict: TranslationDictionary = {
   "Available to deposit": "예치 가능",
   "against {pool}": "{pool} 대상",
   Locked: "잠김",
-  "Merkl Rewards": "Merkl 리워드",
   "Next rewards": "다음 리워드",
   "Open on Launch Date": "출시일에 오픈",
   "Previous rewards": "이전 리워드",
@@ -1378,9 +1380,6 @@ const dict: TranslationDictionary = {
   "Prices may be stale": "가격 정보가 오래되었을 수 있습니다",
   "The current annual borrow rate on this debt. Below, the interest accrued so far, ticking live.":
     "이 부채에 적용되는 현재 연간 차입 금리입니다. 아래는 지금까지 누적된 이자로, 실시간으로 갱신됩니다.",
-  "Total AVA you've earned across completed quests and staking rewards.":
-    "완료한 퀘스트와 스테이킹 리워드를 통해 획득한 총 AVA입니다.",
-  "AVA you can claim to your wallet right now.": "지금 바로 지갑으로 청구할 수 있는 AVA입니다.",
   "Core Concepts": "핵심 개념",
   "What is Avana?": "Avana란?",
   "Protocol overview": "프로토콜 개요",
