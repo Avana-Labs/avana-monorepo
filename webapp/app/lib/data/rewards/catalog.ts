@@ -26,7 +26,7 @@ export type RewardsQuest = {
   /** Per-task illustration under public/asset-rewards; when absent the card falls back to iconId. */
   image?: string
   expiration?: string
-  /** "coming_soon" until a rewards source exists: the card renders with its action disabled. */
+  /** "available" until done, then "claimed"; the card shows its action only while it is available. */
   status?: string
   progressLabel?: string
 }

@@ -5,7 +5,7 @@ import { QUEST_POINTS } from "@/convex/lib/rewards"
 import { questDialog, questHref, questsByTab } from "@/app/lib/data/rewards/quests"
 import { translate, TRANSLATIONS } from "@/app/lib/i18n/translations"
 
-const labels = { comingSoon: "Coming soon", earned: "Earned" }
+const labels = { earned: "Earned" }
 const all = (completed: string[]) => Object.values(questsByTab(labels, new Set(completed))).flat()
 const byId = (completed: string[], id: string) => all(completed).find((q) => q.id === id)!
 

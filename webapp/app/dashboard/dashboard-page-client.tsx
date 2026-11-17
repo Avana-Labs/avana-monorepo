@@ -104,7 +104,7 @@ export function DashboardPageClient() {
   useHistoryBackfill(walletId, rewards)
   const questsByTab = useMemo(
     () =>
-      buildQuestsByTab({ comingSoon: t("Coming soon"), earned: t("Earned") }, rewards?.completedQuests ?? new Set()),
+      buildQuestsByTab({ earned: t("Earned") }, rewards?.completedQuests ?? new Set()),
     [t, rewards],
   )
   // Being signed in on the dashboard completes the first quest; Convex awards it once.
