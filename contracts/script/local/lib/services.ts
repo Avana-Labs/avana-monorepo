@@ -9,13 +9,13 @@
 // session's worktree), whose node_modules must be installed.
 
 import { spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { CHAINS, CONTRACTS, EXPORT_KEY_ID, type LocalChain, PORTS, REPO, STACK, chainIdEnv, fallbackUrl, manifestPath, outDir, recorderUrl, rpcUrl } from "./env.ts";
 import { PASSWORD_FILE, keystorePath } from "./keys.ts";
-import { rpc } from "./chain.ts";
+import { rpc, stateFloor } from "./chain.ts";
 import { binJs, logPath, running, start, stop, tail, waitFor } from "./procs.ts";
 
 export const CONVEX_DIR = process.env.STACK_CONVEX_DIR ?? join(REPO, "services/convex");
@@ -50,8 +50,11 @@ export async function startRecorders(): Promise<void> {
 
 // ─── Indexer ───
 
-export function indexerEnv(schema: string): NodeJS.ProcessEnv {
+export function indexerEnv(schema: string, stateFloors = ""): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
+    // A chain restored from a saved state has no state before its floor: the sampler starts there (services/indexer
+    // src/lib/stateFloor.ts).
+    INDEXER_STATE_FLOOR: stateFloors,
     AVANA_MANIFEST: manifests(),
     ...chainIdEnv(),
     INDEXER_NETWORK_SET: "production",
@@ -76,10 +79,64 @@ export async function indexerStatus(): Promise<Record<number, number>> {
   return Object.fromEntries(Object.values(j).map((s) => [s.id, s.block.number]));
 }
 
-/** Starts the indexer on `schema` under the process name `name` (the live indexer is `indexer` on schema `live`). */
-export async function startIndexer(schema = "live", name = "indexer"): Promise<void> {
+const LIVE_SCHEMA_FILE = join(STACK, "indexer-schema");
+
+/** Every file under `p`, in name order. */
+function files(p: string): string[] {
+  if (!statSync(p).isDirectory()) return [p];
+  return readdirSync(p).sort().flatMap((f) => files(join(p, f)));
+}
+
+/**
+ * An indexer schema named `<prefix>_<hash>`. Ponder resumes a schema only under the build that wrote it, and that build
+ * covers the manifests its config reads, which a Hub release rewrites: the hash covers those manifests and the indexer's
+ * code, so an indexer started after a release or a code change indexes into a new schema instead of refusing the old one.
+ */
+export function indexerSchema(prefix: string, manifestPaths: readonly string[]): string {
+  const h = createHash("sha256");
+  for (const p of manifestPaths) h.update(readFileSync(p));
+  for (const f of ["ponder.config.ts", "ponder.schema.ts", "src"].flatMap((p) => files(join(INDEXER_DIR, p)))) h.update(readFileSync(f));
+  return `${prefix}_${h.digest("hex").slice(0, 12)}`;
+}
+
+/** The live indexer's schema for the manifests deployed now. */
+export const liveSchema = (): string => indexerSchema("live", deployed().map(manifestPath));
+
+/** The schema the live indexer was last started on. */
+export function runningLiveSchema(): string {
+  return existsSync(LIVE_SCHEMA_FILE) ? readFileSync(LIVE_SCHEMA_FILE, "utf8").trim() : "live";
+}
+
+const STATE_FLOOR_FILE = join(STACK, "indexer-state-floor");
+
+/** Each deployed chain's state floor above 0, as INDEXER_STATE_FLOOR takes it (`<chainId>:<block>,...`). */
+export async function stateFloors(): Promise<string> {
+  const floors: string[] = [];
+  for (const c of deployed()) {
+    const f = await stateFloor(c);
+    if (f > 0) floors.push(`${c.chainId}:${f}`);
+  }
+  return floors.join(",");
+}
+
+/** The state floors the live indexer was last started with: a replay indexes from the same, so the tables compare. */
+export const liveStateFloors = (): string | undefined => (existsSync(STATE_FLOOR_FILE) ? readFileSync(STATE_FLOOR_FILE, "utf8").trim() : undefined);
+
+/**
+ * Starts the indexer on `schema` under the process name `name` (the live indexer is `indexer` on `liveSchema()`). The
+ * live indexer takes the chains' state floors now; another indexer (the replay) takes the live one's.
+ */
+export async function startIndexer(schema?: string, name = "indexer"): Promise<void> {
   if (running(name)) return;
-  start(name, process.execPath, [binJs("ponder"), "start", "--port", String(PORTS.indexer), "--log-format", "json"], { cwd: INDEXER_DIR, env: indexerEnv(schema) });
+  let floors: string;
+  if (!schema) {
+    schema = liveSchema();
+    floors = await stateFloors();
+    mkdirSync(STACK, { recursive: true });
+    writeFileSync(LIVE_SCHEMA_FILE, schema);
+    writeFileSync(STATE_FLOOR_FILE, floors);
+  } else floors = liveStateFloors() ?? (await stateFloors());
+  start(name, process.execPath, [binJs("ponder"), "start", "--port", String(PORTS.indexer), "--log-format", "json"], { cwd: INDEXER_DIR, env: indexerEnv(schema, floors) });
   await waitFor(`${name} /ready`, async () => (await fetch(`${indexerUrl()}/ready`)).ok, 900_000, 2_000).catch((e) => {
     throw new Error(`${(e as Error).message}\n${tail(name, 15)}`);
   });
@@ -113,31 +170,31 @@ export interface ConvexInfo {
 const convexInfoPath = join(STACK, "convex.json");
 export const convexInfo = (): ConvexInfo | undefined => (existsSync(convexInfoPath) ? (JSON.parse(readFileSync(convexInfoPath, "utf8")) as ConvexInfo) : undefined);
 
-/** The anonymous local deployment's URL and admin key, from the files `convex dev` writes. */
-function discoverConvex(): ConvexInfo | undefined {
+/** The anonymous local deployment's URL and admin key, from the files `convex dev` writes in `dir`. */
+export function discoverConvex(dir = CONVEX_DIR): ConvexInfo | undefined {
   // `convex dev` keeps the local deployment's ports and admin key here (replay-check.ts reads the same file).
-  const local = join(CONVEX_DIR, ".convex", "local", "default", "config.json");
+  const local = join(dir, ".convex", "local", "default", "config.json");
   if (existsSync(local)) {
     const j = JSON.parse(readFileSync(local, "utf8")) as { adminKey?: string; ports?: { cloud?: number; site?: number } };
-    if (j.adminKey && j.ports?.cloud) return { url: `http://127.0.0.1:${j.ports.cloud}`, siteUrl: j.ports.site ? `http://127.0.0.1:${j.ports.site}` : undefined, adminKey: j.adminKey, dir: CONVEX_DIR };
+    if (j.adminKey && j.ports?.cloud) return { url: `http://127.0.0.1:${j.ports.cloud}`, siteUrl: j.ports.site ? `http://127.0.0.1:${j.ports.site}` : undefined, adminKey: j.adminKey, dir: dir };
   }
-  const envLocal = join(CONVEX_DIR, ".env.local");
+  const envLocal = join(dir, ".env.local");
   if (!existsSync(envLocal)) return undefined;
   const vars = Object.fromEntries(readFileSync(envLocal, "utf8").split(/\r?\n/).filter((l) => /^[A-Z_]+=/.test(l)).map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1).replace(/^"|"$/g, "").replace(/\s+#.*$/, "")]));
   const url = vars.CONVEX_URL;
   const deployment = (vars.CONVEX_DEPLOYMENT ?? "").replace(/^[a-z]+:/, "").replace(/\s.*$/, "");
   if (!url || !deployment) return undefined;
-  const roots = [join(CONVEX_DIR, ".convex", "local", "default"), join(homedir(), ".convex", "anonymous-convex-backend-state", deployment), join(homedir(), ".convex", "convex-backend-state", deployment)];
+  const roots = [join(dir, ".convex", "local", "default"), join(homedir(), ".convex", "anonymous-convex-backend-state", deployment), join(homedir(), ".convex", "convex-backend-state", deployment)];
   for (const r of roots) {
     const cfg = join(r, "config.json");
     if (!existsSync(cfg)) continue;
     const j = JSON.parse(readFileSync(cfg, "utf8")) as { adminKey?: string };
-    if (j.adminKey) return { url, siteUrl: vars.CONVEX_SITE_URL, adminKey: j.adminKey, dir: CONVEX_DIR };
+    if (j.adminKey) return { url, siteUrl: vars.CONVEX_SITE_URL, adminKey: j.adminKey, dir: dir };
   }
   return undefined;
 }
 
-async function convexCall(info: ConvexInfo, kind: "query" | "mutation" | "action", path: string, args: Record<string, unknown>): Promise<unknown> {
+export async function convexCall(info: ConvexInfo, kind: "query" | "mutation" | "action", path: string, args: Record<string, unknown>): Promise<unknown> {
   const r = await fetch(`${info.url}/api/${kind}`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Convex ${info.adminKey}` },
@@ -154,13 +211,23 @@ export const convex = (kind: "query" | "mutation" | "action", path: string, args
 };
 
 /** Sets deployment environment variables through the deployment's admin API (no value on a command line). */
-async function convexEnv(info: ConvexInfo, vars: Record<string, string>): Promise<void> {
+export async function convexEnv(info: ConvexInfo, vars: Record<string, string>): Promise<void> {
   const r = await fetch(`${info.url}/api/update_environment_variables`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Convex ${info.adminKey}` },
     body: JSON.stringify({ changes: Object.entries(vars).map(([name, value]) => ({ name, value })) }),
   });
   if (!r.ok) throw new Error(`convex environment: HTTP ${r.status} ${await r.text()}`);
+}
+
+/** Whether the local deployment's backend answers (`convex dev` keeps running after its backend exits). */
+export async function convexAnswers(info = discoverConvex()): Promise<boolean> {
+  if (!info) return false;
+  try {
+    return (await fetch(`${info.url}/instance_name`, { signal: AbortSignal.timeout(5_000) })).ok;
+  } catch {
+    return false;
+  }
 }
 
 /** Files `convex dev` needs that a checkout may lack; made by the stack and removed by `stopConvex`. */
@@ -170,15 +237,21 @@ const CONVEX_MADE = join(STACK, "convex-made.json");
  * Starts `convex dev` on an anonymous local deployment (no account, nothing leaves the machine), sets its environment
  * (the chains' RPCs, the indexer export, the listing content, the session secret) and writes each chain's
  * `deployments` row from its manifest.
+ *
+ * `convex dev` runs the backend with its output discarded, does not start it again when it exits, and reports the exit
+ * only in verbose mode: the CLI runs verbose, so the log records the backend's exit code. A CLI whose backend no
+ * longer answers is restarted (`restarted`). The previous run's log is kept as `convex.prev.log`.
  */
-export async function startConvex(): Promise<ConvexInfo> {
+export async function startConvex(): Promise<ConvexInfo & { restarted: boolean }> {
+  const restarted = running("convex") && !(await convexAnswers());
+  if (restarted) stop("convex");
   if (!running("convex")) {
     const made = [".gitignore", "convex/tsconfig.json"].map((f) => join(CONVEX_DIR, f)).filter((f) => !existsSync(f));
     writeFileSync(CONVEX_MADE, JSON.stringify(made));
-    rmSync(logPath("convex"), { force: true });
+    if (existsSync(logPath("convex"))) renameSync(logPath("convex"), logPath("convex.prev"));
     start("convex", process.execPath, [binJs("convex"), "dev", "--codegen", "disable", "--typecheck", "disable", "--tail-logs", "always"], {
       cwd: CONVEX_DIR,
-      env: { CONVEX_AGENT_MODE: "anonymous" },
+      env: { CONVEX_AGENT_MODE: "anonymous", CONVEX_VERBOSE: "1" },
     });
   }
   const log = () => (existsSync(logPath("convex")) ? readFileSync(logPath("convex"), "utf8") : "");
@@ -193,6 +266,10 @@ export async function startConvex(): Promise<ConvexInfo> {
     INDEXER_EXPORT_SECRET: secret("export-secret"),
     LISTING_CONTENT_URL: `http://127.0.0.1:${PORTS.content}`,
     CONVEX_SESSION_SECRET: secret("convex-session-secret", 48),
+    // The webapp's SIWE rate limiter sends the same value (webapp/scripts/local-stack.mjs reads this file).
+    CONVEX_RATE_LIMIT_SECRET: secret("convex-rate-limit-secret"),
+    // The chains crons.ts schedules the export pull, the sampler and the intent tracker on (Ethereum and Base mainnet when unset).
+    AVANA_CHAIN_IDS: CHAINS.map((c) => c.chainId).join(","),
     ...chainIdEnv(),
   };
   for (const c of CHAINS) {
@@ -204,12 +281,15 @@ export async function startConvex(): Promise<ConvexInfo> {
     await convexEnv(info, vars);
     return true;
   }, 120_000, 2_000);
-  // The auth config needs SIWE_JWT_ISSUER before the CLI pushes: touch it so `convex dev` pushes again once it is set.
-  if (!/Convex functions ready/.test(log())) {
-    const auth = join(CONVEX_DIR, "convex", "auth.config.ts");
-    if (existsSync(auth)) writeFileSync(auth, readFileSync(auth));
+  // The auth config reads SIWE_JWT_ISSUER and crons.ts reads AVANA_CHAIN_IDS when the CLI pushes: touch both so
+  // `convex dev` pushes again with the environment just set, and wait for that push.
+  const pushes = () => (log().match(/Convex functions ready/g) ?? []).length;
+  const before = pushes();
+  for (const f of ["auth.config.ts", "crons.ts"]) {
+    const p = join(CONVEX_DIR, "convex", f);
+    if (existsSync(p)) writeFileSync(p, readFileSync(p));
   }
-  await waitFor("Convex functions pushed", async () => /Convex functions ready/.test(log()), 300_000, 2_000).catch((e) => {
+  await waitFor("Convex functions pushed", async () => pushes() > before, 300_000, 2_000).catch((e) => {
     throw new Error(`${(e as Error).message}\n${tail("convex", 20)}`);
   });
   for (const c of deployed()) {
@@ -223,7 +303,7 @@ export async function startConvex(): Promise<ConvexInfo> {
       await convex("mutation", "deployments:setDeployment", base);
     }
   }
-  return info;
+  return { ...info, restarted };
 }
 
 /** ORACLE() of an Aave V4 Spoke. */
@@ -234,16 +314,26 @@ const ORACLE = "0x38013f02";
 export async function deploymentRow(c: LocalChain): Promise<Record<string, unknown>> {
   const m = JSON.parse(readFileSync(manifestPath(c), "utf8")) as Record<string, any>;
   const world = JSON.parse(readFileSync(join(outDir(c), "world.json"), "utf8")) as Record<string, any>;
+  return deploymentRowFrom(c.chainId, m, world, await spokeOracles(rpcUrl(c), m), rpcUrl(c));
+}
+
+/** Each Lend and CDP Spoke of manifest `m` with its oracle (ORACLE()), read over `url`; a Spoke without one is left out. */
+export async function spokeOracles(url: string, m: Record<string, any>): Promise<{ spoke: string; oracle: string }[]> {
+  const out: { spoke: string; oracle: string }[] = [];
+  for (const spoke of [...m.aave.lendSpokes, ...m.aave.borrowSpokes].map((s: Record<string, any>) => s.address as string)) {
+    const r = await rpc<string>(url, "eth_call", [{ to: spoke, data: ORACLE }, "latest"]);
+    const oracle = `0x${r.slice(-40)}`;
+    if (!/^0x0{40}$/.test(oracle)) out.push({ spoke, oracle });
+  }
+  return out;
+}
+
+/** A chain's `deployments` row from its manifest `m`, its world file, its Spokes' oracles and its explorer. */
+export function deploymentRowFrom(chainId: number, m: Record<string, any>, world: Record<string, any>, spokeOracles: { spoke: string; oracle: string }[], explorerUrl: string): Record<string, unknown> {
   const lendSpokes = m.aave.lendSpokes.map((s: Record<string, any>) => s.address as string);
   const cdpSpokes = m.aave.borrowSpokes.map((s: Record<string, any>) => s.address as string);
-  const spokeOracles: { spoke: string; oracle: string }[] = [];
-  for (const spoke of [...lendSpokes, ...cdpSpokes]) {
-    const out = await rpc<string>(rpcUrl(c), "eth_call", [{ to: spoke, data: ORACLE }, "latest"]);
-    const oracle = `0x${out.slice(-40)}`;
-    if (!/^0x0{40}$/.test(oracle)) spokeOracles.push({ spoke, oracle });
-  }
   return {
-    chainId: c.chainId,
+    chainId,
     lens: m.avana.lens.address,
     hubs: m.aave.hubs.map((h: Record<string, any>) => ({ address: h.address, label: h.label, tier: h.tier })),
     lendSpokes,
@@ -251,7 +341,7 @@ export async function deploymentRow(c: LocalChain): Promise<Record<string, unkno
     firstLossReserves: m.avana.firstLossReserves.map((r: Record<string, any>) => ({ address: r.address, asset: r.asset, hub: r.hub })),
     marketRegistry: m.avana.marketRegistry.address,
     timelock: m.avana.timelock.address,
-    explorerUrl: rpcUrl(c),
+    explorerUrl,
     nativeUsdFeed: world.feeds.WETH.primary,
     release: m.release,
     // The About card's contract rows and the swap venues (optional in Convex; a slot without an address is left out).

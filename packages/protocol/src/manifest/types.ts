@@ -172,7 +172,7 @@ export interface ReleaseManifest {
     /** Null while the concentrated-liquidity LPOracle implementation is not deployed. */
     readonly clOracles: readonly ClOracle[];
     readonly proxyCreationCodeHash: Hex;
-    /** The chain's AvanaGasVault (2.23) and its immutables; null while it is not deployed (step 12-gas-vault). */
+    /** The chain's AvanaGasVault (2.24) and its immutables; null while it is not deployed (step 12-gas-vault). */
     readonly gasVault: GasVault | null;
   };
   readonly markets: readonly Market[];

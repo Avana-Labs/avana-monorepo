@@ -14,7 +14,8 @@
     "./fixtures": "./src/views/fixtures.ts",
     "./chains": "./src/chains.ts",
     "./env": "./src/env.ts",
-    "./gas": "./src/gas.ts"
+    "./gas": "./src/gas.ts",
+    "./keystore": "./src/keystore.ts"
   },
   "engines": {
     "node": ">=22.12"

@@ -360,7 +360,7 @@ function AssetSection({
             <tbody key={`${title}-${sortKey}-${sortDirection}`} className="divide-y divide-border dark:divide-white/6">
               {sortedRows.length > 0 ? (
                 sortedRows.map((row, index) => (
-                  <AssetRowView key={row.symbol} row={row} index={index} delay={index * 40} onDeposit={onDeposit} />
+                  <AssetRowView key={row.market} row={row} index={index} delay={index * 40} onDeposit={onDeposit} />
                 ))
               ) : (
                 <tr>

@@ -4945,14 +4945,14 @@
       "fingerprint": "95fcc0d7a8645c99",
       "check": "dead-code",
       "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
-      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "reason": "Required implementation of the abstract hook ClLPVaultBase._blockTime(). Its only caller is ClNfpmLPVault.consistencyDeviation, which the v4 LPVault does not inherit; the v4 consistencyDeviation reads _BLOCK_TIME directly, the value this function returns. Unused in this contract and harmless.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "39e0adeaa999d696",
       "check": "uninitialized-local",
       "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
-      "reason": "A local deliberately left zero: a memory struct filled field by field by the next call, or a word or fee that stays zero when the guarded read before it fails, which the caller reports as a failed read (fail closed).",
+      "reason": "Never read unset: fee is assigned from the reference pool's fee() in the try branch, and the catch reverts InvalidPool, so getPool(a, b, fee) always receives the pool's own fee. Slither does not follow the assignment inside try/catch.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
@@ -5190,7 +5190,7 @@
       "fingerprint": "21c5dc70d11ccc47",
       "check": "dead-code",
       "file": "src/oracle/lp-oracle/LPOracleV4ModuleLogic.sol",
-      "reason": "Analysis artefact of the compilation restrictions and the module split, as for LPOracleCLModule: each function is used by the v4 implementation (initialize) or by the module logic through delegatecall, so it is unused in some of the contracts that inherit it.",
+      "reason": "Not dead: listingChecks reaches it in this contract through _clListingChecks, LPOracleV4Module._clListingChecks and super._clListingChecks (LPOracleCLModule), whose virtual _rangeFails() call dispatches to this override; Slither resolves the call inside the function reached through super to the base declaration. The override is the one that runs: a v4 key of spacing 60 against a fee-500 reference pool (spacing 10) lists with CL_CHECK_RANGE clear, which the base check would set (TEST-331, rangeCheckUsesTheV4KeysSpacingNotTheReferencePools).",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {

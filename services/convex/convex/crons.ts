@@ -5,18 +5,21 @@
 // expired SIWE sessions daily; the previous UTC day's liquidation and revenue rollups at 00:30; Merkl incentives and
 // market risk scores hourly. Chains are those with a `deployments` row; a chain without one is skipped. The app
 // features add: off-protocol token prices every 10 minutes (and a daily close), FX hourly, and the Ask AI market
-// cache (DefiLlama pools hourly, Aave markets twice an hour).
+// cache (DefiLlama pools hourly, Aave markets twice an hour). The per-chain jobs run on the chains of AVANA_CHAIN_IDS
+// (lib/cronChains.ts: Ethereum and Base when unset, Sepolia and Base Sepolia on the test deployment), at the intervals
+// of each chain's block time.
 
 import { cronJobs } from "convex/server";
 import { internal } from "./_generated/api";
+import { cronChains } from "./lib/cronChains";
 
 const crons = cronJobs();
 
-for (const chainId of [1, 8453]) {
+for (const { chainId, pullSeconds, intentSeconds, merklCron } of cronChains(process.env)) {
   crons.interval(`sample current values ${chainId}`, { seconds: 30 }, internal.ingest.sampler.refresh, { chainId });
-  crons.interval(`pull export ${chainId}`, { seconds: chainId === 1 ? 30 : 10 }, internal.ingest.pull.pull, { chainId });
-  crons.cron(`refresh merkl incentives ${chainId}`, chainId === 1 ? "17 * * * *" : "47 * * * *", internal.incentives.refresh, { chainId });
-  crons.interval(`track intents ${chainId}`, { seconds: chainId === 1 ? 12 : 4 }, internal.intents.track, { chainId });
+  crons.interval(`pull export ${chainId}`, { seconds: pullSeconds }, internal.ingest.pull.pull, { chainId });
+  crons.cron(`refresh merkl incentives ${chainId}`, merklCron, internal.incentives.refresh, { chainId });
+  crons.interval(`track intents ${chainId}`, { seconds: intentSeconds }, internal.intents.track, { chainId });
 }
 crons.daily("prune activity older than 30 days", { hourUTC: 3, minuteUTC: 0 }, internal.ingest.apply.prune, {});
 crons.cron("score market risk", "5 * * * *", internal.riskScores.score, {});

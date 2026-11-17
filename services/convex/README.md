@@ -129,7 +129,7 @@ Each page's activity feed shows its own events and none twice: the Lend page the
 
 ## Scheduled pull
 
-A Convex cron runs `ingest/pull.pull` for each chain every 30 s on Ethereum and every 10 s on Base. The action:
+A Convex cron runs `ingest/pull.pull` for each chain every 30 s on Ethereum and every 10 s on Base. The chains are those of the deployment variable `AVANA_CHAIN_IDS` (comma-separated chain IDs; `1,8453` when unset, `11155111,84532` on the test deployment), and every per-chain cron (the pull, the sampler, the intent tracker, Merkl) follows it at the intervals of the chain's block time (`convex/lib/cronChains.ts`). Crons are read when the functions are pushed: a changed list takes effect at the next push. The action:
 
 1. Reads the checkpoint `(throughBlock, throughBlockHash)`.
 2. Checks that `throughBlockHash` is still the hash of `throughBlock` over Convex's own RPC (not the indexer's). A mismatch goes to [reorg rebuild](#reorg-rebuild).
@@ -183,7 +183,7 @@ The web app's server opens a session after it verifies a SIWE signature (`siweSe
 
 `wallet.live.accounts` reads the wallet's accounts at the head with Lens `getAccounts` over Convex's RPC (health factor, collateral and debt in USD, debts, gates), unstored and rate limited per wallet, for clients that cannot read the chain themselves.
 
-`wallet.activity.listForWallet` pages through the wallet's logs of the last 30 days (`ingestedLogs.by_wallet`, exact cursor) as dashboard rows, each with the page it belongs to and an explorer link; `wallet/history:older` serves anything older. `deployments.explorers` returns each chain's explorer for links the app builds itself.
+`wallet.activity.listForWallet` pages through the wallet's logs of the last 30 days (`ingestedLogs.by_wallet`, exact cursor) as dashboard rows, each with the page it belongs to and an explorer link; `wallet/history:older` serves anything older, and with `rows` also returns that page as dashboard rows: decoded as the import decodes logs, without the events Convex still holds, dated by their block's time (read from Convex's RPC by block hash once and kept in `blockTimestamps`) and with the token amount but no USD value. `deployments.explorers` returns each chain's explorer for links the app builds itself.
 
 ## Configuration
 
@@ -216,4 +216,4 @@ The import's fork tests (`TEST-143`): duplicate, overlapping, out-of-order and t
 | `windows.getRateWindows` | Read time | 1D, 30D and 90D averages of supply APY, borrow APR and utilization; on pool pages the market's borrow APR and the LP fee APR of its tick range (`lib/windows.ts`: fees per unit of active liquidity over the value of one unit across the range, 0 out of range). Pool rows' `supplyApyPct` is the 24 h LP fee APR |
 | `rollups.rollUp` → `rollups.history` | Daily, 00:30 UTC | Each market's liquidations, collateral seized, debt repaid and bad debt, and each Hub asset's interest, reserve and supplier shares, for the UTC day that ended; events are valued at their hour's price. Kept past the 30-day log window |
 | `riskScores.score` | Hourly | The market risk score, model `avana-risk-v1` (`lib/riskScore.ts`: premium, cap usage, price state, breaker, Hub pause, debt below HF 1.10, recent bad debt). The pool risk card shows it with each input's points |
-| `incentives.refresh` → `incentives.forPage` | Hourly per chain | Merkl's live opportunities matched to each page: `rewards` with the APR, `none` after a fresh check with no campaign, `unknown` when Merkl failed or the last check is over 3 hours old. `MERKL_API_URL` overrides the API |
+| `incentives.refresh` → `incentives.forPage` | Hourly per chain | Merkl's live opportunities matched to each page: `rewards` with the APR or `none` (checked, no campaign), each with `asOf` (the last successful check) and `stale` when Merkl failed since or that check is over 3 hours old; `unknown` until a check succeeds. `MERKL_API_URL` overrides the API |

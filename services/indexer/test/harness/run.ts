@@ -33,7 +33,7 @@ export function abiOfSource(source: string): Abi {
   if (source.startsWith("AaveHub")) return abis.AaveHub as Abi;
   if (source === "AmmPool") return clPoolAbi as Abi;
   if (source === "UniswapV4PoolManager") return uniswapV4PoolManagerAbi as Abi;
-  if (source === "DaoDeficitOffset") return abis.AvanaFirstLossReserve as Abi;
+  if (source === "DaoDeficitOffset" || source === "AvanaFirstLossReserveListed") return abis.AvanaFirstLossReserve as Abi;
   const abi = (abis as unknown as Record<string, Abi>)[source];
   if (!abi) throw new Error(`no ABI for source ${source}`);
   return abi;

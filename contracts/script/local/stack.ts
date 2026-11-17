@@ -23,13 +23,14 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CHAINS, CONTRACTS, type LocalChain, PORTS, STACK, chainOf, manifestPath, outDir, rpcUrl } from "./lib/env.ts";
-import { FIRST_RELEASE, answers, blockNumber, currentConfig, fundSigners, miningMode, placeL1FeeOracle, readStatus, runRelease, setMining, startNode, stopNode, writeBaseConfig } from "./lib/chain.ts";
+import { FIRST_RELEASE, answers, blockNumber, currentConfig, fundSigners, miningMode, placeL1FeeOracle, readStatus, runRelease, setMining, startNode, statePath, stopNode, writeBaseConfig } from "./lib/chain.ts";
 import { ensureKeys } from "./lib/keys.ts";
-import { names, record, running, start, stop } from "./lib/procs.ts";
+import { logPath, names, record, running, start, stop } from "./lib/procs.ts";
 import {
   CONVEX_DIR,
   PGLITE,
   WEBAPP_DIR,
+  convexAnswers,
   convexInfo,
   indexerAtHead,
   indexerStatus,
@@ -92,6 +93,7 @@ async function up(): Promise<void> {
   say(`indexer: at head ${JSON.stringify(at)}`);
   await startContent();
   const info = await startConvex();
+  if (info.restarted) say(`convex: the backend had stopped answering; restarted (previous log: ${logPath("convex.prev")})`);
   say(`convex: ${info.url} (functions from ${CONVEX_DIR})`);
   startConvexDriver();
   await startMonitor();
@@ -108,8 +110,9 @@ async function up(): Promise<void> {
     say("activity: running on every deployed chain");
   }
   if (!flag("no-hubs")) await applyHubFiles();
-  if (!flag("no-webapp")) startWebapp();
+  // The webapp reads its environment from stack.env: write it first.
   await writeEnvFile();
+  if (!flag("no-webapp")) startWebapp();
   say(`stack up: ${join(STACK, "stack.env")} lists the endpoints`);
 }
 
@@ -142,12 +145,12 @@ function restartActivity(c: LocalChain): void {
   start(name, process.execPath, [join(CONTRACTS, "script/local/activity.ts"), "--chain", c.network], { cwd: CONTRACTS });
 }
 
-/** The webapp's dev server on the stack (its environment from stack.env), when its start command is known. */
+/** The webapp's dev server on the stack: webapp/scripts/local-stack.mjs sets its environment from stack.env. */
 function startWebapp(): void {
   if (running("webapp")) return;
   const script = join(WEBAPP_DIR, "scripts", "local-stack.mjs");
   if (!existsSync(script)) {
-    say(`webapp: not started (${script} not found: the webapp's local-stack entry is the webapp session's)`);
+    say(`webapp: not started (${script} not found)`);
     return;
   }
   start("webapp", process.execPath, [script, join(STACK, "stack.env")], { cwd: WEBAPP_DIR, env: { FAUCET_URL: faucetUrl() } });
@@ -188,7 +191,7 @@ async function status(): Promise<void> {
     say("indexer: not answering");
   }
   const info = convexInfo();
-  if (info) say(`convex: ${info.url}`);
+  if (info) say(`convex: ${info.url}, backend ${(await convexAnswers(info)) ? "answering" : "not answering (run up to restart it)"}`);
 }
 
 async function down(): Promise<void> {
@@ -196,7 +199,7 @@ async function down(): Promise<void> {
   if (!flag("keep-chains")) {
     for (const c of CHAINS) {
       await stopNode(c);
-      say(`stopped ${c.label} node (state saved to ${outDir(c)}/anvil-state.hex)`);
+      say(`stopped ${c.label} node (state saved to ${statePath(c)})`);
     }
   }
 }

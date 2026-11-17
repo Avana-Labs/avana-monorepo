@@ -3,7 +3,7 @@
 How Avana pays for its own keepers' gas on each chain: the fee rules, the AvanaGasVault, its deployment and funding,
 the alerts and what to do on each, and the testnet drills that rehearse the vault. The rules are in the spec:
 `EMG-114` (fee classes and budgets) and `EMG-115` (playbook P-22) in
-[3.6](spec/03-operations/06-emergency-operations.md), and the vault in [2.23](spec/02-contracts/23-gas-vault.md).
+[3.6](spec/03-operations/06-emergency-operations.md), and the vault in [2.24](spec/02-contracts/24-gas-vault.md).
 
 ## What runs where
 

@@ -788,6 +788,17 @@ export default defineSchema({
     resetAt: v.number(),
   }).index("by_key", ["key"]),
 
+  /**
+   * Block timestamps read from Convex's RPC for older activity (`wallet/history:older`), by chain and block number.
+   * A row is used only while its hash matches the record's block hash.
+   */
+  blockTimestamps: defineTable({
+    chainId: v.number(),
+    blockNumber: dec,
+    blockHash: v.string(),
+    timestampMs: v.number(),
+  }).index("by_block", ["chainId", "blockNumber"]),
+
   /** Owner mapping and lifecycle metadata for Convex Agent Ask AI threads. */
   askAIThreads: defineTable({
     threadId: v.string(),

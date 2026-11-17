@@ -17,15 +17,21 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { join } from "node:path";
 import { encodeFunctionData, parseAbi, toFunctionSelector } from "viem";
 import { CONTRACTS, EXPORT_KEY_ID, type LocalChain, PORTS, REPO, STACK, chainIdEnv, manifestPath, outDir, rpcUrl } from "./env.ts";
-import { answers, blockNumber, refreshFeeds, rpc, setMining, stepEnv } from "./chain.ts";
+import { answers, blockNumber, refreshFeeds, rpc, setMining, stateFloor, stepEnv } from "./chain.ts";
 import { logPath, running, sleep, stop } from "./procs.ts";
-import { PGLITE, indexerAtHead, indexerUrl, secret, startIndexer } from "./services.ts";
+import { PGLITE, indexerAtHead, indexerUrl, runningLiveSchema, secret, startIndexer } from "./services.ts";
 
 type Say = (s: string) => void;
 const PAUSE = join(STACK, "activity.paused");
 const sampleFile = (c: LocalChain) => join(STACK, "replay", `sample-block-${c.key}`);
 
 /** Ponder's warning, error and fatal lines of a log, less the node's own notices (services-replay.sh `classify`). */
+/**
+ * How long the indexer may take to reach the heads. Closing the samples mines a sampler interval on each chain (an hour
+ * of blocks: 1,800 on the 2 s Base chain), and the indexer takes new blocks one at a time, about two a second.
+ */
+const INDEXER_CATCH_UP_MS = 1_800_000;
+
 export function classify(log: string): { errors: string[]; tolerated: number } {
   const node = new Set(["All JSON-RPC providers are inactive", "All JSON-RPC providers are inactive due to rate limiting", "No new block received within expected time", "JSON-RPC request unexpectedly surpassed timeout"]);
   const errors: string[] = [];
@@ -129,10 +135,13 @@ export async function check(chains: readonly LocalChain[], say: Say): Promise<bo
   return still(chains, async () => {
     let ok = true;
     for (const c of chains) ok = verifyManifest(c, say) && ok;
-    for (const c of chains) if (!existsSync(sampleFile(c))) await closeSamples(c, say);
-    else await rpc(rpcUrl(c), "anvil_mine", ["0x46"]);
+    // A sample before the chain's state floor (a node restored from a saved state) can no longer be read: close new ones.
+    for (const c of chains) {
+      if (!existsSync(sampleFile(c)) || Number(readFileSync(sampleFile(c), "utf8")) < (await stateFloor(c))) await closeSamples(c, say);
+      else await rpc(rpcUrl(c), "anvil_mine", ["0x46"]);
+    }
     try {
-      say(`PASS indexer at head ${JSON.stringify(await indexerAtHead(300_000))}`);
+      say(`PASS indexer at head ${JSON.stringify(await indexerAtHead(INDEXER_CATCH_UP_MS))}`);
     } catch (e) {
       say(`FAIL indexer: ${(e as Error).message}`);
       return false;
@@ -186,10 +195,11 @@ export async function replay(chains: readonly LocalChain[], say: Say): Promise<b
     let ok = true;
     if (!running("indexer")) throw new Error("no live indexer: run the stack's up command first");
     for (const c of chains) await closeSamples(c, say);
-    say(`indexer (live): at head ${JSON.stringify(await indexerAtHead(600_000))}`);
+    say(`indexer (live): at head ${JSON.stringify(await indexerAtHead(INDEXER_CATCH_UP_MS))}`);
     const live = classify(logPath("indexer"));
     say(`indexer (live): ${live.errors.length} error or warning lines, ${live.tolerated} node timeouts or notices`);
     for (const l of live.errors.slice(0, 5)) say(`  ${l.slice(0, 500)}`);
+    const liveName = runningLiveSchema();
     stop("indexer");
     await sleep(3_000);
 
@@ -198,7 +208,7 @@ export async function replay(chains: readonly LocalChain[], say: Say): Promise<b
     rmSync(logPath("indexer-replay"), { force: true });
     try {
       await startIndexer(schema, "indexer-replay");
-      say(`indexer (${schema}): at head ${JSON.stringify(await indexerAtHead(1_800_000))}`);
+      say(`indexer (${schema}): at head ${JSON.stringify(await indexerAtHead(INDEXER_CATCH_UP_MS))}`);
     } catch (e) {
       say(`FAIL indexer replay: ${(e as Error).message}`);
       ok = false;
@@ -214,13 +224,14 @@ export async function replay(chains: readonly LocalChain[], say: Say): Promise<b
     if (ok) {
       const log = logPath("check-indexer-tables");
       rmSync(log, { force: true });
-      const r = node([join(CONTRACTS, "script/e2e/replay-check.ts"), "--indexer", REPO, PGLITE, "live", schema], chainIdEnv(), log);
+      const r = node([join(CONTRACTS, "script/e2e/replay-check.ts"), "--indexer", REPO, PGLITE, liveName, schema], chainIdEnv(), log);
       say(`${r.ok ? "PASS" : "FAIL"} indexer tables: ${r.out.trim().split(/\r?\n/).filter((l) => /replay: /.test(l)).join(" | ").slice(0, 800)}`);
       ok = r.ok && ok;
     }
 
-    await startIndexer("live", "indexer");
-    say(`indexer (live): restarted, at head ${JSON.stringify(await indexerAtHead(600_000))}`);
+    // A Hub release since the live indexer started changes its build: it then restarts on a new schema from the start blocks.
+    await startIndexer();
+    say(`indexer (live): restarted on ${runningLiveSchema()}, at head ${JSON.stringify(await indexerAtHead(INDEXER_CATCH_UP_MS))}`);
     for (const c of chains) ok = convexCheck(c, Number(readFileSync(sampleFile(c), "utf8")), say) && ok;
     for (const c of chains) say(`${c.network}: rpc-recorder ${await (await fetch(`http://127.0.0.1:${c.recorderPort}`)).text().catch(() => "?")}`);
     return ok;

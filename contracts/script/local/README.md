@@ -50,9 +50,9 @@ node script/local/stack.ts down
 - `check` is the fast re-check: each manifest against its chain, the indexer at both heads with no error line, and Convex against each chain (`script/e2e/replay-check.ts`). It changes nothing, so a fix to a check or to the data layer is checked in minutes.
 - `replay` runs the indexer replay ([services/REPLAY.md](../../../services/REPLAY.md)) on the running stack. It closes a daily sample on each chain (the chain clock moves two days), then stops the live indexer at the head. A second indexer indexes every block again into a fresh schema, and its tables must equal the live ones. The live indexer then starts again, and `replay-check.ts` checks the local Convex against each chain.
 - While `check` or `replay` runs, the chains mine only on transactions and the activity loops pause, so the heads stand still.
-- `down` stops every process and saves each chain's state (`anvil_dumpState`). `up` loads it back. `--keep-chains` stops only the services.
+- `down` stops every process and saves each chain's state (`anvil_dumpState`, streamed to `deployments-local/<network>/anvil-state.json`, so a state of any size is saved). `up` starts the node with `--load-state` on it. A state saved as `anvil-state.hex` by an earlier stack is converted once. A restored node has every block and log but no state before the block it was restored at: the indexer starts its hourly samples there (`INDEXER_STATE_FLOOR`, probed per chain when the live indexer starts; a replay uses the same floors), and `check` closes new samples when its last one is below it. `--keep-chains` stops only the services.
 
-Logs are in `deployments-local/stack/logs/<process>.log`, one per process and one per deploy step (`<chain>.<release>.<step>.log`). Each chain's step record is `deployments-local/<network>/stack-status.json`. `deployments-local/stack/stack.env` lists the endpoints and holds no secret.
+Logs are in `deployments-local/stack/logs/<process>.log`, one per process and one per deploy step (`<chain>.<release>.<step>.log`). `convex.log` runs verbose, so it records the local backend's exit code; `up` restarts a Convex whose backend no longer answers and keeps the previous log as `convex.prev.log`. Each chain's step record is `deployments-local/<network>/stack-status.json`. `deployments-local/stack/stack.env` lists the endpoints and holds no secret.
 
 | Variable | Default | Effect |
 |---|---|---|
@@ -60,7 +60,7 @@ Logs are in `deployments-local/stack/logs/<process>.log`, one per process and on
 | `ETHEREUM_FORK_RPC_URL`, `BASE_FORK_RPC_URL` | none | The networks' RPC endpoints (comma-separated for several). Never in the repository: set in the environment, or stored encrypted next to the keystores with `stack.ts secrets`. anvil reads them through a local proxy (`fork-proxy.ts`, retries with backoff), so they appear on no command line. `up` stops if one is missing in fork mode |
 | `STACK_FORK_BLOCK_ETHEREUM`, `STACK_FORK_BLOCK_BASE` | `fork.json` | Another fork block |
 | `STACK_GENESIS_DAYS_AGO` | 35 | Chain time at genesis. Each release moves the clock past its timelock delays (about 15.5 days), so the first release lands near the present |
-| `STACK_MAX_MARKETS` | 64 | The MarketRegistry's market limit, fixed at deployment |
+| `STACK_MAX_MARKETS` | 128 | The MarketRegistry's market limit, fixed at deployment |
 | `STACK_CONVEX_DIR`, `STACK_WEBAPP_DIR` | this checkout | Run another checkout's `services/convex` or `webapp` (its `node_modules` installed) |
 | `STACK_BASH` | Git Bash | The bash that runs the deploy steps |
 
@@ -118,3 +118,30 @@ Tokens and pools a Hub file needs that the test world lacks go in `contracts/scr
 ## Values the DAO sets
 
 Caps, credit lines, First-Loss Reserve and DAO offset amounts, and speed limits are set by the Aave DAO and governance on a real network, never by a release config or a Hub file. The local stack needs some to run: `test-values.json` holds them (per debt asset, per collateral token with a default, per market with a default), and the stack merges them into each chain's config. Hub files carry structure and page text only.
+
+## The app on the test networks
+
+`script/testnet/app.ts` runs the same services and the webapp on Sepolia (11155111) and Base Sepolia (84532) once both are deployed by the test-network deploy (`deployments-local/sepolia`, `deployments-local/base-sepolia`). From `contracts/`:
+
+```bash
+node script/testnet/app.ts up --chains sepolia,base-sepolia --deployments <deploying worktree>/contracts/deployments-local
+```
+
+```bash
+node script/testnet/app.ts status
+```
+
+```bash
+node script/testnet/app.ts down
+```
+
+| Piece | What runs |
+|---|---|
+| RPC proxies | One per network (`script/testnet/rpc-proxy.ts`, ports 8665 and 8666): HTTP with retries, WebSocket tunnelled, CORS for the webapp only. Every service and the browser read the network through it, so the RPC URL is held by the proxy alone |
+| Indexer | Ponder on the `testnet` network set (PGlite, port 42170), from each release's first block. Its schema is `testnet_<hash>` of the manifests and the indexer's code (recorded in `deployments-local/testnet-app/indexer-schema`): after a Hub release rewrites a manifest, `up` starts it on the new schema, a full reindex |
+| Convex | A local deployment of `services/convex`, its crons on the test networks (`AVANA_CHAIN_IDS=11155111,84532`), each chain's `deployments` row from its manifest |
+| Monitor, keeper | The `testnet` network set. The keeper observes; with `KEEPER_KMS_KEY_ID_SEPOLIA` or `KEEPER_KMS_KEY_ID_BASE_SEPOLIA` set it is active on that chain (a test-network keeper never signs from a local keystore) |
+| Faucet | Test-network mode on port 42180: it mints the grant's test tokens from the deployer keystore of the private config (`AVANA_TESTNET_CONFIG`); `--gas-eth 0.01` also tops each wallet up to that much test ETH |
+| Webapp | `next dev` on http://127.0.0.1:3100, chain IDs 11155111 and 84532, the "Sepolia" network badge |
+
+Inputs, none in the repository: the RPC URLs `SEPOLIA_RPC_URL` and `BASE_SEPOLIA_RPC_URL` (the environment, or the deploying worktree's encrypted secrets of `stack.ts secrets`; optional `SEPOLIA_WS_URL` and `BASE_SEPOLIA_WS_URL` when the provider's WebSocket is not its https URL as wss), and `AVANA_TESTNET_CONFIG`. Every line the command prints is redacted. Its logs, process records and stores are in `deployments-local/testnet-app/` (`app.env` lists the endpoints), apart from the local stack's, and none of its ports is the local stack's, so both run on one machine. The indexer and Convex refuse to share a worktree's stores with a running local stack (`APP_CONVEX_DIR` runs another worktree's Convex). `APP_PORT_<NAME>` moves a port.

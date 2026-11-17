@@ -789,15 +789,6 @@
       "review": "Reviewed per call site, group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if."
     },
     {
-      "fingerprint": "3198db416f389b3e",
-      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
-      "function": "RiskModuleBreakerLogic._tripped",
-      "reason": "uint64(until): until = lastBreach + gateRecoverySeconds with lastBreach a uint64 timestamp and gateRecoverySeconds at most 7,200 (GATE_RECOVERY_MAX, the ParameterStore bound), so it fits 64 bits for any reachable block time (SPEC-BRK-007). Covered by TEST-228 (poolShareGateRecovers). forge-lint unsafe-typecast suppression on the line above with the bound.",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if."
-    },
-    {
       "fingerprint": "278f069456f00b59",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
       "file": "src/policy/risk-module/RiskModulePledgeLogic.sol",
@@ -1626,14 +1617,14 @@
       "fingerprint": "8f1c29cec5c4e700",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
       "file": "src/amm/concentrated-liquidity/ClNfpmLPVault.sol",
-      "reason": "Deliberate narrowing of packed words: the low 160 bits of slot0 or an address, the 24-bit tick and the 128-bit liquidity, as v4-core's StateLibrary decodes them; each cast carries its own comment.",
+      "reason": "Address to uint160 to uint256 to bytes32: the pool address widened into its 32-byte pool reference, so nothing is narrowed; 4naly3er flags every cast to a type below 256 bits. Here the position's pool, in _readPosition.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "a661d80584e6d06f",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
       "file": "src/amm/concentrated-liquidity/ClNfpmLPVault.sol",
-      "reason": "Deliberate narrowing of packed words: the low 160 bits of slot0 or an address, the 24-bit tick and the 128-bit liquidity, as v4-core's StateLibrary decodes them; each cast carries its own comment.",
+      "reason": "Address to uint160 to uint256 to bytes32: the pool address widened into its 32-byte pool reference, so nothing is narrowed; 4naly3er flags every cast to a type below 256 bits. Here the bound pool, passed to _storeMarket in bindMarket.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
@@ -1668,21 +1659,24 @@
       "fingerprint": "71857ce276c10210",
       "check": "`abi.encodePacked()` should not be used with dynamic types when passing the result to a hash function such as `keccak256()`",
       "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
-      "reason": "No dynamic type: Position.calculatePositionKey packs (address, int24, int24, bytes32), all static, exactly as the PoolManager keys positions.",
-      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
+      "reason": "The only abi.encodePacked in this file is _push's abi.encodePacked(b.actions, action), which appends one action byte to the PositionManager's packed action string as v4-periphery expects; the result goes to modifyLiquidities and is never hashed. 4naly3er reports the instance on a blank line (537, three lines below _push), so the fingerprint is a blank line's; reviewedFiles pins the review to the file as read.",
+      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review",
+      "reviewedFiles": {
+        "src/amm/uniswap-v4/UniswapV4Integration.sol": "25adcba7b8ed1cb7d80d443ade61ac3cfbd408438b1061d81a877be86bbd3a35"
+      }
     },
     {
       "fingerprint": "a7839525e3779b8b",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
       "file": "src/amm/uniswap-v4/UniswapV4State.sol",
-      "reason": "Deliberate narrowing of packed words: the low 160 bits of slot0 or an address, the 24-bit tick and the 128-bit liquidity, as v4-core's StateLibrary decodes them; each cast carries its own comment.",
+      "reason": "The low 160 bits of the v4 pool's slot0 word, its sqrtPriceX96 field, decoded as v4-core's StateLibrary decodes it; the comment and the unsafe-typecast suppression above the line state the layout.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "450bc3255e45e890",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
       "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
-      "reason": "Deliberate narrowing of packed words: the low 160 bits of slot0 or an address, the 24-bit tick and the 128-bit liquidity, as v4-core's StateLibrary decodes them; each cast carries its own comment.",
+      "reason": "A range-checked narrowing: unitExp is at most ClUnitMath.MAX_UNIT_EXP (18), checked just before the cast (a larger value makes the market encoding invalid), as the comment above it states.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {

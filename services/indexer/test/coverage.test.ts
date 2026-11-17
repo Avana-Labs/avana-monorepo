@@ -21,6 +21,7 @@ const SOURCES: Readonly<Record<string, Abi>> = {
   ...Object.fromEntries(Object.entries(abis).filter(([name]) => name !== "AaveSpoke" && name !== "AaveHub")),
   ...Object.fromEntries(AAVE_SPOKE_SOURCES.map((s) => [s, abis.AaveSpoke])),
   ...Object.fromEntries(AAVE_HUB_SOURCES.map((s) => [s, abis.AaveHub])),
+  AvanaFirstLossReserveListed: abis.AvanaFirstLossReserve,
   DaoDeficitOffset: abis.AvanaFirstLossReserve,
   AmmPool: clPoolAbi,
   UniswapV4PoolManager: uniswapV4PoolManagerAbi,

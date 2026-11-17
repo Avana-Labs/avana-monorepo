@@ -149,7 +149,10 @@ export type PortfolioActivityRow = {
   product: PortfolioActivityProduct
   kind: PortfolioActivityKind
   status: PortfolioActivityStatus
-  amountUsd: number
+  /** Absent for activity older than the indexed window, whose USD value at the time is not known. */
+  amountUsd?: number
+  /** The token amount with its symbol ("1,500 USDC"), shown in place of the USD value when there is none. */
+  tokenAmountLabel?: string
   primaryLabel: string
   secondaryLabel: string
   txHash: string

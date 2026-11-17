@@ -177,7 +177,8 @@ export function buildLendPageData(_walletId: string, state?: LendSystemState): L
   const assetGroups = buildAssetGroups(markets).map((group) => ({
     ...group,
     rows: group.rows.map((row) => {
-      const market = markets.find((entry) => entry.asset.symbol.toUpperCase() === row.symbol.toUpperCase())
+      // By market id, not symbol: the same asset listed on two Hubs has two markets.
+      const market = markets.find((entry) => entry.marketId === row.market)
       const rowMarket = market ? catalogMarketToRow(market) : null
       return {
         ...row,
@@ -219,7 +220,8 @@ export function buildLendPageData(_walletId: string, state?: LendSystemState): L
       apyChange24h: 0,
       tvl: formatCompactUsd(suppliedUsdOf(market)),
       tvlUsd: suppliedUsdOf(market),
-      utilization: Math.round(market.utilization * 100),
+      // Unrounded: the hero averages it by TVL, so a market under 0.5% must still count.
+      utilization: market.utilization * 100,
       type: market.riskTier,
       protocol: market.asset.symbol,
       color: "text-foreground",

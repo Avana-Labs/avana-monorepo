@@ -66,11 +66,18 @@ const NO_BALANCES: UserAssetBalance[] = []
  * its tokens as "wallet" rows and its LP NFTs that an Avana market accepts as "borrow_collateral_unpledged" rows. The
  * tokens and markets come from Convex (`deployments.swapContractsOf`, `collateralMarkets.list`). Read again on each new
  * block and after a swap. Undefined while loading; empty for a guest id or without a Convex deployment.
+ *
+ * `guest` is for a caller outside every ConvexProvider (the guest home workspace, `home-page-guest-workspace.tsx`):
+ * it answers empty without calling `useQuery`, which throws without a provider even when skipped.
  */
-export function useConvexProductWalletBalances(walletId: string | null | undefined): UserAssetBalance[] | undefined {
-  // Without a deployment there is no ConvexProvider and nothing to read. `hasConvexClient` is a
-  // build-time constant, so every render takes the same branch.
-  if (!hasConvexClient) return NO_BALANCES
+export function useConvexProductWalletBalances(
+  walletId: string | null | undefined,
+  { guest = false }: { guest?: boolean } = {},
+): UserAssetBalance[] | undefined {
+  // Without a deployment, or for the guest workspace, there is no ConvexProvider and nothing to read.
+  // `hasConvexClient` is a build-time constant and `guest` is fixed for the caller's lifetime, so every
+  // render takes the same branch.
+  if (!hasConvexClient || guest) return NO_BALANCES
   return useChainWalletBalances(walletId)
 }
 

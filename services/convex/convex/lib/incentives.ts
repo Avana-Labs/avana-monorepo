@@ -3,8 +3,9 @@
 // Merkl incentives per page. A page is a target: an address the campaign names (Merkl's `identifier` or
 // `explorerAddress`) and, for a Lend or Borrow asset page, the token the campaign must pay on, since one Spoke holds
 // many reserves. A pool page targets the market's pool and its vault token. A target matched by no live opportunity
-// after a successful fetch has no rewards ("none"); a failed or stale fetch leaves it "unknown", so the app never
-// shows "No rewards" it has not checked.
+// after a successful fetch has no rewards ("none"). Each answer carries the time of the last successful fetch and
+// whether it is stale, so the app can show the last known value "as of" that time; only a chain never fetched
+// successfully is "unknown", so the app never shows "No rewards" it has not checked.
 
 export interface MerklOpportunity {
   readonly chainId: number;
@@ -33,7 +34,7 @@ export interface IncentiveMatch {
   readonly opportunities: number;
 }
 
-/** After this long without a successful fetch, a page's incentives are unknown again. */
+/** After this long without a successful fetch, a page's incentives are stale (the last known value, flagged). */
 export const INCENTIVES_STALE_MS = 3 * 60 * 60 * 1000;
 
 const lower = (a: string | undefined) => (a ?? "").toLowerCase();
@@ -58,11 +59,15 @@ export function matchIncentives(opps: readonly MerklOpportunity[], chainId: numb
   return out;
 }
 
-export type IncentiveStatus = { readonly status: "rewards"; readonly aprPct: number; readonly rewardTokens: readonly string[] } | { readonly status: "none" } | { readonly status: "unknown" };
+/** `asOf` is the last successful fetch (epoch ms); `stale` when it is older than INCENTIVES_STALE_MS. */
+export type IncentiveStatus =
+  | ({ readonly status: "rewards"; readonly aprPct: number; readonly rewardTokens: readonly string[] } | { readonly status: "none" }) & { readonly asOf: number; readonly stale: boolean }
+  | { readonly status: "unknown" };
 
 /** What a page shows, from its stored match and the chain's last successful fetch time. */
 export function incentiveStatus(match: { aprPct: number; rewardTokens: readonly string[]; opportunities: number } | null, lastOkAt: number | null, now: number): IncentiveStatus {
-  if (lastOkAt === null || now - lastOkAt > INCENTIVES_STALE_MS) return { status: "unknown" };
-  if (!match || match.opportunities === 0) return { status: "none" };
-  return { status: "rewards", aprPct: match.aprPct, rewardTokens: match.rewardTokens };
+  if (lastOkAt === null) return { status: "unknown" };
+  const asOf = { asOf: lastOkAt, stale: now - lastOkAt > INCENTIVES_STALE_MS };
+  if (!match || match.opportunities === 0) return { status: "none", ...asOf };
+  return { status: "rewards", aprPct: match.aprPct, rewardTokens: match.rewardTokens, ...asOf };
 }

@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "license": "BUSL-1.1",
-  "description": "Test funds for a connected wallet on the local fork chains: gas, wallet tokens and, later, the starting positions. Refuses any chain that is not a local anvil fork.",
+  "description": "Test funds for a connected wallet on the local fork chains (gas, wallet tokens and, later, the starting positions) and on the test networks (test tokens minted by their minter). Refuses any other chain.",
   "type": "module",
   "engines": {
     "node": ">=22.12"

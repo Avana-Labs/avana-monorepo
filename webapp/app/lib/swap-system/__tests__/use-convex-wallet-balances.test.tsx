@@ -30,6 +30,12 @@ describe("wallet balance reads", () => {
     expect(args().every((a) => a === "skip")).toBe(true)
   })
 
+  it("calls no Convex query for the guest workspace, which has no ConvexProvider", () => {
+    const { result } = renderHook(() => useConvexProductWalletBalances("guest-1", { guest: true }))
+    expect(result.current).toEqual([])
+    expect(useQuery).not.toHaveBeenCalled()
+  })
+
   it("loads the active chain's tokens and markets for a wallet address", () => {
     setActiveChainKey("base")
     const { result } = renderHook(() => useConvexProductWalletBalances("0x00000000000000000000000000000000000000aa"))

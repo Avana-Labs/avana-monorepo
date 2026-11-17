@@ -3,8 +3,8 @@ import { formatBorrowLpSymbolLabel } from "@/app/lib/borrow-system/market-labels
 import { formatActivityTokenAmount } from "@/app/lib/currency/format"
 
 /**
- * The wallet's indexed activity (services/convex `wallet.activity.listForWallet`, the last 30 days) as the dashboard
- * feed's rows, with the same products, kinds, signs and labels the session's own rows use
+ * The wallet's indexed activity (services/convex `wallet.activity.listForWallet`, the last 30 days, then the older
+ * rows of `wallet.history.older`, which carry a token amount and no USD value) as the dashboard feed's rows, with the same products, kinds, signs and labels the session's own rows use
  * (`mapTransactionHistoryToActivityRows`, `buildLendActivityHistory`):
  * - Borrow rows come from the pool page's events (the AaveAdapter's), which name the market. The same borrow or repay
  *   also lands on the asset page from the CDP Spoke; that copy is left out.
@@ -14,7 +14,10 @@ import { formatActivityTokenAmount } from "@/app/lib/currency/format"
  * TODO(activity): index a wallet's swaps from the front-end fee transfer every Avana swap pays to `feeRecipient`.
  */
 
-/** One row of `wallet.activity.listForWallet` (services/convex `WalletActivityRow`), the fields read here. */
+/**
+ * One row of `wallet.activity.listForWallet` or `wallet.history.older` (services/convex `WalletActivityRow`), the
+ * fields read here.
+ */
 export type WalletActivityRowLike = {
   id: string
   at: string
@@ -46,6 +49,18 @@ function tokenAmount(label: string | undefined): number {
   return Number.isFinite(value) ? value : 0
 }
 
+/**
+ * A row older than the indexed window (`wallet.history.older`) has no USD value; its amount cell shows the token
+ * amount instead.
+ */
+function withoutUsd(row: WalletActivityRowLike): Pick<PortfolioActivityRow, "tokenAmountLabel"> | null {
+  if (row.amountUsd !== undefined) return null
+  const symbol = row.tokenSymbol ?? row.tokenAmountLabel?.split(" ").slice(1).join(" ")
+  return row.tokenAmountLabel && symbol
+    ? { tokenAmountLabel: formatActivityTokenAmount(tokenAmount(row.tokenAmountLabel), symbol) }
+    : {}
+}
+
 function borrowRow(
   row: WalletActivityRowLike,
   slug: string,
@@ -53,6 +68,7 @@ function borrowRow(
 ): PortfolioActivityRow | null {
   const kind = BORROW_KINDS[row.kind]
   if (!kind) return null
+  const older = withoutUsd(row)
   const amountUsd = Math.abs(row.amountUsd ?? 0)
   const signed = kind === "borrow" || kind === "withdraw" || kind === "liquidation" ? -amountUsd : amountUsd
   // Debt actions label by the borrowed asset, collateral actions by the pool, with the pool as context on debt rows.
@@ -67,7 +83,7 @@ function borrowRow(
     product: "borrow",
     kind,
     status: "confirmed",
-    amountUsd: signed,
+    ...(older ?? { amountUsd: signed }),
     primaryLabel: isDebtAction ? (row.tokenSymbol ?? fallbackLabel) : (poolLabel ?? fallbackLabel),
     secondaryLabel: isDebtAction && poolLabel ? `via ${poolLabel}` : "",
     marketId: isDebtAction ? row.tokenSymbol?.toLowerCase() : slug,
@@ -85,7 +101,7 @@ function lendRow(row: WalletActivityRowLike, slug: string): PortfolioActivityRow
     product: "lend",
     kind,
     status: "confirmed",
-    amountUsd: row.amountUsd ?? 0,
+    ...(withoutUsd(row) ?? { amountUsd: row.amountUsd ?? 0 }),
     primaryLabel: symbol,
     secondaryLabel: formatActivityTokenAmount(tokenAmount(row.tokenAmountLabel), symbol),
     txHash: row.txHash ?? "",

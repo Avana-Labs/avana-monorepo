@@ -7,17 +7,24 @@ type CapacityFilledProps = {
   size?: "md" | "sm"
 }
 
+/** Whole percent, except a value above 0 and under 1, which keeps two decimals so it never reads as 0%. */
+export function formatCapacityFilled(percentage: number): string {
+  if (percentage > 0 && percentage < 0.01) return "<0.01%"
+  if (percentage > 0 && percentage < 1) return `${percentage.toFixed(2)}%`
+  return `${Math.round(percentage)}%`
+}
+
 /** Compact utilization gauge shared by the market tables. `value` is a percentage (0–100). */
 export function CapacityFilled({ value, className, size = "md" }: CapacityFilledProps) {
   const hasValue = typeof value === "number" && Number.isFinite(value)
   const percentage = hasValue ? Math.min(100, Math.max(0, value)) : null
-  const rounded = percentage === null ? null : Math.round(percentage)
+  const label = percentage === null ? null : formatCapacityFilled(percentage)
   const circumference = 2 * Math.PI * 12
 
   return (
     <div
       role="img"
-      aria-label={rounded === null ? "Capacity filled unavailable" : `Capacity filled ${rounded}%`}
+      aria-label={label === null ? "Capacity filled unavailable" : `Capacity filled ${label}`}
       className={cn(
         "inline-flex items-center whitespace-nowrap",
         size === "sm" ? "gap-2 align-top leading-5" : "gap-2.5",
@@ -53,7 +60,7 @@ export function CapacityFilled({ value, className, size = "md" }: CapacityFilled
         ) : null}
       </svg>
       <span className="font-data text-[15px] font-normal tabular-nums text-foreground dark:text-white">
-        {rounded === null ? "—" : `${rounded}%`}
+        {label ?? "—"}
       </span>
     </div>
   )
