@@ -1,10 +1,16 @@
 # audit
 
-Audit scope, external reports and verification evidence for Avana. The official findings register is [5.3 Audit Findings](../spec/05-verification/03-audit-findings.md). [`findings-register.md`](findings-register.md) in this folder is the internal-review view: every finding from Avana's internal review and verification runs, open or resolved, with the run that found it. This folder also holds each run's report, run log and models, and the material the findings and proofs cite. Every check Avana runs on its code and its design has a folder here with how it runs and its latest results; the [index](#internal-verification) lists them all.
+Audit status, the areas under internal review and verification evidence for Avana. The official findings register is [5.3 Audit Findings](../spec/05-verification/03-audit-findings.md). [`findings-register.md`](findings-register.md) in this folder is the internal-review view: every finding from Avana's internal review and verification runs, open or resolved, with the run that found it. This folder also holds each run's report, run log and models, and the material the findings and proofs cite. Every check Avana runs on its code and its design has a folder here with how it runs and its latest results; the [index](#internal-verification) lists them all.
 
-## Scope (`Q-115`)
+## Audit status
 
-The audit covers the code written from the specification:
+Avana is going through an internal audit: an internal manual review of the code and an AI-assisted audit. There has been no external audit yet. When those steps finish, the audit opens to external auditors and to the public.
+
+The bug bounty has not started. It will be announced. Until then, report a vulnerability as [`SECURITY.md`](../../SECURITY.md) describes.
+
+## Areas under internal review (`Q-115`)
+
+These are the areas the internal audit reviews now, written from the specification. The same list sets the scope of the external audit that follows it.
 
 | In scope | Notes |
 |---|---|
@@ -96,8 +102,7 @@ Other evidence:
 | Path | Contents |
 |---|---|
 | [`findings-register.md`](findings-register.md) | Every finding from the runs above, with severity, status, resolution and the check that verifies the fix |
-| `docs/audit/` (root) | Scope documents per audit, external audit reports, and evidence files cited by findings |
-| [`external/`](external/index.md) | External audit and formal-verification reports, `YYYY-MM-DD_<Scope>_<Firm>.pdf`, indexed in [`external/index.md`](external/index.md) with the audited commit, fix commit and release of each |
+| `docs/audit/` (root) | Scope documents and evidence files cited by findings |
 | [`docs/audit/formal/`](formal/) | One report per implementation-stage formal property: property ID, scope, model, assumptions and summaries, tool and version, result, reproduction command. Filled as the Certora Prover passes each property ([certora](certora/)). |
 | [`contracts/certora/`](../../contracts/) | CVL specifications and configurations for the prover rules (`Q-041`) |
 | [`contracts/test/`](../../contracts/) | Foundry tests and Halmos symbolic tests |
@@ -116,7 +121,7 @@ The implementation-stage properties `PROP-001` onward are proved with the prover
 
 ## Findings
 
-Every failed check and every attack the design does not fully block is a `FINDING-NNN` in [5.3](../spec/05-verification/03-audit-findings.md), citing the requirement, flow step or invariant it affects and the test or property that confirms the fix. Findings from the internal runs in this folder are recorded first in [`findings-register.md`](findings-register.md) with the statuses Open, Resolved in spec — re-verification pending, Resolved in spec, Accepted risk and Rejected, and are mirrored into 5.3 once they are resolved in spec (re-verification pending or done) or Accepted risk. External auditors' findings are added in the same format, with the raw report kept here.
+Every failed check and every attack the design does not fully block is a `FINDING-NNN` in [5.3](../spec/05-verification/03-audit-findings.md), citing the requirement, flow step or invariant it affects and the test or property that confirms the fix. Findings from the internal runs in this folder are recorded first in [`findings-register.md`](findings-register.md) with the statuses Open, Resolved in spec — re-verification pending, Resolved in spec, Accepted risk and Rejected, and are mirrored into 5.3 once they are resolved in spec (re-verification pending or done) or Accepted risk. Findings from the external audit, once it opens, are added in the same format.
 
 | Severity | Meaning |
 |---|---|
