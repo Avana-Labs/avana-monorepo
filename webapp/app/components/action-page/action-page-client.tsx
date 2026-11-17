@@ -5,6 +5,7 @@ import { isValidAction, normalizeActionKind } from "@/app/lib/action-system/cont
 import { ActionNotFound } from "@/app/components/action-page/action-not-found"
 import { BorrowActionPageClient } from "@/app/components/action-page/borrow-action-page-client"
 import { LendActionPageClient } from "@/app/components/action-page/lend-action-page-client"
+import { RewardsActionPageClient } from "@/app/components/action-page/rewards-action-page-client"
 
 export function ActionPageClient({
   product,
@@ -26,7 +27,9 @@ export function ActionPageClient({
   initialDebtId?: string
 }) {
   if (!isValidAction(product, kind)) {
-    const fallbackHref = closeHref ?? (product === "lend" || product === "borrow" ? `/${product}` : "/")
+    const fallbackHref =
+      closeHref ??
+      (product === "lend" || product === "borrow" ? `/${product}` : product === "rewards" ? "/dashboard" : "/")
     return <ActionNotFound closeHref={fallbackHref} />
   }
 
@@ -44,6 +47,10 @@ export function ActionPageClient({
         initialDebtId={initialDebtId}
       />
     )
+  }
+
+  if (product === "rewards") {
+    return <RewardsActionPageClient closeHref={closeHref} />
   }
 
   return (

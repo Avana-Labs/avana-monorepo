@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
+import {CardinalityGrowth} from "./lib/CardinalityGrowth.sol";
 import {WorldAaveV3} from "./lib/WorldAaveV3.sol";
 import {WorldAerodrome} from "./lib/WorldAerodrome.sol";
 import {WorldFeeds} from "./lib/WorldFeeds.sol";
@@ -302,8 +303,12 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3, WorldUniswapV4 
         uint256 usd = vm.parseJsonUint(cfg, ".world.aaveV3SupplyUsd");
         uint256 n = _count(cfg, ".world.tokens");
         for (uint256 i = 0; i < n; ++i) {
-            // A hostile token (`kind`) is not a flash source: Aave V3 lists only standard ERC-20s.
-            if (vm.keyExistsJson(cfg, string.concat(".world.tokens[", vm.toString(i), "].kind"))) continue;
+            // A hostile token (`kind`) is not a flash source: Aave V3 lists only standard ERC-20s. A `blocklist` token
+            // is one (Aave V3 lists USDC), and a debt asset needs its flash liquidity.
+            string memory kk = string.concat(".world.tokens[", vm.toString(i), "].kind");
+            if (vm.keyExistsJson(cfg, kk) && keccak256(bytes(vm.parseJsonString(cfg, kk))) != keccak256("blocklist")) {
+                continue;
+            }
             string memory sym = vm.parseJsonString(cfg, string.concat(".world.tokens[", vm.toString(i), "].symbol"));
             TokenInfo memory t = tokens[keccak256(bytes(sym))];
             _aaveV3List(t.token, sym, primaryFeed[keccak256(bytes(sym))]);
@@ -331,8 +336,7 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3, WorldUniswapV4 
         uint24 fee = uint24(vm.parseJsonUint(cfg, string.concat(k, ".fee")));
         address pool = IUniswapV3FactoryAdmin(uniFactory).createPool(a.token, b.token, fee);
         IPoolInit(pool).initialize(_sqrtPrice(a, b));
-        IPoolInit(pool)
-            .increaseObservationCardinalityNext(uint16(vm.parseJsonUint(cfg, ".world.observationCardinality")));
+        CardinalityGrowth.grow(pool, uint16(vm.parseJsonUint(cfg, ".world.observationCardinality")));
         (uint256 a0, uint256 a1) = _fund(a, b, vm.parseJsonUint(cfg, string.concat(k, ".usd")), uniNpm);
         _mintUni(a.token, b.token, fee, a0, a1);
         list = vm.serializeAddress("uniswapPools", vm.parseJsonString(cfg, string.concat(k, ".name")), pool);
@@ -366,8 +370,7 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3, WorldUniswapV4 
         uint256 g = vm.parseJsonUint(cfg, string.concat(k, ".generation"));
         address pool = ISlipstreamFactory(slipFactories[g]).createPool(a.token, b.token, spacing, _sqrtPrice(a, b));
         _gauge(g, pool);
-        IPoolInit(pool)
-            .increaseObservationCardinalityNext(uint16(vm.parseJsonUint(cfg, ".world.observationCardinality")));
+        CardinalityGrowth.grow(pool, uint16(vm.parseJsonUint(cfg, ".world.observationCardinality")));
         (uint256 a0, uint256 a1) = _fund(a, b, vm.parseJsonUint(cfg, string.concat(k, ".usd")), slipNpms[g]);
         _mintSlip(slipNpms[g], a.token, b.token, spacing, a0, a1);
         list = vm.serializeAddress("slipstreamPools", vm.parseJsonString(cfg, string.concat(k, ".name")), pool);
@@ -468,8 +471,7 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3, WorldUniswapV4 
             pool = IUniswapV3FactoryAdmin(uniFactory).createPool(a.token, b.token, 500);
             IPoolInit(pool).initialize(_sqrtPrice(a, b));
         }
-        IPoolInit(pool)
-            .increaseObservationCardinalityNext(uint16(vm.parseJsonUint(cfg, ".world.observationCardinality")));
+        CardinalityGrowth.grow(pool, uint16(vm.parseJsonUint(cfg, ".world.observationCardinality")));
         if (created) {
             (uint256 a0, uint256 a1) = _fund(a, b, usd, uniNpm);
             _mintUni(a.token, b.token, 500, a0, a1);

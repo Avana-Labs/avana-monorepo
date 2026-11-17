@@ -441,6 +441,8 @@ export default defineSchema({
     actionBps: v.record(v.string(), v.number()),
     exemptActions: v.array(v.string()),
     maxFeeUsd: v.union(v.null(), v.number()),
+    /** Points redemption rules (lib/redemption.ts); the defaults apply while absent. */
+    redemption: v.optional(v.object({ pointsPerStep: v.number(), bpsPerStep: v.number(), days: v.number(), maxBps: v.number() })),
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
 
@@ -671,6 +673,15 @@ export default defineSchema({
     .index("by_referred", ["referred"])
     .index("by_owner", ["owner"]),
 
+  /** Points a wallet spent on a temporary fee discount (`lib/redemption.ts`): `bps` off every fee from `startsAt` to `endsAt`. */
+  rewardRedemptions: defineTable({
+    wallet: address,
+    points: v.number(),
+    bps: v.number(),
+    startsAt: v.number(),
+    endsAt: v.number(),
+  }).index("by_wallet_ends", ["wallet", "endsAt"]),
+
   /** Running sums of a wallet's `rewardEvents`, so a read never scans the ledger; `questIds` are the completed quests. */
   rewardTotals: defineTable({
     wallet: address,
@@ -678,6 +689,8 @@ export default defineSchema({
     feePoints: v.number(),
     /** Lend supply so far in USD (each supply valued at the asset's price when it was recorded); drives the volume quest. */
     supplyUsd: v.optional(v.number()),
+    /** Points spent on redemptions so far. */
+    redeemedPoints: v.optional(v.number()),
     questIds: v.array(v.string()),
     updatedAt: v.number(),
   }).index("by_wallet", ["wallet"]),

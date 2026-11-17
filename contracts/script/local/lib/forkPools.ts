@@ -48,6 +48,18 @@ export function minObservations(window: number, blockTime: number): number {
   return Math.ceil(window / blockTime) + 1;
 }
 
+/** The most slots one `increaseObservationCardinalityNext` adds: `Oracle.grow` writes each new slot (about 22,200 gas),
+ * so one call for 750 slots would reach a network's 16,777,216 per-transaction gas cap. */
+export const MAX_GROW_STEP = 500;
+
+/** The `cardinalityNext` of each grow transaction from `current` to `target`, at most `MAX_GROW_STEP` apart; none
+ * when `current` already reaches `target`. */
+export function growSteps(current: number, target: number): number[] {
+  const out: number[] = [];
+  for (let n = current; n < target; ) out.push((n = Math.min(target, n + MAX_GROW_STEP)));
+  return out;
+}
+
 /** Writes until the cardinality reaches `target` (the index must wrap onto the new slots); 0 when it already has. */
 export function writesToGrow(s: PoolState, target: number): number {
   if (s.observationCardinality >= target) return 0;
@@ -65,7 +77,7 @@ export async function fillPool(io: PoolIo, pool: Address, window: number, blockT
   const before = await io.state(pool);
   if (before.observationCardinality >= need && (await io.observeOk(pool, window))) return { pool, need, before, after: before, raised: false, writes: 0 };
   const raised = before.observationCardinalityNext < need;
-  if (raised) await io.raise(pool, need);
+  for (const next of growSteps(before.observationCardinalityNext, need)) await io.raise(pool, next);
   const limit = maxWrites(before, need);
   log(`${pool}: cardinality ${before.observationCardinality} (next ${before.observationCardinalityNext}), need ${need}: at most ${limit} observations`);
   let writes = 0;

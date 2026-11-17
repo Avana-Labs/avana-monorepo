@@ -1,7 +1,7 @@
 import { imageForTask, type RewardsPromoTabId, type RewardsQuest } from "./catalog"
 
 // Quests of the Rewards screens. Points are granted by Convex (services/convex lib/rewards.ts, `QUEST_POINTS`) for
-// the four quests with a source; the rest are "Coming soon".
+// every quest here; each has a source (an on-chain action, a client event or a referral) and an action.
 
 type PlaceholderQuest = Omit<RewardsQuest, "image" | "status" | "progressLabel" | "cta">
 
@@ -113,7 +113,7 @@ const QUESTS: Record<RewardsPromoTabId, PlaceholderQuest[]> = {
 }
 
 /** The dialogs a quest's button can open, in the Rewards tab. */
-export type QuestDialog = "primer" | "pin-pool" | "pin-lend"
+export type QuestDialog = "primer" | "pin-pool" | "pin-lend" | "referral"
 
 /** What each live quest's button does (open a page or a dialog), and its label. */
 const QUEST_ACTIONS: Record<string, { href?: string; dialog?: QuestDialog; cta: string }> = {
@@ -121,6 +121,9 @@ const QUEST_ACTIONS: Record<string, { href?: string; dialog?: QuestDialog; cta: 
   "review-risk-basics": { dialog: "primer", cta: "Read" },
   "favorite-market": { dialog: "pin-pool", cta: "Pin" },
   "favorite-lend-market": { dialog: "pin-lend", cta: "Pin" },
+  "share-referral-link": { dialog: "referral", cta: "Invite" },
+  "invite-first-wallet": { dialog: "referral", cta: "Invite" },
+  "bring-3-active-users": { dialog: "referral", cta: "Invite" },
   "first-lend-deposit": { href: "/lend", cta: "Deposit" },
   "supply-500-lend": { href: "/lend", cta: "Deposit" },
   "first-borrow": { href: "/borrow", cta: "Borrow" },
@@ -141,21 +144,23 @@ export function questDialog(questId: string): QuestDialog | undefined {
 /**
  * The quests of each Rewards tab, ready for the quest cards. The five with a source (first deposit, borrow, repay,
  * pledge and $500 supplied, detected from the wallet's own on-chain activity) show "Earned" once completed and
- * otherwise open the page where they are done; every other quest is "Coming soon".
+ * otherwise open the page where they are done. A quest without an action is not listed: every card works.
  */
 export function questsByTab(
-  labels: { comingSoon: string; earned: string },
+  labels: { earned: string },
   completed: ReadonlySet<string>,
 ): Record<RewardsPromoTabId, RewardsQuest[]> {
   const entries = Object.entries(QUESTS).map(([tab, quests]) => [
     tab,
-    quests.map((quest) => {
-      const base = { ...quest, image: imageForTask(quest.id), progressLabel: quest.description }
+    quests.flatMap((quest) => {
       const action = QUEST_ACTIONS[quest.id]
-      if (!action) return { ...base, cta: labels.comingSoon, status: "coming_soon" as const }
-      return completed.has(quest.id)
-        ? { ...base, cta: labels.earned, status: "claimed" as const }
-        : { ...base, cta: action.cta, status: "available" as const }
+      if (!action) return []
+      const base = { ...quest, image: imageForTask(quest.id), progressLabel: quest.description }
+      return [
+        completed.has(quest.id)
+          ? { ...base, cta: labels.earned, status: "claimed" as const }
+          : { ...base, cta: action.cta, status: "available" as const },
+      ]
     }),
   ])
   return Object.fromEntries(entries) as Record<RewardsPromoTabId, RewardsQuest[]>

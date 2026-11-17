@@ -560,7 +560,7 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
     });
     markets.push(name);
     checklist.push(
-      `${v4 ? "Uniswap v3 reference pool of " : "Pool "}${mi.pool} (${name}): raise its observation cardinality to at least ${need} (increaseObservationCardinalityNext; ceil(${TWAP_WINDOW} s / ${c.chain.blockTime} s blocks) + 1) and let it fill a ${TWAP_WINDOW} s window before the listing executes; until then the market's TWAP check is unavailable. On a fork the stack's fork-pools step does it.`,
+      `${v4 ? "Uniswap v3 reference pool of " : "Pool "}${mi.pool} (${name}): raise its observation cardinality to at least ${need} (increaseObservationCardinalityNext, at most 500 new slots per transaction; ceil(${TWAP_WINDOW} s / ${c.chain.blockTime} s blocks) + 1) and let it fill a ${TWAP_WINDOW} s window before the listing executes; until then the market's TWAP check is unavailable. On a fork the stack's fork-pools step does it.`,
     );
   }
 
