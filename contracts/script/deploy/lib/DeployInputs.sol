@@ -90,6 +90,7 @@ abstract contract DeployInputs is Script {
         c.initialPoolShareMaxBps = uint16(vm.parseJsonUint(json, ".parameters.initialPoolShareMaxBps"));
         c.maxMarketCount = vm.parseJsonUint(json, ".parameters.maxMarketCount");
         c.keeperFloor = vm.parseJsonUint(json, ".parameters.keeperFloor");
+        c.timelockNormalDelay = vm.parseJsonUint(json, ".parameters.timelockNormalDelay");
         c.keepers = _addrs(json, ".keepers");
         c.operatorHelpers = _helpers(json);
         c.integrations = _integrations(json);

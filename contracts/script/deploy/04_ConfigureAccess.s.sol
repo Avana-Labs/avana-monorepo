@@ -98,8 +98,10 @@ contract ConfigureAccess is TimelockOperations {
         _freshSalt(timelock, op);
         console2.log(op.name, vm.toString(_writeOperation(timelock, op)), _operationPath(op.name));
         if (vm.envOr("AVANA_SCHEDULE", false)) {
+            // The delay the timelock requires of it: the normal delay set at deployment (`timelockNormalDelay`).
+            uint256 delay = ITimelockOps(timelock).requiredDelay(op.targets, op.payloads);
             vm.broadcast(safe);
-            ITimelockOps(timelock).scheduleBatch(op.targets, op.values, op.payloads, bytes32(0), op.salt, 432_000);
+            ITimelockOps(timelock).scheduleBatch(op.targets, op.values, op.payloads, bytes32(0), op.salt, delay);
             console2.log("scheduled as the governance Safe", safe);
         }
     }

@@ -73,6 +73,9 @@ struct ChainInputs {
     uint16 initialPoolShareMaxBps;
     uint256 maxMarketCount;
     uint256 keeperFloor;
+    // The timelock's initial normal delay, seconds (`REQ-ACCESS-027`: 432,000; 60 to 120 on a test network,
+    // `REQ-ACCESS-187`).
+    uint256 timelockNormalDelay;
     address[] keepers;
     OperatorHelperInput[] operatorHelpers;
     IntegrationInput[] integrations;
