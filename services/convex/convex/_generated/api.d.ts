@@ -121,6 +121,7 @@ import type * as wallet_clientQuests from "../wallet/clientQuests.js";
 import type * as wallet_history from "../wallet/history.js";
 import type * as wallet_live from "../wallet/live.js";
 import type * as wallet_membership from "../wallet/membership.js";
+import type * as wallet_pinnedMarkets from "../wallet/pinnedMarkets.js";
 import type * as wallet_positions from "../wallet/positions.js";
 import type * as wallet_productBalances from "../wallet/productBalances.js";
 import type * as wallet_profiles from "../wallet/profiles.js";
@@ -244,6 +245,7 @@ declare const fullApi: ApiFromModules<{
   "wallet/history": typeof wallet_history;
   "wallet/live": typeof wallet_live;
   "wallet/membership": typeof wallet_membership;
+  "wallet/pinnedMarkets": typeof wallet_pinnedMarkets;
   "wallet/positions": typeof wallet_positions;
   "wallet/productBalances": typeof wallet_productBalances;
   "wallet/profiles": typeof wallet_profiles;

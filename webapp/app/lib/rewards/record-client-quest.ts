@@ -12,6 +12,25 @@ import { getSiweSession } from "@/app/lib/siwe/auth-store"
  */
 export type ClientQuestRecorder = (questId: string) => Promise<void>
 
+/**
+ * Pins a market to the signed-in wallet's watchlist (`wallet.pinnedMarkets.pin`); Convex checks that the market exists
+ * and awards the pin quest once. Resolves whether the pin was stored, false without a session or on any failure.
+ */
+export async function pinMarket(scope: "lend" | "pool", slug: string): Promise<boolean> {
+  try {
+    if (!hasConvexClient) return false
+    const session = getSiweSession()
+    if (!session) return false
+    const { getSiweConvexClient } = await import("@/app/lib/convex/siwe-convex-provider")
+    const client = getSiweConvexClient()
+    if (!client) return false
+    await client.mutation(api.wallet.pinnedMarkets.pin, { wallet: session.wallet, scope, slug })
+    return true
+  } catch {
+    return false
+  }
+}
+
 export const recordClientQuest: ClientQuestRecorder = async (questId) => {
   try {
     if (!hasConvexClient) return

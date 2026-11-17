@@ -3,10 +3,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import type { RewardsPromoTabId, RewardsQuest } from "@/app/lib/data/rewards/catalog"
-import { questHref, questsByTab as buildQuestsByTab } from "@/app/lib/data/rewards/quests"
+import {
+  questDialog,
+  questHref,
+  questsByTab as buildQuestsByTab,
+  type QuestDialog,
+} from "@/app/lib/data/rewards/quests"
 import { useWalletRewards } from "@/app/lib/rewards/use-wallet-rewards"
 import { useHistoryBackfill } from "@/app/lib/rewards/use-history-backfill"
-import { recordClientQuest } from "@/app/lib/rewards/record-client-quest"
+import { pinMarket, recordClientQuest } from "@/app/lib/rewards/record-client-quest"
+import {
+  RewardsEducationDialog,
+  RewardsPinMarketDialog,
+} from "@/app/dashboard/_rewards-components/rewards-task-dialogs"
 import { useAvanaSessions } from "@/app/lib/avana-session/avana-sessions-provider"
 import { PortfolioStatCards } from "@/app/dashboard/portfolio-stat-cards"
 import { PortfolioRewardsCards } from "@/app/dashboard/_rewards-components/rewards-balance-hero"
@@ -101,13 +110,31 @@ export function DashboardPageClient() {
   useEffect(() => {
     if (rewards && !connectDone) void recordClientQuest("connect-wallet")
   }, [rewards, connectDone])
-  // A quest's button opens the page where it is done; quests that are not live have no action.
+  // A quest's button opens the page or the dialog where it is done; quests that are not live have no action.
+  const [dialog, setDialog] = useState<QuestDialog | null>(null)
   const openQuest = useCallback(
     async (questId: string) => {
+      const target = questDialog(questId)
+      if (target) {
+        setDialog(target)
+        return
+      }
       const href = questHref(questId)
       if (href) router.push(href)
     },
     [router],
+  )
+  const pinOptions = useMemo(
+    () =>
+      dialog === "pin-pool"
+        ? Object.values(avana.borrow.state.markets).map((market) => ({ id: market.id, label: market.display.name }))
+        : dialog === "pin-lend"
+          ? Object.values(avana.lend.state.markets).map((market) => ({
+              id: market.marketId,
+              label: market.asset.symbol,
+            }))
+          : [],
+    [dialog, avana.borrow.state.markets, avana.lend.state.markets],
   )
 
   const handleDashboardTabChange = useCallback(
@@ -208,6 +235,18 @@ export function DashboardPageClient() {
           </div>
         </div>
       </div>
+
+      <RewardsEducationDialog
+        open={dialog === "primer"}
+        onOpenChange={(open) => !open && setDialog(null)}
+        onComplete={() => recordClientQuest("review-risk-basics")}
+      />
+      <RewardsPinMarketDialog
+        open={dialog === "pin-pool" || dialog === "pin-lend"}
+        onOpenChange={(open) => !open && setDialog(null)}
+        markets={pinOptions}
+        onPin={(slug) => pinMarket(dialog === "pin-lend" ? "lend" : "pool", slug).then(() => undefined)}
+      />
 
       {activeDashboardTab === "rewards" ? (
         <MobileDetailActionBar>

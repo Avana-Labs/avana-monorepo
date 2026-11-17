@@ -17,7 +17,7 @@ vi.mock("@/app/lib/convex/siwe-convex-provider", () => ({
   getSiweConvexClient: () => (state.client ? { mutation: state.mutation } : null),
 }))
 
-import { recordClientQuest } from "@/app/lib/rewards/record-client-quest"
+import { pinMarket, recordClientQuest } from "@/app/lib/rewards/record-client-quest"
 
 const WALLET = "0x00000000000000000000000000000000000000aa"
 
@@ -51,5 +51,27 @@ describe("recording a client quest", () => {
   it("swallows a failed mutation", async () => {
     state.mutation.mockRejectedValue(new Error("INVALID_QUEST"))
     await expect(recordClientQuest("connect-wallet")).resolves.toBeUndefined()
+  })
+})
+
+describe("pinning a market", () => {
+  it("sends the scope and slug for the signed-in wallet and reports the pin", async () => {
+    expect(await pinMarket("pool", "ethereum-usdc-usdt")).toBe(true)
+    expect(state.mutation.mock.calls[0]![1]).toEqual({ wallet: WALLET, scope: "pool", slug: "ethereum-usdc-usdt" })
+  })
+
+  it("reports false without a session, a deployment or a client, and on a failed mutation", async () => {
+    state.session = null
+    expect(await pinMarket("lend", "x")).toBe(false)
+    state.session = { wallet: WALLET }
+    state.hasClient = false
+    expect(await pinMarket("lend", "x")).toBe(false)
+    state.hasClient = true
+    state.client = false
+    expect(await pinMarket("lend", "x")).toBe(false)
+    state.client = true
+    state.mutation.mockRejectedValue(new Error("INVALID_PIN"))
+    expect(await pinMarket("lend", "x")).toBe(false)
+    expect(state.mutation).toHaveBeenCalledTimes(1)
   })
 })

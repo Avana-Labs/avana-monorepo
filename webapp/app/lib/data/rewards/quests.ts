@@ -112,9 +112,15 @@ const QUESTS: Record<RewardsPromoTabId, PlaceholderQuest[]> = {
   ],
 }
 
-/** Where each quest's card takes the wallet, and the label of that button. */
-const QUEST_ACTIONS: Record<string, { href: string; cta: string }> = {
+/** The dialogs a quest's button can open, in the Rewards tab. */
+export type QuestDialog = "primer" | "pin-pool" | "pin-lend"
+
+/** What each live quest's button does (open a page or a dialog), and its label. */
+const QUEST_ACTIONS: Record<string, { href?: string; dialog?: QuestDialog; cta: string }> = {
   "connect-wallet": { href: "/dashboard", cta: "Connect Wallet" },
+  "review-risk-basics": { dialog: "primer", cta: "Read" },
+  "favorite-market": { dialog: "pin-pool", cta: "Pin" },
+  "favorite-lend-market": { dialog: "pin-lend", cta: "Pin" },
   "first-lend-deposit": { href: "/lend", cta: "Deposit" },
   "supply-500-lend": { href: "/lend", cta: "Deposit" },
   "first-borrow": { href: "/borrow", cta: "Borrow" },
@@ -122,9 +128,14 @@ const QUEST_ACTIONS: Record<string, { href: string; cta: string }> = {
   "pledge-uniswap-v3-position": { href: "/borrow", cta: "Pledge" },
 }
 
-/** The page a real quest's button opens; undefined for a quest that is not live yet. */
+/** The page a real quest's button opens; undefined for a quest that opens a dialog or is not live yet. */
 export function questHref(questId: string): string | undefined {
   return QUEST_ACTIONS[questId]?.href
+}
+
+/** The dialog a quest's button opens; undefined for a quest that opens a page or is not live yet. */
+export function questDialog(questId: string): QuestDialog | undefined {
+  return QUEST_ACTIONS[questId]?.dialog
 }
 
 /**
