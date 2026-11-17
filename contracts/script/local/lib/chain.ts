@@ -9,10 +9,11 @@
 // is deployed by a transaction, and the steps that only feed the local services are skipped.
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { CONTRACTS, type LocalChain, REPO, genesisTimestamp, outDir, rpcUrl } from "./env.ts";
-import { testnetSignerEnv } from "../../testnet/keys.ts";
+import { CONTRACTS, type LocalChain, REPO, activeRpcProvider, activeRpcUrls, genesisTimestamp, outDir, rpcUrl } from "./env.ts";
+import { testnetRoles, testnetSignerEnv } from "../../testnet/keys.ts";
+import { broadcastSnapshot, changedBroadcasts, planFailover, redactRpc, testnetRpc, useHealthyRpc } from "../../testnet/rpc.ts";
 import { addresses, signerEnv } from "./keys.ts";
 import { minObservations } from "./forkPools.ts";
 import { dumpState, firstStateBlock, hexStateToJson } from "./state.ts";
@@ -81,7 +82,7 @@ async function startForkProxy(c: LocalChain): Promise<void> {
   const { secretValue } = await import("./secrets.ts");
   const varName = `${c.network.toUpperCase()}_FORK_RPC_URL` as "ETHEREUM_FORK_RPC_URL" | "BASE_FORK_RPC_URL";
   const urls = secretValue(varName);
-  if (!urls) throw new Error(`fork mode needs ${varName}: set it in the environment, or store it encrypted with \`node script/local/stack.ts secrets\``);
+  if (!urls) throw new Error(`fork mode needs ${varName}: set it in the environment, or store it encrypted with \`node script/local/stack.ts secrets --only ${varName}\``);
   start(name, process.execPath, [join(CONTRACTS, "script/local/fork-proxy.ts"), String(c.fork!.proxyPort)], { env: { FORK_UPSTREAMS: urls } });
   await waitFor(`${c.label} fork proxy`, async () => (await fetch(`http://127.0.0.1:${c.fork!.proxyPort}`)).ok, 15_000, 300);
 }
@@ -238,6 +239,11 @@ export interface StepRecord {
   readonly detail: string;
   readonly at: string;
   readonly seconds: number;
+  /** Test networks: the RPC provider the step ran on last. */
+  readonly provider?: string;
+  /** Test networks: the step failed on an RPC failure after it began broadcasting, so the next run continues its
+   * broadcast (forge script --resume) instead of starting it again. */
+  readonly resume?: boolean;
 }
 export interface Status {
   /** The config of the last release started (relative to contracts/). */
@@ -304,14 +310,16 @@ export function stepEnv(c: LocalChain, config = currentConfig(c)): NodeJS.Proces
   };
 }
 
-/** `text` with every secret of the environment (RPC URLs, the explorer key) replaced: forge and viem name the URL in
- * a connection error, and a log must never hold it. */
+/** `text` with every secret replaced: the environment's (RPC URLs, provider credentials, the explorer key), and the
+ * test networks' provider endpoints and credentials (script/testnet/rpc.ts). forge and viem name the URL in a
+ * connection error, and a log must never hold it. */
 export function redact(text: string): string {
   let out = text;
+  for (const u of activeRpcUrls()) if (u.length >= 8) out = out.split(u).join("<AVANA_RPC_URL>");
   for (const [k, v] of Object.entries(process.env)) {
-    if (v && v.length >= 8 && (/RPC_URL$|^RPC_|ETHERSCAN_API_KEY$/.test(k) || k === "AVANA_RPC_URL")) out = out.split(v).join(`<${k}>`);
+    if (v && v.length >= 8 && (/RPC_URL$|^RPC_|ETHERSCAN_API_KEY$|^ALCHEMY_API_KEY$|^QUICKNODE_(TOKEN|ENDPOINT_NAME)$/.test(k) || k === "AVANA_RPC_URL")) out = out.split(v).join(`<${k}>`);
   }
-  return out;
+  return redactRpc(out);
 }
 
 /**
@@ -333,33 +341,80 @@ export async function runStep(c: LocalChain, release: string, step: string, conf
   const t0 = Date.now();
   let ok = false;
   let detail = "";
-  const env = { ...process.env, ...stepEnv(c, config) };
-  try {
-    if (step === "multicall3") detail = c.testnet ? await checkMulticall3(c) : await placeMulticall3(c);
-    else if (step === "place-executor") detail = c.testnet ? await deployExecutor(c, config) : await placeExecutor(c, config);
-    else if (step.startsWith("advance:")) detail = c.testnet ? await waitOnChain(c, Number(step.slice(8)), env, log) : await advance(c, Number(step.slice(8)), env, log);
-    else if (step === "twap-history") detail = await waitForTwapHistory(c);
-    else if (step === "manifest") detail = manifest(c, env, log);
-    else if (step === "treasury") detail = c.testnet ? "skipped on a test network: the local faucet and activity loop are not deployed there" : await fundTreasuries(c);
-    else if (step === "swap-contracts") detail = await swapContracts(c);
-    else if (step.startsWith("changes:")) detail = runShell("11-changes", env, log, false, [join(outDir(c), step.slice(8))]);
-    else detail = runShell(step, env, log, prev?.outcome === "fail");
+  // A step whose earlier broadcast stopped part-way is run again from the start, its old broadcast record archived;
+  // on a test network, one stopped by an RPC failure continues its broadcast instead (script/testnet/rpc.ts).
+  let mode: ForgeMode = prev?.outcome === "fail" ? (prev.resume ? "resume" : "fresh") : "plain";
+  const attempt = async (): Promise<string> => {
+    const env = { ...process.env, ...stepEnv(c, config) };
+    let d: string;
+    if (step === "multicall3") d = c.testnet ? await checkMulticall3(c) : await placeMulticall3(c);
+    else if (step === "place-executor") d = c.testnet ? await deployExecutor(c, config) : await placeExecutor(c, config);
+    else if (step.startsWith("advance:")) d = c.testnet ? await waitOnChain(c, Number(step.slice(8)), env, log) : await advance(c, Number(step.slice(8)), env, log);
+    else if (step === "twap-history") d = await waitForTwapHistory(c);
+    else if (step === "manifest") d = manifest(c, env, log);
+    else if (step === "treasury") d = c.testnet ? "skipped on a test network: the local faucet and activity loop are not deployed there" : await fundTreasuries(c);
+    else if (step === "swap-contracts") d = await swapContracts(c);
+    else if (step.startsWith("changes:")) d = runShell("11-changes", env, log, "plain", [join(outDir(c), step.slice(8))]);
+    else d = runShell(step, env, log, mode);
     // An execute step whose timelock operation is not ready yet exits 0 and broadcasts nothing: that is a failure.
     const notReady = /^\s*not ready: .*$/m.exec(existsSync(log) ? readFileSync(log, "utf8") : "");
     if (notReady) throw new Error(notReady[0].trim());
-    ok = true;
+    return d;
+  };
+  const broadcastDir = join(CONTRACTS, forgeDirs(c).FOUNDRY_BROADCAST!);
+  let resume = false;
+  try {
+    // Each test-network step starts on the healthiest provider.
+    if (c.testnet) await useHealthyRpc(c);
+    const before = c.testnet ? broadcastSnapshot(broadcastDir) : undefined;
+    try {
+      detail = await attempt();
+      ok = true;
+    } catch (e) {
+      detail = (e as Error).message;
+      if (!c.testnet || !before) throw e;
+      // An RPC failure: once more on the backup, after the failed attempt's transactions have settled there.
+      const records = changedBroadcasts(broadcastDir, before);
+      const output = `${detail}\n${existsSync(log) ? readFileSync(log, "utf8") : ""}`;
+      const plan = await planFailover(c, output, records, Object.values(testnetRoles().signers));
+      if (!plan.move) {
+        const rpcFailure = plan.reason !== "not an RPC failure";
+        resume = rpcFailure && records.length > 0;
+        throw new Error(rpcFailure ? `${detail} (no failover: ${plan.reason})` : detail);
+      }
+      if (existsSync(log)) renameSync(log, `${log}.${plan.from}`);
+      if (plan.resume) mode = "resume";
+      try {
+        detail = `${await attempt()} (moved from ${plan.from} to ${plan.to}${plan.resume ? ", broadcast resumed" : ""})`;
+        ok = true;
+      } catch (e2) {
+        resume = plan.resume || changedBroadcasts(broadcastDir, before).length > 0;
+        throw new Error(`${(e2 as Error).message} (after moving from ${plan.from} to ${plan.to}; the first attempt's log is ${log}.${plan.from})`);
+      }
+    }
   } catch (e) {
     detail = (e as Error).message;
   }
   const s = readStatus(c);
-  s.steps[key] = { outcome: ok ? "pass" : "fail", detail: detail.slice(0, 600), at: new Date().toISOString(), seconds: Math.round((Date.now() - t0) / 1000) };
+  const provider = c.testnet ? activeRpcProvider(c) : undefined;
+  s.steps[key] = {
+    outcome: ok ? "pass" : "fail",
+    detail: redact(detail).slice(0, 600),
+    at: new Date().toISOString(),
+    seconds: Math.round((Date.now() - t0) / 1000),
+    ...(provider ? { provider } : {}),
+    ...(!ok && resume ? { resume } : {}),
+  };
   writeStatus(c, s);
-  return { chain: c.network, step: key, outcome: ok ? "pass" : "fail", detail, log };
+  return { chain: c.network, step: key, outcome: ok ? "pass" : "fail", detail: redact(detail), log };
 }
 
-function runShell(step: string, env: NodeJS.ProcessEnv, log: string, fresh: boolean, args: string[] = []): string {
-  // A step whose earlier broadcast stopped part-way is run again from the start, its old broadcast record archived.
-  const e = { ...env, AVANA_FORGE_FLAGS: [env.AVANA_FORGE_FLAGS ?? "", fresh ? "--start-fresh" : ""].join(" ").trim() };
+/** How a forge step starts: as it is, from the start (`--start-fresh`), or continuing its broadcast (`--resume`). */
+type ForgeMode = "plain" | "fresh" | "resume";
+
+function runShell(step: string, env: NodeJS.ProcessEnv, log: string, mode: ForgeMode, args: string[] = []): string {
+  const flag = mode === "fresh" ? "--start-fresh" : mode === "resume" ? "--resume" : "";
+  const e = { ...env, AVANA_FORGE_FLAGS: [env.AVANA_FORGE_FLAGS ?? "", flag].join(" ").trim() };
   const run = () => spawnSync(bash(), ["script/deploy/step.sh", step, ...args], { cwd: CONTRACTS, env: e, encoding: "utf8", maxBuffer: 1 << 28 });
   let r = run();
   // A shell that failed to start wrote nothing and sent nothing: it is started once more.
@@ -435,10 +490,13 @@ async function deployerClients(c: LocalChain) {
   const { keystoreAccount, signerAccount } = await import("../../testnet/keys.ts");
   const { PASSWORD_FILE, keystorePath } = await import("./keys.ts");
   const account = c.testnet ? await signerAccount("deployer") : await keystoreAccount(keystorePath("deployer"), PASSWORD_FILE);
+  // A test network sends through the RPC manager: a send whose outcome is unknown is looked up on the backup, never
+  // signed again.
+  const transport = c.testnet ? (await testnetRpc()).transport(c.chainId) : http(rpcUrl(c), { timeout: 120_000 });
   return {
     account,
-    wallet: createWalletClient({ account, transport: http(rpcUrl(c), { timeout: 120_000 }) }),
-    client: createPublicClient({ transport: http(rpcUrl(c), { timeout: 120_000 }) }),
+    wallet: createWalletClient({ account, transport }),
+    client: createPublicClient({ transport }),
   };
 }
 
