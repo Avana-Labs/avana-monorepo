@@ -8,7 +8,7 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title AvanaGasVault
-/// @notice Holds the chain's native gas token and refills Avana's own keeper signers (2.23 `REQ-GASV-001`…). A top-up
+/// @notice Holds the chain's native gas token and refills Avana's own keeper signers (2.24 `REQ-GASV-001`…). A top-up
 /// is permissionless and benefits nobody but the allowlisted signer: the destination and the amount
 /// `min(targetBalance − balance, periodCap − sentInPeriod, address(this).balance)` come from on-chain state alone.
 /// Example: `minBalance = 0.3 ETH`, `targetBalance = 1 ETH`, `periodCap = 1 ETH`, signer at 0.2 ETH and nothing sent in

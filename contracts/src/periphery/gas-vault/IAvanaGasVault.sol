@@ -7,7 +7,7 @@ import {IAvanaGasVaultErrors} from "./IAvanaGasVaultErrors.sol";
 import {IAvanaGasVaultEvents} from "./IAvanaGasVaultEvents.sol";
 
 /// @title IAvanaGasVault
-/// @notice One vault per chain holding that chain's native gas token for Avana's own keeper signers (2.23). Anyone can
+/// @notice One vault per chain holding that chain's native gas token for Avana's own keeper signers (2.24). Anyone can
 /// trigger a top-up, which pays only an allowlisted signer, only while it is below its `minBalance`, and at most
 /// `min(targetBalance − balance, periodCap − sent in the last 24 h, vault balance)`. `TIMELOCK` adds signers, raises
 /// values, unpauses and withdraws to `TREASURY`; `GUARDIAN` (or `TIMELOCK`) removes a signer, lowers values and pauses

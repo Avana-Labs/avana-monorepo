@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Gas top-up (2.23, EMG-115): when the chain's AvanaGasVault lists this instance's signer and the signer's balance is
+// Gas top-up (2.24, EMG-115): when the chain's AvanaGasVault lists this instance's signer and the signer's balance is
 // below its `minBalance`, call the vault's `topUpAll()`. The call is permissionless and pays only the vault's listed
 // signers, each to its target within its 24 h cap, so the keeper sends it as any caller could; it refills the standby
 // in the same call when the standby is below its minimum too. It is sent only when the vault would send this signer

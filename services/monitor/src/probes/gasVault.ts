@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The chain's AvanaGasVault (2.23), read from the chain, not from the keeper (EMG-115):
+// The chain's AvanaGasVault (2.24), read from the chain, not from the keeper (EMG-115):
 // - M-35, vault runway: the vault's balance against its daily top-up rate. Under 30 days warns, under 14 days pages:
 //   a treasury Safe refill or a bridge needs a quorum and a few days. The rate is what the vault sent (`ToppedUp`)
 //   over the last 30 days divided by the days watched (at least one): top-ups are lumpy, one refill covers several

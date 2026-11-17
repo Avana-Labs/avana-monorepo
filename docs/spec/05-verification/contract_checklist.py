@@ -123,7 +123,7 @@ CONTRACTS: dict[str, tuple[list[str], list[str], list[str]]] = {
     "LPVaultSwap": (["11-lpvaultswap.md"], ["LPVaultSwap"], ["LPVaultSwap.spec"]),
     "AvanaFirstLossReserve": (["14-first-loss-reserve.md"], ["AvanaFirstLossReserve", "First-Loss Reserve", "First-Loss Reserves"], ["AvanaFirstLossReserve.spec"]),
     "Lens": (["17-lens.md"], ["Lens", "LensSpeedModule"], []),
-    "AvanaGasVault": (["23-gas-vault.md"], ["AvanaGasVault", "gas vault"], ["AvanaGasVault.spec"]),
+    "AvanaGasVault": (["24-gas-vault.md"], ["AvanaGasVault", "gas vault"], ["AvanaGasVault.spec"]),
     "FlashLiquidator": (
         ["11-lpvaultswap.md#Flash liquidation helper"],
         ["FlashLiquidator", "OperatorFlashLiquidator", "Flash liquidation helper", "flash liquidation helper"],

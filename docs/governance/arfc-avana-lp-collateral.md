@@ -2,22 +2,22 @@
 
 Governance, New Market
 Author: @avana
-Created: 2026-11-04 · Updated: 2026-11-15
+Created: 2026-11-04 · Updated: 2026-11-17
 
 ## At a glance
 
 | | |
 |---|---|
 | What Avana is | Contracts that let liquidity providers borrow stablecoins such as GHO against AMM positions without removing their liquidity from the pool. Avana holds the position and issues a transfer-restricted vault token for it, which is the collateral on a standard, unmodified Aave V4 Spoke owned by the Aave DAO. |
-| Launch | Ethereum (Uniswap v3) and Base (Aerodrome Slipstream) together, one Avana Stable LP Hub on each. Stablecoin pools only, such as USDC/USDT and pools containing GHO. |
+| Deployment | Ethereum (Uniswap v3 and v4) and Base (Aero Slipstream) together, with one Avana Hub on each chain: "Avana Ethereum Hub" and "Avana Base Hub", both tier 3. Each Hub holds one Lend Spoke, every CDP Spoke on its chain, and an Avana First-Loss Reserve and a DAO Deficit Offset per debt asset. CDP Spokes are grouped by risk tier: Stable, Correlated, Blue-chip, Gov/DeFi and Stocks. The approved set is 10 Spokes and 43 markets on real pools. |
 | Lending | Public from day one, beside the Aave DAO's bootstrap supply. Lenders earn the Hub supply rate, set by Aave V4's standard utilization curve. |
 | Borrowing | Stable debt assets the Aave DAO approves (for example GHO, USDC, USDT), each with its own line, draw cap, price source, swap routes and Avana First-Loss Reserve. For GHO, a proposed 2M GHO line on Ethereum to start; every other line is set in the funding ARFC. |
-| Collateral factor | Lowest Core Hub collateral factor among the pool's tokens × a pool risk factor of at most 90%. |
+| Collateral factor | Lowest Core Hub collateral factor among the pool's tokens × a pool risk factor of at most 90%. Avana proposes LP collateral factors from 80% (Stable) to 65% (Stocks); the DAO sets every one. |
 | Liquidation | Aave's standard `liquidationCall`, always partial. Only the seized share of the position is unwound and sold, in one transaction, and the debt is repaid in the debt asset. |
 | Avana's revenue | No share of interest. The Avana app charges 10 bps on every app action (ceiling 25 bps without a new ARFC), and Avana's contracts take 20% of each liquidation's surplus. Both go to one timelocked fee recipient; neither changes an interest rate or the Aave DAO's revenue. |
 | Loss coverage | Two layers per Hub and debt asset: first the Avana First-Loss Reserve, funded by Avana and controlled by the DAO, then a DAO Deficit Offset funded by the Aave DAO treasury and spent only once the First-Loss Reserve is empty or deactivated by the DAO. A loss beyond both is disclosed, not shared. |
 | Governance | The Aave DAO owns and configures every Avana Hub and Spoke. Changes to Avana's own contracts go through a per-chain timelock (5 days, 12 hours for risk-reducing changes) that the Aave governance executor can propose to and cancel. |
-| Status | Contracts implemented for Ethereum (Uniswap v3) and Base (Aerodrome Slipstream), with tests, formal checks and internal audits recorded under Verification. External audits, an audit contest and a bug bounty come next. |
+| Status | Contracts implemented for Ethereum (Uniswap v3 and v4) and Base (Aero Slipstream), with tests, formal checks and internal audits recorded under Verification. External audits, an audit contest and a bug bounty come next. |
 
 ## What this ARFC asks
 
@@ -29,7 +29,7 @@ If this ARFC passes, two follow-up ARFCs would ask the Aave DAO for the followin
 **Deployment ARFC**
 - List each CDP Spoke as a standard Aave V4 Spoke, with three settings on every Avana collateral reserve: `receiveSharesEnabled = false`, `liquidationFee = 0` and no reinvestment controller. Avana recommends a target health factor of 1.10 and a minimum liquidation bonus of at least 2%; the DAO decides both.
 - Grant Avana's public flash liquidation helper and Avana's flash source the `FLASH_BORROWER` role on the Aave V3 Pool on Ethereum and Base, so their flash loans carry no premium.
-- Register an Avana First-Loss Reserve for each approved debt asset on each chain's Stable LP Hub and name its role holders, and behind each one a DAO Deficit Offset: the same contract, registered the same way, which can spend only once the First-Loss Reserve in front of it is empty, or while the DAO keeps that First-Loss Reserve deactivated.
+- Register an Avana First-Loss Reserve for each approved debt asset on each chain's Avana Hub and name its role holders, and behind each one a DAO Deficit Offset: the same contract, registered the same way, which can spend only once the First-Loss Reserve in front of it is empty, or while the DAO keeps that First-Loss Reserve deactivated.
 - Add each chain's Aave governance executor as proposer and canceller on that chain's Avana timelock, and the Aave Protocol Guardian as guardian and canceller.
 - Let the Aave Protocol Guardian freeze Lend Spoke reserves as well as CDP Spoke reserves. A freeze stops new supply and never stops withdrawals; unfreezing stays with the DAO.
 
@@ -64,23 +64,23 @@ Each wallet gets one immutable position proxy per market, so each market has its
 
 ### How the Spokes are set up
 
-Each chain has one Avana Stable LP Hub. The money sits in the Hub; Spokes are entry points into it.
+Each chain has one Avana Hub, at tier 3: "Avana Ethereum Hub" and "Avana Base Hub". The money sits in the Hub; Spokes are entry points into it. Every Spoke below sits on that one Hub.
 
 - **Lend Spoke.** Single assets go in: GHO, USDT, USDC and the like. Its draw cap is 0 on every asset, so nobody can borrow through it. Lenders use Aave's standard `supply` and `withdraw`, with no Avana contract in the path.
-- **CDP Spoke (borrow side), one per AMM protocol.** "Uniswap v3 Stable" on Ethereum and "Aerodrome Slipstream Stable" on Base. The Avana vault token is the only collateral. Each vault-token reserve has a draw cap of 0, so the vault token can be supplied as collateral but never borrowed. Each debt reserve (the stable debt assets the Aave DAO approves, for example GHO, USDC, USDT) is borrowable with a collateral factor of 0, and the CDP Spoke's supply cap on that asset is 0. So USDC cannot be supplied there and cannot count as collateral, and borrowing liquidity comes only from the Hub, which the Lend Spoke fills.
+- **CDP Spokes (borrow side), by AMM protocol and risk tier.** Each CDP Spoke serves one AMM protocol and one risk tier (Stable, Correlated, Blue-chip, Gov/DeFi or Stocks), for example "Uniswap v3 Stable" and "Uniswap v4 Correlated BTC" on Ethereum and "Aero Slipstream Blue-chip" on Base. Several CDP Spokes may share a Hub, AMM protocol and risk tier, so markets that need their own liquidation settings get their own Spoke. On each CDP Spoke the Avana vault token is the only collateral. Each vault-token reserve has a draw cap of 0, so the vault token can be supplied as collateral but never borrowed. Each debt reserve (the stable debt assets the Aave DAO approves, for example GHO, USDC, USDT) is borrowable with a collateral factor of 0, and the CDP Spoke's supply cap on that asset is 0. So USDC cannot be supplied there and cannot count as collateral, and borrowing liquidity comes only from the Hub, which the Lend Spoke fills.
 - **Avana First-Loss Reserve, one per Hub and debt asset.** A supply-only Spoke with no draw capacity that holds that pair's first-loss reserve. Avana Labs funds it in the debt asset to its minimum before any draw cap on that asset rises above 0, and the Aave DAO controls it. It spends funds only to eliminate a recorded deficit in its own asset.
 - **DAO Deficit Offset, one per Hub and debt asset.** The same kind of Spoke, funded by the Aave DAO treasury and controlled by the DAO. It eliminates a deficit only once the Avana First-Loss Reserve of the same pair is empty, so Avana's capital is spent first whenever the First-Loss Reserve can pay. If the DAO deactivates the First-Loss Reserve, the offset pays instead, so a deficit is never left waiting; each layer keeps its own funds, coverage and withdrawals.
 - **Avana checks the same settings.** Its risk module reads these Aave settings at activation and on every pledge and borrow. If one drifts, for example a debt reserve's collateral factor stops being 0, a breaker trips and new borrowing stops until an authorized reset. Repayment, exits and liquidation stay open.
 - **Borrowers reach the CDP Spoke only through Avana:** wallet → Avana adapter → the user's position proxy → CDP Spoke. The vault token can only be held by those proxies, the Hub and Avana's own contracts, so it cannot be taken outside Avana.
 
-The Aave DAO sets how much each CDP Spoke can draw. Each draw cap stays within the chain's flash liquidity of that asset and the depth of its swap routes, so every borrowed amount can be liquidated in one transaction. Correlated LP and Volatile LP Hubs, with stricter limits, can be added later.
+The Aave DAO sets how much each CDP Spoke can draw. Each draw cap stays within the chain's flash liquidity of that asset and the depth of its swap routes, so every borrowed amount can be liquidated in one transaction. Every risk tier draws on the same Hub, and each CDP Spoke has its own collateral factors, liquidation bonus, collateral risk and draw caps, so a riskier tier gets stricter terms.
 
-### Initial scope
+### Deployment set
 
-- **Pools:** stablecoin pools that meet the listing rules, including USDC/USDT and pools containing GHO.
-- **Markets:** a market is one pool with one exact price range; a position must match it exactly. Slipstream positions must be unstaked. Each chain lists at most 16 markets, closed ones included.
+- **Pools:** pools that meet the listing rules, grouped by risk tier: Stable (for example USDC/USDT), Correlated (for example wstETH/WETH, cbBTC/WBTC), Blue-chip (for example WETH/USDC, cbBTC/USDC), Gov/DeFi (for example AAVE/WETH, UNI/WETH, LINK/WETH, AERO/USDC) and Stocks (tokenized stocks against USDC). The approved set has 43 markets on real pools, 32 of them on Ethereum.
+- **Markets:** a market is one pool with one exact price range; a position must match it exactly. Slipstream positions must be unstaked. Each chain's market limit, closed markets included, is fixed at deployment from a fork measurement of the cost of re-checking every market in one transaction.
 - **Listing requirements per pool:** sufficient liquidity history, Chainlink price routes for each token, an independent second price source, and a primary and a backup swap route into each debt asset that never trade through the pool itself. Fee-on-transfer, rebasing and hook tokens are excluded.
-- **Later:** the core also supports Uniswap v2, Uniswap v4 and other AMM designs. Each needs its own integration, fork tests, gas measurements, risk review and governance approval before its first listing.
+- **Later:** the core also supports Uniswap v2 and other AMM designs. Each needs its own integration, fork tests, gas measurements, risk review and governance approval before its first listing.
 
 ## Lending
 
@@ -159,6 +159,18 @@ Valuation and borrowing limits are set separately:
 
 CFᵢ is each pool token's Aave V4 Core Hub collateral factor; a GHO leg uses an explicit factor set at listing. The pool risk factor, at most 90%, reflects the position's range, pool depth and expected liquidation costs. The DAO sets each reserve's factor at or below this value, and Avana stops new borrowing if it is set higher. Gauntlet's analysis of LP collateral recommends conservative starting factors, as low as 0.25× the lower underlying factor when the borrowed asset is not one of the pool's tokens. Final factors are calibrated per market with service providers.
 
+**Proposed values by risk tier.** Avana proposes these values for the listing AIP. The Aave DAO sets every cap, credit line, collateral factor, bonus, rate model and reserve amount.
+
+| Risk tier | LP collateral factor | Maximum liquidation bonus | Collateral risk |
+|---|---:|---:|---:|
+| Stable | 80% | 4% | 400 bps |
+| Correlated | 75% | 5% | 600 bps |
+| Blue-chip | 72% | 6.5% | 800 bps |
+| Gov/DeFi | 68% | 8% | 1,000 bps |
+| Stocks | 65% | 10% | 1,200 bps |
+
+The bonus and the collateral risk (Aave V4's `collateralRisk`, which sets the borrower's risk premium) are the same for every market on a CDP Spoke. Each market reaches its tier's LP collateral factor through its own pool risk factor, at most 90%. Avana also proposes token collateral factors for the listing AIP: 8,400 bps for cbBTC and WBTC, 7,600 bps for AAVE, UNI, AERO and LINK, and 7,300 bps for each tokenized stock.
+
 Illustrative example, not proposed launch parameters (GHO, USDC and USDT at $1):
 
 | Item | Result |
@@ -174,7 +186,7 @@ Collateral value would need to fall about 29% to reach health factor 1, which fo
 
 ### Borrowing and repayment
 
-- **Pledge.** The position moves into Avana's custody; its liquidity stays in the pool. It must match a listed market exactly, pass the oracle checks and caps, and be worth at least $10. An account holds at most 16 positions in one market. There is no borrower allowlist and no minimum debt. Per-Hub caps apply per pool and per token; there is no per-wallet cap. A market or token cap can be tightened to zero, which stops new pledges and leaves repayment, withdrawal, liquidation and rescue top-ups open; it reopens to at most $1,000 and then grows by ×1.5 steps at the 5-day delay.
+- **Pledge.** The position moves into Avana's custody; its liquidity stays in the pool. It must match a listed market exactly, pass the oracle checks and caps, and be worth at least $10. An account holds at most 16 positions in one market (8 in a Uniswap v4 market). There is no borrower allowlist and no minimum debt. Per-Hub caps apply per pool and per token; there is no per-wallet cap. A market or token cap can be tightened to zero, which stops new pledges and leaves repayment, withdrawal, liquidation and rescue top-ups open; it reopens to at most $1,000 and then grows by ×1.5 steps at the 5-day delay.
 - **Rate.** `Borrowing Rate = Drawn Rate × (1 + User Risk Premium)`, where the drawn rate comes from the asset's utilization curve. With a 50% risk premium and a 4.5% drawn rate, a loan pays 6.75%.
 - **Repay.** Anyone can repay any account's debt at any time. No Avana pause, breaker or address freeze can block repayment, fee collection or a debt-free withdrawal; only an Aave-side pause of the debt reserve or a Hub halt of the Spoke can. A borrower can also repay by selling part of the position, with no bonus or Avana fee.
 - **Withdraw.** The position returns with its uncollected fees. A withdrawal that leaves debt must keep the health factor at or above 1.00 and pass every price check; a debt-free withdrawal reads no price.
@@ -294,7 +306,7 @@ flowchart TB
     end
     subgraph A["Avana (this ARFC)"]
         direction TB
-        A0["Deficit recorded on an Avana Stable LP Hub<br/>(Avana CDP Spokes only)"] --> A1["1. Avana First-Loss Reserve<br/>Avana Labs funds, locked in the Hub before any borrowing"]
+        A0["Deficit recorded on an Avana Hub<br/>(Avana CDP Spokes only)"] --> A1["1. Avana First-Loss Reserve<br/>Avana Labs funds, locked in the Hub before any borrowing"]
         A1 -->|"reserve empty, or deactivated by the DAO"| A2["2. DAO Deficit Offset<br/>DAO treasury, size set by the DAO"]
         A2 -->|"beyond both"| A3["Hub suppliers<br/>new supply frozen, withdrawals open, residual published"]
     end
@@ -323,7 +335,7 @@ sequenceDiagram
 
 1. **The party that brings the risk pays first.** In TokenLogic's framework the first loss belongs to the DAO, and for Core WETH, USDC and USDT that is the right owner: the DAO issues those markets and earns their revenue. Avana brings a new kind of collateral, concentrated-liquidity LP positions, onto its own Hub. The same principle applied to Avana puts Avana first. Avana Labs funds the first layer, and the DAO's money stands only behind it. The DAO is not asked to underwrite a new collateral class before the protocol that built it has.
 
-2. **Avana's Hubs are outside Umbrella, and should stay that way.** The ARFC covers the Ethereum Core Hub only: not GHO, not Base, not a separate Hub. Avana borrows GHO on Ethereum and USDC on Base from its own Stable LP Hubs. Adding those Hubs to Umbrella would change the risk that existing stakers signed up for, and staked capital should not be exposed to a new collateral class it was never priced for. Without its own coverage, any Avana deficit would fall on the Hub's lenders, the DAO's bootstrap supply among them. Avana therefore brings its own coverage and leaves Umbrella's stakers out.
+2. **Avana's Hubs are outside Umbrella, and should stay that way.** The ARFC covers the Ethereum Core Hub only: not GHO, not Base, not a separate Hub. Avana borrows GHO on Ethereum and USDC on Base from its own Avana Hubs. Adding those Hubs to Umbrella would change the risk that existing stakers signed up for, and staked capital should not be exposed to a new collateral class it was never priced for. Without its own coverage, any Avana deficit would fall on the Hub's lenders, the DAO's bootstrap supply among them. Avana therefore brings its own coverage and leaves Umbrella's stakers out.
 
 3. **Pre-funded and locked, because Avana is new.** Umbrella can cover at the moment of need because it rests on capital and a treasury that already exist. Avana has neither a staker base nor a track record. Its promise therefore has to be on chain before anyone borrows:
    - the reserve is funded before any draw cap is above 0;

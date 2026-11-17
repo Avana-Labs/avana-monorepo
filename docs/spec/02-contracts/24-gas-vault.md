@@ -1,4 +1,4 @@
-# 2.23 AvanaGasVault
+# 2.24 AvanaGasVault
 
 > **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-16
 >

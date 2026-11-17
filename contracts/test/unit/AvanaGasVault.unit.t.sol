@@ -65,7 +65,7 @@ contract GasBurningSigner {
     }
 }
 
-/// @notice AvanaGasVault (2.23): the top-up rule and its three caps, the exact 24 h window, `topUpAll`, reentry, the
+/// @notice AvanaGasVault (2.24): the top-up rule and its three caps, the exact 24 h window, `topUpAll`, reentry, the
 /// timelock and guardian split, tighten-only, the allowlist bound, pause and withdrawal to `TREASURY` only.
 contract AvanaGasVaultUnitTest is Test, IAvanaGasVaultEvents {
     AvanaGasVault internal vault;

@@ -302,7 +302,7 @@ To also generate the Gambit mutants locally (Gambit compiles each file with the 
 
 ### AvanaGasVault.spec — `AvanaGasVault.conf`
 
-- **Contracts**: `src/periphery/gas-vault/AvanaGasVault.sol:AvanaGasVault` (keeper gas, 2.23), against `IAvanaGasVault`.
+- **Contracts**: `src/periphery/gas-vault/AvanaGasVault.sol:AvanaGasVault` (keeper gas, 2.24), against `IAvanaGasVault`.
 - **Covers**: `PROP-113`; `INV-111`. Rules `periodCapNeverExceeded`, `periodCapNeverExceededByTopUpAll`, `topUpNeverAboveTarget`, `onlyAllowlistedReceive`, `guardianOnlyTightens`, `withdrawOnlyToTreasury`, `noExternalCallButEthSend`, and the witness `topUpIsReachable`.
 - **Ghosts and hooks**: `CALL` and `DELEGATECALL` hooks flag any call the vault makes with calldata, or any delegatecall; native balances are the prover's `nativeBalances`.
 - **Assumptions**: ETH transfers (empty calldata) do not change the vault's state (`optimistic_fallback`): the reentrancy guard closes every state-changing entry point a recipient could reach except `fund`/`receive`, which only add ETH (TEST-333 shows both re-entries refused).
