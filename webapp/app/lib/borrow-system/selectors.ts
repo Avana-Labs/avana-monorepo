@@ -187,6 +187,7 @@ export function selectBorrowableAssets(
 
       return {
         id: asset.id,
+        spokeId: asset.spokeId,
         symbol: asset.symbol,
         name: asset.display.name,
         subtitle: asset.display.subtitle,

@@ -5,6 +5,7 @@ import type { BorrowableAsset } from "@/app/lib/data/borrow-domain"
 
 const wbtc: BorrowableAsset = {
   id: "uni-v3-bluechip:wbtc",
+  spokeId: "0x00000000000000000000000000000000000000b1",
   symbol: "WBTC",
   name: "Wrapped Bitcoin",
   subtitle: "BTC",
