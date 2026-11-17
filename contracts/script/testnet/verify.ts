@@ -15,6 +15,9 @@
 // FOUNDRY_PROFILE=<that profile> and with --compilation-profile naming the compiler profile within it whose settings
 // built the artifact (forge cannot tell it from a missing cache, nor from one that records the contract under several),
 // the explorer key only in the environment (ETHERSCAN_API_KEY, never an argument).
+// A source file changed since the build (its keccak256 differs from the one the artifact's metadata records) is
+// submitted as the build saw it when RECORDED_SOURCES holds that version, through the explorer's API with forge's
+// standard JSON input; otherwise the failure names the file.
 // A contract recorded in verified.json, or that the explorer reports verified already, is skipped, so a rerun only
 // retries what is left. Init code that matches no artifact (data contracts, proxies of a factory outside the build) is
 // listed as skipped.
@@ -22,6 +25,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { keccak256, toBytes } from "viem";
 
 export interface Deployed {
   readonly address: string;
@@ -42,6 +46,8 @@ export interface Artifact {
   /** The compiler profile within `profile` that built it (`--compilation-profile`); set when the index knows the
    * profiles' settings. */
   readonly compilationProfile?: string;
+  /** Each source of the compilation, with the keccak256 of its content as the build read it (the metadata's). */
+  readonly sources?: Readonly<Record<string, string>>;
 }
 export interface Match {
   readonly artifact: Artifact;
@@ -151,6 +157,7 @@ function readArtifact(profile: string, file: string, contracts: string): Artifac
     optimizer: { enabled: Boolean(m.settings.optimizer?.enabled), runs: m.settings.optimizer?.runs },
     viaIR: Boolean(m.settings.viaIR),
     evmVersion: m.settings.evmVersion,
+    sources: Object.fromEntries(Object.entries((m.sources ?? {}) as Record<string, { keccak256?: string }>).flatMap(([p, x]) => (x.keccak256 ? [[p, x.keccak256.toLowerCase()]] : []))),
   };
 }
 
@@ -231,6 +238,45 @@ export function deployedContracts(broadcastRoot: string, chainId: number, create
   return [...out.values()];
 }
 
+/**
+ * Sources as a build read them, where the file in the checkout has changed since, by the keccak256 the build recorded
+ * (`<hash without 0x>.txt`). Each is an exact copy, kept as data (not compiled):
+ * - 2725cc1d…3746: solmate's src/utils/SafeTransferLib.sol at 80d48c6 (2024-10-27, "Add extcodesize check"). The
+ *   test-network releases' out-permit2/ Permit2 was built while dependencies/solmate-4b47a19 held that commit; the
+ *   file there now is 4b47a19's, which compiles to 20 fewer bytes, so the explorer finds no match without this copy.
+ */
+export const RECORDED_SOURCES = "script/testnet/verify-sources";
+
+/** The keccak256 of a file as read, with its line endings as LF, and as CRLF: a checkout's line endings may differ
+ * from the build's. */
+const toLF = (s: string) => s.replace(/\r\n/g, "\n");
+
+function fileHashes(path: string): string[] {
+  if (!existsSync(path)) return [];
+  const raw = readFileSync(path, "utf8");
+  const lf = toLF(raw);
+  return [...new Set([raw, lf, lf.replace(/\n/g, "\r\n")])].map((s) => keccak256(toBytes(s)));
+}
+
+/** The sources of `a` whose file in `contracts` differs from what the build read (or is missing, with a copy of the
+ * build's version in RECORDED_SOURCES), each with the recorded hash and that copy, if any. `hashes` caches each file's
+ * hashes across artifacts. */
+export function changedSources(contracts: string, a: Artifact, hashes = new Map<string, string[]>()): { path: string; keccak: string; recorded?: string }[] {
+  const out: { path: string; keccak: string; recorded?: string }[] = [];
+  for (const [path, keccak] of Object.entries(a.sources ?? {})) {
+    if (!hashes.has(path)) hashes.set(path, fileHashes(join(contracts, path)));
+    const found = hashes.get(path)!;
+    if (found.includes(keccak)) continue;
+    const copy = join(contracts, RECORDED_SOURCES, `${keccak.slice(2)}.txt`);
+    const recorded = existsSync(copy) ? toLF(readFileSync(copy, "utf8")) : undefined;
+    // A source unit name that is no file here (one forge reaches through a remapping, as Aave V4's `src/…`) is not
+    // known to have changed.
+    if (found.length === 0 && recorded === undefined) continue;
+    out.push({ path, keccak, ...(recorded !== undefined ? { recorded } : {}) });
+  }
+  return out;
+}
+
 /** The longest constructor arguments (hex characters) passed to forge on its command line. Windows refuses a command
  * line over 32,767 characters, and the Aave V4 instance batches take a Spoke's or Hub's creation code (about 50,000):
  * longer arguments go to the explorer's API with the standard JSON input forge prints instead. */
@@ -240,11 +286,11 @@ export const ARGS_ON_COMMAND_LINE = 16_000;
 const WAIT = ["--retries", "20", "--delay", "15"];
 
 /** The `forge verify-contract` invocation of one match: its arguments and the profile it runs under. With constructor
- * arguments too long for a command line, forge prints the standard JSON input (`--show-standard-json-input`) and the
- * arguments are returned for the explorer request (sourceRequest). */
-export function verifyCommand(m: Match, address: string, chainId: number): { profile: string; args: string[]; constructorArgs?: string } {
+ * arguments too long for a command line, or with `direct` (sources to replace), forge prints the standard JSON input
+ * (`--show-standard-json-input`) and the arguments are returned for the explorer request (sourceRequest). */
+export function verifyCommand(m: Match, address: string, chainId: number, direct = false): { profile: string; args: string[]; constructorArgs?: string } {
   const a = m.artifact;
-  const inline = m.args.length <= ARGS_ON_COMMAND_LINE;
+  const inline = !direct && m.args.length <= ARGS_ON_COMMAND_LINE;
   const args = ["verify-contract", address, `${a.source}:${a.name}`, "--chain", String(chainId), "--compiler-version", a.compiler];
   if (a.optimizer.enabled && a.optimizer.runs !== undefined) args.push("--num-of-optimizations", String(a.optimizer.runs));
   if (a.viaIR) args.push("--via-ir");
@@ -353,6 +399,7 @@ export async function verifyRelease(o: VerifyOptions): Promise<{ verified: numbe
   const toml = readFileSync(join(o.contracts, "foundry.toml"), "utf8");
   const index = indexArtifacts(o.contracts, profileOuts(toml), compilerProfiles(toml));
   const failed: string[] = [];
+  const hashes = new Map<string, string[]>();
   const proxies: { address: string; implementation?: string; name: string }[] = [];
   let verified = 0;
   let skipped = 0;
@@ -371,9 +418,12 @@ export async function verifyRelease(o: VerifyOptions): Promise<{ verified: numbe
       skipped++;
       continue;
     }
-    const { profile, args, constructorArgs } = verifyCommand(m, d.address, o.chainId);
+    const changed = changedSources(o.contracts, m.artifact, hashes);
+    const replace = changed.filter((c) => c.recorded !== undefined);
+    const { profile, args, constructorArgs } = verifyCommand(m, d.address, o.chainId, replace.length > 0);
     const contract = `${m.artifact.source}:${m.artifact.name}`;
     if (o.dryRun) {
+      for (const c of changed) o.say(`  ${d.address} ${m.artifact.name}: ${c.path} changed since the build${c.recorded !== undefined ? `; the build's version from ${RECORDED_SOURCES}` : " (no copy of the build's version)"}`);
       const request = constructorArgs === undefined ? undefined : sourceRequest(o.chainId, d.address, contract, m.artifact.compiler, constructorArgs);
       const post = request ? ` | POST ${request.url} ${new URLSearchParams({ ...request.form, constructorArguements: `<${constructorArgs!.length / 2} bytes>`, sourceCode: "<the standard JSON input>", apikey: "<redacted>" }).toString()}` : "";
       o.say(`  FOUNDRY_PROFILE=${profile} ETHERSCAN_API_KEY=<redacted> forge ${args.join(" ")}${post}`);
@@ -386,7 +436,13 @@ export async function verifyRelease(o: VerifyOptions): Promise<{ verified: numbe
       if (!/already verified/i.test(text)) error = r.error?.message ?? (text.trim().split(/\r?\n/).filter((l) => /error|fail/i.test(l)).slice(0, 2).join(" ") || `forge exited with ${r.status}`);
     } else if (constructorArgs !== undefined) {
       const { url, form } = sourceRequest(o.chainId, d.address, contract, m.artifact.compiler, constructorArgs);
-      error = await submit(url, { ...form, sourceCode: r.stdout.trim() }, "checkverifystatus", o.pollMs ?? 5_000);
+      const input = JSON.parse(r.stdout) as { sources: Record<string, { content: string }> };
+      for (const c of replace) input.sources[c.path] = { content: c.recorded! };
+      error = await submit(url, { ...form, sourceCode: JSON.stringify(input) }, "checkverifystatus", o.pollMs ?? 5_000);
+    }
+    const missing = changed.filter((c) => c.recorded === undefined);
+    if (error !== undefined && missing.length > 0) {
+      error += ` (built from another version of ${missing.map((c) => c.path).join(", ")}: add it as ${RECORDED_SOURCES}/<keccak256>.txt, ${missing.map((c) => c.keccak).join(", ")})`;
     }
     if (error === undefined) {
       ledger[key] = contract;
