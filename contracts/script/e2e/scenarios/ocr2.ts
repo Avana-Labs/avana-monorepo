@@ -34,15 +34,21 @@ export const OCR2_ABI = parseAbi([
 
 let cachedOracles: Promise<PrivateKeyAccount[]> | undefined;
 
-/** The four oracles, decrypted once per process from the keystores in AVANA_OCR_KEYSTORE_DIR. */
+/**
+ * The four oracles, decrypted once per process: the keystore files of AVANA_OCR_KEYSTORES (`;`-separated) with the
+ * password of AVANA_OCR_PASSWORD_FILE when both are set, else the keystores `ocr-0` … `ocr-3` and the file `password`
+ * of AVANA_OCR_KEYSTORE_DIR (the local rehearsal's and the local stack's).
+ */
 export function oracleAccounts(): Promise<PrivateKeyAccount[]> {
+  const listed = process.env.AVANA_OCR_KEYSTORES?.split(";").filter(Boolean);
   const dir = process.env.AVANA_OCR_KEYSTORE_DIR;
-  if (!dir) throw new Error("AVANA_OCR_KEYSTORE_DIR is not set: the oracle keystores script/e2e/e2e-local.sh generates");
+  const files = listed ?? (dir ? Array.from({ length: ORACLES }, (_, i) => join(dir, `ocr-${i}`)) : undefined);
+  const passwordFile = listed ? process.env.AVANA_OCR_PASSWORD_FILE : dir ? join(dir, "password") : undefined;
+  if (!files || !passwordFile) throw new Error("AVANA_OCR_KEYSTORE_DIR (or AVANA_OCR_KEYSTORES and AVANA_OCR_PASSWORD_FILE) is not set: the oracle keystores");
+  if (files.length !== ORACLES) throw new Error(`AVANA_OCR_KEYSTORES must name ${ORACLES} keystores`);
   cachedOracles ??= (async () => {
-    const password = readFileSync(join(dir, "password"), "utf8").replace(/\r?\n$/, "");
-    return Promise.all(
-      Array.from({ length: ORACLES }, async (_, i) => privateKeyToAccount(await decryptKeystore(readFileSync(join(dir, `ocr-${i}`), "utf8"), password))),
-    );
+    const password = readFileSync(passwordFile, "utf8").replace(/\r?\n$/, "");
+    return Promise.all(files.map(async (f) => privateKeyToAccount(await decryptKeystore(readFileSync(f, "utf8"), password))));
   })();
   return cachedOracles;
 }

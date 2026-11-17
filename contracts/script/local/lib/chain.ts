@@ -4,11 +4,15 @@
 // recorded in deployments-local/<network>/stack-status.json, and the release manifest. A step that passed is never run
 // again; a step that failed is run again (with forge's --start-fresh) by the next call, on the same node: the fix of a
 // failed step costs that step, not a redeploy.
+// The public test networks (env.ts TESTNETS, script/testnet/testnet.ts) run the same steps from the same configs, with
+// no anvil method: their signers are keystores, a timelock delay is waited on the chain's clock, the executor stand-in
+// is deployed by a transaction, and the steps that only feed the local services are skipped.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { CONTRACTS, type LocalChain, REPO, genesisTimestamp, outDir, rpcUrl } from "./env.ts";
+import { testnetSignerEnv } from "../../testnet/keys.ts";
 import { addresses, signerEnv } from "./keys.ts";
 import { minObservations } from "./forkPools.ts";
 import { dumpState, firstStateBlock, hexStateToJson } from "./state.ts";
@@ -134,11 +138,27 @@ export const testValues = (): Record<string, any> => JSON.parse(readFileSync(joi
  * First-Loss Reserves' funder, the keeper is the keeper and the operator helper's signer, the treasury is the fee
  * recipient, the guardian is the Aave Protocol Guardian.
  */
-export function writeBaseConfig(c: LocalChain): string {
+export function writeBaseConfig(
+  c: LocalChain,
+  a: { deployer: string; keeper: string; treasury: string; guardian: string } = addresses(),
+  patch?: (cfg: Record<string, any>) => void,
+): string {
+  const cfg = baseConfig(c, a, patch);
+  const dst = join(outDir(c), "config-base.json");
+  mkdirSync(outDir(c), { recursive: true });
+  writeFileSync(dst, `${JSON.stringify(cfg, null, 2)}\n`);
+  return dst;
+}
+
+/** The chain's first-release config (writeBaseConfig), built in memory: `a` fills the roles, `patch` changes the rest. */
+export function baseConfig(
+  c: LocalChain,
+  a: { deployer: string; keeper: string; treasury: string; guardian: string },
+  patch?: (cfg: Record<string, any>) => void,
+): Record<string, any> {
   const src = JSON.parse(readFileSync(join(CONTRACTS, "script/deploy/config/anvil.json"), "utf8")) as Record<string, any>;
-  const a = addresses();
   const tv = testValues();
-  const label = c.network;
+  const label = c.hubs;
   const lend = `lend${label.charAt(0).toUpperCase()}${label.slice(1)}`;
   const cfg = structuredClone(src);
   cfg.network = c.network;
@@ -146,7 +166,7 @@ export function writeBaseConfig(c: LocalChain): string {
   cfg.chain.blockTime = c.blockTime;
   // Every world pool keeps a 30-minute TWAP at this chain's block time: the LPOracle refuses a pool whose observation
   // cardinality is below twapMinObservations (anvil.json's 151 suits 12-second blocks, not Base's 2).
-  cfg.world.observationCardinality = Math.max(Number(cfg.world.observationCardinality ?? 0), minObservations(1800, c.blockTime));
+  cfg.world.observationCardinality = Math.max(Number(cfg.world.observationCardinality ?? 0), minObservations(TWAP_WINDOW, c.blockTime));
   // The MarketRegistry's MAX_MARKET_COUNT is fixed at deployment: room for every Hub file the stack may add.
   cfg.parameters.maxMarketCount = Number(process.env.STACK_MAX_MARKETS ?? 128);
   cfg.parameters.globals.feeRecipient = a.treasury;
@@ -189,9 +209,9 @@ export function writeBaseConfig(c: LocalChain): string {
     t.hubs = [label];
     Object.assign(t, tv.tokens?.default ?? {}, tv.tokens?.[t.symbol] ?? {});
   }
-  // The chain's Hub files may need tokens and pools the test world lacks: script/deploy/hubs/<network>/world.json
+  // The chain's Hub files may need tokens and pools the test world lacks: script/deploy/hubs/<hubs>/world.json
   // adds them to the world step 02 deploys (an entry already in the world is kept as it is).
-  const extra = join(CONTRACTS, "script/deploy/hubs", c.network, "world.json");
+  const extra = join(CONTRACTS, "script/deploy/hubs", c.hubs, "world.json");
   if (existsSync(extra)) {
     const w = JSON.parse(readFileSync(extra, "utf8")) as Record<string, { symbol?: string; name?: string }[]>;
     for (const k of ["tokens", "uniswapPools", "slipstreamPools", "uniswapV4Pools"]) {
@@ -201,10 +221,8 @@ export function writeBaseConfig(c: LocalChain): string {
       for (const x of w[k] ?? []) if (!have.has(x.symbol ?? x.name)) cfg.world[k].push(x);
     }
   }
-  const dst = join(outDir(c), "config-base.json");
-  mkdirSync(outDir(c), { recursive: true });
-  writeFileSync(dst, `${JSON.stringify(cfg, null, 2)}\n`);
-  return dst;
+  patch?.(cfg);
+  return cfg;
 }
 
 /** The config the chain's steps read now: the last release's (STATUS.config), else the base config. */
@@ -280,10 +298,20 @@ export function stepEnv(c: LocalChain, config = currentConfig(c)): NodeJS.Proces
     AVANA_NETWORK: c.network,
     AVANA_RPC_URL: rpcUrl(c),
     AVANA_CONFIG: relative(CONTRACTS, config).split("\\").join("/"),
-    RPC_ANVIL: rpcUrl(c),
+    ...(c.testnet ? {} : { RPC_ANVIL: rpcUrl(c) }),
     [`RPC_${c.envSuffix}`]: rpcUrl(c),
-    ...signerEnv(),
+    ...(c.testnet ? testnetSignerEnv() : signerEnv()),
   };
+}
+
+/** `text` with every secret of the environment (RPC URLs, the explorer key) replaced: forge and viem name the URL in
+ * a connection error, and a log must never hold it. */
+export function redact(text: string): string {
+  let out = text;
+  for (const [k, v] of Object.entries(process.env)) {
+    if (v && v.length >= 8 && (/RPC_URL$|^RPC_|ETHERSCAN_API_KEY$/.test(k) || k === "AVANA_RPC_URL")) out = out.split(v).join(`<${k}>`);
+  }
+  return out;
 }
 
 /**
@@ -307,11 +335,12 @@ export async function runStep(c: LocalChain, release: string, step: string, conf
   let detail = "";
   const env = { ...process.env, ...stepEnv(c, config) };
   try {
-    if (step === "multicall3") detail = await placeMulticall3(c);
-    else if (step === "place-executor") detail = await placeExecutor(c, config);
-    else if (step.startsWith("advance:")) detail = await advance(c, Number(step.slice(8)), env, log);
+    if (step === "multicall3") detail = c.testnet ? await checkMulticall3(c) : await placeMulticall3(c);
+    else if (step === "place-executor") detail = c.testnet ? await deployExecutor(c, config) : await placeExecutor(c, config);
+    else if (step.startsWith("advance:")) detail = c.testnet ? await waitOnChain(c, Number(step.slice(8)), env, log) : await advance(c, Number(step.slice(8)), env, log);
+    else if (step === "twap-history") detail = await waitForTwapHistory(c);
     else if (step === "manifest") detail = manifest(c, env, log);
-    else if (step === "treasury") detail = await fundTreasuries(c);
+    else if (step === "treasury") detail = c.testnet ? "skipped on a test network: the local faucet and activity loop are not deployed there" : await fundTreasuries(c);
     else if (step === "swap-contracts") detail = await swapContracts(c);
     else if (step.startsWith("changes:")) detail = runShell("11-changes", env, log, false, [join(outDir(c), step.slice(8))]);
     else detail = runShell(step, env, log, prev?.outcome === "fail");
@@ -330,9 +359,14 @@ export async function runStep(c: LocalChain, release: string, step: string, conf
 
 function runShell(step: string, env: NodeJS.ProcessEnv, log: string, fresh: boolean, args: string[] = []): string {
   // A step whose earlier broadcast stopped part-way is run again from the start, its old broadcast record archived.
-  const e = { ...env, AVANA_FORGE_FLAGS: fresh ? "--start-fresh" : "" };
-  const r = spawnSync(bash(), ["script/deploy/step.sh", step, ...args], { cwd: CONTRACTS, env: e, encoding: "utf8", maxBuffer: 1 << 28 });
-  const text = `${r.stdout ?? ""}${r.stderr ?? ""}`;
+  const e = { ...env, AVANA_FORGE_FLAGS: [env.AVANA_FORGE_FLAGS ?? "", fresh ? "--start-fresh" : ""].join(" ").trim() };
+  const run = () => spawnSync(bash(), ["script/deploy/step.sh", step, ...args], { cwd: CONTRACTS, env: e, encoding: "utf8", maxBuffer: 1 << 28 });
+  let r = run();
+  // A shell that failed to start wrote nothing and sent nothing: it is started once more.
+  if (r.status !== 0 && !r.stdout && !r.stderr) r = run();
+  // A step that never ran (the shell could not start, or was killed) leaves no output: its cause goes to the log.
+  const lost = r.error ? `step.sh did not run: ${r.error.message}\n` : r.signal ? `step.sh stopped by ${r.signal}\n` : "";
+  const text = redact(`${lost}${r.stdout ?? ""}${r.stderr ?? ""}`);
   writeFileSync(log, text);
   if (r.status !== 0) {
     const why = text.split(/\r?\n/).filter((l) => /Error|revert|error/.test(l)).slice(0, 3).join(" ") || text.trim().split(/\r?\n/).slice(-3).join(" ");
@@ -350,6 +384,106 @@ async function placeMulticall3(c: LocalChain): Promise<string> {
   const h = keccak256((await rpc<`0x${string}`>(rpcUrl(c), "eth_getCode", [address, "latest"])) as `0x${string}`);
   if (h !== "0xd5c15df687b16f2ff992fc8d767b4216323184a2bbc6ee2f9c398c318e770891") throw new Error(`Multicall3 code hash ${h}`);
   return `code hash ${h}`;
+}
+
+/** On a test network Multicall3 is already deployed (its keyless transaction): its code hash is checked. */
+async function checkMulticall3(c: LocalChain): Promise<string> {
+  const { keccak256 } = await import("viem");
+  const code = await rpc<`0x${string}`>(rpcUrl(c), "eth_getCode", ["0xcA11bde05977b3631167028862bE2a173976CA11", "latest"]);
+  const h = keccak256(code);
+  if (h !== "0xd5c15df687b16f2ff992fc8d767b4216323184a2bbc6ee2f9c398c318e770891") throw new Error(`Multicall3 code hash ${h}: not the canonical Multicall3`);
+  return `code hash ${h}`;
+}
+
+/** The Safe Singleton Factory, on every network the deploy reaches (step 00 checks it). */
+export const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7";
+
+/**
+ * A test network's Aave governance executor stand-in (AaveGovernanceExecutorOwnedStandIn), owned by `owner`, the
+ * PayloadsController stand-in: its init code and the address the Safe Singleton Factory gives it with salt 0, so the
+ * config names it before it is deployed.
+ */
+export async function executorStandIn(owner: string): Promise<{ address: `0x${string}`; initCode: `0x${string}` }> {
+  const { encodeAbiParameters, getContractAddress } = await import("viem");
+  const art = JSON.parse(readFileSync(join(CONTRACTS, "out/AaveGovernanceExecutorOwnedStandIn.sol/AaveGovernanceExecutorOwnedStandIn.json"), "utf8"));
+  const initCode = `${art.bytecode.object}${encodeAbiParameters([{ type: "address" }], [owner as `0x${string}`]).slice(2)}` as `0x${string}`;
+  const address = getContractAddress({ opcode: "CREATE2", from: SAFE_SINGLETON_FACTORY, salt: `0x${"00".repeat(32)}`, bytecode: initCode });
+  return { address, initCode };
+}
+
+/** Deploys the executor stand-in through the Safe Singleton Factory, signed by the deployer keystore (before step 01:
+ * Aave V4's deployment makes it admin). Its address must be the config's Aave DAO account. */
+async function deployExecutor(c: LocalChain, config: string): Promise<string> {
+  const cfg = JSON.parse(readFileSync(config, "utf8")) as Record<string, any>;
+  const dao = (cfg.aaveLocal.aaveDao as string).toLowerCase();
+  const controller = cfg.aaveLocal.payloadsController as string;
+  const { address, initCode } = await executorStandIn(controller);
+  if (address.toLowerCase() !== dao) throw new Error(`the executor stand-in for ${controller} lands at ${address}, not the config's aaveLocal.aaveDao ${dao}: rebuild or regenerate the config`);
+  if ((await rpc<string>(rpcUrl(c), "eth_getCode", [address, "latest"])) !== "0x") return `executor stand-in at ${address} already`;
+  const { wallet, client } = await deployerClients(c);
+  const hash = await wallet.sendTransaction({ to: SAFE_SINGLETON_FACTORY, data: `0x${"00".repeat(32)}${initCode.slice(2)}`, chain: null });
+  const r = await client.waitForTransactionReceipt({ hash });
+  if (r.status !== "success" || (await rpc<string>(rpcUrl(c), "eth_getCode", [address, "latest"])) === "0x") throw new Error(`executor stand-in deployment ${hash} failed`);
+  const { recordCreated } = await import("../../testnet/verify.ts");
+  recordCreated(outDir(c), address, initCode);
+  return `executor stand-in at ${address}, owner ${controller} (tx ${hash})`;
+}
+
+/** The deployer's wallet and a public client on the chain: the local stack's keystore, or the test network's. */
+async function deployerClients(c: LocalChain) {
+  const { createPublicClient, createWalletClient, http } = await import("viem");
+  const { keystoreAccount, signerAccount } = await import("../../testnet/keys.ts");
+  const { PASSWORD_FILE, keystorePath } = await import("./keys.ts");
+  const account = c.testnet ? await signerAccount("deployer") : await keystoreAccount(keystorePath("deployer"), PASSWORD_FILE);
+  return {
+    account,
+    wallet: createWalletClient({ account, transport: http(rpcUrl(c), { timeout: 120_000 }) }),
+    client: createPublicClient({ transport: http(rpcUrl(c), { timeout: 120_000 }) }),
+  };
+}
+
+/**
+ * A timelock delay on a test network: waits until the chain's clock has moved `seconds` past now (blocks keep coming
+ * on a live chain), then publishes a fresh round on every feed, as on anvil.
+ */
+async function waitOnChain(c: LocalChain, seconds: number, env: NodeJS.ProcessEnv, log: string): Promise<string> {
+  const now = async () => Number(BigInt((await rpc<{ timestamp: string }>(rpcUrl(c), "eth_getBlockByNumber", ["latest", false])).timestamp));
+  const until = (await now()) + seconds;
+  const t0 = Date.now();
+  while ((await now()) < until) await new Promise((r) => setTimeout(r, Math.min(5_000, c.blockTime * 1_000)));
+  refreshFeeds(c, env, log);
+  return `waited ${Math.round((Date.now() - t0) / 1000)} s for ${seconds} s of chain time`;
+}
+
+/** The world pools' TWAP window, seconds: the listing checks each pool's `observe([TWAP_WINDOW, 0])`. */
+export const TWAP_WINDOW = 1800;
+/** `observe(uint32[])` of Uniswap v3 and Slipstream pools, with [TWAP_WINDOW, 0]. */
+const OBSERVE_WINDOW = `0x883bdbfd${[0x20, 2, TWAP_WINDOW, 0].map((n) => n.toString(16).padStart(64, "0")).join("")}`;
+
+/**
+ * A test network's listing waits until every Uniswap v3 and Slipstream world pool has a TWAP window of history: a pool
+ * answers `observe` over the window only once its first observation is that old, and the world's last pools are
+ * created at the end of a long step 02. On anvil the timelock advance moves the clock days ahead, so this never waits.
+ */
+async function waitForTwapHistory(c: LocalChain): Promise<string> {
+  const world = JSON.parse(readFileSync(join(outDir(c), "world.json"), "utf8")) as Record<string, Record<string, string> | undefined>;
+  const pools = [...Object.values(world.uniswapPools ?? {}), ...Object.values(world.slipstreamPools ?? {})];
+  const now = async () => Number(BigInt((await rpc<{ timestamp: string }>(rpcUrl(c), "eth_getBlockByNumber", ["latest", false])).timestamp));
+  const young = async () => {
+    const out: string[] = [];
+    for (const p of pools) await rpc(rpcUrl(c), "eth_call", [{ to: p, data: OBSERVE_WINDOW }, "latest"]).catch(() => out.push(p));
+    return out;
+  };
+  const t0 = Date.now();
+  // A pool's history only grows with the chain's clock: one window from now, every pool created before now answers.
+  const deadline = (await now()) + TWAP_WINDOW + 60;
+  let left = await young();
+  while (left.length > 0) {
+    if ((await now()) > deadline) throw new Error(`no ${TWAP_WINDOW} s TWAP history yet on ${left.join(", ")}`);
+    await new Promise((r) => setTimeout(r, 15_000));
+    left = await young();
+  }
+  return `${pools.length} pools answer a ${TWAP_WINDOW} s TWAP; waited ${Math.round((Date.now() - t0) / 1000)} s`;
 }
 
 /** Aave governance v3's executor stand-in at the config's Aave DAO account, its owner the PayloadsController. */
@@ -376,7 +510,7 @@ export function refreshFeeds(c: LocalChain, env: NodeJS.ProcessEnv, log: string,
   const args = ["script/e2e/refresh-feeds.ts", "--network", c.network];
   for (const [s, p] of Object.entries(prices)) args.push("--price", `${s}=${p}`);
   const r = spawnSync(process.execPath, args, { cwd: CONTRACTS, env, encoding: "utf8" });
-  writeFileSync(log, `${r.stdout ?? ""}${r.stderr ?? ""}`, { flag: "a" });
+  writeFileSync(log, redact(`${r.stdout ?? ""}${r.stderr ?? ""}`), { flag: "a" });
   if (r.status !== 0) throw new Error(`refresh-feeds failed: see ${log}`);
 }
 
@@ -386,8 +520,8 @@ function manifest(c: LocalChain, env: NodeJS.ProcessEnv, log: string): string {
   const out = join(outDir(c), "manifest.json");
   const run = (args: string[]) => {
     const r = spawnSync(process.execPath, [cli, ...args], { cwd: join(REPO, "packages/protocol"), env: { ...env, RPC_STACK: rpcUrl(c) }, encoding: "utf8", maxBuffer: 1 << 26 });
-    writeFileSync(log, `${r.stdout ?? ""}${r.stderr ?? ""}`, { flag: "a" });
-    if (r.status !== 0) throw new Error(`manifest ${args[0]}: see ${log}: ${(r.stdout + r.stderr).trim().split(/\r?\n/).slice(-2).join(" ")}`);
+    writeFileSync(log, redact(`${r.stdout ?? ""}${r.stderr ?? ""}`), { flag: "a" });
+    if (r.status !== 0) throw new Error(`manifest ${args[0]}: see ${log}: ${redact(r.stdout + r.stderr).trim().split(/\r?\n/).slice(-2).join(" ")}`);
     return r.stdout.trim().split(/\r?\n/).at(-1) ?? "";
   };
   run(["produce", "--network", c.network, "--rpc-env", "RPC_STACK", "--out", out]);
@@ -396,30 +530,55 @@ function manifest(c: LocalChain, env: NodeJS.ProcessEnv, log: string): string {
   return verified;
 }
 
-/** The deploy steps of the first release, in order (the rehearsal's deploy step, contracts/script/e2e/e2e-local.sh). */
-export const FIRST_RELEASE = [
-  "multicall3", "00-factories", "01-aave-v4", "place-executor", "02-test-world", "03-avana", "04-access-operations",
-  "advance:432001", "05-execute-access-operations", "06-aave-deployment-aip", "07-deploy-first-loss-reserves",
-  "08-aave-loss-layers-aip", "07-fund-first-loss-reserves", ...listingSetupSteps(), "swap-contracts", "manifest", "treasury",
-];
-
-/** The steps of a later release: each acts only on what the config adds (the rehearsal's day-2 phase). */
-export const LATER_RELEASE = [
-  "01-aave-v4", "04-access-operations", "advance:432001", "05-execute-access-operations", "06-aave-deployment-aip",
-  "07-deploy-first-loss-reserves", "08-aave-loss-layers-aip", "07-fund-first-loss-reserves", ...listingSteps(), "manifest",
-];
-
-/** The listing's setup: integrations, tokens, debt assets and Spokes, the debt oracles and the Aave debt reserves. */
-function listingSetupSteps() {
-  return ["09-listing-setup", "advance:432001", "09-execute-listing-setup", "09-debt-oracles", "10-aave-debt-reserves-aip"];
+/**
+ * The timelock delays a chain's release waits, in seconds: the config's normal delay and the timelock's short delay (60 s
+ * on a test network, REQ-ACCESS-187). The local chains keep the production delays (432,000 s and 43,200 s), the
+ * rehearsal's, whose step names their ledgers hold.
+ */
+export function releaseDelays(c: LocalChain, config?: string): { normal: number; short: number } {
+  if (!c.testnet) return { normal: 432_000, short: 43_200 };
+  const cfg = JSON.parse(readFileSync(config ?? currentConfig(c), "utf8")) as { parameters: { timelockNormalDelay: number } };
+  return { normal: Number(cfg.parameters.timelockNormalDelay), short: 60 };
 }
 
-/** A listing: its setup, then the markets (metadata, listing operation, Aave side) and their activation. */
-function listingSteps() {
+/** The deploy steps of the first release, in order (the rehearsal's deploy step, contracts/script/e2e/e2e-local.sh). On
+ * a test network the executor stand-in is deployed before Aave V4, which makes it admin. */
+export function firstRelease(c: LocalChain, d = releaseDelays(c)): string[] {
+  const head = c.testnet ? ["multicall3", "00-factories", "place-executor", "01-aave-v4"] : ["multicall3", "00-factories", "01-aave-v4", "place-executor"];
   return [
-    ...listingSetupSteps(),
-    "09-market-metadata", "09-listing-markets", "advance:432001", "09-execute-listing-markets", "10-aave-markets-aip",
-    "09-listing-activate", "advance:43201", "09-execute-listing-activate",
+    ...head, "02-test-world", "03-avana", "04-access-operations", `advance:${d.normal + 1}`, "05-execute-access-operations",
+    "06-aave-deployment-aip", "07-deploy-first-loss-reserves", "08-aave-loss-layers-aip", "07-fund-first-loss-reserves",
+    ...listingSetupSteps(d), "swap-contracts", "manifest", "treasury",
+  ];
+}
+
+/** The steps of a later release: each acts only on what the config adds (the rehearsal's day-2 phase). */
+export function laterRelease(c: LocalChain, d = releaseDelays(c)): string[] {
+  return [
+    "01-aave-v4", "04-access-operations", `advance:${d.normal + 1}`, "05-execute-access-operations", "06-aave-deployment-aip",
+    "07-deploy-first-loss-reserves", "08-aave-loss-layers-aip", "07-fund-first-loss-reserves", ...listingSteps(d, c.testnet !== undefined), "manifest",
+  ];
+}
+
+const LOCAL_DELAYS = { normal: 432_000, short: 43_200 };
+/** The local chains' sequences. */
+export const FIRST_RELEASE = firstRelease({ testnet: undefined } as LocalChain, LOCAL_DELAYS);
+export const LATER_RELEASE = laterRelease({ testnet: undefined } as LocalChain, LOCAL_DELAYS);
+
+/** The listing's setup: integrations, tokens, debt assets and Spokes, the debt oracles and the Aave debt reserves. */
+function listingSetupSteps(d: { normal: number }) {
+  return ["09-listing-setup", `advance:${d.normal + 1}`, "09-execute-listing-setup", "09-debt-oracles", "10-aave-debt-reserves-aip"];
+}
+
+/**
+ * A listing: its setup, then the markets (metadata, listing operation, Aave side) and their activation. On a test
+ * network the listing first waits for the pools' TWAP history (waitForTwapHistory).
+ */
+function listingSteps(d: { normal: number; short: number }, testnet = false) {
+  return [
+    ...listingSetupSteps(d),
+    "09-market-metadata", ...(testnet ? ["twap-history"] : []), "09-listing-markets", `advance:${d.normal + 1}`, "09-execute-listing-markets", "10-aave-markets-aip",
+    "09-listing-activate", `advance:${d.short + 1}`, "09-execute-listing-activate",
   ];
 }
 
@@ -432,21 +591,18 @@ function listingSteps() {
  * manager: UniswapV3PositionManager, UniswapV4PositionManager, SlipstreamPositionManager (and `.n` per generation n).
  */
 async function swapContracts(c: LocalChain): Promise<string> {
-  const { createPublicClient, createWalletClient, http } = await import("viem");
-  const { privateKeyToAccount } = await import("viem/accounts");
-  const { PASSWORD_FILE, keystorePath } = await import("./keys.ts");
-  const { decryptKeystore } = await import("../../../../services/keeper/src/adapters/localKeystore.ts");
   const worldPath = join(outDir(c), "world.json");
   const world = JSON.parse(readFileSync(worldPath, "utf8")) as Record<string, any>;
   world.external ??= {};
-  const account = privateKeyToAccount(await decryptKeystore(readFileSync(keystorePath("deployer"), "utf8"), readFileSync(PASSWORD_FILE, "utf8").trim()));
-  const wallet = createWalletClient({ account, transport: http(rpcUrl(c)) });
-  const client = createPublicClient({ transport: http(rpcUrl(c)) });
+  const { wallet, client } = await deployerClients(c);
   const deploy = async (out: string, factory: `0x${string}`): Promise<`0x${string}`> => {
     const art = JSON.parse(readFileSync(join(CONTRACTS, out, "QuoterV2.sol", "QuoterV2.json"), "utf8")) as { abi: unknown[]; bytecode: { object: `0x${string}` } };
     const hash = await wallet.deployContract({ abi: art.abi, bytecode: art.bytecode.object, args: [factory, world.tokens.WETH], chain: null });
     const r = await client.waitForTransactionReceipt({ hash });
     if (r.status !== "success" || !r.contractAddress) throw new Error(`QuoterV2 from ${out} did not deploy`);
+    const { encodeDeployData } = await import("viem");
+    const { recordCreated } = await import("../../testnet/verify.ts");
+    recordCreated(outDir(c), r.contractAddress, encodeDeployData({ abi: art.abi, bytecode: art.bytecode.object, args: [factory, world.tokens.WETH] }));
     return r.contractAddress;
   };
   const venues = [

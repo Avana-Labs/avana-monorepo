@@ -60,6 +60,8 @@ contract AvanaTimelockHalmosTest is Test {
         );
         SelectorPair[] memory daoList =
             TimelockShortDelayLists.daoOnlyCancel(address(marketRegistry), address(lpVaultSwap));
+        // A production chain ID: the test-network delays of REQ-ACCESS-187 are TEST-345's.
+        vm.chainId(1);
         timelock = new AvanaTimelock(
             proposers,
             executors,

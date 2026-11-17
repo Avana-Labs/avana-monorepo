@@ -20,6 +20,7 @@ import {
   zeroHash,
 } from "viem";
 import { adminOf, codeHash, implementationOf } from "./chain.ts";
+import { minNormalDelay } from "./schema.ts";
 import type { Immutable, ReleaseManifest, Upgradeable } from "./types.ts";
 
 export type Outcome = "pass" | "fail" | "pending";
@@ -182,7 +183,8 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
   ]);
   const t = m.avana.timelock.address;
   add("timelock normalDelay", Number(await client.readContract({ address: t, abi: tl, functionName: "normalDelay" })) === m.roles.timelock.normalDelay);
-  add("timelock MIN_NORMAL_DELAY = 345,600", (await client.readContract({ address: t, abi: tl, functionName: "MIN_NORMAL_DELAY" })) === 345_600n);
+  const floor = minNormalDelay(m.chainId);
+  add(`timelock MIN_NORMAL_DELAY = ${floor.toLocaleString("en-US")}`, (await client.readContract({ address: t, abi: tl, functionName: "MIN_NORMAL_DELAY" })) === BigInt(floor));
   add("timelock publicExecution", (await client.readContract({ address: t, abi: tl, functionName: "publicExecution" })) === m.roles.timelock.publicExecution);
 
   // Role snapshot (REQ-ACCESS-023, TEST-214): every holder is in the table, every table entry holds its role.

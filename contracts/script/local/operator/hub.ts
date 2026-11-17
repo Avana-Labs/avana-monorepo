@@ -39,7 +39,7 @@ import { basename, join } from "node:path";
 import { addRoutePools, poolOf, routePair, type Route } from "../../e2e/routes.ts";
 import { DEV_CHAIN_IDS } from "../../../../services/common/src/chains.ts";
 import { chainOf, outDir } from "../lib/env.ts";
-import { LATER_RELEASE, type StepOutcome, currentConfig, miningMode, runRelease, setMining, testValues } from "../lib/chain.ts";
+import { type StepOutcome, currentConfig, laterRelease, releaseDelays as releaseDelaysOf, miningMode, runRelease, setMining, testValues } from "../lib/chain.ts";
 
 type Json = Record<string, any>;
 
@@ -149,6 +149,9 @@ export interface TestValues {
   /** Per CDP Spoke, between the market default and the market's own values: one collateral risk premium for all the
    *  Spoke's collateral, for example. */
   spokes?: Record<string, MarketValues>;
+  /** Each route's depth threshold, whole units of its debt asset, on a chain that is not a development node (there a
+   *  route without one is refused; a development node lists it without, and the monitor reports `noThreshold`). */
+  routeDepthThreshold?: number;
 }
 export interface CollateralInput {
   symbol: string;
@@ -500,6 +503,7 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
     const own = (c.world.uniswapPools as Json[]).some((x) => x.name === mi.pool) ? mi.pool : "";
     const lends = input.borrowable[s.label]!;
     const routes: Route[] = lends.flatMap((asset) => [p.a, p.b].filter((t: string) => t !== asset).map((t: string) => routePair(c, name, t, asset, own)));
+    if (needRisk && tv.routeDepthThreshold !== undefined) for (const r of routes) (r as Route & { depthThreshold?: number }).depthThreshold = tv.routeDepthThreshold;
     addRoutePools(c, routes);
     if (v4) {
       // A Uniswap v4 market is keyed by its pool key; its Uniswap v3 reference pool (same pair, fee 500) is the one step
@@ -595,11 +599,13 @@ export interface ReleaseResult {
  */
 export async function releaseHub(network: string, release: string, configPath: string, onStep?: (o: StepOutcome) => void, plan?: HubPlan["summary"]): Promise<ReleaseResult> {
   const c = chainOf(network);
-  const before = await miningMode(c);
-  await setMining(c, "auto");
+  // A test network mines on its own clock; a local chain mines a block per transaction during the release.
+  const before = c.testnet ? undefined : await miningMode(c);
+  if (!c.testnet) await setMining(c, "auto");
   try {
     // Rate curves of assets the Hub already lent: one Aave rate change before the manifest.
-    let sequence = LATER_RELEASE;
+    const later = laterRelease(c, releaseDelaysOf(c, configPath));
+    let sequence = later;
     if (plan?.rateChanges.length) {
       const file = `changes-${release}-rates.json`;
       writeFileSync(
@@ -630,7 +636,7 @@ export async function releaseHub(network: string, release: string, configPath: s
           2,
         )}\n`,
       );
-      sequence = [...LATER_RELEASE.slice(0, -1), `changes:${file}`, LATER_RELEASE.at(-1)!];
+      sequence = [...later.slice(0, -1), `changes:${file}`, later.at(-1)!];
     }
     const steps = await runRelease(c, release, sequence, configPath, onStep);
     const ok = steps.every((s) => s.outcome !== "fail");

@@ -25,6 +25,7 @@
       "offsetMinimum": 25000
     }
   },
+  "routeDepthThreshold": 5000000,
   "creditLineWhole": 100000000,
   "speedLimits": {
     "window": 21600,

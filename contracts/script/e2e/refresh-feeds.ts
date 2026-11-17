@@ -5,8 +5,11 @@
 // 12 hours), after which every feed is older than its 86,400 s heartbeat plus margin and every LPOracle and DebtOracle
 // would read Cached or Expired. A live Chainlink network publishes at least once per heartbeat; this does the same.
 // `--symbols A,B` limits the refresh to those tokens; `--price SYMBOL=answer8` moves one token's feeds to a new answer.
+// `--every <seconds>` keeps running and publishes a round on every feed at that interval (a test network's feeds,
+// whose heartbeat is 86,400 s: script/testnet/testnet.ts feeds). The oracles sign from the encrypted keystores of
+// AVANA_OCR_KEYSTORE_DIR (scenarios/ocr2.ts); the node is RPC_ANVIL, else AVANA_RPC_URL (never printed).
 //
-// Usage, from contracts/:  node script/e2e/refresh-feeds.ts --network anvil [--symbols USDC,WETH] [--price WETH=150000000000]
+// Usage, from contracts/:  node script/e2e/refresh-feeds.ts --network anvil [--symbols USDC,WETH] [--price WETH=150000000000] [--every 3600]
 
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -17,6 +20,8 @@ import { OCR2_ABI, transmit } from "./scenarios/ocr2.ts";
 const CONTRACTS = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 /** A loaded machine answers a burst of transmits slowly: viem's default 10 s request timeout failed a refresh there. */
 export const RPC_TIMEOUT_MS = 120_000;
+/** The node: the local rehearsal's RPC_ANVIL, else the deploy steps' AVANA_RPC_URL. */
+export const feedsRpc = () => process.env.RPC_ANVIL ?? process.env.AVANA_RPC_URL ?? "http://127.0.0.1:8545";
 
 /** Every (symbol, aggregator, proxy) of the world, or of `symbols` when given. */
 export function worldFeeds(network: string, symbols?: readonly string[]) {
@@ -41,14 +46,21 @@ export async function refreshFeeds(
   network: string,
   opts: { symbols?: readonly string[]; prices?: Record<string, bigint> } = {},
 ) {
-  const wallet = createWalletClient({ transport: http(process.env.RPC_ANVIL ?? "http://127.0.0.1:8545", { timeout: RPC_TIMEOUT_MS }) });
+  const wallet = createWalletClient({ transport: http(feedsRpc(), { timeout: RPC_TIMEOUT_MS }) });
   const feeds = worldFeeds(network, opts.symbols);
+  // A local node takes the whole burst at once; a live chain's RPC may lag on the pending nonce, so each round is mined
+  // before the next is sent.
+  const live = ![31337, 31338].includes(await client.getChainId());
   const hashes: Hex[] = [];
   for (const f of feeds) {
     const answer =
       opts.prices?.[f.symbol] ??
       ((await client.readContract({ address: f.proxy, abi: OCR2_ABI, functionName: "latestRoundData" })) as readonly bigint[])[1]!;
-    hashes.push(await transmit(client, wallet, f.aggregator, answer));
+    const h = await transmit(client, wallet, f.aggregator, answer);
+    if (live) {
+      const r = await client.waitForTransactionReceipt({ hash: h });
+      if (r.status !== "success") throw new Error(`transmit ${h} reverted`);
+    } else hashes.push(h);
   }
   for (const h of hashes) {
     const r = await client.waitForTransactionReceipt({ hash: h });
@@ -62,16 +74,30 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const i = process.argv.indexOf(`--${n}`);
     return i === -1 ? undefined : process.argv[i + 1];
   };
-  const client = createPublicClient({ transport: http(process.env.RPC_ANVIL ?? "http://127.0.0.1:8545", { timeout: RPC_TIMEOUT_MS }) }) as PublicClient;
+  const client = createPublicClient({ transport: http(feedsRpc(), { timeout: RPC_TIMEOUT_MS }) }) as PublicClient;
   const prices: Record<string, bigint> = {};
   for (const p of (arg("price") ?? "").split(",").filter(Boolean)) {
     const [s, v] = p.split("=");
     prices[s!] = BigInt(v!);
   }
-  refreshFeeds(client, arg("network") ?? "anvil", { symbols: arg("symbols")?.split(","), prices })
+  const every = Number(arg("every") ?? 0);
+  const once = () => refreshFeeds(client, arg("network") ?? "anvil", { symbols: arg("symbols")?.split(","), prices });
+  const secret = (m: string) => [process.env.RPC_ANVIL, process.env.AVANA_RPC_URL].reduce<string>((t, u) => (u ? t.split(u).join("<rpc>") : t), m);
+  if (every > 0) {
+    // Long-lived: a failed round is logged and retried at the next interval, so one RPC hiccup never stops it.
+    for (;;) {
+      try {
+        process.stdout.write(`${new Date().toISOString()} refreshed ${await once()} feeds\n`);
+      } catch (e) {
+        process.stderr.write(`${new Date().toISOString()} refresh failed: ${secret((e as Error).message)}\n`);
+      }
+      await new Promise((r) => setTimeout(r, every * 1000));
+    }
+  }
+  once()
     .then((n) => process.stdout.write(`refreshed ${n} feeds\n`))
     .catch((e: unknown) => {
-      process.stderr.write(`${(e as Error).message}\n`);
+      process.stderr.write(`${secret((e as Error).message)}\n`);
       process.exit(1);
     });
 }

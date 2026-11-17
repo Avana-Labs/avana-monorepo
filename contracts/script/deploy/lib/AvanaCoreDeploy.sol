@@ -85,7 +85,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
             parameterStore: p.parameterStore, marketRegistry: p.marketRegistry, lpVaultSwap: p.lpVaultSwap
         });
         bytes memory args = abi.encode(
-            proposers, executors, cancellers, daoCancellers, uint256(432_000), true, shortList, daoOnly, targets
+            proposers, executors, cancellers, daoCancellers, c.timelockNormalDelay, true, shortList, daoOnly, targets
         );
         return _deploy3("AvanaTimelock", bytes.concat(_artifact("AvanaTimelock.sol", "AvanaTimelock"), args));
     }

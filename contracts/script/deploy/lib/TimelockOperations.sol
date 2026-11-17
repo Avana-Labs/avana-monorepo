@@ -37,6 +37,8 @@ interface ITimelockOps {
         bytes[] calldata payloads
     ) external view returns (uint256);
 
+    function getMinDelay() external view returns (uint256);
+
     function isOperation(
         bytes32 id
     ) external view returns (bool);

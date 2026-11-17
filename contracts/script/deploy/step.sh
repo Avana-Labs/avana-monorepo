@@ -52,12 +52,20 @@
 # (script/local/stack.ts) names its chains `ethereum` and `base`, as on the real networks. On a local chain the deployer
 # signs from its encrypted Foundry keystore when AVANA_DEPLOYER_KEYSTORE and AVANA_DEPLOYER_PASSWORD_FILE are set
 # (AVANA_DEPLOYER is its address); the governance roles stay unlocked senders.
+# Elsewhere, with AVANA_KEYSTORE_PATHS (encrypted keystore files, `;`-separated) and AVANA_KEYSTORE_PASSWORD_FILE (their
+# shared password), every account a step signs as is loaded from those keystores, AVANA_DEPLOYER is the default sender,
+# and with AVANA_SCHEDULE_OPERATIONS=1 the timelock operations are scheduled by the governance Safe's keystore, as on
+# anvil (script/testnet/testnet.ts sets all four).
+# The RPC reaches forge through the foundry.toml endpoint avana_step (AVANA_RPC_URL) and cast through ETH_RPC_URL,
+# never a command-line argument. AVANA_VERIFY=1 verifies each step's contracts on the explorer after its broadcast
+# (forge script --resume --verify, ETHERSCAN_API_KEY); a failed verification is reported and does not fail the step.
 
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 step="${1:?usage: script/deploy/step.sh <step>; the steps are listed at the top of this file}"
 : "${AVANA_NETWORK:?set AVANA_NETWORK (anvil, sepolia, ethereum, base)}"
 : "${AVANA_RPC_URL:?set AVANA_RPC_URL}"
+export ETH_RPC_URL="$AVANA_RPC_URL"
 CONFIG="${AVANA_CONFIG:-script/deploy/config/$AVANA_NETWORK.json}"
 config() { node -e 'const c=require(process.argv[1]);console.log(process.argv[2].split(".").reduce((o,k)=>o[k],c))' "./$CONFIG" "$1"; }
 
@@ -102,7 +110,7 @@ case "$step" in
 esac
 
 local_net=0
-case "$(cast chain-id --rpc-url "$AVANA_RPC_URL")" in 31337 | 31338) local_net=1 ;; esac
+case "$(cast chain-id)" in 31337 | 31338) local_net=1 ;; esac
 if [ $local_net -eq 1 ]; then
   sender="$deployer"
   # 04 broadcasts as the Safe itself; the other scheduling steps broadcast as the deployer and schedule as the Safe.
@@ -116,6 +124,13 @@ if [ $local_net -eq 1 ]; then
     for i in 0 1 2 3; do signer+=(--keystore "$AVANA_OCR_KEYSTORE_DIR/ocr-$i"); done
     for i in 0 1 2 3; do signer+=(--password-file "$AVANA_OCR_KEYSTORE_DIR/password"); done
   fi
+elif [ -n "${AVANA_KEYSTORE_PATHS:-}" ]; then
+  : "${AVANA_DEPLOYER:?set AVANA_DEPLOYER to the address of the deployer keystore}"
+  : "${AVANA_KEYSTORE_PASSWORD_FILE:?set AVANA_KEYSTORE_PASSWORD_FILE}"
+  signer=(--sender "$deployer")
+  IFS=';' read -r -a keystores <<< "$AVANA_KEYSTORE_PATHS"
+  for k in "${keystores[@]}"; do signer+=(--keystore "$k" --password-file "$AVANA_KEYSTORE_PASSWORD_FILE"); done
+  [ $schedule -eq 1 ] && [ "${AVANA_SCHEDULE_OPERATIONS:-0}" = 1 ] && envs+=(AVANA_SCHEDULE=1)
 else
   read -r -a signer <<< "${AVANA_SIGNER_FLAGS:?set AVANA_SIGNER_FLAGS, for example --account deployer --sender 0x…}"
 fi
@@ -124,6 +139,15 @@ fi
 # by default) as well as the block gas limit. AVANA_FORGE_FLAGS adds flags (the rehearsal's --start-fresh on resume).
 read -r -a extra <<< "${AVANA_FORGE_FLAGS:-}"
 # Off anvil the scripts check that HEAD is the AVANA_RELEASE tag with git (DeployInputs._requireReleaseCheckout).
-[ $local_net -eq 0 ] && extra+=(--ffi)
-exec env FOUNDRY_GAS_LIMIT=30000000000 ${envs[@]+"${envs[@]}"} forge script "script/deploy/$script" --rpc-url "$AVANA_RPC_URL" \
-  --broadcast "${signer[@]}" --slow --non-interactive --disable-block-gas-limit --memory-limit 1073741824 ${extra[@]+"${extra[@]}"}
+ffi=()
+[ $local_net -eq 0 ] && ffi=(--ffi)
+run() {
+  env FOUNDRY_GAS_LIMIT=30000000000 ${envs[@]+"${envs[@]}"} forge script "script/deploy/$script" --rpc-url avana_step "${signer[@]}" --slow \
+    --non-interactive --disable-block-gas-limit --memory-limit 1073741824 "$@"
+}
+run --broadcast ${extra[@]+"${extra[@]}"} ${ffi[@]+"${ffi[@]}"}
+[ "${AVANA_VERIFY:-0}" = 1 ] || exit 0
+# The broadcast passed: verify what it deployed from the run's broadcast record (--resume sends nothing again).
+if ! run --resume --verify --retries 10 --delay 15 ${ffi[@]+"${ffi[@]}"}; then
+  echo "VERIFY FAILED for $step: rerun it with AVANA_VERIFY=1 once the explorer has indexed the contracts" >&2
+fi

@@ -954,7 +954,7 @@
             },
             "normalDelay": {
               "type": "integer",
-              "minimum": 345600,
+              "minimum": 60,
               "maximum": 432000
             },
             "publicExecution": {

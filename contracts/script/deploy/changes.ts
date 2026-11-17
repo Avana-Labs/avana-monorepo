@@ -32,12 +32,18 @@
 // the operation or transaction) and, for a timelock run, operation-changes-<name>.json in the format of the deploy
 // scripts' operations. Exit status: 0 applied (or written, off anvil), 2 refused by a limit check (nothing sent),
 // 3 not available on this deployment (a delegated role Aave has not granted), 1 any other failure.
+// Where it runs: on a local node (network `anvil`, or chain 31337 or 31338 under any name) every sender is unlocked and
+// a timelock delay moves the clock; on a test network deployed from keystores (AVANA_KEYSTORE_PATHS and
+// AVANA_KEYSTORE_PASSWORD_FILE, as for step.sh) each sender signs from the keystore of its address and a timelock delay
+// is waited on the chain's clock; anywhere else the changes are written for the Safe and the AIP author, and nothing is
+// sent.
 //
 // Usage, from contracts/:  AVANA_NETWORK=anvil AVANA_RPC_URL=http://127.0.0.1:8545 script/deploy/step.sh 11-changes <file>
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { PrivateKeyAccount } from "viem/accounts";
 import {
   type Abi,
   type Address,
@@ -71,9 +77,8 @@ const CONTRACTS = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const network = process.env.AVANA_NETWORK ?? "anvil";
 const rpc = process.env.AVANA_RPC_URL ?? process.env.RPC_ANVIL ?? "http://127.0.0.1:8545";
 const OUT = join(CONTRACTS, "deployments-local", network);
-const ANVIL = network === "anvil";
-// refresh-feeds.ts sends its rounds to RPC_ANVIL.
-process.env.RPC_ANVIL ??= rpc;
+// refresh-feeds.ts sends its rounds to AVANA_RPC_URL.
+process.env.AVANA_RPC_URL ??= rpc;
 
 type Json = Record<string, any>;
 const readJson = (f: string) => JSON.parse(readFileSync(f, "utf8")) as Json;
@@ -83,6 +88,28 @@ const config = readJson(process.env.AVANA_CONFIG ? join(CONTRACTS, process.env.A
 
 const client = createPublicClient({ transport: http(rpc) }) as PublicClient;
 const wallet = createWalletClient({ transport: http(rpc) });
+const ANVIL = network === "anvil" || [31337, 31338].includes(await client.getChainId());
+/** The keystore accounts of a test network, by address: every sender this run signs as. */
+const KEYSTORES = ANVIL ? undefined : process.env.AVANA_KEYSTORE_PATHS?.split(";").filter(Boolean);
+const signers = new Map<string, PrivateKeyAccount>();
+if (KEYSTORES) {
+  const { keystoreAccount } = await import("../testnet/keys.ts");
+  const passwordFile = process.env.AVANA_KEYSTORE_PASSWORD_FILE;
+  if (!passwordFile) throw new Error("AVANA_KEYSTORE_PATHS is set without AVANA_KEYSTORE_PASSWORD_FILE");
+  for (const k of KEYSTORES) {
+    const a = await keystoreAccount(k, passwordFile);
+    signers.set(a.address.toLowerCase(), a);
+  }
+}
+/** Whether this run sends its transactions (a local node, or a test network's keystores) or only writes them. */
+const SEND = ANVIL || KEYSTORES !== undefined;
+/** The account that sends as `from`: the keystore's on a test network, the unlocked address on anvil. */
+function signerOf(from: Address): Address | PrivateKeyAccount {
+  if (ANVIL) return from;
+  const a = signers.get(from.toLowerCase());
+  if (!a) throw new Error(`no keystore of AVANA_KEYSTORE_PATHS signs as ${from}`);
+  return a;
+}
 
 /** A change the limit checks refuse; nothing is sent. */
 class Refused extends Error {}
@@ -393,15 +420,21 @@ async function rpcCall(method: string, params: unknown[] = []) {
 async function sendTx(from: Address, to: Address, data: Hex): Promise<Hex> {
   if (ANVIL) await rpcCall("anvil_setBalance", [from, "0x3635C9ADC5DEA00000"]).catch(() => undefined);
   const gas = (await client.estimateGas({ account: from, to, data })) * 13n / 10n + 50_000n;
-  const hash = await wallet.sendTransaction({ account: from, to, data, chain: null, gas });
+  const hash = await wallet.sendTransaction({ account: signerOf(from), to, data, chain: null, gas });
   const r = await client.waitForTransactionReceipt({ hash });
   if (r.status !== "success") throw new Error(`transaction ${hash} to ${to} reverted`);
   return hash;
 }
 
 async function advance(seconds: bigint) {
-  await rpcCall("evm_increaseTime", [Number(seconds)]);
-  await rpcCall("evm_mine", []);
+  if (ANVIL) {
+    await rpcCall("evm_increaseTime", [Number(seconds)]);
+    await rpcCall("evm_mine", []);
+  } else {
+    // A live chain: wait for its clock.
+    const until = (await client.getBlock()).timestamp + seconds;
+    while ((await client.getBlock()).timestamp < until) await new Promise((r) => setTimeout(r, 3_000));
+  }
   // A live Chainlink network publishes at least once per heartbeat; the rehearsal moves the clock, so every feed gets a round.
   await refreshFeeds(client, network);
 }
@@ -445,7 +478,7 @@ async function runTimelock(name: string, calls: Call[], log: string[]): Promise<
   };
   writeFileSync(join(OUT, `operation-changes-${name}.json`), `${JSON.stringify(op, null, 2)}\n`);
   log.push(`changes-${name} ${id} (delay ${delay} s) ${join(OUT, `operation-changes-${name}.json`)}`);
-  if (!ANVIL) return { operation: id, delay: Number(delay), scheduled: false };
+  if (!SEND) return { operation: id, delay: Number(delay), scheduled: false };
   const scheduled = await sendTx(safe, TIMELOCK, scheduleData);
   log.push(`  scheduled as the governance Safe ${safe}: ${scheduled}`);
   await advance(delay + 1n);
@@ -466,7 +499,7 @@ async function runDirect(sender: Address, calls: Call[], log: string[]): Promise
   const note = await checkLimits(c, (await client.getBlock()).timestamp);
   if (note) log.push(`  limit ok: ${note}`);
   await simulate(sender, c);
-  if (!ANVIL) {
+  if (!SEND) {
     log.push(`  for the Safe ${sender}: to ${c.target} data ${c.data}`);
     return { to: c.target, data: c.data, sent: false };
   }
@@ -634,9 +667,12 @@ function dataContractInit(data: Hex): Hex {
 
 async function deploy(from: Address, data: Hex): Promise<Address> {
   if (ANVIL) await rpcCall("anvil_setBalance", [from, "0x3635C9ADC5DEA00000"]).catch(() => undefined);
-  const hash = await wallet.sendTransaction({ account: from, data, chain: null, gas: 15_000_000n });
+  const hash = await wallet.sendTransaction({ account: signerOf(from), data, chain: null, gas: 15_000_000n });
   const r = await client.waitForTransactionReceipt({ hash });
   if (r.status !== "success" || !r.contractAddress) throw new Error(`deployment ${hash} failed`);
+  // The explorer verification of a test network reads the contracts deployed outside forge from created.json.
+  const { recordCreated } = await import("../testnet/verify.ts");
+  recordCreated(OUT, r.contractAddress, data);
   return getAddress(r.contractAddress);
 }
 
@@ -651,7 +687,7 @@ async function runAip(name: string, actions: AaveActions, log: string[]): Promis
     actions: encoded,
     decoded: freeze(actions),
   };
-  if (!ANVIL) {
+  if (!SEND) {
     writeFileSync(file, `${JSON.stringify(record, null, 2)}\n`);
     log.push(`AIP changes-${name}: actions written for the AIP author ${file}`);
     return { aip: file, executed: false };
@@ -725,7 +761,7 @@ async function runRateRole(changes: readonly Change[], prior: Json[] | undefined
       [{ a: next.optimalUsageRatio, b: next.baseDrawnRate, c: next.rateGrowthBeforeOptimal, d: next.rateGrowthAfterOptimal }],
     );
     const data = encodeFunctionData({ abi: CONFIGURATOR, functionName: "updateInterestRateData", args: [hub, assetId, irData] });
-    const tx = ANVIL ? await sendTx(holder, configurator, data) : undefined;
+    const tx = SEND ? await sendTx(holder, configurator, data) : undefined;
     log.push(`  rate role ${role.roleId} by ${holder}: ${show(set)} ${tx ?? "(written)"}`);
     results.push({ prior: { ...cur }, tx, data });
   }
@@ -818,7 +854,7 @@ async function runSteps(name: string, call: Call, log: string[]): Promise<Json> 
     const stepCall: Call = { ...call, args, data: encodeFunctionData({ abi: call.abi, functionName: call.fn, args }), label: `ParameterStore.${call.fn}(${show(args).slice(1, -1)})` };
     log.push(`  step ${i + 1}: ${cap.view} ${current} -> ${next}`);
     ops.push(await runTimelock(`${name}-step${i + 1}`, [stepCall], log));
-    if (!ANVIL) break;
+    if (!SEND) break;
   }
   return { steps: ops.length, operations: ops };
 }

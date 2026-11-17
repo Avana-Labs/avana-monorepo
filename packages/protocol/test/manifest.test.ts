@@ -20,13 +20,24 @@ describe("release manifest schema", () => {
     const m = structuredClone(sampleManifest()) as Record<string, any>;
     delete m.feeRecipient;
     m.avana.lock.address = "0x1234";
-    m.roles.timelock.normalDelay = 3600;
+    m.roles.timelock.normalDelay = 30;
     m.extra = 1;
     const paths = validate(m).map((e) => e.path);
     expect(paths).toContain("$.feeRecipient");
     expect(paths).toContain("$.avana.lock.address");
     expect(paths).toContain("$.roles.timelock.normalDelay");
     expect(paths).toContain("$.extra");
+  });
+
+  it("takes a normal delay of minutes on a test network only (REQ-ACCESS-187)", () => {
+    const m = structuredClone(sampleManifest()) as Record<string, any>;
+    m.roles.timelock.normalDelay = 120;
+    expect(validate({ ...m, chainId: 11155111 })).toEqual([]);
+    expect(validate({ ...m, chainId: 84532 })).toEqual([]);
+    expect(validate({ ...m, chainId: 1, network: "ethereum" }).map((e) => e.path)).toEqual(["$.roles.timelock.normalDelay"]);
+    expect(validate({ ...m, chainId: 8453, network: "base" }).map((e) => e.path)).toEqual(["$.roles.timelock.normalDelay"]);
+    m.roles.timelock.normalDelay = 345600;
+    expect(validate({ ...m, chainId: 1, network: "ethereum" })).toEqual([]);
   });
 
   it("refuses a release that is not a semantic version tag and an unknown network", () => {
