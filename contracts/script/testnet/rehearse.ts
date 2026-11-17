@@ -9,7 +9,8 @@
 // transaction (anvil --mixed-mining), so a timelock delay passes on the chain's clock. At the end each account's gas
 // and ETH spent is read from the chain and written to gas-report.json in the run's directory.
 //
-// Arguments: [--chains sepolia,base-sepolia] [--dir <dir>] [--keep]; AVANA_RELEASE is a local tag at HEAD. Outputs go
+// Arguments: [--chains sepolia,base-sepolia] [--dir <dir>] [--keep] [--resume]; AVANA_RELEASE is a local tag at HEAD.
+// A failed chain's node stays up: rerun with --resume and the same --dir to continue at the failed step. Outputs go
 // to deployments-local/<network>/, marked as a rehearsal's (a real deploy refuses to resume them).
 
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
@@ -68,30 +69,48 @@ function makeRoles(home: string): string {
   return file;
 }
 
-async function startNode(c: LocalChain, dir: string): Promise<{ url: string; proc: ChildProcess }> {
+/**
+ * The chain's node: a new anvil, detached so it outlives this process, or with `--resume` the one a failed run left
+ * on the port (its chain ID checked), so a fix resumes at the failed step. Its process ID is kept in the run's
+ * directory for the run that stops it.
+ */
+async function startNode(c: LocalChain, dir: string, resume: boolean): Promise<{ url: string; reused: boolean }> {
   const port = PORTS[c.network]!;
   const url = `http://127.0.0.1:${port}`;
+  let answering: number | undefined;
   try {
-    await rpc(url, "eth_chainId");
-    throw new Error(`port ${port} is in use: set REHEARSAL_PORT_${c.envSuffix}`);
-  } catch (e) {
-    if ((e as Error).message.startsWith("port")) throw e;
+    answering = Number(BigInt(await rpc<string>(url, "eth_chainId")));
+  } catch {}
+  if (answering !== undefined) {
+    if (resume && answering === c.chainId) return { url, reused: true };
+    throw new Error(`port ${port} answers chain ${answering}: ${resume ? "not this network's node" : "pass --resume to continue on it, or set REHEARSAL_PORT_" + c.envSuffix}`);
   }
   const args = [
     "--host", "127.0.0.1", "--port", String(port), "--chain-id", String(c.chainId), "--block-time", String(c.blockTime), "--mixed-mining",
     "--gas-limit", "60000000", "--hardfork", "osaka", "--enable-tx-gas-limit", "--accounts", "0",
   ];
   const { openSync } = await import("node:fs");
-  const proc = spawn("anvil", args, { stdio: ["ignore", openSync(join(dir, `anvil-${c.network}.log`), "a"), openSync(join(dir, `anvil-${c.network}.log`), "a")] });
+  const log = openSync(join(dir, `anvil-${c.network}.log`), "a");
+  const proc: ChildProcess = spawn("anvil", args, { detached: true, windowsHide: true, stdio: ["ignore", log, log] });
+  proc.unref();
+  writeFileSync(join(dir, `anvil-${c.network}.pid`), String(proc.pid));
   for (let i = 0; i < 100; i++) {
     try {
       await rpc(url, "eth_chainId");
-      return { url, proc };
+      return { url, reused: false };
     } catch {
       await new Promise((r) => setTimeout(r, 300));
     }
   }
   throw new Error(`anvil for ${c.network} did not start (log ${join(dir, `anvil-${c.network}.log`)})`);
+}
+
+function stopNode(c: LocalChain, dir: string): void {
+  const pidFile = join(dir, `anvil-${c.network}.pid`);
+  if (!existsSync(pidFile)) return;
+  try {
+    process.kill(Number(readFileSync(pidFile, "utf8")));
+  } catch {}
 }
 
 /** The gas and ETH each account spent on the chain: every transaction of every block. */
@@ -124,7 +143,7 @@ async function main() {
     spawnSync(process.execPath, ["-e", 'import("./script/testnet/keys.ts").then(m=>{const r=m.testnetRoles();console.log(JSON.stringify({...r.signers,...r.addresses}))})'], { cwd: CONTRACTS, env, encoding: "utf8" }).stdout,
   ) as Record<string, string>;
   const names = Object.fromEntries(Object.entries(roles).map(([k, v]) => [v.toLowerCase(), k]));
-  const nodes: ChildProcess[] = [];
+  const nodes: LocalChain[] = [];
   const report: Record<string, unknown> = {};
   let ok = true;
   try {
@@ -133,14 +152,16 @@ async function main() {
       if (existsSync(out) && !existsSync(join(out, ".rehearsal"))) throw new Error(`${out} exists and is not a rehearsal's: move it away first`);
       mkdirSync(out, { recursive: true });
       writeFileSync(join(out, ".rehearsal"), `${dir}\n`);
-      const { url, proc } = await startNode(c, dir);
-      nodes.push(proc);
-      // What the real networks already have.
-      await rpc(url, "anvil_setCode", [SAFE_SINGLETON_FACTORY, SAFE_SINGLETON_FACTORY_CODE]);
-      await rpc(url, "anvil_setCode", [MULTICALL3, `0x${readFileSync(join(CONTRACTS, "external/multicall3/Multicall3.runtime.hex"), "utf8").trim().replace(/^0x/, "")}`]);
-      // The test ETH of the signers that send transactions.
-      for (const k of FUNDED_ROLES) await rpc(url, "anvil_setBalance", [roles[k], "0x3635C9ADC5DEA00000"]);
-      say(`${c.network}: anvil ${c.chainId} on port ${PORTS[c.network]}, deploying`);
+      const { url, reused } = await startNode(c, dir, argv.includes("--resume"));
+      nodes.push(c);
+      if (!reused) {
+        // What the real networks already have.
+        await rpc(url, "anvil_setCode", [SAFE_SINGLETON_FACTORY, SAFE_SINGLETON_FACTORY_CODE]);
+        await rpc(url, "anvil_setCode", [MULTICALL3, `0x${readFileSync(join(CONTRACTS, "external/multicall3/Multicall3.runtime.hex"), "utf8").trim().replace(/^0x/, "")}`]);
+        // The test ETH of the signers that send transactions.
+        for (const k of FUNDED_ROLES) await rpc(url, "anvil_setBalance", [roles[k], "0x3635C9ADC5DEA00000"]);
+      }
+      say(`${c.network}: anvil ${c.chainId} on port ${PORTS[c.network]}${reused ? " (resumed: the passed steps are kept)" : ""}, deploying`);
       const t0 = Date.now();
       const r = spawnSync(process.execPath, ["script/testnet/testnet.ts", "deploy", "--chain", c.network, "--no-verify"], {
         cwd: CONTRACTS,
@@ -153,7 +174,12 @@ async function main() {
       // build output for, and each contract it would skip.
       const v = spawnSync(process.execPath, ["script/testnet/testnet.ts", "verify", "--chain", c.network, "--dry-run"], { cwd: CONTRACTS, env, encoding: "utf8", maxBuffer: 1 << 26 });
       writeFileSync(join(dir, `verify-dry-run-${c.network}.txt`), `${v.stdout ?? ""}${v.stderr ?? ""}`);
-      const verify = { commands: (v.stdout.match(/forge verify-contract/g) ?? []).length, unmatched: (v.stdout.match(/^ {2}skip /gm) ?? []).length };
+      const verify = {
+        commands: (v.stdout.match(/forge verify-contract/g) ?? []).length,
+        proxies: (v.stdout.match(/verifyproxycontract/g) ?? []).length,
+        create3Helpers: (v.stdout.match(/a CREATE3 helper proxy/g) ?? []).length,
+        unmatched: (v.stdout.match(/no build output matches/g) ?? []).length,
+      };
       report[c.network] = { ok: r.status === 0, minutes, gas, verify };
       say(`${c.network}: ${r.status === 0 ? "PASSED" : "FAILED"} in ${minutes} min; gas by account ${JSON.stringify(gas)}; verification dry run ${JSON.stringify(verify)}`);
       if (r.status !== 0) {
@@ -163,7 +189,12 @@ async function main() {
     }
   } finally {
     writeFileSync(join(dir, "gas-report.json"), `${JSON.stringify(report, null, 2)}\n`);
-    if (!argv.includes("--keep")) for (const p of nodes) p.kill();
+    // A failed chain's node stays up for a resume run; the others stop unless --keep.
+    for (const c of nodes) {
+      const failed = (report[c.network] as { ok?: boolean } | undefined)?.ok !== true;
+      if (failed) say(`${c.network}: node left running on port ${PORTS[c.network]}; after the fix: --resume --dir ${dir}`);
+      else if (!argv.includes("--keep")) stopNode(c, dir);
+    }
   }
   say(`gas report ${join(dir, "gas-report.json")}`);
   process.exitCode = ok ? 0 : 1;

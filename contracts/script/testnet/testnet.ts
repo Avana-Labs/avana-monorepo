@@ -155,14 +155,14 @@ async function deploy(): Promise<void> {
   }
   say(`${c.network}: deployed; manifest ${join(outDir(c), "manifest.json")}`);
   // The last stage: every contract of the release verified on the explorer (verify.ts).
-  if (!flag("no-verify")) verifyStage(c, false);
+  if (!flag("no-verify")) await verifyStage(c, false);
 }
 
 /** The explorer verification of everything the chain's releases deployed; a rerun retries only what is left. */
-function verifyStage(c: LocalChain, dryRun: boolean): void {
+async function verifyStage(c: LocalChain, dryRun: boolean): Promise<void> {
   say(`${c.network}: explorer verification${dryRun ? " (dry run: the commands only)" : ""}`);
   const env = forgeDirs(c);
-  const r = verifyRelease({ contracts: CONTRACTS, outDir: outDir(c), broadcastRoot: join(CONTRACTS, env.FOUNDRY_BROADCAST!), chainId: c.chainId, dryRun, say });
+  const r = await verifyRelease({ contracts: CONTRACTS, outDir: outDir(c), broadcastRoot: join(CONTRACTS, env.FOUNDRY_BROADCAST!), chainId: c.chainId, dryRun, say });
   say(`${c.network}: ${r.verified} verified, ${r.skipped} skipped, ${r.failed.length} failed`);
   for (const f of r.failed) say(`  ${f}`);
   if (r.failed.length) throw new Stop(`${r.failed.length} contracts are not verified yet: run verify --chain ${c.network} again`);
@@ -178,7 +178,7 @@ async function verify(): Promise<void> {
       if (v) process.env.ETHERSCAN_API_KEY = v;
     }
   }
-  verifyStage(c, dryRun);
+  await verifyStage(c, dryRun);
 }
 
 async function status(): Promise<void> {

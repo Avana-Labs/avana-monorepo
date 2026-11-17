@@ -190,24 +190,69 @@ export interface VerifyOptions {
   readonly say: (s: string) => void;
 }
 
-/** Verifies every contract of the release not yet verified; returns how many verified, were skipped and failed. */
-export function verifyRelease(o: VerifyOptions): { verified: number; skipped: number; failed: string[] } {
+/** The implementation an EIP-1167 minimal proxy (a clone: Slipstream's pools and gauges, for example) delegates to. */
+export function cloneImplementation(initCode: string): string | undefined {
+  const m = /363d3d373d3d3d363d73([0-9a-f]{40})5af43d82803e903d91602b57fd5bf3/.exec(strip(initCode));
+  return m ? `0x${m[1]}` : undefined;
+}
+
+/** The CREATE3 deployer proxy (16 bytes of init code): a helper only the CREATE3 factory calls, never verified. */
+export const isCreate3Helper = (initCode: string) => strip(initCode) === "67363d3d37363d34f03d5260086018f3";
+
+/** A verified contract that is itself a proxy of a stored implementation, marked as such on the explorer too. */
+const UPGRADEABLE_PROXY = /^(ERC1967Proxy|TransparentUpgradeableProxy|BeaconProxy|[A-Za-z]*UpgradeabilityProxy)$/;
+
+/** The explorer's proxy verification request (Etherscan v2): the proxy, and the implementation a clone delegates to. */
+export function proxyRequest(chainId: number, address: string, implementation?: string): { url: string; form: Record<string, string> } {
+  return {
+    url: `https://api.etherscan.io/v2/api?chainid=${chainId}`,
+    form: { module: "contract", action: "verifyproxycontract", address, ...(implementation ? { expectedimplementation: implementation } : {}) },
+  };
+}
+
+async function submitProxy(chainId: number, address: string, implementation: string | undefined): Promise<string | undefined> {
+  const key = process.env.ETHERSCAN_API_KEY!;
+  const { url, form } = proxyRequest(chainId, address, implementation);
+  const post = await fetch(url, { method: "POST", body: new URLSearchParams({ ...form, apikey: key }) });
+  const sent = (await post.json()) as { status: string; result: string };
+  if (sent.status !== "1") return sent.result;
+  for (let i = 0; i < 20; i++) {
+    await new Promise((r) => setTimeout(r, 5_000));
+    const check = await fetch(`${url}&module=contract&action=checkproxyverification&guid=${encodeURIComponent(sent.result)}&apikey=${key}`);
+    const c = (await check.json()) as { status: string; result: string };
+    if (c.status === "1") return undefined;
+    if (!/pending|in queue/i.test(c.result)) return c.result;
+  }
+  return "the explorer did not answer in time";
+}
+
+/**
+ * Verifies every contract of the release not yet verified: each against its build output, then every proxy as a proxy
+ * of its implementation (upgradeable proxies, and the minimal-proxy clones of a verified implementation, which have
+ * no source of their own). Only CREATE3 helpers stay unverified. Returns how many verified, were skipped and failed.
+ */
+export async function verifyRelease(o: VerifyOptions): Promise<{ verified: number; skipped: number; failed: string[] }> {
   if (!o.dryRun && !process.env.ETHERSCAN_API_KEY) throw new Error("ETHERSCAN_API_KEY is not set, in the environment or the encrypted secrets store");
   const ledgerPath = join(o.outDir, "verified.json");
   const ledger = (existsSync(ledgerPath) ? JSON.parse(readFileSync(ledgerPath, "utf8")) : {}) as Record<string, string>;
+  const save = () => writeFileSync(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`);
   const index = indexArtifacts(o.contracts, profileOuts(readFileSync(join(o.contracts, "foundry.toml"), "utf8")));
   const failed: string[] = [];
+  const proxies: { address: string; implementation?: string; name: string }[] = [];
   let verified = 0;
   let skipped = 0;
   for (const d of deployedContracts(o.broadcastRoot, o.chainId, join(o.outDir, "created.json"))) {
     const key = d.address.toLowerCase();
-    if (ledger[key]) {
-      skipped++;
+    const m = matchArtifact(index, d.initCode);
+    const clone = m ? undefined : cloneImplementation(d.initCode);
+    if (clone) proxies.push({ address: d.address, implementation: clone, name: "minimal proxy" });
+    if (m && UPGRADEABLE_PROXY.test(m.artifact.name)) proxies.push({ address: d.address, name: m.artifact.name });
+    if (ledger[key] || clone) {
+      if (ledger[key]) skipped++;
       continue;
     }
-    const m = matchArtifact(index, d.initCode);
     if (!m) {
-      o.say(`  skip ${d.address}: no build output matches its init code`);
+      o.say(`  skip ${d.address}: ${isCreate3Helper(d.initCode) ? "a CREATE3 helper proxy" : "no build output matches its init code"}`);
       skipped++;
       continue;
     }
@@ -220,12 +265,35 @@ export function verifyRelease(o: VerifyOptions): { verified: number; skipped: nu
     const text = `${r.stdout ?? ""}${r.stderr ?? ""}`;
     if (r.status === 0 || /already verified/i.test(text)) {
       ledger[key] = `${m.artifact.source}:${m.artifact.name}`;
-      writeFileSync(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`);
+      save();
       verified++;
       o.say(`  verified ${d.address} ${m.artifact.name}`);
     } else {
       failed.push(`${d.address} ${m.artifact.name}: ${text.trim().split(/\r?\n/).filter((l) => /error|fail/i.test(l)).slice(0, 2).join(" ")}`);
       o.say(`  FAILED ${d.address} ${m.artifact.name}`);
+    }
+  }
+  // The proxies, once their implementations are verified.
+  for (const p of proxies) {
+    const key = `proxy:${p.address.toLowerCase()}`;
+    if (ledger[key]) {
+      skipped++;
+      continue;
+    }
+    const { url, form } = proxyRequest(o.chainId, p.address, p.implementation);
+    if (o.dryRun) {
+      o.say(`  POST ${url} ${new URLSearchParams({ ...form, apikey: "<redacted>" }).toString()}`);
+      continue;
+    }
+    const err = await submitProxy(o.chainId, p.address, p.implementation);
+    if (err) {
+      failed.push(`${p.address} ${p.name} as a proxy: ${err}`);
+      o.say(`  FAILED ${p.address} as a proxy`);
+    } else {
+      ledger[key] = p.implementation ?? "proxy";
+      save();
+      verified++;
+      o.say(`  verified ${p.address} as a proxy${p.implementation ? ` of ${p.implementation}` : ""}`);
     }
   }
   return { verified, skipped, failed };
