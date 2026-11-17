@@ -9,13 +9,10 @@ name: e2e-local
 # contracts/script/e2e/e2e-local.sh records each step as pass, fail or not-run; a not-run step (a missing tool or
 # build) is reported as a warning annotation and in the job summary,
 # never as a pass, and fails the job only when E2E_REQUIRE_ALL is true (the manual input). A failed step fails the job.
-# Runs nightly, on release tags and by hand; a manual run may name the steps and drills to run.
+# By hand only (no schedule and no tag trigger since 2026-11-17); a manual run
+# may name the steps and drills to run.
 
 on:
-  schedule:
-    - cron: "30 6 * * *"
-  push:
-    tags: ["v*"]
   workflow_dispatch:
     inputs:
       require_all:
@@ -41,8 +38,6 @@ defaults:
 jobs:
   e2e:
     name: anvil rehearsal
-    # Nightly runs only when the repository variable NIGHTLY_ENABLED is true (paused until the final slow run).
-    if: github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 110
     steps:

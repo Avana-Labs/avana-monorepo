@@ -1,6 +1,9 @@
 name: security-slow
 
-# Slow security tier every night on main (06:00 UTC), on every release tag (`v*`), by hand (workflow_dispatch): Echidna, Medusa, Halmos, hevm and Mythril with the slow-tier budgets. Pull requests run contracts.yml only.
+# Slow security tier, by hand only (workflow_dispatch; no schedule and no tag trigger since 2026-11-17): Echidna,
+# Medusa, Halmos, hevm and Mythril with the slow-tier budgets. Run it after
+# a large protocol change and on the commit of a release tag before an upgrade (script/upgrade-operation.py needs a
+# successful slow-tier run on the implementation's commit). Pull requests run contracts.yml only.
 # The `build` job compiles once (script/security-slow.sh build, and the build Halmos runs); `plan` lists the targets
 # from that build with script/ci-shards.py; every target then runs in its own job, reusing the build: one per Echidna
 # harness (both modes), one per Medusa harness, one per Halmos test function (a 1-hour budget), six for hevm (its
@@ -21,11 +24,6 @@ name: security-slow
 # pinned certora-cli wheel.
 
 on:
-  schedule:
-    # Nightly at 06:00 UTC on main (GitHub runs a schedule on the default branch only).
-    - cron: "0 6 * * *"
-  push:
-    tags: ["v*"]
   workflow_dispatch:
     inputs:
       campaign:
@@ -102,8 +100,6 @@ defaults:
 jobs:
   build:
     name: slow-tier build
-    # Nightly runs only when the repository variable NIGHTLY_ENABLED is true (paused until the final slow run).
-    if: github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -946,7 +942,7 @@ jobs:
     # leg is skipped by its `if` (no target of that kind, or a campaign run, which skips the slow-tier jobs, or the
     # slow tier, which skips the campaign jobs); with the build and the plan passed, skipped can mean nothing else.
     name: slow-gate
-    if: always() && (github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true')
+    if: always()
     needs:
       - build
       - plan
