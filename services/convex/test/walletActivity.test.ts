@@ -8,7 +8,7 @@ import { fixtureHubAsset, fixtureMarkets, fixtureSpokeReserves } from "@avana/se
 import { hubAssetKey } from "../convex/lib/pages.ts";
 import { explorerLinks } from "../convex/lib/explorer.ts";
 import type { World } from "../convex/model.ts";
-import { walletActivityRow } from "../convex/wallet/activity.ts";
+import { olderActivityRow, walletActivityRow } from "../convex/wallet/activity.ts";
 
 const asset = { ...fixtureHubAsset, slug: "ethereum-usdc", updatedAt: 0 };
 const market = { ...fixtureMarkets[0]!, slug: "ethereum-usdc-usdt", updatedAt: 0 };
@@ -33,6 +33,16 @@ describe("wallet activity rows", () => {
 
   it("leaves out events no page shows", () => {
     expect(walletActivityRow(world, log("AaveAdapter.UserProxyCreated", {}, { marketKey: `1:${market.marketId}` }), () => undefined)).toBeNull();
+  });
+
+  it("gives an older event its token amount and page but no USD value", () => {
+    const supply = log("AaveSpoke.Supply", { suppliedAmount: "1500000000" }, { hubAssetKey: hubAssetKey(asset) });
+    const recent = walletActivityRow(world, supply, () => undefined);
+    const r = olderActivityRow(world, supply, () => undefined);
+    expect(recent?.amountUsd).toBe(1500);
+    expect(r).toMatchObject({ kind: "supply", amountLabel: "—", tokenAmountLabel: recent?.tokenAmountLabel, tokenSymbol: recent?.tokenSymbol, page: { scope: "lend", slug: "ethereum-usdc" } });
+    expect(r).not.toHaveProperty("amountUsd");
+    expect(olderActivityRow(world, log("AaveAdapter.UserProxyCreated", {}, { marketKey: `1:${market.marketId}` }), () => undefined)).toBeNull();
   });
 });
 

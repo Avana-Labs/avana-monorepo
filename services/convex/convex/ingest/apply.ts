@@ -9,7 +9,7 @@ import { type SeriesExportPage, type SeriesRecord, mergeValues } from "@avana/se
 import type { ChainSnapshot } from "@avana/services-common/views";
 import { internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
-import { internalMutation, internalQuery, type MutationCtx } from "../_generated/server";
+import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "../_generated/server";
 import { type Resolver, decodeRecord } from "../lib/activity.ts";
 import { blockTimes } from "../lib/exportPage.ts";
 import { noteFirstSeen } from "../lib/membership.ts";
@@ -108,12 +108,12 @@ export const applySnapshot = internalMutation({
 });
 
 /** Every Lend Spoke of a chain: the deployment's and those the sampler found on Hubs recorded later. */
-async function lendSpokesOf(ctx: MutationCtx, dep: Doc<"deployments">): Promise<Set<string>> {
+export async function lendSpokesOf(ctx: QueryCtx, dep: Doc<"deployments">): Promise<Set<string>> {
   const hubs = (await ctx.db.query("hubs").collect()).filter((h) => h.chainId === dep.chainId);
   return new Set([...dep.lendSpokes, ...hubs.flatMap((h) => h.lendSpokes)]);
 }
 
-function resolver(ctx: MutationCtx, dep: Doc<"deployments">, lendSpokes: ReadonlySet<string>): Resolver {
+export function resolver(ctx: QueryCtx, dep: Doc<"deployments">, lendSpokes: ReadonlySet<string>): Resolver {
   const chainId = dep.chainId;
   return {
     chainId,

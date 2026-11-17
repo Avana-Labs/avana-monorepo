@@ -2,7 +2,8 @@
 // Copyright (c) 2026 Avana Labs
 // A wallet's recent activity for the dashboard (`wallet.activity.listForWallet`): the logs of the last 30 days that
 // name the wallet or one of its proxies (the import writes the owning wallet on each), newest first, one row per
-// event with the page it belongs to and an explorer link. Older activity comes from `wallet/history:older`.
+// event with the page it belongs to and an explorer link. Older activity comes from `wallet/history:older`, whose rows
+// (`olderActivityRow`) carry the token amount and no USD value.
 // Activity is public chain data, so the query needs no sign-in.
 
 import { paginationOptsValidator } from "convex/server";
@@ -47,6 +48,18 @@ export function walletActivityRow(w: World, log: IngestedLog, explorerOf: (chain
   const page = pageOf(w, log);
   const href = explorerLinks(explorerOf(log.chainId))?.tx(log.txHash);
   return { ...row, chainId: log.chainId, txHash: log.txHash, ...(href ? { href } : {}), ...(page ? { page } : {}) };
+}
+
+/**
+ * The dashboard row of an event older than Convex's window (`wallet/history:older`): the token amount without a USD
+ * value, since only today's prices are known; the caller sets `at` from the block's time.
+ */
+export function olderActivityRow(w: World, log: IngestedLog, explorerOf: (chainId: number) => string | undefined): WalletActivityRow | null {
+  const row = walletActivityRow(w, log, explorerOf);
+  if (!row) return null;
+  const { amountUsd, ...rest } = row;
+  void amountUsd;
+  return { ...rest, amountLabel: "—" };
 }
 
 /**

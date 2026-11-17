@@ -66,4 +66,26 @@ describe("mapWalletActivityRows", () => {
       },
     ])
   })
+
+  it("maps older rows without a USD value to their token amount, on Lend and borrow rows alike", () => {
+    const rows = mapWalletActivityRows(
+      [
+        row({
+          kind: "supply",
+          amountUsd: undefined,
+          tokenAmountLabel: "1,500.0135 USDC",
+          page: { scope: "lend", slug: "usdc-core" },
+        }),
+        row({ id: "2", kind: "borrow", amountUsd: undefined, tokenAmountLabel: "250 USDC" }),
+        row({ id: "3", kind: "repay", amountUsd: undefined, tokenAmountLabel: undefined, tokenSymbol: undefined }),
+      ],
+      MARKETS,
+    )
+    expect(rows.map((r) => [r.kind, r.amountUsd, r.tokenAmountLabel])).toEqual([
+      ["supply", undefined, "1,500 USDC"],
+      ["borrow", undefined, "250 USDC"],
+      ["repay", undefined, undefined],
+    ])
+    expect(rows.every((r) => !("amountUsd" in r))).toBe(true)
+  })
 })

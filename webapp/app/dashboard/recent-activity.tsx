@@ -133,6 +133,8 @@ function applyAmountSign(sign: 1 | -1 | 0, body: string) {
 
 function formatRowAmount(row: PortfolioActivityRow) {
   const sign = AMOUNT_SIGN_BY_KIND[row.kind]
+  // Activity older than the indexed window has no USD value: the cell shows the token amount instead.
+  if (row.amountUsd === undefined) return row.tokenAmountLabel ? applyAmountSign(sign, row.tokenAmountLabel) : "—"
   const magnitude = Math.abs(row.amountUsd)
   const body = row.product === "rewards" ? `${magnitude.toLocaleString()} AVA` : formatCompactUsd(magnitude)
   return applyAmountSign(sign, body)
@@ -171,8 +173,16 @@ function mergeActivityRows(
   return [...byAction.values()].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
 }
 
+/** Rows older than the indexed window (30 days) show their date ("Oct 3") instead of an age. */
+const DATED_AFTER_MS = 30 * 86_400_000
+
 function formatRelativeTime(iso: string) {
-  const elapsedMs = Math.max(0, Date.now() - new Date(iso).getTime())
+  const at = new Date(iso)
+  const elapsedMs = Math.max(0, Date.now() - at.getTime())
+  if (elapsedMs >= DATED_AFTER_MS) {
+    const sameYear = at.getFullYear() === new Date().getFullYear()
+    return at.toLocaleDateString("en-US", { month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }) })
+  }
   const totalSeconds = Math.max(1, Math.floor(elapsedMs / 1000))
 
   if (totalSeconds < 60) return `${totalSeconds}s`
@@ -200,10 +210,11 @@ export function RecentActivity({
   const router = useRouter()
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const [limit, setLimit] = React.useState(ACTIVITY_PAGE_SIZE)
-  // The wallet's indexed activity (services/convex, last 30 days) merged with the rows the session passes in.
+  // The wallet's indexed activity (services/convex: the last 30 days, then older pages on "Show more") merged with
+  // the rows the session passes in.
   const activity = useWalletActivity(walletId)
   const isLoadingConvex = activity.isLoading
-  const isLoadingMore = false
+  const isLoadingMore = activity.isLoadingMore
   const hasMore = activity.hasMore
 
   const sortedRows = React.useMemo(() => mergeActivityRows(activity.rows, seedRows), [activity.rows, seedRows])
