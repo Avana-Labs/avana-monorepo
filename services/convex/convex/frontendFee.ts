@@ -9,8 +9,8 @@
 
 import { v } from "convex/values";
 import { internalMutation, query, type QueryCtx } from "./_generated/server";
-import { checkFeeRules, DEFAULT_FEE_RULES, type FeeAction, type FeeRules, LP_VALUE_ACTIONS, MAX_FEE_BPS, quoteFee, tenureDiscountBps } from "./lib/fees.ts";
-import { firstSeenOf } from "./wallet/membership.ts";
+import { checkFeeRules, DEFAULT_FEE_RULES, type FeeAction, type FeeRules, LP_VALUE_ACTIONS, MAX_FEE_BPS, quoteFee } from "./lib/fees.ts";
+import { checkRedemptionRules, discountBpsOf } from "./lib/redemption.ts";
 
 const action = v.union(
   v.literal("supply"),
@@ -63,8 +63,8 @@ export const quote = query({
     const gas = await ctx.db.query("chainGas").withIndex("by_chain", (q) => q.eq("chainId", a.chainId)).unique();
     if (!gas) return null;
     const base = await rules(ctx);
-    const member = a.wallet && /^0x[0-9a-fA-F]{40}$/.test(a.wallet) ? await firstSeenOf(ctx, a.wallet) : null;
-    const q = quoteFee(member ? { ...base, memberDiscountBps: tenureDiscountBps(member.sinceMs, Date.now()) } : base, {
+    const discountBps = a.wallet && /^0x[0-9a-fA-F]{40}$/.test(a.wallet) ? await discountBpsOf(ctx, a.wallet, Date.now()) : 0;
+    const q = quoteFee(discountBps > 0 ? { ...base, memberDiscountBps: discountBps } : base, {
       action: a.action as FeeAction,
       basis: lp
         ? { kind: "lpValue", valueUsd8: BigInt(input), decimals: price.decimals, priceUsd8: price.priceUsd8 }
@@ -77,9 +77,17 @@ export const quote = query({
 
 /** Sets the fee rules; run from the Convex dashboard or CLI by an operator (internal: no client can call it). Any rate above MAX_FEE_BPS throws. */
 export const setConfig = internalMutation({
-  args: { enabled: v.boolean(), defaultBps: v.number(), actionBps: v.record(v.string(), v.number()), exemptActions: v.array(v.string()), maxFeeUsd: v.union(v.null(), v.number()) },
+  args: {
+    enabled: v.boolean(),
+    defaultBps: v.number(),
+    actionBps: v.record(v.string(), v.number()),
+    exemptActions: v.array(v.string()),
+    maxFeeUsd: v.union(v.null(), v.number()),
+    redemption: v.optional(v.object({ pointsPerStep: v.number(), bpsPerStep: v.number(), days: v.number(), maxBps: v.number() })),
+  },
   handler: async (ctx, a) => {
     checkFeeRules(a);
+    if (a.redemption) checkRedemptionRules(a.redemption, a.defaultBps);
     const row = { key: "default", ...a, updatedAt: Date.now() };
     const existing = await ctx.db.query("feeConfig").withIndex("by_key", (q) => q.eq("key", "default")).unique();
     if (existing) await ctx.db.replace(existing._id, row);

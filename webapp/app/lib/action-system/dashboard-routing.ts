@@ -5,6 +5,7 @@ type DashboardTabKey = "wallet" | "lend" | "borrow" | "referrals" | "rewards"
 const PRODUCT_TAB: Record<ActionProduct, DashboardTabKey> = {
   borrow: "borrow",
   lend: "lend",
+  rewards: "rewards",
 }
 
 // Products that own a dedicated top-level surface get sent back there on

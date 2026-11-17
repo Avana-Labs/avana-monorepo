@@ -61,7 +61,7 @@ describe("quest points", () => {
 describe("rewards summary", () => {
   test("is zero for a wallet with no activity, and rejects a malformed wallet", async () => {
     const t = convexTest(schema, modules);
-    expect(await t.query(api.wallet.rewards.summary, { wallet: WALLET })).toEqual({ earnedPoints: 0, tenurePoints: 0, questPoints: 0, feePoints: 0, completedQuests: [], historyChecked: true });
+    expect(await t.query(api.wallet.rewards.summary, { wallet: WALLET })).toMatchObject({ earnedPoints: 0, tenurePoints: 0, questPoints: 0, feePoints: 0, completedQuests: [], historyChecked: true });
     await expect(t.query(api.wallet.rewards.summary, { wallet: "0x12" })).rejects.toThrow(/20-byte address/);
   });
 
@@ -72,7 +72,7 @@ describe("rewards summary", () => {
       await awardQuestForLog(ctx, WALLET, "AaveAdapter.Borrowed", 1_000);
       await awardPoints(ctx, { wallet: WALLET, kind: "fee", key: "fee:1:0xaa", points: 7, at: 2 });
     });
-    expect(await t.query(api.wallet.rewards.summary, { wallet: WALLET.toLowerCase() })).toEqual({
+    expect(await t.query(api.wallet.rewards.summary, { wallet: WALLET.toLowerCase() })).toMatchObject({
       earnedPoints: 200 + 50 + 7,
       tenurePoints: 200,
       questPoints: 50,

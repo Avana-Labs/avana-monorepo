@@ -13,6 +13,9 @@ const rewards = (historyChecked: boolean): WalletRewards => ({
   earnedPoints: 0,
   completedQuests: new Set(),
   historyChecked,
+  availablePoints: 0,
+  redemption: { pointsPerStep: 1000, bpsPerStep: 2, days: 30, maxBps: 4 },
+  activeRedemptions: [],
 })
 
 beforeEach(() => run.mockClear())

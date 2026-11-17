@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import type { RewardsPromoTabId, RewardsQuest } from "@/app/lib/data/rewards/catalog"
 import {
@@ -18,6 +19,8 @@ import {
   RewardsReferralDialog,
 } from "@/app/dashboard/_rewards-components/rewards-task-dialogs"
 import { useReferralDialogData } from "@/app/lib/rewards/use-referral-dialog-data"
+import { maxRedeemSteps } from "@/app/lib/rewards/redeem-points"
+import { actionPagePath } from "@/app/lib/action-system/contracts"
 import { useAvanaSessions } from "@/app/lib/avana-session/avana-sessions-provider"
 import { PortfolioStatCards } from "@/app/dashboard/portfolio-stat-cards"
 import { PortfolioRewardsCards } from "@/app/dashboard/_rewards-components/rewards-balance-hero"
@@ -103,8 +106,7 @@ export function DashboardPageClient() {
   const rewards = useWalletRewards(walletId)
   useHistoryBackfill(walletId, rewards)
   const questsByTab = useMemo(
-    () =>
-      buildQuestsByTab({ earned: t("Earned") }, rewards?.completedQuests ?? new Set()),
+    () => buildQuestsByTab({ earned: t("Earned") }, rewards?.completedQuests ?? new Set()),
     [t, rewards],
   )
   // Being signed in on the dashboard completes the first quest; Convex awards it once.
@@ -114,6 +116,12 @@ export function DashboardPageClient() {
   }, [rewards, connectDone])
   // A quest's button opens the page or the dialog where it is done; quests that are not live have no action.
   const [dialog, setDialog] = useState<QuestDialog | null>(null)
+  const heldBps = rewards?.activeRedemptions.reduce((sum, r) => sum + r.bps, 0) ?? 0
+  const canRedeem = rewards ? maxRedeemSteps(rewards.availablePoints, heldBps, rewards.redemption) > 0 : false
+  // Redeeming is its own action page, like every other action; it comes back to this tab.
+  const redeemHref = canRedeem
+    ? actionPagePath("rewards", "claim", { return: `/dashboard?tab=${activeDashboardTab}` })
+    : undefined
   const openQuest = useCallback(
     async (questId: string) => {
       const target = questDialog(questId)
@@ -173,8 +181,8 @@ export function DashboardPageClient() {
           <aside className="min-w-0 lg:col-start-2 lg:row-start-2 lg:pt-8">
             <PortfolioRewardsCards
               earnedAmount={rewards?.earnedPoints ?? 0}
-              // Nothing is redeemed yet, so every earned point is available.
-              claimableAmount={rewards?.earnedPoints ?? 0}
+              claimableAmount={rewards?.availablePoints ?? 0}
+              claimHref={redeemHref}
               activeTab={activeDashboardTab}
               showQuickActions
             />
@@ -261,13 +269,19 @@ export function DashboardPageClient() {
 
       {activeDashboardTab === "rewards" ? (
         <MobileDetailActionBar>
-          <button
-            type="button"
-            disabled
-            className={primaryCtaClass({ size: "compact", disabled: true, className: "w-full" })}
-          >
-            {t("No rewards ready")}
-          </button>
+          {redeemHref ? (
+            <Link href={redeemHref} className={primaryCtaClass({ size: "compact", className: "w-full" })}>
+              {t("Claim Rewards")}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className={primaryCtaClass({ size: "compact", disabled: true, className: "w-full" })}
+            >
+              {t("No rewards ready")}
+            </button>
+          )}
         </MobileDetailActionBar>
       ) : null}
     </>
