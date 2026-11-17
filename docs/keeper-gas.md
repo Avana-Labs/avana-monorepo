@@ -94,14 +94,12 @@ In short:
 ## Testnet drills
 
 To run on Sepolia and Base Sepolia before mainnet. Nothing here has been broadcast to a testnet. The script is
-`contracts/script/drills/gas-vault/drill.sh` (header: usage, roles, keystores); it deploys a stand-alone vault whose
+`contracts/script/drills/gas-vault/drill.sh` (header: usage); it deploys a stand-alone vault whose
 timelock role is a drill account, so `addSigner` runs without the 4-day delay. The delay itself, and the deploy steps
 above, are rehearsed on anvil.
 
-**Before.** Create five encrypted Foundry keystores (`cast wallet import gas-drill-<role> --interactive` for deployer,
-treasury, timelock, guardian and signer), put their password in a file outside the repository, set `DRILL_<ROLE>` to
-the five addresses and `RPC_SEPOLIA` / `RPC_BASE_SEPOLIA`. Fund the deployer, treasury, timelock and guardian with
-about 0.05 test ETH each; the signer starts empty.
+**Before.** Each role signs from its own encrypted Foundry keystore held outside the repository, and the deployer,
+treasury, timelock and guardian are funded with test ETH; the signer starts empty.
 
 **Run**, per network (`sepolia`, then `base-sepolia`), from `contracts/`:
 
