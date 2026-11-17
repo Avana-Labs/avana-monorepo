@@ -33,13 +33,16 @@ import { refreshWalletBalances, useConvexProductWalletBalances } from "./use-con
  * the chain's own pools on the local chains, with the Q-409 fee taken from the input; CoW Swap,
  * which answers "unsupported" until connected, elsewhere. On the chain's own pools the approval and
  * the swap are sent from the connected wallet (`swap-execution.ts`); elsewhere none runs yet.
+ *
+ * `guest` marks the guest home workspace's session, which renders outside every ConvexProvider and has
+ * no balances to read.
  */
-export function useSwapSession({ walletId }: { walletId: string }) {
+export function useSwapSession({ walletId, guest = false }: { walletId: string; guest?: boolean }) {
   const [state, setState] = useState<SwapSystemState>({ balances: [], allowances: {}, transactions: [] })
 
   // The wallet's balances on the active chain (`use-convex-wallet-balances.ts`); balances handed in through
   // `hydrateBalances` win while set.
-  const chainBalances = useConvexProductWalletBalances(walletId)
+  const chainBalances = useConvexProductWalletBalances(walletId, { guest })
   const walletBalances = useMemo(() => {
     const source = state.balances.length > 0 ? state.balances : (chainBalances ?? [])
     return source.filter((balance): balance is UserAssetBalance => balance.walletId === walletId)
