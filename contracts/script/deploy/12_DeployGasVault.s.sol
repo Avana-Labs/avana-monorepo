@@ -21,8 +21,10 @@ import {console2} from "forge-std/console2.sol";
 ///   normal delay; written for the governance Safe and, with `AVANA_SCHEDULE`, scheduled as the Safe (anvil). With every
 ///   signer listed, nothing is written.
 /// - `fund`: the treasury sends the vault up to `gasVault.fundWei` (a lump sum: 30 days of the measured daily spend plus
-///   the burst reserve). On anvil and the test networks the funder broadcasts; on Ethereum and Base the step only prints
-///   the treasury Safe's transaction, which its signers execute.
+///   the burst reserve). On anvil and the test networks the funder broadcasts: the treasury, or `AVANA_GAS_VAULT_FUNDER`
+///   when set (a test network's treasury is an address that signs nothing, so its deployer funds the vault; `fund` is
+///   open to any sender). On Ethereum and Base the step only prints the treasury Safe's transaction, which its signers
+///   execute.
 /// @dev Config, `gasVault`: `maxSigners` (≤ 8), `fundWei`, and `signers[]` of `{signer, minBalanceWei,
 /// targetBalanceWei, periodCapWei}`, the primary and standby keeper signers of the chain. The values come from the
 /// measured daily spend `D` (`minBalance = 3 × D`, `targetBalance = periodCap = 7 × D + B`).
@@ -174,7 +176,7 @@ contract DeployGasVault is TimelockOperations, DeployBase {
             console2.log("  data", vm.toString(abi.encodeCall(IAvanaGasVault.fund, ())));
             return;
         }
-        vm.broadcast(treasury);
+        vm.broadcast(vm.envOr("AVANA_GAS_VAULT_FUNDER", treasury));
         IAvanaGasVault(payable(vault)).fund{value: amount}();
         console2.log("  funded gas vault", vault, amount);
     }

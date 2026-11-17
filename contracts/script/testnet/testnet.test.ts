@@ -9,7 +9,7 @@ import { CHAINS, TESTNETS, chainOf } from "../local/lib/env.ts";
 import { FIRST_RELEASE, LATER_RELEASE, baseConfig, firstRelease, laterRelease, testValues } from "../local/lib/chain.ts";
 import { type HubInput, type TestValues, planHub } from "../local/operator/hub.ts";
 import { ADDRESS_ROLES, SIGNER_ROLES, type TestnetRoles, checkRoles, keysOf, parseConfigFile } from "./keys.ts";
-import { baseRoles, testnetPatch } from "./testnet.ts";
+import { GAS_VAULT, GAS_VAULT_SIGNER, baseRoles, testnetPatch } from "./testnet.ts";
 
 const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
 const signers = Object.fromEntries(SIGNER_ROLES.map((k, i) => [k, addr(i + 1)]));
@@ -63,7 +63,13 @@ test("a test network's release deploys the executor before Aave V4 and waits its
   // The local stack's ledgers name these steps: they must not move.
   assert.deepEqual(FIRST_RELEASE.slice(0, 4), ["multicall3", "00-factories", "01-aave-v4", "place-executor"]);
   assert.deepEqual(LATER_RELEASE.filter((s) => s.startsWith("advance:")), ["advance:432001", "advance:432001", "advance:432001", "advance:43201"]);
-  assert.equal(first.length, FIRST_RELEASE.length);
+  // Only a test network's first release deploys, wires and funds the gas vault, before the manifest records it.
+  const vault = ["12-gas-vault", "12-gas-vault-signers", "advance:121", "12-execute-gas-vault-signers", "12-fund-gas-vault"];
+  const at = first.indexOf("12-gas-vault");
+  assert.deepEqual(first.slice(at, at + vault.length), vault);
+  assert.ok(at > first.indexOf("05-execute-access-operations") && at < first.indexOf("manifest"));
+  assert.ok(!FIRST_RELEASE.some((s) => s.startsWith("12-")));
+  assert.equal(first.length - vault.length, FIRST_RELEASE.length);
   // Only a test network's listing waits for the pools' TWAP history, right before its listing operation.
   assert.equal(later.indexOf("twap-history"), later.indexOf("09-listing-markets") - 1);
   assert.ok(!LATER_RELEASE.includes("twap-history"));
@@ -102,6 +108,10 @@ test("a test network's market parameters are the local stack's, from test-values
       t = planHub(t, input, tv, tc.chainId).config;
     }
     assert.ok(t.listing.markets.length > 0, `${testnet}: its Hub files list markets`);
+    // The gas vault: one keeper signer, the test-network sizes, the base config's maxSigners.
+    assert.deepEqual(t.gasVault.signers, [{ signer: roles.addresses.KEEPER, ...GAS_VAULT_SIGNER }]);
+    assert.equal(t.gasVault.fundWei, GAS_VAULT.fundWei);
+    assert.equal(t.gasVault.maxSigners, l.gasVault.maxSigners);
     assert.deepEqual(strip(t), strip(l), `${testnet}: every value but the roles and delays is the local stack's`);
     // The values come from test-values.json: the DAO's per debt asset and per token, the market ladder per market.
     for (const d of t.aavePayload.debtAssets) for (const [k, v] of Object.entries(tv.debtAssets?.[d.symbol] ?? {})) if (k in d) assert.deepEqual(d[k], v, `${testnet} ${d.symbol}.${k}`);
