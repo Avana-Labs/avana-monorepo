@@ -52,7 +52,7 @@ node script/local/stack.ts down
 - While `check` or `replay` runs, the chains mine only on transactions and the activity loops pause, so the heads stand still.
 - `down` stops every process and saves each chain's state (`anvil_dumpState`). `up` loads it back. `--keep-chains` stops only the services.
 
-Logs are in `deployments-local/stack/logs/<process>.log`, one per process and one per deploy step (`<chain>.<release>.<step>.log`). Each chain's step record is `deployments-local/<network>/stack-status.json`. `deployments-local/stack/stack.env` lists the endpoints and holds no secret.
+Logs are in `deployments-local/stack/logs/<process>.log`, one per process and one per deploy step (`<chain>.<release>.<step>.log`). `convex.log` runs verbose, so it records the local backend's exit code; `up` restarts a Convex whose backend no longer answers and keeps the previous log as `convex.prev.log`. Each chain's step record is `deployments-local/<network>/stack-status.json`. `deployments-local/stack/stack.env` lists the endpoints and holds no secret.
 
 | Variable | Default | Effect |
 |---|---|---|

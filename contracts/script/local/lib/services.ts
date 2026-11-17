@@ -10,7 +10,7 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { CHAINS, CONTRACTS, EXPORT_KEY_ID, type LocalChain, PORTS, REPO, STACK, chainIdEnv, fallbackUrl, manifestPath, outDir, recorderUrl, rpcUrl } from "./env.ts";
@@ -196,6 +196,16 @@ export async function convexEnv(info: ConvexInfo, vars: Record<string, string>):
   if (!r.ok) throw new Error(`convex environment: HTTP ${r.status} ${await r.text()}`);
 }
 
+/** Whether the local deployment's backend answers (`convex dev` keeps running after its backend exits). */
+export async function convexAnswers(info = discoverConvex()): Promise<boolean> {
+  if (!info) return false;
+  try {
+    return (await fetch(`${info.url}/instance_name`, { signal: AbortSignal.timeout(5_000) })).ok;
+  } catch {
+    return false;
+  }
+}
+
 /** Files `convex dev` needs that a checkout may lack; made by the stack and removed by `stopConvex`. */
 const CONVEX_MADE = join(STACK, "convex-made.json");
 
@@ -203,15 +213,21 @@ const CONVEX_MADE = join(STACK, "convex-made.json");
  * Starts `convex dev` on an anonymous local deployment (no account, nothing leaves the machine), sets its environment
  * (the chains' RPCs, the indexer export, the listing content, the session secret) and writes each chain's
  * `deployments` row from its manifest.
+ *
+ * `convex dev` runs the backend with its output discarded, does not start it again when it exits, and reports the exit
+ * only in verbose mode: the CLI runs verbose, so the log records the backend's exit code. A CLI whose backend no
+ * longer answers is restarted (`restarted`). The previous run's log is kept as `convex.prev.log`.
  */
-export async function startConvex(): Promise<ConvexInfo> {
+export async function startConvex(): Promise<ConvexInfo & { restarted: boolean }> {
+  const restarted = running("convex") && !(await convexAnswers());
+  if (restarted) stop("convex");
   if (!running("convex")) {
     const made = [".gitignore", "convex/tsconfig.json"].map((f) => join(CONVEX_DIR, f)).filter((f) => !existsSync(f));
     writeFileSync(CONVEX_MADE, JSON.stringify(made));
-    rmSync(logPath("convex"), { force: true });
+    if (existsSync(logPath("convex"))) renameSync(logPath("convex"), logPath("convex.prev"));
     start("convex", process.execPath, [binJs("convex"), "dev", "--codegen", "disable", "--typecheck", "disable", "--tail-logs", "always"], {
       cwd: CONVEX_DIR,
-      env: { CONVEX_AGENT_MODE: "anonymous" },
+      env: { CONVEX_AGENT_MODE: "anonymous", CONVEX_VERBOSE: "1" },
     });
   }
   const log = () => (existsSync(logPath("convex")) ? readFileSync(logPath("convex"), "utf8") : "");
@@ -263,7 +279,7 @@ export async function startConvex(): Promise<ConvexInfo> {
       await convex("mutation", "deployments:setDeployment", base);
     }
   }
-  return info;
+  return { ...info, restarted };
 }
 
 /** ORACLE() of an Aave V4 Spoke. */

@@ -24,11 +24,12 @@ import { join } from "node:path";
 import { CHAINS, CONTRACTS, type LocalChain, PORTS, STACK, chainOf, manifestPath, outDir, rpcUrl } from "./lib/env.ts";
 import { FIRST_RELEASE, answers, blockNumber, currentConfig, fundSigners, miningMode, placeL1FeeOracle, readStatus, runRelease, setMining, startNode, stopNode, writeBaseConfig } from "./lib/chain.ts";
 import { ensureKeys } from "./lib/keys.ts";
-import { names, record, running, start, stop } from "./lib/procs.ts";
+import { logPath, names, record, running, start, stop } from "./lib/procs.ts";
 import {
   CONVEX_DIR,
   PGLITE,
   WEBAPP_DIR,
+  convexAnswers,
   convexInfo,
   indexerAtHead,
   indexerStatus,
@@ -91,6 +92,7 @@ async function up(): Promise<void> {
   say(`indexer: at head ${JSON.stringify(at)}`);
   await startContent();
   const info = await startConvex();
+  if (info.restarted) say(`convex: the backend had stopped answering; restarted (previous log: ${logPath("convex.prev")})`);
   say(`convex: ${info.url} (functions from ${CONVEX_DIR})`);
   startConvexDriver();
   await startMonitor();
@@ -188,7 +190,7 @@ async function status(): Promise<void> {
     say("indexer: not answering");
   }
   const info = convexInfo();
-  if (info) say(`convex: ${info.url}`);
+  if (info) say(`convex: ${info.url}, backend ${(await convexAnswers(info)) ? "answering" : "not answering (run up to restart it)"}`);
 }
 
 async function down(): Promise<void> {
