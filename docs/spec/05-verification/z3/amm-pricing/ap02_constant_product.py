@@ -35,7 +35,7 @@ prove('AMM-B1b', 'equality iff the pool sits at the oracle price (r0 p0 = r1 p1)
 
 # ---------------------------------------------------------------------------------------------------
 # B2  One swap (token0 in, fee 0.3%): k grows, but by at most a factor 1/gamma
-# MATH-AMM-V2-PRICE-02 verifies: SPEC-AMM-V2-001, REQ-AMM-V2-005, REQ-AMM-CORE-014, INV-078, AMMN-RT-07
+# MATH-AMM-V2-PRICE-02 verifies: SPEC-AMM-V2-001, REQ-AMM-V2-005, REQ-AMM-CORE-014, INV-078
 out = r1 * d * GAMMA / (r0 + d * GAMMA)                  # getAmountOut, exact
 kk = (r0 + d) * (r1 - out)
 prove('AMM-B2a', 'k never decreases on a swap: (r0 + dx)(r1 - out) >= r0 r1', [r0 > 0, r1 > 0, d > 0], kk >= r0 * r1)
@@ -51,7 +51,7 @@ prove('AMM-B2d', 'after any swap the quote still lower-bounds the redeemable val
 
 # ---------------------------------------------------------------------------------------------------
 # B3  Donation (transfer then sync)
-# MATH-AMM-V2-PRICE-03 verifies: SPEC-AMM-V2-001, REQ-AMM-V2-003, INV-078, AMMN-RT-07
+# MATH-AMM-V2-PRICE-03 verifies: SPEC-AMM-V2-001, REQ-AMM-V2-003, INV-078
 D0, D1 = Reals('D0 D1')
 don = [D0 >= 0, D1 >= 0, q2 >= 0, q2 * q2 == (r0 + D0) * (r1 + D1) * p0 * p1]
 prove('AMM-B3a', 'pool at the oracle price: a synced donation raises V by at most its own value D0 p0 + D1 p1',
@@ -79,7 +79,7 @@ prove('AMM-B4b', 'burn: amounts a_i <= l r_i / S -> V(r - a) / (S - l) >= V(r) /
 
 # ---------------------------------------------------------------------------------------------------
 # B5  Protocol fee on mint (kLast / feeTo): pending dilution not yet in totalSupply
-# MATH-AMM-V2-PRICE-05 verifies: REQ-AMM-V2-002, INV-078, AMMN-RT-07
+# MATH-AMM-V2-PRICE-05 verifies: REQ-AMM-V2-002, INV-078
 rk, rkl = Reals('rk rkl')
 fee_liq = S * (rk - rkl) / (5 * rk + rkl)
 prove('AMM-B5a', 'quote per LP with totalSupply overstates the post-_mintFee value by the factor 1 + (rk - rkl)/(5 rk + rkl) '
@@ -91,7 +91,7 @@ prove('AMM-B5b', 'with supply + pending fee liquidity the per-LP quote is <= per
 
 # ---------------------------------------------------------------------------------------------------
 # Attack runs (exact integers). Pool: 1,000,000 USDC (6 dec, $1) / 500 WETH (18 dec, $2,000).
-# MATH-AMM-V2-PRICE-06 verifies: REQ-AMM-V2-001, REQ-AMM-V2-002, REQ-AMM-V2-004, REQ-AMM-V2-005, AMMN-RT-07
+# MATH-AMM-V2-PRICE-06 verifies: REQ-AMM-V2-001, REQ-AMM-V2-002, REQ-AMM-V2-004, REQ-AMM-V2-005
 def per_lp(pair, p0, p1, supply=None, use_balances=False):
     r0_, r1_ = (pair.b0, pair.b1) if use_balances else (pair.r0, pair.r1)
     return F(v2_fair_value(r0_, r1_, p0, p1), supply or pair.supply)

@@ -19,7 +19,7 @@ import {
   stringToBytes,
   zeroHash,
 } from "viem";
-import { adminOf, codeHash, implementationOf } from "./chain.ts";
+import { adminOf, codeHash, getLogsChunked, implementationOf } from "./chain.ts";
 import { minNormalDelay } from "./schema.ts";
 import type { Immutable, ReleaseManifest, Upgradeable } from "./types.ts";
 
@@ -60,10 +60,14 @@ const roleName = (h: string) => Object.entries(ROLES).find(([, v]) => v === h)?.
 const GRANTED = parseAbiItem("event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)");
 const REVOKED = parseAbiItem("event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)");
 
-/** Current holders of every role of `contract`, replayed from its role events since `fromBlock`. */
+/**
+ * Current holders of every role of `contract`, replayed from its role events since `fromBlock`. The logs are read up to
+ * the head in ranges a provider accepts (getLogsChunked).
+ */
 async function roleHolders(client: PublicClient, contract: Address, fromBlock: number): Promise<Map<string, Set<string>>> {
   const holders = new Map<string, Set<string>>();
-  const logs = await client.getLogs({ address: contract, events: [GRANTED, REVOKED], fromBlock: BigInt(fromBlock), toBlock: "latest" });
+  const head = await client.getBlockNumber();
+  const logs = await getLogsChunked(client, { address: contract, events: [GRANTED, REVOKED], fromBlock: BigInt(fromBlock), toBlock: head });
   logs.sort((a, b) => Number((a.blockNumber ?? 0n) - (b.blockNumber ?? 0n)) || (a.logIndex ?? 0) - (b.logIndex ?? 0));
   for (const log of logs) {
     const { role, account } = log.args as { role: Hex; account: Address };

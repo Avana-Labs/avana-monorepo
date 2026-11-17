@@ -2,7 +2,7 @@
   "name": "avana-monorepo",
   "private": true,
   "license": "BUSL-1.1",
-  "description": "npm workspace root for the off-chain TypeScript packages: services/common, services/indexer, services/keeper, services/monitor, services/convex, packages/protocol, packages/export, packages/rpc and the web app in webapp/.",
+  "description": "npm workspace root for the off-chain TypeScript packages: services/common, services/indexer, services/keeper, services/monitor, services/faucet, services/convex, packages/protocol, packages/export, packages/rpc and the web app in webapp/.",
   "engines": {
     "node": ">=22.12"
   },
@@ -25,7 +25,7 @@
   "overrides": {
     "@graphql-tools/utils": "12.1.0",
     "vite": "8.3.8",
-    "@hono/node-server": "2.1.3",
+    "@hono/node-server": "2.1.6",
     "drizzle-orm": "0.45.2",
     "glob": "14.0.2",
     "minimatch": {

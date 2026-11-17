@@ -2,7 +2,7 @@
 
 > **Status:** In review · **Owner:** Avana Labs · **Last reviewed:** 2026-11-10
 
-The findings register. Every counterexample found by the spec-stage models and every attack found in design review that the design did not fully block is recorded here, with the decision that resolved it and the test or property that confirms the fix. Implementation-stage findings from developers, formal verification and external auditors are added with the same fields; raw reports and evidence go in [`docs/audit/`](../../audit/).
+The findings register. Every counterexample found by the spec-stage models and every attack found in design review that the design did not fully block is recorded here, with the decision that resolved it and the test or property that confirms the fix. The design-review reports it cites are kept outside the repository (`Q-204`). Implementation-stage findings from developers, formal verification and external auditors are added with the same fields; raw reports and evidence go in [`docs/audit/`](../../audit/).
 
 - **Source**: who found it. Model evidence paths are relative to this folder. *Design review (attacker round)* findings came from an adversarial pass over the whole design; *Design review (decision check)* findings came from checking each decision against the others. Neither set are entries of [4.2](../04-security/02-attack-scenarios.md); 4.2 holds the attack scenarios that the final design must block. *Formal verification* findings came from machine-checked proofs over the drafted contract rules (custody, governance and control, liquidation); *Design review (risk round)* findings from a system-level solvency and risk review; *User simulation* findings from a simulated population of borrowers, liquidity providers and keepers run through market stress paths. In these sections the Resolution ends with the rules the fix changed. *Design review (AMM-neutral)* findings came from the review of the move to several AMM protocols, Hubs and chains (run `AMMN-R1`: red team, flow walkthroughs, gas and DoS, integration assumptions, architecture options, state machine); their severity is the combined report's where merging duplicates raised it.
 - **Severity**: Critical (loss of collateral or unbacked debt, no precondition beyond an upgrade or a public call), High (loss or protocol-wide halt under a plausible condition), Medium (bounded loss, griefing or liveness loss in one market), Low (dust-level loss or a narrow condition), Informational (confirms a decision; no loss).
@@ -3340,7 +3340,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-01`, `Q-359`, `ATTACK-004`, `ATTACK-153`, `Q-293`, `Q-363`, `Q-366` |
 | Description | Pricing is per unit of liquidity over one range, but intake required only the pool's usable ticks. A $10,000 position one tick each side of spot (`L = 100,007,500`) in a market priced over `[0.90, 1.10]` (0.097854 USD per unit) was credited as $9,786,145. |
 | Impact | Borrowing up to `marketUsdCap` and `depositorUsdCap` against about $10,000 of real value; the rest becomes bad debt. |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-01`) |
+| Evidence | `red-team.md` (`AMMN-RT-01`) |
 | Resolution | A market is one (chain, AMM protocol, pool, exact position shape); for concentrated liquidity the shape is the exact `[tickLower, tickUpper]` range, an immutable of the market's VaultToken and LPOracle. A pledge requires an exact match of the position's shape with the market's (for v3 and Slipstream: equal `tickLower` and `tickUpper`, pool derived through the market's factory equal to the vault token's pool), stated in the core and checked by each integration. Changed rules: `INV-005`, `ATTACK-004`, `ATTACK-153`, `REQ-COLL-024`, `REQ-RISK-012`, `REQ-AMM-CORE-006`, `REQ-VAULT-009`, `SPEC-BACK-001`, `REQ-VAULT-002`, `REQ-VAULT-003`, `REQ-VAULT-166`, `REQ-VAULT-167`, `REQ-VAULT-173`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-279`, `TEST-264`, `TEST-265`, `PROP-083` |
@@ -3355,7 +3355,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-02`, `Q-359`, `ATTACK-154`, `Q-363` |
 | Description | Market `[0.99, 1.01]`, token1 at $0.952 (oracle ratio 1.05, above the range). A position of `L = 1,000,000` holds 10,000 token1 worth $9,524; unclamped math gives `y = 29,708` and a value of $28,293. Missing `10^(d1−d0)` scaling mis-scales DAI/USDC by up to 10⁶. |
 | Impact | Direct theft path: borrowing against 2.97× the collateral value during a depeg, when routes are thin. |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-02`) |
+| Evidence | `red-team.md` (`AMMN-RT-02`) |
 | Resolution | Fair composition on-chain: `value = Σ amountᵢ(oracle price vector) × priceᵢ`, never spot reserves, 50/50 or weights × price. For concentrated liquidity the oracle square-root ratio is clamped to `[sqrtRatio(tickLower), sqrtRatio(tickUpper)]`, amounts are floored then reduced by 1 raw unit, tick alignment uses signed math, and uncollected fees are excluded. The served value is the minimum over holdings reachable at the oracle prices. Changed rules: `INV-078`, `ATTACK-154`, `SPEC-AMM-CORE-001`, `SPEC-AMM-V3-001`, `REQ-AMM-SLIP-012`, `SPEC-ORC-008`, `SPEC-ORC-009`, `REQ-ORACLE-104`, `REQ-AMM-CORE-013`, `REQ-AMM-V3-006`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-279`, `TEST-266`, `PROP-083` |
@@ -3370,7 +3370,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-03`, `Q-362`, `ATTACK-021`, `ATTACK-155`, `Q-281`, `Q-300`, `Q-363` |
 | Description | On a standard Spoke, `liquidationCall(..., receiveShares = true)` credits the liquidator Spoke supply shares with no token transfer, so the vault token's recipient rule never runs. A third party seizes 100,000 units of shares worth 105,000 at bonus 1.05; a non-zero `liquidationFee` or a borrowable vault-token reserve has the same effect. |
 | Impact | Seized units with no ledger debit; debt against them that can never be liquidated (about $100k of bad debt in the review's example). |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-03`) |
+| Evidence | `red-team.md` (`AMMN-RT-03`) |
 | Resolution | Every CDP Spoke is a standard, unmodified Aave V4 Spoke. The listing AIP sets `receiveSharesEnabled = false` on every Avana collateral reserve, `liquidationFee = 0` (or paid to Avana's fee receiver) and no reinvestment controller, and the RiskModule drift check compares each setting on every new-activity call. Drift trips a breaker that stops new activity, never liquidation. The vault token's transfer rule allows only the AaveAdapter's mint and burn, proxy to home Hub on supply, home Hub to proxy on withdrawal, and home Hub to LPVaultSwap on seizure (`REQ-VTOKEN-025`), so any other liquidator's `liquidationCall` reverts on the token transfer. The residual risk is an Aave DAO change that enables one of the settings and is used in the same block, stated in 4.3. Changed rules: `INV-093`, `INV-011`, `INV-029`, `ATTACK-021`, `ATTACK-155`, `REQ-RISK-078`, `REQ-ADAPTER-029`, `REQ-CONFIG-076`, `REQ-VTOKEN-006`, `REQ-VTOKEN-008`, `REQ-VTOKEN-009`, `REQ-VTOKEN-040`, `REQ-VTOKEN-041`. Fix pass (2026-11-10): the exposure lasts from the Aave change until the drift check trips `CONFIG_DRIFT`, which runs on every Avana entry point and on a per-block keeper poke; a seizure outside LPVaultSwap in that window is an accepted residual risk bounded by the Spoke draw caps (`INV-093`, `REQ-RISK-078`, `ATTACK-155`, `EXT-001`; `Q-382`). |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-268`, `PROP-078` |
@@ -3385,7 +3385,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-04`, `Q-359`, `ATTACK-156`, `Q-363` |
 | Description | With pinned proxy versions and migration, a wallet-chosen implementation became a registered proxy that could borrow past every Avana gate; old versions could not be patched; a CREATE2 address over version-specific init code gave a wallet two accounts per (wallet, Spoke); and migration had to rewrite `r.proxy`, which the immutable ledger forbids. |
 | Impact | Gate bypass on borrow, unpatchable custody bugs and broken one-account accounting. |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-04`) |
+| Evidence | `red-team.md` (`AMMN-RT-04`) |
 | Resolution | A PositionProxy is a logic-free immutable account created by CREATE2 on first use, bound at creation to one wallet, one CDP Spoke and one market. It executes only calls from the chain's AaveAdapter, which holds all logic and upgrades through the timelock. There is no beacon, no proxy upgrade and no migration, so exits never depend on proxy code. Changed rules: `INV-063`, `INV-064`, `INV-065`, `ATTACK-156`, `REQ-PROXY-050`, `REQ-PROXY-052`, `REQ-PROXY-101`, `REQ-ARCH-177`, `REQ-ADAPTER-099`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-271`, `PROP-076` |
@@ -3400,7 +3400,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-05`, `Q-359`, `Q-361`, `ATTACK-157`, `Q-279`, `Q-295`, `Q-363` |
 | Description | With one ledger per CDP Spoke, each ledger admitted the full `tokenUsdCap`: three Spokes holding USDT took USDT exposure from the intended $10M to $30M, and two markets on one pool doubled the pool-share cap. |
 | Impact | Routes sized for one cap must absorb a multiple of it on a depeg; the shortfall becomes Hub bad debt. |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-05`) |
+| Evidence | `red-team.md` (`AMMN-RT-05`) |
 | Resolution | One AMM-neutral Collateralization ledger per chain holds every cap counter keyed by Hub (token, depositor, pool share), so adding Spokes or markets never adds cap room; token exposure is counted per funding Hub over every Spoke that draws from it. Changed rules: `INV-092`, `INV-027`, `INV-028`, `ATTACK-157`, `REQ-COLL-002`, `REQ-COLL-026`, `SPEC-BACK-004`, `REQ-RISK-021`, `REQ-RISK-079`, `REQ-COLL-030`, `REQ-VAULT-014`, `REQ-VAULT-034`, `REQ-AMM-CORE-013`, `REQ-AMM-V3-006`. Fix pass (2026-11-10): the pool-share cap is per pool, summed over every market (every range) of that pool on the chain, so k ranges share one cap (`INV-092`, `REQ-RISK-079`, `SPEC-CAP-005`; `Q-383`). |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-272`, `PROP-077` |
@@ -3415,7 +3415,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-06`, `Q-363`, `ATTACK-158`, `Q-302` |
 | Description | A v4 pool's hook can take a delta on remove-liquidity or revert it; a position subscriber can gas-grief removal. The unwind then returns fewer tokens than the curve amounts, or none. |
 | Impact | Liquidations of a v4 market revert or are skimmed; collateral value is overstated. |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-06`) |
+| Evidence | `red-team.md` (`AMMN-RT-06`) |
 | Resolution | Uniswap v2, Curve StableSwap-NG, Balancer and Uniswap v4 are not listed at launch; each has a readiness section with its pricing model and the guards it must pass before listing: v2 reads `getReserves`, never `balanceOf`, with effective supply including pending `feeTo` liquidity; Curve and Balancer value at the minimum token price and check the pool's reentrancy lock before every read; Uniswap v4 requires a hook allowlist with no remove-liquidity hooks or return deltas; every AMM protocol has a per-block quote-change cap. Uniswap v4 intake checks the `PoolKey` hook address bits on-chain at listing and refuses a position with a subscriber. Changed rules: `INV-078`, `ATTACK-158`, `REQ-AMM-V4-001`, `REQ-AMM-CORE-004`, `REQ-AMM-CORE-012`, `REQ-AMM-CORE-014`, `SPEC-AMM-CORE-001`, `REQ-AMM-CORE-018`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-331` |
@@ -3430,7 +3430,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-07`, `Q-363`, `ATTACK-093`, `ATTACK-159`, `Q-302` |
 | Description | Fair-reserve models read pool state (reserves, supply, invariant). During a remove-liquidity callback the state is inconsistent, and a donation or sync inside one transaction changes it. `ATTACK-093` relied on the LPOracle reading no pool state. |
 | Impact | Inflated collateral value for one transaction, enough to borrow and leave. |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-07`) |
+| Evidence | `red-team.md` (`AMMN-RT-07`) |
 | Resolution | Uniswap v2, Curve StableSwap-NG, Balancer and Uniswap v4 are not listed at launch; each has a readiness section with its pricing model and the guards it must pass before listing: v2 reads `getReserves`, never `balanceOf`, with effective supply including pending `feeTo` liquidity; Curve and Balancer value at the minimum token price and check the pool's reentrancy lock before every read; Uniswap v4 requires a hook allowlist with no remove-liquidity hooks or return deltas; every AMM protocol has a per-block quote-change cap. Changed rules: `ATTACK-093`, `ATTACK-159`, `REQ-AMM-CORE-004`, `REQ-AMM-CURVE-002`, `REQ-AMM-BAL-002`, `REQ-AMM-CORE-012`, `REQ-AMM-CORE-014`, `SPEC-AMM-CORE-001`, `REQ-AMM-CORE-018`, `REQ-AMM-V3-005`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-328`, `TEST-329`, `TEST-330` |
@@ -3445,7 +3445,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-08`, `Q-365`, `ATTACK-041`, `ATTACK-160`, `Q-363` |
 | Description | Observation cardinality `n ≥ ⌈W/12⌉ + 1` gives `n = 151` for `W = 1,800 s`, which covers 302 s on 2-second blocks; 901 are needed. One dust swap per block for 151 blocks (about $2 of gas) makes `observe` revert `OLD`. |
 | Impact | New pledges and borrowing stop and the served price drops to `min(fresh, A)` for as long as the griefer pays. |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-08`) |
+| Evidence | `red-team.md` (`AMMN-RT-08`) |
 | Resolution | TWAP is a consistency check only, and its buffer is sized per chain block time: `n ≥ ⌈W / chainBlockTime⌉ + 1`, with `chainBlockTime` an immutable per chain (Base 2 s); each integration reads `slot0` with its own decoder. Changed rules: `ATTACK-041`, `ATTACK-160`, `REQ-PSTORE-027`, `SPEC-ORC-022`, `REQ-AMM-SLIP-013`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-265` |
@@ -3460,7 +3460,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-09`, `Q-363`, `ATTACK-161`, `Q-340`, `Q-365` |
 | Description | A position at or past its range edge is 100% one token. In a constant-product route of depth 10V, two V/2 legs lose 4.76% each, but one V leg loses 9.09%, so the per-leg `minOut` fails even at `s = 5%`. |
 | Impact | Liquidations revert or fall to the caller top-up when the stress test said they would settle. |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-09`) |
+| Evidence | `red-team.md` (`AMMN-RT-09`) |
 | Resolution | At listing and in the route-depth monitor, each token's route is stressed with the full position value V (the single-token composition at each range edge); each token class (stable, correlated, volatile) has its own route requirements. Changed rules: `INV-083`, `ATTACK-161`, `REQ-ROUTE-006`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-281` |
@@ -3475,7 +3475,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-10`, `Q-359`, `ATTACK-162`, `Q-279`, `Q-363` |
 | Description | With one Adapter per Hub and one ProxyManager per chain, Hub A's Adapter could deploy the CREATE2 address of `(wallet, spokeOfHubB)` first, with itself as the controlling Adapter. |
 | Impact | Permanent denial of service for the wallet on Spoke B, or control of its account by the wrong Adapter. |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-10`) |
+| Evidence | `red-team.md` (`AMMN-RT-10`) |
 | Resolution | One ProxyManager and one AaveAdapter per chain, scoped by Hub inside; `deployProxy` accepts only that Adapter; the salt binds (wallet, CDP Spoke, market). A PositionProxy is a logic-free immutable account created by CREATE2 on first use, bound at creation to one wallet, one CDP Spoke and one market. It executes only calls from the chain's AaveAdapter, which holds all logic and upgrades through the timelock. There is no beacon, no proxy upgrade and no migration, so exits never depend on proxy code. Changed rules: `INV-064`, `ATTACK-162`, `REQ-PROXY-050`, `REQ-PROXY-052`, `REQ-PROXY-055`, `REQ-PROXY-101`, `REQ-ARCH-152`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-271`, `PROP-076` |
@@ -3490,7 +3490,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-11`, `Q-360`, `ATTACK-163`, `Q-283`, `Q-284`, `Q-363` |
 | Description | Each Hub's registry summed only its own Spokes, so a Volatile Spoke drawing Stable Hub USDC sat outside the Stable Hub's line; its deficits landed on a Hub whose First-Loss Reserve did not recognise the Spoke. |
 | Impact | Funding-Hub suppliers carry more than the approved line, including volatile-collateral shortfall risk, with no coverage. |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-11`) |
+| Evidence | `red-team.md` (`AMMN-RT-11`) |
 | Resolution | Cross-Hub credit lines are fully specified and off at launch. The funding Hub owns the cap; one registry sums the lines per (funding Hub, asset); a pause of the funding Hub stops the line; the cap is at most that Hub's first-loss coverage. `INV-057` is a gate on new draws, and the cap-sum rule is a configuration invariant on caps. Changed rules: `INV-094`, `INV-057`, `INV-042`, `ATTACK-163`, `REQ-CONFIG-081`, `REQ-ARCH-010`, `REQ-ARCH-011`, `REQ-ARCH-029`, `REQ-ARCH-040`, `REQ-ARCH-144`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-273`, `TEST-274`, `PROP-079`, `PROP-081` |
@@ -3505,7 +3505,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-12`, `Q-359`, `Q-362`, `ATTACK-164`, `Q-281`, `Q-299`, `Q-363` |
 | Description | `INV-003` assumed one Spoke per vault-token asset. A second Spoke on the same Hub asset could draw vault tokens out of the Hub, and tokens sent to LPVaultSwap would read as pending balance. |
 | Impact | Backing equality breaks; vault-token liquidity leaves the Hub or is stranded. |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-12`) |
+| Evidence | `red-team.md` (`AMMN-RT-12`) |
 | Resolution | Each vault-token Hub asset has exactly one Spoke, the market's CDP Spoke, checked at `listCollateralMarket` and by the drift check; the AaveAdapter and LPVaultSwap take the Spoke only from the vault token. Changed rules: `INV-003`, `INV-093`, `ATTACK-164`, `REQ-ADAPTER-031`, `REQ-COLL-003`, `REQ-VAULT-102`, `REQ-VTOKEN-020`, `REQ-VTOKEN-021`, `REQ-VTOKEN-038`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-268`, `PROP-078` |
@@ -3520,7 +3520,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-13`, `Q-362`, `ATTACK-165`, `Q-343`, `Q-363`, `Q-387`, `Q-397` |
 | Description | `INV-037` capped every draw in one rolling window. A busy liquidation day in one low-quality market, or a keeper farming small draws, used the whole window, and other markets' liquidations reverted or fell to permissionless mode, which cannot draw. |
 | Impact | Before the fix: contagion across markets, which `INV-075` excludes. |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-13`) |
+| Evidence | `red-team.md` (`AMMN-RT-13`) |
 | Resolution | Resolved by removal (`Q-397`): the SettlementBudget, its windows and its reserves no longer exist, so no market's liquidations can use another market's allowance. Each liquidation is funded by its own caller: the caller sizes `debtToCover` and its funding (flash principal, exact premium and `callerFunds`) for the repayment Aave V4's dust rule may require, and pays any rounding gap at final settlement through its shortfall top-up, bounded by `maxShortfall` (`INV-034`). `INV-075` therefore holds with no shared fund. Earlier fixes, superseded: per-market windows with running sums (`Q-362`) and per-market reserved floors (`Q-387`). Changed rules: `INV-037`, `INV-038`, `INV-097`, `ATTACK-165`, `SPEC-BRK-004`, `SPEC-SET-001`…`007`, `REQ-SWAP-029`, `REQ-SWAP-061` and the 2.13 requirements, each rewritten to state the removal. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-277`, `TEST-093`, `PROP-084`, `MATH-ST-109`, `FV-LIQ-04` |
@@ -3535,7 +3535,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-14`, `Q-363`, `Q-365`, `REQ-READY-001`, `ATTACK-058`, `ATTACK-059`, `ATTACK-166` |
 | Description | Equity feeds pause outside market hours while the DEX price moves 24/7; splits and dividends can be rebases or mints the feed and pool see differently; issuers may refuse LPVaultSwap or a route as holder. |
 | Impact | Borrowing on a stale-but-valid price across a weekend gap; liquidation refused by the issuer. |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-14`) |
+| Evidence | `red-team.md` (`AMMN-RT-14`) |
 | Resolution | Tokenized stocks are not listed at launch (launch is a Stable LP Hub on Ethereum and on Base). `REQ-READY-001` ([2.22](../02-contracts/22-amm-integration-readiness.md)) is the listing rule for any such token: (1) a market-hours feed is listed only with closed-market staleness handling, so new borrows stop while the reference market is closed and liquidation values the token at its stress price; (2) a corporate action (split, dividend) pauses new activity in every market holding the token until the feed and the pool are re-checked; (3) the issuer's holder allowlist includes the LPVault, LPVaultSwap and every swap-route contract that holds the token, checked in the listing batch. Changed rules: `REQ-READY-001`, `ATTACK-058`, `ATTACK-059`, `ATTACK-166`, `REQ-CHAIN-001`, `REQ-CONFIG-020`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-283` |
@@ -3550,7 +3550,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-15`, `Q-359`, `ATTACK-167`, `Q-286`, `Q-301`, `Q-305`, `Q-363`, `Q-365` |
 | Description | On Base both Uniswap v3 and Slipstream exist and Slipstream has three factory generations. `getPool(t0, t1, 100)` resolves to different pools (fee 100 against `tickSpacing` 100), so a copied configuration can bind a thin attacker-seeded pool. |
 | Impact | A market bound to the wrong pool or position manager. |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-15`) |
+| Evidence | `red-team.md` (`AMMN-RT-15`) |
 | Resolution | `listCollateralMarket` checks `NFPM.factory() == factory`, `pool.factory() == factory`, `factory.getPool(t0, t1, param) == pool` (fee for v3, `tickSpacing` for Slipstream), the pool code hash and the integration's `positions()` and `slot0` decoders; each integration takes the NFPM and factory only from its own immutables. Changed rules: `INV-005`, `INV-017`, `ATTACK-167`, `REQ-CONFIG-075`, `REQ-AMM-V3-002`, `REQ-AMM-SLIP-006`, `REQ-ARCH-207`, `REQ-ARCH-209`, `REQ-ARCH-027`, `REQ-ARCH-033`, `REQ-ARCH-038`, `REQ-VAULT-174`, `REQ-VAULT-097`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-264`, `TEST-265` |
@@ -3565,7 +3565,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-RT-16`, `Q-359`, `ATTACK-168`, `Q-363` |
 | Description | A borrower with HF < 1 front-runs the keeper by migrating to a new proxy version, so `liquidate(oldProxy, …)` reverts, once per version. |
 | Impact | Liquidation delayed while the account loses value. |
-| Evidence | [`red-team.md`](../../audit/design-review/amm-neutral/red-team.md) (`AMMN-RT-16`) |
+| Evidence | `red-team.md` (`AMMN-RT-16`) |
 | Resolution | No migration exists. A PositionProxy is a logic-free immutable account created by CREATE2 on first use, bound at creation to one wallet, one CDP Spoke and one market. It executes only calls from the chain's AaveAdapter, which holds all logic and upgrades through the timelock. There is no beacon, no proxy upgrade and no migration, so exits never depend on proxy code. Changed rules: `INV-065`, `ATTACK-168`, `REQ-PROXY-050`, `REQ-ARCH-177`, `REQ-ADAPTER-099`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-271` |
@@ -3580,7 +3580,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-01`, `Q-362`, `ATTACK-169`, `Q-279`, `Q-296`, `Q-363`, `Q-366` |
 | Description | The Lock's members were four constructor immutables (`AAVE_ADAPTER`, `COLLATERALIZATION`, `LP_VAULT`, `LP_VAULT_SWAP`). A Spoke deployed later with its own vault and ledger could never join it. |
 | Impact | Every pledge, release, fee collection and seizure on a later Spoke reverts with `NotMember`. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-01`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-01`) |
 | Resolution | The Lock has exactly two members, the AaveAdapter and LPVaultSwap. Every LPVault and Collateralization entry point that moves value is reachable only through them, with one AMM-neutral Collateralization ledger per chain and one immutable LPVault per AMM protocol per chain, so a new CDP Spoke or market never needs a Lock redeploy. Changed rules: `INV-091`, `INV-054`, `ATTACK-169`, `REQ-COLL-029`, `REQ-ADAPTER-096`, `REQ-ADAPTER-050`, `REQ-VAULT-150`, `REQ-VAULT-064`, `REQ-VAULT-066`, `REQ-VAULT-165`, `REQ-VAULT-098`. Fix pass (2026-11-10): `INV-091`, `INV-054`, 2.16 and `ILock` say the same thing. Collateralization's value-moving functions accept only a Lock member while the Lock is held. An LPVault's position-moving functions accept only Collateralization while the Lock is held, so they run only inside a call tree a Lock member opened. `returnStray` is timelock-only and runs only while the Lock is free (`REQ-LOCK-028`, `REQ-VAULT-150`, `REQ-VAULT-165`; `Q-362`). |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-270`, `PROP-075` |
@@ -3595,7 +3595,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-02`, `Q-362`, `Q-365`, `ATTACK-170`, `Q-333`, `Q-334`, `Q-363` |
 | Description | The GHO FlashMinter and the GSMs exist only on Ethereum; GHO on Base is a bridged token with thin depth. Every Slipstream liquidation as specified needed a GHO flash mint and GHO routes, and the recovery floor counted bridged GHO at $1. |
 | Impact | No liquidation funding on Base; a hidden loss to the waterfall from a bridged-GHO discount. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-02`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-02`) |
 | Resolution | LPVaultSwap flash-borrows the debt asset itself through `IFlashSource`, implemented with the Aave V3 Pool `flashLoan` (single asset, mode 0) on every chain. Before the loan it checks available liquidity and the premium against `maxFlashFeeBps`; in the callback it checks initiator, caller and the active context. The flash source is never the Hub of the CDP Spoke being liquidated, the implementation is replaceable through the timelock, and when flash liquidity is short the caller funds the debt. The GhoFlashMinter, the GSM as a primary route and the leg that buys the debt with GHO are removed. LPVaultSwap swaps the unwound tokens over the swap routes into the debt asset with a per-leg oracle `minOut`, repays the flash loan plus premium, and pays the leftover in the debt asset repaid, in this order: Avana's fee (20 % of the oracle gain, capped by the realized surplus), the keeper reward, then the borrower surplus (`Q-337`, 2.11 `SPEC-LIQ-009`, `SPEC-LIQ-022`). GHO is used only when the debt is GHO. Changed rules: `INV-040`, `INV-095`, `INV-070`, `ATTACK-170`, `REQ-SWAP-011`, `REQ-SWAP-017`, `SPEC-LIQ-004`, `SPEC-LIQ-005`, `SPEC-LIQ-006`, `REQ-SWAP-012`, `REQ-FLASH-001`, `REQ-FLASH-007`, `REQ-FLASH-010`, `SPEC-LIQ-002`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-267`, `TEST-280`, `PROP-080` |
@@ -3610,7 +3610,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-03`, `Q-362`, `Q-364`, `ATTACK-171`, `Q-287`, `Q-363`, `Q-365` |
 | Description | No page read a sequencer-uptime feed; grace started only after Expired, which a short outage never reaches; `MKT-005` required heartbeats ≤ 3,600 s while Base USD feeds use 86,400 s. |
 | Impact | Liquidations on the first post-outage prices while borrowers had no access; no Slipstream market could list. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-03`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-03`) |
 | Resolution | Each L2 chain has a sequencer-uptime feed (Base `0xBCF85224fc0756B9Fa45aA7892530B47e10b6433`) and a grace period after restart. While the sequencer is down or inside the grace period no new risk opens; liquidation keeps its stress rules. A feed is fresh while its age is at most its own heartbeat plus a margin (Chainlink stablecoin feeds: 82,800–86,400 s); the fixed 3,600 s rule is removed. Borrow and withdraw also require an independent second source (a deep-pool TWAP or a second oracle network) to agree within the deviation band. Liquidation keeps its stress rules: stale collateral counts as 0 from Expired and stale debt uses its stress price. Changed rules: `INV-098`, `INV-023`, `ATTACK-171`, `REQ-CHAIN-003`, `REQ-ORACLE-099`, `SPEC-ORC-019`, `LIQ-086`, `REQ-RISK-081`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-275`, `TEST-276` |
@@ -3625,7 +3625,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-04`, `Q-359`, `ATTACK-172`, `Q-363` |
 | Description | Aave V4 has no position transfer, so migration meant repay, withdraw and re-borrow, which new-activity gates refuse in exactly the states that force migration; a bug in a pinned `repay` could not be patched. |
 | Impact | Borrowers unable to repay or withdraw, then liquidated. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-04`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-04`) |
 | Resolution | A PositionProxy is a logic-free immutable account created by CREATE2 on first use, bound at creation to one wallet, one CDP Spoke and one market. It executes only calls from the chain's AaveAdapter, which holds all logic and upgrades through the timelock. There is no beacon, no proxy upgrade and no migration, so exits never depend on proxy code. Changed rules: `INV-065`, `INV-043`, `INV-045`, `ATTACK-172`, `REQ-PROXY-050`, `REQ-ARCH-177`, `REQ-ARCH-152`, `REQ-ADAPTER-099`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-271`, `PROP-076` |
@@ -3640,7 +3640,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-05`, `Q-360`, `ATTACK-173`, `Q-282`, `Q-283`, `Q-284`, `Q-363` |
 | Description | A Volatile CDP Spoke borrowing Stable Hub USDC was governed by its home Hub's contracts while its losses fell on Stable Hub suppliers; `DEF-013` summed exposure only on the home Hub; pending settlement always paid the GHO First-Loss Reserve. |
 | Impact | Loss of the isolation the three Hub tiers exist for. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-05`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-05`) |
 | Resolution | Cross-Hub credit lines are fully specified and off at launch. The funding Hub owns the cap; one registry sums the lines per (funding Hub, asset); a pause of the funding Hub stops the line; the cap is at most that Hub's first-loss coverage. `INV-057` is a gate on new draws, and the cap-sum rule is a configuration invariant on caps. Each debt reserve records its funding Hub, and pending settlement sends recovered value to the First-Loss Reserve of the market's (Hub, debt asset). Changed rules: `INV-094`, `INV-071`, `ATTACK-173`, `REQ-ARCH-008`, `REQ-ARCH-013`, `REQ-ARCH-157`, `REQ-ARCH-028`, `REQ-ARCH-038`, `REQ-ARCH-010`, `REQ-ARCH-011`, `REQ-ARCH-029`, `REQ-ARCH-040`, `REQ-ARCH-144`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-273`, `TEST-280`, `PROP-079` |
@@ -3655,7 +3655,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-06`, `Q-360`, `ATTACK-174`, `Q-283`, `Q-363` |
 | Description | A credit line spanning Hubs was a sum of per-Spoke `drawCap`s set by separate AIPs; nothing on-chain checked the sum. |
 | Impact | Draw caps above the approved line. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-06`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-06`) |
 | Resolution | Cross-Hub credit lines are fully specified and off at launch. The funding Hub owns the cap; one registry sums the lines per (funding Hub, asset); a pause of the funding Hub stops the line; the cap is at most that Hub's first-loss coverage. `INV-057` is a gate on new draws, and the cap-sum rule is a configuration invariant on caps. `enableDebtReserve` and every cap change check the registry sum on-chain. Changed rules: `INV-094`, `INV-057`, `ATTACK-174`, `REQ-RISK-082`, `SPEC-CAP-010`, `REQ-CONFIG-081`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-273`, `TEST-274`, `PROP-081` |
@@ -3670,7 +3670,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-07`, `Q-359`, `ATTACK-175`, `Q-280`, `Q-304`, `Q-363` |
 | Description | The spec put many markets in one account on one Borrow Spoke; the proposal put one market per Spoke. The choice decides seizure keys, reserve limits, drift checks, liquidation order and how many health factors a wallet has. |
 | Impact | Contradictory account model across the spec. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-07`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-07`) |
 | Resolution | One CDP Spoke per (chain, Hub, AMM protocol, risk tier) lists several markets, each one collateral reserve. Each wallet gets one PositionProxy per (CDP Spoke, market), so every market has its own Aave account and health factor and nothing is cross-collateralized. Changed rules: `INV-064`, `INV-075`, `ATTACK-175`, `REQ-COLL-031`, `REQ-ARCH-004`, `REQ-ARCH-207`, `REQ-ARCH-208`, `REQ-ARCH-015`, `REQ-ARCH-156`, `REQ-COLL-005`, `REQ-VAULT-013`, `REQ-VAULT-026`, `REQ-COLL-034`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-271`, `PROP-076` |
@@ -3685,7 +3685,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-08`, `Q-359`, `ATTACK-176`, `Q-293`, `Q-298`, `Q-363` |
 | Description | Value per unit, vault-token decimals, `MAX_CREDITED_LIQUIDITY`, the depeg shock, the CF formula and the pool-share check all assumed full range; a bounded range out of range holds one token and earns no fees. |
 | Impact | Mispriced bounded markets and mis-sized caps. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-08`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-08`) |
 | Resolution | A market is one (chain, AMM protocol, pool, exact position shape); for concentrated liquidity the shape is the exact `[tickLower, tickUpper]` range, an immutable of the market's VaultToken and LPOracle. Pricing is fair composition with the oracle ratio clamped to the range (see `FINDING-202`); caps and collateral factor are derived per market shape. Changed rules: `INV-005`, `INV-078`, `ATTACK-176`, `REQ-VAULT-002`, `REQ-VAULT-003`, `REQ-VAULT-166`, `REQ-VAULT-167`, `REQ-VAULT-173`, `REQ-VTOKEN-022`, `SPEC-UNIT-001`, `SPEC-UNIT-004`, `REQ-VTOKEN-036`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-279`, `TEST-266`, `PROP-083` |
@@ -3700,7 +3700,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-09`, `Q-363`, `ATTACK-177`, `Q-401` |
 | Description | Anyone, including the borrower, can move the pool spot before removal so the unwound mix is worth less than the recovery floor at oracle prices; `liquidatePermissionless` reverts `RecoveryBelowFloor`. |
 | Impact | Repeatable, cheap liquidation blocking in a drained pool. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-09`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-09`) |
 | Resolution | The fair-composition quote does not move with spot. A spot move changes only the unwound mix; per-leg oracle `minOut` holds, and the caller's shortfall top-up covers a gap, so the liquidation does not depend on the pool's spot. In-kind settlement no longer exists (`Q-401`): when the routes cannot settle, the call reverts `NoRouteAvailable` and a guardian freezes new borrowing on the market while the routes are repaired (`Q-399`). Changed rules: `INV-078`, `INV-039`, `ATTACK-177`, `SPEC-AMM-CORE-001`, `LIQ-082`, `REQ-SWAP-025`, `SPEC-LIQ-012`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-266`, `TEST-281` |
@@ -3715,7 +3715,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-10`, `Q-365`, `ATTACK-178`, `Q-291`, `Q-301`, `Q-305`, `Q-363` |
 | Description | Slipstream factories key pools by `tickSpacing`, its NFT `positions()` returns `tickSpacing` where v3 returns `fee`, `slot0` has 6 fields (the v3 ABI reads the wrong word for `unlocked`), fees can be dynamic, and unstaked positions pay an `unstakedFee` share. |
 | Impact | v3-shaped code reverts or checks the wrong value on Slipstream. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-10`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-10`) |
 | Resolution | The Aerodrome Slipstream integration implements the AMM integration interface with its own pool lookup by `tickSpacing`, `positions()` and 6-field `slot0` decoders, the pool fee read live for the TWAP tolerance, the three NPM and factory generations, and unstaked NFTs only (a gauge-staked NFT is refused). Changed rules: `ATTACK-178`, `REQ-VAULT-001`, `REQ-VAULT-002`, `REQ-VAULT-004`, `REQ-VAULT-174`, `REQ-VAULT-166`, `REQ-VAULT-097`, `REQ-AMM-SLIP-001`, `REQ-AMM-SLIP-002`, `REQ-AMM-SLIP-003`, `REQ-VAULT-173`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-265` |
@@ -3730,7 +3730,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-11`, `Q-359`, `ATTACK-179`, `Q-299`, `Q-363` |
 | Description | Market identity was `tokenOfPool(pool)`, so a pool could not carry two ranges or tiers and could never be relisted on a new CDP Spoke after offboarding. |
 | Impact | No path to a second range, a second tier or a relisting after a ledger or vault fix. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-11`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-11`) |
 | Resolution | A market is one (chain, AMM protocol, pool, exact position shape); for concentrated liquidity the shape is the exact `[tickLower, tickUpper]` range, an immutable of the market's VaultToken and LPOracle. `listCollateralMarket` creates the VaultToken and LPOracle per market, so one pool can carry several markets and be relisted on a new Spoke. Changed rules: `ATTACK-179`, `REQ-VTOKEN-021`, `REQ-COLL-003`, `REQ-VAULT-102`, `REQ-VTOKEN-020`, `REQ-VTOKEN-038`, `REQ-VTOKEN-028`. Fix pass (2026-11-10): vault tokens are keyed by `(spoke, marketKey)`, so a market can be relisted after wind-down; 2.8 no longer reserves one token per pool for life (`REQ-CONFIG-007`, `REQ-MREG-030`, `REQ-VTOKEN-020`; `Q-359`). |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-264`, `TEST-279` |
@@ -3745,7 +3745,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-12`, `Q-365`, `ATTACK-180`, `Q-346`, `Q-363` |
 | Description | Avana's pause states never block exits or liquidation, but an Aave Hub halt of a CDP Spoke or a pause of a vault-token reserve blocks all three, and halting a Spoke is the obvious containment step for one market. |
 | Impact | The exits guarantee fails in the case it is meant for. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-12`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-12`) |
 | Resolution | 4.3 states the Aave-side halt scope: a halt stops add, remove, draw, restore and share transfers, so supply, withdraw, borrow, repay and liquidation; deficit coverage, premium refresh and fee shares continue. Containment of a CDP Spoke uses the reserve freeze and `drawCap = 0`, never a halt or reserve pause while debt exists; the drift check reports a halted Spoke and the playbook gives a keeper path once Aave lifts it. Changed rules: `INV-081`, `ATTACK-180`, `REQ-SWAP-039`, `REQ-SWAP-119`, `REQ-SWAP-055`. Fix pass (2026-11-10): an Aave halt stops exits; this is an accepted risk with the Aave-halt playbook (`EMG-052`, `EMG-064`, `INV-081`, `ATTACK-180`; `Q-346`). Owner: Aave DAO (halt flags). Bound: positions open while the halt lasts, within each market's caps. |
 | Status | Accepted risk |
 | Verification | `TEST-127`, `TEST-268` |
@@ -3760,7 +3760,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-13`, `Q-362`, `ATTACK-181`, `Q-363` |
 | Description | 32 places assumed the liquidation-manager variant. The standard-Spoke alternative holds only if every path that moves vault tokens out of the Hub checks the recipient: `receiveShares`, fee shares, reinvestment, a second Spoke on the asset, zero-amount transfers. |
 | Impact | A third party seizes collateral or triggers a deficit report outside LPVaultSwap. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-13`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-13`) |
 | Resolution | Every CDP Spoke is a standard, unmodified Aave V4 Spoke. The listing AIP sets `receiveSharesEnabled = false` on every Avana collateral reserve, `liquidationFee = 0` (or paid to Avana's fee receiver) and no reinvestment controller, and the RiskModule drift check compares each setting on every new-activity call. Drift trips a breaker that stops new activity, never liquidation. The vault token's transfer rule allows only the AaveAdapter's mint and burn, proxy to home Hub on supply, home Hub to proxy on withdrawal, and home Hub to LPVaultSwap on seizure (`REQ-VTOKEN-025`), so any other liquidator's `liquidationCall` reverts on the token transfer. Changed rules: `INV-093`, `INV-011`, `ATTACK-181`, `REQ-ADAPTER-028`, `REQ-ADAPTER-029`, `REQ-ADAPTER-030`, `REQ-ADAPTER-036`, `REQ-RISK-078`, `REQ-VTOKEN-006`, `REQ-VTOKEN-025`, `REQ-CONFIG-076`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-268`, `PROP-078` |
@@ -3775,7 +3775,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-14`, `Q-362`, `Q-363`, `ATTACK-182`, `Q-333`, `Q-339`, `Q-365` |
 | Description | An ETH debt against an ETH/LST market flash-minted GHO, bought ETH, then sold ETH and the LST for GHO: two swaps through GHO depth. Routes existed only for stablecoins. |
 | Impact | Correlated and Volatile markets could not list or liquidate at size. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-14`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-14`) |
 | Resolution | LPVaultSwap flash-borrows the debt asset itself through `IFlashSource`, implemented with the Aave V3 Pool `flashLoan` (single asset, mode 0) on every chain. Before the loan it checks available liquidity and the premium against `maxFlashFeeBps`; in the callback it checks initiator, caller and the active context. The flash source is never the Hub of the CDP Spoke being liquidated, the implementation is replaceable through the timelock, and when flash liquidity is short the caller funds the debt. The GhoFlashMinter, the GSM as a primary route and the leg that buys the debt with GHO are removed. LPVaultSwap swaps the unwound tokens over the swap routes into the debt asset with a per-leg oracle `minOut`, repays the flash loan plus premium, and pays the leftover in the debt asset repaid, in this order: Avana's fee (20 % of the oracle gain, capped by the realized surplus), the keeper reward, then the borrower surplus (`Q-337`, 2.11 `SPEC-LIQ-009`, `SPEC-LIQ-022`). GHO is used only when the debt is GHO. Each token class has route requirements, and each market's debt cap follows the measured depth of its own routes. Changed rules: `INV-083`, `INV-070`, `ATTACK-182`, `REQ-SWAP-011`, `REQ-SWAP-017`, `SPEC-LIQ-004`, `SPEC-LIQ-005`, `SPEC-LIQ-006`, `REQ-SWAP-022`, `REQ-ROUTE-001`, `REQ-ROUTE-002`, `REQ-ROUTE-036`, `REQ-ROUTE-039`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-280`, `TEST-281` |
@@ -3790,7 +3790,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-15`, `Q-360`, `Q-365`, `ATTACK-183`, `Q-363` |
 | Description | An uncovered deficit stays counted in the Hub's assets; lenders who withdraw first leave at full value and the last carry the loss. |
 | Impact | Unequal loss among Lend Spoke suppliers. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-15`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-15`) |
 | Resolution | The First-Loss Reserve of each (Hub, debt asset) covers deficits first; a cross-Hub line's cap is at most the funding Hub's first-loss coverage; the uncovered remainder is an Aave-side Hub loss, stated with its rule in 4.3 and published per drawing Spoke. Changed rules: `INV-071`, `INV-094`, `ATTACK-183`, `REQ-HUB-021`, `REQ-HUB-103`, `REQ-FLR-001`, `REQ-RISK-082`, `SPEC-CAP-010`, `DEF-015`, `DEF-020`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-273` |
@@ -3805,7 +3805,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-16`, `Q-361`, `ATTACK-184`, `Q-363`, `Q-396` |
 | Description | Caps are charged at pledge; a whale or sybil wallets pledge debt-free, keep earning fees and block new borrowers. |
 | Impact | New borrowing refused while caps are full; no loss. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-16`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-16`) |
 | Resolution | Accepted risk (`Q-396`). Owner: Avana Labs and the risk service providers who set caps at listing. The idle-collateral mechanism of the earlier fix pass (`Idle` cap bucket, `releaseIdle`, `admitIdleCharge`, `idleUsdCap`, `idleBookingSeconds`, `IDLE_UTILIZATION_BPS`, `Q-384`) is removed. Bound: a full cap refuses only new pledges, never repay, exits, liquidation or rescue top-ups, which use the reserved slice (`topUpSliceUsd`, 10 % of the market cap); cap counters are keyed by Hub in one ledger, so the depositor cap covers every Spoke and market of the Hub and limits one wallet's share; caps are set at listing and raised through the timelock; monitoring alerts on cap use by accounts with no debt. The squatter earns pool fees on its own capital and no loss reaches lenders. Changed rules: `INV-092`, `ATTACK-184`, `REQ-ADAPTER-095`, `REQ-RISK-080`. |
 | Status | Accepted risk |
 | Verification | `TEST-272`, `PROP-077` |
@@ -3820,7 +3820,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-17`, `Q-359`, `ATTACK-185`, `Q-279`, `Q-363` |
 | Description | The instance table omitted the DebtOracle, flash source, swap routes, First-Loss Reserves per funding Hub and the Lend Spoke; `BOR-005` named one Hub. |
 | Impact | Unassigned components and an incomplete borrow-receiver refusal list. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-17`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-17`) |
 | Resolution | Every contract has a stated scope: per chain (ProxyManager, VaultTokenFactory, Timelock, AaveAdapter, LPVaultSwap, Collateralization, MarketRegistry, ParameterStore, RiskModule, PayoutEscrow (the payout escrow), Lock, DebtOracle, the `IFlashSource` implementation; the Lens as periphery), per AMM protocol per chain (LPVault, pricing library), per market (VaultToken, LPOracle), per wallet × Spoke × market (PositionProxy); one Lend Spoke per chain; one First-Loss Reserve per (Hub, debt asset). The SettlementBudget was later removed (`Q-397`). The receiver refusal list is every Avana Hub and Spoke on the chain. Changed rules: `ATTACK-185`, `REQ-CHAIN-002`, `REQ-ARCH-034`, `REQ-ARCH-155`, `REQ-HUB-021`, `REQ-PROXY-017`, `REQ-LENS-001`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-224`, `TEST-271` |
@@ -3835,7 +3835,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-18`, `Q-359`, `ATTACK-186`, `Q-279`, `Q-363` |
 | Description | Same mechanism as `FINDING-210`: with several Adapters, one could deploy another Hub's proxy address first. |
 | Impact | Denial of service for a wallet on one Spoke. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-18`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-18`) |
 | Resolution | One ProxyManager and one AaveAdapter per chain; `deployProxy` accepts only that Adapter; the salt binds (wallet, CDP Spoke, market). Changed rules: `INV-064`, `ATTACK-186`, `REQ-PROXY-050`, `REQ-PROXY-052`, `REQ-PROXY-055`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-271`, `PROP-076` |
@@ -3850,7 +3850,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-19`, `Q-361`, `ATTACK-187`, `Q-285`, `Q-363` |
 | Description | A bug in shared code reaches every Hub on a chain, but each pause was one call per Hub per chain; a frozen address kept acting on other Hubs. |
 | Impact | Slow or partial containment. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-19`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-19`) |
 | Resolution | Every cap, pause, breaker, route permission and emergency control lives in the per-chain contracts keyed by Hub (and by Spoke and market where it applies); each chain has its own Timelock, Safe and Guardian set; a borrow reads the pause of its home Hub and of the debt reserve's funding Hub. Changed rules: `INV-049`, `INV-094`, `ATTACK-187`, `REQ-CHAIN-001`, `REQ-CHAIN-002`, `REQ-ARCH-153`, `REQ-ARCH-154`, `REQ-ARCH-182`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-273` |
@@ -3865,7 +3865,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-20`, `Q-362`, `ATTACK-188`, `Q-363` |
 | Description | If the Aave DAO points the CDP Spoke's AaveOracle at another source, every liquidation of the market reverts `StalePrice` with no Avana-side remedy. |
 | Impact | Liquidation of one market stopped by an Aave-side configuration change. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-20`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-20`) |
 | Resolution | The AaveOracle source of each Avana reserve is one of the drift-checked Spoke settings: a mismatch trips the breaker, which stops new activity only; changing the source is a joint operation through `listCollateralMarket` that sets the market's LPOracle. Changed rules: `INV-093`, `ATTACK-188`, `REQ-ORACLE-101`, `REQ-ORACLE-091`, `REQ-HUB-105`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-268`, `PROP-078` |
@@ -3880,7 +3880,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-21`, `Q-359`, `ATTACK-189`, `Q-286`, `Q-363` |
 | Description | Slipstream pools failed the canonical-factory rule; WBTC/WETH failed the even-decimals rule; tokens without a Core Hub CF had no CF source; `deployCdpSpoke` could not create an Aave Spoke. |
 | Impact | No path to list Slipstream, odd-decimal pairs or tokens without a Core Hub CF. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-21`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-21`) |
 | Resolution | Listing rules are per AMM integration (factory, pool lookup, decoders). `deployCdpSpoke` creates the Aave Spoke and its AaveOracle entry and registers them under a Hub with an integration; `listCollateralMarket` creates the VaultToken and LPOracle, sets the exact shape and wires the reserve; `enableDebtReserve` sets the funding Hub and asset, checks caps and swap routes, and enables borrowing. Changed rules: `ATTACK-189`, `REQ-CONFIG-077`, `REQ-CONFIG-031`, `REQ-ARCH-207`, `REQ-ARCH-209`, `REQ-ARCH-027`, `REQ-ARCH-033`, `REQ-ARCH-038`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-265`, `TEST-283` |
@@ -3895,7 +3895,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-22`, `Q-363`, `ATTACK-190` |
 | Description | With no force-close and CF > 0 while debt exists, one dormant borrower keeps a market's feed, routes and keepers forever; a bug in an immutable LPVault or ledger had no path out except each user's withdraw. |
 | Impact | Unbounded wind-down cost per market. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-22`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-22`) |
 | Resolution | Market keys let the same pool be relisted on a new CDP Spoke, so a ledger or vault fix moves users through withdraw and re-pledge; withdraw never depends on proxy code; a dormant market stays served at its caps until its last account repays or is liquidated. Changed rules: `INV-045`, `ATTACK-190`, `MKT-057`, `REQ-CONFIG-080`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-271` |
@@ -3910,7 +3910,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-23`, `Q-363`, `ATTACK-191`, `Q-337`, `Q-359` |
 | Description | The spec paid the surplus after funding and Avana's fee to the caller; only in-kind settlement paid the borrower. |
 | Impact | Text conflict; no loss. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-23`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-23`) |
 | Resolution | LPVaultSwap swaps the unwound tokens over the swap routes into the debt asset with a per-leg oracle `minOut`, repays the flash loan plus premium, and pays the leftover in the debt asset repaid, in this order: Avana's fee (20 % of the oracle gain, capped by the realized surplus), the keeper reward, then the borrower surplus (`Q-337`, 2.11 `SPEC-LIQ-009`, `SPEC-LIQ-022`). GHO is used only when the debt is GHO. Changed rules: `INV-035`, `INV-036`, `ATTACK-191`, `SPEC-LIQ-010`, `SPEC-LIQ-022`, `REQ-SWAP-026`, `REQ-SWAP-027`, `REQ-SWAP-076`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-280` |
@@ -3925,7 +3925,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-24`, `Q-359`, `ATTACK-192`, `Q-292`, `Q-297`, `Q-363` |
 | Description | Records, pending settlement and indexes used `amount0`/`amount1` and `tokenId`; Curve, Balancer and v2 positions have n tokens and no tokenId, and `tokenId` alone collides across position managers and chains. |
 | Impact | Shared immutable code that cannot hold a later AMM protocol. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-24`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-24`) |
 | Resolution | Positions are identified by `positionKey` (bytes32) plus `integrationId`; every amount is an n-token array; pending settlement holds n tokens; indexing keys by (chain, integration, positionKey). Changed rules: `INV-002`, `INV-006`, `INV-007`, `ATTACK-192`, `REQ-VAULT-027`, `REQ-VAULT-152`, `REQ-COLL-006`, `REQ-VAULT-016`, `REQ-COLL-027`, `REQ-VAULT-106`, `REQ-VAULT-175`, `REQ-VAULT-077`, `REQ-COLL-028`, `REQ-VAULT-060`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-264`, `TEST-265` |
@@ -3940,7 +3940,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-25`, `Q-359`, `ATTACK-193`, `Q-289`, `Q-363` |
 | Description | Each LPVaultSwap needs three active keepers or its Hub halts borrowing; three Hubs on two chains needed six keeper sets. |
 | Impact | Operating cost; borrowing halted on a Hub with too few keepers. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-25`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-25`) |
 | Resolution | One LPVaultSwap per chain, so the keeper floor of 3 is per chain, funded before activation on each chain. Changed rules: `INV-048`, `ATTACK-193`, `REQ-CHAIN-002`, `REQ-ARCH-040`, `REQ-ARCH-069`, `REQ-ARCH-129`, `REQ-ACCESS-054`, `LIQ-063`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-098` |
@@ -3955,7 +3955,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-FLOW-26`, `Q-363`, `ATTACK-194`, `Q-347` |
 | Description | During a crash with `Paused(General)`, a borrower without outside funds could not deleverage, while keepers could liquidate the account at a bonus. |
 | Impact | Avoidable liquidation bonus paid by the borrower. |
-| Evidence | [`flow-walkthroughs.md`](../../audit/design-review/amm-neutral/flow-walkthroughs.md) (`AMMN-FLOW-26`) |
+| Evidence | `flow-walkthroughs.md` (`AMMN-FLOW-26`) |
 | Resolution | Repay with collateral, with its partial removal and re-credit, runs under `Paused(General)` when it only lowers debt and the health factor does not fall; it stays refused under `MintPathSuspect`. Changed rules: `INV-089`, `INV-067`, `ATTACK-194`, `REQ-SWAP-106`, `REQ-SWAP-116`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-280` |
@@ -3970,7 +3970,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-01`, `Q-362`, `Q-287`, `Q-294`, `Q-366` |
 | Description | Each debited record costs about 240k gas and Aave's dust rule seizes the last chunk whole. 125 records of $8 need 1.31M + 125 × 0.24M = 31.3M gas, above the 16.78M per-transaction cap. |
 | Impact | An account that is liquidatable but cannot be liquidated; its debt becomes bad debt. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-01`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-01`) |
 | Resolution | At most 16 records per account per market (`MAX_RECORDS_PER_ACCOUNT_MARKET`); a pledge at the cap reverts `TooManyRecords`, rescue top-ups count against it, and value is added through re-credit. Worst-case seizure gas is 1.31M + 16 × 0.29M = 5.95M, under 36% of the per-transaction cap. Changed rules: `INV-096`, `INV-015`, `REQ-VAULT-025`, `SPEC-BACK-016`, `REQ-AMM-CORE-015`, `REQ-COLL-005`, `REQ-COLL-025`, `REQ-VAULT-054`, `REQ-VAULT-128`, `REQ-VAULT-108`, `DEP-006`, `LIQ-022`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-269`, `PROP-082` |
@@ -3985,7 +3985,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-02`, `Q-362`, `Q-287`, `Q-381` |
 | Description | At 10 gwei a liquidation is unprofitable below about $3,400 of debt on Ethereum, so small debts are never liquidated at normal gas prices. |
 | Impact | Small accounts accumulate as bad debt. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-02`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-02`) |
 | Resolution | Resolved by decision: no minimum; Avana keeper pays gas (`Q-381`, superseding the minimum debt of `Q-311`, `Q-317`, `Q-362` and `Q-380`). Avana has no minimum debt on any chain; a borrower may borrow any amount. Avana's own approved keepers liquidate every account with HF < 1 and Avana pays the gas, with the permissionless fallback kept, so liquidation never depends on a keeper making a profit. The 16-record cap stays, because one liquidation of the largest account must fit the per-transaction gas limit: `G = 1.31M + 0.24M × 16 = 5.15M ≤ 16,777,216`. `SPEC-CHAIN-001` states only the per-chain gas model in gas units, used for the record cap and Avana's keeper gas budget. Changed rules: `INV-096`, `SPEC-CHAIN-001`, `REQ-RISK-083`, `LIQ-087`, `REQ-RISK-077`, `SPEC-CAP-009`, 2.11 `REQ-SWAP-032`, `REQ-SWAP-101`. |
 | Status | Resolved in design |
 | Verification | `TEST-278`, `TEST-269`, `PROP-082`, `MATH-ST-108` |
@@ -4000,7 +4000,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-03`, `Q-363`, `ATTACK-158`, `Q-302` |
 | Description | Remove-liquidity hooks and subscriber callbacks run inside removal and can revert or burn gas. |
 | Impact | Liquidation of a v4 market blocked. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-03`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-03`) |
 | Resolution | Uniswap v2, Curve StableSwap-NG, Balancer and Uniswap v4 are not listed at launch; each has a readiness section with its pricing model and the guards it must pass before listing: v2 reads `getReserves`, never `balanceOf`, with effective supply including pending `feeTo` liquidity; Curve and Balancer value at the minimum token price and check the pool's reentrancy lock before every read; Uniswap v4 requires a hook allowlist with no remove-liquidity hooks or return deltas; every AMM protocol has a per-block quote-change cap. The v4 intake refuses a position with a subscriber and the LPVault never subscribes; v4 swap routes use hook-free pools only. Changed rules: `ATTACK-158`, `REQ-AMM-V4-001`, `REQ-AMM-CORE-004`, `REQ-AMM-CORE-012`, `REQ-AMM-CORE-014`, `SPEC-AMM-CORE-001`, `REQ-AMM-CORE-018`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-283` |
@@ -4015,7 +4015,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-04`, `Q-367`, `ATTACK-042`, `Q-399` |
 | Description | A caller sends just enough gas that the gas-limited `try` recording a breaker report fails while the outer call succeeds, so breakers never latch. |
 | Impact | Breakers silently disabled. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-04`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-04`) |
 | Resolution | Resolved by removal (`Q-399`): no breaker counts reports written by liquidations any more, so no breaker depends on a gas-limited record. The `gasleft()` rule stays for the remaining gas-limited `try` calls: before each, the caller requires `gasleft() ≥ limit × 64/63 + POST_CALL_GAS` and reverts `InsufficientGas` otherwise; it covers the payout transfers whose failure moves the amount to the PayoutEscrow (`INV-061`) and the issuer probe. Changed rules: `ATTACK-042`, `REQ-SWAP-103`, `REQ-SWAP-104`, `REQ-MREG-026`, `SPEC-ORC-023`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-268` |
@@ -4030,7 +4030,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-05`, `Q-367`, `ATTACK-042` |
 | Description | Feed and pool reads had no explicit gas, so a starved poke could record an outage or skip a read. |
 | Impact | A gas-starved poke latches a wrong state. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-05`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-05`) |
 | Resolution | Every feed and pool read has an explicit gas stipend; `gasleft() ≥ FEED_CALL_GAS × 64/63 + REMAINING_POKE_GAS` is required before each, and `POKE_MIN_GAS_FLOOR` is at least the measured full-poke gas. Changed rules: `INV-031`, `ATTACK-042`, `SPEC-ORC-023`, `REQ-ORACLE-102`, `REQ-ORACLE-038`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-276` |
@@ -4045,7 +4045,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-06`, `Q-362`, `Q-365` |
 | Description | Same root cause as `FINDING-218` and `FINDING-263`. |
 | Impact | No liquidation funding on Base. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-06`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-06`) |
 | Resolution | LPVaultSwap flash-borrows the debt asset itself through `IFlashSource`, implemented with the Aave V3 Pool `flashLoan` (single asset, mode 0) on every chain. Before the loan it checks available liquidity and the premium against `maxFlashFeeBps`; in the callback it checks initiator, caller and the active context. The flash source is never the Hub of the CDP Spoke being liquidated, the implementation is replaceable through the timelock, and when flash liquidity is short the caller funds the debt. The GhoFlashMinter, the GSM as a primary route and the leg that buys the debt with GHO are removed. Changed rules: `INV-095`, `INV-040`, `REQ-FLASH-001`, `REQ-FLASH-002`, `REQ-FLASH-003`, `REQ-FLASH-005`, `REQ-FLASH-006`, `REQ-ROUTE-031`, `REQ-CHAIN-001`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-267`, `PROP-080` |
@@ -4060,7 +4060,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-07`, `Q-367`, `Q-344` |
 | Description | In a 20% crash the number of liquidations per block is bounded by route depth at 1%, flash headroom and gas per call. |
 | Impact | A capped market may not clear before prices move further. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-07`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-07`) |
 | Resolution | Each market's `marketUsdCap` is sized so the capped market liquidates within `liquidationPriceMaxAge` at the 95th-percentile gas share, using its route depth, the flash source's available liquidity and the 16-record bound; each liquidation is funded by its own caller, so no shared fund links markets (`Q-397`). Changed rules: `INV-096`, `INV-097`, `REQ-SWAP-002`, `SPEC-LIQ-021`, `REQ-SWAP-118`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-269`, `TEST-281` |
@@ -4075,7 +4075,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-08`, `Q-367`, `Q-342`, `Q-401` |
 | Description | A USDC pause stopped volatile markets whose route passed through USDC; a blocklist of LPVaultSwap stopped every market holding the token; USDT's `approve` needs `forceApprove`. |
 | Impact | Liquidation halts in markets that do not hold the paused token. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-08`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-08`) |
 | Resolution | A token's primary and alternate routes share no intermediate token, checked at `setRoute`; approvals use `forceApprove` and return to 0; tokens with an ERC-777 implementer are refused at listing; a route whose token is blocked fails over to the alternate route, which shares no intermediate token, and a payout transfer the token refuses goes to the PayoutEscrow, now Avana's payout escrow (automatic in-kind was removed, `Q-401`). Changed rules: `INV-021`, `INV-039`, `REQ-SWAP-023`, `REQ-SWAP-031`, `REQ-SWAP-064`, `REQ-ROUTE-003`, `REQ-ROUTE-005`, `EMG-063`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-281`, `TEST-283` |
@@ -4090,7 +4090,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-09`, `Q-362`, `Q-279` |
 | Description | Same root cause as `FINDING-217`. |
 | Impact | Every flow on a later Spoke reverts. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-09`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-09`) |
 | Resolution | The Lock has exactly two members, the AaveAdapter and LPVaultSwap. Every LPVault and Collateralization entry point that moves value is reachable only through them, with one AMM-neutral Collateralization ledger per chain and one immutable LPVault per AMM protocol per chain, so a new CDP Spoke or market never needs a Lock redeploy. Changed rules: `INV-091`, `INV-054`, `REQ-VAULT-150`, `REQ-ADAPTER-050`. Fix pass (2026-11-10): `INV-091`, `INV-054`, 2.16 and `ILock` say the same thing. Collateralization's value-moving functions accept only a Lock member while the Lock is held. An LPVault's position-moving functions accept only Collateralization while the Lock is held, so they run only inside a call tree a Lock member opened. `returnStray` is timelock-only and runs only while the Lock is free (`REQ-LOCK-028`, `REQ-VAULT-150`, `REQ-VAULT-165`; `Q-362`). |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-270`, `PROP-075` |
@@ -4105,7 +4105,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-10`, `Q-362`, `Q-343`, `Q-397` |
 | Description | Each draw read every bucket of the rolling window; the window was shared by every market. |
 | Impact | Before the fix: gas per draw and cross-market contention. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-10`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-10`) |
 | Resolution | Resolved by removal (`Q-397`): the SettlementBudget no longer exists, so no liquidation reads or writes a budget window. Earlier fix, superseded: per-market windows with a running sum per key. Changed rules: `INV-097`, `REQ-SWAP-029`, `REQ-SWAP-061`, `SPEC-SET-003`, `SPEC-SET-005`, `SPEC-SET-006`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-277`, `PROP-084` |
@@ -4120,7 +4120,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-11`, `Q-367`, `ATTACK-057`, `Q-345` |
 | Description | A 1-wei repay before a keeper's call changes the leftover debt so Aave's dust rule applies and the call's `minPayout` fails. |
 | Impact | Griefing of one liquidation attempt. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-11`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-11`) |
 | Resolution | Keepers set `debtToCover` at least 5% below the dust boundary or as a full close, with at least 1% tolerance on `minPayout`, and use private order flow on Ethereum. Changed rules: `ATTACK-057`, `REQ-SWAP-005`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-247` |
@@ -4135,7 +4135,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-12`, `Q-367` |
 | Description | An unbounded keeper list made the borrow-path count read grow with the list. |
 | Impact | Gas growth on borrow. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-12`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-12`) |
 | Resolution | `addKeeper` caps the list at `MAX_KEEPERS = 32`. Changed rules: `INV-048`, `REQ-SWAP-107`, `REQ-SWAP-034`, `REQ-RISK-071`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-098` |
@@ -4150,7 +4150,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-13`, `Q-367`, `Q-294`, `Q-297` |
 | Description | Each extra token adds a swap leg, a `minOut` and an oracle read. |
 | Impact | Higher liquidation gas for n-token markets. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-13`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-13`) |
 | Resolution | The unwind removes exactly the seized units and returns n token amounts with per-token minimums; an integration may exit to a single token with the oracle floor on that output; n is capped per market type; native ETH is accepted only while the Lock is held. Changed rules: `INV-083`, `REQ-AMM-CORE-015`, `REQ-AMM-CURVE-005`, `REQ-COLL-005`, `REQ-COLL-025`, `REQ-VAULT-025`, `REQ-VAULT-054`, `REQ-VAULT-128`, `REQ-VAULT-175`, `REQ-VAULT-077`, `REQ-COLL-028`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-281`, `TEST-283` |
@@ -4165,7 +4165,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-14`, `Q-365`, `ATTACK-178`, `Q-301` |
 | Description | A gauge-staked Slipstream NFT has different fee and custody behaviour, and staking later adds a gauge liveness dependency. |
 | Impact | Wrong fee accounting or a liveness dependency on the gauge. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-14`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-14`) |
 | Resolution | Slipstream intake accepts unstaked NFTs only and refuses a gauge-staked NFT; the LPVault never stakes. Changed rules: `ATTACK-178`, `REQ-AMM-SLIP-009`, `REQ-VAULT-174`, `REQ-VAULT-097`, `REQ-AMM-SLIP-001`, `REQ-AMM-SLIP-002`, `REQ-AMM-SLIP-003`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-265` |
@@ -4180,7 +4180,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-15`, `Q-367`, `Q-303` |
 | Description | `BackingRecord` with its list links used 10 slots where 5 suffice; `OracleLeg`, `GlobalParams`, `PledgeCounters` and `BreakerWindow` also pack smaller. |
 | Impact | About 110k gas per pledge and 5k per debited record. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-15`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-15`) |
 | Resolution | `BackingRecord` packs into 5 slots (`positionKey`-indexed, with list links), and the other hot structs pack as listed in the gas review; the storage layout is checked in CI. Rules: `SPEC-BACK-016`, `REQ-VAULT-015`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-269` |
@@ -4195,7 +4195,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-GAS-16`, `Q-367` |
 | Description | Pool, tokens, vault token, LPOracle, reserve IDs, decimals and range are fixed per market but were re-read from storage several times per liquidation. |
 | Impact | Avoidable cold reads per liquidation. |
-| Evidence | [`gas-dos.md`](../../audit/design-review/amm-neutral/gas-dos.md) (`AMMN-GAS-16`) |
+| Evidence | `gas-dos.md` (`AMMN-GAS-16`) |
 | Resolution | Per-market values are immutables of the market's VaultToken and LPOracle; LPVaultSwap reads the market once and passes a context whose hash each callee checks against the registry's stored commitment. Rules: `REQ-CONFIG-005`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-269` |
@@ -4210,7 +4210,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-INT-01`, `Q-364`, `Q-366` |
 | Description | On Ethereum USDC/USD and USDS/USD have 82,800 s heartbeats and USDT/USD and GHO/USD 86,400 s; on Base every stable feed is 86,400 s. At block 26,383,651 the USDT/USD round was 67,704 s old. |
 | Impact | The launch market cannot be listed; with the old 4,200 s age limit, borrowing would be stopped most of the day. |
-| Evidence | [`integration-assumptions.md`](../../audit/design-review/amm-neutral/integration-assumptions.md) (`AMMN-INT-01`) |
+| Evidence | `integration-assumptions.md` (`AMMN-INT-01`) |
 | Resolution | A feed is fresh while its age is at most its own heartbeat plus a margin (Chainlink stablecoin feeds: 82,800–86,400 s); the fixed 3,600 s rule is removed. Borrow and withdraw also require an independent second source (a deep-pool TWAP or a second oracle network) to agree within the deviation band. Liquidation keeps its stress rules: stale collateral counts as 0 from Expired and stale debt uses its stress price. Changed rules: `INV-023`, `INV-030`, `INV-031`, `INV-055`, `INV-056`, `SPEC-ORC-019`, `REQ-ORACLE-090`, `REQ-ADAPTER-016`, `REQ-CONFIG-021`. Fix pass (2026-11-10): each token may have a pre-approved standby second source that either guardian switches to at once; switching back needs the timelock, and `EMG-103` keeps the market Live as `REQ-ORACLE-100` requires (`SPEC-ORC-020`, `REQ-ORACLE-100`, `REQ-PSTORE-028`, `EMG-103`; `Q-385`). |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-276`, `TEST-117` |
@@ -4225,7 +4225,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-INT-02`, `Q-365`, `ATTACK-170`, `Q-341` |
 | Description | GSM USDC `0xFeeb…9535` and GSM USDT `0x535b…6B7B` return `getIsSeized() = true`, an exposure cap of 0 and no liquidity. |
 | Impact | Every route through those GSMs reverts. |
-| Evidence | [`integration-assumptions.md`](../../audit/design-review/amm-neutral/integration-assumptions.md) (`AMMN-INT-02`) |
+| Evidence | `integration-assumptions.md` (`AMMN-INT-02`) |
 | Resolution | The GSM is no longer a primary route or a flash dependency. 4.3 states only verified facts about the GSMs and removes the seized addresses; any GSM used as a swap route must report not seized, not frozen and an exposure cap above 0 at route approval and in the route health check. Changed rules: `ATTACK-170`, `REQ-ROUTE-011`, `REQ-ROUTE-002`, `REQ-ROUTE-005`, `REQ-ROUTE-030`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-281` |
@@ -4240,7 +4240,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-INT-03`, `Q-362`, `Q-365`, `Q-341` |
 | Description | The USDC GSM held about $0.03 available to buy, so it could not be the primary USDC buy route. |
 | Impact | Every USDC-debt liquidation would use the backup route. |
-| Evidence | [`integration-assumptions.md`](../../audit/design-review/amm-neutral/integration-assumptions.md) (`AMMN-INT-03`) |
+| Evidence | `integration-assumptions.md` (`AMMN-INT-03`) |
 | Resolution | The leg that buys the debt with GHO is removed: LPVaultSwap flash-borrows the debt asset itself through `IFlashSource`, so no buy route exists. Changed rules: `INV-070`, `INV-095`, `REQ-ROUTE-031`, `REQ-ROUTE-002`, `REQ-ROUTE-005`, `REQ-ROUTE-011`, `REQ-ROUTE-030`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-267`, `TEST-280` |
@@ -4255,7 +4255,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-INT-04`, `Q-362`, `ATTACK-181`, `Q-281`, `Q-300`, `Q-365` |
 | Description | The only liquidation-manager variant in `aave/aave-v4` reverts the 5-argument `liquidationCall`, exposes a 4-argument one, allows one collateral reserve per Spoke and one debt reserve per user, and has no dust rule or target-HF sizing. |
 | Impact | Avana's required Spoke existed in no Aave source. |
-| Evidence | [`integration-assumptions.md`](../../audit/design-review/amm-neutral/integration-assumptions.md) (`AMMN-INT-04`) |
+| Evidence | `integration-assumptions.md` (`AMMN-INT-04`) |
 | Resolution | Every CDP Spoke is a standard, unmodified Aave V4 Spoke. The listing AIP sets `receiveSharesEnabled = false` on every Avana collateral reserve, `liquidationFee = 0` (or paid to Avana's fee receiver) and no reinvestment controller, and the RiskModule drift check compares each setting on every new-activity call. Drift trips a breaker that stops new activity, never liquidation. The vault token's transfer rule allows only the AaveAdapter's mint and burn, proxy to home Hub on supply, home Hub to proxy on withdrawal, and home Hub to LPVaultSwap on seizure (`REQ-VTOKEN-025`), so any other liquidator's `liquidationCall` reverts on the token transfer. Changed rules: `INV-093`, `ATTACK-181`, `REQ-CONFIG-074`, `REQ-VTOKEN-006`, `REQ-VTOKEN-008`, `REQ-VTOKEN-009`, `REQ-VTOKEN-040`, `REQ-VTOKEN-041`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-268`, `PROP-078` |
@@ -4270,7 +4270,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-INT-05`, `Q-362`, `Q-365`, `ATTACK-170`, `Q-333`, `Q-334`, `Q-336` |
 | Description | The Base address book lists only the GHO token, its CCIP pool and stewards. |
 | Impact | Step 1 of the liquidation flow cannot run on Base. |
-| Evidence | [`integration-assumptions.md`](../../audit/design-review/amm-neutral/integration-assumptions.md) (`AMMN-INT-05`) |
+| Evidence | `integration-assumptions.md` (`AMMN-INT-05`) |
 | Resolution | LPVaultSwap flash-borrows the debt asset itself through `IFlashSource`, implemented with the Aave V3 Pool `flashLoan` (single asset, mode 0) on every chain. Before the loan it checks available liquidity and the premium against `maxFlashFeeBps`; in the callback it checks initiator, caller and the active context. The flash source is never the Hub of the CDP Spoke being liquidated, the implementation is replaceable through the timelock, and when flash liquidity is short the caller funds the debt. The GhoFlashMinter, the GSM as a primary route and the leg that buys the debt with GHO are removed. Changed rules: `INV-040`, `INV-095`, `ATTACK-170`, `REQ-FLASH-001`, `REQ-FLASH-002`, `REQ-FLASH-005`, `REQ-ROUTE-031`, `REQ-SWAP-011`, `REQ-SWAP-017`, `SPEC-LIQ-004`, `SPEC-LIQ-005`, `SPEC-LIQ-006`, `REQ-SWAP-012`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-267`, `PROP-080` |
@@ -4285,7 +4285,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-INT-06`, `Q-362`, `Q-365`, `ATTACK-171` |
 | Description | Base has the Chainlink L2 Sequencer Uptime feed `0xBCF85224fc0756B9Fa45aA7892530B47e10b6433`; the spec read none. |
 | Impact | Borrows and liquidations on stale rounds after an outage. |
-| Evidence | [`integration-assumptions.md`](../../audit/design-review/amm-neutral/integration-assumptions.md) (`AMMN-INT-06`) |
+| Evidence | `integration-assumptions.md` (`AMMN-INT-06`) |
 | Resolution | Each L2 chain has a sequencer-uptime feed (Base `0xBCF85224fc0756B9Fa45aA7892530B47e10b6433`) and a grace period after restart. While the sequencer is down or inside the grace period no new risk opens; liquidation keeps its stress rules. Changed rules: `INV-098`, `ATTACK-171`, `REQ-CHAIN-003`, `REQ-ORACLE-099`, `LIQ-086`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-275` |
@@ -4300,7 +4300,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-INT-07`, `Q-362`, `ATTACK-155`, `Q-281`, `Q-365` |
 | Description | `receiveShares = true` credits Spoke supply shares with no ERC-20 transfer and fee shares move by `payFeeShares`; the restriction holds only while `receiveSharesEnabled == false` and `liquidationFee == 0`. |
 | Impact | One DAO configuration change lets any liquidator seize shares without a ledger debit. |
-| Evidence | [`integration-assumptions.md`](../../audit/design-review/amm-neutral/integration-assumptions.md) (`AMMN-INT-07`) |
+| Evidence | `integration-assumptions.md` (`AMMN-INT-07`) |
 | Resolution | Every CDP Spoke is a standard, unmodified Aave V4 Spoke. The listing AIP sets `receiveSharesEnabled = false` on every Avana collateral reserve, `liquidationFee = 0` (or paid to Avana's fee receiver) and no reinvestment controller, and the RiskModule drift check compares each setting on every new-activity call. Drift trips a breaker that stops new activity, never liquidation. The vault token's transfer rule allows only the AaveAdapter's mint and burn, proxy to home Hub on supply, home Hub to proxy on withdrawal, and home Hub to LPVaultSwap on seizure (`REQ-VTOKEN-025`), so any other liquidator's `liquidationCall` reverts on the token transfer. Changed rules: `INV-093`, `INV-011`, `INV-014`, `ATTACK-155`, `REQ-RISK-078`, `REQ-ADAPTER-029`, `REQ-CONFIG-076`. Fix pass (2026-11-10): the exposure lasts from the Aave change until the drift check trips `CONFIG_DRIFT`, which runs on every Avana entry point and on a per-block keeper poke; a seizure outside LPVaultSwap in that window is an accepted residual risk bounded by the Spoke draw caps (`INV-093`, `REQ-RISK-078`, `ATTACK-155`, `EXT-001`; `Q-382`). |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-268`, `PROP-078` |
@@ -4315,7 +4315,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-INT-08`, `Q-365`, `ATTACK-180`, `Q-290` |
 | Description | `reportDeficit`, `eliminateDeficit`, `payFeeShares` and `refreshPremium` check only `active`, so they continue under a halt. |
 | Impact | None to safety. |
-| Evidence | [`integration-assumptions.md`](../../audit/design-review/amm-neutral/integration-assumptions.md) (`AMMN-INT-08`) |
+| Evidence | `integration-assumptions.md` (`AMMN-INT-08`) |
 | Resolution | EXT-001 states that a halt stops add, remove, draw, restore and share transfers (supply, withdraw, borrow, repay and liquidation) while deficit coverage, premium refresh and fee shares continue. Changed rules: `ATTACK-180`, `REQ-ARCH-118`, `REQ-ARCH-120`, `REQ-HUB-021`, `REQ-HUB-063`, `REQ-FLR-022`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-127` |
@@ -4330,7 +4330,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-ARCH-01`, `Q-362`, `Q-279`, `Q-291`, `Q-296` |
 | Description | Adding a vault and ledger with each Spoke meant redeploying the Lock and every contract that stores it, or making membership governance-extendable. |
 | Impact | Either a redeploy per Spoke or a mutable Lock. |
-| Evidence | [`architecture-options.md`](../../audit/design-review/amm-neutral/architecture-options.md) (`AMMN-ARCH-01`) |
+| Evidence | `architecture-options.md` (`AMMN-ARCH-01`) |
 | Resolution | The Lock has exactly two members, the AaveAdapter and LPVaultSwap. Every LPVault and Collateralization entry point that moves value is reachable only through them, with one AMM-neutral Collateralization ledger per chain and one immutable LPVault per AMM protocol per chain, so a new CDP Spoke or market never needs a Lock redeploy. Changed rules: `INV-091`, `INV-054`, `REQ-VAULT-150`, `REQ-COLL-002`, `REQ-COLL-029`, `REQ-VAULT-075`, `REQ-COLL-032`, `REQ-VTOKEN-044`, `REQ-VAULT-001`, `REQ-VAULT-002`, `REQ-VAULT-004`, `REQ-VAULT-174`. Fix pass (2026-11-10): `INV-091`, `INV-054`, 2.16 and `ILock` say the same thing. Collateralization's value-moving functions accept only a Lock member while the Lock is held. An LPVault's position-moving functions accept only Collateralization while the Lock is held, so they run only inside a call tree a Lock member opened. `returnStray` is timelock-only and runs only while the Lock is free (`REQ-LOCK-028`, `REQ-VAULT-150`, `REQ-VAULT-165`; `Q-362`). |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-270`, `PROP-075` |
@@ -4345,7 +4345,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-ARCH-02`, `Q-359`, `Q-280` |
 | Description | One Spoke per market raised a listing from 4 DAO calls to about 12 plus 3 deployments and split the credit line into M caps, while markets of one AMM protocol share code anyway. The topology simulation measured 16 governance actions per market for several markets per Spoke against 38–56. |
 | Impact | Governance cost with no isolation gain. |
-| Evidence | [`architecture-options.md`](../../audit/design-review/amm-neutral/architecture-options.md) (`AMMN-ARCH-02`) |
+| Evidence | `architecture-options.md` (`AMMN-ARCH-02`) |
 | Resolution | One CDP Spoke per (chain, Hub, AMM protocol, risk tier) lists several markets, each one collateral reserve. Each wallet gets one PositionProxy per (CDP Spoke, market), so every market has its own Aave account and health factor and nothing is cross-collateralized. Changed rules: `INV-064`, `INV-075`, `REQ-ARCH-004`, `REQ-ARCH-207`, `REQ-ARCH-208`, `REQ-ARCH-015`, `REQ-ARCH-156`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-271`, `PROP-076` |
@@ -4360,7 +4360,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-ARCH-03`, `Q-359`, `Q-279`, `Q-348`, `Q-362` |
 | Description | Every per-Hub instance runs the same implementation under the same timelock and Guardian, so per-Hub copies triple deployments without isolating a code bug or a role compromise. |
 | Impact | Deployment and upgrade cost; implied isolation that does not exist. |
-| Evidence | [`architecture-options.md`](../../audit/design-review/amm-neutral/architecture-options.md) (`AMMN-ARCH-03`) |
+| Evidence | `architecture-options.md` (`AMMN-ARCH-03`) |
 | Resolution | One AaveAdapter and one LPVaultSwap per chain, scoped by Hub inside; every cap, pause and breaker is keyed by Hub. Changed rules: `INV-018`, `INV-092`, `REQ-SWAP-032`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-272` |
@@ -4375,7 +4375,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-ARCH-04`, `Q-362`, `Q-282`, `Q-334`, `Q-335`, `Q-336`, `Q-348`, `Q-365`, `Q-366` |
 | Description | Liquidation stops whenever the flash reserve is paused, flash-disabled, drained, repriced or deprecated, which happens most under stress. |
 | Impact | Liquidation halt on a chain. |
-| Evidence | [`architecture-options.md`](../../audit/design-review/amm-neutral/architecture-options.md) (`AMMN-ARCH-04`) |
+| Evidence | `architecture-options.md` (`AMMN-ARCH-04`) |
 | Resolution | LPVaultSwap flash-borrows the debt asset itself through `IFlashSource`, implemented with the Aave V3 Pool `flashLoan` (single asset, mode 0) on every chain. Before the loan it checks available liquidity and the premium against `maxFlashFeeBps`; in the callback it checks initiator, caller and the active context. The flash source is never the Hub of the CDP Spoke being liquidated, the implementation is replaceable through the timelock, and when flash liquidity is short the caller funds the debt. The GhoFlashMinter, the GSM as a primary route and the leg that buys the debt with GHO are removed. Changed rules: `INV-095`, `INV-040`, `REQ-FLASH-001`, `REQ-FLASH-002`, `REQ-FLASH-005`, `REQ-FLASH-006`, `REQ-FLASH-008`, `REQ-ARCH-008`, `REQ-ARCH-013`, `REQ-ARCH-157`, `REQ-ARCH-028`, `REQ-ARCH-038`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-267`, `PROP-080` |
@@ -4390,7 +4390,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-ARCH-05`, `Q-365`, `Q-287`, `Q-362` |
 | Description | No sequencer rule, unmeasured Base flash and conversion limits, and Aave V4 on Base unverified. |
 | Impact | A Base launch without its chain-specific controls. |
-| Evidence | [`architecture-options.md`](../../audit/design-review/amm-neutral/architecture-options.md) (`AMMN-ARCH-05`) |
+| Evidence | `architecture-options.md` (`AMMN-ARCH-05`) |
 | Resolution | Ethereum and Base launch together; Aave V4 is live on Base. Each chain has its own Timelock, Safe and Guardian set and its own parameters (block time, sequencer, feeds, gas model); no chain has a minimum debt (`Q-381`). Each L2 chain has a sequencer-uptime feed (Base `0xBCF85224fc0756B9Fa45aA7892530B47e10b6433`) and a grace period after restart. While the sequencer is down or inside the grace period no new risk opens; liquidation keeps its stress rules. Changed rules: `INV-098`, `INV-096`, `REQ-CHAIN-001`, `REQ-CHAIN-002`, `REQ-CHAIN-003`, `REQ-CHAIN-004`, `SPEC-CHAIN-001`, `REQ-ORACLE-099`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-275`, `TEST-265`, `TEST-278` |
@@ -4405,7 +4405,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-ARCH-06`, `Q-359`, `Q-291`, `Q-292`, `Q-297` |
 | Description | Markets were keyed by pool address and positions by NFT; Uniswap v4 and Balancer have no pool address, Curve has no closed-form composition, and three of six AMM protocols compound fees. |
 | Impact | A later AMM protocol would need a second factory and ledger. |
-| Evidence | [`architecture-options.md`](../../audit/design-review/amm-neutral/architecture-options.md) (`AMMN-ARCH-06`) |
+| Evidence | `architecture-options.md` (`AMMN-ARCH-06`) |
 | Resolution | The AMM integration interface identifies positions by `positionKey` plus `integrationId`, uses n-token arrays and has five functions (custody, composition at an oracle price vector, unwind of exactly x units with per-token minimums, fees, risk metadata), with hooks for pools keyed by address or id, rolled-in fees, native ETH, rate tokens and AMM protocols with no closed-form pricing. Changed rules: `INV-002`, `INV-006`, `REQ-VAULT-001`, `REQ-VAULT-002`, `REQ-VAULT-004`, `REQ-VAULT-174`, `REQ-VAULT-166`, `REQ-VAULT-152`, `REQ-COLL-006`, `REQ-VAULT-016`, `REQ-COLL-027`, `REQ-VAULT-027`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-264`, `TEST-265`, `TEST-283` |
@@ -4420,7 +4420,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-ARCH-07`, `Q-362`, `ATTACK-181`, `Q-281` |
 | Description | `Q-222` depended on a Spoke no Aave commit contains; the variant that exists forces one market per Spoke and one debt per account. |
 | Impact | Launch blocked on new Aave code. |
-| Evidence | [`architecture-options.md`](../../audit/design-review/amm-neutral/architecture-options.md) (`AMMN-ARCH-07`) |
+| Evidence | `architecture-options.md` (`AMMN-ARCH-07`) |
 | Resolution | Every CDP Spoke is a standard, unmodified Aave V4 Spoke. The listing AIP sets `receiveSharesEnabled = false` on every Avana collateral reserve, `liquidationFee = 0` (or paid to Avana's fee receiver) and no reinvestment controller, and the RiskModule drift check compares each setting on every new-activity call. Drift trips a breaker that stops new activity, never liquidation. The vault token's transfer rule allows only the AaveAdapter's mint and burn, proxy to home Hub on supply, home Hub to proxy on withdrawal, and home Hub to LPVaultSwap on seizure (`REQ-VTOKEN-025`), so any other liquidator's `liquidationCall` reverts on the token transfer. Changed rules: `INV-093`, `ATTACK-181`, `REQ-ADAPTER-028`, `REQ-ADAPTER-029`, `REQ-ADAPTER-030`, `REQ-ADAPTER-036`, `REQ-RISK-078`, `REQ-VTOKEN-025`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-268`, `PROP-078` |
@@ -4435,7 +4435,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-ARCH-08`, `Q-359`, `Q-288` |
 | Description | No core contract calls the Lens and nothing it returns authorizes an action, yet its interface is 888 lines. |
 | Impact | Audit scope with no security return. |
-| Evidence | [`architecture-options.md`](../../audit/design-review/amm-neutral/architecture-options.md) (`AMMN-ARCH-08`) |
+| Evidence | `architecture-options.md` (`AMMN-ARCH-08`) |
 | Resolution | The Lens is periphery, outside the audited core, one per chain; LPVaultSwap re-checks everything a preview reports. Changed rules: `INV-052`, `REQ-LENS-001`, `REQ-ARCH-155`, `REQ-ARCH-206`, `REQ-ARCH-045`, `REQ-ACCESS-066`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-247` |
@@ -4450,7 +4450,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-ARCH-09`, `Q-359` |
 | Description | The proposal pinned each proxy; 2.5 made the ProxyManager the beacon of every proxy. |
 | Impact | Conflicting custody trust statements. |
-| Evidence | [`architecture-options.md`](../../audit/design-review/amm-neutral/architecture-options.md) (`AMMN-ARCH-09`) |
+| Evidence | `architecture-options.md` (`AMMN-ARCH-09`) |
 | Resolution | A PositionProxy is a logic-free immutable account created by CREATE2 on first use, bound at creation to one wallet, one CDP Spoke and one market. It executes only calls from the chain's AaveAdapter, which holds all logic and upgrades through the timelock. There is no beacon, no proxy upgrade and no migration, so exits never depend on proxy code. Changed rules: `INV-065`, `REQ-PROXY-050`, `REQ-PROXY-101`, `REQ-ARCH-177`, `REQ-ARCH-152`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-271` |
@@ -4465,7 +4465,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-ARCH-10`, `Q-362` |
 | Description | Under `Q-222` the field checks added code and gas but no protection; under a standard Spoke they are the main control. |
 | Impact | None. |
-| Evidence | [`architecture-options.md`](../../audit/design-review/amm-neutral/architecture-options.md) (`AMMN-ARCH-10`) |
+| Evidence | `architecture-options.md` (`AMMN-ARCH-10`) |
 | Resolution | With the standard Spoke the drift checks are the primary control and stay: `receiveSharesEnabled`, `liquidationFee`, the reinvestment controller, borrowability of the vault-token reserve and the AaveOracle source. Changed rules: `INV-093`, `INV-029`, `REQ-ADAPTER-028`, `REQ-ADAPTER-029`, `REQ-ADAPTER-030`, `REQ-ADAPTER-036`, `REQ-RISK-078`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-268`, `PROP-078` |
@@ -4480,7 +4480,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-SM-01`, `Q-360`, `Q-283`, `Q-366` |
 | Description | Quint property TOPO-05 failed: draw caps on a funding Hub's asset could sum above its credit line, because each home Hub checked only its own Spokes. |
 | Impact | Funding-Hub suppliers exposed beyond the approved line. |
-| Evidence | [`state-machine.md`](../../audit/design-review/amm-neutral/state-machine.md) (`AMMN-SM-01`) |
+| Evidence | `state-machine.md` (`AMMN-SM-01`) |
 | Resolution | Cross-Hub credit lines are fully specified and off at launch. The funding Hub owns the cap; one registry sums the lines per (funding Hub, asset); a pause of the funding Hub stops the line; the cap is at most that Hub's first-loss coverage. `INV-057` is a gate on new draws, and the cap-sum rule is a configuration invariant on caps. Lowering a line or cross-Hub cap reverts until the caps under it are lowered first. Changed rules: `INV-094`, `INV-057`, `REQ-RISK-082`, `SPEC-CAP-010`, `REQ-CONFIG-081`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-273`, `PROP-079` |
@@ -4495,7 +4495,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-SM-02`, `Q-360` |
 | Description | TOPO-04 failed in every design: a cap cut or accrued interest leaves a Spoke above its cap. |
 | Impact | An invariant that normal operation breaks. |
-| Evidence | [`state-machine.md`](../../audit/design-review/amm-neutral/state-machine.md) (`AMMN-SM-02`) |
+| Evidence | `state-machine.md` (`AMMN-SM-02`) |
 | Resolution | `INV-057`: no draw completes that leaves `drawn + premium + deficit` above the Spoke's `drawCap`; a cap cut or interest can leave a Spoke above its cap, and then only repayment, liquidation and coverage lower it. The cap-sum rule stays a configuration invariant on caps. Changed rules: `INV-057`, `MKT-057`, `REQ-ADAPTER-023`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-274`, `PROP-081` |
@@ -4510,7 +4510,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-SM-03`, `Q-359` |
 | Description | TOPO-07, 08 and 09 failed: once an Adapter drops an old proxy version, a paused borrower cannot repay or withdraw, and caps or freezes can strand migration. |
 | Impact | Breaks "exits never blocked". |
-| Evidence | [`state-machine.md`](../../audit/design-review/amm-neutral/state-machine.md) (`AMMN-SM-03`) |
+| Evidence | `state-machine.md` (`AMMN-SM-03`) |
 | Resolution | A PositionProxy is a logic-free immutable account created by CREATE2 on first use, bound at creation to one wallet, one CDP Spoke and one market. It executes only calls from the chain's AaveAdapter, which holds all logic and upgrades through the timelock. There is no beacon, no proxy upgrade and no migration, so exits never depend on proxy code. Changed rules: `INV-063`, `INV-064`, `INV-065`, `INV-043`, `INV-045`, `REQ-PROXY-050`, `REQ-ARCH-177`, `REQ-ARCH-152`, `REQ-ADAPTER-099`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-271`, `PROP-076` |
@@ -4525,7 +4525,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-SM-04`, `Q-362`, `Q-281` |
 | Description | TOPO-02b and TOPO-03 failed: a third party took Spoke supply shares with no token transfer, so per-proxy supply no longer equalled credited units, and a non-LPVaultSwap caller triggered a deficit report. |
 | Impact | Stuck units and a broken settlement path. |
-| Evidence | [`state-machine.md`](../../audit/design-review/amm-neutral/state-machine.md) (`AMMN-SM-04`) |
+| Evidence | `state-machine.md` (`AMMN-SM-04`) |
 | Resolution | Every CDP Spoke is a standard, unmodified Aave V4 Spoke. The listing AIP sets `receiveSharesEnabled = false` on every Avana collateral reserve, `liquidationFee = 0` (or paid to Avana's fee receiver) and no reinvestment controller, and the RiskModule drift check compares each setting on every new-activity call. Drift trips a breaker that stops new activity, never liquidation. The vault token's transfer rule allows only the AaveAdapter's mint and burn, proxy to home Hub on supply, home Hub to proxy on withdrawal, and home Hub to LPVaultSwap on seizure (`REQ-VTOKEN-025`), so any other liquidator's `liquidationCall` reverts on the token transfer. Changed rules: `INV-093`, `INV-008`, `INV-041`, `REQ-ADAPTER-036`, `REQ-VTOKEN-025`, `REQ-RISK-078`, `REQ-ADAPTER-029`, `REQ-CONFIG-076`. Fix pass (2026-11-10): the exposure lasts from the Aave change until the drift check trips `CONFIG_DRIFT`, which runs on every Avana entry point and on a per-block keeper poke; a seizure outside LPVaultSwap in that window is an accepted residual risk bounded by the Spoke draw caps (`INV-093`, `REQ-RISK-078`, `ATTACK-155`, `EXT-001`; `Q-382`). |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-268`, `PROP-078` |
@@ -4540,7 +4540,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-SM-05`, `Q-361` |
 | Description | TOPO-10 failed by design: a USDC price shock moves every account holding USDC, on every Spoke. TOPO-X2 failed: the Stable Hub's `tokenUsdCap[USDC]` did not count a foreign Spoke drawing from it. |
 | Impact | An isolation claim the design cannot meet, and uncounted token exposure. |
-| Evidence | [`state-machine.md`](../../audit/design-review/amm-neutral/state-machine.md) (`AMMN-SM-05`) |
+| Evidence | `state-machine.md` (`AMMN-SM-05`) |
 | Resolution | `INV-075` isolates markets from pool-level failures only (feeds, oracle state, breakers, pool depth, routes); token prices are shared by design. Token exposure is counted per funding Hub over every Spoke that draws from it. Changed rules: `INV-075`, `INV-092`, `REQ-COLL-026`, `REQ-RISK-079`, `SPEC-CAP-002`, `SPEC-CAP-007`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-272`, `PROP-077` |
@@ -4555,7 +4555,7 @@ Findings of the AMM-neutral design review of 2026-11-10 (run `AMMN-R1`), against
 | Reference | `AMMN-SM-06`, `Q-361`, `Q-283`, `Q-360` |
 | Description | TOPO-X1 failed: under a Stable Hub pause, a Volatile Spoke still borrowed Stable Hub USDC. |
 | Impact | A pause that leaves new draws open. |
-| Evidence | [`state-machine.md`](../../audit/design-review/amm-neutral/state-machine.md) (`AMMN-SM-06`) |
+| Evidence | `state-machine.md` (`AMMN-SM-06`) |
 | Resolution | A borrow reads the pause state of its home Hub and of the debt reserve's funding Hub; repay, liquidation and exits read neither (`INV-081`). Changed rules: `INV-094`, `INV-024`, `REQ-HUB-103`, `BOR-019`, `REQ-CONFIG-081`, `LIQ-088`. |
 | Status | Resolved in spec — re-verification pending |
 | Verification | `TEST-273`, `PROP-079` |
@@ -4726,7 +4726,7 @@ Three spec-stage counterexamples had no finding. They are recorded here with the
 | Reference | `ATTACK-195`, `INV-095`, `REQ-FLASH-001`, `REQ-FLASH-005`, `REQ-FLASH-006`, Q-386, Q-388 |
 | Description | The flash path compared the source's lender address with the liquidated reserve's Hub. A replacement source that is a flash Spoke on an Aave V4 Hub has a Spoke address, so it passed even when its Spoke drew from that Hub, and the setter refused only a lender that was itself a recorded Hub. LPVaultSwap checked the funding Hub while the source checked the home Hub. |
 | Impact | Not reachable at launch (the source is the Aave V3 Pool). With a replacement source, a liquidation could repay a Hub with that Hub's own liquidity. |
-| Evidence | [`final-recheck.md`](../../audit/design-review/amm-neutral/final-recheck.md) (N1) |
+| Evidence | `final-recheck.md` (N1) |
 | Resolution | The flash-source implementation reports the pool or Hub it borrows from (`LENDER()`), and the source is refused when `MarketRegistry.isRecordedHub(LENDER())` is true, that is when that address is any Hub recorded on the chain: by `MarketRegistry.setFlashSource` (`InvalidRoute`) and by LPVaultSwap on every flash call (`FlashSourceIsHub`); `recordHub` refuses the current source's `LENDER()`, so the order of recording does not matter. The check covers every registered Hub, so the home-Hub and funding-Hub identities no longer matter. Changed rules: `INV-095`, `REQ-FLASH-001`, `REQ-FLASH-005`, `REQ-FLASH-006`. |
 | Status | Resolved in spec |
 | Verification | `TEST-285`, `TEST-267`, `PROP-096`, `MATH-ST-110` |
@@ -4741,7 +4741,7 @@ Three spec-stage counterexamples had no finding. They are recorded here with the
 | Reference | `ATTACK-196`, `INV-036`, `INV-061`, `REQ-SWAP-028`, `REQ-SWAP-064`, `REQ-SWAP-076`, `REQ-ESCROW-018`, Q-389 |
 | Description | The transfer of Avana's fee `A` to `feeRecipient` was unguarded, so if Circle or Tether blocklisted the treasury Safe, every routed liquidation with `S > 0` and every `settlePending` residue in that asset reverted on the chain until a normal-delay `setFeeRecipient` (5 days) took effect. A blocklisted keeper address had the same effect on its own calls. |
 | Impact | A chain-wide halt of routed liquidation in one debt asset, on an issuer action, for up to the normal delay. |
-| Evidence | [`final-recheck.md`](../../audit/design-review/amm-neutral/final-recheck.md) (N2a) |
+| Evidence | `final-recheck.md` (N2a) |
 | Resolution | Every fee and payout transfer is gas-limited and its failure never reverts a liquidation or `settlePending`: a transfer that reverts, returns `false` or runs out of gas moves the amount to the PayoutEscrow (the payout escrow, whose only job this is since `Q-401`), credited to the account (the borrower, `feeRecipient` or the caller), which claims it later. Changed rules: `INV-036`, `INV-061`, `REQ-SWAP-028`, `REQ-SWAP-064`, `REQ-SWAP-076`, `REQ-ESCROW-018`. |
 | Status | Resolved in spec |
 | Verification | `TEST-286`, `TEST-173`, `TEST-229` |
@@ -4756,7 +4756,7 @@ Three spec-stage counterexamples had no finding. They are recorded here with the
 | Reference | `ATTACK-197`, `INV-095`, `REQ-FLASH-003`, `REQ-SWAP-026`, `REQ-SWAP-108`, `REQ-SWAP-122`, `REQ-SWAP-123`, Q-390 |
 | Description | `REQ-SWAP-108` said a 5,000 USDT flash arrives as 4,995 USDT and LPVaultSwap passes on 4,995, but `REQ-FLASH-003` forwarded exactly the amount and then required `balance ≥ amount + premium` after LPVaultSwap returned `F + φ` net of the fee. Once Tether set `basisPointsRate > 0`, every flash-funded liquidation and every `deleverage` of a USDT debt reserve reverted. |
 | Impact | Only caller-funded and in-kind liquidation remained for that reserve while the fee was on. |
-| Evidence | [`final-recheck.md`](../../audit/design-review/amm-neutral/final-recheck.md) (N2b) |
+| Evidence | `final-recheck.md` (N2b) |
 | Resolution | The flash path and every payout measure received amounts by balance delta, and LPVaultSwap repays the source so that it receives `F + φ` after the fee. A non-zero transfer fee on a debt asset trips that reserve's debt breaker (`ISSUER`, read by the issuer probe `basisPointsRate()`): new borrows stop. Repayments of that asset do not settle while the fee is on: Aave V4's Hub refuses a fee-reduced repayment (`InsufficientTransferred`), so liquidation, repay and `deleverage` of it revert until the fee returns to 0 and resume in the next block after (`REQ-SWAP-123`, `TEST-048`); the balance-delta flash path below stays as defence in depth. Listing requires a transfer fee of 0 at listing time. Example at 10 bps: a 5,000 USDT flash at 5 bps arrives as 4,995 USDT, and LPVaultSwap sends `⌈5,002.5 / 0.999⌉` = 5,007.507508 USDT so the source receives 5,002.5; the source's balance is measured after each transfer and topped up at most `MAX_REPAY_TRANSFERS` = 4 times (`REQ-SWAP-122`). Changed rules: `INV-095`, `REQ-FLASH-003`, `REQ-SWAP-026`, `REQ-SWAP-108`, `REQ-SWAP-122`, `REQ-SWAP-123`. |
 | Status | Resolved in spec |
 | Verification | `TEST-287`, `TEST-221`, `TEST-048`, `PROP-097`, `MATH-ST-112` |

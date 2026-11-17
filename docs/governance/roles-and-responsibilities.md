@@ -11,12 +11,12 @@ This page lists every authority that can act on Avana, who sits on it, what it c
 | Aave DAO (governance executor) | Aave governance; on Base, the Base executor over Aave's cross-chain governance | Through Aave governance | Owns the Hubs and Spokes, every First-Loss Reserve's admin role; second proposer and only role-change canceller on the AvanaTimelock |
 | AvanaTimelock | Contract, its own admin | After each operation's delay | Holds every admin role on every Avana contract |
 | Governance Safe | 4-of-7, at most 3 Avana Labs signers, at least 3 organisations and 3 jurisdictions | Schedules; waits 12 hours or 5 days | Proposes every Avana change; cancels |
-| Emergency Guardian | 3-of-5: Avana Labs signers plus one Aave Labs seat and one LlamaRisk seat | Immediate | Freeze, pause, unpause, breakers, address freeze, standby switches, coverage, cancel |
+| Emergency Guardian | 3-of-5: Avana Labs signers plus one Aave service-provider seat and one independent risk-provider seat | Immediate | Freeze, pause, unpause, breakers, address freeze, standby switches, coverage, cancel |
 | Aave Protocol Guardian | Aave's guardian multisig | Immediate | The Emergency Guardian's Avana powers, plus Aave-side reserve freeze and pause |
-| Joint Configuration Safe | 2-of-3: Avana Labs, Aave Labs, LlamaRisk | Immediate | Risk tightenings, Avana's fee share within bounds, the guardians' MarketRegistry powers |
+| Joint Configuration Safe | 2-of-3: Avana Labs, an Aave service provider, an independent risk provider | Immediate | Risk tightenings, Avana's fee share within bounds, the guardians' MarketRegistry powers |
 | Keepers | Approved keeper addresses on LPVaultSwap, plus anyone through the permissionless path | Immediate | Liquidate accounts Aave marks liquidatable |
 | Avana treasury Safe | Avana Labs Safe | Immediate, own funds only | Funds each First-Loss Reserve; receives Avana's fee as `feeRecipient` |
-| Risk service providers | LlamaRisk and the Aave DAO's other risk providers | Through proposals | Size listings, caps and coverage; no on-chain Avana role of their own |
+| Risk service providers | The Aave DAO's risk service providers | Through proposals | Size listings, caps and coverage; no on-chain Avana role of their own |
 
 No single person signs on two Safes of the same chain, no signer key is shared between the Emergency Guardian, the governance Safe, the Joint Configuration Safe and the Aave Protocol Guardian (`REQ-ROLE-007`), and the Aave Protocol Guardian's signers are disjoint from every Avana Safe (`REQ-ACCESS-104`). An organisation may hold seats on several Safes, each through a different person and key.
 
@@ -57,7 +57,7 @@ No single person signs on two Safes of the same chain, no signer key is shared b
 
 ## Emergency Guardian
 
-**Composition:** 3-of-5 per chain, five different people across at least 3 time zones. Two seats are held by Aave Labs and LlamaRisk, one each; the other three by Avana Labs. No seat can act alone, and no two seats of one organisation reach the threshold without a signer from another.
+**Composition:** 3-of-5 per chain, five different people across at least 3 time zones. Two seats are held by an Aave service provider and an independent risk provider, one each; the other three by Avana Labs. No seat can act alone, and no two seats of one organisation reach the threshold without a signer from another.
 
 **Holds:**
 - `APPLICATION_PAUSE_GUARDIAN` and `APPLICATION_FREEZE_GUARDIAN` on the MarketRegistry.
@@ -89,7 +89,7 @@ No single person signs on two Safes of the same chain, no signer key is shared b
 
 ## Joint Configuration Safe
 
-**Composition:** 2-of-3 per chain: one Avana Labs signer, one Aave Labs signer, one LlamaRisk signer. Any two act; none acts alone.
+**Composition:** 2-of-3 per chain: one Avana Labs signer, one Aave service-provider signer, one independent risk-provider signer. Any two act; none acts alone.
 
 **Holds:** `APPLICATION_RISK_STEWARD` on the ParameterStore (`REQ-ROLE-117`); `APPLICATION_PAUSE_GUARDIAN` and `APPLICATION_FREEZE_GUARDIAN` on the MarketRegistry.
 
@@ -122,9 +122,9 @@ No single person signs on two Safes of the same chain, no signer key is shared b
 
 ## Risk service providers
 
-**Who:** LlamaRisk and the Aave DAO's other risk service providers.
+**Who:** The Aave DAO's risk service providers.
 
-**Does:** sizes each listing package (pool risk factors, USD caps, `minPledgeUsd`, per-pool `poolShareMaxBps`) with its cap-sizing calculation, the deficit-breaker materiality of each non-GHO debt reserve, and, with the Aave DAO, the credit lines, draw caps and each First-Loss Reserve's coverage ratio and minimum. Changes reach Avana through the governance Safe and the timelock. LlamaRisk also holds one seat on the Emergency Guardian and one on the Joint Configuration Safe.
+**Does:** sizes each listing package (pool risk factors, USD caps, `minPledgeUsd`, per-pool `poolShareMaxBps`) with its cap-sizing calculation, the deficit-breaker materiality of each non-GHO debt reserve, and, with the Aave DAO, the credit lines, draw caps and each First-Loss Reserve's coverage ratio and minimum. Changes reach Avana through the governance Safe and the timelock. An independent risk provider also holds one seat on the Emergency Guardian and one on the Joint Configuration Safe.
 
 ## Contracts that act on each other
 

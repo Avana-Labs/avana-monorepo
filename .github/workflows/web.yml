@@ -1,7 +1,7 @@
 name: web
 
 # The web app in webapp/ (`@avana/web`, one package of the npm workspace whose root is the repository's package.json).
-# Every pull request and push to main that changes it, services/convex (the app imports its Convex API), the workspace
+# Every pull request that changes it (a push to main does not rerun it), services/convex (the app imports its Convex API), the workspace
 # manifests or this file installs the whole workspace with npm ci from the lock file (lifecycle scripts never run), then
 # checks that the lock file applies every root `overrides` pin, then runs the app's lint, typecheck, unit tests and a
 # production build. The build needs no secrets: every environment
@@ -11,16 +11,6 @@ name: web
 
 on:
   pull_request:
-    paths:
-      - "webapp/**"
-      - "services/convex/**"
-      - "package.json"
-      - "package-lock.json"
-      - ".nvmrc"
-      - ".github/workflows/web.yml"
-      - ".github/scripts/check-npm-overrides.mjs"
-  push:
-    branches: [main]
     paths:
       - "webapp/**"
       - "services/convex/**"

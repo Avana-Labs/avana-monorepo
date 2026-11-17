@@ -18,7 +18,7 @@
   "dependencies": {
     "@avana/protocol": "file:../../packages/protocol",
     "@avana/services-common": "file:../common",
-    "hono": "4.13.13",
+    "hono": "4.13.16",
     "ponder": "0.18.2",
     "viem": "2.57.11"
   },

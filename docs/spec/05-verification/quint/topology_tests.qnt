@@ -26,7 +26,7 @@ module topology_tests {
   // ---------------------------------------------------------------- AMMN-SM-01
   // The home Hub's registry checks a Spoke's draw caps; the funding Hub's line and cross-Hub
   // cap are not enforced over all Spokes that draw from it.
-  // QNT-TOPO-T01 verifies: AMMN-SM-01, AMMN-RT-11
+  // QNT-TOPO-T01
   run ammnSm01CapsAboveLineTest = initProposal
     .then(govSetDrawCap("S1", "USDC", 13))             // STABLE checks S1 + S2 = 20 <= line 20
     .expect(and {
@@ -37,7 +37,7 @@ module topology_tests {
     .then(govSetCreditLine("STABLE", "USDC", 15))     // STABLE counts S1 + S2 = 15 only
     .expect(not(topo05_crossHubCap))
 
-  // QNT-TOPO-T02 verifies: AMMN-SM-01, AMMN-RT-11
+  // QNT-TOPO-T02
   run ammnSm01CrossCapIgnoredTest = initProposalLoaded
     .then(govSetCrossCap("STABLE", "USDC", 0))        // the funding Hub withdraws its cross-Hub line
     .then(borrow("alice", "S3", "USDC", 1))            // S3's cap was set in VOLATILE's scope and still allows it
@@ -46,7 +46,7 @@ module topology_tests {
       s.g.crossCapDraw, not(topo05_crossHubCap),
     })
 
-  // QNT-TOPO-T03 verifies: AMMN-SM-01, AMMN-RT-11, AMMN-FLOW-05
+  // QNT-TOPO-T03
   run ammnSm01FixedTest = initFixedLoaded
     .expect(and {
       not(setDrawCapOk(s, "S1", "USDC", 13)),            // 13 + 7 + 5 > line 20
@@ -60,7 +60,7 @@ module topology_tests {
   // ---------------------------------------------------------------- AMMN-SM-02
   // drawn <= drawCap is a gate on new draws, not a state invariant: a cap cut (delisting) or
   // interest leaves drawn above the caps in every design.
-  // QNT-TOPO-T04 verifies: INV-057, AMMN-SM-02
+  // QNT-TOPO-T04 verifies: INV-057
   run ammnSm02CapCutTest = initFixedLoaded
     .then(govSetDrawCap("S2", "GHO", 0))
     .then(delistDebt("S1", "GHO"))                     // MKT-045: drawCap 0 and freeze while 8 GHO is drawn
@@ -69,7 +69,7 @@ module topology_tests {
       not(topo04_hubDebtWithinCaps), topo04g_drawGate, allFixed,
     })
 
-  // QNT-TOPO-T05 verifies: INV-057, AMMN-SM-02
+  // QNT-TOPO-T05 verifies: INV-057
   run ammnSm02InterestTest = initFixedLoaded
     .then(govSetDrawCap("S1", "GHO", 8))
     .then(govSetDrawCap("S2", "GHO", 0))
@@ -83,7 +83,7 @@ module topology_tests {
   // ---------------------------------------------------------------- AMMN-SM-03
   // Pinned proxies: an Adapter upgrade may stop serving older versions, and migration is a
   // re-supply plus re-borrow that the pause, the Aave freeze and the drawCap can refuse.
-  // QNT-TOPO-T06 verifies: INV-067, AMMN-SM-03
+  // QNT-TOPO-T06 verifies: INV-067
   run ammnSm03PauseBlocksExitTest = initProposalLoaded
     .then(releaseVersion)
     .then(upgradeAdapter("STABLE"))                    // STABLE's Adapter serves version 2 only
@@ -95,7 +95,7 @@ module topology_tests {
       not(topo07_stopsNeverReachExits),
     })
 
-  // QNT-TOPO-T07 verifies: AMMN-SM-03
+  // QNT-TOPO-T07
   run ammnSm03CapCutOrphansTest = initProposalLoaded
     .then(releaseVersion)
     .then(upgradeAdapter("STABLE"))
@@ -106,7 +106,7 @@ module topology_tests {
       not(topo08_migration),
     })
 
-  // QNT-TOPO-T08 verifies: MKT-045, AMMN-SM-03
+  // QNT-TOPO-T08 verifies: MKT-045
   run ammnSm03DelistStrandsTest = initProposalLoaded
     .then(releaseVersion)
     .then(upgradeAdapter("STABLE"))
@@ -121,7 +121,7 @@ module topology_tests {
     .then(delistDebt("S1", "GHO"))
     .expect(and { not(canRepay(clearStops(s), A1, "GHO")), not(topo09_delistingNeverStrands) })
 
-  // QNT-TOPO-T09 verifies: INV-067, AMMN-SM-03
+  // QNT-TOPO-T09 verifies: INV-067
   run ammnSm03FixedTest = initFixedLoaded
     .then(releaseVersion)
     .expect(and { not(upgradeAdapterOk(s, "STABLE")), not(upgradeAdapterOk(s, "VOLATILE")) })
@@ -136,7 +136,7 @@ module topology_tests {
     })
 
   // migration itself preserves the account (PROPOSAL, no Adapter upgrade)
-  // QNT-TOPO-T10 verifies: AMMN-RT-04
+  // QNT-TOPO-T10
   run migrationPreservesTest = initProposalLoaded
     .then(releaseVersion)
     .then(migrate("alice", "S1"))
@@ -152,7 +152,7 @@ module topology_tests {
   // ---------------------------------------------------------------- AMMN-SM-04
   // Standard Spoke: with receiveSharesEnabled (an Aave setting) any liquidator takes Spoke
   // shares of the vault token without a token transfer, past LPVaultSwap and the ledger.
-  // QNT-TOPO-T11 verifies: AMMN-SM-04, AMMN-RT-03, AMMN-INT-07
+  // QNT-TOPO-T11
   run ammnSm04ReceiveSharesTest = initProposalLoaded
     .then(aaveSetReceiveShares("S3"))
     .then(shockToken("M3", "ETH", 40))
@@ -167,7 +167,7 @@ module topology_tests {
       topo02_supplyEqualsCredit, topo01_custody,
     })
 
-  // QNT-TOPO-T12 verifies: AMMN-SM-04, AMMN-RT-03, AMMN-INT-07
+  // QNT-TOPO-T12
   run ammnSm04FixedTest = initFixedLoaded
     .then(aaveSetReceiveShares("S3"))
     .then(shockToken("M3", "ETH", 40))
@@ -176,7 +176,7 @@ module topology_tests {
     .expect(and { s.debt.get((B3, "GHO")) == 0, credOf(s, B3, "M3") == 1, topo03_noCrossRouting, topo02b_perProxy })
 
   // another Hub's LPVaultSwap cannot liquidate a Spoke (both designs)
-  // QNT-TOPO-T13 verifies: AMMN-SM-04, AMMN-RT-03
+  // QNT-TOPO-T13
   run crossHubLiquidationRefusedTest = initProposalLoaded
     .then(shockToken("M3", "ETH", 40))
     .expect(and { liqOk(s, B3, "GHO", 4), not(liqCallerOk(s, "STABLE", "S3", "honest")) })
@@ -186,7 +186,7 @@ module topology_tests {
   // ---------------------------------------------------------------- AMMN-SM-05
   // A token price shock in one market moves every Spoke whose market or debt uses the token;
   // per-Hub token caps miss collateral of other Hubs' Spokes that draw from the Hub.
-  // QNT-TOPO-T14 verifies: INV-075, AMMN-SM-05
+  // QNT-TOPO-T14 verifies: INV-075
   run ammnSm05TokenShockTest = initFixedLoaded
     .then(shockToken("M1", "USDC", 70))
     .expect(and {
@@ -203,7 +203,7 @@ module topology_tests {
     .then(poolShock("M3"))
     .expect(topo10p_poolShockIsolation)
 
-  // QNT-TOPO-T16 verifies: AMMN-SM-05, AMMN-RT-05
+  // QNT-TOPO-T16
   run ammnSm05TokenCapTest = initProposalLoaded
     .then(pledge("bob", 4))                            // STABLE's ParameterStore sees S1 + S2 only
     .expect(and {
@@ -215,7 +215,7 @@ module topology_tests {
 
   // ---------------------------------------------------------------- AMMN-SM-06
   // A funding Hub's pause does not stop other Hubs' Spokes drawing its liquidity.
-  // QNT-TOPO-T17 verifies: AMMN-SM-06, AMMN-FLOW-19
+  // QNT-TOPO-T17
   run ammnSm06FundingPauseTest = initProposalLoaded
     .then(setPause("STABLE", "Paused"))
     .then(borrow("alice", "S3", "USDC", 1))

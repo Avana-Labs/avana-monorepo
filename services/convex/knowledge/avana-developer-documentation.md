@@ -2362,7 +2362,7 @@ Test market shocks, oracle edge cases, and liquidation routing failures, not jus
 
 ### External review channels
 
-Formal audits and the [Bug Bounty](http://localhost:3000/developers/safety/bug-bounty) program should both stay active. One does not replace the other.
+Avana is going through an internal audit: an internal manual review and an AI-assisted audit. There has been no external audit yet; when those steps finish, the audit opens to external auditors and the public. The [Bug Bounty](http://localhost:3000/developers/safety/bug-bounty) has not started; it will be announced.
 
 ## Core Contract Surfaces
 
@@ -2441,11 +2441,11 @@ Responsible disclosure scope and economic-impact triage guidance for Avana secur
 
 ## Overview
 
-The Avana Bug Bounty covers responsible disclosure across contracts, risk systems, and supporting infrastructure that can affect user funds or protocol solvency.
+The Avana bug bounty has not started. It will be announced, with its terms, rewards, platform and start date. Until then, this page describes the scope for responsible disclosure across contracts, risk systems, and supporting infrastructure that can affect user funds or protocol solvency.
 
 Because Avana uses AMM liquidity positions as collateral, scope includes both direct contract bugs and failures where liquidity, pricing, or market state can be turned into bad collateral value or broken liquidations.
 
-**Severity is economic first:** rewards track exploitability and outcomes such as fund loss, insolvency, bad debt, or systemic collateral mispricing, not only how large the code change looks.
+**Severity is economic first:** severity tracks exploitability and outcomes such as fund loss, insolvency, bad debt, or systemic collateral mispricing, not only how large the code change looks.
 
 ## Scope & System Architecture
 

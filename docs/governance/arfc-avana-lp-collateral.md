@@ -17,7 +17,7 @@ Created: 2026-11-04 · Updated: 2026-11-17
 | Avana's revenue | No share of interest. The Avana app charges 10 bps on every app action (ceiling 25 bps without a new ARFC), and Avana's contracts take 20% of each liquidation's surplus. Both go to one timelocked fee recipient; neither changes an interest rate or the Aave DAO's revenue. |
 | Loss coverage | Two layers per Hub and debt asset: first the Avana First-Loss Reserve, funded by Avana and controlled by the DAO, then a DAO Deficit Offset funded by the Aave DAO treasury and spent only once the First-Loss Reserve is empty or deactivated by the DAO. A loss beyond both is disclosed, not shared. |
 | Governance | The Aave DAO owns and configures every Avana Hub and Spoke. Changes to Avana's own contracts go through a per-chain timelock (5 days, 12 hours for risk-reducing changes) that the Aave governance executor can propose to and cancel. |
-| Status | Contracts implemented for Ethereum (Uniswap v3 and v4) and Base (Aero Slipstream), with tests, formal checks and internal audits recorded under Verification. External audits, an audit contest and a bug bounty come next. |
+| Status | Contracts implemented for Ethereum (Uniswap v3 and v4) and Base (Aero Slipstream), with tests and formal checks recorded under Verification. An internal audit is under way: an internal manual review and an AI-assisted audit. The audit opens to external auditors and the public when those steps finish; there has been no external audit yet. The bug bounty has not started and will be announced. |
 
 ## What this ARFC asks
 
@@ -40,7 +40,7 @@ If this ARFC passes, two follow-up ARFCs would ask the Aave DAO for the followin
 - Each DAO Deficit Offset's size per Hub and debt asset, funded from the DAO treasury. Caps and credit lines are sized so the modelled tail loss fits within the First-Loss Reserve's minimum plus this offset; Avana proposes no fixed figure, because the offset is the part of that need the DAO chooses to carry above Avana's reserve.
 - Each lend asset's utilization curve, Aave V4's standard kinked interest-rate strategy; for GHO the DAO may keep the curve's base rate at or above the Core Hub GHO base rate.
 
-Mainnet launch follows independent audits of every contract and governance approval.
+Mainnet deployment follows the internal audit, the external audit that opens after it, and governance approval.
 
 - Website: https://avana.cc
 - Sandbox (borrow and liquidation flows with simulated assets, no onchain transactions): https://app.avana.cc
@@ -387,7 +387,7 @@ Avana's contracts are implemented and checked against the specification by tests
 | Quint | Cross-contract state machine with honest and hostile components, and a multi-Hub, multi-Spoke model | 58 of 58 properties hold, 8 of 8 combined runs hold, 50 of 50 scenarios pass | [quint](../audit/quint/README.md) |
 | Formal verification of the design | Custody, control (access, timelock, pauses, oracle, breakers) and liquidation | Custody 10, control 28 and liquidation 19 findings, all resolved in the specification; 1 custody and 5 control fixes await re-verification against the final text | [audit index](../audit/README.md#evidence-layout) |
 | 1,000-user simulation | 1,000 users and bots over 90 days, including six stress episodes | 572,608 invariant checks, 0 violations, 98 liquidations, $0 bad debt | [user simulation](../audit/user-simulation/report.md) |
-| Adversarial design review | Red team, flow walkthroughs, live-chain integration assumptions, gas and DoS | First draft: 6 Critical, 13 High, 22 Medium, 14 Low. All resolved except one Medium (an Aave-side halt stopping exits on a Spoke), accepted with an operating playbook. Final re-check: 96.5/100, then 99.0/100 after its fix pass | [final re-check](../audit/design-review/amm-neutral/final-recheck.md) |
+| Adversarial design review | Red team, flow walkthroughs, live-chain integration assumptions, gas and DoS | First draft: 6 Critical, 13 High, 22 Medium, 14 Low. All resolved except one Medium (an Aave-side halt stopping exits on a Spoke), accepted with an operating playbook. Final re-check: 96.5/100, then 99.0/100 after its fix pass | final re-check |
 
 ### Mutation testing
 
@@ -430,11 +430,11 @@ These are the targets the final runs must meet before deployment. They are requi
 | Halmos | 169 `check_` functions in 30 files under `contracts/test/halmos/` | Every check runs to completion and passes; no check is accepted as bounded |
 | Slow suites (`security-slow.yml`, deep invariant campaigns) | 35 Echidna and Medusa property harnesses (`contracts/test/invariant/echidna/`), the hevm entry points of the same harnesses, the Halmos checks above, and 33 Foundry invariant suites (`contracts/test/invariant/`) | Every job green |
 | Fork tests | 16 fork test files (`contracts/test/fork/`) on Ethereum and Base forks at the blocks pinned in `ForkConstants.sol` | Every test passes on each chain's fork before that chain's deployment |
-| External audits, audit contest and bug bounty | Listed under What comes next | No open Critical or High finding at deployment |
+| Internal audit (internal manual review and AI-assisted audit), then the external audit | Every contract in [Areas under internal review](../audit/README.md#areas-under-internal-review-q-115) | No open Critical or High finding at deployment |
 
 ### What comes next
 
-Before mainnet, independent external firms audit Avana's core contracts, each AMM integration, the flash source, the two loss layers (the Avana First-Loss Reserve and the DAO Deficit Offset) and the flash liquidation helper. A public audit contest follows, and a bug bounty opens with a `SECURITY.md` disclosure policy. External reports and their fix commits are filed in [docs/audit/external](../audit/external/index.md).
+Avana is going through an internal audit: an internal manual review and an AI-assisted audit of the core contracts, each AMM integration, the flash source, the two loss layers (the Avana First-Loss Reserve and the DAO Deficit Offset) and the flash liquidation helper. When those steps finish, the audit opens to external auditors and the public; that has not happened yet. The bug bounty has not started and will be announced. Vulnerability reports follow [`SECURITY.md`](../../SECURITY.md); the audit status is kept in [`docs/audit/README.md`](../audit/README.md#audit-status).
 
 ## Next steps
 
@@ -456,7 +456,7 @@ Avana documents, in the public repository:
 - [Specification](../spec/README.md), starting with the [protocol overview](../spec/01-architecture/01-protocol-overview.md) and [parameters](../spec/01-architecture/05-parameters.md)
 - [Liquidation](../spec/03-operations/05-liquidation.md), [first-loss reserve](../spec/02-contracts/14-first-loss-reserve.md), [governance and timelock](../spec/02-contracts/15-governance-and-timelock.md)
 - [Current parameter values and who sets them](parameters.md)
-- [Verification](../spec/05-verification/README.md), [design review final re-check](../audit/design-review/amm-neutral/final-recheck.md), [user simulation](../audit/user-simulation/report.md), [findings register](../audit/findings-register.md)
+- [Verification](../spec/05-verification/README.md), design review final re-check, [user simulation](../audit/user-simulation/report.md), [findings register](../audit/findings-register.md)
 
 Related discussions:
 - [Temp Check] Aave's CDP for Uniswap V4 Positions: https://governance.aave.com/t/temp-check-aave-s-cdp-for-uniswap-v4-positions/21980

@@ -150,8 +150,8 @@ note('AMM-A3g', 'exact-integer search: floored getAmountsForLiquidity at the flo
 
 # ---------------------------------------------------------------------------------------------------
 # A4  Oracle price outside the range: the oracle sqrt price is clamped to [sa, sb]
-# MATH-AMM-V3-PRICE-04 verifies: SPEC-AMM-V3-001, REQ-AMM-V3-005, REQ-AMM-V3-006, INV-078, AMMN-RT-02
-# MATH-AMM-SLIP-PRICE-04 verifies: REQ-AMM-SLIP-012, INV-078, AMMN-RT-02
+# MATH-AMM-V3-PRICE-04 verifies: SPEC-AMM-V3-001, REQ-AMM-V3-005, REQ-AMM-V3-006, INV-078
+# MATH-AMM-SLIP-PRICE-04 verifies: REQ-AMM-SLIP-012, INV-078
 prove('AMM-A4a', 'oracle below the range: holdings are all token0, a0 = L (sb - sa)/(sa sb), and value is linear in p0',
       base + [sO <= sa], And(y_f == 0, x_f == L * (sb - sa) / (sa * sb), fair == x_f * P))
 prove('AMM-A4b', 'oracle above the range: holdings are all token1, a1 = L (sb - sa), value independent of p0',
@@ -184,8 +184,8 @@ prove('AMM-A4g', 'the clamped quote never exceeds the unclamped one (negative am
 
 # ---------------------------------------------------------------------------------------------------
 # A5  tickSpacing-aligned range check in int24 arithmetic
-# MATH-AMM-V3-PRICE-05 verifies: REQ-AMM-V3-002, REQ-AMM-V3-007, REQ-AMM-V3-008, INV-005, AMMN-RT-01
-# MATH-AMM-SLIP-PRICE-05 verifies: REQ-AMM-SLIP-008, REQ-AMM-SLIP-014, REQ-AMM-SLIP-017, INV-005, AMMN-RT-01
+# MATH-AMM-V3-PRICE-05 verifies: REQ-AMM-V3-002, REQ-AMM-V3-007, REQ-AMM-V3-008, INV-005
+# MATH-AMM-SLIP-PRICE-05 verifies: REQ-AMM-SLIP-008, REQ-AMM-SLIP-014, REQ-AMM-SLIP-017, INV-005
 t24, k24, tl24, tu24 = BitVec('t', 24), BitVec('k', 24), BitVec('tl', 24), BitVec('tu', 24)
 in_bounds = lambda x: And(x >= BitVecVal(MIN_TICK, 24), x <= BitVecVal(MAX_TICK, 24))
 for sp in SPACINGS:
@@ -221,8 +221,8 @@ note('AMM-A5e', 'largest Slipstream spacing whose maxLiquidityPerTick fits MAX_C
 
 # ---------------------------------------------------------------------------------------------------
 # A6  A unit of liquidity is worth a different amount on every range: the market prices one exact range
-# MATH-AMM-V3-PRICE-06 verifies: REQ-AMM-CORE-006, REQ-AMM-CORE-016, AMMN-RT-01
-# MATH-AMM-SLIP-PRICE-06 verifies: REQ-AMM-CORE-006, REQ-AMM-CORE-016, REQ-AMM-SLIP-018, AMMN-RT-01
+# MATH-AMM-V3-PRICE-06 verifies: REQ-AMM-CORE-006, REQ-AMM-CORE-016
+# MATH-AMM-SLIP-PRICE-06 verifies: REQ-AMM-CORE-006, REQ-AMM-CORE-016, REQ-AMM-SLIP-018
 sA, sB = Reals('sA sB')                                    # the market's range; [sa, sb] is the pledged one
 x_m, y_m = holdings(L, sO, sA, sB)
 prove('AMM-A6a', 'a range nested in the market range is worth at most the market range per unit of L, at every '
