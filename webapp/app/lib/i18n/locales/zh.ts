@@ -1427,6 +1427,7 @@ const dict: TranslationDictionary = {
   "Dashboard Positions": "仪表盘持仓",
   "Available to deposit": "可存入",
   "against {pool}": "对 {pool}",
+  "Merkl Rewards": "Merkl 奖励",
   Locked: "已锁定",
   "Next rewards": "下一批奖励",
   "Open on Launch Date": "在发布日开启",
