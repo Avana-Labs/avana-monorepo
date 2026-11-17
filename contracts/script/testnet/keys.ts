@@ -7,6 +7,7 @@
 //   DEPLOYER, GOVERNANCE, PAYLOADS_CONTROLLER  the keystore (its file name in KEYSTORE_DIR) that signs as each role
 //   ORACLES                                    the four OCR2 oracles' keystores, comma-separated
 //   TREASURY, KEEPER, AAVE_PROTOCOL_GUARDIAN, EMERGENCY_GUARDIAN, JOINT_CONFIG_SAFE   addresses that sign nothing
+//   GAS_VAULT_FUND_WEI_SEPOLIA, GAS_VAULT_FUND_WEI_BASE_SEPOLIA   optional: the chain's gas vault funding (testnet.ts)
 // A keystore's address is read from it at run time, decrypted with the password file; no key is written anywhere.
 
 import { spawnSync } from "node:child_process";
@@ -102,7 +103,7 @@ export function checkRoles(signers: Record<string, string | undefined>, addresse
 }
 
 /** The private file, from AVANA_TESTNET_CONFIG. */
-function configFile(): Record<string, string> {
+export function configFile(): Record<string, string> {
   const path = process.env[CONFIG_ENV];
   if (!path) throw new Error(`${CONFIG_ENV} is not set: it names the private test-network config file`);
   if (!existsSync(path)) throw new Error(`${CONFIG_ENV} names no file`);
