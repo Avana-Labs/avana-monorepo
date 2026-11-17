@@ -13,7 +13,7 @@ Run from `docs/spec/05-verification/`:
 
 Result words follow [`../units-oracle`](../units-oracle/README.md): `PROVED`, `COUNTEREXAMPLE`, `COMPUTED`, `TIMEOUT`; a script exits 1 only when a result differs from the `expect` value beside the check. `COUNTEREXAMPLE (deliberate)` marks an unsafe quote shown to be manipulable. `run_all.sh` runs every `z3/**/*.py` and every `hypothesis/test_*.py` on its quick path, so these files run there too; all pass.
 
-These are the pricing proofs (`PRICE`) and manipulation tests (`MANIP`) that an AMM integration carries before listing (`trace.py`, `amm-integrations.json`). Each group of checks has one ID of the form `MATH-AMM-<P>-PRICE-NN` or `HYP-AMM-<P>-<METHOD>-NN` and a `verifies:` tag naming the rules it checks on the integration pages ([2.19](../../../02-contracts/19-amm-integration-interface.md)–[2.22](../../../02-contracts/22-amm-integration-readiness.md)) and the design-review findings it closes. Uniswap v3 and Aerodrome Slipstream share the tick and amount math, so every concentrated-liquidity group carries a `V3` and a `SLIP` ID.
+These are the pricing proofs (`PRICE`) and manipulation tests (`MANIP`) that an AMM integration carries before listing (`trace.py`, `amm-integrations.json`). Each group of checks has one ID of the form `MATH-AMM-<P>-PRICE-NN` or `HYP-AMM-<P>-<METHOD>-NN` and a `verifies:` tag naming the rules it checks on the integration pages ([2.19](../../../02-contracts/19-amm-integration-interface.md)–[2.22](../../../02-contracts/22-amm-integration-readiness.md)). Uniswap v3 and Aerodrome Slipstream share the tick and amount math, so every concentrated-liquidity group carries a `V3` and a `SLIP` ID.
 
 | Check ID | Checks | Verifies |
 |---|---|---|

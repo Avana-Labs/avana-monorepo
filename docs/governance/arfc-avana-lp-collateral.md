@@ -387,7 +387,7 @@ Avana's contracts are implemented and checked against the specification by tests
 | Quint | Cross-contract state machine with honest and hostile components, and a multi-Hub, multi-Spoke model | 58 of 58 properties hold, 8 of 8 combined runs hold, 50 of 50 scenarios pass | [quint](../audit/quint/README.md) |
 | Formal verification of the design | Custody, control (access, timelock, pauses, oracle, breakers) and liquidation | Custody 10, control 28 and liquidation 19 findings, all resolved in the specification; 1 custody and 5 control fixes await re-verification against the final text | [audit index](../audit/README.md#evidence-layout) |
 | 1,000-user simulation | 1,000 users and bots over 90 days, including six stress episodes | 572,608 invariant checks, 0 violations, 98 liquidations, $0 bad debt | [user simulation](../audit/user-simulation/report.md) |
-| Adversarial design review | Red team, flow walkthroughs, live-chain integration assumptions, gas and DoS | First draft: 6 Critical, 13 High, 22 Medium, 14 Low. All resolved except one Medium (an Aave-side halt stopping exits on a Spoke), accepted with an operating playbook. Final re-check: 96.5/100, then 99.0/100 after its fix pass | [final re-check](../audit/design-review/amm-neutral/final-recheck.md) |
+| Adversarial design review | Red team, flow walkthroughs, live-chain integration assumptions, gas and DoS | First draft: 6 Critical, 13 High, 22 Medium, 14 Low. All resolved except one Medium (an Aave-side halt stopping exits on a Spoke), accepted with an operating playbook. Final re-check: 96.5/100, then 99.0/100 after its fix pass | final re-check |
 
 ### Mutation testing
 
@@ -456,7 +456,7 @@ Avana documents, in the public repository:
 - [Specification](../spec/README.md), starting with the [protocol overview](../spec/01-architecture/01-protocol-overview.md) and [parameters](../spec/01-architecture/05-parameters.md)
 - [Liquidation](../spec/03-operations/05-liquidation.md), [first-loss reserve](../spec/02-contracts/14-first-loss-reserve.md), [governance and timelock](../spec/02-contracts/15-governance-and-timelock.md)
 - [Current parameter values and who sets them](parameters.md)
-- [Verification](../spec/05-verification/README.md), [design review final re-check](../audit/design-review/amm-neutral/final-recheck.md), [user simulation](../audit/user-simulation/report.md), [findings register](../audit/findings-register.md)
+- [Verification](../spec/05-verification/README.md), design review final re-check, [user simulation](../audit/user-simulation/report.md), [findings register](../audit/findings-register.md)
 
 Related discussions:
 - [Temp Check] Aave's CDP for Uniswap V4 Positions: https://governance.aave.com/t/temp-check-aave-s-cdp-for-uniswap-v4-positions/21980

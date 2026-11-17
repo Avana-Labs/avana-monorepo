@@ -1,6 +1,6 @@
 """Run the Avana 1,000-user simulation against the final spec (decisions Q-001 to Q-278).
 
-Deployment-topology comparison (design review, docs/audit/design-review/topology-options.md):
+Deployment-topology comparison (design review, kept outside the repository):
 
     docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --topology --seeds 8 --jobs 8
 

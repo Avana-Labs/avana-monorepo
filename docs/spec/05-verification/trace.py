@@ -35,8 +35,6 @@ ID kinds
     MATH-* (Z3)  SYM-* (SymPy)  QNT-* (Quint)  HYP-* (Hypothesis)  SIM-* (simulation)
     TEST-* (Foundry)  PROP-* (Certora / Halmos / SMTChecker)
     Solidity: `/// @custom:spec REQ-VAULT-001, INV-003` in contracts/src.
-  A check may also name a design-review finding it closes (AMMN-RT-01, defined in
-  docs/audit/design-review/amm-neutral/); those links are listed apart from the requirement matrix.
   ATTACK-* entries name their checks in the `| Checks |` row under their heading.
 
 Implementation evidence (evidence.py). A TEST-*/PROP-* tag counts for a row only when it sits in the comment block
@@ -81,7 +79,6 @@ FLOWS = "DEP|BOR|REP|WDR|LIQ|EMG|FEE|MKT|DEF"
 # pools, Curve, Balancer, Sushi. CORE holds the AMM-neutral rules every integration meets.
 AMM = "V2|V3|V4|SLIP|AERO|CURVE|BAL|SUSHI"
 AMM_ID = rf"(?:(?:REQ|SPEC)-AMM-(?:CORE|{AMM})|(?:INV|ATTACK)-AMM-(?:{AMM}))-[0-9]{{3}}"
-AMMN_ID = r"AMMN-(?:RT|FLOW|GAS|INT|ARCH|SM)-[0-9]{2}"   # design-review findings, closed by checks
 REQ_ID = rf"(?:{AMM_ID}|REQ-[A-Z]+-[0-9]{{3}}|INV-[0-9]{{3}}|SPEC-[A-Z]+-[0-9]{{3}}|ATTACK-[0-9]{{3}}|(?:{FLOWS})-(?:F-|POST-)?[0-9]{{3}}[a-z]?|Q-[0-9]{{3}})"
 CHECK_ID = r"(?:MATH|SYM|QNT|HYP|SIM|TEST|PROP|FV)-[A-Z0-9]+(?:-[A-Z0-9]+)*"
 CHECK_KIND = {"MATH": "Z3", "SYM": "SymPy", "QNT": "Quint", "HYP": "Hypothesis",
@@ -90,7 +87,7 @@ CHECK_KIND = {"MATH": "Z3", "SYM": "SymPy", "QNT": "Quint", "HYP": "Hypothesis",
 SPEC_STAGE = {"Z3", "SymPy", "Quint", "Hypothesis", "Simulation", "Internal FV"}
 
 DEF_LINE = re.compile(rf"^\s*(?:[-*]\s+|\|\s*|#+\s+)`?({REQ_ID})`?(?:[\s|:·—-]+)(.*)$")
-TARGET = rf"(?:{REQ_ID}|{AMMN_ID})"
+TARGET = rf"(?:{REQ_ID})"
 TAG = re.compile(rf"({CHECK_ID})\s+verifies:\s*((?:{TARGET})(?:\s*,\s*{TARGET})*)")
 SOL_TAG = re.compile(rf"@custom:spec\s+((?:{REQ_ID})(?:\s*,\s*{REQ_ID})*)")
 SPLIT = re.compile(TARGET)
@@ -114,7 +111,6 @@ AMM_MANIFEST = VERIF / "amm-integrations.json"                # {"V3": {"status"
 AMM_STATUS = ("draft", "review", "listed")
 PASS = {"proved", "computed", "holds", "pass"}
 FINDINGS = VERIF / "03-audit-findings.md"
-REVIEW = ROOT / "docs" / "audit" / "design-review" / "amm-neutral"
 
 
 FOUNDRY_TEST_FN = re.compile(r"^\s*function\s+((?:test|invariant)\w*)\s*\(")
@@ -296,7 +292,7 @@ def check_amm(reqs: dict, links: dict, findings: dict[str, str], errors: list[st
             continue
         out = errors if status == "listed" else warnings
         own = sorted(r for r in reqs if re.match(rf"^\w+-AMM-{p}-", r))
-        # every check named for this protocol, whatever it links (a rule, a core rule or an AMMN finding)
+        # every check named for this protocol, whatever it links (a rule or a core rule)
         checks = {c["id"]: c for items in links.values() for c in items if f"-AMM-{p}-" in c["id"]}
         for method, (kinds, folder) in AMM_METHODS.items():
             found = [c for cid, c in checks.items() if f"-AMM-{p}-{method}-" in cid and c["kind"] in kinds
@@ -323,16 +319,6 @@ def check_amm(reqs: dict, links: dict, findings: dict[str, str], errors: list[st
                     if findings.get(res.get("finding"), "").startswith(("Resolved", "Accepted")):
                         continue  # failed on purpose or fixed in spec, and traceable to its FINDING
                     errors.append(f"AMM {p}: {cid} has result {res.get('result', 'none')} and no resolved FINDING")
-
-
-def review_findings() -> dict[str, str]:
-    """AMMN-* design-review findings defined in docs/audit/design-review/amm-neutral/."""
-    found: dict[str, str] = {}
-    for path in sorted(REVIEW.glob("*.md")):
-        for n, line in enumerate(path.read_text().splitlines(), 1):
-            for fid in re.findall(rf"(?<![A-Za-z0-9-])({AMMN_ID})\b", line):
-                found.setdefault(fid, f"{path.relative_to(ROOT)}:{n}")
-    return found
 
 
 def digest(text: str) -> str:
@@ -380,7 +366,6 @@ def main() -> int:
     collect_attack_checks(links, check_targets)
     findings = check_findings(errors, warnings)
     check_amm(reqs, links, findings, errors, warnings)
-    review = review_findings()
     owners = owner_keys()
     on, loose = ev.scan_tags(TARGET)
     for t in loose:
@@ -396,13 +381,8 @@ def main() -> int:
         if rid not in reqs and not entry.get("retired_to"):
             errors.append(f"{rid} was accepted but is no longer defined; record its replacement as retired_to in the lock")
 
-    closed: dict[str, list[dict]] = {}
     for rid, items in links.items():
-        if re.fullmatch(AMMN_ID, rid):
-            if rid not in review:
-                errors.extend(f"{it['where']}: {it['id']} links to undefined design-review finding {rid}" for it in items)
-            closed[rid] = items
-        elif rid not in reqs:
+        if rid not in reqs:
             for it in items:
                 errors.append(f"{it['where']}: {it['id']} links to undefined {rid}")
 
@@ -490,12 +470,6 @@ def main() -> int:
         + f" · {len(errors)} errors · {len(warnings)} warnings**\n\n"
         "| Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |\n"
         "|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n"
-        + ("\n## Design-review findings closed by checks\n\n"
-           "Checks that name an `AMMN-*` finding of `docs/audit/design-review/amm-neutral/` they close. A finding listed "
-           "here still needs the spec rule that fixes it.\n\n"
-           "| Finding | Checks |\n|---|---|\n"
-           + "\n".join(f"| `{fid}` | {', '.join(sorted({'`' + c['id'] + '`' for c in closed[fid]}))} |"
-                       for fid in sorted(closed)) + "\n" if closed else "")
     )
 
     for e in errors:
