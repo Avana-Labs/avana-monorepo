@@ -14,7 +14,7 @@ struct MarketParams {
     uint16 slippageAllowanceBps;
     // Liveness floor of the slippage allowance, bps.
     uint16 slippageAllowanceMinBps;
-    // Pool risk factor, bps (> 0, at most 4,000).
+    // Pool risk factor, bps (> 0, at most 9,000).
     uint16 poolRiskFactor;
     // Minimum value of one pledge, 8-decimal USD (for example 10e8, at most 100_000e8).
     uint256 minPledgeUsd;

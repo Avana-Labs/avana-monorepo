@@ -182,7 +182,7 @@ PARAMS = [
     ("borrowPriceMaxAge", "down", 0, "borrowAgeCeiling", None),
     ("consistencyToleranceBps", "down", "consistencyToleranceMinBps", None, None),
     ("feedAgreementToleranceBps", "down", "feedAgreementToleranceMinBps", 10_000, None),
-    ("poolRiskFactor", "down", 1, 4_000, None),
+    ("poolRiskFactor", "down", 1, 9_000, None),
     ("routeDepthThreshold", "up", 1, None, None),
     ("marketUsdCap", "down", "topUpSliceUsdCurrent", 2**128, "cap"),
     ("topUpSliceUsd", "down", 0, "marketUsdCapCurrent", "slice"),

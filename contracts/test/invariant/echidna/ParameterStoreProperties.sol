@@ -75,7 +75,7 @@ contract ParameterStoreProperties is ParameterStoreStorage {
 
     function property_poolRiskFactorPositive() external view returns (bool) {
         uint16 f = _s().market[M].poolRiskFactor;
-        return f > 0 && f <= 4000;
+        return f > 0 && f <= 9000;
     }
 
     function property_flashFeeNeverRises() external view returns (bool) {
