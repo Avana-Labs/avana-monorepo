@@ -6,41 +6,28 @@ name: spec
 # Spec-stage verification: Z3, SymPy, simulations, Hypothesis, Quint and the traceability check
 # (trace.py), split into the parts of docs/spec/05-verification/run_all.sh, one job each, run in parallel.
 #
-# - `trace` runs on every pull request and push to main that touches the paths below, and on every manual run:
+# Off by default (2026-11-17): Certora runs locally and the spec is settled, so this
+# workflow runs only on a pull request that changes the spec (docs/spec/, contracts/certora/) and by hand.
+# - `trace` runs on every such pull request and on every manual run:
 #   the licence-header check, `run_all.sh trace` (fails on a duplicate ID, a link to an undefined ID or an
 #   unaccepted requirement change) and a check that the committed traceability.md matches the one trace.py
 #   regenerates.
 # - `model` runs one job per other part (`run_all.sh --list`: each z3/ folder, sympy, simulation, hypothesis,
 #   quint), each bounded at 4 hours; a part fails when any check differs from its recorded result. These jobs run
-#   every night at 06:00 UTC, on every release tag (`v*`) and by hand, never on a pull request or a push to main.
-# - `spec-gate` passes only when `plan` and `trace` passed and, in a nightly, release or manual run, every model part
-#   passed; elsewhere the model parts are skipped and the gate accepts that.
+#   by hand only, never on a pull request.
+# - `spec-gate` passes only when `plan` and `trace` passed and, in a manual run, every model part passed; elsewhere
+#   the model parts are skipped and the gate accepts that.
 
 on:
   pull_request:
     paths:
       - "docs/spec/**"
-      - "contracts/src/**"
-      - "contracts/test/**"
       - "contracts/certora/**"
       - ".github/workflows/spec.yml"
-  push:
-    branches: [main]
-    tags: ["v*"]
-    paths:
-      - "docs/spec/**"
-      - "contracts/src/**"
-      - "contracts/test/**"
-      - "contracts/certora/**"
-      - ".github/workflows/spec.yml"
-  schedule:
-    # Nightly at 06:00 UTC on main (GitHub runs a schedule on the default branch only).
-    - cron: "0 6 * * *"
   workflow_dispatch:
 
 concurrency:
-  # A newer pull-request run cancels the older one on the same ref; runs on main finish, so a model part is never
-  # cancelled by the next push.
+  # A newer pull-request run cancels the older one on the same ref; a manual run finishes.
   group: spec-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -72,7 +59,7 @@ jobs:
   model:
     name: run_all.sh ${{ matrix.part }}
     needs: plan
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
@@ -165,7 +152,7 @@ jobs:
       - name: Every part passed
         continue-on-error: true
         env:
-          LONG: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
+          LONG: ${{ github.event_name == 'workflow_dispatch' }}
           PLAN: ${{ needs.plan.result }}
           MODEL: ${{ needs.model.result }}
           TRACE: ${{ needs.trace.result }}
@@ -176,9 +163,9 @@ jobs:
           if [ "$LONG" = true ]; then
             [ "$MODEL" = success ] || { echo "model parts: $MODEL"; fail=1; }
           elif [ "$MODEL" = skipped ]; then
-            echo "model parts: skipped, they run nightly, on every release tag and by hand"
+            echo "model parts: skipped, they run by hand"
           else
-            echo "model parts: $MODEL outside a nightly, release or manual run, expected skipped"
+            echo "model parts: $MODEL outside a manual run, expected skipped"
             fail=1
           fi
           exit $fail

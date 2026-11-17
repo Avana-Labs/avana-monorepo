@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Chain reads shared by the manifest producer and the verification: runtime code hashes, ERC-1967 slots, deployment
-// blocks from Foundry broadcast files.
+// blocks from Foundry broadcast files, logs read in block ranges a provider accepts.
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { type Address, type Hex, type PublicClient, getAddress, keccak256 } from "viem";
+import { type AbiEvent, type Address, type GetLogsReturnType, type Hex, type PublicClient, getAddress, keccak256 } from "viem";
 
 /** ERC-1967 implementation slot, `bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1)`. */
 export const IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc" as const;
@@ -27,6 +27,28 @@ export async function implementationOf(client: PublicClient, proxy: Address): Pr
 export async function adminOf(client: PublicClient, proxy: Address): Promise<bigint> {
   const word = await client.getStorageAt({ address: proxy, slot: ADMIN_SLOT });
   return word ? BigInt(word) : 0n;
+}
+
+/** Largest block range of one `eth_getLogs` call: providers cap it (QuickNode at 10,000 blocks). */
+export const LOG_RANGE = 5_000n;
+
+/**
+ * `getLogs` over [fromBlock, toBlock] in consecutive inclusive ranges of at most `step` blocks, the results concatenated
+ * in block order. An empty list when `fromBlock` is past `toBlock`.
+ */
+export async function getLogsChunked<const E extends readonly AbiEvent[]>(
+  client: Pick<PublicClient, "getLogs">,
+  params: { readonly address: Address | Address[]; readonly events: E; readonly fromBlock: bigint; readonly toBlock: bigint },
+  step: bigint = LOG_RANGE,
+): Promise<GetLogsReturnType<undefined, E, undefined, bigint, bigint>> {
+  if (step <= 0n) throw new Error(`getLogs range ${step} is not positive`);
+  const { address, events, fromBlock, toBlock } = params;
+  const out: GetLogsReturnType<undefined, E, undefined, bigint, bigint> = [];
+  for (let start = fromBlock; start <= toBlock; start += step) {
+    const end = start + step - 1n < toBlock ? start + step - 1n : toBlock;
+    out.push(...(await client.getLogs({ address, events, fromBlock: start, toBlock: end })));
+  }
+  return out;
 }
 
 /**

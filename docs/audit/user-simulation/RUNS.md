@@ -118,7 +118,7 @@ The violations are the check "rescue top-up sized to restore `minOpeningHealthFa
 | Item | Value |
 |---|---|
 | Date | 2026-11-10 |
-| What ran | The topology comparison of [topology-options.md](../design-review/topology-options.md): T1, T2 and T3 in 8 scenarios (T3 also in `eth-crash`), 40 days each, 6 seeds |
+| What ran | The topology comparison of the design review's topology options (kept outside the repository): T1, T2 and T3 in 8 scenarios (T3 also in `eth-crash`), 40 days each, 6 seeds |
 | Command | `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --topology --seeds 6 --jobs 8` (from the repository root) |
 | Tools | Python 3.9.6, standard library only; `multiprocessing` |
 | Seeds and bounds | Seeds 20261109…20261114; 150 runs |
@@ -133,14 +133,14 @@ The violations are the check "rescue top-up sized to restore `minOpeningHealthFa
 | Item | Value |
 |---|---|
 | Date | 2026-11-10 |
-| What ran | The topology comparison of [topology-options.md](../design-review/topology-options.md) after the dust fix: T1 (one market per Spoke), T2 (several markets per Spoke) and T3 (T2 plus a Volatile-Hub Spoke borrowing USDC from the Stable Hub) in `calm`, `dai-depeg`, `usdt-depeg`, `pool-crunch`, `two-pool`, `oracle-stale`, `dai-crash` and `dai-failure`, and T3 in `eth-crash`; 40 days per run, shock on day 25. Then the `base` variant once more to confirm the topology option leaves the base path unchanged |
+| What ran | The topology comparison of the design review's topology options (kept outside the repository) after the dust fix: T1 (one market per Spoke), T2 (several markets per Spoke) and T3 (T2 plus a Volatile-Hub Spoke borrowing USDC from the Stable Hub) in `calm`, `dai-depeg`, `usdt-depeg`, `pool-crunch`, `two-pool`, `oracle-stale`, `dai-crash` and `dai-failure`, and T3 in `eth-crash`; 40 days per run, shock on day 25. Then the `base` variant once more to confirm the topology option leaves the base path unchanged |
 | Commands | `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --topology --seeds 5 --jobs 8`; `docs/spec/05-verification/.venv/bin/python docs/audit/user-simulation/run_simulation.py --only base --out <scratch directory>` (from the repository root) |
 | Tools | Python 3.9.6, standard library only; `multiprocessing` |
 | Seeds and bounds | Seeds 20261109…20261113; 125 runs; 985 people on three stable markets (USDC/USDT and DAI/USDC on chain A, USDC/USDT-B on chain B), plus 150 WETH/USDC LPs in T3; no attackers, probes or pauses |
 | Results | 0 invariant violations in 125 runs (2,509,764 to 2,527,680 checks per scenario). No liquidation or bad debt in any topology in `calm`, `dai-depeg`, `usdt-depeg`, `pool-crunch` and `two-pool`. `oracle-stale`: 0 accounts liquidated in T1, 11.4 (0–28) in T2, every one through a market healthy on its own. `dai-failure`: bad debt $8.1k (T1), $6.7k (T2), $9.2k (T3), 0.22–0.31% of the $3M Hub reserve, all within the First-Loss Reserve. `DrawCapExceeded` refusals before the shock: 29 (T1), 4 (T2), 116 (T3). Mean over seeds per metric in `results/topology/aggregate.md`. Base confirmation: 514,318 checks, 0 violations, 88 liquidation calls, sha256 `b32c4c5cdc21307b`, as in `SIM-R5` |
 | Exit code | 0 for both commands |
 | Wall time | 12 min 40 s for the grid (3,079 CPU-seconds; the machine was also running a Quint verification job, so about 6.5 min on 8 idle cores); 85 s for the base confirmation |
-| Findings produced | None in the register. Design questions for the topology choice are listed in [topology-options.md](../design-review/topology-options.md#what-t2-needs) |
+| Findings produced | None in the register. Design questions for the topology choice are listed in the design review's topology options |
 | Spec state | Final spec, decisions `Q-001`…`Q-278`; spec pages unchanged |
 | Output | `results/topology/summary-<topology>-<scenario>-<seed>.json`, `results/topology/aggregate.md`, `results/topology/aggregate.json` (sha256 `e1f941bd50ace096`) |
 
