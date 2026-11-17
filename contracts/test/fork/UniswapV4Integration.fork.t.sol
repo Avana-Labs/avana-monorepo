@@ -161,6 +161,7 @@ contract UniswapV4IntegrationForkTest is AvanaTest {
     }
 
     // TEST-341 verifies: REQ-AMM-V4-001, REQ-AMM-V4-003, REQ-AMM-V4-004, REQ-AMM-V4-007, SPEC-AMM-V4-003
+    // TEST-116 verifies: REQ-AMM-CORE-005, REQ-AMM-CORE-007, REQ-AMM-CORE-008; shared: this is the Uniswap v4 integration's run on its chain's fork through the AMM integration interface (exact range received, other ranges refused, removal)
     function test_TEST_341_uniswapV4CustodyNativeRemovalAndReadGuard() public {
         uint128 l = 1e15;
         uint256 id = _mint(alice, lower, upper, l);
