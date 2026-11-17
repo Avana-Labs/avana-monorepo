@@ -339,8 +339,13 @@ export async function runStep(c: LocalChain, release: string, step: string, conf
 function runShell(step: string, env: NodeJS.ProcessEnv, log: string, fresh: boolean, args: string[] = []): string {
   // A step whose earlier broadcast stopped part-way is run again from the start, its old broadcast record archived.
   const e = { ...env, AVANA_FORGE_FLAGS: [env.AVANA_FORGE_FLAGS ?? "", fresh ? "--start-fresh" : ""].join(" ").trim() };
-  const r = spawnSync(bash(), ["script/deploy/step.sh", step, ...args], { cwd: CONTRACTS, env: e, encoding: "utf8", maxBuffer: 1 << 28 });
-  const text = redact(`${r.stdout ?? ""}${r.stderr ?? ""}`);
+  const run = () => spawnSync(bash(), ["script/deploy/step.sh", step, ...args], { cwd: CONTRACTS, env: e, encoding: "utf8", maxBuffer: 1 << 28 });
+  let r = run();
+  // A shell that failed to start wrote nothing and sent nothing: it is started once more.
+  if (r.status !== 0 && !r.stdout && !r.stderr) r = run();
+  // A step that never ran (the shell could not start, or was killed) leaves no output: its cause goes to the log.
+  const lost = r.error ? `step.sh did not run: ${r.error.message}\n` : r.signal ? `step.sh stopped by ${r.signal}\n` : "";
+  const text = redact(`${lost}${r.stdout ?? ""}${r.stderr ?? ""}`);
   writeFileSync(log, text);
   if (r.status !== 0) {
     const why = text.split(/\r?\n/).filter((l) => /Error|revert|error/.test(l)).slice(0, 3).join(" ") || text.trim().split(/\r?\n/).slice(-3).join(" ");
