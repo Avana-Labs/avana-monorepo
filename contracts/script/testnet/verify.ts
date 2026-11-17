@@ -352,16 +352,35 @@ export function sourceRequest(chainId: number, address: string, contract: string
   };
 }
 
-/** Submits `form` and waits for the explorer's verdict through `check`: undefined once verified, else its message. */
+/** An explorer API answer, or undefined when the request or its JSON failed (a dropped connection, an HTML error
+ * page): one contract's request failing must not stop the rest of the pass. */
+async function explorer<T>(url: string, init?: RequestInit): Promise<T | undefined> {
+  try {
+    return (await (await fetch(url, init)).json()) as T;
+  } catch {
+    return undefined;
+  }
+}
+
+/** How many times a submission is sent when the explorer cannot be reached. */
+const SEND_TRIES = 3;
+
+/** Submits `form` and waits for the explorer's verdict through `check`: undefined once verified, else its message. A
+ * submission the explorer cannot be reached for is sent again, up to SEND_TRIES times; a check that fails is retried
+ * like a pending one. */
 async function submit(url: string, form: Record<string, string>, check: string, pollMs: number): Promise<string | undefined> {
   const key = process.env.ETHERSCAN_API_KEY!;
-  const post = await fetch(url, { method: "POST", body: new URLSearchParams({ ...form, apikey: key }) });
-  const sent = (await post.json()) as { status: string; result: string };
+  let sent: { status: string; result: string } | undefined;
+  for (let i = 0; i < SEND_TRIES && !sent; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, pollMs));
+    sent = await explorer(url, { method: "POST", body: new URLSearchParams({ ...form, apikey: key }) });
+  }
+  if (!sent) return "the explorer could not be reached";
   if (sent.status !== "1") return /already verified/i.test(sent.result) ? undefined : sent.result;
   for (let i = 0; i < 60; i++) {
     await new Promise((r) => setTimeout(r, pollMs));
-    const res = await fetch(`${url}&module=contract&action=${check}&guid=${encodeURIComponent(sent.result)}&apikey=${key}`);
-    const c = (await res.json()) as { status: string; result: string };
+    const c = await explorer<{ status: string; result: string }>(`${url}&module=contract&action=${check}&guid=${encodeURIComponent(sent.result)}&apikey=${key}`);
+    if (!c) continue;
     if (c.status === "1" || /already verified/i.test(c.result)) return undefined;
     if (!/pending|in queue|rate limit/i.test(c.result)) return c.result;
   }
@@ -370,9 +389,10 @@ async function submit(url: string, form: Record<string, string>, check: string, 
 
 /** The implementation the explorer records for `address` as a proxy, if it records one. */
 async function recordedImplementation(chainId: number, address: string): Promise<string | undefined> {
-  const res = await fetch(`https://api.etherscan.io/v2/api?chainid=${chainId}&module=contract&action=getsourcecode&address=${address}&apikey=${process.env.ETHERSCAN_API_KEY!}`);
-  const r = (await res.json()) as { status: string; result: { Proxy?: string; Implementation?: string }[] | string };
-  const c = Array.isArray(r.result) ? r.result[0] : undefined;
+  const r = await explorer<{ status: string; result: { Proxy?: string; Implementation?: string }[] | string }>(
+    `https://api.etherscan.io/v2/api?chainid=${chainId}&module=contract&action=getsourcecode&address=${address}&apikey=${process.env.ETHERSCAN_API_KEY!}`,
+  );
+  const c = r && Array.isArray(r.result) ? r.result[0] : undefined;
   return c && c.Proxy !== "0" && c.Implementation ? c.Implementation : undefined;
 }
 

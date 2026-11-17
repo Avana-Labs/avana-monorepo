@@ -270,6 +270,29 @@ test("a clone the explorer already links to its implementation counts as verifie
   assert.match(elsewhere.r.failed[0]!, /not detected/);
 });
 
+test("an explorer that cannot be reached fails that contract only; the pass goes on", async () => {
+  const f = fixture();
+  // Every contract verified already: only the clone's proxy request runs, and every request to the explorer drops.
+  const done = Object.fromEntries(["a1", "b2", "d4", "f6"].map((a) => [`0x${"00".repeat(19)}${a}`, "x"]));
+  writeFileSync(join(f.out, "verified.json"), JSON.stringify(done));
+  let calls = 0;
+  const real = globalThis.fetch;
+  globalThis.fetch = (async () => {
+    calls++;
+    throw new TypeError("fetch failed");
+  }) as unknown as typeof fetch;
+  process.env.ETHERSCAN_API_KEY = "k";
+  try {
+    const r = await verifyRelease({ contracts: f.root, outDir: f.out, broadcastRoot: f.broadcast, chainId: 11_155_111, dryRun: false, say: () => {}, pollMs: 0 });
+    assert.equal(r.failed.length, 1);
+    assert.match(r.failed[0]!, /could not be reached/);
+    assert.equal(calls, 3, "the submission is sent three times");
+  } finally {
+    globalThis.fetch = real;
+    delete process.env.ETHERSCAN_API_KEY;
+  }
+});
+
 test("viem's keccak256 of a source's bytes is Keccak's (Solidity's), across block boundaries", () => {
   assert.equal(keccak256(""), "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
   assert.equal(keccak256("abc"), "0x4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45");
