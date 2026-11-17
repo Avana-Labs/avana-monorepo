@@ -6,12 +6,13 @@
 
 import { createServer } from "node:http";
 import { KMSClient } from "@aws-sdk/client-kms";
-import { type Address, type PublicClient, createPublicClient, http, parseAbi, parseAbiItem, webSocket } from "viem";
+import { type Address, type PublicClient, createPublicClient, parseAbi, parseAbiItem, webSocket } from "viem";
 import { debtOracleAbi, marketRegistryAbi } from "@avana/protocol/abis";
 import { awsKmsKey } from "./adapters/awsKms.ts";
 import { localKeystoreSigner } from "./adapters/localKeystore.ts";
 import { logAlertSink } from "./adapters/logAlertSink.ts";
 import { monitorSink, teeSink } from "./adapters/monitorSink.ts";
+import { readClient } from "./chain/client.ts";
 import { l1DataFee, paysL1DataFee } from "./chain/gas.ts";
 import { kmsSigner } from "./chain/signer.ts";
 import { type ChainConfig, loadConfig } from "./config.ts";
@@ -21,7 +22,7 @@ import { IndexerStream, applyStreamRecords } from "./discovery/indexerStream.ts"
 import { headWatchdog } from "./discovery/stream.ts";
 import { InventoryBook } from "./inventory.ts";
 import { ChainMetrics, renderMetrics, valueInWei } from "./metrics.ts";
-import type { AlertSink } from "./monitoring/alerts.ts";
+import { type AlertSink, HeldAlerts } from "./monitoring/alerts.ts";
 import { DiscoveryWatch, discoveryThrough } from "./monitoring/discovery.ts";
 import { SpendTracker, fundingCheck } from "./monitoring/funding.ts";
 import { HubBook, SpendBook, attributeSubject, liquidationReward } from "./runtime/budget.ts";
@@ -41,6 +42,8 @@ process.on("unhandledRejection", fatal("unhandledRejection"));
 const USER_PROXY_CREATED = parseAbiItem("event UserProxyCreated(address indexed wallet, address indexed spoke, uint256 indexed marketId, address proxy)");
 const OPERATOR_HELPER_ABI = [parseAbiItem("function MAX_TOP_UP_BPS() view returns (uint256)")] as const;
 const SWEEP_MS = 10 * 60 * 1000;
+/** A sweep from the manifest's start block, once a day; the other sweeps resume from the last one's finalized block. */
+const FULL_SWEEP_MS = 24 * 60 * 60 * 1000;
 const NATIVE_FEED_ABI = parseAbi(["function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)", "function decimals() view returns (uint8)"]);
 const CLASSES: readonly JobClass[] = ["urgent", "scheduled", "lazy"];
 const line = (record: Record<string, unknown>) => process.stdout.write(`${JSON.stringify(record, (_k, v: unknown) => (typeof v === "bigint" ? v.toString(10) : v))}\n`);
@@ -93,20 +96,30 @@ function reportOneSided(cfg: ChainConfig, cache: AccountCache, rpcThrough: bigin
 /**
  * The block-cadence spend alerts, then M-16, M-17 and M-33: the rolling 24 h spend per class for the metrics, M-32 for a
  * class at its budget and M-31 for a spend anomaly, from the spend log; they are judged before the funding reads, so a
- * failed read never hides them.
+ * failed read never hides them. The funding reads run at the slow-cadence heads only; at the heads in between, the
+ * alerts the last reads raised are posted again (HeldAlerts), so the monitor holds them as before.
  */
-function spendAndFunding(book: SpendBook, m: ChainMetrics, alerts: AlertSink, funding: (head: { number: bigint; timestamp: bigint }) => Promise<void>) {
-  return async (head: { number: bigint; timestamp: bigint }) => {
+function spendAndFunding(
+  book: SpendBook,
+  m: ChainMetrics,
+  alerts: AlertSink,
+  held: HeldAlerts,
+  funding: (head: { number: bigint; timestamp: bigint }) => Promise<void>,
+) {
+  return async (head: { number: bigint; timestamp: bigint }, slow: boolean) => {
     book.watchFrom(head.timestamp);
     m.spend24h = new Map(CLASSES.map((c) => [c, book.spent24h(head.timestamp, c)] as const));
     for (const a of book.alerts(head)) await alerts.send(a);
+    if (!slow) return held.replay(head.number);
+    held.begin();
     await funding(head);
   };
 }
 
 for (const cfg of config.chains) {
-  const primary = createPublicClient({ transport: http(cfg.rpc.primary) }) as PublicClient;
-  const fallback = createPublicClient({ transport: http(cfg.rpc.fallback) }) as PublicClient;
+  // Reads made together at one block travel as one Multicall3 eth_call (chain/client.ts).
+  const primary = readClient(cfg.chain.id, cfg.rpc.primary);
+  const fallback = readClient(cfg.chain.id, cfg.rpc.fallback);
   const heads = createPublicClient({ transport: webSocket(cfg.rpc.ws, { keepAlive: true, reconnect: true }) });
   const cache = new AccountCache();
   const inventory = new InventoryBook();
@@ -195,10 +208,21 @@ for (const cfg of config.chains) {
   const first = await stream.poll(Number.MAX_SAFE_INTEGER);
   applyStreamRecords(first.records, cache, cfg.manifest, cfg.chain.id);
   if (first.kind !== "ok") line({ type: "keeper.stream", chainId: cfg.chain.id, event: first.kind, detail: first.kind === "failed" ? first.error : first.finalized });
-  const p1 = await backfill(cfg, primary, cache, start, await primary.getBlockNumber());
-  const p2 = await backfill(cfg, fallback, cache, start, await fallback.getBlockNumber());
-  // The block both providers' logs have been read to; set again by each full sweep.
-  let rpcThrough = p1 < p2 ? p1 : p2;
+  /**
+   * One provider's sweep: logs from `fromBlock` to its head. Returns the head read to and the provider's finalized block
+   * before the read, where the next incremental sweep starts: logs at or below a finalized block never change.
+   */
+  const sweep = async (client: PublicClient, fromBlock: bigint) => {
+    const finalized = (await client.getBlock({ blockTag: "finalized" })).number;
+    const through = await backfill(cfg, client, cache, fromBlock, await client.getBlockNumber());
+    return { through, next: finalized };
+  };
+  const s1 = await sweep(primary, start);
+  const s2 = await sweep(fallback, start);
+  // Where each provider's next incremental sweep starts.
+  const resume = { primary: s1.next, fallback: s2.next };
+  // The block both providers' logs have been read to; set again by each sweep.
+  let rpcThrough = s1.through < s2.through ? s1.through : s2.through;
   reportOneSided(cfg, cache, rpcThrough, stream);
 
   // M-30 at each head, after the stream poll: warns on any one-sided account, pages once one stays one-sided for
@@ -235,6 +259,7 @@ for (const cfg of config.chains) {
     streamDown = false;
   };
 
+  const heldFunding = new HeldAlerts(alerts);
   const onHead = chainLoop({
     keeper: config,
     cfg,
@@ -255,11 +280,11 @@ for (const cfg of config.chains) {
       await pollStream();
       judgeDiscovery(head.number);
     },
-    funding: spendAndFunding(spendBook, chainMetrics, alerts, fundingCheck({
+    funding: spendAndFunding(spendBook, chainMetrics, alerts, heldFunding, fundingCheck({
       chainId: cfg.chain.id,
       primary,
       fallback,
-      alerts,
+      alerts: heldFunding.sink,
       assets: [...new Map(cfg.manifest.debtReserves.map((r) => [r.asset.toLowerCase(), r.asset])).values()],
       fundingSafe: helperEntry.fundingSafe,
       helper: helperEntry.address,
@@ -289,12 +314,19 @@ for (const cfg of config.chains) {
     onError: fatal("headStream"),
   });
 
-  // Full sweep: re-enumerate proxies from logs over both providers every 10 minutes, then compare with the indexer's set.
+  // Sweep: enumerate proxies from logs over both providers every 10 minutes, then compare with the indexer's set. Each
+  // sweep resumes from the provider's finalized block of the previous one; once a day it starts again from the
+  // manifest's start block, which repairs anything a provider left out of an earlier answer.
+  let lastFull = Date.now();
   setInterval(() => {
     running = running.then(async () => {
-      const a = await backfill(cfg, primary, cache, start, await primary.getBlockNumber());
-      const b = await backfill(cfg, fallback, cache, start, await fallback.getBlockNumber());
-      rpcThrough = a < b ? a : b;
+      const full = Date.now() - lastFull >= FULL_SWEEP_MS;
+      if (full) lastFull = Date.now();
+      const a = await sweep(primary, full ? start : resume.primary);
+      const b = await sweep(fallback, full ? start : resume.fallback);
+      resume.primary = a.next;
+      resume.fallback = b.next;
+      rpcThrough = a.through < b.through ? a.through : b.through;
       reportOneSided(cfg, cache, rpcThrough, stream);
     });
   }, SWEEP_MS);
