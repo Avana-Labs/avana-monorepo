@@ -1,4 +1,4 @@
-import { decodeFunctionData, getAddress, parseAbi, type Address } from "viem"
+import { decodeFunctionData, getAddress, maxUint256, parseAbi, type Address } from "viem"
 import { describe, expect, it, vi } from "vitest"
 import type { BorrowChain, BorrowWallet } from "@/app/lib/borrow-system/chain-execution"
 import { executeLendOnChain, LEND_SPOKE_ABI } from "@/app/lib/lend-system/chain-execution"
@@ -105,13 +105,13 @@ describe("executeLendOnChain", () => {
     )
     const calls = sent.flat()
     expect(decodeSpoke(calls)).toMatchObject([
-      { to: SPOKE_B, functionName: "withdraw", args: [2n, 500_000_000n, WALLET] },
+      { to: SPOKE_B, functionName: "withdraw", args: [2n, maxUint256, WALLET] },
       { to: SPOKE_A, functionName: "withdraw", args: [1n, 100_000_000n, WALLET] },
     ])
     expect(calls.at(-1)!.to).toBe(USDC)
   })
 
-  it("withdraws exactly what is supplied when asked for more", async () => {
+  it("withdraws the whole supply with the maximum amount when asked for more, fee on the amount read", async () => {
     const { deps, sent } = harness({ [SPOKE_A]: 300_000_000n })
     await executeLendOnChain(
       deps,
@@ -120,7 +120,22 @@ describe("executeLendOnChain", () => {
         payload: { type: "withdraw", walletId: WALLET, marketId: "ethereum-usdc", positionId: "p", withdrawAmount: 1_000 },
       }),
     )
-    expect(decodeSpoke(sent.flat())).toMatchObject([{ to: SPOKE_A, args: [1n, 300_000_000n, WALLET] }])
+    const calls = sent.flat()
+    expect(decodeSpoke(calls)).toMatchObject([{ to: SPOKE_A, args: [1n, maxUint256, WALLET] }])
+    const fee = decodeFunctionData({ abi: parseAbi(["function transfer(address,uint256)"]), data: calls.at(-1)!.data! })
+    expect(fee.args).toEqual([RECIPIENT, 300_000n]) // 10 bps of the 300 USDC read
+  })
+
+  it("withdraws a partial amount as asked", async () => {
+    const { deps, sent } = harness({ [SPOKE_A]: 300_000_000n })
+    await executeLendOnChain(
+      deps,
+      intent({
+        actionType: "withdraw",
+        payload: { type: "withdraw", walletId: WALLET, marketId: "ethereum-usdc", positionId: "p", withdrawAmount: 120 },
+      }),
+    )
+    expect(decodeSpoke(sent.flat())).toMatchObject([{ to: SPOKE_A, args: [1n, 120_000_000n, WALLET] }])
   })
 
   it("supplies to the one open lend reserve and refuses to guess between several", async () => {

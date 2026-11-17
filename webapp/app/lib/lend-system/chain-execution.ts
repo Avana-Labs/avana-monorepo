@@ -1,4 +1,4 @@
-import { encodeFunctionData, parseAbi, parseUnits, type Address, type Hex } from "viem"
+import { encodeFunctionData, maxUint256, parseAbi, parseUnits, type Address, type Hex } from "viem"
 import { buildActionBatch, sendActionBatch, type Call } from "@/app/lib/fees/fee-batch"
 import { frontendFeeAmount, frontendFeeRules, type FeeRules } from "@/app/lib/fees/front-end-fee"
 import { isUserRejection } from "@/app/lib/swap-system/swap-execution"
@@ -61,8 +61,9 @@ function planSupply(asset: LendHubAssetRef, account: Address, amount: bigint): P
 }
 
 /**
- * Withdraws `requested` from the asset's lend reserves, largest supply first, each at most what it holds now; a
- * request at or above the whole supply withdraws exactly what each reserve holds.
+ * Withdraws `requested` from the asset's lend reserves, largest supply first, each at most what it holds now. A reserve
+ * the request empties is withdrawn with the maximum amount, which the Spoke caps to the whole supply at execution, so
+ * interest accrued after the read leaves no dust; the fee stays sized on the amount read.
  */
 async function planWithdraw(chain: BorrowChain, asset: LendHubAssetRef, account: Address, requested: bigint): Promise<PlannedLend> {
   const held = await Promise.all(
@@ -85,7 +86,7 @@ async function planWithdraw(chain: BorrowChain, asset: LendHubAssetRef, account:
     const take = r.supplied < left ? r.supplied : left
     calls.push({
       to: r.spoke as Address,
-      data: encodeFunctionData({ abi: LEND_SPOKE_ABI, functionName: "withdraw", args: [BigInt(r.reserveId), take, account] }),
+      data: encodeFunctionData({ abi: LEND_SPOKE_ABI, functionName: "withdraw", args: [BigInt(r.reserveId), take === r.supplied ? maxUint256 : take, account] }),
     })
     left -= take
   }
