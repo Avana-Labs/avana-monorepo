@@ -4,7 +4,10 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 const state = vi.hoisted(() => ({ pathname: "/", isSignedIn: false }))
 
 vi.mock("next/navigation", () => ({ usePathname: () => state.pathname }))
-vi.mock("@/app/lib/siwe/use-siwe-auth", () => ({ useSiweAuth: () => ({ isSignedIn: state.isSignedIn }) }))
+vi.mock("@/app/lib/siwe/use-siwe-auth", () => ({
+  useSiweAuth: () => ({ isSignedIn: state.isSignedIn }),
+  useSiweToken: () => (state.isSignedIn ? "token" : null),
+}))
 vi.mock("@/app/lib/test-mode", () => ({ shouldUseOpenGateSession: () => false }))
 vi.mock("next/dynamic", () => ({
   default: () =>
