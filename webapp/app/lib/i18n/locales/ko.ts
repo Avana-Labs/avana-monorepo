@@ -1359,6 +1359,7 @@ const dict: TranslationDictionary = {
   "Dashboard Positions": "대시보드 포지션",
   "Available to deposit": "예치 가능",
   "against {pool}": "{pool} 대상",
+  "Merkl Rewards": "Merkl 리워드",
   Locked: "잠김",
   "Next rewards": "다음 리워드",
   "Open on Launch Date": "출시일에 오픈",

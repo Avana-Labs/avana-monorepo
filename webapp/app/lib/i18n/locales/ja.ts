@@ -1425,6 +1425,7 @@ const dict: TranslationDictionary = {
   "Dashboard Positions": "ダッシュボードのポジション",
   "Available to deposit": "預入可能",
   "against {pool}": "{pool} に対して",
+  "Merkl Rewards": "Merkl リワード",
   Locked: "ロック中",
   "Next rewards": "次のリワード",
   "Open on Launch Date": "ローンチ日に開放",

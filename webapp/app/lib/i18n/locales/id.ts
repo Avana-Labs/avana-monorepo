@@ -1387,6 +1387,7 @@ const dict: TranslationDictionary = {
   "Dashboard Positions": "Posisi Dasbor",
   "Available to deposit": "Tersedia untuk disetor",
   "against {pool}": "terhadap {pool}",
+  "Merkl Rewards": "Hadiah Merkl",
   Locked: "Terkunci",
   "Next rewards": "Hadiah berikutnya",
   "Open on Launch Date": "Terbuka pada tanggal peluncuran",

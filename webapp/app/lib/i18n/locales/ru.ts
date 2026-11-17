@@ -1388,6 +1388,7 @@ const dict: TranslationDictionary = {
   "Dashboard Positions": "Позиции дашборда",
   "Available to deposit": "Доступно для депозита",
   "against {pool}": "против {pool}",
+  "Merkl Rewards": "Награды Merkl",
   Locked: "Заблокировано",
   "Next rewards": "Следующие награды",
   "Open on Launch Date": "Откроется в день запуска",

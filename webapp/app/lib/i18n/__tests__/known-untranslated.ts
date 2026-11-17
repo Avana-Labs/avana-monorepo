@@ -32,6 +32,9 @@ export const KNOWN_UNTRANSLATED: readonly string[] = [
   // Dashboard loading status — new copy awaiting the locale backfill.
   "Loading dashboard…",
   "This is taking longer than usual.",
+  // Merkl rewards — coming-soon copy awaiting the locale backfill.
+  "Coming soon",
+  "Merkl reward campaigns will appear here once they launch.",
   "1 Day",
   "1D",
   "6 Months",

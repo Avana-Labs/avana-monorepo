@@ -35,6 +35,7 @@ import { primaryCtaClass } from "@/app/components/action-page/action-cta"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { UnderlineTabStrip } from "@/app/components/tab-primitives"
 import { RewardsPromoContent, RewardsQuestSection } from "@/app/dashboard/_rewards-components/quests-tab"
+import { MerklRewardsSection } from "@/app/dashboard/_rewards-components/merkl-rewards-section"
 
 type DashboardPromoTabId = Extract<RewardsPromoTabId, "getting-started" | "lend" | "borrow" | "referrals">
 type DashboardAccountTabId = Extract<RewardsPromoTabId, "lend" | "borrow">
@@ -86,6 +87,7 @@ function DashboardRewardsTab({
         if (quests.length === 0) return null
         return <RewardsQuestSection key={id} title={title} quests={quests} onTaskAction={onTaskAction} />
       })}
+      <MerklRewardsSection />
     </div>
   )
 }
