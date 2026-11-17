@@ -1,0 +1,318 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "aavePayload": {
+    "hubs": [
+      {
+        "label": "ethereum",
+        "lendSpoke": "lendEthereum",
+        "cdpSpokes": [
+          "uniV3Stable",
+          "uniV4Stable"
+        ],
+        "content": {
+          "name": "Avana Ethereum Hub"
+        }
+      }
+    ],
+    "debtAssets": [
+      {
+        "symbol": "GHO",
+        "token": "$world:.tokens.GHO",
+        "decimals": 18,
+        "priceSource": "$world:.feeds.GHO.primary",
+        "drawCap": 10000000,
+        "coverageMinimum": 100000,
+        "offsetMinimum": 75000
+      },
+      {
+        "symbol": "USDC",
+        "token": "$world:.tokens.USDC",
+        "decimals": 6,
+        "priceSource": "$world:.feeds.USDC.primary",
+        "drawCap": 10000000,
+        "coverageMinimum": 100000,
+        "offsetMinimum": 75000
+      },
+      {
+        "symbol": "USDT",
+        "token": "$world:.tokens.USDT",
+        "decimals": 6,
+        "priceSource": "$world:.feeds.USDT.primary",
+        "drawCap": 5000000,
+        "coverageMinimum": 50000,
+        "offsetMinimum": 25000
+      }
+    ]
+  },
+  "integrations": [
+    {
+      "integrationId": 1,
+      "kind": "uniswap-v3",
+      "positionManagers": [
+        "$world:.uniswapV3PositionManager"
+      ],
+      "factories": [
+        "$world:.uniswapV3Factory"
+      ]
+    },
+    {
+      "integrationId": 3,
+      "kind": "uniswap-v4",
+      "positionManagers": [
+        "$world:.uniswapV4PositionManager"
+      ],
+      "factories": [
+        "$world:.uniswapV3Factory"
+      ]
+    }
+  ],
+  "world": {
+    "uniswapPools": [
+      {
+        "name": "USDC-USDT-100",
+        "a": "USDC",
+        "b": "USDT",
+        "fee": 100,
+        "usd": 20000000
+      },
+      {
+        "name": "USDC-USDT-500",
+        "a": "USDC",
+        "b": "USDT",
+        "fee": 500,
+        "usd": 3000000
+      }
+    ],
+    "uniswapV4Pools": [
+      {
+        "name": "USDC-USDT-v4-100",
+        "a": "USDC",
+        "b": "USDT",
+        "fee": 100,
+        "tickSpacing": 1,
+        "usd": 4000000
+      }
+    ]
+  },
+  "listing": {
+    "creditLineWhole": 100000000,
+    "tokens": [
+      {
+        "symbol": "USDC",
+        "isUsdStable": true,
+        "deviationBps": 25,
+        "collateralFactorBps": 9000,
+        "agreementToleranceBps": 150,
+        "secondToleranceBps": 150,
+        "tokenCapUsd": "50000000",
+        "hubs": [
+          "ethereum"
+        ]
+      },
+      {
+        "symbol": "USDT",
+        "isUsdStable": true,
+        "deviationBps": 25,
+        "collateralFactorBps": 9000,
+        "agreementToleranceBps": 150,
+        "secondToleranceBps": 150,
+        "tokenCapUsd": "50000000",
+        "hubs": [
+          "ethereum"
+        ]
+      }
+    ],
+    "debtAssets": [
+      {
+        "symbol": "GHO",
+        "fixedPrice": true,
+        "deviationBps": 25,
+        "floorRoundingAllowance": "1000000000000000000"
+      },
+      {
+        "symbol": "USDC",
+        "fixedPrice": false,
+        "stressRiseBps": 500,
+        "debtOraclePokeMinGas": 1000000,
+        "floorRoundingAllowance": "1000000"
+      }
+    ],
+    "spokes": [
+      {
+        "label": "uniV3Stable",
+        "hub": "ethereum",
+        "integrationId": 1,
+        "tier": 3,
+        "content": {
+          "name": "Uniswap v3 Stable"
+        }
+      },
+      {
+        "label": "uniV4Stable",
+        "hub": "ethereum",
+        "integrationId": 3,
+        "tier": 3,
+        "content": {
+          "name": "Uniswap v4 Stable"
+        }
+      }
+    ],
+    "debtReserves": [
+      {
+        "spoke": "uniV3Stable",
+        "symbol": "GHO"
+      },
+      {
+        "spoke": "uniV3Stable",
+        "symbol": "USDC"
+      },
+      {
+        "spoke": "uniV4Stable",
+        "symbol": "GHO"
+      },
+      {
+        "spoke": "uniV4Stable",
+        "symbol": "USDC"
+      }
+    ],
+    "markets": [
+      {
+        "integrationId": 1,
+        "generation": 0,
+        "tickLower": 0,
+        "tickUpper": 0,
+        "collateralFactorBps": 8000,
+        "maxLiquidationBonus": 10400,
+        "collateralRisk": 400,
+        "consistencyToleranceBps": 50,
+        "poolRiskFactorBps": 8889,
+        "slippageAllowanceBps": 156,
+        "slippageAllowanceMinBps": 50,
+        "minPledgeUsd": "10",
+        "marketUsdCap": "5000000",
+        "topUpSliceUsd": "500000",
+        "stressFloorUsd": "1",
+        "name": "uni-USDC-USDT-100",
+        "spoke": "uniV3Stable",
+        "pool": "USDC-USDT-100",
+        "routes": [
+          {
+            "token": "USDC",
+            "asset": "GHO",
+            "primary": [
+              "GHO-USDC-100"
+            ],
+            "backup": [
+              "USDC-USDT-500",
+              "GHO-USDT-100"
+            ],
+            "depthThreshold": 5000000
+          },
+          {
+            "token": "USDT",
+            "asset": "GHO",
+            "primary": [
+              "GHO-USDT-100"
+            ],
+            "backup": [
+              "USDC-USDT-500",
+              "GHO-USDC-100"
+            ],
+            "depthThreshold": 5000000
+          },
+          {
+            "token": "USDT",
+            "asset": "USDC",
+            "primary": [
+              "USDC-USDT-500"
+            ],
+            "backup": [
+              "WETH-USDT-500",
+              "WETH-USDC-500"
+            ],
+            "depthThreshold": 5000000
+          }
+        ]
+      },
+      {
+        "integrationId": 3,
+        "generation": 0,
+        "tickLower": 0,
+        "tickUpper": 0,
+        "collateralFactorBps": 8000,
+        "maxLiquidationBonus": 10400,
+        "collateralRisk": 400,
+        "consistencyToleranceBps": 100,
+        "poolRiskFactorBps": 8889,
+        "slippageAllowanceBps": 156,
+        "slippageAllowanceMinBps": 50,
+        "minPledgeUsd": "10",
+        "marketUsdCap": "5000000",
+        "topUpSliceUsd": "500000",
+        "stressFloorUsd": "1",
+        "name": "univ4-USDC-USDT-100",
+        "spoke": "uniV4Stable",
+        "pool": "USDC-USDT-v4-100",
+        "routes": [
+          {
+            "token": "USDC",
+            "asset": "GHO",
+            "primary": [
+              "GHO-USDC-100"
+            ],
+            "backup": [
+              "USDC-USDT-100",
+              "GHO-USDT-100"
+            ],
+            "depthThreshold": 5000000
+          },
+          {
+            "token": "USDT",
+            "asset": "GHO",
+            "primary": [
+              "GHO-USDT-100"
+            ],
+            "backup": [
+              "USDC-USDT-100",
+              "GHO-USDC-100"
+            ],
+            "depthThreshold": 5000000
+          },
+          {
+            "token": "USDT",
+            "asset": "USDC",
+            "primary": [
+              "USDC-USDT-100"
+            ],
+            "backup": [
+              "USDC-USDT-500"
+            ],
+            "depthThreshold": 5000000
+          }
+        ]
+      }
+    ]
+  },
+  "chain": {
+    "blockTime": 12,
+    "hasSequencer": false,
+    "sequencerFeed": "0x0000000000000000000000000000000000000000",
+    "sequencerGraceSeconds": 0
+  },
+  "parameters": {
+    "maxMarketCount": 128,
+    "keeperFloor": 1,
+    "globals": {
+      "avanaFeeShareBps": 2000
+    }
+  },
+  "gasVault": {
+    "maxSigners": 8,
+    "signers": [
+      {
+        "signer": "0xf100000000000000000000000000000000000022"
+      }
+    ]
+  }
+}
