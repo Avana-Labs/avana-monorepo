@@ -41,7 +41,7 @@ Example (Ethereum, USDC, illustrative): the Hub holds 10,000,000 added (Lend Spo
 
 ## Current values
 
-`ingest/sampler.refresh` runs every 30 s per chain. At one block it reads, over Convex's own RPC (`RPC_<CHAIN>`, `RPC_<CHAIN>_FALLBACK`), the chain snapshot of `@avana/services-common/views`: every Hub of the deployment and every Hub the MarketRegistry has recorded since, with their assets and Spokes, every Lend Spoke's reserves and oracle prices, the Hub-to-Hub credit lines, each Hub asset's totals, its Spokes, rate curve and Lens exposure, every CDP Spoke's debt reserves (`Lens.getDebtReserves`) and liquidation config, and every market (`Lens.getMarkets`) with its collateral risk. One mutation replaces the rows; every row carries the block. The same reader runs in the indexer's hourly sampler, so current rows and chart points come from the same calls.
+`ingest/sampler.refresh` runs every 60 s per chain. At one block it reads, over Convex's own RPC (`RPC_<CHAIN>`, `RPC_<CHAIN>_FALLBACK`), the chain snapshot of `@avana/services-common/views`: every Hub of the deployment and every Hub the MarketRegistry has recorded since, with their assets and Spokes, every Lend Spoke's reserves and oracle prices, the Hub-to-Hub credit lines, each Hub asset's totals, its Spokes, rate curve and Lens exposure, every CDP Spoke's debt reserves (`Lens.getDebtReserves`) and liquidation config, and every market (`Lens.getMarkets`) with its collateral risk. One mutation writes the rows; every row carries the block. A row whose values are unchanged is left alone until its stored read is 10 minutes old (`UNCHANGED_REWRITE_MS`), so subscriptions re-run when a value changes, not at every refresh. The same reader runs in the indexer's hourly sampler, so current rows and chart points come from the same calls.
 
 A Hub, Spoke, market, pool or asset listed on chain appears at the next run, with a default slug (`ethereum-market-4`, `ethereum-core`) until its listing metadata (which may also name a Hub, scope `hub`) loads. A Borrow asset page's default slug is `<chain>-<spoke>-<symbol>`; when one Spoke draws the same symbol from two Hubs, each of those pages adds its Hub's label (`ethereum-univ3stable-core-usdc`), and two tokens with one symbol on one Hub add the token's address (`lib/format.ts`, `assetSlugs`). The same run stores the chain's base fee, priority fee and native USD price (`deployments.nativeUsdFeed`) for the fee quote.
 
@@ -129,7 +129,7 @@ Each page's activity feed shows its own events and none twice: the Lend page the
 
 ## Scheduled pull
 
-A Convex cron runs `ingest/pull.pull` for each chain every 30 s on Ethereum and every 10 s on Base. The chains are those of the deployment variable `AVANA_CHAIN_IDS` (comma-separated chain IDs; `1,8453` when unset, `11155111,84532` on the test deployment), and every per-chain cron (the pull, the sampler, the intent tracker, Merkl) follows it at the intervals of the chain's block time (`convex/lib/cronChains.ts`). Crons are read when the functions are pushed: a changed list takes effect at the next push. The action:
+A Convex cron runs `ingest/pull.pull` for each chain every 60 s; the export serves finalized blocks only. The chains are those of the deployment variable `AVANA_CHAIN_IDS` (comma-separated chain IDs; `1,8453` on the production deployment, `11155111,84532` on the test deployment), and every per-chain cron (the pull, the sampler, Merkl) follows it (`convex/lib/cronChains.ts`). A deployment without `AVANA_CHAIN_IDS`, such as a development deployment, schedules no cron at all. Crons are read when the functions are pushed: a changed list takes effect at the next push. The action:
 
 1. Reads the checkpoint `(throughBlock, throughBlockHash)`.
 2. Checks that `throughBlockHash` is still the hash of `throughBlock` over Convex's own RPC (not the indexer's). A mismatch goes to [reorg rebuild](#reorg-rebuild).
@@ -162,7 +162,7 @@ The export serves only finalized blocks, so a rebuild means something outside no
 
 ## Transaction progress
 
-After the user's wallet submits, the app calls `intents.submit` (signed-in wallet, the hash, a kind from a fixed list and the page; never a target, amount or calldata). The `track intents` cron reads each open intent's receipt over Convex's own RPC about once a block (`lib/intents.ts`):
+After the user's wallet submits, the app calls `intents.submit` (signed-in wallet, the hash, a kind from a fixed list and the page; never a target, amount or calldata). The chain's intent tracker reads each open intent's receipt over Convex's own RPC about once a block (`lib/intents.ts`), only while the chain has open intents: `submit` schedules it, each run schedules the next while intents stay open, and the `wake intent trackers` cron restarts it every 5 minutes if a run was lost:
 
 | From | To | When |
 |---|---|---|

@@ -14,10 +14,16 @@ export function rpcClient(chainId: number): PublicClient {
   return createPublicClient({ transport: fallback(urls.map((u) => http(u))) }) as PublicClient;
 }
 
+/**
+ * Calldata bytes per multicall eth_call. viem's default (1,024) splits one batch of the snapshot into several requests;
+ * 8,192 bytes keeps each batch to one or two while bounding the gas of one `aggregate3` of view calls.
+ */
+export const MULTICALL_BATCH_BYTES = 8_192;
+
 /** A multicall pinned to one block, for the snapshot reader. */
 export function pinnedViews(client: PublicClient, blockNumber: bigint): ViewClient {
   return {
     multicall: async (calls: readonly ContractCall[]) =>
-      (await client.multicall({ contracts: calls as never, allowFailure: true, blockNumber, multicallAddress: MULTICALL3_ADDRESS })) as unknown as readonly CallResult[],
+      (await client.multicall({ contracts: calls as never, allowFailure: true, blockNumber, multicallAddress: MULTICALL3_ADDRESS, batchSize: MULTICALL_BATCH_BYTES })) as unknown as readonly CallResult[],
   };
 }

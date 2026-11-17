@@ -33,9 +33,39 @@ async function contentSlug(ctx: MutationCtx, scope: "lend" | "asset" | "pool" | 
 }
 
 /**
+ * A row of one snapshot whose values equal the stored row's is rewritten only once its stored read is this old: every
+ * write re-runs each subscription on the table, and the read time (`blockNumber`, `timestamp`, `updatedAt`) moves at
+ * every refresh while the values mostly do not. A changed value is written at once.
+ */
+export const UNCHANGED_REWRITE_MS = 10 * 60_000;
+
+/** Fields that say when a row was read, not what it holds. */
+const READ_FIELDS: ReadonlySet<string> = new Set(["_id", "_creationTime", "updatedAt", "blockNumber", "timestamp"]);
+
+/** The row's values in one canonical text: keys sorted, the read fields left out. */
+function valuesOf(row: object, top = true): string {
+  const canon = (x: unknown, outer: boolean): unknown => {
+    if (Array.isArray(x)) return x.map((y) => canon(y, false));
+    if (x === null || typeof x !== "object") return x;
+    return Object.fromEntries(
+      Object.keys(x)
+        .filter((k) => !(outer && READ_FIELDS.has(k)) && (x as Record<string, unknown>)[k] !== undefined)
+        .sort()
+        .map((k) => [k, canon((x as Record<string, unknown>)[k], false)]),
+    );
+  };
+  return JSON.stringify(canon(row, top));
+}
+
+/** True when `row` must be written over `existing`: a value changed, or the stored read is UNCHANGED_REWRITE_MS old. */
+export function needsWrite(existing: { readonly updatedAt: number }, row: { readonly updatedAt: number }): boolean {
+  return valuesOf(existing) !== valuesOf(row) || row.updatedAt - existing.updatedAt >= UNCHANGED_REWRITE_MS;
+}
+
+/**
  * Writes the current rows of one snapshot: Hubs (a Hub recorded since the last run is inserted), Hub-to-Hub credit
  * lines, Hub assets, slices, reserves and markets. Rows of credit lines, reserves and slices that left the chain's
- * views are removed.
+ * views are removed. An existing row is replaced only when `needsWrite` says so.
  */
 export const applySnapshot = internalMutation({
   args: { snapshot: v.any() },
@@ -49,34 +79,41 @@ export const applySnapshot = internalMutation({
       const slug = (await contentSlug(ctx, "hub", s.chainId, h.hub)) ?? defaultSlug.hub(s.chainId, labelOf(h.hub));
       const row = { ...h, lendAssetIds: [...h.lendAssetIds], lendSpokes: [...h.lendSpokes], cdpSpokes: [...h.cdpSpokes], slug, updatedAt: now };
       const existing = await ctx.db.query("hubs").withIndex("by_key", (q) => q.eq("chainId", h.chainId).eq("hub", h.hub)).unique();
-      if (existing) await ctx.db.replace(existing._id, row);
-      else await ctx.db.insert("hubs", row);
+      if (existing) {
+        if (needsWrite(existing, row)) await ctx.db.replace(existing._id, row);
+      } else await ctx.db.insert("hubs", row);
     }
     const keepLines = new Set(s.creditLines.map((l) => `${l.fundingHub}:${l.assetId}:${l.spoke}`));
-    for (const old of (await ctx.db.query("creditLines").collect()).filter((l) => l.chainId === s.chainId && !keepLines.has(`${l.fundingHub}:${l.assetId}:${l.spoke}`))) await ctx.db.delete(old._id);
+    const lines = await ctx.db.query("creditLines").withIndex("by_key", (q) => q.eq("chainId", s.chainId)).collect();
+    for (const old of lines.filter((l) => !keepLines.has(`${l.fundingHub}:${l.assetId}:${l.spoke}`))) await ctx.db.delete(old._id);
     for (const l of s.creditLines) {
       const row = { ...l, updatedAt: now };
       const existing = await ctx.db.query("creditLines").withIndex("by_key", (q) => q.eq("chainId", l.chainId).eq("fundingHub", l.fundingHub).eq("assetId", l.assetId).eq("spoke", l.spoke)).unique();
-      if (existing) await ctx.db.replace(existing._id, row);
-      else await ctx.db.insert("creditLines", row);
+      if (existing) {
+        if (needsWrite(existing, row)) await ctx.db.replace(existing._id, row);
+      } else await ctx.db.insert("creditLines", row);
     }
     for (const a of s.hubAssets) {
       const slug = (await contentSlug(ctx, "lend", s.chainId, `${a.hub}:${a.assetId}`)) ?? defaultSlug.lend(s.chainId, labelOf(a.hub), await symbol(a.underlying));
       const row = { ...a, lendReserves: [...a.lendReserves], slug, updatedAt: now };
       const existing = await ctx.db.query("hubAssets").withIndex("by_key", (q) => q.eq("chainId", a.chainId).eq("hub", a.hub).eq("assetId", a.assetId)).unique();
-      if (existing) await ctx.db.replace(existing._id, row);
-      else await ctx.db.insert("hubAssets", row);
+      if (existing) {
+        if (needsWrite(existing, row)) await ctx.db.replace(existing._id, row);
+      } else await ctx.db.insert("hubAssets", row);
     }
     const keepSlices = new Set(s.slices.map((x) => `${x.hub}:${x.assetId}:${x.spoke}`));
-    for (const old of (await ctx.db.query("hubAssetSpokes").collect()).filter((x) => x.chainId === s.chainId && !keepSlices.has(`${x.hub}:${x.assetId}:${x.spoke}`))) await ctx.db.delete(old._id);
+    const slices = await ctx.db.query("hubAssetSpokes").withIndex("by_key", (q) => q.eq("chainId", s.chainId)).collect();
+    for (const old of slices.filter((x) => !keepSlices.has(`${x.hub}:${x.assetId}:${x.spoke}`))) await ctx.db.delete(old._id);
     for (const sl of s.slices) {
       const row = { ...sl, updatedAt: now };
       const existing = await ctx.db.query("hubAssetSpokes").withIndex("by_key", (q) => q.eq("chainId", sl.chainId).eq("hub", sl.hub).eq("assetId", sl.assetId).eq("spoke", sl.spoke)).unique();
-      if (existing) await ctx.db.replace(existing._id, row);
-      else await ctx.db.insert("hubAssetSpokes", row);
+      if (existing) {
+        if (needsWrite(existing, row)) await ctx.db.replace(existing._id, row);
+      } else await ctx.db.insert("hubAssetSpokes", row);
     }
     const keepReserves = new Set(s.spokeReserves.map((r) => `${r.spoke}:${r.reserveId}`));
-    for (const old of (await ctx.db.query("spokeReserves").collect()).filter((r) => r.chainId === s.chainId && !keepReserves.has(`${r.spoke}:${r.reserveId}`))) await ctx.db.delete(old._id);
+    const reserves = await ctx.db.query("spokeReserves").withIndex("by_key", (q) => q.eq("chainId", s.chainId)).collect();
+    for (const old of reserves.filter((r) => !keepReserves.has(`${r.spoke}:${r.reserveId}`))) await ctx.db.delete(old._id);
     // Default slugs per (Spoke, Hub, token): the same token drawn from two Hubs on one Spoke gets two pages.
     const defaults = assetSlugs(
       s.chainId,
@@ -94,15 +131,17 @@ export const applySnapshot = internalMutation({
       const slug = (await contentSlug(ctx, "asset", s.chainId, `${r.spoke}:${r.reserveId}`)) ?? defaults.get(`${r.spoke}:${r.reserveId}`)!;
       const row = { ...r, slug, updatedAt: now };
       const existing = await ctx.db.query("spokeReserves").withIndex("by_key", (q) => q.eq("chainId", r.chainId).eq("spoke", r.spoke).eq("reserveId", r.reserveId)).unique();
-      if (existing) await ctx.db.replace(existing._id, row);
-      else await ctx.db.insert("spokeReserves", row);
+      if (existing) {
+        if (needsWrite(existing, row)) await ctx.db.replace(existing._id, row);
+      } else await ctx.db.insert("spokeReserves", row);
     }
     for (const m of s.markets) {
       const slug = (await contentSlug(ctx, "pool", s.chainId, m.marketId)) ?? defaultSlug.pool(s.chainId, m.marketId);
       const row = { ...m, tokens: [...m.tokens], tokenDecimals: [...m.tokenDecimals], caps: { ...m.caps, tokenUsdCaps8: [...m.caps.tokenUsdCaps8] }, borrow: [...m.borrow], slug, updatedAt: now };
       const existing = await ctx.db.query("markets").withIndex("by_key", (q) => q.eq("chainId", m.chainId).eq("marketId", m.marketId)).unique();
-      if (existing) await ctx.db.replace(existing._id, row);
-      else await ctx.db.insert("markets", row);
+      if (existing) {
+        if (needsWrite(existing, row)) await ctx.db.replace(existing._id, row);
+      } else await ctx.db.insert("markets", row);
     }
   },
 });

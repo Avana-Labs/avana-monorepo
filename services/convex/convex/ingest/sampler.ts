@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Current values: every 30 s per chain the sampler reads the snapshot (Hubs, Hub assets, Spoke slices, Hub-to-Hub
+// Current values: every 60 s per chain the sampler reads the snapshot (Hubs, Hub assets, Spoke slices, Hub-to-Hub
 // credit lines, CDP debt reserves, markets) at one block over Convex's RPC and writes the rows the pages read, with
 // the gas price for the fee quote. A Hub, Spoke, market, pool or asset listed on chain appears at the next run; its
 // content arrives with the listing metadata.
@@ -11,6 +11,7 @@ import { type ChainDeployment, readChainSnapshot } from "@avana/services-common/
 import type { Doc } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 import { internalAction, internalMutation } from "../_generated/server";
+import { MULTICALL3_ADDRESS } from "@avana/services-common/chains";
 import { pinnedViews, rpcClient } from "../lib/rpc.ts";
 
 const feedAbi = parseAbi(["function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)", "function decimals() view returns (uint8)"]);
@@ -44,8 +45,17 @@ export const refresh = internalAction({
     );
     await ctx.runMutation(internal.ingest.apply.applySnapshot, { snapshot });
 
-    const [, answer] = await client.readContract({ address: deployment.nativeUsdFeed as `0x${string}`, abi: feedAbi, functionName: "latestRoundData", blockNumber: block.number });
-    const decimals = await client.readContract({ address: deployment.nativeUsdFeed as `0x${string}`, abi: feedAbi, functionName: "decimals", blockNumber: block.number });
+    // The feed's answer and decimals in one eth_call.
+    const feed = deployment.nativeUsdFeed as `0x${string}`;
+    const [[, answer], decimals] = await client.multicall({
+      contracts: [
+        { address: feed, abi: feedAbi, functionName: "latestRoundData" },
+        { address: feed, abi: feedAbi, functionName: "decimals" },
+      ],
+      allowFailure: false,
+      blockNumber: block.number,
+      multicallAddress: MULTICALL3_ADDRESS,
+    });
     const nativeUsd8 = decimals >= 8 ? answer / 10n ** BigInt(decimals - 8) : answer * 10n ** BigInt(8 - decimals);
     const priorityFeeWei = await client.estimateMaxPriorityFeePerGas();
     await ctx.runMutation(internal.ingest.sampler.storeGas, {
