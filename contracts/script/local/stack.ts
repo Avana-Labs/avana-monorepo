@@ -107,8 +107,9 @@ async function up(): Promise<void> {
     say("activity: running on every deployed chain");
   }
   if (!flag("no-hubs")) await applyHubFiles();
-  if (!flag("no-webapp")) startWebapp();
+  // The webapp reads its environment from stack.env: write it first.
   await writeEnvFile();
+  if (!flag("no-webapp")) startWebapp();
   say(`stack up: ${join(STACK, "stack.env")} lists the endpoints`);
 }
 
@@ -141,12 +142,12 @@ function restartActivity(c: LocalChain): void {
   start(name, process.execPath, [join(CONTRACTS, "script/local/activity.ts"), "--chain", c.network], { cwd: CONTRACTS });
 }
 
-/** The webapp's dev server on the stack (its environment from stack.env), when its start command is known. */
+/** The webapp's dev server on the stack: webapp/scripts/local-stack.mjs sets its environment from stack.env. */
 function startWebapp(): void {
   if (running("webapp")) return;
   const script = join(WEBAPP_DIR, "scripts", "local-stack.mjs");
   if (!existsSync(script)) {
-    say(`webapp: not started (${script} not found: the webapp's local-stack entry is the webapp session's)`);
+    say(`webapp: not started (${script} not found)`);
     return;
   }
   start("webapp", process.execPath, [script, join(STACK, "stack.env")], { cwd: WEBAPP_DIR, env: { FAUCET_URL: faucetUrl() } });

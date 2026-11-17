@@ -226,6 +226,8 @@ export async function startConvex(): Promise<ConvexInfo> {
     INDEXER_EXPORT_SECRET: secret("export-secret"),
     LISTING_CONTENT_URL: `http://127.0.0.1:${PORTS.content}`,
     CONVEX_SESSION_SECRET: secret("convex-session-secret", 48),
+    // The webapp's SIWE rate limiter sends the same value (webapp/scripts/local-stack.mjs reads this file).
+    CONVEX_RATE_LIMIT_SECRET: secret("convex-rate-limit-secret"),
     ...chainIdEnv(),
   };
   for (const c of CHAINS) {
