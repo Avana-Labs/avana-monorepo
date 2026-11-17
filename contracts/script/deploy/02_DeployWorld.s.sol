@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
+import {CardinalityGrowth} from "./lib/CardinalityGrowth.sol";
 import {WorldAaveV3} from "./lib/WorldAaveV3.sol";
 import {WorldAerodrome} from "./lib/WorldAerodrome.sol";
 import {WorldFeeds} from "./lib/WorldFeeds.sol";
@@ -331,8 +332,7 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3, WorldUniswapV4 
         uint24 fee = uint24(vm.parseJsonUint(cfg, string.concat(k, ".fee")));
         address pool = IUniswapV3FactoryAdmin(uniFactory).createPool(a.token, b.token, fee);
         IPoolInit(pool).initialize(_sqrtPrice(a, b));
-        IPoolInit(pool)
-            .increaseObservationCardinalityNext(uint16(vm.parseJsonUint(cfg, ".world.observationCardinality")));
+        CardinalityGrowth.grow(pool, uint16(vm.parseJsonUint(cfg, ".world.observationCardinality")));
         (uint256 a0, uint256 a1) = _fund(a, b, vm.parseJsonUint(cfg, string.concat(k, ".usd")), uniNpm);
         _mintUni(a.token, b.token, fee, a0, a1);
         list = vm.serializeAddress("uniswapPools", vm.parseJsonString(cfg, string.concat(k, ".name")), pool);
@@ -366,8 +366,7 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3, WorldUniswapV4 
         uint256 g = vm.parseJsonUint(cfg, string.concat(k, ".generation"));
         address pool = ISlipstreamFactory(slipFactories[g]).createPool(a.token, b.token, spacing, _sqrtPrice(a, b));
         _gauge(g, pool);
-        IPoolInit(pool)
-            .increaseObservationCardinalityNext(uint16(vm.parseJsonUint(cfg, ".world.observationCardinality")));
+        CardinalityGrowth.grow(pool, uint16(vm.parseJsonUint(cfg, ".world.observationCardinality")));
         (uint256 a0, uint256 a1) = _fund(a, b, vm.parseJsonUint(cfg, string.concat(k, ".usd")), slipNpms[g]);
         _mintSlip(slipNpms[g], a.token, b.token, spacing, a0, a1);
         list = vm.serializeAddress("slipstreamPools", vm.parseJsonString(cfg, string.concat(k, ".name")), pool);
@@ -468,8 +467,7 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3, WorldUniswapV4 
             pool = IUniswapV3FactoryAdmin(uniFactory).createPool(a.token, b.token, 500);
             IPoolInit(pool).initialize(_sqrtPrice(a, b));
         }
-        IPoolInit(pool)
-            .increaseObservationCardinalityNext(uint16(vm.parseJsonUint(cfg, ".world.observationCardinality")));
+        CardinalityGrowth.grow(pool, uint16(vm.parseJsonUint(cfg, ".world.observationCardinality")));
         if (created) {
             (uint256 a0, uint256 a1) = _fund(a, b, usd, uniNpm);
             _mintUni(a.token, b.token, 500, a0, a1);

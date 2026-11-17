@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Address } from "viem";
-import { fillPool, fillPools, maxWrites, minObservations, type PoolIo, type PoolState, writesToGrow } from "./forkPools.ts";
+import { fillPool, fillPools, growSteps, MAX_GROW_STEP, maxWrites, minObservations, type PoolIo, type PoolState, writesToGrow } from "./forkPools.ts";
 
 /** A pool's oracle as Uniswap v3's Oracle library keeps it: a ring of observations that grows on wrap. */
 class OracleModel {
@@ -75,6 +75,29 @@ test("minObservations matches LPPriceMath: ceil(window / blockTime) + 1", () => 
   assert.throws(() => minObservations(1800, 0));
 });
 
+test("growSteps: no grow transaction adds more than 500 slots", () => {
+  assert.deepEqual(growSteps(151, 901), [651, 901]);
+  assert.deepEqual(growSteps(1, 901), [501, 901]);
+  assert.deepEqual(growSteps(901, 151), []);
+  assert.deepEqual(growSteps(151, 151), []);
+  for (const [from, to] of [[1, 1], [1, 2], [1, 501], [1, 502], [100, 65535], [651, 901]]) {
+    let prev = from;
+    for (const n of growSteps(from, to)) {
+      assert.ok(n > prev && n - prev <= MAX_GROW_STEP, `${prev} -> ${n}`);
+      prev = n;
+    }
+    assert.equal(prev, Math.max(from, to));
+  }
+});
+
+test("fillPool raises a pool from 151 to 901 in two grow transactions", async () => {
+  const pools = { [A]: new OracleModel(151, 150, 1800, 100_000) };
+  const calls: string[] = [];
+  await fillPool(io(pools, 2, calls), A, 1800, 2);
+  assert.deepEqual(calls.filter((c) => c.startsWith("raise")), [`raise ${A} 651`, `raise ${A} 901`]);
+  assert.ok(pools[A]!.cardinality >= 901);
+});
+
 test("writesToGrow: the index must wrap onto the new slots", () => {
   const s: PoolState = { observationIndex: 3, observationCardinality: 10, observationCardinalityNext: 151 };
   assert.equal(writesToGrow(s, 151), 7);
@@ -96,7 +119,7 @@ for (const [name, card, index, oldestAge, blockTime] of [
     assert.ok(m.cardinality >= need, `cardinality ${m.cardinality} < ${need}`);
     assert.ok(m.observeOk(1800));
     assert.equal(r.raised, true);
-    assert.equal(calls.filter((c) => c.startsWith("raise")).length, 1);
+    assert.equal(calls.filter((c) => c.startsWith("raise")).length, growSteps(r.before.observationCardinalityNext, need).length);
     assert.ok(r.writes <= maxWrites(r.before, need), `${r.writes} writes`);
   });
 }
