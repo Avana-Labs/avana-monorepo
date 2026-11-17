@@ -6,8 +6,7 @@
 
 import { v } from "convex/values";
 import { query } from "../_generated/server";
-import { tenurePoints } from "../lib/rewards.ts";
-import { firstSeenOf } from "./membership.ts";
+import { activeRedemptions, pointBalance, redemptionRules, type RedemptionRules } from "../lib/redemption.ts";
 
 export interface RewardsSummary {
   readonly earnedPoints: number;
@@ -18,6 +17,12 @@ export interface RewardsSummary {
   readonly completedQuests: readonly string[];
   /** Whether the wallet's older history was read on every served chain (`wallet.backfill.run`). */
   readonly historyChecked: boolean;
+  /** Points spent on redemptions, and points left to redeem (earned less spent). */
+  readonly redeemedPoints: number;
+  readonly availablePoints: number;
+  /** The redemption rules, and the discounts the wallet holds now. */
+  readonly redemption: RedemptionRules;
+  readonly activeRedemptions: readonly { readonly bps: number; readonly endsAt: number }[];
 }
 
 export const summary = query({
@@ -25,16 +30,26 @@ export const summary = query({
   handler: async (ctx, { wallet }): Promise<RewardsSummary> => {
     if (!/^0x[0-9a-fA-F]{40}$/.test(wallet)) throw new Error("wallet is a 20-byte address");
     const w = wallet.toLowerCase();
-    const [totals, member, deployments, backfills] = await Promise.all([
-      ctx.db.query("rewardTotals").withIndex("by_wallet", (q) => q.eq("wallet", w)).unique(),
-      firstSeenOf(ctx, w),
+    const now = Date.now();
+    const [balance, deployments, backfills, redemption, active] = await Promise.all([
+      pointBalance(ctx, w, now),
       ctx.db.query("deployments").collect(),
       ctx.db.query("historyBackfills").withIndex("by_wallet", (q) => q.eq("wallet", w)).collect(),
+      redemptionRules(ctx),
+      activeRedemptions(ctx, w, now),
     ]);
     const historyChecked = deployments.every((d) => backfills.some((b) => b.chainId === d.chainId));
-    const tenure = member ? tenurePoints(member.sinceMs, Date.now()) : 0;
-    const questPoints = totals?.questPoints ?? 0;
-    const feePoints = totals?.feePoints ?? 0;
-    return { earnedPoints: tenure + questPoints + feePoints, tenurePoints: tenure, questPoints, feePoints, completedQuests: totals?.questIds ?? [], historyChecked };
+    return {
+      earnedPoints: balance.earned,
+      tenurePoints: balance.tenure,
+      questPoints: balance.questPoints,
+      feePoints: balance.feePoints,
+      completedQuests: balance.totals?.questIds ?? [],
+      historyChecked,
+      redeemedPoints: balance.redeemed,
+      availablePoints: balance.available,
+      redemption,
+      activeRedemptions: active.map((r) => ({ bps: r.bps, endsAt: r.endsAt })).sort((a, b) => a.endsAt - b.endsAt),
+    };
   },
 });

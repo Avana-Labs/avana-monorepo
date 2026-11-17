@@ -10,6 +10,8 @@ import { useQuery } from "convex/react"
 import { isAddress } from "viem"
 import { api } from "@/convex/_generated/api"
 import { hasConvexClient } from "@/app/lib/convex/has-convex-client"
+import { DEFAULT_REDEMPTION } from "@/convex/lib/redemption"
+import type { RedemptionRules } from "./redeem-points"
 
 export type WalletRewards = {
   /** Points earned in total: tenure, quests and fees. */
@@ -17,9 +19,20 @@ export type WalletRewards = {
   completedQuests: ReadonlySet<string>
   /** Whether the wallet's older history was read, so its first activity and quests are complete. */
   historyChecked: boolean
+  /** Points left to redeem (earned less spent), the redemption rules, and the discounts held now. */
+  availablePoints: number
+  redemption: RedemptionRules
+  activeRedemptions: readonly { bps: number; endsAt: number }[]
 }
 
-const NO_REWARDS: WalletRewards = { earnedPoints: 0, completedQuests: new Set(), historyChecked: true }
+const NO_REWARDS: WalletRewards = {
+  earnedPoints: 0,
+  completedQuests: new Set(),
+  historyChecked: true,
+  availablePoints: 0,
+  redemption: DEFAULT_REDEMPTION,
+  activeRedemptions: [],
+}
 
 export function useWalletRewards(walletId: string | null | undefined): WalletRewards | undefined {
   // `hasConvexClient` is a build-time constant, so every render takes the same branch.
@@ -40,6 +53,9 @@ function useLiveWalletRewards(walletId: string | null | undefined): WalletReward
               earnedPoints: summary.earnedPoints,
               completedQuests: new Set(summary.completedQuests),
               historyChecked: summary.historyChecked,
+              availablePoints: summary.availablePoints,
+              redemption: summary.redemption,
+              activeRedemptions: summary.activeRedemptions,
             },
     [wallet, summary],
   )

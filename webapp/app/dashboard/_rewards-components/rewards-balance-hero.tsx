@@ -73,12 +73,15 @@ function FeeCard({
  */
 export function PortfolioRewardsCards({
   claimHref,
+  onClaim,
   earnedAmount = 0,
   claimableAmount = 0,
   activeTab,
   showQuickActions = false,
 }: {
   claimHref?: string
+  /** Opens the redemption; the Claim Rewards button is disabled without it. */
+  onClaim?: () => void
   /** Total points earned: tenure, quests and fees. */
   earnedAmount?: number
   /** Points available to redeem for a fee discount. */
@@ -120,7 +123,13 @@ export function PortfolioRewardsCards({
                 </Link>
               </Button>
             ) : (
-              <Button type="button" size="sm" disabled className="shrink-0 gap-2 font-normal [&_svg]:size-4">
+              <Button
+                type="button"
+                size="sm"
+                disabled={!onClaim}
+                onClick={onClaim}
+                className="shrink-0 gap-2 font-normal [&_svg]:size-4"
+              >
                 <CircleDollarSign className="size-4" />
                 {t("Claim Rewards")}
               </Button>

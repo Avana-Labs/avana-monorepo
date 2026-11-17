@@ -7,7 +7,7 @@
 
 import { v } from "convex/values";
 import { query, type QueryCtx } from "../_generated/server";
-import { tenureDiscountBps } from "../lib/fees.ts";
+import { discountBpsOf } from "../lib/redemption.ts";
 import type { MembershipSource } from "../lib/membership.ts";
 
 /** The earliest first sign of a wallet, or null when none is recorded. */
@@ -29,14 +29,14 @@ export async function firstSeenOf(ctx: Pick<QueryCtx, "db">, wallet: string): Pr
 }
 
 /**
- * The wallet's membership and the fee discount it earns (`tenureDiscountBps`: 0 under 30 days, 1 bps from 30, 2 from 90,
- * 3 from 180), or null when no first interaction is recorded. The discount is computed here, so a client never decides it.
+ * The wallet's membership and the fee discount it holds (tenure: 0 under 30 days, 1 bps from 30, 2 from 90, 3 from 180;
+ * plus its active redemptions), or null when no first interaction is recorded. The discount is computed here, so a client never decides it.
  */
 export const get = query({
   args: { wallet: v.string() },
   handler: async (ctx, { wallet }): Promise<{ sinceMs: number; source: MembershipSource; discountBps: number } | null> => {
     if (!/^0x[0-9a-fA-F]{40}$/.test(wallet)) throw new Error("wallet is a 20-byte address");
     const m = await firstSeenOf(ctx, wallet);
-    return m ? { ...m, discountBps: tenureDiscountBps(m.sinceMs, Date.now()) } : null;
+    return m ? { ...m, discountBps: await discountBpsOf(ctx, wallet, Date.now()) } : null;
   },
 });

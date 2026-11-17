@@ -15,9 +15,11 @@ import { pinMarket, recordClientQuest } from "@/app/lib/rewards/record-client-qu
 import {
   RewardsEducationDialog,
   RewardsPinMarketDialog,
+  RewardsRedeemDialog,
   RewardsReferralDialog,
 } from "@/app/dashboard/_rewards-components/rewards-task-dialogs"
 import { useReferralDialogData } from "@/app/lib/rewards/use-referral-dialog-data"
+import { maxRedeemSteps, redeemPoints } from "@/app/lib/rewards/redeem-points"
 import { useAvanaSessions } from "@/app/lib/avana-session/avana-sessions-provider"
 import { PortfolioStatCards } from "@/app/dashboard/portfolio-stat-cards"
 import { PortfolioRewardsCards } from "@/app/dashboard/_rewards-components/rewards-balance-hero"
@@ -103,8 +105,7 @@ export function DashboardPageClient() {
   const rewards = useWalletRewards(walletId)
   useHistoryBackfill(walletId, rewards)
   const questsByTab = useMemo(
-    () =>
-      buildQuestsByTab({ earned: t("Earned") }, rewards?.completedQuests ?? new Set()),
+    () => buildQuestsByTab({ earned: t("Earned") }, rewards?.completedQuests ?? new Set()),
     [t, rewards],
   )
   // Being signed in on the dashboard completes the first quest; Convex awards it once.
@@ -113,7 +114,9 @@ export function DashboardPageClient() {
     if (rewards && !connectDone) void recordClientQuest("connect-wallet")
   }, [rewards, connectDone])
   // A quest's button opens the page or the dialog where it is done; quests that are not live have no action.
-  const [dialog, setDialog] = useState<QuestDialog | null>(null)
+  const [dialog, setDialog] = useState<QuestDialog | "redeem" | null>(null)
+  const heldBps = rewards?.activeRedemptions.reduce((sum, r) => sum + r.bps, 0) ?? 0
+  const canRedeem = rewards ? maxRedeemSteps(rewards.availablePoints, heldBps, rewards.redemption) > 0 : false
   const openQuest = useCallback(
     async (questId: string) => {
       const target = questDialog(questId)
@@ -173,8 +176,8 @@ export function DashboardPageClient() {
           <aside className="min-w-0 lg:col-start-2 lg:row-start-2 lg:pt-8">
             <PortfolioRewardsCards
               earnedAmount={rewards?.earnedPoints ?? 0}
-              // Nothing is redeemed yet, so every earned point is available.
-              claimableAmount={rewards?.earnedPoints ?? 0}
+              claimableAmount={rewards?.availablePoints ?? 0}
+              onClaim={canRedeem ? () => setDialog("redeem") : undefined}
               activeTab={activeDashboardTab}
               showQuickActions
             />
@@ -244,6 +247,16 @@ export function DashboardPageClient() {
         onOpenChange={(open) => !open && setDialog(null)}
         onComplete={() => recordClientQuest("review-risk-basics")}
       />
+      {rewards ? (
+        <RewardsRedeemDialog
+          open={dialog === "redeem"}
+          onOpenChange={(open) => !open && setDialog(null)}
+          available={rewards.availablePoints}
+          rules={rewards.redemption}
+          held={rewards.activeRedemptions}
+          onRedeem={async (steps) => (await redeemPoints(steps)).ok}
+        />
+      ) : null}
       <RewardsReferralDialog
         open={dialog === "referral"}
         onOpenChange={(open) => !open && setDialog(null)}
@@ -263,10 +276,11 @@ export function DashboardPageClient() {
         <MobileDetailActionBar>
           <button
             type="button"
-            disabled
-            className={primaryCtaClass({ size: "compact", disabled: true, className: "w-full" })}
+            disabled={!canRedeem}
+            onClick={() => setDialog("redeem")}
+            className={primaryCtaClass({ size: "compact", disabled: !canRedeem, className: "w-full" })}
           >
-            {t("No rewards ready")}
+            {canRedeem ? t("Claim Rewards") : t("No rewards ready")}
           </button>
         </MobileDetailActionBar>
       ) : null}

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
+import { maxRedeemSteps, type RedemptionRules } from "@/app/lib/rewards/redeem-points"
 import {
   Dialog,
   DialogContent,
@@ -172,6 +173,115 @@ export function RewardsReferralDialog({
             }}
           >
             {copied ? t("Copied") : t("Copy link")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/**
+ * Spends points on the temporary fee discount: the steps the wallet can buy (its points, within the cap on what it may
+ * hold at once) as options, a Redeem button that spends them for good, and the discounts it holds now.
+ */
+export function RewardsRedeemDialog({
+  open,
+  onOpenChange,
+  available,
+  rules,
+  held,
+  onRedeem,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  available: number
+  rules: RedemptionRules
+  held: ReadonlyArray<{ bps: number; endsAt: number }>
+  /** Spends the steps; resolves whether it happened. */
+  onRedeem: (steps: number) => Promise<boolean>
+}) {
+  const { t, language } = useTranslation()
+  const [steps, setSteps] = useState(1)
+  const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState(false)
+
+  const heldBps = held.reduce((sum, r) => sum + r.bps, 0)
+  const max = maxRedeemSteps(available, heldBps, rules)
+  const chosen = Math.min(steps, Math.max(1, max))
+  const points = (n: number) => t("{points} pts").replace("{points}", String(n))
+  const bps = (n: number) => t("{bps} bps off").replace("{bps}", String(n))
+  const date = (ms: number) => new Date(ms).toLocaleDateString(language === "EN" ? undefined : language.toLowerCase())
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) setFailed(false)
+        onOpenChange(next)
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("Redeem points")}</DialogTitle>
+          <DialogDescription>
+            {t("Choose how many points to spend. The discount applies to every fee for {days} days.").replace(
+              "{days}",
+              String(rules.days),
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            {t("{points} points available").replace("{points}", String(available))}
+          </p>
+          {max === 0 ? (
+            <p className="text-sm text-foreground">
+              {available < rules.pointsPerStep
+                ? t("Not enough points yet: {points} are needed.").replace("{points}", String(rules.pointsPerStep))
+                : t("You already hold the largest discount allowed.")}
+            </p>
+          ) : (
+            <div className="grid gap-2">
+              {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
+                <Button
+                  key={n}
+                  variant={n === chosen ? "default" : "outline"}
+                  disabled={busy}
+                  onClick={() => setSteps(n)}
+                >
+                  {`${points(n * rules.pointsPerStep)} → ${bps(n * rules.bpsPerStep)}`}
+                </Button>
+              ))}
+            </div>
+          )}
+          {failed ? <p className="text-sm text-danger">{t("Could not redeem. Try again.")}</p> : null}
+          {held.length > 0 ? (
+            <div className="space-y-1 border-t border-border/60 pt-3">
+              <p className="text-sm text-foreground">{t("Active discounts")}</p>
+              {held.map((r) => (
+                <p key={`${r.endsAt}-${r.bps}`} className="text-sm text-muted-foreground">
+                  {t("{bps} bps off until {date}").replace("{bps}", String(r.bps)).replace("{date}", date(r.endsAt))}
+                </p>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        <DialogFooter>
+          <Button
+            className={rewardsPrimaryButtonClass}
+            disabled={busy || max === 0}
+            onClick={() => {
+              setBusy(true)
+              setFailed(false)
+              void onRedeem(chosen)
+                .then((ok) => {
+                  if (ok) onOpenChange(false)
+                  else setFailed(true)
+                })
+                .finally(() => setBusy(false))
+            }}
+          >
+            {t("Redeem")}
           </Button>
         </DialogFooter>
       </DialogContent>
