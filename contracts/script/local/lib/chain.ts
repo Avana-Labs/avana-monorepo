@@ -403,6 +403,8 @@ async function deployExecutor(c: LocalChain, config: string): Promise<string> {
   const hash = await wallet.sendTransaction({ to: SAFE_SINGLETON_FACTORY, data: `0x${"00".repeat(32)}${initCode.slice(2)}`, chain: null });
   const r = await client.waitForTransactionReceipt({ hash });
   if (r.status !== "success" || (await rpc<string>(rpcUrl(c), "eth_getCode", [address, "latest"])) === "0x") throw new Error(`executor stand-in deployment ${hash} failed`);
+  const { recordCreated } = await import("../../testnet/verify.ts");
+  recordCreated(outDir(c), address, initCode);
   return `executor stand-in at ${address}, owner ${controller} (tx ${hash})`;
 }
 
@@ -543,6 +545,9 @@ async function swapContracts(c: LocalChain): Promise<string> {
     const hash = await wallet.deployContract({ abi: art.abi, bytecode: art.bytecode.object, args: [factory, world.tokens.WETH], chain: null });
     const r = await client.waitForTransactionReceipt({ hash });
     if (r.status !== "success" || !r.contractAddress) throw new Error(`QuoterV2 from ${out} did not deploy`);
+    const { encodeDeployData } = await import("viem");
+    const { recordCreated } = await import("../../testnet/verify.ts");
+    recordCreated(outDir(c), r.contractAddress, encodeDeployData({ abi: art.abi, bytecode: art.bytecode.object, args: [factory, world.tokens.WETH] }));
     return r.contractAddress;
   };
   const venues = [

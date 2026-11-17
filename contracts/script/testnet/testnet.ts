@@ -11,12 +11,14 @@
 // A step that passed is never run again: rerun `deploy` after any failure.
 //
 // Commands: roles | deploy --chain <sepolia|base-sepolia> [--no-verify] | status --chain <c> | feeds --chain <c> [--every <s>]
+//   | verify --chain <c> [--dry-run]   the explorer verification alone, for a retry (verify.ts)
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { CONTRACTS, type LocalChain, TESTNETS, chainOf, outDir, rpcUrl } from "../local/lib/env.ts";
-import { type StepOutcome, currentConfig, executorStandIn, firstRelease, readStatus, redact, rpc, runRelease, stepEnv, writeBaseConfig } from "../local/lib/chain.ts";
+import { type StepOutcome, currentConfig, executorStandIn, firstRelease, forgeDirs, readStatus, redact, rpc, runRelease, stepEnv, writeBaseConfig } from "../local/lib/chain.ts";
+import { verifyRelease } from "./verify.ts";
 import { FUNDED_ROLES, SIGNER_ROLES, type TestnetRoles, testnetRoles } from "./keys.ts";
 
 /** The timelock's normal delay on a test network, seconds (its floor there is 60 s, REQ-ACCESS-187). */
@@ -132,13 +134,13 @@ async function deploy(): Promise<void> {
     throw new Stop(`${outDir(c)} holds a rehearsal's outputs: move it away before the real deploy`);
   }
   process.env.AVANA_RELEASE = rel;
-  if (process.env.ETHERSCAN_API_KEY && !flag("no-verify")) process.env.AVANA_VERIFY = "1";
+  if (!flag("no-verify") && !process.env.ETHERSCAN_API_KEY) throw new Stop("ETHERSCAN_API_KEY is not set, in the environment or the encrypted secrets store (or pass --no-verify)");
   const b = await balances(c);
   const empty = FUNDED_ROLES.filter((k) => b[k] === 0n);
   if (empty.length) throw new Stop(`no test ETH on the ${empty.join(", ")} signer${empty.length > 1 ? "s" : ""} (see \`roles\`)`);
   const status = readStatus(c);
   const config = status.config ? currentConfig(c) : await testnetConfig(c, rel);
-  say(`${c.network} (${c.chainId}): release ${rel}, config ${config}${process.env.AVANA_VERIFY ? ", verifying on the explorer" : ""}`);
+  say(`${c.network} (${c.chainId}): release ${rel}, config ${config}${flag("no-verify") ? "" : ", explorer verification at the end"}`);
   const first = await runRelease(c, "first", firstRelease(c), config, show);
   const failed = first.find((o) => o.outcome === "fail");
   if (failed) throw new Stop(`${failed.step} failed (log ${failed.log}); fix it and run deploy again: passed steps are not rerun`);
@@ -151,7 +153,32 @@ async function deploy(): Promise<void> {
     if (!r.ok) throw new Stop(`Hub file ${f}: ${r.error ?? r.steps.find((s) => s.outcome === "fail")?.detail}; fix it and run deploy again`);
     say(`${c.network}: ${f} released, ${r.markets?.length ?? 0} markets`);
   }
-  say(`${c.network}: deployed; manifest ${join(outDir(c), "manifest.json")}. Keep the feeds fresh: node script/testnet/testnet.ts feeds --chain ${c.network}`);
+  say(`${c.network}: deployed; manifest ${join(outDir(c), "manifest.json")}`);
+  // The last stage: every contract of the release verified on the explorer (verify.ts).
+  if (!flag("no-verify")) verifyStage(c, false);
+}
+
+/** The explorer verification of everything the chain's releases deployed; a rerun retries only what is left. */
+function verifyStage(c: LocalChain, dryRun: boolean): void {
+  say(`${c.network}: explorer verification${dryRun ? " (dry run: the commands only)" : ""}`);
+  const env = forgeDirs(c);
+  const r = verifyRelease({ contracts: CONTRACTS, outDir: outDir(c), broadcastRoot: join(CONTRACTS, env.FOUNDRY_BROADCAST!), chainId: c.chainId, dryRun, say });
+  say(`${c.network}: ${r.verified} verified, ${r.skipped} skipped, ${r.failed.length} failed`);
+  for (const f of r.failed) say(`  ${f}`);
+  if (r.failed.length) throw new Stop(`${r.failed.length} contracts are not verified yet: run verify --chain ${c.network} again`);
+}
+
+async function verify(): Promise<void> {
+  const c = testnet();
+  const dryRun = flag("dry-run");
+  if (!dryRun) {
+    const { secretValue } = await import("../local/lib/secrets.ts");
+    if (!process.env.ETHERSCAN_API_KEY) {
+      const v = secretValue("ETHERSCAN_API_KEY");
+      if (v) process.env.ETHERSCAN_API_KEY = v;
+    }
+  }
+  verifyStage(c, dryRun);
 }
 
 async function status(): Promise<void> {
@@ -205,8 +232,11 @@ async function main() {
       case "feeds":
         await feeds();
         break;
+      case "verify":
+        await verify();
+        break;
       default:
-        say("usage: node script/testnet/testnet.ts roles | deploy --chain <sepolia|base-sepolia> [--no-verify] | status --chain <c> | feeds --chain <c> [--every <s>]");
+        say("usage: node script/testnet/testnet.ts roles | deploy --chain <sepolia|base-sepolia> [--no-verify] | status --chain <c> | feeds --chain <c> [--every <s>] | verify --chain <c> [--dry-run]");
         process.exitCode = 2;
     }
   } catch (e) {

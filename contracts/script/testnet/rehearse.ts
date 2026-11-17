@@ -149,8 +149,13 @@ async function main() {
       });
       const minutes = Math.round((Date.now() - t0) / 60_000);
       const gas = await gasReport(url, names);
-      report[c.network] = { ok: r.status === 0, minutes, gas };
-      say(`${c.network}: ${r.status === 0 ? "PASSED" : "FAILED"} in ${minutes} min; gas by account ${JSON.stringify(gas)}`);
+      // The explorer verification has no explorer here: its dry run lists the command for every contract it found a
+      // build output for, and each contract it would skip.
+      const v = spawnSync(process.execPath, ["script/testnet/testnet.ts", "verify", "--chain", c.network, "--dry-run"], { cwd: CONTRACTS, env, encoding: "utf8", maxBuffer: 1 << 26 });
+      writeFileSync(join(dir, `verify-dry-run-${c.network}.txt`), `${v.stdout ?? ""}${v.stderr ?? ""}`);
+      const verify = { commands: (v.stdout.match(/forge verify-contract/g) ?? []).length, unmatched: (v.stdout.match(/^ {2}skip /gm) ?? []).length };
+      report[c.network] = { ok: r.status === 0, minutes, gas, verify };
+      say(`${c.network}: ${r.status === 0 ? "PASSED" : "FAILED"} in ${minutes} min; gas by account ${JSON.stringify(gas)}; verification dry run ${JSON.stringify(verify)}`);
       if (r.status !== 0) {
         ok = false;
         break;

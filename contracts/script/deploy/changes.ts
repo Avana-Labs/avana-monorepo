@@ -670,6 +670,9 @@ async function deploy(from: Address, data: Hex): Promise<Address> {
   const hash = await wallet.sendTransaction({ account: signerOf(from), data, chain: null, gas: 15_000_000n });
   const r = await client.waitForTransactionReceipt({ hash });
   if (r.status !== "success" || !r.contractAddress) throw new Error(`deployment ${hash} failed`);
+  // The explorer verification of a test network reads the contracts deployed outside forge from created.json.
+  const { recordCreated } = await import("../testnet/verify.ts");
+  recordCreated(OUT, r.contractAddress, data);
   return getAddress(r.contractAddress);
 }
 
