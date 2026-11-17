@@ -6,6 +6,7 @@ import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
 import { PAUSE_REASON, PAUSE_STATE, enumName, logOnly } from "../lib/logOnly.ts";
 import { recordLog } from "../lib/record.ts";
+import { stateReadBlock } from "../lib/stateFloor.ts";
 import { clPoolAbi } from "@avana/services-common/views";
 
 ponder.on("MarketRegistry:MarketRegistered", async ({ event, context }) => {
@@ -36,7 +37,8 @@ ponder.on("MarketRegistry:MarketRegistered", async ({ event, context }) => {
       .onConflictDoNothing();
     return;
   }
-  const fee = await context.client.readContract({ address: a.pool, abi: clPoolAbi, functionName: "fee" });
+  // At the log's block, or at the state floor of a restored development node (lib/stateFloor.ts).
+  const fee = await context.client.readContract({ address: a.pool, abi: clPoolAbi, functionName: "fee", blockNumber: stateReadBlock(p.chainId, p.blockNumber) });
   await context.db
     .insert(schema.ammPool)
     .values({ chainId: p.chainId, pool: a.pool.toLowerCase() as `0x${string}`, integrationId: Number(a.integrationId), feePips: Number(fee), listedBlock: p.blockNumber, lastBlock: p.blockNumber })

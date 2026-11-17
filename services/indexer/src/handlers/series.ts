@@ -13,6 +13,7 @@ import schema from "ponder:schema";
 import { and, eq } from "ponder";
 import { deploymentOf } from "../config/sources.ts";
 import { writeObservation } from "../lib/seriesWrite.ts";
+import { stateFloor } from "../lib/stateFloor.ts";
 
 const s = (x: bigint | number): DecimalString => x.toString(10);
 
@@ -27,6 +28,8 @@ ponder.on("SeriesSampler:block", async ({ event, context }) => {
   const chainId = context.chain.id;
   const timestamp = Number(event.block.timestamp);
   const blockNumber = event.block.number;
+  // A restored development node has no state before its floor (lib/stateFloor.ts): the series start there.
+  if (blockNumber < stateFloor(chainId)) return;
   const client = viewClient(context);
   const snap = await readChainSnapshot(client, deploymentOf(chainId), { blockNumber, timestamp });
   const at = { chainId, timestamp, blockNumber };

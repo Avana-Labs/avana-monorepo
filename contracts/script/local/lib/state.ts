@@ -117,3 +117,20 @@ export async function dumpState(url: string, path: string): Promise<void> {
 export async function hexStateToJson(hexPath: string, path: string): Promise<void> {
   await writeState(createReadStream(hexPath), "raw", path);
 }
+
+/**
+ * The first block whose state a node serves, given whether it serves the state at a block: 0 on a node that kept every
+ * state, the block it was restored at on a node started from a saved state (anvil keeps blocks and logs, not the
+ * states before). The served blocks run from that block to the head, so a binary search finds it.
+ */
+export async function firstStateBlock(head: number, served: (block: number) => Promise<boolean>): Promise<number> {
+  if (await served(0)) return 0;
+  let lo = 0; // not served
+  let hi = head; // served
+  while (hi - lo > 1) {
+    const mid = lo + Math.floor((hi - lo) / 2);
+    if (await served(mid)) hi = mid;
+    else lo = mid;
+  }
+  return hi;
+}

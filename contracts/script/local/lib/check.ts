@@ -17,7 +17,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { join } from "node:path";
 import { encodeFunctionData, parseAbi, toFunctionSelector } from "viem";
 import { CONTRACTS, EXPORT_KEY_ID, type LocalChain, PORTS, REPO, STACK, chainIdEnv, manifestPath, outDir, rpcUrl } from "./env.ts";
-import { answers, blockNumber, refreshFeeds, rpc, setMining, stepEnv } from "./chain.ts";
+import { answers, blockNumber, refreshFeeds, rpc, setMining, stateFloor, stepEnv } from "./chain.ts";
 import { logPath, running, sleep, stop } from "./procs.ts";
 import { PGLITE, indexerAtHead, indexerUrl, runningLiveSchema, secret, startIndexer } from "./services.ts";
 
@@ -135,8 +135,11 @@ export async function check(chains: readonly LocalChain[], say: Say): Promise<bo
   return still(chains, async () => {
     let ok = true;
     for (const c of chains) ok = verifyManifest(c, say) && ok;
-    for (const c of chains) if (!existsSync(sampleFile(c))) await closeSamples(c, say);
-    else await rpc(rpcUrl(c), "anvil_mine", ["0x46"]);
+    // A sample before the chain's state floor (a node restored from a saved state) can no longer be read: close new ones.
+    for (const c of chains) {
+      if (!existsSync(sampleFile(c)) || Number(readFileSync(sampleFile(c), "utf8")) < (await stateFloor(c))) await closeSamples(c, say);
+      else await rpc(rpcUrl(c), "anvil_mine", ["0x46"]);
+    }
     try {
       say(`PASS indexer at head ${JSON.stringify(await indexerAtHead(INDEXER_CATCH_UP_MS))}`);
     } catch (e) {

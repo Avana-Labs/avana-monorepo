@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { gzipSync } from "node:zlib";
-import { decodeHex, dumpState, hexStateToJson } from "./state.ts";
+import { decodeHex, dumpState, firstStateBlock, hexStateToJson } from "./state.ts";
 
 const STATE = JSON.stringify({ block: { number: "0x14ae" }, accounts: { "0x01": { nonce: 1, code: "0x6001", storage: {} } }, blocks: [] });
 const HEX = `0x${gzipSync(STATE).toString("hex")}`;
@@ -93,5 +93,18 @@ test("dumpState: streams anvil_dumpState into the JSON state; a failed dump keep
   } finally {
     server.close();
     t.done();
+  }
+});
+
+test("firstStateBlock: 0 on a node with every state, the restore block on a restored node, in few probes", async () => {
+  assert.equal(await firstStateBlock(17882, async () => true), 0);
+  for (const floor of [1, 2, 5294, 17881, 17882]) {
+    let probes = 0;
+    const got = await firstStateBlock(17882, async (n) => {
+      probes++;
+      return n >= floor;
+    });
+    assert.equal(got, floor);
+    assert.ok(probes <= 17, `${probes} probes`);
   }
 });

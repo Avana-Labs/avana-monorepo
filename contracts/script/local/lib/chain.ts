@@ -11,7 +11,7 @@ import { join, relative } from "node:path";
 import { CONTRACTS, type LocalChain, REPO, genesisTimestamp, outDir, rpcUrl } from "./env.ts";
 import { addresses, signerEnv } from "./keys.ts";
 import { minObservations } from "./forkPools.ts";
-import { dumpState, hexStateToJson } from "./state.ts";
+import { dumpState, firstStateBlock, hexStateToJson } from "./state.ts";
 import { logPath, running, start, stop, waitFor } from "./procs.ts";
 
 // ─── JSON-RPC ───
@@ -90,6 +90,22 @@ export async function stopNode(c: LocalChain, save = true): Promise<void> {
 }
 
 export const nodeRunning = (c: LocalChain) => running(nodeName(c));
+
+/**
+ * The chain's state floor: the first block whose state the node serves. A node started from a saved state has every
+ * block and log but no state before the block it was restored at; a read pinned earlier fails.
+ */
+export async function stateFloor(c: LocalChain): Promise<number> {
+  const served = async (n: number) => {
+    try {
+      await rpc(rpcUrl(c), "eth_getBalance", ["0x0000000000000000000000000000000000000000", `0x${n.toString(16)}`]);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  return firstStateBlock(await blockNumber(c), served);
+}
 
 /**
  * `auto`: a block per transaction, no timer (deploys and releases, whose hundreds of transactions would otherwise wait
