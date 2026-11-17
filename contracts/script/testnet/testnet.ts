@@ -17,7 +17,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CONTRACTS, type LocalChain, TESTNETS, chainOf, outDir, rpcUrl } from "../local/lib/env.ts";
-import { type StepOutcome, currentConfig, executorStandIn, firstRelease, forgeDirs, readStatus, redact, rpc, runRelease, stepEnv, writeBaseConfig } from "../local/lib/chain.ts";
+import { type Status, type StepOutcome, currentConfig, executorStandIn, firstRelease, forgeDirs, readStatus, redact, rpc, runRelease, stepEnv, writeBaseConfig } from "../local/lib/chain.ts";
 import { verifyRelease } from "./verify.ts";
 import { FUNDED_ROLES, SIGNER_ROLES, type TestnetRoles, configFile, testnetRoles } from "./keys.ts";
 import { rpcSummary, useHealthyRpc } from "./rpc.ts";
@@ -58,6 +58,59 @@ export function syncGasVaultFund(configPath: string, fundWei: string): boolean {
   writeFileSync(configPath, `${JSON.stringify(cfg, null, 2)}\n`);
   return true;
 }
+/**
+ * The dollars each native-ETH Uniswap v4 pool of the world (an `a` or `b` of `ETH`) is seeded with on a test network.
+ * Step 02 pays half of a pool's `usd` in the deployer's own ETH (the other side, and the reference pool, are mintable
+ * test tokens): the local stack's $2,000,000 and $1,000,000 would take hundreds of test ETH. No Hub file lists these
+ * pools, so they only need to exist; $10 each takes about 0.0017 ETH at the world's $3,000 ETH.
+ */
+export const NATIVE_V4_POOL_USD = 10;
+
+/** Whether a world Uniswap v4 pool holds native ETH. */
+export const isNativeV4Pool = (p: { a?: string; b?: string }) => p.a === "ETH" || p.b === "ETH";
+
+/** Sets each native-ETH Uniswap v4 pool's `usd` to NATIVE_V4_POOL_USD; returns the names of the pools it changed. */
+export function shrinkNativeV4Pools(cfg: Record<string, any>): string[] {
+  const changed: string[] = [];
+  for (const p of (cfg.world?.uniswapV4Pools ?? []) as Record<string, any>[]) {
+    if (!isNativeV4Pool(p) || p.usd === NATIVE_V4_POOL_USD) continue;
+    p.usd = NATIVE_V4_POOL_USD;
+    changed.push(p.name);
+  }
+  return changed;
+}
+
+/**
+ * The wei of ETH the deployer pays into the config's native-ETH Uniswap v4 pools, as step 02 computes it
+ * (02_DeployWorld `_uniswapV4Pool`: `_amountForUsd(ETH, usd / 2)`, ETH priced at the WETH token's `price8`).
+ */
+export function nativeV4PoolWei(cfg: Record<string, any>): bigint {
+  const weth = ((cfg.world?.tokens ?? []) as Record<string, any>[]).find((t) => t.symbol === "WETH");
+  let wei = 0n;
+  for (const p of (cfg.world?.uniswapV4Pools ?? []) as Record<string, any>[]) {
+    if (!isNativeV4Pool(p)) continue;
+    if (!weth) throw new Error(`world.uniswapV4Pools ${p.name}: no WETH token to price ETH`);
+    wei += (BigInt(p.usd) / 2n) * 10n ** 8n * 10n ** 18n / BigInt(weth.price8);
+  }
+  return wei;
+}
+
+/** The first release's step that deploys the world, its native-ETH Uniswap v4 pools among it. */
+export const WORLD_STEP = "first:02-test-world";
+
+/**
+ * On a rerun, the config was written by an earlier run (`status.config`): while the world step has not passed, its
+ * native-ETH Uniswap v4 pools are brought to NATIVE_V4_POOL_USD (shrinkNativeV4Pools); once it has, the config is the
+ * world's record and is left as it is. No step before it reads the pools. Returns the names of the pools it changed.
+ */
+export function syncNativeV4Pools(configPath: string, status: Pick<Status, "config" | "steps">): string[] {
+  if (!status.config || status.steps[WORLD_STEP]?.outcome === "pass") return [];
+  const cfg = JSON.parse(readFileSync(configPath, "utf8")) as Record<string, any>;
+  const changed = shrinkNativeV4Pools(cfg);
+  if (changed.length) writeFileSync(configPath, `${JSON.stringify(cfg, null, 2)}\n`);
+  return changed;
+}
+
 /** Its one keeper signer: refilled below 0.05 ETH to 0.2 ETH, at most 0.2 ETH a day. */
 export const GAS_VAULT_SIGNER = { minBalanceWei: "50000000000000000", targetBalanceWei: "200000000000000000", periodCapWei: "200000000000000000" };
 /** A directory the rehearsal (rehearse.ts) wrote: a real deploy refuses to resume it. */
@@ -135,7 +188,7 @@ export const baseRoles = ({ signers: s, addresses: a }: TestnetRoles) => ({ depl
 
 /**
  * What a test network's config changes in the local stack's: its roles, release, normal delay and operation gas budget,
- * and nothing else. testnet.test.ts checks every other value against the local stack's config, built from the same
+ * the gas vault, and the native-ETH Uniswap v4 pools' size (NATIVE_V4_POOL_USD), and nothing else. testnet.test.ts checks every other value against the local stack's config, built from the same
  * test values (script/local/test-values.json, the one source of the market parameters).
  */
 export function testnetPatch({ signers: s, addresses: a }: TestnetRoles, executor: string, rel: string, fundWei = GAS_VAULT.fundWei) {
@@ -155,6 +208,8 @@ export function testnetPatch({ signers: s, addresses: a }: TestnetRoles, executo
     // `fundWei` (gasVaultFundWei; 0: not funded).
     cfg.gasVault = { ...cfg.gasVault, fundWei };
     cfg.gasVault.signers = [{ signer: a.KEEPER, ...GAS_VAULT_SIGNER }];
+    // The native-ETH Uniswap v4 pools: seeded with the deployer's real test ETH, so a few dollars each.
+    shrinkNativeV4Pools(cfg);
   };
 }
 
@@ -195,6 +250,11 @@ async function deploy(): Promise<void> {
   if (status.steps["first:12-fund-gas-vault"]?.outcome !== "pass") {
     if (status.config && syncGasVaultFund(config, fundWei)) say(`${c.network}: gas vault funding set to ${fundWei} wei (${gasVaultFundKey(c)})`);
     if (fundWei === "0") say(`${c.network}: gas vault not funded: ${gasVaultFundKey(c)} = 0; fund it later with its \`fund\``);
+  }
+  const shrunk = syncNativeV4Pools(config, status);
+  if (shrunk.length) {
+    const wei = nativeV4PoolWei(JSON.parse(readFileSync(config, "utf8")));
+    say(`${c.network}: native-ETH Uniswap v4 pools ${shrunk.join(", ")} set to $${NATIVE_V4_POOL_USD} each (${eth(wei)} from the deployer in all)`);
   }
   const first = await runRelease(c, "first", firstRelease(c), config, show);
   const failed = first.find((o) => o.outcome === "fail");
