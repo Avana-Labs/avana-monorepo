@@ -9,7 +9,7 @@ The chains, contracts and services the webapp runs on locally, started by one co
 | Avana | The deploy steps of `script/deploy/step.sh` on each chain. The first release holds one Aave Hub per chain ("Avana Ethereum Hub", "Avana Base Hub", tier 3) with its Lend Spoke and debt assets; the chain's Hub file adds its CDP Spokes and markets. Protocol parameters come from `script/deploy/config/anvil.json`; the values the Aave DAO sets come from `test-values.json` |
 | Indexer | One Ponder process for both chains (PGlite), port 42070, reading each node through `script/e2e/rpc-recorder.ts` |
 | Convex | One anonymous local deployment of `services/convex` (no account), fed by the indexer export; `convex-driver.ts` runs its chain jobs on the local chains |
-| Keeper | Active on both chains, signing from the `keeper` keystore |
+| Keeper | Active on both chains, signing from its own keystore |
 | Monitor | Both chains, every alert to its log |
 | Faucet | `services/faucet` in fork mode on both chains, port 42080, its tokens and prices from each chain's manifest; the webapp gets `FAUCET_URL` |
 | Activity | One loop per chain: lends, borrows, repays and swaps (`activity.ts`) |
@@ -66,18 +66,7 @@ Logs are in `deployments-local/stack/logs/<process>.log`, one per process and on
 
 ## Signers
 
-No key is written in clear, passed on a command line or kept in an env file. Each signer is an encrypted Foundry keystore in `deployments-local/stack/keystore`, made by `cast wallet new`. All share one random password in a file only the user can read.
-
-| Keystore | Signs |
-|---|---|
-| `deployer` | Every deploy and release step on both chains; the test tokens' minter and the First-Loss Reserves' funder |
-| `keeper` | The liquidation bot's transactions; it is also the operator helper's signer in each chain's config |
-| `treasury` | The fee recipient (`ParameterStore.feeRecipient`): the liquidation fee share and the front-end fee. Never the deployer or the keeper: the stack refuses to start if any two of the three are one account |
-| `faucet` | The webapp's test funds |
-| `activity-funds` | Transfers test tokens to the activity loop's simulated users |
-| `ocr-0` … `ocr-3` | The four OCR2 oracles that sign every price report |
-
-The governance Safe, the guardians and the Aave governance executor stand in for multisigs and governance. They send through anvil's unlocked senders (`--auto-impersonate`), as in the rehearsal. So do the activity loop's simulated users, which are addresses with no key.
+Every signer is an encrypted Foundry keystore, created and held by the operator outside the repository. No key is written in clear, passed on a command line or kept in an env file. The multisig and governance stand-ins send through anvil's unlocked senders, as in the rehearsal.
 
 ## Adding a Hub
 

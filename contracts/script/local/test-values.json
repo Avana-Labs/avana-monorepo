@@ -39,6 +39,7 @@
     "debtMaxWhole": 5000000
   },
   "tokens": {
+    "_comment": "The collateral factors of cbBTC, WBTC, AAVE, UNI, AERO, LINK and the tokenized stocks are Avana's proposed values for the listing AIP; the Aave DAO sets the final ones.",
     "default": {
       "tokenCapUsd": "50000000"
     },
@@ -68,7 +69,7 @@
     },
     "LINK": {
       "deviationBps": 50,
-      "collateralFactorBps": 7000,
+      "collateralFactorBps": 7600,
       "tokenCapUsd": "10000000"
     },
     "DAI": {
@@ -103,13 +104,13 @@
     },
     "WBTC": {
       "deviationBps": 50,
-      "collateralFactorBps": 8000,
+      "collateralFactorBps": 8400,
       "agreementToleranceBps": 200,
       "secondToleranceBps": 200
     },
     "cbBTC": {
       "deviationBps": 50,
-      "collateralFactorBps": 8000,
+      "collateralFactorBps": 8400,
       "agreementToleranceBps": 200,
       "secondToleranceBps": 200
     },
@@ -121,77 +122,86 @@
     },
     "AAVE": {
       "deviationBps": 100,
-      "collateralFactorBps": 6500,
+      "collateralFactorBps": 7600,
       "tokenCapUsd": "10000000"
     },
     "UNI": {
       "deviationBps": 100,
-      "collateralFactorBps": 6500,
+      "collateralFactorBps": 7600,
       "tokenCapUsd": "10000000"
     },
     "AERO": {
       "deviationBps": 100,
-      "collateralFactorBps": 6500,
+      "collateralFactorBps": 7600,
       "tokenCapUsd": "10000000"
     },
     "AMZNc": {
       "deviationBps": 100,
-      "collateralFactorBps": 6000,
+      "collateralFactorBps": 7300,
       "tokenCapUsd": "5000000"
     },
     "SNDKc": {
       "deviationBps": 100,
-      "collateralFactorBps": 6000,
+      "collateralFactorBps": 7300,
       "tokenCapUsd": "5000000"
     },
     "GOOGLc": {
       "deviationBps": 100,
-      "collateralFactorBps": 6000,
+      "collateralFactorBps": 7300,
       "tokenCapUsd": "5000000"
     },
     "NVDAc": {
       "deviationBps": 100,
-      "collateralFactorBps": 6000,
+      "collateralFactorBps": 7300,
       "tokenCapUsd": "5000000"
     },
     "SPCXc": {
       "deviationBps": 100,
-      "collateralFactorBps": 6000,
+      "collateralFactorBps": 7300,
       "tokenCapUsd": "5000000"
     },
     "METAc": {
       "deviationBps": 100,
-      "collateralFactorBps": 6000,
+      "collateralFactorBps": 7300,
       "tokenCapUsd": "5000000"
     }
   },
   "spokes": {
     "uniV3Stable": {
-      "collateralRisk": 400
+      "collateralRisk": 400,
+      "maxLiquidationBonus": 10400
     },
     "uniV4Stable": {
-      "collateralRisk": 400
+      "collateralRisk": 400,
+      "maxLiquidationBonus": 10400
     },
     "uniV3CorrelatedEth": {
-      "collateralRisk": 1000
+      "collateralRisk": 600,
+      "maxLiquidationBonus": 10500
     },
     "uniV4CorrelatedBtc": {
-      "collateralRisk": 1000
+      "collateralRisk": 600,
+      "maxLiquidationBonus": 10500
     },
     "uniV3BlueChip": {
-      "collateralRisk": 2000
+      "collateralRisk": 800,
+      "maxLiquidationBonus": 10650
     },
     "slipBlueChip": {
-      "collateralRisk": 2000
+      "collateralRisk": 800,
+      "maxLiquidationBonus": 10650
     },
     "uniV3GovDefi": {
-      "collateralRisk": 3000
+      "collateralRisk": 1000,
+      "maxLiquidationBonus": 10800
     },
     "slipGovDefi": {
-      "collateralRisk": 3000
+      "collateralRisk": 1000,
+      "maxLiquidationBonus": 10800
     },
     "slipStocks": {
-      "collateralRisk": 4000
+      "collateralRisk": 1200,
+      "maxLiquidationBonus": 11000
     }
   },
   "markets": {
@@ -206,26 +216,23 @@
       "topUpSliceUsd": "500000"
     },
     "uni-USDC-USDT-100": {
-      "collateralFactorBps": 3500,
-      "maxLiquidationBonus": 10500,
-      "consistencyToleranceBps": 50,
-      "slippageAllowanceBps": 195
+      "poolRiskFactorBps": 8889,
+      "collateralFactorBps": 8000,
+      "consistencyToleranceBps": 50
     },
     "uni-WETH-USDC-500": {
-      "collateralFactorBps": 3000,
-      "maxLiquidationBonus": 10800,
+      "poolRiskFactorBps": 8471,
+      "collateralFactorBps": 7200,
       "consistencyToleranceBps": 100,
-      "slippageAllowanceBps": 300,
       "riskFactorBps": {
         "pairVolatility": 150,
         "liquidityDepth": 50
       }
     },
     "uni-wstETH-WETH-100": {
-      "collateralFactorBps": 3400,
-      "maxLiquidationBonus": 10600,
-      "consistencyToleranceBps": 50,
-      "slippageAllowanceBps": 230
+      "poolRiskFactorBps": 8824,
+      "collateralFactorBps": 7500,
+      "consistencyToleranceBps": 50
     },
     "slip-USDC-USDT-cl1": {
       "collateralFactorBps": 3500,
@@ -234,16 +241,87 @@
       "slippageAllowanceBps": 195
     },
     "slip-WETH-USDC-cl100": {
-      "collateralFactorBps": 3000,
-      "maxLiquidationBonus": 10800,
-      "consistencyToleranceBps": 100,
-      "slippageAllowanceBps": 300
+      "poolRiskFactorBps": 8471,
+      "collateralFactorBps": 7200,
+      "consistencyToleranceBps": 100
     },
     "slip-wstETH-WETH-cl1": {
       "collateralFactorBps": 3400,
       "maxLiquidationBonus": 10600,
       "consistencyToleranceBps": 50,
       "slippageAllowanceBps": 230
+    },
+    "slip-cbBTC-USDC-cl100": {
+      "poolRiskFactorBps": 8572,
+      "collateralFactorBps": 7200
+    },
+    "slip-cbBTC-WETH-cl100": {
+      "poolRiskFactorBps": 8572,
+      "collateralFactorBps": 7200
+    },
+    "slip-AERO-USDC-cl200": {
+      "poolRiskFactorBps": 8948,
+      "collateralFactorBps": 6800
+    },
+    "slip-AERO-WETH-cl200": {
+      "poolRiskFactorBps": 8948,
+      "collateralFactorBps": 6800
+    },
+    "slip-LINK-WETH-cl200": {
+      "poolRiskFactorBps": 8948,
+      "collateralFactorBps": 6800
+    },
+    "slip-AMZNc-USDC-cl100": {
+      "poolRiskFactorBps": 8905,
+      "collateralFactorBps": 6500
+    },
+    "slip-SNDKc-USDC-cl100": {
+      "poolRiskFactorBps": 8905,
+      "collateralFactorBps": 6500
+    },
+    "slip-GOOGLc-USDC-cl100": {
+      "poolRiskFactorBps": 8905,
+      "collateralFactorBps": 6500
+    },
+    "slip-NVDAc-USDC-cl100": {
+      "poolRiskFactorBps": 8905,
+      "collateralFactorBps": 6500
+    },
+    "slip-SPCXc-USDC-cl100": {
+      "poolRiskFactorBps": 8905,
+      "collateralFactorBps": 6500
+    },
+    "slip-METAc-USDC-cl100": {
+      "poolRiskFactorBps": 8905,
+      "collateralFactorBps": 6500
+    },
+    "uni-DAI-USDT-100": {
+      "poolRiskFactorBps": 8889,
+      "collateralFactorBps": 8000
+    },
+    "uni-WBTC-USDC-3000": {
+      "poolRiskFactorBps": 8572,
+      "collateralFactorBps": 7200
+    },
+    "uni-AAVE-WETH-3000": {
+      "poolRiskFactorBps": 8948,
+      "collateralFactorBps": 6800
+    },
+    "uni-UNI-WETH-3000": {
+      "poolRiskFactorBps": 8948,
+      "collateralFactorBps": 6800
+    },
+    "uni-LINK-WETH-3000": {
+      "poolRiskFactorBps": 8948,
+      "collateralFactorBps": 6800
+    },
+    "univ4-USDC-USDT-100": {
+      "poolRiskFactorBps": 8889,
+      "collateralFactorBps": 8000
+    },
+    "univ4-cbBTC-WBTC-100": {
+      "poolRiskFactorBps": 8929,
+      "collateralFactorBps": 7500
     }
   }
 }
