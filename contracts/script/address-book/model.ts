@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Reads one network's deployment folder (manifest.json and the files the deploy writes beside it) into the values the
-// website's three reference pages show: every address, the per-market and per-Spoke listing values, and the settings
+// address book's three pages show: every address, the per-market and per-Spoke listing values, and the settings
 // that differ per network. Each value is looked up where the deploy recorded it; a value that is missing or still a
 // placeholder is reported as a problem, never filled in.
 
