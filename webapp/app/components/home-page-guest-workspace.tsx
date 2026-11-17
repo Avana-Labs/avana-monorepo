@@ -16,7 +16,8 @@ const HomePageGuestRuntime = lazy(async () => ({
 
 /** The swap card with the empty guest wallet. */
 export function HomePageGuestWorkspace() {
-  const swap = useSwapSession({ walletId: GUEST_WALLET_ID })
+  // Rendered outside every ConvexProvider (`home-page-client.tsx`), so the session reads no Convex data.
+  const swap = useSwapSession({ walletId: GUEST_WALLET_ID, guest: true })
   const [mode, setMode] = useState<HomeMode>("swap")
 
   // Once a product tab is requested, keep the normal workspace mounted so its
