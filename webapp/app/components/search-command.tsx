@@ -59,6 +59,24 @@ function SearchResultImage({ src }: { src: string }) {
   )
 }
 
+type SearchIndex = { pools: BorrowPoolRow[]; assets: BorrowableAsset[]; lendMarkets: LendMarket[] }
+
+/** The server's search index (`/api/search-index`), or null when it cannot be read. */
+async function fetchSearchIndex(): Promise<SearchIndex | null> {
+  try {
+    const response = await fetch("/api/search-index", { headers: { accept: "application/json" } })
+    if (!response.ok) return null
+    const body = (await response.json()) as Partial<SearchIndex>
+    return {
+      pools: Array.isArray(body.pools) ? body.pools : [],
+      assets: Array.isArray(body.assets) ? body.assets : [],
+      lendMarkets: Array.isArray(body.lendMarkets) ? body.lendMarkets : [],
+    }
+  } catch {
+    return null
+  }
+}
+
 async function getSearchResults(
   formatCompactCurrency: (usd: number) => string,
   t: (key: string) => string,
@@ -243,9 +261,20 @@ export function SearchCommand({
     setLoadingResults(true)
 
     try {
-      const hydratedPools: BorrowPoolRow[] = borrowSession?.marketSummaries ?? []
-      const hydratedAssets: BorrowableAsset[] = borrowSession?.borrowableAssets ?? []
-      const lendMarkets = lendSession ? Object.values(lendSession.state.markets) : []
+      let hydratedPools: BorrowPoolRow[] = borrowSession?.marketSummaries ?? []
+      let hydratedAssets: BorrowableAsset[] = borrowSession?.borrowableAssets ?? []
+      let lendMarkets = lendSession ? Object.values(lendSession.state.markets) : []
+      // The header sits above the session providers, so it usually has no session: read the server's index instead.
+      if (!borrowSession || !lendSession) {
+        const index = await fetchSearchIndex()
+        if (index) {
+          if (!borrowSession) {
+            hydratedPools = index.pools
+            hydratedAssets = index.assets
+          }
+          if (!lendSession) lendMarkets = index.lendMarkets
+        }
+      }
       const nextResults = await getSearchResults(compact, t, hydratedPools, hydratedAssets, lendMarkets)
       setResults(nextResults)
     } finally {
@@ -266,11 +295,13 @@ export function SearchCommand({
 
   useEffect(() => {
     if (!open) {
+      // An empty list is not kept: the next open reads again.
+      if (results?.length === 0) setResults(null)
       return
     }
 
     void loadResults()
-  }, [loadResults, open])
+  }, [loadResults, open, results])
 
   const normalizedQuery = query.trim().toLowerCase()
   const resolvedResults = results ?? []
