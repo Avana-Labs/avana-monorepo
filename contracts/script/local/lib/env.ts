@@ -26,7 +26,8 @@ export interface LocalChain {
    * folder, script/deploy/hubs/<hubs>/ (`ethereum` on Ethereum and Sepolia, `base` on Base and Base Sepolia). */
   readonly hubs: string;
   /** A public test network (Sepolia, Base Sepolia) deployed from keystores (script/testnet/): no anvil method is
-   * called, its RPC URL comes from `rpcEnv`, and each signer from the testnet keystores. */
+   * called, its endpoint is the healthy provider script/testnet/rpc.ts picks from the provider credentials (or the
+   * explicit override `rpcEnv`), and each signer comes from the testnet keystores. */
   readonly testnet?: { readonly rpcEnv: string };
   /** The services' chain key (services/common/src/chains.ts, network set `production`): the services read this node as
    * that chain through RPC_<envSuffix> and CHAIN_ID_<envSuffix>. */
@@ -46,7 +47,8 @@ export interface LocalChain {
 /**
  * Fork mode: every chain forks its real network at the block pinned in fork.json, so runs are repeatable and anvil
  * caches what it read; STACK_FORK_BLOCK_<CHAIN> pins another. The network's RPC endpoints are never in the repository:
- * <CHAIN>_FORK_RPC_URL comes from the environment or the encrypted secrets file (secrets.ts), and anvil reaches them
+ * they are built from the RPC provider credentials (packages/rpc), or <CHAIN>_FORK_RPC_URL replaces them, each from the
+ * environment or the encrypted secrets file (secrets.ts), and anvil reaches them
  * through the local fork proxy (fork-proxy.ts), so they appear on no command line either.
  */
 function forkOf(network: string, proxyPort: number): LocalChain["fork"] {
@@ -87,8 +89,9 @@ export const CHAINS: readonly LocalChain[] = [
 
 /**
  * The public test networks, deployed as the local stack is (the same base config, Hub files, world and test values)
- * by script/testnet/testnet.ts. Their RPC URLs are secrets: `rpcEnv` names the variable (environment, or the encrypted
- * secrets file of secrets.ts); they never reach a command line or a log.
+ * by script/testnet/testnet.ts. Their endpoints are built from the provider credentials (script/testnet/rpc.ts,
+ * packages/rpc); `rpcEnv` names an explicit endpoint that replaces them (environment, or the encrypted secrets file of
+ * secrets.ts). No endpoint reaches a command line or a log.
  */
 export const TESTNETS: readonly LocalChain[] = [
   {
@@ -126,11 +129,18 @@ export const chainOf = (network: string): LocalChain => {
   return c;
 };
 
-/** The chain's RPC: the local node's port, or a test network's URL from its secret variable. */
+/** Each test network's endpoint in use, by chain ID: set by script/testnet/rpc.ts, held in this process only. */
+const activeRpc = new Map<number, { readonly url: string; readonly provider: string }>();
+export const setActiveRpc = (c: LocalChain, url: string, provider: string) => activeRpc.set(c.chainId, { url, provider });
+export const activeRpcProvider = (c: LocalChain) => activeRpc.get(c.chainId)?.provider;
+/** The active endpoints' URLs, for redaction. */
+export const activeRpcUrls = () => [...activeRpc.values()].map((a) => a.url);
+
+/** The chain's RPC: the local node's port, or a test network's endpoint in use (else its explicit override). */
 export const rpcUrl = (c: LocalChain) => {
   if (!c.testnet) return `http://127.0.0.1:${c.port}`;
-  const url = process.env[c.testnet.rpcEnv]?.trim();
-  if (!url) throw new Error(`${c.testnet.rpcEnv} is not set: store it with \`node script/local/stack.ts secrets\` or set it in the environment`);
+  const url = activeRpc.get(c.chainId)?.url ?? process.env[c.testnet.rpcEnv]?.trim();
+  if (!url) throw new Error(`no RPC for ${c.network}: store the provider credentials with \`node script/local/stack.ts secrets\` (or set ${c.testnet.rpcEnv})`);
   return url;
 };
 /** What every service reads to know which node stands in for which chain. */

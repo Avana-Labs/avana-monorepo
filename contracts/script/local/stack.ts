@@ -8,8 +8,8 @@
 //   node script/local/stack.ts up [--chains ethereum,base] [--no-activity] [--no-hubs] [--no-webapp]
 //   node script/local/stack.ts deploy [--chains ...]   the chains and their first release only, no services
 //   node script/local/stack.ts status
-//   node script/local/stack.ts secrets [--only A,B]  store the fork and test-network RPC URLs and the explorer key,
-//                                               encrypted next to the keystores (prompted)
+//   node script/local/stack.ts secrets [--only A,B]  store the RPC provider credentials and the explorer key, encrypted
+//                                               next to the keystores (prompted); --only names explicit endpoints too
 //   node script/local/stack.ts check            re-check only: manifests, indexer at head, Convex against the chain
 //   node script/local/stack.ts replay           the indexer replay and replay-check.ts against the local Convex
 //   node script/local/stack.ts add-hub <hub.json> --chain ethereum|base

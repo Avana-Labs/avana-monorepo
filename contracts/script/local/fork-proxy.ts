@@ -2,12 +2,14 @@
 // Copyright (c) 2026 Avana Labs
 // The fork's upstream for one chain: anvil forks from this local proxy (http://127.0.0.1:<port>), which forwards each
 // JSON-RPC request to the network's RPC endpoints. The endpoints reach it in its environment (FORK_UPSTREAMS,
-// comma-separated), so no RPC URL appears on any command line or in the repository. A rate-limited or failed request
-// is retried with exponential backoff, rotating through the endpoints.
+// comma-separated, primary first), so no RPC URL appears on any command line or in the repository. A request goes to
+// the first endpoint not failed in the last 30 s; a rate-limited or failed one moves to the next at once, and backs
+// off exponentially only when every endpoint has failed.
 //
 // Usage (started by the stack): FORK_UPSTREAMS=<urls> node script/local/fork-proxy.ts <port>
 
 import { createServer } from "node:http";
+import { preferredUpstream } from "../testnet/rpc-proxy.ts";
 
 const port = Number(process.argv[2]);
 const upstreams = (process.env.FORK_UPSTREAMS ?? "").split(",").map((u) => u.trim()).filter(Boolean);
@@ -16,12 +18,13 @@ if (!port || upstreams.length === 0) {
   process.exit(2);
 }
 const stats = { forwarded: 0, retried: 0, failed: 0 };
-let next = 0;
+const pick = preferredUpstream(upstreams.length);
 
 async function forward(body: string): Promise<{ status: number; text: string }> {
   let wait = 500;
   for (let attempt = 0; attempt < 8; attempt++) {
-    const url = upstreams[next++ % upstreams.length]!;
+    const i = pick.next();
+    const url = upstreams[i]!;
     try {
       const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body, signal: AbortSignal.timeout(60_000) });
       const text = await r.text();
@@ -30,6 +33,7 @@ async function forward(body: string): Promise<{ status: number; text: string }> 
       return { status: r.status, text };
     } catch {
       stats.retried++;
+      if (pick.failed(i)) continue;
       await new Promise((res) => setTimeout(res, wait));
       wait = Math.min(wait * 2, 15_000);
     }

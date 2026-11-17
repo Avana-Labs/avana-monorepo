@@ -79,10 +79,12 @@ docs/spec/05-verification/tools/
 # EVM decompiler binary (downloaded, not committed)
 contracts/tools/heimdall/bin/
 
-# Only packages/protocol (the ABIs the services import) and packages/export (the export client) are tracked under packages/.
+# Only packages/protocol (the ABIs the services import), packages/export (the export client) and packages/rpc (the RPC
+# manager) are tracked under packages/.
 packages/*
 !packages/protocol/
 !packages/export/
+!packages/rpc/
 .github/workflows/protocol.yml
 
 # Python test cache
