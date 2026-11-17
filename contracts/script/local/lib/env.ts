@@ -12,8 +12,11 @@ export const CONTRACTS = resolve(dirname(fileURLToPath(import.meta.url)), "../..
 export const REPO = resolve(CONTRACTS, "..");
 /** Everything the stack writes that belongs to no single chain: keystores, process records, service state, logs. */
 export const STACK = join(CONTRACTS, "deployments-local", "stack");
-export const LOGS = join(STACK, "logs");
-export const PIDS = join(STACK, "pids");
+/** Process logs and records (procs.ts): the stack's, or another run's directory (STACK_RUN_DIR, the test-network app's
+ * script/testnet/app.ts), so two runs on one checkout never share a process name. */
+const RUN = process.env.STACK_RUN_DIR ?? STACK;
+export const LOGS = join(RUN, "logs");
+export const PIDS = join(RUN, "pids");
 
 export interface LocalChain {
   /** The deploy scripts' network name (AVANA_NETWORK), as on the real network: its outputs go to
