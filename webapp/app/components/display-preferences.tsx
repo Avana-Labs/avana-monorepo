@@ -74,7 +74,9 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
   const [language, setLanguageState] = useState<LanguageCode>("EN")
   const [currency, setCurrencyState] = useState<CurrencyCode>("USD")
   const [ratesVersion, setRatesVersion] = useState(0)
-  const hydratedRef = useRef(false)
+  // State, not a ref: the persist effects run in the same commit as the restore effect, so a
+  // ref set there let them write the defaults over the stored preferences.
+  const [hydrated, setHydrated] = useState(false)
   // Mirrors the current currency for the async live-rate callback, which resolves
   // after the user may have switched again.
   const currencyRef = useRef<CurrencyCode>("USD")
@@ -109,7 +111,7 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
       currencyRef.current = storedCurrency
     }
 
-    hydratedRef.current = true
+    setHydrated(true)
 
     // Refresh live rates in the browser; the server always renders USD. Convex (signed-in)
     // can still overlay via FX_RATES_UPDATED_EVENT.
@@ -136,20 +138,20 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
   }, [])
 
   useEffect(() => {
-    if (!hydratedRef.current) {
+    if (!hydrated) {
       return
     }
 
     window.localStorage.setItem(STORAGE_KEY, showDollarAmounts ? "true" : "false")
-  }, [showDollarAmounts])
+  }, [hydrated, showDollarAmounts])
 
   useEffect(() => {
-    if (!hydratedRef.current) {
+    if (!hydrated) {
       return
     }
 
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language)
-  }, [language])
+  }, [hydrated, language])
 
   // Keep the document language attribute in sync so the browser (and assistive
   // tech) treat the page as the selected locale. Mirror the RTL flag onto `dir`
@@ -166,12 +168,12 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
   }, [language])
 
   useEffect(() => {
-    if (!hydratedRef.current) {
+    if (!hydrated) {
       return
     }
 
     window.localStorage.setItem(CURRENCY_STORAGE_KEY, currency)
-  }, [currency])
+  }, [currency, hydrated])
 
   // Sibling tabs write the same preference keys; `storage` only fires in other
   // documents, so this mirrors language/currency/amount visibility without loops.

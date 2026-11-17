@@ -177,7 +177,8 @@ export function buildLendPageData(_walletId: string, state?: LendSystemState): L
   const assetGroups = buildAssetGroups(markets).map((group) => ({
     ...group,
     rows: group.rows.map((row) => {
-      const market = markets.find((entry) => entry.asset.symbol.toUpperCase() === row.symbol.toUpperCase())
+      // By market id, not symbol: the same asset listed on two Hubs has two markets.
+      const market = markets.find((entry) => entry.marketId === row.market)
       const rowMarket = market ? catalogMarketToRow(market) : null
       return {
         ...row,
