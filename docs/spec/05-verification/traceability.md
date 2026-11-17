@@ -2981,7 +2981,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-ROLE-114` | LPVaultSwap | `deleverage(DeleverageRequest)` (`reportRecoveryShortfall` and `probeLiquida… | — | — | — | — | — | Unlinked |
 | `REQ-ROLE-115` | AaveAdapter; Collateralization; LPVault | `removeLiquidity`, `recredit`, `repayWithCollate… | — | — | — | — | — | Unlinked |
 | `REQ-ROLE-116` | Every signer key of the governance multisig, the Emergency Guardian and the Avana treasury… | — | — | — | — | — | Unlinked |
-| `REQ-ROLE-117` | The Joint Configuration Safe of each chain (2-of-3: one Avana Labs, one Aave Labs and one … | — | — | — | `TEST-062`° | `AvanaRoles` | Not run |
+| `REQ-ROLE-117` | The Joint Configuration Safe of each chain (2-of-3: one Avana Labs, one Aave service-provi… | — | — | — | `TEST-062`° | `AvanaRoles` | Not run |
 | `REQ-ROLE-118` | The AvanaGasVault of each chain MUST check `msg.sender == TIMELOCK` for `addSigner`, `setS… | — | — | — | — | — | Unlinked |
 | `REQ-ROUTE-001` | A market can be activated only if, for every token of the market and every debt asset appr… | — | — | — | `TEST-054`°, `TEST-054`‡, `TEST-245`°, `TEST-245`‡ | — | Not run |
 | `REQ-ROUTE-002` | Route classes per token class (`Q-339`). For each (token, debt asset) pair the primary rou… | — | — | — | `TEST-054`°, `TEST-054`‡ | `DexHop`, `DexHops`, `DexPathRoute`, `IMarketRegistryRoutes` (decl.), `IPegModuleRoute` (decl.), `ISettlementRoute` (decl.), `MarketRegistryRouteChecks`, `MarketRegistryRoutesLogic`, `PegModuleRoute`, `PegModuleStep`, `WrapperStep`, `WrapperThenDexRoute` | Not run |
@@ -3620,32 +3620,3 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `WDR-POST-013` | After path E, the exposure counters fell by exactly `charge(c) − charge(c − units)` of the… | — | — | — | — | — | Unlinked |
 | `WDR-POST-014` | In a `Closed` market every remaining position is returned to its depositor on request with… | — | — | — | — | — | Unlinked |
 | `WDR-POST-015` | No step of any path depended on PositionProxy code beyond forwarding the Adapter's call; t… | — | — | — | — | — | Unlinked |
-
-## Design-review findings closed by checks
-
-Checks that name an `AMMN-*` finding of `docs/audit/design-review/amm-neutral/` they close. A finding listed here still needs the spec rule that fixes it.
-
-| Finding | Checks |
-|---|---|
-| `AMMN-FLOW-04` | `QNT-TOPO-08` |
-| `AMMN-FLOW-05` | `QNT-TOPO-05`, `QNT-TOPO-T03` |
-| `AMMN-FLOW-16` | `MATH-CAP-09` |
-| `AMMN-FLOW-19` | `QNT-TOPO-T17`, `QNT-TOPO-X1` |
-| `AMMN-GAS-01` | `MATH-CAP-09`, `MATH-CH-01` |
-| `AMMN-GAS-02` | `MATH-CH-01` |
-| `AMMN-INT-07` | `QNT-TOPO-T11`, `QNT-TOPO-T12` |
-| `AMMN-RT-01` | `HYP-AMM-SLIP-PRICE-04`, `HYP-AMM-V3-PRICE-04`, `MATH-AMM-SLIP-PRICE-05`, `MATH-AMM-SLIP-PRICE-06`, `MATH-AMM-V3-PRICE-05`, `MATH-AMM-V3-PRICE-06` |
-| `AMMN-RT-02` | `HYP-AMM-SLIP-PRICE-03`, `HYP-AMM-V3-PRICE-03`, `MATH-AMM-SLIP-PRICE-04`, `MATH-AMM-V3-PRICE-04` |
-| `AMMN-RT-03` | `QNT-TOPO-03`, `QNT-TOPO-T11`, `QNT-TOPO-T12`, `QNT-TOPO-T13` |
-| `AMMN-RT-04` | `QNT-TOPO-08`, `QNT-TOPO-T10` |
-| `AMMN-RT-05` | `QNT-TOPO-T16`, `QNT-TOPO-X2` |
-| `AMMN-RT-07` | `HYP-AMM-BAL-MANIP-01`, `HYP-AMM-CURVE-MANIP-01`, `HYP-AMM-V2-MANIP-01`, `HYP-AMM-V2-MANIP-02`, `HYP-AMM-V2-MANIP-03`, `HYP-AMM-V2-PRICE-01`, `MATH-AMM-BAL-PRICE-01`, `MATH-AMM-BAL-PRICE-02`, `MATH-AMM-CURVE-PRICE-01`, `MATH-AMM-CURVE-PRICE-02`, `MATH-AMM-V2-PRICE-02`, `MATH-AMM-V2-PRICE-03`, `MATH-AMM-V2-PRICE-05`, `MATH-AMM-V2-PRICE-06` |
-| `AMMN-RT-11` | `QNT-TOPO-05`, `QNT-TOPO-T01`, `QNT-TOPO-T02`, `QNT-TOPO-T03` |
-| `AMMN-RT-13` | `FV-LIQ-04`, `MATH-ST-109` |
-| `AMMN-RT-16` | `QNT-TOPO-08` |
-| `AMMN-SM-01` | `QNT-TOPO-05`, `QNT-TOPO-T01`, `QNT-TOPO-T02`, `QNT-TOPO-T03` |
-| `AMMN-SM-02` | `QNT-TOPO-04G`, `QNT-TOPO-04`, `QNT-TOPO-T04`, `QNT-TOPO-T05` |
-| `AMMN-SM-03` | `QNT-TOPO-07`, `QNT-TOPO-08`, `QNT-TOPO-T06`, `QNT-TOPO-T07`, `QNT-TOPO-T08`, `QNT-TOPO-T09` |
-| `AMMN-SM-04` | `QNT-TOPO-03`, `QNT-TOPO-T11`, `QNT-TOPO-T12`, `QNT-TOPO-T13` |
-| `AMMN-SM-05` | `QNT-TOPO-10`, `QNT-TOPO-T14`, `QNT-TOPO-T16`, `QNT-TOPO-X2` |
-| `AMMN-SM-06` | `QNT-TOPO-T17`, `QNT-TOPO-X1` |

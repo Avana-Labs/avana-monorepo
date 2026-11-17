@@ -631,12 +631,12 @@ export function renderAccessControls(m: Model): string {
     ],
     [
       "Emergency Guardian",
-      `${kind(r.emergencyGuardian, "3-of-5 Safe: three Avana Labs seats, one Aave Labs seat, one independent risk-provider seat.", "a 3-of-5 Safe with three Avana Labs seats, one Aave Labs seat and one independent risk-provider seat")} \`APPLICATION_PAUSE_GUARDIAN\` and \`APPLICATION_FREEZE_GUARDIAN\` on the MarketRegistry, \`APPLICATION_PAUSE_GUARDIAN\` on the ParameterStore, \`CANCELLER_ROLE\` on the AvanaTimelock, \`COVERAGE_ROLE\` on every First-Loss Reserve${gv && gv.guardian.toLowerCase() === r.emergencyGuardian.toLowerCase() ? ", and the AvanaGasVault's `GUARDIAN`" : ""}. No upgrade or parameter power.`,
+      `${kind(r.emergencyGuardian, "3-of-5 Safe: three Avana Labs seats, one Aave service-provider seat, one independent risk-provider seat.", "a 3-of-5 Safe with three Avana Labs seats, one Aave service-provider seat and one independent risk-provider seat")} \`APPLICATION_PAUSE_GUARDIAN\` and \`APPLICATION_FREEZE_GUARDIAN\` on the MarketRegistry, \`APPLICATION_PAUSE_GUARDIAN\` on the ParameterStore, \`CANCELLER_ROLE\` on the AvanaTimelock, \`COVERAGE_ROLE\` on every First-Loss Reserve${gv && gv.guardian.toLowerCase() === r.emergencyGuardian.toLowerCase() ? ", and the AvanaGasVault's `GUARDIAN`" : ""}. No upgrade or parameter power.`,
       r.emergencyGuardian,
     ],
     [
       "Joint Configuration Safe",
-      `${kind(r.jointConfigSafe, "2-of-3 Safe: one Avana Labs, one Aave Labs and one independent risk-provider signer.", "a 2-of-3 Safe with one Avana Labs, one Aave Labs and one independent risk-provider signer")} \`APPLICATION_PAUSE_GUARDIAN\` and \`APPLICATION_FREEZE_GUARDIAN\` on the MarketRegistry and \`APPLICATION_RISK_STEWARD\` on the ParameterStore. Cannot loosen, upgrade, change roles, cover a deficit or cancel.`,
+      `${kind(r.jointConfigSafe, "2-of-3 Safe: one Avana Labs, one Aave service-provider and one independent risk-provider signer.", "a 2-of-3 Safe with one Avana Labs, one Aave service-provider and one independent risk-provider signer")} \`APPLICATION_PAUSE_GUARDIAN\` and \`APPLICATION_FREEZE_GUARDIAN\` on the MarketRegistry and \`APPLICATION_RISK_STEWARD\` on the ParameterStore. Cannot loosen, upgrade, change roles, cover a deficit or cancel.`,
       r.jointConfigSafe,
     ],
     [

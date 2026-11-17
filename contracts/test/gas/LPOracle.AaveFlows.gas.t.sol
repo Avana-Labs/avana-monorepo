@@ -14,7 +14,7 @@ import {IGasAaveOracle, LPOracleGasFixture} from "../utils/fixtures/LPOracleGasF
 /// `borrow`, `withdraw` and `liquidationCall` on the CDP Spoke at its reserve limit, in each price scenario.
 abstract contract LPOracleAaveFlowsGasBase is LPOracleGasFixture {
     // Budgets: the worst scenario measured on the optimized path with the concentrated-liquidity implementation on a real
-    // Uniswap v3 pool, rounded up to the next 5,000 gas (Josue's rule: acceptance is the full worst-case Aave flow; no
+    // Uniswap v3 pool, rounded up to the next 5,000 gas (the gas rule: acceptance is the full worst-case Aave flow; no
     // price is cached and no freshness, deviation or rounding check is weakened for gas). Cold: every account and slot
     // cold, as the first price read of a transaction. Warm: the same call repeated in one transaction, as the second and
     // later reads of a liquidation are. Against the base's measurement with a price-independent test module, each

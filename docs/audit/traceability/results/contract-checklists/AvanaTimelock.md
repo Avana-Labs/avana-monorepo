@@ -15,7 +15,7 @@ Run results: none given (links only); recorded prover results and Halmos logs ar
 - [~] `REQ-ACCESS-007` (15-governance-and-timelock.md:138) `EXECUTOR_ROLE` (timelock) | Governance multisig | Timelock `DEFAULT_ADMIN_ROLE` | `execute`, `executeBatch` w — TEST-242
 - [~] `REQ-ACCESS-008` (15-governance-and-timelock.md:139) `APPLICATION_PAUSE_GUARDIAN` (MarketRegistry) | Emergency Guardian, Aave Protocol Guardian, Joint Configuratio — TEST-062
 - [~] `REQ-ACCESS-009` (15-governance-and-timelock.md:140) `APPLICATION_FREEZE_GUARDIAN` (MarketRegistry) | Emergency Guardian, Aave Protocol Guardian, Joint Configurati — TEST-062
-- [~] `REQ-ACCESS-185` (15-governance-and-timelock.md:141) `APPLICATION_RISK_STEWARD` (ParameterStore) | Joint Configuration Safe (2-of-3: one Avana Labs, one Aave Labs  — TEST-062
+- [~] `REQ-ACCESS-185` (15-governance-and-timelock.md:141) `APPLICATION_RISK_STEWARD` (ParameterStore) | Joint Configuration Safe (2-of-3: one Avana Labs, one Aave servi — TEST-062
 - [~] `REQ-ACCESS-010` (15-governance-and-timelock.md:142) `TIMELOCK` immutable address | The AvanaTimelock | Not a role: fixed at construction | `returnStray` on each A — TEST-024, TEST-108, TEST-166
 - [~] `REQ-ACCESS-011` (15-governance-and-timelock.md:143) Committed operators (keepers) | Accounts or per-operator flash liquidation helpers registered on the chain's L — TEST-045, TEST-063, TEST-098
 - [~] `REQ-ACCESS-012` (15-governance-and-timelock.md:144) Unprivileged callers | Everyone | Not applicable | Borrower entry points of the AaveAdapter (including `remove — TEST-194, TEST-228

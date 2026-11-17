@@ -135,11 +135,11 @@ prove("FV-LIQ-04n", f"over any {N} completed liquidations each caller's top-up i
 # FV-LIQ-04 verifies: SPEC-SET-007, REQ-SWAP-043, SPEC-LIQ-010
 prove("FV-LIQ-04o", "keeperOut >= 0 on every call: keeperOut = Kf + kr when R' >= D and Kf - (D - R') when R' < D",
       call, z3.And(kout >= 0, z3.Implies(Rp >= D, kout == K + kr), z3.Implies(Rp < D, kout == K - (D - Rp))))
-# FV-LIQ-04 verifies: SPEC-SET-007, AMMN-RT-13
+# FV-LIQ-04 verifies: SPEC-SET-007
 prove("FV-LIQ-04p", "a market's liquidation cannot be blocked by another market's liquidations: completion depends only on "
       "the call's own R, Kf, minRec and maxShortfall (maxShortfall >= max(0, minRec - R) completes)",
       call + [msf >= z_max(0, floor_t)], ok)
-# FV-LIQ-04 verifies: SPEC-SET-007, AMMN-RT-13, Q-387
+# FV-LIQ-04 verifies: SPEC-SET-007, Q-387
 expect_violation("FV-LIQ-04pm", "mutation (the design before Q-387 and Q-397): a gap paid from a balance shared by markets "
                  "lets one market's draws leave another market's liquidation unfunded; FV-LIQ-04p shows the top-up has no "
                  "shared balance", [pool >= 0, draw > 0, draw <= pool, z3.Int("otherNeed") > pool - draw],

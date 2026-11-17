@@ -18,7 +18,7 @@ G(n) = 4,610,000 + 170,000 * n <= 7,500,000 gas units, the liquidation gas budge
 Q-396 removed it (cap squatting by a non-borrowing LP, AMMN-FLOW-16, is an accepted risk handled by listing caps and
 monitoring); they now check the Lens capacity figures of Q-398.
 
-MATH-CAP-09 verifies: SPEC-CHAIN-001, SPEC-CAP-009, INV-096, REQ-RISK-080, AMMN-GAS-01, AMMN-FLOW-16, Q-396, Q-398
+MATH-CAP-09 verifies: SPEC-CHAIN-001, SPEC-CAP-009, INV-096, REQ-RISK-080, Q-396, Q-398
 MATH-CAP-10 verifies: SPEC-CAP-010, REQ-RISK-082, REQ-CONFIG-081
 """
 from z3 import And, Ints, Reals, If, Not

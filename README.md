@@ -62,12 +62,14 @@ Each chain has its own AvanaTimelock. Every privileged change there is scheduled
 |---|---|
 | [`webapp/`](webapp/) | The Next.js web app (Lend, Borrow, Portfolio, detail pages, Swap, Support, Ask AI); it reads `services/convex` |
 | [`contracts/`](contracts/) | Foundry workspace with the Solidity contracts, unit, fuzz, fork and invariant tests, deployment scripts, Certora specifications and the security tools (`contracts/tools/`, including heimdall) |
-| [`services/`](services/) | `indexer/`: the Ponder indexer of Avana and Aave events; `keeper/`: the liquidation keeper; `convex/`: the Convex backend and the design of its import; `monitor/`: the monitoring and alerting service; `common/`: chains, manifest view and export types shared by the services |
+| [`services/`](services/) | `indexer/`: the Ponder indexer of Avana and Aave events; `keeper/`: the liquidation keeper; `convex/`: the Convex backend and the design of its import; `monitor/`: the monitoring and alerting service; `faucet/`: test funds on the local and public test networks; `dashboards/`: Grafana and Prometheus for the compose stack; `common/`: chains, manifest view and export types shared by the services |
 | [`docs/spec/`](docs/spec/) | The protocol specification: architecture, one page per contract, one page per operation, invariants, attack scenarios, external dependencies, design decisions, and the spec-stage verification models |
 | [`docs/governance/`](docs/governance/) | Aave DAO payloads (deployment, listing, collateral-factor, credit-line and refresh AIPs) and the AvanaTimelock operations scheduled by the governance multisig |
-| [`docs/audit/`](docs/audit/) | Audit scope, external reports, formal-verification reports and the evidence cited by findings |
-| [`packages/`](packages/) | `protocol/`: the `@avana/protocol` ABIs and ABI hash the indexer and keeper use |
+| [`docs/audit/`](docs/audit/) | Audit status, the areas under internal review, formal-verification reports and the evidence cited by findings |
+| [`packages/`](packages/) | `protocol/`: the `@avana/protocol` ABIs and ABI hash the indexer and keeper use; `export/`: the reader of the indexer's export; `rpc/`: the shared RPC manager |
 | [`deployments/`](deployments/) | Release manifests, one per chain and release, and their schema |
+| [`address-book/`](address-book/) | The generated address, parameter and access-control pages the website's developer reference reads |
+| [`infra/`](infra/) | Configuration templates and the description of where the off-chain services run in production |
 
 ## Toolchain
 
@@ -529,7 +531,7 @@ Two more workflows run every night at 06:00 UTC on `main`, on every release tag 
 ## Security, releases and contributions
 
 - Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md) gives the setup, build, test and security-tier commands and the licence of contributions.
-- Vulnerabilities: [`SECURITY.md`](SECURITY.md); reports go to support@avana.cc, and the bug bounty is at [avana.cc/developers/safety/bug-bounty](https://www.avana.cc/developers/safety/bug-bounty). External audit reports are indexed in [`docs/audit/external/`](docs/audit/external/index.md).
+- Vulnerabilities: [`SECURITY.md`](SECURITY.md); reports go to support@avana.cc. Audit and bug-bounty status: [`docs/audit/README.md`](docs/audit/README.md#audit-status).
 - Releases: annotated tags `vX.Y.Z`, each with a section in [`CHANGELOG.md`](CHANGELOG.md). The tag is the deploy scripts' `AVANA_RELEASE`, which feeds the CREATE2 and CREATE3 salts, so a tag is never moved or reused. A tag starts every long check; an upgrade is scheduled from a tag and executes only when they passed, so they run during the timelock delay ([governance](docs/governance/README.md#releases-and-emergency-fixes)).
 - Emergency fixes: a pull request labelled `hotfix` runs the short set plus the touched contracts' invariant campaigns at full depth, one campaign or run segment per job, each at most about 30 minutes (playbook P-05 in [3.6](docs/spec/03-operations/06-emergency-operations.md)). The guardians' pause protects funds at once; the fix then follows the release path.
 - Reviews: [`.github/CODEOWNERS`](.github/CODEOWNERS) names the team that approves each path; [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) is the checklist every pull request completes. The repository is `Avana-Labs/avana-monorepo` in the [Avana-Labs](https://github.com/Avana-Labs) GitHub organisation.
