@@ -134,6 +134,28 @@ export const getLendHeroSeries = query({
   },
 });
 
+/**
+ * The Lend featured cards' sparklines: each Hub asset's supply APY (percent) for every hour of the last 24, oldest
+ * first, ending at its chain's series clock. A slug with no Hub asset is left out; one with no series yet has no points.
+ */
+export const getLendSparklines = query({
+  args: { slugs: v.array(v.string()) },
+  handler: async (ctx, { slugs }) => {
+    const w = await loadWorld(ctx);
+    const out: { slug: string; points: number[] }[] = [];
+    for (const slug of slugs.slice(0, 12)) {
+      const a = w.hubAssets.find((x) => x.slug === slug);
+      if (!a) continue;
+      const now = await seriesNow(ctx, a.chainId);
+      const from = Math.floor(now / 3_600) * 3_600 - 23 * 3_600;
+      const stored = await scopePoints(ctx, "hubAsset", hubAssetKey(a), "hour", from - 48 * 3_600);
+      const apy = hubMetric("supplyApy", a.decimals);
+      out.push({ slug, points: filledBuckets("hubAsset", combineSources("hubAsset", stored), from, now, "hour").map((p) => apy(p.values)) });
+    }
+    return out;
+  },
+});
+
 /** Borrow asset page: Hub supply, utilization, price and base rate from the Hub series; "borrow" is this Spoke's draw. */
 export const getAssetHeroSeries = query({
   args: { slug: v.string(), metric: v.union(v.literal("price"), v.literal("supply"), v.literal("borrow"), v.literal("utilization"), v.literal("apy")), range: rangeArg },

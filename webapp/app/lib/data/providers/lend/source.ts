@@ -4,9 +4,9 @@ import type {
   DataSourceResponse,
 } from "@/app/lib/data/core/source-runtime"
 import { createMarketPageSource } from "@/app/lib/data/providers/catalog-page-source"
-import { buildLendPageData } from "@/app/lib/lend-system/read-model"
+import { buildLendPageData, withFeaturedSparklines } from "@/app/lib/lend-system/read-model"
 import { mergeConvexLendSnapshots } from "@/app/lib/lend-system/market-hydration"
-import { fetchLendMarketSnapshots } from "@/app/lib/lend-system/market-hydration-server"
+import { fetchLendMarketSnapshots, fetchLendSparklines } from "@/app/lib/lend-system/market-hydration-server"
 import { emptyLendSystemState } from "@/app/lib/lend-system/market-hydration"
 import type { LendPageData } from "./types"
 
@@ -20,7 +20,10 @@ const source = createMarketPageSource({
   buildEmptyState: (walletId) => emptyLendSystemState(walletId),
   fetchSnapshots: fetchLendMarketSnapshots,
   mergeSnapshots: mergeConvexLendSnapshots,
-  readPageData: (state, walletId) => buildLendPageData(walletId, state),
+  readPageData: async (state, walletId) => {
+    const page = buildLendPageData(walletId, state)
+    return withFeaturedSparklines(page, await fetchLendSparklines(page.featuredSequence))
+  },
 })
 
 export const liveLendPageSource: LendPageSource = {

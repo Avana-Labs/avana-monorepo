@@ -39,6 +39,8 @@ export type LendFeaturedAsset = {
   iconUrl: string
   /** Sparkline path of the supply series; absent until series exist. */
   path?: string
+  /** The supply APY (percent) at each point of `path`, oldest first. */
+  values?: number[]
 }
 
 /** Group titles of the Lend list, in display order. */

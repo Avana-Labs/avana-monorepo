@@ -104,6 +104,19 @@ export async function fetchLendMarketSnapshots(): Promise<LendConvexSnapshot[]> 
   }
 }
 
+/** Each Lend market's supply APY (percent) for the last 24 hours, hourly, by slug. Empty when unreachable. */
+export async function fetchLendSparklines(slugs: readonly string[]): Promise<Record<string, number[]>> {
+  const client = convexClient()
+  if (!client || slugs.length === 0) return {}
+  try {
+    const rows = await client.query(api.markets.getLendSparklines, { slugs: [...slugs] })
+    return Object.fromEntries(rows.map((row) => [row.slug, row.points]))
+  } catch (error) {
+    reportServerFetchFailure("fetchLendSparklines", error)
+    return {}
+  }
+}
+
 /** Latest-day reference snapshot for one lend market (slug-scoped). */
 export async function fetchLendMarketSnapshot(slug: string): Promise<LendMarketSnapshot | null> {
   const client = convexClient()

@@ -17,6 +17,7 @@ const lendPageSchema = z.object({
       iconUrl: z.string(),
       // Sparkline path of the supply series; absent until series exist (LendFeaturedAsset.path).
       path: z.string().optional(),
+      values: z.array(z.number()).optional(),
     }),
   ),
   featuredSequence: z.array(z.string()),
