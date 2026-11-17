@@ -57,9 +57,11 @@ definition DAO_CANCELLER() returns bytes32 = to_bytes32(0x2138e7b918df10dc44ec87
 // ---------------------------------------------------------------------------------------------------------------------
 
 // PROP-058 verifies: INV-051, INV-065, INV-068, Q-226, Q-228, Q-262
+// The two floors are fixed at construction from the chain ID: the production values, or 60 s each on a test network
+// (REQ-ACCESS-187, TEST-345).
 rule delayConstants() {
-    assert SHORT_DELAY() == 43200, "SHORT_DELAY is not 43,200 s";
-    assert MIN_NORMAL_DELAY() == 345600, "MIN_NORMAL_DELAY is not 345,600 s";
+    assert (SHORT_DELAY() == 43200 && MIN_NORMAL_DELAY() == 345600) || (SHORT_DELAY() == 60 && MIN_NORMAL_DELAY() == 60),
+        "SHORT_DELAY and MIN_NORMAL_DELAY are neither 43,200 s and 345,600 s nor the test networks' 60 s";
     assert MAX_DELAY() == 432000, "MAX_DELAY is not 432,000 s";
     assert GRACE_PERIOD() == 1209600, "GRACE_PERIOD is not 1,209,600 s";
 }

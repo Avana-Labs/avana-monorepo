@@ -144,7 +144,13 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         address[] memory dao
     ) internal returns (AvanaTimelock) {
         SelectorPair[] memory none = new SelectorPair[](0);
-        return new AvanaTimelock(proposers, executors, cancellers, dao, NORMAL_DELAY, true, none, none, _targets());
+        // Built on a production chain ID: the test-network delays of REQ-ACCESS-187 are TEST-345's.
+        uint256 chainId = vm.getChainId();
+        vm.chainId(1);
+        AvanaTimelock t =
+            new AvanaTimelock(proposers, executors, cancellers, dao, NORMAL_DELAY, true, none, none, _targets());
+        vm.chainId(chainId);
+        return t;
     }
 
     function _list(

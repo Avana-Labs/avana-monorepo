@@ -10,7 +10,7 @@ Status is the row's implementation state: **Verified** (a counting test or prope
 
 No run results are given to this matrix (it is committed and must not depend on a run), so no Foundry test counts as Verified here; a CVL rule or Halmos check counts when contracts/certora/RUNS.md or docs/audit/halmos/results/ records its pass with a job id or log. The CI evidence job writes the same matrix from the run's results.
 
-**3603 requirements · 118 verified · 0 failed · 1924 not run · 1561 unlinked · 0 changed — re-verify · 0 errors · 3532 warnings**
+**3604 requirements · 118 verified · 0 failed · 1925 not run · 1561 unlinked · 0 changed — re-verify · 0 errors · 3533 warnings**
 
 | Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |
 |---|---|---|---|---|---|---|---|
@@ -1540,7 +1540,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-ACCESS-111` | No account MAY, except through a timelock operation that waited its required delay, upgrad… | — | — | — | `TEST-062`°, `TEST-194`° | — | Not run |
 | `REQ-ACCESS-112` | The Emergency Guardian and the Aave Protocol Guardian MUST NOT be able to upgrade, change … | — | — | — | `TEST-062`°, `TEST-065`°, `TEST-066`°, `TEST-067`°, `TEST-244`° | — | Not run |
 | `REQ-ACCESS-113` | No role MAY move user collateral, vault tokens or borrowed assets directly; the only fund-… | — | — | — | `TEST-023`°, `TEST-032`°, `TEST-035`°, `TEST-108`°, `TEST-168`°, `TEST-191`° | — | Not run |
-| `REQ-ACCESS-114` | The AvanaTimelock MUST NOT be upgradeable; `SHORT_DELAY`, `MIN_NORMAL_DELAY`, `MAX_DELAY` … | — | — | — | `TEST-194`°, `TEST-242`°, `TEST-244`° | `AvanaTimelock`, `IAvanaTimelock` (decl.) | Not run |
+| `REQ-ACCESS-114` | The AvanaTimelock MUST NOT be upgradeable; `MAX_DELAY` and `GRACE_PERIOD` are constants, `… | — | — | — | `TEST-194`°, `TEST-242`°, `TEST-244`° | `AvanaTimelock`, `IAvanaTimelock` (decl.) | Not run |
 | `REQ-ACCESS-115` | Foundry fork tests on the deployed configuration MUST show: every operation type can be ca… | — | — | — | — | — | Unlinked |
 | `REQ-ACCESS-116` | Caller lacks the role for a privileged selector, or calls a timelock self-only selector di… | — | — | — | `TEST-194`° | — | Not run |
 | `REQ-ACCESS-117` | `schedule` with `delay < requiredDelay` or `< getMinDelay()`, by a non-proposer, or for an… | — | — | — | `TEST-194`°, `TEST-212`° | `AvanaTimelock`, `IAvanaTimelockErrors` (decl.) | Not run |
@@ -1566,7 +1566,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-ACCESS-137` | A call of a former in-kind selector (`enableInKind`, `disableInKind`, `setInKindExpiry`, `… | — | — | — | `TEST-053`°, `TEST-064`°, `TEST-278`° | — | Not run |
 | `REQ-ACCESS-138` | `tightenPoolRiskFactor(marketId, v)` / `setPoolRiskFactor(marketId, v)` | `APPLICATION_ADM… | — | — | — | `TEST-062`°, `TEST-063`°, `TEST-064`°, `TEST-067`° | — | Not run |
 | `REQ-ACCESS-139` | No `liquidatePermissionless(params)` selector | None | Not applicable | Not applicable | O… | — | — | — | `TEST-032`°, `TEST-174`° | — | Not run |
-| `REQ-ACCESS-140` | The AvanaTimelock MUST define `SHORT_DELAY = 43,200`, `MIN_NORMAL_DELAY = 345,600`, `MAX_D… | — | — | — | `TEST-194`° | `AvanaTimelock`, `IAvanaTimelockViews` (decl.), `IAvanaTimelock` (decl.) | Not run |
+| `REQ-ACCESS-140` | The AvanaTimelock MUST define `SHORT_DELAY = 43,200`, `MIN_NORMAL_DELAY = 345,600` (on eve… | — | — | — | `TEST-194`° | `AvanaTimelock`, `IAvanaTimelockViews` (decl.), `IAvanaTimelock` (decl.) | Not run |
 | `REQ-ACCESS-141` | `schedule` and `scheduleBatch` MUST compute `requiredDelay(targets, payloads)` per `SPEC-G… | `MATH-GOV-01` | — | — | `TEST-063`°, `TEST-194`°, `TEST-212`°, `TEST-244`° | `AvanaTimelock`, `IAvanaTimelockErrors` (decl.), `IAvanaTimelockEvents` (decl.), `IAvanaTimelockGovernance` (decl.), `IAvanaTimelockViews` (decl.), `IAvanaTimelock` (decl.), `SelectorPair` | Not run |
 | `REQ-ACCESS-142` | The constructor MUST fix the immutable set `SHORT_ELIGIBLE` of `(target, selector)` pairs … | `MATH-GOV-06`, `MATH-GOV-19` | — | — | `TEST-244`° | `AvanaTimelock`, `IAvanaTimelockErrors` (decl.), `IAvanaTimelockGovernance` (decl.), `IAvanaTimelockViews` (decl.), `IAvanaTimelock` (decl.), `SelectorPair`, `TimelockSelectors` | Not run |
 | `REQ-ACCESS-143` | At scheduling the timelock MUST record `isRoleChangeOperation(id) = true` iff the operatio… | `MATH-GOV-09`, `MATH-GOV-10` | — | — | `TEST-244`° | `AvanaTimelock`, `IAvanaTimelockViews` (decl.), `IAvanaTimelock` (decl.), `TimelockSelectors` | Not run |
@@ -1613,6 +1613,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-ACCESS-184` | `recordIntegrationContracts(integrationId, contracts)`, `finalizeIntegrationContracts(inte… | — | — | — | `TEST-062`°, `TEST-063`°, `TEST-067`°, `TEST-296`° | — | Not run |
 | `REQ-ACCESS-185` | `APPLICATION_RISK_STEWARD` (ParameterStore) | Joint Configuration Safe (2-of-3: one Avana … | — | — | — | `TEST-062`° | — | Not run |
 | `REQ-ACCESS-186` | `tightenMaxFlashFeeBps(v)` / `setMaxFlashFeeBps(v)` | `APPLICATION_ADMIN`; the tighten set… | — | — | — | `TEST-062`°, `TEST-063`°, `TEST-067`°, `TEST-245`° | — | Not run |
+| `REQ-ACCESS-187` | On a test network or development node, chain ID 11155111 (Sepolia), 84532 (Base Sepolia), … | — | — | — | `TEST-345`° | `AvanaTimelock`, `IAvanaTimelockViews` (decl.) | Not run |
 | `REQ-ADAPTER-001` | The chain's one Adapter MUST sit behind one fixed ERC-1967 proxy address that never change… | — | — | — | `TEST-062`°, `TEST-195`° | `AaveAdapter`, `IAaveAdapter` (decl.) | Not run |
 | `REQ-ADAPTER-002` | The user entry points (`pledge`, `recredit`, `borrow`, `repay`, `withdraw`, `removeLiquidi… | — | — | — | `TEST-031`° | `AaveAdapter`, `IAaveAdapter` (decl.) | Not run |
 | `REQ-ADAPTER-003` | The Adapter MUST be a UUPS proxy whose `_authorizeUpgrade` requires `APPLICATION_ADMIN`, h… | — | — | — | `TEST-062`°, `TEST-195`°, `TEST-210`° | `AaveAdapter`, `IAaveAdapterAdmin` (decl.), `IAaveAdapterViews` (decl.), `IAaveAdapter` (decl.) | Not run |

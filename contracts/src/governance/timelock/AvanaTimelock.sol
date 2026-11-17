@@ -20,16 +20,20 @@ import {TimelockController} from "@openzeppelin/contracts/governance/TimelockCon
 /// @dev Not upgradeable. Constructor `admin = address(0)`: the timelock is its only `DEFAULT_ADMIN_ROLE` holder for
 /// life. Public execution is OpenZeppelin's open role (`EXECUTOR_ROLE` held by `address(0)`). OpenZeppelin keeps its
 /// timestamps private, so a cleaned-up operation is hidden through `getTimestamp` until it is scheduled again.
-/// @custom:spec REQ-ACCESS-001, REQ-ACCESS-013, REQ-ACCESS-016, REQ-ACCESS-017, REQ-ACCESS-018, REQ-ACCESS-021, REQ-ACCESS-027, REQ-ACCESS-114, REQ-ACCESS-140, SPEC-GOV-001, SPEC-GOV-002, SPEC-GOV-005, SPEC-GOV-007, SPEC-GOV-013, INV-051, INV-068, INV-084, INV-090, Q-228, Q-259, Q-262, Q-263
+/// @custom:spec REQ-ACCESS-001, REQ-ACCESS-013, REQ-ACCESS-016, REQ-ACCESS-017, REQ-ACCESS-018, REQ-ACCESS-021, REQ-ACCESS-027, REQ-ACCESS-114, REQ-ACCESS-140, REQ-ACCESS-187, SPEC-GOV-001, SPEC-GOV-002, SPEC-GOV-005, SPEC-GOV-007, SPEC-GOV-013, INV-051, INV-068, INV-084, INV-090, Q-228, Q-259, Q-262, Q-263
 contract AvanaTimelock is TimelockController, IAvanaTimelock {
     /// @inheritdoc IAvanaTimelockViews
-    uint256 public constant override SHORT_DELAY = 43_200;
+    /// @dev 43,200 s, or `TEST_NETWORK_DELAY` on a test network (`_delayOn`), fixed at construction.
+    uint256 public immutable override SHORT_DELAY;
     /// @inheritdoc IAvanaTimelockViews
     uint256 public constant override MAX_DELAY = 432_000;
     /// @inheritdoc IAvanaTimelockViews
-    uint256 public constant override MIN_NORMAL_DELAY = 345_600;
+    /// @dev 345,600 s, or `TEST_NETWORK_DELAY` on a test network (`_delayOn`), fixed at construction.
+    uint256 public immutable override MIN_NORMAL_DELAY;
     /// @inheritdoc IAvanaTimelockViews
     uint256 public constant override GRACE_PERIOD = 1_209_600;
+    /// @notice `SHORT_DELAY` and `MIN_NORMAL_DELAY` on a test network or development node (`REQ-ACCESS-187`).
+    uint256 internal constant TEST_NETWORK_DELAY = 60;
 
     uint256 private _normalDelay;
     mapping(address target => mapping(bytes4 selector => bool)) private _shortEligible;
@@ -66,9 +70,14 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
         GovernedTargets memory targets
     )
         TimelockController(
-            SHORT_DELAY, _checkedRoleLists(proposers, executors, cancellers, daoCancellers), executors, address(0)
+            _delayOn(block.chainid, 43_200),
+            _checkedRoleLists(proposers, executors, cancellers, daoCancellers),
+            executors,
+            address(0)
         )
     {
+        SHORT_DELAY = _delayOn(block.chainid, 43_200);
+        MIN_NORMAL_DELAY = _delayOn(block.chainid, 345_600);
         if (normalDelay_ < MIN_NORMAL_DELAY || normalDelay_ > MAX_DELAY) revert DelayOutOfBounds(normalDelay_);
         _normalDelay = normalDelay_;
         emit NormalDelayChanged(0, normalDelay_);
@@ -263,7 +272,7 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
 
     /// @notice Always `SHORT_DELAY`.
     /// @custom:spec REQ-ACCESS-017, REQ-ACCESS-114
-    function getMinDelay() public pure override returns (uint256) {
+    function getMinDelay() public view override returns (uint256) {
         return SHORT_DELAY;
     }
 
@@ -414,6 +423,20 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
             restoring = restoring && hasSelector && _daoCancelSelector[targets[i]][selector];
         }
         required = allShort ? SHORT_DELAY : _normalDelay;
+    }
+
+    /// @dev The delay floor `production` on chain `chainId`, or `TEST_NETWORK_DELAY` on Sepolia (11155111), Base
+    /// Sepolia (84532) and the local development nodes (31337, 31338), so a test deployment does not wait days. Every
+    /// other chain keeps `production` (`REQ-ACCESS-187`).
+    /// @custom:spec REQ-ACCESS-187
+    function _delayOn(
+        uint256 chainId,
+        uint256 production
+    ) internal pure returns (uint256) {
+        if (chainId == 11_155_111 || chainId == 84_532 || chainId == 31_337 || chainId == 31_338) {
+            return TEST_NETWORK_DELAY;
+        }
+        return production;
     }
 
     /// @dev The constructor's role lists must allow the role table (REQ-ACCESS-183); runs before OpenZeppelin's

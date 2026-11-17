@@ -12602,7 +12602,7 @@
     ]
   },
   "REQ-ACCESS-114": {
-    "hash": "dc79542d48051d9b",
+    "hash": "597e8b14a8f02977",
     "checks": [
       "AvanaTimelock",
       "IAvanaTimelock",
@@ -12825,7 +12825,7 @@
     ]
   },
   "REQ-ACCESS-140": {
-    "hash": "c5f96a3d5e5f0719",
+    "hash": "cc359f869b526c2f",
     "checks": [
       "AvanaTimelock",
       "FV-CTL-20",
@@ -13331,6 +13331,14 @@
       "TEST-063",
       "TEST-067",
       "TEST-245"
+    ]
+  },
+  "REQ-ACCESS-187": {
+    "hash": "8fb0401b7310b102",
+    "checks": [
+      "AvanaTimelock",
+      "IAvanaTimelockViews",
+      "TEST-345"
     ]
   },
   "REQ-ADAPTER-001": {
