@@ -119,7 +119,7 @@ contract ListMarkets is ListingBase {
             _oracles();
         } else if (_eq(step, "markets")) {
             (Operation memory op, uint256[] memory starts) = _markets();
-            _proposeInParts(op, starts);
+            _proposeInParts(op, _leadingCallsApart(starts, op.targets.length));
         } else if (_eq(step, "activate")) {
             _propose(_activate(), true);
         } else {
@@ -602,9 +602,9 @@ contract ListMarkets is ListingBase {
 
     /// @notice Schedules a listing batch as one or more operations, each estimated to execute within the chain's
     /// budget (`_operationGasBudget`). The batch is cut only at the group starts in `starts`: for `listing-markets`
-    /// between markets (the routes of listed markets and the debt reserves stay with the first market, and each
-    /// market's calls stay together); for `listing-setup` between any two calls (`_everyCall`), since the parts run
-    /// in order. Part 1 keeps the batch's name; part k is `<name>.<k>` and names part k-1 as its predecessor, so the
+    /// between any two of the calls before the first new market (the routes of listed markets and the debt reserves)
+    /// and between markets, each market's calls staying together (`_leadingCallsApart`); for `listing-setup` between
+    /// any two calls (`_everyCall`), since the parts run in order. Part 1 keeps the batch's name; part k is `<name>.<k>` and names part k-1 as its predecessor, so the
     /// parts execute in order (`05_ExecuteOperations` follows them). The last part carries the batch's salt (for
     /// `listing-markets` the listing metadata salt, so the pages load once every market of the listing is on chain);
     /// the others' salts derive from it.
@@ -642,9 +642,27 @@ contract ListMarkets is ListingBase {
         }
     }
 
+    /// @notice Group starts for `listing-markets`: each call before the first new market (the routes of listed
+    /// markets, then the debt reserves) is a group of its own, since those calls only need to run in order, and each
+    /// new market's calls are one group (`marketStarts`, the index of each new market's first call). Kept with the
+    /// first market, those calls can need more gas than one operation may use.
+    function _leadingCallsApart(
+        uint256[] memory marketStarts,
+        uint256 n
+    ) private pure returns (uint256[] memory starts) {
+        uint256 leading = marketStarts.length == 0 ? n : marketStarts[0];
+        starts = new uint256[](leading + marketStarts.length);
+        for (uint256 i = 0; i < leading; ++i) {
+            starts[i] = i;
+        }
+        for (uint256 j = 0; j < marketStarts.length; ++j) {
+            starts[leading + j] = marketStarts[j];
+        }
+    }
+
     /// @notice Where the batch is cut: `cuts[k]` is the first call of part k and the last entry is the batch length.
-    /// Groups are [0, starts[1]) (the routes and debt reserves with the first market), then one per market; a group
-    /// goes into the current part unless that takes the part over `budget`.
+    /// Groups are [0, starts[1]), then [starts[g], starts[g + 1]) for each later group; a group goes into the current
+    /// part unless that takes the part over `budget`.
     function _cuts(
         Operation memory op,
         uint256[] memory starts,
