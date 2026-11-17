@@ -4,6 +4,7 @@
 // opens with `- network:`, `### ` sections, GFM tables and `> ` notes. Sections, tables and columns follow the site's
 // pages one to one; the rows come from the model, so a network shows only what its deployment has.
 
+import { minNormalDelay } from "../../../packages/protocol/src/manifest/schema.ts";
 import { KIND_ORDER, type Market, type Model, type Spoke, TWAP_WINDOW, VENUE } from "./model.ts";
 
 export type Page = "addresses" | "parameters" | "access-controls";
@@ -31,7 +32,8 @@ export function seconds(s: number): string {
   return `${int(s)} s`;
 }
 const list = (xs: readonly string[]) => (xs.length <= 1 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} and ${xs.at(-1)}`);
-const cell = (s: string) => s.replace(/\|/g, "\\|");
+/** A table cell's text with backslashes escaped first, then pipes, so a literal `\|` cannot end the cell. */
+export const cell = (s: string) => s.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
 
 function table(headers: readonly string[], rows: readonly (readonly string[])[]): string {
   const line = (cells: readonly string[]) => `| ${cells.map(cell).join(" | ")} |`;
@@ -578,6 +580,7 @@ export function renderParameters(m: Model, problems: string[]): string {
   settings.push(
     ["`SHORT_DELAY`", seconds(m.shortDelay), "Timelock delay of an operation whose every call is on the short-delay list."],
     ["`normalDelay`", seconds(t.normalDelay), "Timelock delay of every other operation."],
+    ["`MIN_NORMAL_DELAY`", seconds(minNormalDelay(m.net.chainId)), "Floor of `normalDelay` on this chain, fixed when the timelock was deployed."],
     ["`publicExecution`", t.publicExecution ? "true" : "false", t.publicExecution ? "Any address may execute a ready timelock operation." : "Only the governance Safe executes ready timelock operations."],
     ["`MAX_MARKET_COUNT`", int(m.maxMarketCount), "Most markets this chain's MarketRegistry ever lists, fixed when it was deployed."],
   );
@@ -678,6 +681,7 @@ export function renderAccessControls(m: Model): string {
       [
         ["Short delay (`SHORT_DELAY`)", seconds(m.shortDelay), "Delay of an operation whose every call is on the short list."],
         ["Normal delay (`normalDelay`)", seconds(t.normalDelay), "Delay of every other operation, including upgrades and role changes."],
+        ["Minimum normal delay (`MIN_NORMAL_DELAY`)", seconds(minNormalDelay(m.net.chainId)), "Floor below which `setNormalDelay` cannot set the normal delay."],
         ["Public execution", t.publicExecution ? "On" : "Off", t.publicExecution ? "Any address may execute a ready operation." : "Only the governance Safe executes ready operations."],
       ],
     ),

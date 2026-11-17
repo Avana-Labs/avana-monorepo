@@ -43,6 +43,7 @@ The AvanaTimelock's delays and execution setting on this network.
 | --- | --- | --- |
 | Short delay (`SHORT_DELAY`) | 43,200 s (12 hours) | Delay of an operation whose every call is on the short list. |
 | Normal delay (`normalDelay`) | 432,000 s (5 days) | Delay of every other operation, including upgrades and role changes. |
+| Minimum normal delay (`MIN_NORMAL_DELAY`) | 60 s | Floor below which `setNormalDelay` cannot set the normal delay. |
 | Public execution | On | Any address may execute a ready operation. |
 
 <!-- network-section:end local-ethereum -->
@@ -78,6 +79,7 @@ The AvanaTimelock's delays and execution setting on this network.
 | --- | --- | --- |
 | Short delay (`SHORT_DELAY`) | 43,200 s (12 hours) | Delay of an operation whose every call is on the short list. |
 | Normal delay (`normalDelay`) | 432,000 s (5 days) | Delay of every other operation, including upgrades and role changes. |
+| Minimum normal delay (`MIN_NORMAL_DELAY`) | 60 s | Floor below which `setNormalDelay` cannot set the normal delay. |
 | Public execution | On | Any address may execute a ready operation. |
 
 <!-- network-section:end local-base -->

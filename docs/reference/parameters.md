@@ -200,6 +200,7 @@ Each pool token's collateral factor (CF0 and CF1 in the LP collateral factor, `m
 | `sequencer.feed` | None | Ethereum has no sequencer, so no uptime feed is read. |
 | `SHORT_DELAY` | 43,200 s (12 hours) | Timelock delay of an operation whose every call is on the short-delay list. |
 | `normalDelay` | 432,000 s (5 days) | Timelock delay of every other operation. |
+| `MIN_NORMAL_DELAY` | 60 s | Floor of `normalDelay` on this chain, fixed when the timelock was deployed. |
 | `publicExecution` | true | Any address may execute a ready timelock operation. |
 | `MAX_MARKET_COUNT` | 128 | Most markets this chain's MarketRegistry ever lists, fixed when it was deployed. |
 | `routeDepthThreshold` | Not set | The local development chains list swap routes without a depth threshold; the monitor reports each route slot as having none. |
@@ -382,6 +383,7 @@ Each pool token's collateral factor (CF0 and CF1 in the LP collateral factor, `m
 | `sequencer.feed` | None | No sequencer uptime feed is read on this network; the feed and its grace period apply on Base mainnet only. |
 | `SHORT_DELAY` | 43,200 s (12 hours) | Timelock delay of an operation whose every call is on the short-delay list. |
 | `normalDelay` | 432,000 s (5 days) | Timelock delay of every other operation. |
+| `MIN_NORMAL_DELAY` | 60 s | Floor of `normalDelay` on this chain, fixed when the timelock was deployed. |
 | `publicExecution` | true | Any address may execute a ready timelock operation. |
 | `MAX_MARKET_COUNT` | 128 | Most markets this chain's MarketRegistry ever lists, fixed when it was deployed. |
 | `routeDepthThreshold` | Not set | The local development chains list swap routes without a depth threshold; the monitor reports each route slot as having none. |
@@ -528,7 +530,7 @@ The Aave DAO sets these values on Avana's Hub and Spokes. Avana records some of 
 | --- | --- | --- | --- | --- |
 | `SHORT_DELAY` | Per network | — | Delay of an operation whose every call is on the short-delay list: tightenings, freezes, pauses, breaker trips, standby switches, keeper removals and market activation. Each network's value is under its Chain settings. | `Q-228`, `Q-262`; `AvanaTimelock.sol:26` |
 | `normalDelay` | Per network | `MIN_NORMAL_DELAY`–`MAX_DELAY` | Delay of every other operation: upgrades, listings, loosenings, fee changes, keeper additions and role changes. A loosening of a step-limited parameter moves one step at most once per normal delay. Each network's value is under its Chain settings. | `Q-228`, `Q-246`; `AvanaTimelock.sol:72`, `AvanaCoreDeploy.sol:88` |
-| `MIN_NORMAL_DELAY` | 345,600 s (4 days) | — | Floor of the normal delay, long enough for borrowers to leave before any normal-delay operation executes. | `Q-262`, `SPEC-GOV-015`; `AvanaTimelock.sol:30` |
+| `MIN_NORMAL_DELAY` | Per network | — | Floor of the normal delay, long enough for borrowers to leave before any normal-delay operation executes. It is fixed when the timelock is deployed and is lower on the test networks and local development chains. Each network's value is under its Chain settings. | `Q-262`, `SPEC-GOV-015`, `REQ-ACCESS-187`; `AvanaTimelock.sol:31-36` |
 | `MAX_DELAY` | 432,000 s (5 days) | — | Ceiling of the normal delay. | `Q-228`; `AvanaTimelock.sol:28` |
 | `GRACE_PERIOD` | 1,209,600 s (14 days) | — | Time a ready operation stays executable; after it the operation expires. | `Q-228`; `AvanaTimelock.sol:32` |
 | `publicExecution` | Per network | — | While on, any address may execute a ready operation. Each network's value is under its Chain settings. | `Q-228`; `AvanaCoreDeploy.sol:88` |

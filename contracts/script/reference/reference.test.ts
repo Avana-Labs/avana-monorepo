@@ -14,7 +14,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { isPlaceholder } from "./model.ts";
 import { assemble, generate, parseArgs, readSections } from "./reference.ts";
-import { pct, seconds } from "./render.ts";
+import { cell, pct, seconds } from "./render.ts";
 
 const FIXTURE = join(dirname(fileURLToPath(import.meta.url)), "fixtures", "ethereum-sepolia");
 const DATE = "2026-11-17";
@@ -65,6 +65,9 @@ test("writes the network's section of all three pages from the deployment", () =
     assert.ok(parameters.includes(m.markets.find((x: any) => x.poolId).poolId));
     assert.ok(parameters.includes("| `SHORT_DELAY` | 60 s |"));
     assert.ok(parameters.includes("| `normalDelay` | 432,000 s (5 days) |"));
+    // The floor of a test network's timelock (minNormalDelay of chain 11155111), not the 345,600 s of a public chain.
+    assert.ok(parameters.includes("| `MIN_NORMAL_DELAY` | 60 s |"));
+    assert.ok(parameters.includes("| `MIN_NORMAL_DELAY` | Per network |"));
     assert.ok(parameters.includes("| `routeDepthThreshold` | 5,000,000 |"));
     assert.ok(parameters.includes("| `pokeMinGas` (DebtOracle, USDC) | 1,000,000 gas |"));
     assert.ok(parameters.includes("| Uniswap v3 Stable | 156 bps | 50 bps |"));
@@ -78,6 +81,7 @@ test("writes the network's section of all three pages from the deployment", () =
     assert.ok(access.includes(`| ${m.roles.keepers[0]} |`));
     assert.ok(!access.includes("Standby keeper"));
     assert.ok(access.includes("| Short delay (`SHORT_DELAY`) | 60 s |"));
+    assert.ok(access.includes("| Minimum normal delay (`MIN_NORMAL_DELAY`) | 60 s |"));
     assert.ok(!access.includes("AvanaGasVault's `GUARDIAN`"));
 
     for (const page of ["addresses", "parameters", "access-controls"]) {
@@ -238,4 +242,11 @@ test("helpers: arguments, placeholders, percentages and durations", () => {
   assert.ok(!isPlaceholder("0xf100000000000000000000000000000000000001"));
   assert.deepEqual([8000, 650, 8889, 50, 1, 0].map(pct), ["80%", "6.5%", "88.89%", "0.5%", "0.01%", "0%"]);
   assert.deepEqual([60, 120, 3600, 43_200, 432_000, 1_800].map(seconds), ["60 s", "120 s", "3,600 s (1 hour)", "43,200 s (12 hours)", "432,000 s (5 days)", "1,800 s"]);
+});
+
+test("a table cell escapes backslashes before pipes", () => {
+  // Backslashes first: otherwise `a\|b` would become `a\\|b`, whose pipe ends the cell.
+  assert.equal(cell("a\\|b"), "a\\\\\\|b");
+  assert.equal(cell("x | y \\ z"), "x \\| y \\\\ z");
+  assert.equal(cell("plain"), "plain");
 });
