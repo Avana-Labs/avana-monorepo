@@ -871,14 +871,6 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "eb38b6bef04559bb",
-      "check": "unchecked-return",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
-      "function": "release",
-      "reason": "Aderyn form of unused-return: the LPVault calls (marketOf, returnPosition, topUpPosition, releaseToDepositor) and LPOracle.poke revert on failure, and their reported values are deliberately not used (shape enforced by the LPVault, live units read after a top-up per REQ-COLL-037, measured deltas per REQ-VAULT-088, price state read by the RiskModule). Covered by TEST-018, TEST-237, TEST-238.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
       "fingerprint": "1c70fef2b3fa8eab",
       "check": "unchecked-return",
       "file": "src/custody/collateralization/CollateralizationRelease.sol",
