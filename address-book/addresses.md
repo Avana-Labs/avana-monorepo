@@ -12,6 +12,176 @@ Market pools and risk values are on [Market Parameters](/developers/reference/pa
 
 Every Avana chain runs the standard, unmodified Aave V4 release pinned at commit `a3ef63ea6415d25237a9775bf66e76e9993561c2`, and Avana's timelock and upgradeable contracts use OpenZeppelin Contracts and Contracts Upgradeable v5.1.0, pinned by commit. The libraries LPPriceMath, SettlementMath and AvanaRoles are compiled into the contracts that use them and have no address of their own.
 
+<!-- network-section:start base-sepolia -->
+## Base Sepolia
+- network: base-sepolia
+- chainId: 84532
+- explorer: https://sepolia.basescan.org
+
+One Hub with the Lend Spoke and 3 CDP Spokes listing 12 markets. Market pools and risk parameters are on [Market Parameters](/developers/reference/parameters?network=base-sepolia).
+
+Generated from release `v0.1.0-alpha.2` (commit `b4946f83`) and its deploy output.
+
+### Hub
+
+| Name | Description | Address |
+| --- | --- | --- |
+| Avana Base Hub | Standard Aave V4 Hub, the only Avana Hub on this chain. It holds the lent assets and the vault-token collateral of every Spoke below, and each Spoke sets its own risk parameters. Upgradeable by the Aave DAO, which owns its proxy. | 0x84DEF4377925aE56cd32C6D67ace480b8f5A74F9 |
+
+### Aero Slipstream Spokes
+
+| Name | Description | Address |
+| --- | --- | --- |
+| Aero Slipstream Blue-chip | Aave V4 CDP Spoke where Aero Slipstream positions in ETH and BTC pools are collateral for borrowing GHO and USDC. Borrowers reach it only through the AaveAdapter. Upgradeable by the Aave DAO, which owns its proxy. | 0x196244f6F01B7003014FFfbD3222857baba84862 |
+| Aero Slipstream Gov-DeFi | Aave V4 CDP Spoke where Aero Slipstream positions in governance and DeFi token pools are collateral for borrowing GHO and USDC. Borrowers reach it only through the AaveAdapter. Upgradeable by the Aave DAO, which owns its proxy. | 0xe88C49bC6EB8907050A3dA95B4B82FEd3450347A |
+| Aero Slipstream Stocks | Aave V4 CDP Spoke where Aero Slipstream positions in tokenized-stock pools against USDC are collateral for borrowing GHO and USDC. Borrowers reach it only through the AaveAdapter. Upgradeable by the Aave DAO, which owns its proxy. | 0x2Ff1eDCF4a44C9E129b6C72ae603532BC6b13d8D |
+
+### Lend Spoke
+
+| Name | Description | Address |
+| --- | --- | --- |
+| Lend Spoke | Supply-only Aave V4 Spoke where lenders supply GHO, USDC and USDT for Avana borrowers to draw through the CDP Spokes. Upgradeable by the Aave DAO, which owns its proxy. | 0x243B833a641412f6069d018D0F60df28Cf905c35 |
+
+> Each Spoke has its own AaveOracle, created with the Spoke; read its address from the Spoke's `ORACLE()`. Each vault-token reserve also names the Aave treasury Spoke as its fee receiver, with add and draw caps of 0, so it never holds vault tokens.
+
+### Avana core
+
+The contracts Avana deploys on this chain. For an upgradeable contract the address is its fixed proxy; the current implementation and logic contracts are recorded in the release manifest.
+
+| Name | Description | Address |
+| --- | --- | --- |
+| AvanaTimelock | Owns and upgrades every Avana contract on this chain. Each change waits out a delay; only the governance Safe and the Aave governance executor can propose one. Immutable. | 0xc7C8e558Ee7D35BE694f71a4b0a5e96D01C42A77 |
+| MarketRegistry | Records every Hub, CDP Spoke, AMM integration, market, debt reserve and swap route Avana lists on this chain, and holds each Hub's pause switch. Upgradeable through the AvanaTimelock. | 0x2923CF69fa0d07677432157F2c3e0e7be481BE12 |
+| ParameterStore | Stores every Avana risk parameter on this chain with its hard bounds and the direction in which it may change. Upgradeable through the AvanaTimelock. | 0xec1EA82a260034112F12c5160777B622ed4c453F |
+| RiskModule | Runs every Avana risk check (caps, circuit breakers, price freshness, Aave configuration drift) on pledges, borrows and withdrawals; holds no funds. Upgradeable through the AvanaTimelock. | 0x036492Cc65B75c7C79332EE6aDfF27e7E75761e8 |
+| AaveAdapter | The single entry point for borrowers: pledge, borrow, repay, withdraw, repay with collateral and fee collection go through it to the user's PositionProxy. Upgradeable through the AvanaTimelock. | 0x4c4DdAbb25a6f04db13a8dF2d1c6F3A6305241FC |
+| LPVaultSwap | Runs every liquidation of an Avana account on this chain and is the only address that can receive seized vault tokens. Upgradeable through the AvanaTimelock. | 0xE1F0dbaB18e1C885c1bE9abe4b92A2f2005fE838 |
+| Lock | Shared reentrancy lock of the AaveAdapter and LPVaultSwap. Immutable. | 0x2Cf0B5f78D3f438F1e40869B6D2c280a1A2828d6 |
+| Collateralization | Backing ledger of every pledged position, so every vault token stays fully backed. Immutable. | 0xA12f4ac10CD1316712FEcAbea819345281AbF4Bc |
+| VaultTokenFactory | Registers each AMM integration's LPVault and deploys one vault token per CDP Spoke and market. Immutable. | 0xD95195acDe48Ac0A52B606ba42Fd9B190F971AA0 |
+| ProxyManager | Creates each user's PositionProxy, one per wallet, CDP Spoke and market, at an address fixed by those three values. Immutable. | 0x0bE4C031a1229adEA7e5453E222F7E0d2B98DCCB |
+| PayoutEscrow | Holds a liquidation payout that could not be sent to its recipient until the recipient claims it. Immutable. | 0x8dB761339294c64a2104dCa563609D5f1ba74Fd6 |
+| Avana First-Loss Reserve, GHO | Avana's first-loss capital for GHO on this Hub: it covers deficits Aave records on Avana CDP Spokes before any other layer. Immutable; the Aave DAO controls it through its AccessManager. | 0x5B6Ea392C6De8c48f0612dEda86E985CC0f8A132 |
+| DAO deficit offset, GHO | Second loss layer for GHO on this Hub, funded by the Aave DAO treasury; it pays only once the GHO First-Loss Reserve is empty or deactivated. Immutable; deployed and controlled by the Aave DAO. | 0xf39F08741B17Bc71fdcFEd98f823db33465CcD91 |
+| Avana First-Loss Reserve, USDC | Avana's first-loss capital for USDC on this Hub: it covers deficits Aave records on Avana CDP Spokes before any other layer. Immutable; the Aave DAO controls it through its AccessManager. | 0x3640E2fbB082Bd0f483b4605a9E2a8d6970565A0 |
+| DAO deficit offset, USDC | Second loss layer for USDC on this Hub, funded by the Aave DAO treasury; it pays only once the USDC First-Loss Reserve is empty or deactivated. Immutable; deployed and controlled by the Aave DAO. | 0x7EB67C92Ca762de9173267102c7a7F7274d95f84 |
+| Avana First-Loss Reserve, USDT | Avana's first-loss capital for USDT on this Hub: it covers deficits Aave records on Avana CDP Spokes before any other layer. Immutable; the Aave DAO controls it through its AccessManager. | 0x715732d5Da3bb0837b018039cc4c84E45413A9D5 |
+| DAO deficit offset, USDT | Second loss layer for USDT on this Hub, funded by the Aave DAO treasury; it pays only once the USDT First-Loss Reserve is empty or deactivated. Immutable; deployed and controlled by the Aave DAO. | 0xE4397A110eF3BcCec082155a6F9870224C07CD6B |
+| DebtOracle, USDC | Price source of the USDC debt reserve on every CDP Spoke's AaveOracle, with failover to an alternate and a standby route. GHO is priced at a fixed $1 and needs none. Upgradeable through the AvanaTimelock. | 0x156f3B6372fcb9D2ED9F1c4df81939f62cf3c663 |
+| Fixed $1 price source, GHO | Answers a fixed $1 for GHO on every Spoke's AaveOracle of this network, in place of Aave's fixed GHO price. A test stand-in the listing deploys. Immutable. | 0x3eE09fDB1Dd0Fa833BAba3DbEE72ac546caCe9FC |
+| AvanaCreate3Factory | Deploys Avana contracts at addresses that depend only on the deployer and a salt, so every address is known before deployment. Immutable. | 0xe18066Cfc040E1067a925D06952d6872D63DA657 |
+
+> Each market's vault token and LPOracle proxy are under Markets. Its swap routes, a primary and a backup route per pool token and debt asset, belong to the market and are recorded in the MarketRegistry and the release manifest.
+
+### Markets
+
+Each market has its own vault token, the ERC-20 a pledge mints and the Spoke holds as collateral, and its own LPOracle proxy, which prices the vault token for the Spoke's AaveOracle. Vault tokens are immutable; each LPOracle is upgradeable through the AvanaTimelock.
+
+| Spoke | Market | Market ID | Vault token | LPOracle |
+| --- | --- | --- | --- | --- |
+| Aero Slipstream Blue-chip | WETH/USDC | 1 | 0x654A166a4e206712480b22441d8d1F68D3E3047d | 0xf11fCf83126C4338DF080c4b25bb8b2299B5f223 |
+| Aero Slipstream Blue-chip | cbBTC/USDC | 2 | 0xe7dad84D9E919Fd05925c8F7e7026F2c4394b44a | 0xA6AA96488f641E0B97261c20d0DB894Aa0E1fA17 |
+| Aero Slipstream Blue-chip | cbBTC/WETH | 3 | 0xB5F85a76E88237C51db7c0558788eacab326B325 | 0xB58E86f7376fB6f4Bc92ceAdee6E9B695d4bB99d |
+| Aero Slipstream Gov-DeFi | AERO/USDC | 4 | 0x3f34850f4b62d93a9bC7dd0cF8FF20065Bd26C6A | 0x6A212956f76Ac2F7Af8Db478338BA0882609c386 |
+| Aero Slipstream Gov-DeFi | AERO/WETH | 5 | 0x01f3C88B805aA61e3a2034bcd4Ac6f8538F8bFc0 | 0x96093D8601E508Df31A38Ac31a525ADD10DaeAd7 |
+| Aero Slipstream Gov-DeFi | LINK/WETH | 6 | 0x6E9dD83C974975814599a78639D55e01DD562E28 | 0xD539C2b990974b913ea1634FE040c9c7b52596e9 |
+| Aero Slipstream Stocks | AMZNc/USDC | 7 | 0xD6ac9B3e7709d080291757eb5de8648Ac7a44fa2 | 0xAF614dadD4c7e4B32AFAa2415F302396e948eF41 |
+| Aero Slipstream Stocks | SNDKc/USDC | 8 | 0x3bF5248f7C3351C5a6032DCFDDcAaCc288680045 | 0x690509d66928B7e008093482974efF3ABfC95FE3 |
+| Aero Slipstream Stocks | GOOGLc/USDC | 9 | 0x4E65278Ccb4052D92677D53BdfB7FC213616f6B5 | 0xB7656CE6Ad8974952Ec6c3f338ad228A6DF18825 |
+| Aero Slipstream Stocks | NVDAc/USDC | 10 | 0x7ba414963aB18eC4f09EBB153bd93d4e047f6B83 | 0x2C01DB182A8c49d006b05A77D630ed488cDFF536 |
+| Aero Slipstream Stocks | SPCXc/USDC | 11 | 0x4aCd1a27ce26b3e53bE238E4e7813f2f843CA170 | 0xf380F65aAA63042DEB25507edF5b3E4C82cB5B51 |
+| Aero Slipstream Stocks | METAc/USDC | 12 | 0x3FBF4eb917F5575034434cc7E77CBfC450e9851C | 0x606C093047794f6Ea08E16Bd44A4CD88758C42ba |
+
+### Periphery
+
+| Name | Description | Address |
+| --- | --- | --- |
+| Lens | The read-only contract apps, keepers and monitoring call for account, market, price, risk and liquidation state in one call. No Avana contract depends on it. Immutable; replaced by a new deployment. | 0x6988d8Fc018abB43f0Cac5C5Ff6caeac481CC099 |
+| Aero Slipstream integration (LPVault) | Holds every unstaked Aero Slipstream position pledged on this chain, across the four factory generations, and unwinds it on exit or liquidation. Immutable, with no owner. | 0xd2DDd5a911FdddB6d9F0f036245bDCcAD825A170 |
+| AaveV3FlashSource | Lends LPVaultSwap the debt asset from the Aave V3 Pool for one call so a borrower can repay with collateral. Immutable; the AvanaTimelock can replace it. | 0xc535F3F78Aa8e1D6b594FBE97ECc79b040B71423 |
+| FlashLiquidator | Public flash liquidation helper: anyone can liquidate an account without holding the debt asset. Immutable. | 0x42b28C89BC42e74Ede7b39093554eCFC3300d4C6 |
+| OperatorFlashLiquidator | Avana's keeper's own flash liquidation helper; only its signer can call it. Immutable. | 0x61f33504F175BeefBD8d5280b708582Ee07F27d5 |
+| AvanaGasVault | Holds the chain's native gas token and refills Avana's own keeper signers up to a per-signer cap over any 24 hours. Immutable. | 0x342aEC9E04384e51bEC16a7c471d4e54676a09C3 |
+
+#### Lens modules (called only through Lens)
+
+The Lens forwards each view to one of these read-only contracts. Call the Lens, not these.
+
+| Name | Description | Address |
+| --- | --- | --- |
+| LensAccountModule | Account views and close-account sizing. Immutable. | 0xe727f81d8383d6768e22c88AC96b4d46b736d06f |
+| LensMarketModule | Views of one market. Immutable. | 0x094489bD8D58a2aD1048C49a3Df7032bF0653F43 |
+| LensPriceModule | Price, debt-price and pause-state views and deleverage sizing. Immutable. | 0x1C1A34966bae7f328fE3BD120c3C11faaf29F7dd |
+| LensLiquidationModule | Liquidation preview. Immutable. | 0x5AC314A1f0795938b48EC100FEF0b500f7E3db9d |
+| LensRiskModule | Risk and Hub-asset views. Immutable. | 0x77119f8524d56BE78772aF6550351b2cff24a1a9 |
+| LensPreviewModule | Action previews. Immutable. | 0x299d4D04FEd6cf65B19396CA9C02161911C23b49 |
+| LensMarketsModule | Market list and fee views. Immutable. | 0xeF03b5D6cCF8786c75c9c76d026D23d60A05a5d8 |
+| LensPositionsModule | Position views, available actions and maximum-withdraw sizing. Immutable. | 0x5591B2dB33E937DC48D5F30294a3996744d7e305 |
+| LensSpeedModule | Speed-limit views: how much a borrow can take now under the RiskModule's speed windows. Immutable. | 0x8678b5Dc8d75A6dfC802a09008c39b4fB9D021e5 |
+| LensAaveSizing | Aave V4's liquidation sizing, compiled from the pinned Aave V4 release, used by the liquidation preview. Immutable. | 0xB0158F3c45EF95B6Eccc20F3593ce8a3A3916F4b |
+
+### External dependencies
+
+Contracts Avana relies on but does not deploy. On the test networks some are test stand-ins deployed from the pinned sources.
+
+| Name | Description | Address |
+| --- | --- | --- |
+| Aave V4 AccessManager | Holds the Aave V4 roles of this chain and is the authority of every First-Loss Reserve and DAO deficit offset. | 0x1457D1b68BDAA1A03bE763F501Dc50B47BfBC848 |
+| Aave V4 HubConfigurator | Aave DAO payloads configure the Hub through it. | 0x99Ec3ec9950c1E789DaFEb68b2a67E05009DE122 |
+| Aave V4 SpokeConfigurator | Aave DAO payloads configure the Spokes through it; the Aave Protocol Guardian freezes or pauses reserves through it. | 0x267bCB78fFA1F75F04704d583b462dE401239d5E |
+| Aave governance executor | Owns every Hub and Spoke of this chain, and can propose and cancel AvanaTimelock operations. | 0x8a0F2e7dFD8FF9A42E6610B244C03a6FC280AEeA |
+| Aave Protocol Guardian | Can freeze and pause Avana reserves on Aave, and holds Avana's pause, freeze and cancel roles. | 0xb8dd5400B3B1Cb60F4746829029cE696c939EDca |
+| Aave V3 Pool | Lends the debt asset to the AaveV3FlashSource and the flash liquidation helpers. | 0xcA92Eb10BF827F47d06541e09169CC3266C19a4a |
+| Aave V3 ACLManager | Grants the flash borrower role that lets the AaveV3FlashSource and the FlashLiquidator borrow without a fee. | 0xFd3fBC7d4F091A5A3ED8A3f3c9D763dF89ACc469 |
+| Uniswap v3 Factory | Creates the Uniswap v3 pools the liquidation swap routes of this chain use. | 0xcc6AbD03312F8344E0b23a568dDEbbC859badC6a |
+| Aero Slipstream CLFactory (Initial) | Pool factory of the Initial generation; Avana derives a market's pool from the factory of that market's generation. | 0x3858EA1ED8dB891014C36A0b55a6E26b7d7ed9FD |
+| Aero Slipstream position manager (Initial) | Issues the Slipstream position NFTs of the Initial generation that users pledge. | 0xaaf59CEbc5bAB9E9C91e95aB1f538Ead1a080def |
+| Aero Slipstream CLFactory (Gauge Caps) | Pool factory of the Gauge Caps generation; Avana derives a market's pool from the factory of that market's generation. | 0x4CE6D47d59239c55b7293b7a9C99B239871A9E3c |
+| Aero Slipstream position manager (Gauge Caps) | Issues the Slipstream position NFTs of the Gauge Caps generation that users pledge. | 0x220aAB4EF8500e910796eB61C2FA226Dac9cD969 |
+| Aero Slipstream CLFactory (Gauges V3) | Pool factory of the Gauges V3 generation; Avana derives a market's pool from the factory of that market's generation. | 0xb1F7A0F2c9230e6ada794A6035eC522e9b675492 |
+| Aero Slipstream position manager (Gauges V3) | Issues the Slipstream position NFTs of the Gauges V3 generation that users pledge. | 0xc65Dc867Fb1B55473Cfc9c287fF314fB8F282E90 |
+| Aero Slipstream CLFactory (Aero) | Pool factory of the Aero generation; Avana derives a market's pool from the factory of that market's generation. | 0x3dfb5Fcd634fE11EdF96FA1d48E8a2Ed603fA6B4 |
+| Aero Slipstream position manager (Aero) | Issues the Slipstream position NFTs of the Aero generation that users pledge. | 0xE741931d0b373c0A19e824043dDFd8733E36B4D7 |
+| USDC / USD price feed | Primary USD price feed of USDC, read by the Avana oracles that price it. | 0x4133F03988cD3f60643bCaEf211862e0dd19E4C3 |
+| USDT / USD price feed | Primary USD price feed of USDT, read by the Avana oracles that price it. | 0x280f016fA2b985133279bde2B3D2400B320F12Ea |
+| GHO / USD price feed | Primary GHO feed, used for monitoring only; GHO is priced at a fixed $1. | 0x87A27bD73DF43DF31B83FBcaE725a4D48afe3160 |
+| WETH / USD price feed | Primary USD price feed of WETH, read by the Avana oracles that price it. | 0x95c3c9EdD9a5eDC5907Dd298fD4D074b451f1109 |
+| wstETH / USD price feed | Primary USD price feed of wstETH, read by the Avana oracles that price it. | 0x4274B54ac790908c582c3059Fb293aec1e567448 |
+| cbBTC / USD price feed | Primary USD price feed of cbBTC, read by the Avana oracles that price it. | 0x8474d484480f1de059F4765F9099E76B1c013754 |
+| AERO / USD price feed | Primary USD price feed of AERO, read by the Avana oracles that price it. | 0x7c1ff909ED01d9c7B6316de18b819839545121Ad |
+| LINK / USD price feed | Primary USD price feed of LINK, read by the Avana oracles that price it. | 0x8F10C0238E4d10f222c455eAE2754dcD4F74302D |
+| AMZNc / USD price feed | Primary USD price feed of AMZNc, read by the Avana oracles that price it. | 0x96181C2736f9a26FEaC4400D7c6B6858edcA17A8 |
+| SNDKc / USD price feed | Primary USD price feed of SNDKc, read by the Avana oracles that price it. | 0x915F7ea4876212b3EB722b17b81aE722aA124D68 |
+| GOOGLc / USD price feed | Primary USD price feed of GOOGLc, read by the Avana oracles that price it. | 0xaf9CC2B5c33693B889D6Bc7C835B0a81d666d994 |
+| NVDAc / USD price feed | Primary USD price feed of NVDAc, read by the Avana oracles that price it. | 0x06666c5Fc32E60F31B69D2246462a37567dAAf8B |
+| SPCXc / USD price feed | Primary USD price feed of SPCXc, read by the Avana oracles that price it. | 0x427bA87a9aa354F6CB5907F995C4355aAC01aB49 |
+| METAc / USD price feed | Primary USD price feed of METAc, read by the Avana oracles that price it. | 0x26Abb41e1528C74DFfdC11eF4ff084F4C72Ed657 |
+
+> Each token also has an alternate route, a standby route and an independent second price source; their addresses are in the release manifest. The RiskModule also reads `paused()` on USDC and `basisPointsRate()` on USDT for its issuer-action circuit breaker.
+
+### Assets
+
+The ERC-20 tokens this chain's markets, Lend Spoke and debt reserves use. On the test networks these are test tokens.
+
+| Name | Description | Address |
+| --- | --- | --- |
+| USDC | Pool token on the Aero Slipstream Blue-chip, Aero Slipstream Gov-DeFi, Aero Slipstream Stocks Spokes; supplied on the Lend Spoke; borrowable on every CDP Spoke. | 0xB4821d659b173AF8Fd6EAE3699e0570F9ed8bDd2 |
+| USDT | Supplied on the Lend Spoke. | 0x06784fc4B45086A8b225E24411a9Da71Fb567384 |
+| GHO | Supplied on the Lend Spoke; borrowable on every CDP Spoke. | 0x2c7AC2179ac15a5f70B386EcFc9CD193aa0C3b19 |
+| WETH | Pool token on the Aero Slipstream Blue-chip, Aero Slipstream Gov-DeFi Spokes. | 0x1C608e0F589C0AFBd57ddE1594C9e8899e283eca |
+| wstETH | Listed in the MarketRegistry; no market on this chain uses it as a pool token. | 0x0e16600660073c52d33D314bfCb809f604A9454F |
+| cbBTC | Pool token on the Aero Slipstream Blue-chip Spoke. | 0x80453C5182933f42f6CF6f99497426BB457C9FAB |
+| AERO | Pool token on the Aero Slipstream Gov-DeFi Spoke. | 0x79141f4b1AfB047c3c9D6d9bC09906766fEA615c |
+| LINK | Pool token on the Aero Slipstream Gov-DeFi Spoke. | 0xfd4899c20F8E39E098B5E1D881d9a11756B11963 |
+| AMZNc | Tokenized stock; pool token on the Aero Slipstream Stocks Spoke. | 0x39B4404F294DAC5E9f7319aEb0Ea30057a2ef804 |
+| SNDKc | Tokenized stock; pool token on the Aero Slipstream Stocks Spoke. | 0xa89d6b867022C8bc0ce6E61691FE6BEb4DF9567f |
+| GOOGLc | Tokenized stock; pool token on the Aero Slipstream Stocks Spoke. | 0xDf550A1130D6BA9C489f3677e6Dfb4b840313a95 |
+| NVDAc | Tokenized stock; pool token on the Aero Slipstream Stocks Spoke. | 0x3dC6c608C7E0c75bC426B4871c87Fa90819cE6B7 |
+| SPCXc | Tokenized stock; pool token on the Aero Slipstream Stocks Spoke. | 0xF1D1622786561B771E70fb23ddBfd696F6D40fab |
+| METAc | Tokenized stock; pool token on the Aero Slipstream Stocks Spoke. | 0xBD6d095D95DF06A6d7Cd332E531a0570b1Cd82d0 |
+
+<!-- network-section:end base-sepolia -->
+
 <!-- network-section:start local-ethereum -->
 ## Local Ethereum development chain
 - network: local-ethereum

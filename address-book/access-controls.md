@@ -12,6 +12,43 @@ The Avana Timelock is the only admin of every Avana contract. It is a non-upgrad
 
 Caps, collateral factors, liquidation bonuses, rate models, credit lines and First-Loss Reserve amounts are Aave-side values. The Aave DAO sets them through its payloads and ARFCs; Avana's timelock has no authority over them.
 
+<!-- network-section:start base-sepolia -->
+## Base Sepolia
+- network: base-sepolia
+- chainId: 84532
+- explorer: https://sepolia.basescan.org
+
+Generated from release `v0.1.0-alpha.2` (commit `b4946f83`) and its deploy output.
+
+### Role holders
+
+Contracts link to their address on Contract Addresses. Safes and keeper accounts are listed here.
+
+| Holder | Roles and permissions | Address |
+| --- | --- | --- |
+| [AvanaTimelock](/developers/reference/addresses?network=base-sepolia#avana-core) | Holds `DEFAULT_ADMIN_ROLE` on itself, `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` on every upgradeable Avana contract, and is the `TIMELOCK` address of every immutable Avana contract. | On Contract Addresses |
+| [Aave governance executor](/developers/reference/addresses?network=base-sepolia#external-dependencies) | `PROPOSER_ROLE`, `CANCELLER_ROLE` and `DAO_CANCELLER_ROLE` on the AvanaTimelock; the MarketRegistry's immutable `AAVE_GOVERNANCE_EXECUTOR` (`cancelStandbySwitch`); `RESERVE_ADMIN_ROLE` on every First-Loss Reserve; admin and configurator of the Hub, the Lend Spoke and every CDP Spoke. | On Contract Addresses |
+| [Aave Protocol Guardian](/developers/reference/addresses?network=base-sepolia#external-dependencies) | Same Avana roles as the Emergency Guardian (both guardian roles, `CANCELLER_ROLE`, `COVERAGE_ROLE`), plus Aave's one-way `freezeReserve` and `pauseReserve` on CDP Spoke reserves and `freezeReserve` on Lend Spoke reserves. | On Contract Addresses |
+| Governance Safe | On this network a single account, not a Safe; the intended holder is a 4-of-7 Safe with Avana Labs and external signers. `PROPOSER_ROLE`, `CANCELLER_ROLE` and `EXECUTOR_ROLE` on the AvanaTimelock. No role on any other Avana contract and no immediate power. | 0x3477471dC523e8a57F6cEFf4fBadF9B132D735A7 |
+| Emergency Guardian | On this network a single account, not a Safe; the intended holder is a 3-of-5 Safe with three Avana Labs seats, one Aave service-provider seat and one independent risk-provider seat. `APPLICATION_PAUSE_GUARDIAN` and `APPLICATION_FREEZE_GUARDIAN` on the MarketRegistry, `APPLICATION_PAUSE_GUARDIAN` on the ParameterStore, `CANCELLER_ROLE` on the AvanaTimelock, `COVERAGE_ROLE` on every First-Loss Reserve, and the AvanaGasVault's `GUARDIAN`. No upgrade or parameter power. | 0xcc5b928123F6a6403213A5cbF5c2310A92efD1F1 |
+| Joint Configuration Safe | On this network a single account, not a Safe; the intended holder is a 2-of-3 Safe with one Avana Labs, one Aave service-provider and one independent risk-provider signer. `APPLICATION_PAUSE_GUARDIAN` and `APPLICATION_FREEZE_GUARDIAN` on the MarketRegistry and `APPLICATION_RISK_STEWARD` on the ParameterStore. Cannot loosen, upgrade, change roles, cover a deficit or cancel. | 0xCF75738D1E7e3094e16dC6C7A6E493A7e81232c2 |
+| Fee recipient (treasury) | The ParameterStore's `feeRecipient` and the AvanaGasVault's `TREASURY`. Receives the 20% liquidation fee share and the app's frontend fee. Holds no role; changed only by `setFeeRecipient` at the normal delay. | 0xA7669be9E8335E2C86589DB90D91635DB1F6cE1B |
+| Liquidation keeper | Avana's own committed operator on LPVaultSwap, counted toward `keeperFloor`. Also the signer of the OperatorFlashLiquidator and a signer the AvanaGasVault refills. Never the deployer or the treasury. | 0xB551dA6133dc4c0950f298d75e526B247F87Db2B |
+| Keeper funding Safe | On this network an account, not a Safe. `FUNDING_SAFE` of the OperatorFlashLiquidator: its only payer and payout recipient. Holds no role. | 0x3477471dC523e8a57F6cEFf4fBadF9B132D735A7 |
+
+### Timelock
+
+The AvanaTimelock's delays and execution setting on this network.
+
+| Setting | Value | Description |
+| --- | --- | --- |
+| Short delay (`SHORT_DELAY`) | 60 s | Delay of an operation whose every call is on the short list. |
+| Normal delay (`normalDelay`) | 120 s | Delay of every other operation, including upgrades and role changes. |
+| Minimum normal delay (`MIN_NORMAL_DELAY`) | 60 s | Floor below which `setNormalDelay` cannot set the normal delay. |
+| Public execution | On | Any address may execute a ready operation. |
+
+<!-- network-section:end base-sepolia -->
+
 <!-- network-section:start local-ethereum -->
 ## Local Ethereum development chain
 - network: local-ethereum
