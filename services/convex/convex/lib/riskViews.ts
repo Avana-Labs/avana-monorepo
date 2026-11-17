@@ -133,8 +133,8 @@ const level = (bps: number): RiskLevel => (bps < 200 ? "low" : bps < 500 ? "mode
 const LEVEL_RANK: Readonly<Record<RiskLevel, number>> = { low: 0, moderate: 1, elevated: 2, high: 3 };
 const worst = (levels: readonly RiskLevel[]): RiskLevel => levels.reduce<RiskLevel>((acc, l) => (LEVEL_RANK[l] > LEVEL_RANK[acc] ? l : acc), "low");
 
-/** The factors of a page's listed risk text as card rows (no basis points: they are rated, not priced). */
-const factorRows = (risk: PageRisk) => risk.factors.map((x) => ({ id: x.id, label: x.label, bps: 0, level: x.level, description: x.text }));
+/** The factors of a page's listed risk text as card rows, with the share of the premium the listing gives each (else 0). */
+const factorRows = (risk: PageRisk) => risk.factors.map((x) => ({ id: x.id, label: x.label, bps: x.bps ?? 0, level: x.level, description: x.text }));
 
 /**
  * The risk card of a Lend or Borrow asset page, from the risk text its listing published (metadata version 2). The
@@ -226,6 +226,9 @@ export function collateralRiskDescription(bps: number, baseRateRay?: string | nu
 export function poolRiskAssessment(market: MarketRow, risk?: PageRisk, baseRateRay?: string | null): RiskAssessment {
   const bps = market.collateralRiskBps;
   const listed = risk ? factorRows(risk) : [];
+  // When the listing splits the premium over its factors, the factors are the breakdown; else the premium is one row.
+  const split = risk?.factors.some((x) => x.bps !== undefined) ?? false;
+  const premiumRow = { id: "collateralRisk", label: "Collateral risk (% of base rate)", bps, level: level(bps), description: collateralRiskDescription(bps, baseRateRay) };
   return {
     premiumBps: bps,
     premiumBasis: "baseRate",
@@ -233,7 +236,7 @@ export function poolRiskAssessment(market: MarketRow, risk?: PageRisk, baseRateR
     score: Math.min(100, Math.round(bps / 20)),
     headline: `${pct(bpsToPct(bps))} collateral risk premium`,
     summary: risk?.summary ?? `Every borrower against this market pays the Hub's base rate plus ${pct(bpsToPct(bps))} of it, set by the Aave DAO for this collateral.`,
-    breakdown: [{ id: "collateralRisk", label: "Collateral risk (% of base rate)", bps, level: level(bps), description: collateralRiskDescription(bps, baseRateRay) }, ...listed],
+    breakdown: split ? listed : [premiumRow, ...listed],
     metrics: [
       { id: "cf", label: "Collateral factor", value: pct(bpsToPct(market.collateralFactorBps)) },
       { id: "bonus", label: "Max liquidation bonus", value: pct(bpsToPct(liquidationBonusBps(market.maxLiquidationBonusBps))) },

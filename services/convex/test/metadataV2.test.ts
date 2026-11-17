@@ -117,4 +117,11 @@ describe("risk cards from listed risk text", () => {
     expect(card.summary).toBe(risk.summary);
     expect(poolRiskAssessment(fixtureMarkets[0]!).breakdown).toHaveLength(1);
   });
+
+  it("splits a pool's premium over its listed factors when the listing gives their bps", () => {
+    const split = { ...risk, factors: risk.factors.map((x, i) => ({ ...x, bps: i === 0 ? 30 : 10 })) };
+    const card = poolRiskAssessment(fixtureMarkets[0]!, split);
+    expect(card.breakdown.map((b) => [b.id, b.bps])).toEqual([["issuer", 30], ["depeg", 10]]);
+    expect(card.premiumBps).toBe(fixtureMarkets[0]!.collateralRiskBps);
+  });
 });
