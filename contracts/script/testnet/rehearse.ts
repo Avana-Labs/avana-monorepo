@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The test-network deploy rehearsed with no RPC: one anvil per test network with its real chain ID (11155111,
-// 84532) and hardfork (Osaka: the EIP-7825 per-transaction gas cap, the EIP-170 code-size limit), nothing unlocked, and
+// 84532) and hardfork (Sepolia Osaka, Base Sepolia the OP Stack's Jovian; on both the EIP-7825 per-transaction gas cap
+// is enforced and the EIP-170 code-size limit applies), nothing unlocked, and
 // `testnet.ts deploy` run against it end to end, signed only by throwaway keystores made here in a temporary directory,
 // with the private config file that names them. Only this harness touches the nodes' state, standing in for what the
 // real networks already have (the Safe Singleton Factory and Multicall3 at their canonical addresses) and for the test
@@ -29,6 +30,8 @@ const opt = (n: string) => {
 const say = (s: string) => process.stdout.write(`${s}\n`);
 
 const PORTS: Record<string, number> = { sepolia: Number(process.env.REHEARSAL_PORT_SEPOLIA ?? 8655), "base-sepolia": Number(process.env.REHEARSAL_PORT_BASE_SEPOLIA ?? 8656) };
+// Each network's hardfork: anvil runs a Base chain ID as the OP Stack's network family, which takes only its forks.
+const HARDFORKS: Record<string, string> = { sepolia: "osaka", "base-sepolia": "jovian" };
 const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7";
 const SAFE_SINGLETON_FACTORY_CODE =
   "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf3";
@@ -87,7 +90,7 @@ async function startNode(c: LocalChain, dir: string, resume: boolean): Promise<{
   }
   const args = [
     "--host", "127.0.0.1", "--port", String(port), "--chain-id", String(c.chainId), "--block-time", String(c.blockTime), "--mixed-mining",
-    "--gas-limit", "60000000", "--hardfork", "osaka", "--enable-tx-gas-limit", "--accounts", "0",
+    "--gas-limit", "60000000", "--hardfork", HARDFORKS[c.network]!, "--enable-tx-gas-limit", "--accounts", "0",
   ];
   const { openSync } = await import("node:fs");
   const log = openSync(join(dir, `anvil-${c.network}.log`), "a");
@@ -144,7 +147,9 @@ async function main() {
   ) as Record<string, string>;
   const names = Object.fromEntries(Object.entries(roles).map(([k, v]) => [v.toLowerCase(), k]));
   const nodes: LocalChain[] = [];
-  const report: Record<string, unknown> = {};
+  // The report keeps the other networks' entries a previous run in this directory wrote.
+  const reportFile = join(dir, "gas-report.json");
+  const report: Record<string, unknown> = existsSync(reportFile) ? JSON.parse(readFileSync(reportFile, "utf8")) : {};
   let ok = true;
   try {
     for (const c of chains) {
@@ -188,7 +193,7 @@ async function main() {
       }
     }
   } finally {
-    writeFileSync(join(dir, "gas-report.json"), `${JSON.stringify(report, null, 2)}\n`);
+    writeFileSync(reportFile, `${JSON.stringify(report, null, 2)}\n`);
     // A failed chain's node stays up for a resume run; the others stop unless --keep.
     for (const c of nodes) {
       const failed = (report[c.network] as { ok?: boolean } | undefined)?.ok !== true;
