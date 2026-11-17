@@ -5,7 +5,7 @@
 
 import { type AddressInfo } from "node:net";
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from "node:http";
-import { http, type Hex } from "viem";
+import { http, type Hex, RpcRequestError } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { afterEach, describe, expect, it } from "vitest";
 import { WebSocketServer } from "ws";
@@ -381,5 +381,51 @@ describe("failure classification of tool output (forge, cast)", () => {
     expect(classifyText("Error: script failed: execution reverted: Paused()")).toBeUndefined();
     expect(classifyText("Error: EOA nonce changed unexpectedly while sending transactions. Expected 4 got 5")).toBeUndefined();
     expect(classifyText("compilation failed")).toBeUndefined();
+  });
+});
+
+describe("a revert never triggers failover", () => {
+  it("classifies forge's revert output and viem's execution-reverted errors as not an RPC failure", async () => {
+    const forge = [
+      "Error: script failed: execution reverted: Paused()",
+      "Error: Simulated execution failed.\nError: script failed: custom error 0x9e87fac8",
+      "Error: server returned an error response: error code 3: execution reverted: TimelockTimeout(), data: \"0x2a1c4f9e\"",
+      // A revert reason that names a timeout or a rate limit is still a revert.
+      "Error: Failed to send transaction\nContext:\n- server returned an error response: error code 3: execution reverted: RateLimited(), data: \"0x\"",
+      "Error: Transaction Failure: 0x8f3c Reverted: operation timed out waiting for the price",
+    ];
+    for (const out of forge) expect(classifyText(out)).toBeUndefined();
+    for (const error of [
+      { code: 3, message: "execution reverted: Paused()", data: "0x9e87fac8" },
+      { code: -32000, message: "execution reverted" },
+      { code: -32603, message: "execution reverted: request timed out" },
+    ]) {
+      const e = new RpcRequestError({ body: {}, url: "", error });
+      expect(classifyError(e)).toBeUndefined();
+    }
+    // Through the manager: a revert from the primary is returned once, with no failover and no change of provider.
+    const { manager, alchemy, quicknode } = mockManager();
+    alchemy.behaviour = "revert";
+    await expect(manager.getClient(SEPOLIA).request({ method: "eth_call", params: [{ to: "0x0000000000000000000000000000000000000001", data: "0x" }, "latest"] })).rejects.toThrow(/execution reverted/);
+    expect(quicknode.calls).toHaveLength(0);
+    expect(manager.health(SEPOLIA)[0]).toMatchObject({ provider: "alchemy", inUse: true, down: false });
+  });
+});
+
+describe("provider URL templates", () => {
+  it("hold only public host patterns: every credential comes from the caller", () => {
+    for (const p of [alchemyProvider, quicknodeProvider]) {
+      for (const id of CHAINS) {
+        for (const kind of ["http", "ws"] as const) {
+          let rest = p.url(id, kind, CREDENTIALS);
+          for (const s of SECRETS) rest = rest.split(s).join("");
+          // What is left is scheme, slug, provider host and path separators: no key- or token-like run.
+          expect(rest).not.toMatch(/[A-Za-z0-9_-]{24,}/);
+          expect(rest).toMatch(/^(https|wss):\/\/[a-z0-9.-]*\.(g\.alchemy\.com\/v2\/|quiknode\.pro\/)$/);
+        }
+      }
+      // With no credentials there is no URL at all.
+      expect(() => p.url(SEPOLIA, "http", {})).toThrow(/is not set/);
+    }
   });
 });

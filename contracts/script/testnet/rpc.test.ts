@@ -53,11 +53,18 @@ test("each step starts on the healthiest provider, Alchemy first, its URL kept o
 });
 
 test("an RPC failure moves the step to the backup; a revert does not", async () => {
-  setup();
+  const m = setup();
   await useHealthyRpc(sepolia);
-  const revert = await planFailover(sepolia, "Error: script failed: execution reverted: Paused()", [], [], fast);
-  assert.deepEqual(revert, { move: false, reason: "not an RPC failure" });
-  assert.equal(activeRpcProvider(sepolia), "alchemy");
+  for (const output of [
+    "Error: script failed: execution reverted: Paused()",
+    // A revert whose reason names a timeout: still a revert.
+    'Error: Failed to send transaction\nContext:\n- server returned an error response: error code 3: execution reverted: TimelockTimeout(), data: "0x2a1c4f9e"',
+  ]) {
+    assert.deepEqual(await planFailover(sepolia, output, [], [], fast), { move: false, reason: "not an RPC failure" });
+    assert.equal(activeRpcProvider(sepolia), "alchemy");
+    assert.equal(m.manager.health(sepolia.chainId)[0]!.down, false);
+  }
+  assert.equal(m.quicknode.count("eth_getTransactionByHash"), 0);
   const timeout = await planFailover(sepolia, "Error: error sending request for url (<AVANA_RPC_URL>): operation timed out", [], [], fast);
   assert.deepEqual(timeout, { move: true, from: "alchemy", to: "quicknode", resume: false });
   assert.equal(activeRpcProvider(sepolia), "quicknode");
