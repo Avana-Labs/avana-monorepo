@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Contract facts kept between rounds (src/viewCache.ts): a successful read of a fixed fact is served from memory in
-// later rounds and the rest of the batch is still read; a failed fact and every other read go to the provider again.
+// Contract facts kept between rounds (src/viewCache.ts): a successful read of a fact is served from memory in later
+// rounds for FACT_TTL_MS, keyed by contract, function and arguments, and the rest of the batch is still read; a failed
+// fact, an expired one, a Spoke's ORACLE and every other read go to the provider again.
 
 import { describe, expect, it } from "vitest";
 import type { CallResult, ContractCall, ViewClient } from "@avana/services-common/views";
-import { FactCache } from "../src/viewCache.ts";
+import { FACT_TTL_MS, FactCache } from "../src/viewCache.ts";
 
 const call = (address: string, functionName: string, args: readonly unknown[] = []): ContractCall => ({ address: address as `0x${string}`, abi: [], functionName, args });
 
@@ -37,17 +38,38 @@ describe("FactCache", () => {
   it("keys a fact by contract and arguments", async () => {
     const { client, asked } = provider();
     const facts = new FactCache();
-    await facts.wrap(client).multicall([call("0xH", "getAssetUnderlyingAndDecimals", [1n])]);
-    await facts.wrap(client).multicall([call("0xH", "getAssetUnderlyingAndDecimals", [2n]), call("0xh", "getAssetUnderlyingAndDecimals", [1n])]);
-    expect(asked).toEqual(["getAssetUnderlyingAndDecimals", "getAssetUnderlyingAndDecimals"]);
+    await facts.wrap(client).multicall([call("0xH", "getAssetUnderlyingAndDecimals", [1n]), call("0xT1", "decimals")]);
+    await facts.wrap(client).multicall([call("0xH", "getAssetUnderlyingAndDecimals", [2n]), call("0xh", "getAssetUnderlyingAndDecimals", [1n]), call("0xT2", "decimals"), call("0xt1", "decimals")]);
+    expect(asked).toEqual(["getAssetUnderlyingAndDecimals", "decimals", "getAssetUnderlyingAndDecimals", "decimals"]);
   });
 
-  it("never keeps a failed fact", async () => {
-    const { client, asked } = provider(new Set(["ORACLE"]));
+  it("reads a fact again once it is FACT_TTL_MS old, so an upgrade behind a proxy is seen", async () => {
+    const { client, asked } = provider();
+    let now = 0;
+    const facts = new FactCache({ now: () => now });
+    await facts.wrap(client).multicall([call("0xO", "decimals")]);
+    now = FACT_TTL_MS - 1;
+    await facts.wrap(client).multicall([call("0xO", "decimals")]);
+    now = FACT_TTL_MS;
+    await facts.wrap(client).multicall([call("0xO", "decimals")]);
+    expect(asked).toEqual(["decimals", "decimals"]);
+  });
+
+  it("reads a Spoke's oracle every round", async () => {
+    const { client, asked } = provider();
     const facts = new FactCache();
     await facts.wrap(client).multicall([call("0xS", "ORACLE")]);
     await facts.wrap(client).multicall([call("0xS", "ORACLE")]);
     expect(asked).toEqual(["ORACLE", "ORACLE"]);
+    expect(facts.size).toBe(0);
+  });
+
+  it("never keeps a failed fact", async () => {
+    const { client, asked } = provider(new Set(["decimals"]));
+    const facts = new FactCache();
+    await facts.wrap(client).multicall([call("0xO", "decimals")]);
+    await facts.wrap(client).multicall([call("0xO", "decimals")]);
+    expect(asked).toEqual(["decimals", "decimals"]);
     expect(facts.size).toBe(0);
   });
 

@@ -45,7 +45,7 @@ function pinned(client: PublicClient, blockNumber: bigint): ViewClient {
 
 function provider(c: ChainConfig, url: string): ProviderReads {
   const client = createPublicClient({ transport: http(url) }) as PublicClient;
-  // Facts that never change (viewCache.ts) are read once per provider, not every round.
+  // Contract facts (viewCache.ts) are read once per provider every 10 minutes, not every round.
   const facts = new FactCache();
   return {
     snapshot: (b) => readChainSnapshot(facts.wrap(pinned(client, b.number)), c.deployment, { blockNumber: b.number, timestamp: b.timestamp }),
