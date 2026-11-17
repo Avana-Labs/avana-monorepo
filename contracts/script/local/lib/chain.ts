@@ -606,8 +606,16 @@ export function firstRelease(c: LocalChain, d = releaseDelays(c)): string[] {
   return [
     ...head, "02-test-world", "03-avana", "04-access-operations", `advance:${d.normal + 1}`, "05-execute-access-operations",
     "06-aave-deployment-aip", "07-deploy-first-loss-reserves", "08-aave-loss-layers-aip", "07-fund-first-loss-reserves",
-    ...listingSetupSteps(d), "swap-contracts", "manifest", "treasury",
+    ...listingSetupSteps(d), ...(c.testnet ? gasVaultSteps(d) : []), "swap-contracts", "manifest", "treasury",
   ];
+}
+
+/**
+ * A test network's AvanaGasVault (script/deploy/12_DeployGasVault.s.sol): deployed, its keeper signer added by a
+ * timelock operation, then funded by the deployer. The local stack's sequences leave it out (e2e-local.sh deploys it).
+ */
+function gasVaultSteps(d: { normal: number }) {
+  return ["12-gas-vault", "12-gas-vault-signers", `advance:${d.normal + 1}`, "12-execute-gas-vault-signers", "12-fund-gas-vault"];
 }
 
 /** The steps of a later release: each acts only on what the config adds (the rehearsal's day-2 phase). */

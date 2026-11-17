@@ -26,6 +26,10 @@ import { rpcSummary, useHealthyRpc } from "./rpc.ts";
 export const NORMAL_DELAY = 120;
 /** One timelock operation's execution gas budget on a test network: under the 2^24 per-transaction cap (EIP-7825). */
 export const OPERATION_GAS_BUDGET = 15_000_000;
+/** A test network's AvanaGasVault: the deployer funds it with `fundWei` (0.5 test ETH). */
+export const GAS_VAULT = { fundWei: "500000000000000000" };
+/** Its one keeper signer: refilled below 0.05 ETH to 0.2 ETH, at most 0.2 ETH a day. */
+export const GAS_VAULT_SIGNER = { minBalanceWei: "50000000000000000", targetBalanceWei: "200000000000000000", periodCapWei: "200000000000000000" };
 /** A directory the rehearsal (rehearse.ts) wrote: a real deploy refuses to resume it. */
 export const REHEARSAL_MARK = ".rehearsal";
 
@@ -117,8 +121,9 @@ export function testnetPatch({ signers: s, addresses: a }: TestnetRoles, executo
     cfg.aaveLocal.payloadsController = s.payloadsController;
     cfg.aave.governanceExecutor = executor;
     for (const h of cfg.operatorHelpers) h.fundingSafe = s.governance;
-    // The gas vault is not part of the deploy (as on the local stack); its signer would be the keeper.
-    cfg.gasVault.signers = cfg.gasVault.signers.slice(0, 1).map((g: Record<string, unknown>) => ({ ...g, signer: a.KEEPER }));
+    // The gas vault (first release, gasVaultSteps): one keeper signer, sized for test ETH. The deployer funds it.
+    cfg.gasVault = { ...cfg.gasVault, ...GAS_VAULT };
+    cfg.gasVault.signers = [{ signer: a.KEEPER, ...GAS_VAULT_SIGNER }];
   };
 }
 

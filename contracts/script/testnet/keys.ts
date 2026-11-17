@@ -148,6 +148,8 @@ export function testnetSignerEnv(): NodeJS.ProcessEnv {
   const oracles = [keystores.oracle0, keystores.oracle1, keystores.oracle2, keystores.oracle3];
   return {
     AVANA_DEPLOYER: s.deployer,
+    // The treasury signs nothing on a test network: the deployer funds the gas vault (12-fund-gas-vault).
+    AVANA_GAS_VAULT_FUNDER: s.deployer,
     AVANA_KEYSTORE_PATHS: SIGNER_ROLES.map((r) => keystores[r]).join(";"),
     AVANA_KEYSTORE_PASSWORD_FILE: passwordFile,
     AVANA_SCHEDULE_OPERATIONS: "1",
