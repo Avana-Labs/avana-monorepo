@@ -82,6 +82,11 @@ export async function fetchLendMarketSnapshots(): Promise<LendConvexSnapshot[]> 
         scope: row.scope,
         name: row.name,
         symbol: row.symbol,
+        // Without these the list groups every row under "Other Assets" and drops the Hub and chain.
+        ...(row.category ? { category: row.category } : {}),
+        ...(row.hubId ? { hubId: row.hubId } : {}),
+        ...(row.hubLabel ? { hubLabel: row.hubLabel } : {}),
+        ...(row.chainId !== undefined ? { chainId: row.chainId } : {}),
         reserveFactorPct: row.reserveFactorPct,
         rewardsApyPct: row.rewardsApyPct,
         assetPriceUsd: price?.priceUsd,
