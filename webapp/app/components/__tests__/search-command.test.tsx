@@ -58,4 +58,28 @@ describe("SearchCommand keyboard navigation", () => {
     render(<SearchCommand initialOpen />)
     expect(screen.getByRole("dialog")).toBeInTheDocument()
   })
+
+  it("lists the server index's markets when the header has no session", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          pools: [],
+          assets: [],
+          lendMarkets: [
+            {
+              marketId: "ethereum-gho",
+              asset: { symbol: "GHO", name: "Gho Token" },
+              utilization: 0.1,
+              supplyApy: 0.03,
+            },
+          ],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    render(<SearchCommand initialOpen />)
+    expect(await screen.findByText("Gho Token")).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith("/api/search-index", expect.anything())
+  })
 })
