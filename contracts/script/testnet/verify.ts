@@ -231,17 +231,29 @@ export function deployedContracts(broadcastRoot: string, chainId: number, create
   return [...out.values()];
 }
 
-/** The `forge verify-contract` invocation of one match: its arguments and the profile it runs under. */
-export function verifyCommand(m: Match, address: string, chainId: number): { profile: string; args: string[] } {
+/** The longest constructor arguments (hex characters) passed to forge on its command line. Windows refuses a command
+ * line over 32,767 characters, and the Aave V4 instance batches take a Spoke's or Hub's creation code (about 50,000):
+ * longer arguments go to the explorer's API with the standard JSON input forge prints instead. */
+export const ARGS_ON_COMMAND_LINE = 16_000;
+/** How long forge checks a submitted verification: the explorer's queue can hold one for minutes, and forge's default
+ * (5 checks, 5 seconds apart) gave up on contracts the explorer verified later. */
+const WAIT = ["--retries", "20", "--delay", "15"];
+
+/** The `forge verify-contract` invocation of one match: its arguments and the profile it runs under. With constructor
+ * arguments too long for a command line, forge prints the standard JSON input (`--show-standard-json-input`) and the
+ * arguments are returned for the explorer request (sourceRequest). */
+export function verifyCommand(m: Match, address: string, chainId: number): { profile: string; args: string[]; constructorArgs?: string } {
   const a = m.artifact;
+  const inline = m.args.length <= ARGS_ON_COMMAND_LINE;
   const args = ["verify-contract", address, `${a.source}:${a.name}`, "--chain", String(chainId), "--compiler-version", a.compiler];
   if (a.optimizer.enabled && a.optimizer.runs !== undefined) args.push("--num-of-optimizations", String(a.optimizer.runs));
   if (a.viaIR) args.push("--via-ir");
   if (a.evmVersion) args.push("--evm-version", a.evmVersion);
   if (a.compilationProfile) args.push("--compilation-profile", a.compilationProfile);
-  if (m.args) args.push("--constructor-args", `0x${m.args}`);
+  if (m.args && inline) args.push("--constructor-args", `0x${m.args}`);
   for (const l of m.libraries) args.push("--libraries", `${l.source}:${l.name}:${l.address}`);
-  args.push("--watch");
+  if (!inline) return { profile: a.profile, args: [...args, "--show-standard-json-input"], constructorArgs: m.args };
+  args.push("--watch", ...WAIT);
   return { profile: a.profile, args };
 }
 
@@ -274,21 +286,44 @@ export function proxyRequest(chainId: number, address: string, implementation?: 
   };
 }
 
-async function submitProxy(chainId: number, address: string, implementation: string | undefined): Promise<string | undefined> {
+/** The explorer's source verification request (Etherscan v2) for a standard JSON input, sent with the input as
+ * `sourceCode`: the contract, its compiler and its constructor arguments. */
+export function sourceRequest(chainId: number, address: string, contract: string, compiler: string, constructorArgs: string): { url: string; form: Record<string, string> } {
+  return {
+    url: `https://api.etherscan.io/v2/api?chainid=${chainId}`,
+    form: {
+      module: "contract",
+      action: "verifysourcecode",
+      codeformat: "solidity-standard-json-input",
+      contractaddress: address,
+      contractname: contract,
+      compilerversion: compiler,
+      // The explorer's own spelling.
+      constructorArguements: constructorArgs,
+    },
+  };
+}
+
+/** Submits `form` and waits for the explorer's verdict through `check`: undefined once verified, else its message. */
+async function submit(url: string, form: Record<string, string>, check: string): Promise<string | undefined> {
   const key = process.env.ETHERSCAN_API_KEY!;
-  const { url, form } = proxyRequest(chainId, address, implementation);
   const post = await fetch(url, { method: "POST", body: new URLSearchParams({ ...form, apikey: key }) });
   const sent = (await post.json()) as { status: string; result: string };
-  if (sent.status !== "1") return sent.result;
-  for (let i = 0; i < 20; i++) {
+  if (sent.status !== "1") return /already verified/i.test(sent.result) ? undefined : sent.result;
+  for (let i = 0; i < 60; i++) {
     await new Promise((r) => setTimeout(r, 5_000));
-    const check = await fetch(`${url}&module=contract&action=checkproxyverification&guid=${encodeURIComponent(sent.result)}&apikey=${key}`);
-    const c = (await check.json()) as { status: string; result: string };
-    if (c.status === "1") return undefined;
-    if (!/pending|in queue/i.test(c.result)) return c.result;
+    const res = await fetch(`${url}&module=contract&action=${check}&guid=${encodeURIComponent(sent.result)}&apikey=${key}`);
+    const c = (await res.json()) as { status: string; result: string };
+    if (c.status === "1" || /already verified/i.test(c.result)) return undefined;
+    if (!/pending|in queue|rate limit/i.test(c.result)) return c.result;
   }
   return "the explorer did not answer in time";
 }
+
+const submitProxy = (chainId: number, address: string, implementation: string | undefined) => {
+  const { url, form } = proxyRequest(chainId, address, implementation);
+  return submit(url, form, "checkproxyverification");
+};
 
 /**
  * Verifies every contract of the release not yet verified: each against its build output, then every proxy as a proxy
@@ -321,20 +356,30 @@ export async function verifyRelease(o: VerifyOptions): Promise<{ verified: numbe
       skipped++;
       continue;
     }
-    const { profile, args } = verifyCommand(m, d.address, o.chainId);
+    const { profile, args, constructorArgs } = verifyCommand(m, d.address, o.chainId);
+    const contract = `${m.artifact.source}:${m.artifact.name}`;
     if (o.dryRun) {
-      o.say(`  FOUNDRY_PROFILE=${profile} ETHERSCAN_API_KEY=<redacted> forge ${args.join(" ")}`);
+      const request = constructorArgs === undefined ? undefined : sourceRequest(o.chainId, d.address, contract, m.artifact.compiler, constructorArgs);
+      const post = request ? ` | POST ${request.url} ${new URLSearchParams({ ...request.form, constructorArguements: `<${constructorArgs!.length / 2} bytes>`, sourceCode: "<the standard JSON input>", apikey: "<redacted>" }).toString()}` : "";
+      o.say(`  FOUNDRY_PROFILE=${profile} ETHERSCAN_API_KEY=<redacted> forge ${args.join(" ")}${post}`);
       continue;
     }
     const r = spawnSync("forge", args, { cwd: o.contracts, env: { ...process.env, FOUNDRY_PROFILE: profile }, encoding: "utf8", maxBuffer: 1 << 26 });
     const text = `${r.stdout ?? ""}${r.stderr ?? ""}`;
-    if (r.status === 0 || /already verified/i.test(text)) {
-      ledger[key] = `${m.artifact.source}:${m.artifact.name}`;
+    let error: string | undefined;
+    if (r.error || r.status !== 0) {
+      if (!/already verified/i.test(text)) error = r.error?.message ?? (text.trim().split(/\r?\n/).filter((l) => /error|fail/i.test(l)).slice(0, 2).join(" ") || `forge exited with ${r.status}`);
+    } else if (constructorArgs !== undefined) {
+      const { url, form } = sourceRequest(o.chainId, d.address, contract, m.artifact.compiler, constructorArgs);
+      error = await submit(url, { ...form, sourceCode: r.stdout.trim() }, "checkverifystatus");
+    }
+    if (error === undefined) {
+      ledger[key] = contract;
       save();
       verified++;
       o.say(`  verified ${d.address} ${m.artifact.name}`);
     } else {
-      failed.push(`${d.address} ${m.artifact.name}: ${text.trim().split(/\r?\n/).filter((l) => /error|fail/i.test(l)).slice(0, 2).join(" ")}`);
+      failed.push(`${d.address} ${m.artifact.name}: ${error}`);
       o.say(`  FAILED ${d.address} ${m.artifact.name}`);
     }
   }

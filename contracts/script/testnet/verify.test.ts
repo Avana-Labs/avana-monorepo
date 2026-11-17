@@ -7,7 +7,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { cloneImplementation, compilationProfileOf, compilerProfiles, deployedContracts, indexArtifacts, isCreate3Helper, matchArtifact, profileOuts, proxyRequest, verifyCommand, verifyRelease } from "./verify.ts";
+import { ARGS_ON_COMMAND_LINE, cloneImplementation, compilationProfileOf, compilerProfiles, deployedContracts, indexArtifacts, isCreate3Helper, matchArtifact, profileOuts, proxyRequest, sourceRequest, verifyCommand, verifyRelease } from "./verify.ts";
 
 // Real creation codes are far longer than the index key (64 bytes); each fixture body is 100 bytes.
 const meta = (n: number) => `${n.toString(16).padStart(2, "0")}`.repeat(100);
@@ -152,13 +152,13 @@ test("the forge verify-contract command carries the profile, compiler settings, 
   const index = indexArtifacts(f.root, { default: "out", aave: "out-aave" });
   assert.deepEqual(verifyCommand(matchArtifact(index, `0x${A}${ARG}`)!, "0xa1", 11_155_111), {
     profile: "default",
-    args: ["verify-contract", "0xa1", "src/A.sol:A", "--chain", "11155111", "--compiler-version", "v0.8.28+commit.7893614a", "--num-of-optimizations", "10000", "--evm-version", "cancun", "--constructor-args", `0x${ARG}`, "--watch"],
+    args: ["verify-contract", "0xa1", "src/A.sol:A", "--chain", "11155111", "--compiler-version", "v0.8.28+commit.7893614a", "--num-of-optimizations", "10000", "--evm-version", "cancun", "--constructor-args", `0x${ARG}`, "--watch", "--retries", "20", "--delay", "15"],
   });
   assert.deepEqual(verifyCommand(matchArtifact(index, `0x${L.replace(PLACEHOLDER, LIB)}`)!, "0xb2", 84_532), {
     profile: "aave",
     args: [
       "verify-contract", "0xb2", "dependencies/aave/L.sol:L", "--chain", "84532", "--compiler-version", "v0.8.28+commit.7893614a", "--num-of-optimizations", "22300",
-      "--via-ir", "--evm-version", "cancun", "--libraries", `dependencies/aave/Lib.sol:Lib:0x${LIB}`, "--watch",
+      "--via-ir", "--evm-version", "cancun", "--libraries", `dependencies/aave/Lib.sol:Lib:0x${LIB}`, "--watch", "--retries", "20", "--delay", "15",
     ],
   });
 });
@@ -170,6 +170,32 @@ test("with the profiles' settings known, the command names the compiler profile 
   assert.deepEqual(a.slice(a.indexOf("--compilation-profile"), a.indexOf("--compilation-profile") + 2), ["--compilation-profile", "default"]);
   const l = verifyCommand(matchArtifact(index, `0x${L.replace(PLACEHOLDER, LIB)}`)!, "0xb2", 84_532).args;
   assert.deepEqual(l.slice(l.indexOf("--compilation-profile"), l.indexOf("--compilation-profile") + 2), ["--compilation-profile", "hub"]);
+});
+
+test("constructor arguments too long for a command line go to the explorer with forge's standard JSON input", () => {
+  const f = fixture();
+  const index = indexArtifacts(f.root, { default: "out", aave: "out-aave" });
+  // The Aave V4 instance batches take a Spoke's creation code: about 50,000 hex characters, over Windows' 32,767.
+  const long = "ab".repeat(25_000);
+  assert.ok(long.length > ARGS_ON_COMMAND_LINE);
+  const c = verifyCommand(matchArtifact(index, `0x${A}${long}`)!, "0xa1", 84_532);
+  assert.equal(c.constructorArgs, long);
+  assert.equal(c.args.at(-1), "--show-standard-json-input");
+  assert.ok(!c.args.includes("--constructor-args") && !c.args.includes("--watch"));
+  assert.ok(c.args.join(" ").length < ARGS_ON_COMMAND_LINE);
+  assert.equal(verifyCommand(matchArtifact(index, `0x${A}${ARG}`)!, "0xa1", 84_532).constructorArgs, undefined);
+  assert.deepEqual(sourceRequest(84_532, "0xa1", "src/A.sol:A", "v0.8.28+commit.7893614a", long), {
+    url: "https://api.etherscan.io/v2/api?chainid=84532",
+    form: {
+      module: "contract",
+      action: "verifysourcecode",
+      codeformat: "solidity-standard-json-input",
+      contractaddress: "0xa1",
+      contractname: "src/A.sol:A",
+      compilerversion: "v0.8.28+commit.7893614a",
+      constructorArguements: long,
+    },
+  });
 });
 
 test("a clone names its implementation; the CREATE3 helper is told apart; a proxy request carries no key", () => {
