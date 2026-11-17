@@ -264,6 +264,8 @@ export interface VerifyOptions {
   readonly chainId: number;
   readonly dryRun: boolean;
   readonly say: (s: string) => void;
+  /** Milliseconds between checks of a submitted verification (5 seconds). */
+  readonly pollMs?: number;
 }
 
 /** The implementation an EIP-1167 minimal proxy (a clone: Slipstream's pools and gauges, for example) delegates to. */
@@ -305,13 +307,13 @@ export function sourceRequest(chainId: number, address: string, contract: string
 }
 
 /** Submits `form` and waits for the explorer's verdict through `check`: undefined once verified, else its message. */
-async function submit(url: string, form: Record<string, string>, check: string): Promise<string | undefined> {
+async function submit(url: string, form: Record<string, string>, check: string, pollMs: number): Promise<string | undefined> {
   const key = process.env.ETHERSCAN_API_KEY!;
   const post = await fetch(url, { method: "POST", body: new URLSearchParams({ ...form, apikey: key }) });
   const sent = (await post.json()) as { status: string; result: string };
   if (sent.status !== "1") return /already verified/i.test(sent.result) ? undefined : sent.result;
   for (let i = 0; i < 60; i++) {
-    await new Promise((r) => setTimeout(r, 5_000));
+    await new Promise((r) => setTimeout(r, pollMs));
     const res = await fetch(`${url}&module=contract&action=${check}&guid=${encodeURIComponent(sent.result)}&apikey=${key}`);
     const c = (await res.json()) as { status: string; result: string };
     if (c.status === "1" || /already verified/i.test(c.result)) return undefined;
@@ -320,10 +322,23 @@ async function submit(url: string, form: Record<string, string>, check: string):
   return "the explorer did not answer in time";
 }
 
-const submitProxy = (chainId: number, address: string, implementation: string | undefined) => {
+/** The implementation the explorer records for `address` as a proxy, if it records one. */
+async function recordedImplementation(chainId: number, address: string): Promise<string | undefined> {
+  const res = await fetch(`https://api.etherscan.io/v2/api?chainid=${chainId}&module=contract&action=getsourcecode&address=${address}&apikey=${process.env.ETHERSCAN_API_KEY!}`);
+  const r = (await res.json()) as { status: string; result: { Proxy?: string; Implementation?: string }[] | string };
+  const c = Array.isArray(r.result) ? r.result[0] : undefined;
+  return c && c.Proxy !== "0" && c.Implementation ? c.Implementation : undefined;
+}
+
+/** Marks a proxy as one on the explorer. A clone the explorer has linked to its implementation by itself (Slipstream's
+ * pools and gauges) is refused with "implementation … not detected"; it counts as verified when the explorer's record
+ * names the expected implementation. */
+async function submitProxy(chainId: number, address: string, implementation: string | undefined, pollMs: number): Promise<string | undefined> {
   const { url, form } = proxyRequest(chainId, address, implementation);
-  return submit(url, form, "checkproxyverification");
-};
+  const err = await submit(url, form, "checkproxyverification", pollMs);
+  if (!err || !implementation || !/not detected/i.test(err)) return err;
+  return (await recordedImplementation(chainId, address))?.toLowerCase() === implementation.toLowerCase() ? undefined : err;
+}
 
 /**
  * Verifies every contract of the release not yet verified: each against its build output, then every proxy as a proxy
@@ -371,7 +386,7 @@ export async function verifyRelease(o: VerifyOptions): Promise<{ verified: numbe
       if (!/already verified/i.test(text)) error = r.error?.message ?? (text.trim().split(/\r?\n/).filter((l) => /error|fail/i.test(l)).slice(0, 2).join(" ") || `forge exited with ${r.status}`);
     } else if (constructorArgs !== undefined) {
       const { url, form } = sourceRequest(o.chainId, d.address, contract, m.artifact.compiler, constructorArgs);
-      error = await submit(url, { ...form, sourceCode: r.stdout.trim() }, "checkverifystatus");
+      error = await submit(url, { ...form, sourceCode: r.stdout.trim() }, "checkverifystatus", o.pollMs ?? 5_000);
     }
     if (error === undefined) {
       ledger[key] = contract;
@@ -395,7 +410,7 @@ export async function verifyRelease(o: VerifyOptions): Promise<{ verified: numbe
       o.say(`  POST ${url} ${new URLSearchParams({ ...form, apikey: "<redacted>" }).toString()}`);
       continue;
     }
-    const err = await submitProxy(o.chainId, p.address, p.implementation);
+    const err = await submitProxy(o.chainId, p.address, p.implementation, o.pollMs ?? 5_000);
     if (err) {
       failed.push(`${p.address} ${p.name} as a proxy: ${err}`);
       o.say(`  FAILED ${p.address} as a proxy`);

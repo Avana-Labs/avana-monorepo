@@ -3,7 +3,7 @@
 // Run: node --test script/testnet/verify.test.ts (from contracts/)
 
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -228,4 +228,40 @@ test("a dry run prints each command with the key redacted, and a contract alread
   assert.ok(!lines.some((l) => l.includes("secret-key-value")));
   assert.equal(r.skipped, 3);
   assert.equal(r.failed.length, 0);
+});
+
+test("a clone the explorer already links to its implementation counts as verified; one linked elsewhere fails", async () => {
+  const IMPL = "0x00000000000000000000000000000000000000a1";
+  const run = async (recorded: string) => {
+    const f = fixture();
+    // Every contract verified already: only the clone's proxy request runs, against an explorer stand-in.
+    const done = Object.fromEntries(["a1", "b2", "d4", "f6"].map((a) => [`0x${"00".repeat(19)}${a}`, "x"]));
+    writeFileSync(join(f.out, "verified.json"), JSON.stringify(done));
+    const calls: string[] = [];
+    const real = globalThis.fetch;
+    globalThis.fetch = (async (url: string, init?: { body?: URLSearchParams }) => {
+      const action = init?.body?.get("action") ?? new URL(url).searchParams.get("action");
+      calls.push(action!);
+      const body =
+        action === "verifyproxycontract" ? { status: "1", result: "guid" }
+        : action === "checkproxyverification" ? { status: "0", result: "A corresponding implementation contract was unfortunately not detected for the proxy address." }
+        : { status: "1", result: [{ Proxy: "2", Implementation: recorded }] };
+      return { json: async () => body };
+    }) as unknown as typeof fetch;
+    process.env.ETHERSCAN_API_KEY = "k";
+    try {
+      const r = await verifyRelease({ contracts: f.root, outDir: f.out, broadcastRoot: f.broadcast, chainId: 11_155_111, dryRun: false, say: () => {}, pollMs: 0 });
+      return { r, calls, ledger: JSON.parse(readFileSync(join(f.out, "verified.json"), "utf8")) as Record<string, string> };
+    } finally {
+      globalThis.fetch = real;
+      delete process.env.ETHERSCAN_API_KEY;
+    }
+  };
+  const linked = await run(IMPL.toUpperCase().replace("0X", "0x"));
+  assert.deepEqual(linked.calls, ["verifyproxycontract", "checkproxyverification", "getsourcecode"]);
+  assert.equal(linked.r.failed.length, 0);
+  assert.equal(linked.ledger["proxy:0x0000000000000000000000000000000000000c10"], IMPL);
+  const elsewhere = await run(`0x${"00".repeat(19)}b2`);
+  assert.equal(elsewhere.r.failed.length, 1);
+  assert.match(elsewhere.r.failed[0]!, /not detected/);
 });
