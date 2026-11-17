@@ -201,13 +201,25 @@ export interface FrontendDeps {
   resolve(host: string): Promise<string>;
 }
 
+/**
+ * The page without its per-load CSP nonce: the app sets a fresh nonce on every request (webapp/proxy.ts), so the raw
+ * body hashes differently on each fetch. Every value a `nonce` attribute carries is blanked wherever it appears (the
+ * attributes and any copy of the value in the page's serialized data); everything else is hashed as served.
+ */
+export function withoutNonces(body: string): string {
+  const values = new Set([...body.matchAll(/\bnonce="([^"]+)"/g)].map((m) => m[1]!));
+  let out = body;
+  for (const v of values) out = out.split(v).join("");
+  return out;
+}
+
 export function frontendProbe(cfg: FrontendConfig, deps: FrontendDeps): Probe<FrontendRead> {
   let last: FrontendRead | null = null;
   return {
     name: "frontend",
     async read() {
       const { body, server } = await deps.fetchText(cfg.url);
-      return { sha256: createHash("sha256").update(body).digest("hex"), server, dns: await deps.resolve(new URL(cfg.url).hostname) };
+      return { sha256: createHash("sha256").update(withoutNonces(body)).digest("hex"), server, dns: await deps.resolve(new URL(cfg.url).hostname) };
     },
     evaluate(input) {
       const out: Finding[] = [];

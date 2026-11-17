@@ -20,6 +20,7 @@ import { LivenessBook } from "./liveness.ts";
 import { type Channel, logChannel, pagerDutyChannel, webhookChannel } from "./notify/channels.ts";
 import { monitorServer } from "./server.ts";
 import { apply, collect, fileStateStore } from "./state.ts";
+import { FactCache } from "./viewCache.ts";
 
 const out = (o: unknown) => process.stdout.write(`${JSON.stringify(o)}\n`);
 const fatal = (kind: string) => (err: unknown) => {
@@ -29,18 +30,26 @@ const fatal = (kind: string) => (err: unknown) => {
 process.on("uncaughtException", fatal("uncaughtException"));
 process.on("unhandledRejection", fatal("unhandledRejection"));
 
+/**
+ * Calldata bytes per multicall eth_call. viem's default (1,024) splits one batch of the snapshot into several requests;
+ * 8,192 bytes keeps each batch to one or two while bounding the gas of one `aggregate3` of view calls.
+ */
+const MULTICALL_BATCH_BYTES = 8_192;
+
 function pinned(client: PublicClient, blockNumber: bigint): ViewClient {
   return {
     multicall: async (calls: readonly ContractCall[]) =>
-      (await client.multicall({ contracts: calls as never, allowFailure: true, blockNumber, multicallAddress: MULTICALL3_ADDRESS })) as unknown as readonly CallResult[],
+      (await client.multicall({ contracts: calls as never, allowFailure: true, blockNumber, multicallAddress: MULTICALL3_ADDRESS, batchSize: MULTICALL_BATCH_BYTES })) as unknown as readonly CallResult[],
   };
 }
 
 function provider(c: ChainConfig, url: string): ProviderReads {
   const client = createPublicClient({ transport: http(url) }) as PublicClient;
+  // Facts that never change (viewCache.ts) are read once per provider, not every round.
+  const facts = new FactCache();
   return {
-    snapshot: (b) => readChainSnapshot(pinned(client, b.number), c.deployment, { blockNumber: b.number, timestamp: b.timestamp }),
-    views: (b) => pinned(client, b.number),
+    snapshot: (b) => readChainSnapshot(facts.wrap(pinned(client, b.number)), c.deployment, { blockNumber: b.number, timestamp: b.timestamp }),
+    views: (b) => facts.wrap(pinned(client, b.number)),
     rpc: (b): RawRpc => ({
       getLogs: async (addresses, topic0s, fromBlock, toBlock) => {
         if (toBlock > b.number) throw new Error(`logs past the round's block ${b.number}`);

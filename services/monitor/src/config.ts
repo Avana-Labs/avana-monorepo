@@ -17,6 +17,12 @@ export type ChannelConfig =
   | { readonly name: string; readonly kind: "webhook"; readonly url: string }
   | { readonly name: string; readonly kind: "log" };
 
+/**
+ * MONITOR_INTERVAL_SECONDS when unset. The keeper posts its own block-cadence alerts and heartbeat at every block; the
+ * monitor's own reads (snapshot, oracles, coverage, events) run once a minute.
+ */
+export const DEFAULT_INTERVAL_SECONDS = 60;
+
 export interface ChainConfig {
   readonly chain: ChainInfo;
   readonly manifest: ServiceManifest;
@@ -154,7 +160,7 @@ export function loadConfig(env: NodeJS.ProcessEnv, load: (path: string) => Servi
 
   return {
     chains,
-    intervalSeconds: optionalEnv(env, "MONITOR_INTERVAL_SECONDS") ? intEnv(env, "MONITOR_INTERVAL_SECONDS") : 12,
+    intervalSeconds: optionalEnv(env, "MONITOR_INTERVAL_SECONDS") ? intEnv(env, "MONITOR_INTERVAL_SECONDS") : DEFAULT_INTERVAL_SECONDS,
     channels,
     routing,
     incidentLogPath: requireEnv(env, "MONITOR_INCIDENT_LOG"),

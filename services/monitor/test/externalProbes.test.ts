@@ -11,7 +11,7 @@ import type { Address } from "viem";
 import type { ChainConfig, MonitorConfig } from "../src/config.ts";
 import type { Probe } from "../src/probe.ts";
 import { probesFor } from "../src/probes.ts";
-import { SAFE_GUARD_SLOT, frontendProbe, ghoRateProbe, issuerProbe, m29Gho, safeChanges, safesProbe } from "../src/probes/external.ts";
+import { SAFE_GUARD_SLOT, frontendProbe, ghoRateProbe, issuerProbe, m29Gho, safeChanges, safesProbe, withoutNonces } from "../src/probes/external.ts";
 import { EMPTY_MANIFEST, contextOf, fakeProvider, fixtureSnapshot, on } from "./fakeChain.ts";
 
 const SAFE = "0x00000000000000000000000000000000000005af" as Address;
@@ -107,6 +107,26 @@ describe("M-27 frontend", () => {
     expect((await run(probe, p, 1)).findings).toEqual([]);
     page = "b";
     expect((await run(probe, p, 2)).findings.map((f) => `${f.subject}:${f.kind}:${f.level}`)).toEqual(["frontend:bundle:event:warn"]);
+  });
+
+  it("ignores the per-load CSP nonce, wherever the page repeats it, but not a change of the page", async () => {
+    let n = 0;
+    let app = "app";
+    const page = () => {
+      const nonce = `N${++n}x${"q".repeat(20)}`;
+      return `<html><script nonce="${nonce}">theme()</script><script>self.__next_f.push([1,"{\\"nonce\\":\\"${nonce}\\"}"])</script>${app}</html>`;
+    };
+    const probe = frontendProbe({ url: "https://app.example", expectedSha256: null }, { fetchText: async () => ({ body: page(), server: "" }), resolve: async () => "" });
+    const p = fakeProvider();
+    expect((await run(probe, p, 1)).findings).toEqual([]);
+    expect((await run(probe, p, 2)).findings).toEqual([]);
+    app = "evil";
+    expect((await run(probe, p, 3)).findings.map((f) => `${f.subject}:${f.kind}:${f.level}`)).toEqual(["frontend:bundle:event:warn"]);
+  });
+
+  it("blanks every nonce value and leaves a page without one as served", () => {
+    expect(withoutNonces(`<script nonce="abc123">x</script><link nonce="abc123">"abc123"`)).toBe(`<script nonce="">x</script><link nonce="">""`);
+    expect(withoutNonces("<html>app</html>")).toBe("<html>app</html>");
   });
 });
 
