@@ -161,7 +161,6 @@ export type BorrowableAsset = {
   totalBorrowedUsd: number
   utilization: number
   availableUsd: number
-  walletBalanceLabel: string
   hasWalletBalance: boolean
   visual: BorrowAssetVisual
   trendUp: boolean

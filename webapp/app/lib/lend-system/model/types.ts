@@ -20,6 +20,7 @@ export type LendMarket = {
   hubLabel?: string
   rank: number
   asset: LendAsset
+  /** The asset's USD price; NaN when the price snapshot has none (USD values derived from it then read "—"). */
   assetPriceUsd: number
   supplyApy: number
   rewardsApy: number
@@ -27,6 +28,10 @@ export type LendMarket = {
   totalSupplied: number
   totalBorrowed: number
   availableLiquidity: number
+  /** Supply, borrows and available liquidity in USD as services/convex reports them, priced or not. */
+  totalSuppliedUsd?: number
+  totalBorrowedUsd?: number
+  availableLiquidityUsd?: number
   utilization: number
   reserveFactor: number
   supplyCap?: number

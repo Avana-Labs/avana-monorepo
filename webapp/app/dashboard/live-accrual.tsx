@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { formatFixedCurrency } from "@/app/lib/currency/format"
+import { useCurrency } from "@/app/lib/currency/use-currency"
 
 const YEAR_MS = 365 * 24 * 60 * 60 * 1000
 
@@ -42,8 +44,10 @@ function useAccruedUsd(anchorMs: number | null, ratePerYearUsd: number, baseUsd:
   return base + Math.max(0, (Date.now() - anchor) / YEAR_MS) * rate
 }
 
-function formatLiveUsd(value: number, fractionDigits: number): string {
-  return `$${value.toLocaleString(undefined, { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits })}`
+/** The counter in the Preferences currency. */
+function LiveUsd({ value, fractionDigits }: { value: number; fractionDigits: number }) {
+  const { ctx } = useCurrency()
+  return <span className="tabular-nums">{formatFixedCurrency(value, ctx, fractionDigits)}</span>
 }
 
 /**
@@ -63,7 +67,7 @@ export function LiveInterestEarnedUsd({
   fractionDigits?: number
 }) {
   const value = useAccruedUsd(anchorMs, ratePerYearUsd, baseUsd)
-  return <span className="tabular-nums">{formatLiveUsd(value, fractionDigits)}</span>
+  return <LiveUsd value={value} fractionDigits={fractionDigits} />
 }
 
 /**
@@ -85,7 +89,7 @@ export function LiveInterestOwedUsd({
   fractionDigits?: number
 }) {
   const value = useAccruedUsd(anchorMs, ratePerYearUsd, baseUsd)
-  return <span className="tabular-nums">{formatLiveUsd(value, fractionDigits)}</span>
+  return <LiveUsd value={value} fractionDigits={fractionDigits} />
 }
 
 /**

@@ -3,6 +3,8 @@
 import { ActionMetricHelp } from "@/app/components/action-page/action-metric-help"
 import type { LiquidationRiskStat } from "@/app/lib/detail-page/liquidation-risk"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
+import { redenominateCompactUsd } from "@/app/lib/currency/format"
+import { useCurrency } from "@/app/lib/currency/use-currency"
 import { cn } from "@/lib/utils"
 
 type Props = {
@@ -41,6 +43,10 @@ function DeltaArrow({
  */
 export function LiquidationRiskSection({ stats, className }: Props) {
   const { t } = useTranslation()
+  const { ctx } = useCurrency()
+  // USD stats arrive as compact USD strings (services/convex `compactUsd`).
+  const money = (stat: LiquidationRiskStat, label: string) =>
+    stat.format === "usd" ? redenominateCompactUsd(label, ctx) : label
   if (stats.length === 0) return null
 
   return (
@@ -63,11 +69,11 @@ export function LiquidationRiskSection({ stats, className }: Props) {
             </div>
             <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
               <span className="font-data text-[20px] font-normal leading-none tracking-[-0.01em] text-foreground md:text-[22px]">
-                {stat.value}
+                {money(stat, stat.value)}
               </span>
               <DeltaArrow
                 deltaValue={stat.deltaValue}
-                deltaLabel={stat.deltaLabel}
+                deltaLabel={money(stat, stat.deltaLabel)}
                 goodDirection={stat.goodDirection}
               />
             </div>
