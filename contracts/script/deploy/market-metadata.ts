@@ -56,7 +56,7 @@ function addr(v: string): Address {
 }
 
 const lower = (a: Address) => a.toLowerCase();
-const VENUE: Record<number, string> = { 1: "Uniswap v3", 2: "Slipstream" };
+const VENUE: Record<number, string> = { 1: "Uniswap v3", 2: "Slipstream", 3: "Uniswap v4" };
 
 const client = createPublicClient({ transport: http(rpc) });
 const abi = parseAbi([
@@ -89,6 +89,19 @@ function v4PoolId(name: string): { poolId: `0x${string}`; tickSpacing: number } 
     [key],
   );
   return { poolId: keccak256(encoded), tickSpacing: key.tickSpacing };
+}
+
+/** The market's pool and its token pair. A Uniswap v4 market has no pool contract: its pool is the chain's PoolManager
+ * and its pair is the pool key's currencies (`listing.uniswapV4Pools`). */
+async function poolOf(m: Json): Promise<{ pool: Address; pair: Address[]; v4: boolean }> {
+  if (v4Ids.has(m.integrationId)) {
+    const k = config.listing.uniswapV4Pools?.[m.pool] as Json | undefined;
+    if (!k) throw new Error(`listing.uniswapV4Pools has no ${m.pool}`);
+    return { pool: addr("$world:.uniswapV4PoolManager"), pair: [addr(k.currency0), addr(k.currency1)], v4: true };
+  }
+  const pool = addr(config.listing.pools[m.pool]);
+  const pair = [await client.readContract({ address: pool, abi, functionName: "token0" }), await client.readContract({ address: pool, abi, functionName: "token1" })];
+  return { pool, pair, v4: false };
 }
 
 /** The market's VaultTokenFactory key: integration, pool (or Uniswap v4 pool ID) and tick range (the pool's full range
@@ -134,14 +147,17 @@ function symbolsByAddress(): Map<string, string> {
 }
 
 /** The contracts a market relies on, for its risk card: pools, feeds, its Hub and its CDP Spoke. */
-async function dependencies(m: Json, pool: Address, symbols: string[]): Promise<Json[]> {
+async function dependencies(m: Json, pool: Address, v4: boolean, symbols: string[]): Promise<Json[]> {
   const deps: Json[] = [];
   const add = (kind: string, label: string, a: Address) => {
     if (!deps.some((d) => d.address === lower(a))) deps.push({ kind, label, address: lower(a) });
   };
   const venue = VENUE[m.integrationId] ?? "AMM";
-  add("amm", `${venue} pool`, pool);
-  add("amm", `${venue} factory`, await client.readContract({ address: pool, abi, functionName: "factory" }));
+  if (v4) add("amm", `${venue} PoolManager`, pool);
+  else {
+    add("amm", `${venue} pool`, pool);
+    add("amm", `${venue} factory`, await client.readContract({ address: pool, abi, functionName: "factory" }));
+  }
   for (const r of (m.routes ?? []) as Json[]) for (const name of [...r.primary, ...r.backup]) add("amm", `Swap route pool ${name}`, addr(config.listing.pools[name]));
   const debt = (config.listing.debtReserves as Json[]).filter((d) => d.spoke === m.spoke).map((d) => d.symbol as string);
   for (const s of [...symbols, ...debt]) {
@@ -185,15 +201,14 @@ async function main() {
   for (const [i, m] of (config.listing.markets as Json[]).entries()) {
     const key = await marketKey(factory, m);
     const listed = await client.readContract({ address: registry, abi, functionName: "marketOfKey", args: [key] });
-    const pool = addr(config.listing.pools[m.pool]);
-    const pair = [await client.readContract({ address: pool, abi, functionName: "token0" }), await client.readContract({ address: pool, abi, functionName: "token1" })];
+    const { pool, pair, v4 } = await poolOf(m);
     for (const t of pair) (listed !== 0n ? oldTokens : newTokens).add(lower(t));
     if (listed !== 0n) continue;
     // A cancelled market is relisted under its reserved ID (its vault token names it); a new one takes the next ID.
     const token = await client.readContract({ address: factory, abi, functionName: "tokenOf", args: [spokeOf(m.spoke).spoke, key] });
     const id = /^0x0{40}$/i.test(token) ? next++ : await client.readContract({ address: token, abi, functionName: "marketId" });
     const page = text(`listing.markets[${i}]`, m.content);
-    if (page.risk) page.risk = { ...page.risk, dependencies: await dependencies(m, pool, pair.map((t) => symbolOf.get(lower(t)) ?? lower(t))) };
+    if (page.risk) page.risk = { ...page.risk, dependencies: await dependencies(m, pool, v4, pair.map((t) => symbolOf.get(lower(t)) ?? lower(t))) };
     entries.push({
       scope: "pool",
       key: String(id),

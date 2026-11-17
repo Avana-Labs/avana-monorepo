@@ -366,7 +366,20 @@ contract ListMarkets is ListingBase {
             address hub = _hub(hubLabel);
             address cs =
                 vm.parseJsonAddress(coverage, string.concat("$['AvanaFirstLossReserve.", hubLabel, ".", sym, "']"));
-            if (registry.firstLossReserveOf(hub, _token(sym)) != address(0)) continue;
+            uint256 line = _debtAssetUint(sym, "creditLineWhole", ".listing");
+            if (registry.firstLossReserveOf(hub, _token(sym)) != address(0)) {
+                // A later release adds CDP Spokes whose draw caps the recorded line must still bound: raise it.
+                (uint256 recorded,) = registry.creditLine(hub, _token(sym));
+                if (recorded < line) {
+                    _add(
+                        op,
+                        address(registry),
+                        abi.encodeCall(registry.recordCreditLine, (hub, _token(sym), line)),
+                        "MR.recordCreditLine"
+                    );
+                }
+                continue;
+            }
             _add(
                 op,
                 address(registry),
@@ -376,9 +389,7 @@ contract ListMarkets is ListingBase {
             _add(
                 op,
                 address(registry),
-                abi.encodeCall(
-                    registry.recordCreditLine, (hub, _token(sym), _debtAssetUint(sym, "creditLineWhole", ".listing"))
-                ),
+                abi.encodeCall(registry.recordCreditLine, (hub, _token(sym), line)),
                 "MR.recordCreditLine"
             );
         }
