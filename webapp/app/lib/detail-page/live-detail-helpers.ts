@@ -62,6 +62,8 @@ type FaqEntry = { question: string; answer: string }
 /** Convex editorial content shape (`getContent`): About fields + FAQs + the rich changelog. */
 type DetailContentOverlay = {
   description: string
+  /** The full About text, when the listing gives one. */
+  longText?: string
   stats: ReadonlyArray<AboutContent["stats"][number]>
   history: ReadonlyArray<AboutContent["history"][number]>
   faqs: ReadonlyArray<FaqEntry>
@@ -108,7 +110,7 @@ export function applyDetailContentOverlay<T extends DetailWithContent>(
     ...detail,
     about: {
       ...detail.about,
-      description: content.description,
+      description: content.longText || content.description,
       stats: [...content.stats],
       history: [...content.history],
       // Prefer the Convex-seeded governance changelog when present; keep any base

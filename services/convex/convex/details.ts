@@ -25,6 +25,27 @@ function pageKey(w: World, scope: PageScope, slug: string): { chainId: number; k
   return { chainId: row.chainId, key: (row as MarketDoc).marketId };
 }
 
+/** How a changelog row names the event that made the change ("Risk configuration update"), from its raw kind. */
+const CHANGE_SOURCES: Readonly<Record<string, string>> = {
+  "AaveSpoke.AddDynamicReserveConfig": "Risk configuration added",
+  "AaveSpoke.UpdateDynamicReserveConfig": "Risk configuration update",
+  "AaveSpoke.UpdateReserveConfig": "Reserve configuration update",
+  "AaveHub.UpdateAssetConfig": "Asset configuration update",
+  "AaveHub.UpdateSpokeConfig": "Spoke configuration update",
+  "MarketRegistry.CreditLineSet": "Credit line update",
+  "MarketRegistry.CreditLineRecorded": "Credit line update",
+  "MarketRegistry.MarketOffboarding": "Market offboarding",
+};
+
+/** A raw event kind as words: the mapped label, else the event name split ("SetOracle" → "Set oracle"). */
+export function changeSourceLabel(kind: string): string {
+  const known = CHANGE_SOURCES[kind];
+  if (known) return known;
+  const name = kind.split(".").pop() ?? kind;
+  const words = name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 export async function readChangelog(ctx: QueryCtx, w: World, scope: PageScope, slug: string): Promise<ChangelogRow[]> {
   const page = pageKey(w, scope, slug);
   if (!page) return [];
@@ -41,7 +62,7 @@ export async function readChangelog(ctx: QueryCtx, w: World, scope: PageScope, s
     previous: r.previous,
     current: r.current,
     date: new Date(r.at).toISOString().slice(0, 10),
-    source: r.source,
+    source: changeSourceLabel(r.source),
     executor: "Governance",
     category: "Risk",
     ...(explorer ? { href: `${explorer}/tx/${r.txHash}` } : {}),
@@ -54,6 +75,8 @@ export async function readContent(ctx: QueryCtx, w: World, scope: PageScope, slu
   if (!c) return null;
   return {
     description: c.description,
+    // The About card's full text when the listing gives one (the card folds it behind "read more").
+    ...(c.longText ? { longText: c.longText } : {}),
     stats: c.stats,
     history: c.history,
     faqs: c.faqs,
