@@ -52,7 +52,13 @@ process.exit(failures.length > 0 ? 1 : 0);
 
 // ─── Indexer mode ───
 
-/** Every user table of schema `a` must hold the same rows as the same table of schema `b` (Ponder's own tables aside). */
+/**
+ * Every user table of schema `a` must hold the same rows as the same table of schema `b` (Ponder's own tables aside).
+ * `chain_progress` holds the head each indexer stopped at, not chain data: an indexer that waited on a chain held still
+ * stops a block or two later (services.ts indexerAtHead), so it is left out.
+ */
+const PER_RUN_TABLES = new Set(["chain_progress"]);
+
 async function compareSchemas(repo: string, dataDir: string, a: string, b: string) {
   const { PGlite } = await import(pathToFileURL(join(repo, "node_modules/@electric-sql/pglite/dist/index.js")).href);
   const db = new PGlite(dataDir);
@@ -64,7 +70,7 @@ async function compareSchemas(repo: string, dataDir: string, a: string, b: strin
   const missing = ta.filter((t) => !tb.includes(t));
   if (missing.length > 0) fail("indexer", `tables of ${a} missing from ${b}: ${missing.join(", ")}`);
   let rows = 0;
-  for (const t of ta.filter((x) => tb.includes(x))) {
+  for (const t of ta.filter((x) => tb.includes(x) && !PER_RUN_TABLES.has(x))) {
     // A row's text in a stable order: equal digests mean equal tables.
     const digest = async (s: string) =>
       ((await db.query(`select count(*)::int as n, md5(coalesce(string_agg(r::text, '|' order by r::text), '')) as h from "${s}"."${t}" r`)).rows[0] as { n: number; h: string });

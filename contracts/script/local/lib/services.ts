@@ -144,12 +144,24 @@ export async function startIndexer(schema?: string, name = "indexer"): Promise<v
 
 /** Waits until the indexer's checkpoint reaches each chain's current head (interval mining brings new blocks). */
 export async function indexerAtHead(timeoutMs = 600_000): Promise<Record<number, number>> {
-  const heads = Object.fromEntries(await Promise.all(deployed().map(async (c) => [c.chainId, Number(BigInt(await rpc<string>(rpcUrl(c), "eth_blockNumber")))] as const)));
+  const chains = deployed();
+  const heads = Object.fromEntries(await Promise.all(chains.map(async (c) => [c.chainId, Number(BigInt(await rpc<string>(rpcUrl(c), "eth_blockNumber")))] as const)));
+  let nudged = Date.now();
   return waitFor("indexer at the chains' heads", async () => {
     const s = await indexerStatus();
-    return Object.entries(heads).every(([id, h]) => (s[Number(id)] ?? 0) >= h) ? s : undefined;
+    const behind = chains.filter((c) => (s[c.chainId] ?? 0) < heads[c.chainId]!);
+    if (behind.length === 0) return s;
+    // An indexer started while a check holds the chains still (automine, no transaction) stays at its finalized block
+    // until the node's head changes (Ponder 0.18 live sync): a chain it lags on mines one empty block every 30 s.
+    if (Date.now() - nudged >= NUDGE_MS) {
+      nudged = Date.now();
+      for (const c of behind) if (await rpc<boolean>(rpcUrl(c), "anvil_getAutomine")) await rpc(rpcUrl(c), "evm_mine");
+    }
+    return undefined;
   }, timeoutMs, 3_000);
 }
+
+const NUDGE_MS = 30_000;
 
 // ─── Listing content ───
 
