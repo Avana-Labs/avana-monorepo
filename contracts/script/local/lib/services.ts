@@ -146,31 +146,31 @@ export interface ConvexInfo {
 const convexInfoPath = join(STACK, "convex.json");
 export const convexInfo = (): ConvexInfo | undefined => (existsSync(convexInfoPath) ? (JSON.parse(readFileSync(convexInfoPath, "utf8")) as ConvexInfo) : undefined);
 
-/** The anonymous local deployment's URL and admin key, from the files `convex dev` writes. */
-function discoverConvex(): ConvexInfo | undefined {
+/** The anonymous local deployment's URL and admin key, from the files `convex dev` writes in `dir`. */
+export function discoverConvex(dir = CONVEX_DIR): ConvexInfo | undefined {
   // `convex dev` keeps the local deployment's ports and admin key here (replay-check.ts reads the same file).
-  const local = join(CONVEX_DIR, ".convex", "local", "default", "config.json");
+  const local = join(dir, ".convex", "local", "default", "config.json");
   if (existsSync(local)) {
     const j = JSON.parse(readFileSync(local, "utf8")) as { adminKey?: string; ports?: { cloud?: number; site?: number } };
-    if (j.adminKey && j.ports?.cloud) return { url: `http://127.0.0.1:${j.ports.cloud}`, siteUrl: j.ports.site ? `http://127.0.0.1:${j.ports.site}` : undefined, adminKey: j.adminKey, dir: CONVEX_DIR };
+    if (j.adminKey && j.ports?.cloud) return { url: `http://127.0.0.1:${j.ports.cloud}`, siteUrl: j.ports.site ? `http://127.0.0.1:${j.ports.site}` : undefined, adminKey: j.adminKey, dir: dir };
   }
-  const envLocal = join(CONVEX_DIR, ".env.local");
+  const envLocal = join(dir, ".env.local");
   if (!existsSync(envLocal)) return undefined;
   const vars = Object.fromEntries(readFileSync(envLocal, "utf8").split(/\r?\n/).filter((l) => /^[A-Z_]+=/.test(l)).map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1).replace(/^"|"$/g, "").replace(/\s+#.*$/, "")]));
   const url = vars.CONVEX_URL;
   const deployment = (vars.CONVEX_DEPLOYMENT ?? "").replace(/^[a-z]+:/, "").replace(/\s.*$/, "");
   if (!url || !deployment) return undefined;
-  const roots = [join(CONVEX_DIR, ".convex", "local", "default"), join(homedir(), ".convex", "anonymous-convex-backend-state", deployment), join(homedir(), ".convex", "convex-backend-state", deployment)];
+  const roots = [join(dir, ".convex", "local", "default"), join(homedir(), ".convex", "anonymous-convex-backend-state", deployment), join(homedir(), ".convex", "convex-backend-state", deployment)];
   for (const r of roots) {
     const cfg = join(r, "config.json");
     if (!existsSync(cfg)) continue;
     const j = JSON.parse(readFileSync(cfg, "utf8")) as { adminKey?: string };
-    if (j.adminKey) return { url, siteUrl: vars.CONVEX_SITE_URL, adminKey: j.adminKey, dir: CONVEX_DIR };
+    if (j.adminKey) return { url, siteUrl: vars.CONVEX_SITE_URL, adminKey: j.adminKey, dir: dir };
   }
   return undefined;
 }
 
-async function convexCall(info: ConvexInfo, kind: "query" | "mutation" | "action", path: string, args: Record<string, unknown>): Promise<unknown> {
+export async function convexCall(info: ConvexInfo, kind: "query" | "mutation" | "action", path: string, args: Record<string, unknown>): Promise<unknown> {
   const r = await fetch(`${info.url}/api/${kind}`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Convex ${info.adminKey}` },
@@ -187,7 +187,7 @@ export const convex = (kind: "query" | "mutation" | "action", path: string, args
 };
 
 /** Sets deployment environment variables through the deployment's admin API (no value on a command line). */
-async function convexEnv(info: ConvexInfo, vars: Record<string, string>): Promise<void> {
+export async function convexEnv(info: ConvexInfo, vars: Record<string, string>): Promise<void> {
   const r = await fetch(`${info.url}/api/update_environment_variables`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Convex ${info.adminKey}` },
@@ -267,16 +267,26 @@ const ORACLE = "0x38013f02";
 export async function deploymentRow(c: LocalChain): Promise<Record<string, unknown>> {
   const m = JSON.parse(readFileSync(manifestPath(c), "utf8")) as Record<string, any>;
   const world = JSON.parse(readFileSync(join(outDir(c), "world.json"), "utf8")) as Record<string, any>;
+  return deploymentRowFrom(c.chainId, m, world, await spokeOracles(rpcUrl(c), m), rpcUrl(c));
+}
+
+/** Each Lend and CDP Spoke of manifest `m` with its oracle (ORACLE()), read over `url`; a Spoke without one is left out. */
+export async function spokeOracles(url: string, m: Record<string, any>): Promise<{ spoke: string; oracle: string }[]> {
+  const out: { spoke: string; oracle: string }[] = [];
+  for (const spoke of [...m.aave.lendSpokes, ...m.aave.borrowSpokes].map((s: Record<string, any>) => s.address as string)) {
+    const r = await rpc<string>(url, "eth_call", [{ to: spoke, data: ORACLE }, "latest"]);
+    const oracle = `0x${r.slice(-40)}`;
+    if (!/^0x0{40}$/.test(oracle)) out.push({ spoke, oracle });
+  }
+  return out;
+}
+
+/** A chain's `deployments` row from its manifest `m`, its world file, its Spokes' oracles and its explorer. */
+export function deploymentRowFrom(chainId: number, m: Record<string, any>, world: Record<string, any>, spokeOracles: { spoke: string; oracle: string }[], explorerUrl: string): Record<string, unknown> {
   const lendSpokes = m.aave.lendSpokes.map((s: Record<string, any>) => s.address as string);
   const cdpSpokes = m.aave.borrowSpokes.map((s: Record<string, any>) => s.address as string);
-  const spokeOracles: { spoke: string; oracle: string }[] = [];
-  for (const spoke of [...lendSpokes, ...cdpSpokes]) {
-    const out = await rpc<string>(rpcUrl(c), "eth_call", [{ to: spoke, data: ORACLE }, "latest"]);
-    const oracle = `0x${out.slice(-40)}`;
-    if (!/^0x0{40}$/.test(oracle)) spokeOracles.push({ spoke, oracle });
-  }
   return {
-    chainId: c.chainId,
+    chainId,
     lens: m.avana.lens.address,
     hubs: m.aave.hubs.map((h: Record<string, any>) => ({ address: h.address, label: h.label, tier: h.tier })),
     lendSpokes,
@@ -284,7 +294,7 @@ export async function deploymentRow(c: LocalChain): Promise<Record<string, unkno
     firstLossReserves: m.avana.firstLossReserves.map((r: Record<string, any>) => ({ address: r.address, asset: r.asset, hub: r.hub })),
     marketRegistry: m.avana.marketRegistry.address,
     timelock: m.avana.timelock.address,
-    explorerUrl: rpcUrl(c),
+    explorerUrl,
     nativeUsdFeed: world.feeds.WETH.primary,
     release: m.release,
     // The About card's contract rows and the swap venues (optional in Convex; a slot without an address is left out).

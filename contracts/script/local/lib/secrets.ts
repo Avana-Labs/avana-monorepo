@@ -20,10 +20,21 @@ function key(salt: Buffer): Buffer {
 }
 
 export function readSecrets(): Record<string, string> {
-  if (!existsSync(SECRETS_FILE)) return {};
-  const raw = Buffer.from(readFileSync(SECRETS_FILE, "utf8").trim(), "base64");
+  return existsSync(SECRETS_FILE) ? readSecretsAt(SECRETS_FILE, key) : {};
+}
+
+/** The secrets file `file` of a checkout, its key derived from that checkout's password file `passwordFile` (the
+ * test-network app reads the secrets of the checkout that deployed). Empty when the file does not exist. */
+export function readSecretsFile(file: string, passwordFile: string): Record<string, string> {
+  if (!existsSync(file)) return {};
+  if (!existsSync(passwordFile)) throw new Error(`no password file next to ${file}`);
+  return readSecretsAt(file, (salt) => scryptSync(readFileSync(passwordFile, "utf8").trim(), salt, 32));
+}
+
+function readSecretsAt(file: string, keyOf: (salt: Buffer) => Buffer): Record<string, string> {
+  const raw = Buffer.from(readFileSync(file, "utf8").trim(), "base64");
   const [salt, iv, tag, data] = [raw.subarray(0, 16), raw.subarray(16, 28), raw.subarray(28, 44), raw.subarray(44)];
-  const d = createDecipheriv("aes-256-gcm", key(salt), iv);
+  const d = createDecipheriv("aes-256-gcm", keyOf(salt), iv);
   d.setAuthTag(tag);
   return JSON.parse(Buffer.concat([d.update(data), d.final()]).toString("utf8")) as Record<string, string>;
 }

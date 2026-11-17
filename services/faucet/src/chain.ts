@@ -2,7 +2,8 @@
 // Copyright (c) 2026 Avana Labs
 // The chain the faucet acts on, and the check that it is a local anvil fork: the reported chain id must be one of
 // FAUCET_CHAIN_IDS and the node must answer web3_clientVersion as anvil. Every grant runs the check first, so the faucet
-// can never act on a real network, whatever its RPC variables point at.
+// can never act on a real network, whatever its RPC variables point at. On a test network (Sepolia, Base Sepolia) the
+// check is the chain id, and the test tokens are minted by their minter (TestToken.mint), never set by a cheatcode.
 
 import { decodeFunctionResult, encodeAbiParameters, encodeFunctionData, keccak256, parseAbi, parseEther, parseUnits, type Address, type Hex } from "viem";
 
@@ -21,11 +22,40 @@ export async function checkLocalFork(rpc: Rpc, allowedChainIds: readonly number[
   return chainId;
 }
 
+/** Sepolia and Base Sepolia: the only chains a test-network faucet acts on. */
+export const TEST_NETWORK_IDS: readonly number[] = [11155111, 84532];
+
+/**
+ * The test-network check: the reported chain id must be one of FAUCET_CHAIN_IDS and a public test network (Sepolia,
+ * Base Sepolia), so a test-network faucet never sends on another chain, whatever its RPC variables point at.
+ */
+export async function checkTestNetwork(rpc: Rpc, allowedChainIds: readonly number[]): Promise<number> {
+  const chainId = Number(BigInt((await rpc.request({ method: "eth_chainId" })) as string));
+  if (!allowedChainIds.includes(chainId) || !TEST_NETWORK_IDS.includes(chainId)) {
+    throw new ChainRefused(`chain ${chainId} is not an allowed test network (${allowedChainIds.filter((id) => TEST_NETWORK_IDS.includes(id)).join(", ")})`);
+  }
+  return chainId;
+}
+
 const erc20 = parseAbi(["function balanceOf(address) view returns (uint256)", "function decimals() view returns (uint8)"]);
+const testToken = parseAbi(["function MINTER() view returns (address)", "function mint(address to, uint256 amount)"]);
 
 async function call(rpc: Rpc, to: Address, data: Hex): Promise<Hex> {
   return (await rpc.request({ method: "eth_call", params: [{ to, data }, "latest"] })) as Hex;
 }
+
+/** The test token's minter (TestToken.MINTER, the world deployer), or null when the token has none. */
+export async function tokenMinter(rpc: Rpc, token: Address): Promise<Address | null> {
+  try {
+    const out = await call(rpc, token, encodeFunctionData({ abi: testToken, functionName: "MINTER" }));
+    return decodeFunctionResult({ abi: testToken, functionName: "MINTER", data: out });
+  } catch {
+    return null;
+  }
+}
+
+/** Calldata of TestToken.mint(to, amount). */
+export const mintData = (to: Address, amount: bigint): Hex => encodeFunctionData({ abi: testToken, functionName: "mint", args: [to, amount] });
 
 export async function tokenDecimals(rpc: Rpc, token: Address): Promise<number> {
   const out = await call(rpc, token, encodeFunctionData({ abi: erc20, functionName: "decimals" }));

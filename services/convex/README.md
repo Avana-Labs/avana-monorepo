@@ -129,7 +129,7 @@ Each page's activity feed shows its own events and none twice: the Lend page the
 
 ## Scheduled pull
 
-A Convex cron runs `ingest/pull.pull` for each chain every 30 s on Ethereum and every 10 s on Base. The action:
+A Convex cron runs `ingest/pull.pull` for each chain every 30 s on Ethereum and every 10 s on Base. The chains are those of the deployment variable `AVANA_CHAIN_IDS` (comma-separated chain IDs; `1,8453` when unset, `11155111,84532` on the test deployment), and every per-chain cron (the pull, the sampler, the intent tracker, Merkl) follows it at the intervals of the chain's block time (`convex/lib/cronChains.ts`). Crons are read when the functions are pushed: a changed list takes effect at the next push. The action:
 
 1. Reads the checkpoint `(throughBlock, throughBlockHash)`.
 2. Checks that `throughBlockHash` is still the hash of `throughBlock` over Convex's own RPC (not the indexer's). A mismatch goes to [reorg rebuild](#reorg-rebuild).

@@ -189,12 +189,112 @@ describe("faucet", () => {
     expect(result.record.steps.filter((s) => s.step.startsWith("token ") && !s.failed)).toHaveLength(GRANTS.base.tokens.length - 2);
   });
 
-  it("rejects a bad chain or wallet, and refuses on a test network for now", async () => {
+  it("rejects a bad chain or wallet, and refuses on a test network without a minter", async () => {
     const faucet = new Faucet({ ethereum: testnetStrategy() }, store());
     expect(await faucet.grant("polygon", WALLET)).toMatchObject({ ok: false, status: 400 });
     expect(await faucet.grant("ethereum", "0x123")).toMatchObject({ ok: false, status: 400 });
     expect(await faucet.grant("base", WALLET)).toMatchObject({ ok: false, status: 400 });
     expect(await faucet.grant("ethereum", WALLET)).toMatchObject({ ok: false, failedStep: "testnet" });
+  });
+});
+
+const MINTER = getAddress("0x000000000000000000000000000000000000d3a1");
+const testTokenAbi = parseAbi(["function MINTER() view returns (address)", "function mint(address to, uint256 amount)"]);
+
+/**
+ * A public test network: test tokens whose MINTER is `minterOf(symbol)` (MINTER by default), the USD feeds, native
+ * balances; and the minter, which records each transaction it sends and confirms it unless `revert` names its index.
+ */
+function fakeTestnet(opts: { chainId?: number; minterOf?: (symbol: string) => Address | null; balance?: bigint; revert?: number; pending?: number } = {}) {
+  const sent: { to: Address; data?: Hex; value?: bigint; nonce: number }[] = [];
+  const symbolAt = (address: Address) => Object.keys(TOKENS).find((s) => getAddress(TOKENS[s]!) === getAddress(address));
+  const rpc: Rpc = {
+    async request({ method, params = [] }) {
+      switch (method) {
+        case "eth_chainId":
+          return `0x${(opts.chainId ?? 11155111).toString(16)}`;
+        case "eth_getBalance":
+          return `0x${(opts.balance ?? 0n).toString(16)}`;
+        case "eth_call": {
+          const { to, data } = params[0] as { to: Address; data: Hex };
+          const feedSymbol = symbolAtFeed(to);
+          if (feedSymbol) {
+            const f = decodeFunctionData({ abi: feedAbi, data });
+            if (f.functionName === "decimals") return encodeFunctionResult({ abi: feedAbi, functionName: "decimals", result: 8 });
+            return encodeFunctionResult({ abi: feedAbi, functionName: "latestRoundData", result: [1n, PRICES_8[feedSymbol]!, 0n, 0n, 1n] });
+          }
+          const symbol = symbolAt(to)!;
+          if (data.startsWith("0x313ce567")) return encodeFunctionResult({ abi: erc20, functionName: "decimals", result: symbol === "USDC" ? 6 : 18 });
+          const minter = opts.minterOf ? opts.minterOf(symbol) : MINTER;
+          if (minter === null) throw new Error("execution reverted");
+          return encodeFunctionResult({ abi: testTokenAbi, functionName: "MINTER", result: minter });
+        }
+        default:
+          throw new Error(`unexpected ${method}`);
+      }
+    },
+  };
+  const minter = {
+    address: MINTER,
+    nonce: async () => opts.pending ?? 7,
+    send: async (tx: { to: Address; data?: Hex; value?: bigint; nonce: number }) => {
+      sent.push(tx);
+      return `0x${sent.length.toString(16).padStart(64, "0")}` as Hex;
+    },
+    confirmed: async (hash: Hex) => Number(BigInt(hash)) - 1 !== opts.revert,
+  };
+  return { rpc, minter, sent };
+}
+
+describe("test-network faucet", () => {
+  const store = () => new GrantStore(mkdtempSync(join(tmpdir(), "faucet-")));
+  const strategy = (t: ReturnType<typeof fakeTestnet>, gasEth?: string) =>
+    testnetStrategy({ rpc: t.rpc, allowedChainIds: [11155111, 84532], external: EXTERNAL, minter: t.minter, gasEth });
+
+  it("mints every wallet token to the wallet from the minter, with consecutive nonces, and records the transactions", async () => {
+    const t = fakeTestnet();
+    const result = await new Faucet({ ethereum: strategy(t) }, store()).grant("ethereum", WALLET);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.record.steps.map((s) => s.step)).toEqual(["check chain", ...GRANTS.ethereum.tokens.map((x) => `token ${x.symbol}`)]);
+    expect(t.sent.map((x) => x.nonce)).toEqual(GRANTS.ethereum.tokens.map((_, i) => 7 + i));
+    const usdc = t.sent.find((x) => getAddress(x.to) === getAddress(USDC))!;
+    expect(decodeFunctionData({ abi: testTokenAbi, data: usdc.data! })).toEqual({ functionName: "mint", args: [WALLET, 25_000_000_000n] });
+    expect(t.sent.every((x) => x.value === undefined)).toBe(true);
+    expect(result.record.steps.every((s) => s.step === "check chain" || s.txHash)).toBe(true);
+  });
+
+  it("tops the wallet up to FAUCET_GAS_ETH only when set, and only by what it lacks", async () => {
+    const t = fakeTestnet({ balance: 4_000_000_000_000_000n });
+    const result = await new Faucet({ ethereum: strategy(t, "0.01") }, store()).grant("ethereum", WALLET);
+    expect(result.ok).toBe(true);
+    expect(t.sent[0]).toMatchObject({ to: WALLET, value: 6_000_000_000_000_000n, nonce: 7 });
+    expect(t.sent[1]?.nonce).toBe(8);
+  });
+
+  it("refuses a chain that is not an allowed test network, and sends nothing", async () => {
+    for (const chainId of [1, 31337, 10]) {
+      const t = fakeTestnet({ chainId });
+      const result = await new Faucet({ ethereum: strategy(t) }, store()).grant("ethereum", WALLET);
+      expect(result).toMatchObject({ ok: false, status: 409, failedStep: "check chain" });
+      expect(t.sent).toEqual([]);
+    }
+  });
+
+  it("fails only the line of a token the minter cannot mint", async () => {
+    const t = fakeTestnet({ minterOf: (s) => (s === "LINK" ? null : s === "AAVE" ? getAddress("0x00000000000000000000000000000000000000e1") : MINTER) });
+    const result = await new Faucet({ ethereum: strategy(t) }, store()).grant("ethereum", WALLET);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.record.steps.filter((s) => s.failed).map((s) => s.step)).toEqual(["token LINK", "token AAVE"]);
+    expect(t.sent).toHaveLength(GRANTS.ethereum.tokens.length - 2);
+  });
+
+  it("names the token whose mint reverted and records no grant", async () => {
+    const t = fakeTestnet({ revert: 1 });
+    const faucet = new Faucet({ ethereum: strategy(t) }, store());
+    expect(await faucet.grant("ethereum", WALLET)).toMatchObject({ ok: false, status: 500, failedStep: `token ${GRANTS.ethereum.tokens[1]!.symbol}` });
+    expect(faucet.lookup("ethereum", WALLET)).toBeNull();
   });
 });
 
@@ -208,5 +308,15 @@ describe("config", () => {
     expect(() => loadConfig({ FAUCET_RPC_ETHEREUM: "x", FAUCET_CHAIN_IDS: "31337,1" })).toThrow(/mainnet/);
     expect(() => loadConfig({ FAUCET_RPC_ETHEREUM: "x", FAUCET_HOST: "0.0.0.0" })).toThrow(/127.0.0.1/);
     expect(() => loadConfig({})).toThrow(/FAUCET_RPC/);
+  });
+
+  it("on a test network, defaults to Sepolia and Base Sepolia and needs the minter's keystore", () => {
+    const signer = { FAUCET_SIGNER_KEYSTORE: "/keys/deployer", FAUCET_SIGNER_PASSWORD_FILE: "/keys/password" };
+    const config = loadConfig({ FAUCET_CHAIN_KIND: "testnet", FAUCET_RPC_ETHEREUM: "http://127.0.0.1:8665", ...signer });
+    expect(config).toMatchObject({ kind: "testnet", chainIds: [11155111, 84532], signer: { keystore: "/keys/deployer", passwordFile: "/keys/password" }, gasEth: "0" });
+    expect(() => loadConfig({ FAUCET_CHAIN_KIND: "testnet", FAUCET_RPC_ETHEREUM: "x" })).toThrow(/FAUCET_SIGNER_KEYSTORE/);
+    expect(() => loadConfig({ FAUCET_CHAIN_KIND: "testnet", FAUCET_RPC_ETHEREUM: "x", FAUCET_CHAIN_IDS: "11155111,31337", ...signer })).toThrow(/test networks/);
+    expect(() => loadConfig({ FAUCET_CHAIN_KIND: "testnet", FAUCET_RPC_ETHEREUM: "x", FAUCET_GAS_ETH: "lots", ...signer })).toThrow(/FAUCET_GAS_ETH/);
+    expect(() => loadConfig({ FAUCET_RPC_ETHEREUM: "x", ...signer })).toThrow(/holds no key/);
   });
 });

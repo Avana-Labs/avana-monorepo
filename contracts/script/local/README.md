@@ -118,3 +118,30 @@ Tokens and pools a Hub file needs that the test world lacks go in `contracts/scr
 ## Values the DAO sets
 
 Caps, credit lines, First-Loss Reserve and DAO offset amounts, and speed limits are set by the Aave DAO and governance on a real network, never by a release config or a Hub file. The local stack needs some to run: `test-values.json` holds them (per debt asset, per collateral token with a default, per market with a default), and the stack merges them into each chain's config. Hub files carry structure and page text only.
+
+## The app on the test networks
+
+`script/testnet/app.ts` runs the same services and the webapp on Sepolia (11155111) and Base Sepolia (84532) once both are deployed by the test-network deploy (`deployments-local/sepolia`, `deployments-local/base-sepolia`). From `contracts/`:
+
+```bash
+node script/testnet/app.ts up --chains sepolia,base-sepolia --deployments <deploying worktree>/contracts/deployments-local
+```
+
+```bash
+node script/testnet/app.ts status
+```
+
+```bash
+node script/testnet/app.ts down
+```
+
+| Piece | What runs |
+|---|---|
+| RPC proxies | One per network (`script/testnet/rpc-proxy.ts`, ports 8665 and 8666): HTTP with retries, WebSocket tunnelled, CORS for the webapp only. Every service and the browser read the network through it, so the RPC URL is held by the proxy alone |
+| Indexer | Ponder on the `testnet` network set (PGlite, port 42170), from each release's first block. Its schema is `testnet_<hash>` of the manifests and the indexer's code (recorded in `deployments-local/testnet-app/indexer-schema`): after a Hub release rewrites a manifest, `up` starts it on the new schema, a full reindex |
+| Convex | A local deployment of `services/convex`, its crons on the test networks (`AVANA_CHAIN_IDS=11155111,84532`), each chain's `deployments` row from its manifest |
+| Monitor, keeper | The `testnet` network set. The keeper observes; with `KEEPER_KMS_KEY_ID_SEPOLIA` or `KEEPER_KMS_KEY_ID_BASE_SEPOLIA` set it is active on that chain (a test-network keeper never signs from a local keystore) |
+| Faucet | Test-network mode on port 42180: it mints the grant's test tokens from the deployer keystore of the private config (`AVANA_TESTNET_CONFIG`); `--gas-eth 0.01` also tops each wallet up to that much test ETH |
+| Webapp | `next dev` on http://127.0.0.1:3100, chain IDs 11155111 and 84532, the "Sepolia" network badge |
+
+Inputs, none in the repository: the RPC URLs `SEPOLIA_RPC_URL` and `BASE_SEPOLIA_RPC_URL` (the environment, or the deploying worktree's encrypted secrets of `stack.ts secrets`; optional `SEPOLIA_WS_URL` and `BASE_SEPOLIA_WS_URL` when the provider's WebSocket is not its https URL as wss), and `AVANA_TESTNET_CONFIG`. Every line the command prints is redacted. Its logs, process records and stores are in `deployments-local/testnet-app/` (`app.env` lists the endpoints), apart from the local stack's, and none of its ports is the local stack's, so both run on one machine. The indexer and Convex refuse to share a worktree's stores with a running local stack (`APP_CONVEX_DIR` runs another worktree's Convex). `APP_PORT_<NAME>` moves a port.
