@@ -117,7 +117,7 @@ prove('MATH-AR-05b', 'debtRay*price (toValue of debt) < 2^256 for debt <= 1e15 u
 # MATH-AR-32 verifies: SPEC-HUB-001, SPEC-CF-001
 computed('MATH-AR-32', 'LP collateral factor examples',
          [('USDC 7,800 / USDT 7,500, prf 3,750 -> 2,812 (2,812.5 floored)', 2812, min(7800, 7500) * 3750 // BPS),
-          ('both legs 7,800, prf 4,000 (registry ceiling) -> 3,120', 3120, 7800 * 4000 // BPS),
+          ('both legs 7,800, prf 4,000 -> 3,120', 3120, 7800 * 4000 // BPS),
           ('7,800 / 7,500, prf 4,000 -> 3,000', 3000, min(7800, 7500) * 4000 // BPS)])
 
 # ---------------------------------------------------------------------------

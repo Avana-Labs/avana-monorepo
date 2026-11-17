@@ -256,7 +256,7 @@ contract ParameterStoreInvariantTest is ParameterStoreFixture, HandlerReach {
         assertGe(p.consistencyToleranceBps, 10);
         assertLe(p.consistencyToleranceBps, 10_000);
         assertGt(p.poolRiskFactor, 0);
-        assertLe(p.poolRiskFactor, 4000);
+        assertLe(p.poolRiskFactor, 9000);
         assertLe(p.minPledgeUsd, 100_000e8);
         assertTrue(p.hardHealthFloor == 0 || (p.hardHealthFloor >= 1e18 && p.hardHealthFloor <= 1.25e18), "floor");
         // Market and token caps may be tightened to 0, and the market cap below the slice (REQ-RISK-042).

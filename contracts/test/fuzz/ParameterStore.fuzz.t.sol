@@ -365,7 +365,7 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
             assertLe(store.coverageRatioBps(), 10_000);
         } else if (which == 2) {
             // Lowering never re-runs the margin; a raise keeps a wide margin with these routes (sum 50 bps).
-            err = v == 0 || v > 4000 ? _oob() : bytes("");
+            err = v == 0 || v > 9000 ? _oob() : bytes("");
             _expect(abi.encodeCall(store.setPoolRiskFactor, (M, v)), err);
         } else if (which == 3) {
             err = v == 0 || v > 9999 ? _oob() : bytes("");

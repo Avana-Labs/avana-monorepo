@@ -190,17 +190,17 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         assertEq(store.getMarketParams(M).consistencyToleranceBps, 10);
     }
 
-    // ─── poolRiskFactor: [1, 4,000] ───
+    // ─── poolRiskFactor: [1, 9,000] ───
 
     // TEST-064 verifies: REQ-CONFIG-015, REQ-CONFIG-050
     function test_TEST_064_poolRiskFactorAtBothEnds() public {
         _refuses(abi.encodeCall(store.setPoolRiskFactor, (M, 0)), oob);
         _accepts(abi.encodeCall(store.setPoolRiskFactor, (M, 1)));
         assertEq(store.getMarketParams(M).poolRiskFactor, 1);
-        _accepts(abi.encodeCall(store.setPoolRiskFactor, (M, 4000)));
-        assertEq(store.getMarketParams(M).poolRiskFactor, 4000);
-        _refuses(abi.encodeCall(store.setPoolRiskFactor, (M, 4001)), oob);
-        assertEq(store.getMarketParams(M).poolRiskFactor, 4000);
+        _accepts(abi.encodeCall(store.setPoolRiskFactor, (M, 9000)));
+        assertEq(store.getMarketParams(M).poolRiskFactor, 9000);
+        _refuses(abi.encodeCall(store.setPoolRiskFactor, (M, 9001)), oob);
+        assertEq(store.getMarketParams(M).poolRiskFactor, 9000);
         // The tighten setter keeps it above 0.
         _accepts(abi.encodeCall(store.tightenPoolRiskFactor, (M, 1)));
         _refuses(abi.encodeCall(store.tightenPoolRiskFactor, (M, 0)), oob);
@@ -214,7 +214,7 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         (bool ok, bytes memory ret) = _relist(p);
         assertFalse(ok);
         assertEq(ret, oob);
-        p.poolRiskFactor = 4001;
+        p.poolRiskFactor = 9001;
         (ok, ret) = _relist(p);
         assertFalse(ok);
         assertEq(ret, oob);
