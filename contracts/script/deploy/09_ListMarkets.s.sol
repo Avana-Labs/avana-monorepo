@@ -113,7 +113,8 @@ contract ListMarkets is ListingBase {
         }
         string memory step = vm.envString("AVANA_LISTING_STEP");
         if (_eq(step, "setup")) {
-            _propose(_setup(c), false);
+            Operation memory op = _setup(c);
+            _proposeInParts(op, _everyCall(op.targets.length));
         } else if (_eq(step, "oracles")) {
             _oracles();
         } else if (_eq(step, "markets")) {
@@ -599,12 +600,14 @@ contract ListMarkets is ListingBase {
         return vm.envOr("AVANA_OPERATION_GAS_BUDGET", budget);
     }
 
-    /// @notice Schedules the listing batch as one or more operations, each estimated to execute within the chain's
-    /// budget (`_operationGasBudget`). The batch is cut only between markets: the routes of listed markets and the
-    /// debt reserves stay with the first market, and each market's calls stay together. Part 1 keeps the name
-    /// `listing-markets`; part k is `listing-markets.<k>` and names part k-1 as its predecessor, so the parts execute
-    /// in order (`05_ExecuteOperations` follows them). The last part carries the listing metadata salt, so the pages
-    /// load once every market of the listing is on chain; the others' salts derive from it.
+    /// @notice Schedules a listing batch as one or more operations, each estimated to execute within the chain's
+    /// budget (`_operationGasBudget`). The batch is cut only at the group starts in `starts`: for `listing-markets`
+    /// between markets (the routes of listed markets and the debt reserves stay with the first market, and each
+    /// market's calls stay together); for `listing-setup` between any two calls (`_everyCall`), since the parts run
+    /// in order. Part 1 keeps the batch's name; part k is `<name>.<k>` and names part k-1 as its predecessor, so the
+    /// parts execute in order (`05_ExecuteOperations` follows them). The last part carries the batch's salt (for
+    /// `listing-markets` the listing metadata salt, so the pages load once every market of the listing is on chain);
+    /// the others' salts derive from it.
     function _proposeInParts(
         Operation memory op,
         uint256[] memory starts
@@ -626,7 +629,17 @@ contract ListMarkets is ListingBase {
             _propose(part, false);
             previous = _operationId(timelock, part);
         }
-        if (parts > 1) console2.log("listing-markets split in", parts, "operations, executed in order");
+        if (parts > 1) console2.log(string.concat(op.name, " split in"), parts, "operations, executed in order");
+    }
+
+    /// @notice Group starts that let `_cuts` cut a batch of `n` calls between any two calls: one group per call.
+    function _everyCall(
+        uint256 n
+    ) private pure returns (uint256[] memory starts) {
+        starts = new uint256[](n);
+        for (uint256 i = 0; i < n; ++i) {
+            starts[i] = i;
+        }
     }
 
     /// @notice Where the batch is cut: `cuts[k]` is the first call of part k and the last entry is the batch length.
@@ -652,7 +665,8 @@ contract ListMarkets is ListingBase {
             require(
                 TX_BASE_GAS + groupGas <= budget,
                 string.concat(
-                    "listing-markets: the calls from ",
+                    op.name,
+                    ": the calls from ",
                     op.labels[from],
                     " need about ",
                     vm.toString(groupGas),
@@ -708,7 +722,7 @@ contract ListMarkets is ListingBase {
             if (!ok) {
                 // The call's own revert data, which forge decodes (a custom error by name), after the call's label.
                 console2.log(
-                    "listing-markets: this call reverts when simulated, so it would at execution:", op.labels[i]
+                    string.concat(op.name, ": this call reverts when simulated, so it would at execution:"), op.labels[i]
                 );
                 assembly ("memory-safe") {
                     revert(add(ret, 0x20), mload(ret))
