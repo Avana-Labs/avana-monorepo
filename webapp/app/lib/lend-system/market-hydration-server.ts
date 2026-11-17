@@ -82,6 +82,11 @@ export async function fetchLendMarketSnapshots(): Promise<LendConvexSnapshot[]> 
         scope: row.scope,
         name: row.name,
         symbol: row.symbol,
+        // Without these the list groups every row under "Other Assets" and drops the Hub and chain.
+        ...(row.category ? { category: row.category } : {}),
+        ...(row.hubId ? { hubId: row.hubId } : {}),
+        ...(row.hubLabel ? { hubLabel: row.hubLabel } : {}),
+        ...(row.chainId !== undefined ? { chainId: row.chainId } : {}),
         reserveFactorPct: row.reserveFactorPct,
         rewardsApyPct: row.rewardsApyPct,
         assetPriceUsd: price?.priceUsd,
@@ -96,6 +101,19 @@ export async function fetchLendMarketSnapshots(): Promise<LendConvexSnapshot[]> 
   } catch (error) {
     reportServerFetchFailure("fetchLendMarketSnapshots", error)
     return []
+  }
+}
+
+/** Each Lend market's supply APY (percent) for the last 24 hours, hourly, by slug. Empty when unreachable. */
+export async function fetchLendSparklines(slugs: readonly string[]): Promise<Record<string, number[]>> {
+  const client = convexClient()
+  if (!client || slugs.length === 0) return {}
+  try {
+    const rows = await client.query(api.markets.getLendSparklines, { slugs: [...slugs] })
+    return Object.fromEntries(rows.map((row) => [row.slug, row.points]))
+  } catch (error) {
+    reportServerFetchFailure("fetchLendSparklines", error)
+    return {}
   }
 }
 

@@ -31,9 +31,13 @@ describe("borrow detail contract", () => {
 describe("heroContractFromRows", () => {
   const pool = "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640"
   const checksummed = "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640"
-  const row = (overrides: Partial<{ address: string; label: string; href: string; isSynthetic: boolean }> = {}) => ({
+  // The shape services/convex serves: the short address as label, the slot as salt.
+  const row = (
+    overrides: Partial<{ address: string; label: string; salt: string; href: string; isSynthetic: boolean }> = {},
+  ) => ({
     address: pool,
-    label: "Pool",
+    label: "0x88e6...5640",
+    salt: "vault",
     href: `https://etherscan.io/address/${pool}`,
     isSynthetic: false,
     ...overrides,
@@ -42,13 +46,22 @@ describe("heroContractFromRows", () => {
   it("returns the checksummed address and its explorer link", () => {
     expect(
       heroContractFromRows(
-        [row({ label: "Hub", address: "0x1111111111111111111111111111111111111111" }), row()],
+        [row({ salt: "oracleRouter", address: "0x1111111111111111111111111111111111111111" }), row()],
         "Pool",
       ),
     ).toEqual({
       address: checksummed,
       explorerHref: `https://etherscan.io/address/${checksummed}`,
     })
+  })
+
+  it("shows a market's token when it has no vault row, and an asset's token", () => {
+    const token = row({ salt: "token" })
+    expect(heroContractFromRows([token], "Pool")?.address).toBe(checksummed)
+    expect(heroContractFromRows([token], "Token")?.address).toBe(checksummed)
+    expect(
+      heroContractFromRows([token, row({ address: "0x1111111111111111111111111111111111111111" })], "Pool")?.address,
+    ).toBe("0x1111111111111111111111111111111111111111")
   })
 
   it("never fabricates an address", () => {

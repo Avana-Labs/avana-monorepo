@@ -96,9 +96,12 @@ function HoverTooltip({ asset, pointIndex, left }: { asset: FeaturedAsset; point
   const { t } = useTranslation()
   const points = useMemo(() => parsePathPoints(asset.path ?? ""), [asset.path])
   const point = points[pointIndex] ?? points[0]
+  // A market with no APY history yet has no line to point at.
+  if (!point) return null
   const timeIndex = Math.round((pointIndex / Math.max(points.length - 1, 1)) * (TIME_LABELS.length - 1))
   const deviation = ((60 - point.y) / 60) * 0.34
-  const value = Math.max(0, asset.apy + deviation)
+  // The recorded APY at that point when the card has a series.
+  const value = asset.values?.[pointIndex] ?? Math.max(0, asset.apy + deviation)
 
   return (
     <div

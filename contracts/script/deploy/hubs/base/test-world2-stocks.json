@@ -17,20 +17,20 @@
       "symbol": "USDC",
       "category": "stable",
       "risk": {
-        "summary": "USDC lent on the Hub. Local test content for the development chains; not a risk review.",
+        "summary": "USDC lent on the Hub. Test network listing; not a risk review.",
         "reviewedAt": "2026-11-16",
         "factors": [
           {
             "id": "pairVolatility",
             "label": "Pair volatility",
             "level": "elevated",
-            "text": "Local test content for the development chains; not a risk review."
+            "text": "Test network listing; not a risk review."
           },
           {
             "id": "marketHours",
             "label": "Market hours",
             "level": "elevated",
-            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
           }
         ]
       }
@@ -39,20 +39,20 @@
       "symbol": "GHO",
       "category": "stable",
       "risk": {
-        "summary": "GHO lent on the Hub. Local test content for the development chains; not a risk review.",
+        "summary": "GHO lent on the Hub. Test network listing; not a risk review.",
         "reviewedAt": "2026-11-16",
         "factors": [
           {
             "id": "pairVolatility",
             "label": "Pair volatility",
             "level": "elevated",
-            "text": "Local test content for the development chains; not a risk review."
+            "text": "Test network listing; not a risk review."
           },
           {
             "id": "marketHours",
             "label": "Market hours",
             "level": "elevated",
-            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
           }
         ]
       }
@@ -62,20 +62,20 @@
     {
       "symbol": "GHO",
       "risk": {
-        "summary": "GHO borrowed against stock liquidity positions. Local test content for the development chains; not a risk review.",
+        "summary": "GHO borrowed against stock liquidity positions. Test network listing; not a risk review.",
         "reviewedAt": "2026-11-16",
         "factors": [
           {
             "id": "pairVolatility",
             "label": "Pair volatility",
             "level": "elevated",
-            "text": "Local test content for the development chains; not a risk review."
+            "text": "Test network listing; not a risk review."
           },
           {
             "id": "marketHours",
             "label": "Market hours",
             "level": "elevated",
-            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
           }
         ]
       }
@@ -83,20 +83,20 @@
     {
       "symbol": "USDC",
       "risk": {
-        "summary": "USDC borrowed against stock liquidity positions. Local test content for the development chains; not a risk review.",
+        "summary": "USDC borrowed against stock liquidity positions. Test network listing; not a risk review.",
         "reviewedAt": "2026-11-16",
         "factors": [
           {
             "id": "pairVolatility",
             "label": "Pair volatility",
             "level": "elevated",
-            "text": "Local test content for the development chains; not a risk review."
+            "text": "Test network listing; not a risk review."
           },
           {
             "id": "marketHours",
             "label": "Market hours",
             "level": "elevated",
-            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
           }
         ]
       }
@@ -139,20 +139,38 @@
       "spoke": "slipStocks",
       "category": "stock",
       "risk": {
-        "summary": "AMZNc/USDC. Local test content for the development chains; not a risk review.",
+        "summary": "AMZNc/USDC. Test network listing; not a risk review.",
         "reviewedAt": "2026-11-16",
         "factors": [
           {
             "id": "pairVolatility",
             "label": "Pair volatility",
             "level": "elevated",
-            "text": "Local test content for the development chains; not a risk review."
+            "text": "Test network listing; not a risk review."
           },
           {
             "id": "marketHours",
             "label": "Market hours",
             "level": "elevated",
-            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           }
         ]
       }
@@ -163,20 +181,38 @@
       "spoke": "slipStocks",
       "category": "stock",
       "risk": {
-        "summary": "SNDKc/USDC. Local test content for the development chains; not a risk review.",
+        "summary": "SNDKc/USDC. Test network listing; not a risk review.",
         "reviewedAt": "2026-11-16",
         "factors": [
           {
             "id": "pairVolatility",
             "label": "Pair volatility",
             "level": "elevated",
-            "text": "Local test content for the development chains; not a risk review."
+            "text": "Test network listing; not a risk review."
           },
           {
             "id": "marketHours",
             "label": "Market hours",
             "level": "elevated",
-            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           }
         ]
       }
@@ -187,20 +223,38 @@
       "spoke": "slipStocks",
       "category": "stock",
       "risk": {
-        "summary": "GOOGLc/USDC. Local test content for the development chains; not a risk review.",
+        "summary": "GOOGLc/USDC. Test network listing; not a risk review.",
         "reviewedAt": "2026-11-16",
         "factors": [
           {
             "id": "pairVolatility",
             "label": "Pair volatility",
             "level": "elevated",
-            "text": "Local test content for the development chains; not a risk review."
+            "text": "Test network listing; not a risk review."
           },
           {
             "id": "marketHours",
             "label": "Market hours",
             "level": "elevated",
-            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           }
         ]
       }
@@ -211,20 +265,38 @@
       "spoke": "slipStocks",
       "category": "stock",
       "risk": {
-        "summary": "NVDAc/USDC. Local test content for the development chains; not a risk review.",
+        "summary": "NVDAc/USDC. Test network listing; not a risk review.",
         "reviewedAt": "2026-11-16",
         "factors": [
           {
             "id": "pairVolatility",
             "label": "Pair volatility",
             "level": "elevated",
-            "text": "Local test content for the development chains; not a risk review."
+            "text": "Test network listing; not a risk review."
           },
           {
             "id": "marketHours",
             "label": "Market hours",
             "level": "elevated",
-            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           }
         ]
       }
@@ -235,20 +307,38 @@
       "spoke": "slipStocks",
       "category": "stock",
       "risk": {
-        "summary": "SPCXc/USDC. Local test content for the development chains; not a risk review.",
+        "summary": "SPCXc/USDC. Test network listing; not a risk review.",
         "reviewedAt": "2026-11-16",
         "factors": [
           {
             "id": "pairVolatility",
             "label": "Pair volatility",
             "level": "elevated",
-            "text": "Local test content for the development chains; not a risk review."
+            "text": "Test network listing; not a risk review."
           },
           {
             "id": "marketHours",
             "label": "Market hours",
             "level": "elevated",
-            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           }
         ]
       }
@@ -259,23 +349,75 @@
       "spoke": "slipStocks",
       "category": "stock",
       "risk": {
-        "summary": "METAc/USDC. Local test content for the development chains; not a risk review.",
+        "summary": "METAc/USDC. Test network listing; not a risk review.",
         "reviewedAt": "2026-11-16",
         "factors": [
           {
             "id": "pairVolatility",
             "label": "Pair volatility",
             "level": "elevated",
-            "text": "Local test content for the development chains; not a risk review."
+            "text": "Test network listing; not a risk review."
           },
           {
             "id": "marketHours",
             "label": "Market hours",
             "level": "elevated",
-            "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           }
         ]
       }
+    }
+  ],
+  "tokens": [
+    {
+      "symbol": "USDC",
+      "name": "USD Coin"
+    },
+    {
+      "symbol": "GHO",
+      "name": "Gho Token"
+    },
+    {
+      "symbol": "AMZNc",
+      "name": "Amazon"
+    },
+    {
+      "symbol": "SNDKc",
+      "name": "Sandisk"
+    },
+    {
+      "symbol": "GOOGLc",
+      "name": "Alphabet"
+    },
+    {
+      "symbol": "NVDAc",
+      "name": "NVIDIA"
+    },
+    {
+      "symbol": "SPCXc",
+      "name": "SpaceX"
+    },
+    {
+      "symbol": "METAc",
+      "name": "Meta Platforms"
     }
   ]
 }

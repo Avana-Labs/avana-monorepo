@@ -10,7 +10,7 @@ import { chainSlug } from "./lib/format.ts";
 import { hubAssetKey, interestRateModel, marketAllocation, poolBorrowables, headlineReserve } from "./lib/pages.ts";
 import { assetRiskParameters, atRisk, cashflow, contentRiskAssessment, debtPremiumRange, debtRiskAssessment, lendRiskAssessment, lendRiskParameters, liquidationRisk, poolRiskAssessment, poolRiskParameters, type LiquidationWindow } from "./lib/riskViews.ts";
 import type { ChangelogRow, ContractAddressRow, PageScope } from "./lib/uiTypes.ts";
-import { type World, bySlug, contentOf, lendKey, reserveKey, scopePoints, sliceOf, symbolOf } from "./model.ts";
+import { type World, bySlug, contentOf, lendKey, reserveKey, scopePoints, seriesNow, sliceOf, symbolOf } from "./model.ts";
 import { liquidationTotals } from "./lib/rollups.ts";
 import { liquidationPricing } from "./rollups.ts";
 import type { HubAssetDoc, MarketDoc, SpokeReserveDoc } from "./model.ts";
@@ -23,6 +23,27 @@ function pageKey(w: World, scope: PageScope, slug: string): { chainId: number; k
   if (scope === "lend") return { chainId: row.chainId, key: lendKey(row as HubAssetDoc) };
   if (scope === "asset") return { chainId: row.chainId, key: reserveKey(row as SpokeReserveDoc) };
   return { chainId: row.chainId, key: (row as MarketDoc).marketId };
+}
+
+/** How a changelog row names the event that made the change ("Risk configuration update"), from its raw kind. */
+const CHANGE_SOURCES: Readonly<Record<string, string>> = {
+  "AaveSpoke.AddDynamicReserveConfig": "Risk configuration added",
+  "AaveSpoke.UpdateDynamicReserveConfig": "Risk configuration update",
+  "AaveSpoke.UpdateReserveConfig": "Reserve configuration update",
+  "AaveHub.UpdateAssetConfig": "Asset configuration update",
+  "AaveHub.UpdateSpokeConfig": "Spoke configuration update",
+  "MarketRegistry.CreditLineSet": "Credit line update",
+  "MarketRegistry.CreditLineRecorded": "Credit line update",
+  "MarketRegistry.MarketOffboarding": "Market offboarding",
+};
+
+/** A raw event kind as words: the mapped label, else the event name split ("SetOracle" → "Set oracle"). */
+export function changeSourceLabel(kind: string): string {
+  const known = CHANGE_SOURCES[kind];
+  if (known) return known;
+  const name = kind.split(".").pop() ?? kind;
+  const words = name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 export async function readChangelog(ctx: QueryCtx, w: World, scope: PageScope, slug: string): Promise<ChangelogRow[]> {
@@ -41,7 +62,7 @@ export async function readChangelog(ctx: QueryCtx, w: World, scope: PageScope, s
     previous: r.previous,
     current: r.current,
     date: new Date(r.at).toISOString().slice(0, 10),
-    source: r.source,
+    source: changeSourceLabel(r.source),
     executor: "Governance",
     category: "Risk",
     ...(explorer ? { href: `${explorer}/tx/${r.txHash}` } : {}),
@@ -54,6 +75,8 @@ export async function readContent(ctx: QueryCtx, w: World, scope: PageScope, slu
   if (!c) return null;
   return {
     description: c.description,
+    // The About card's full text when the listing gives one (the card folds it behind "read more").
+    ...(c.longText ? { longText: c.longText } : {}),
     stats: c.stats,
     history: c.history,
     faqs: c.faqs,
@@ -177,13 +200,14 @@ export async function readCashflow(ctx: QueryCtx, w: World, scope: "lend" | "ass
   if (!row) return null;
   const asset = scope === "lend" ? (row as HubAssetDoc) : w.assetsByKey.get(hubAssetKey(row as SpokeReserveDoc));
   if (!asset) return null;
-  const from = Math.floor(Date.now() / 1000) - 365 * 86_400;
-  const hubDays = filledBuckets("hubAsset", combineSources("hubAsset", await scopePoints(ctx, "hubAsset", hubAssetKey(asset), "day", from - 86_400)), from, Math.floor(Date.now() / 1000), "day");
+  const now = await seriesNow(ctx, asset.chainId);
+  const from = now - 365 * 86_400;
+  const hubDays = filledBuckets("hubAsset", combineSources("hubAsset", await scopePoints(ctx, "hubAsset", hubAssetKey(asset), "day", from - 86_400)), from, now, "day");
   let owedByDay: Map<number, Values> | null = null;
   if (scope === "asset") {
     const r = row as SpokeReserveDoc;
     const slice = await scopePoints(ctx, "hubAssetSpoke", `${hubAssetKey(asset)}:${r.spoke}`, "day", from - 86_400);
-    owedByDay = new Map(filledBuckets("hubAssetSpoke", combineSources("hubAssetSpoke", slice), from, Math.floor(Date.now() / 1000), "day").map((d) => [d.t, d.values]));
+    owedByDay = new Map(filledBuckets("hubAssetSpoke", combineSources("hubAssetSpoke", slice), from, now, "day").map((d) => [d.t, d.values]));
   }
   const days = hubDays.map((d) => ({ t: d.t, hub: d.values, ...(owedByDay ? { owed: owedByDay.get(d.t)?.owed ?? "0" } : {}) }));
   return cashflow(days, asset.decimals, asset.liquidityFeeBps);

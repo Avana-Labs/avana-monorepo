@@ -238,6 +238,39 @@ function riskErrors(where: string, r: Risk | undefined, required: boolean): stri
 }
 
 /** The fields of a page's text that are set, for merging over generated text. */
+/** The FAQs every Lend page carries, as the app's reference pages word them. */
+export function lendFaqs(symbol: string, name: string): Faq[] {
+  return [
+    { question: `What is supplying ${symbol}?`, answer: `Supplying ${name} deposits it into the Avana lending market to earn yield. You earn the supply APY plus any active rewards, and you can withdraw available liquidity at any time.` },
+    { question: `How is the ${symbol} supply APY determined?`, answer: "Supply APY tracks borrow demand. As utilization rises, borrowers pay more and a larger share goes to suppliers. Rewards APY, when present, is an extra incentive on top of that base rate." },
+    { question: `Can I withdraw my ${symbol} anytime?`, answer: "You can withdraw up to the market's available liquidity. When utilization is very high, withdrawable cash can be limited until borrowers repay or new supply arrives." },
+    { question: "What is the reserve factor?", answer: "The reserve factor is the share of borrower interest the protocol keeps as a safety buffer instead of paying suppliers. Lower-risk markets use a smaller reserve factor." },
+    { question: `What risks should I watch when supplying ${symbol}?`, answer: `Watch smart-contract risk, ${name}'s own volatility or de-peg risk, and utilization spikes that can delay withdrawals. Higher-risk-tier markets keep a larger reserve and can move more when demand shifts.` },
+  ];
+}
+
+/** The FAQs every Borrow asset page carries. */
+export function borrowAssetFaqs(symbol: string, name: string): Faq[] {
+  return [
+    { question: `What is ${symbol}?`, answer: `${name} is a borrowable asset on Avana. You can take a ${symbol} loan against supported LP collateral, with the rate, available liquidity, and limits set by the active market.` },
+    { question: `How do I borrow ${symbol}?`, answer: `Choose a collateral pool that lists ${symbol}, supply that LP position, then open Borrow and enter the amount. Confirm in your wallet. Debt, health factor, and available borrow update after the transaction settles.` },
+    { question: `What determines the ${symbol} borrow rate?`, answer: "Borrow APY moves with utilization and available liquidity. When more of the market is borrowed, the rate usually rises so new borrowers pay more and suppliers earn more." },
+    { question: "What is health factor, and when is a position liquidated?", answer: "Health factor compares your collateral value to your debt after risk parameters. If it falls to 1.0, the position can be liquidated. Volatile collateral, a rising borrow rate, or a thinner pool all reduce the buffer." },
+    { question: `How do I repay ${symbol}?`, answer: "Open Repay on the same market, choose the amount or repay in full, and confirm. Repaying lowers debt and raises health factor. You can then withdraw unused collateral if the remaining position stays healthy." },
+  ];
+}
+
+/** The FAQs every LP collateral market page carries. */
+export function poolFaqs(name: string): Faq[] {
+  return [
+    { question: `What is ${name}?`, answer: `${name} is an LP pool you can post as collateral on Avana. The position earns swap fees in the underlying DEX, and Avana uses its value — after risk parameters — to unlock borrow power.` },
+    { question: "How do I use this pool as collateral?", answer: "Supply the LP position to this market, then borrow a supported asset against it. Borrowing power follows the pool's collateral factor and your health factor. You can add or remove collateral as long as the remaining position stays healthy." },
+    { question: "How do liquidity providers earn?", answer: "The LP earns a share of swap fees in the pool. More trading usually means more fee flow, but returns still depend on price movement, fee tier, and how much of the time the position stays in range." },
+    { question: "What is impermanent loss?", answer: "Impermanent loss is the gap between holding the two tokens and providing them in the pool while the price moves. It is usually smaller in calmer pairs and larger when one side moves sharply. That change also moves collateral value on Avana." },
+    { question: "What happens if price leaves the active range?", answer: "In concentrated-liquidity pools, the position can stop earning fees until price returns to range. Collateral value can also concentrate into one token, which changes health factor. Tighter ranges can earn more but need more active management." },
+  ];
+}
+
 function given(t: PageText): Partial<PageText> {
   const out: Json = {};
   for (const k of ["name", "description", "longText", "faqs", "links", "iconUrl"] as const) if (t[k] !== undefined) out[k] = t[k];
@@ -330,6 +363,9 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
     const t = input.tokens?.find((x) => x.symbol === symbol);
     return { ...(t?.links ? { links: t.links } : {}), ...(t?.iconUrl ? { iconUrl: t.iconUrl } : {}) };
   };
+  /** A token's display name: this Hub file's, else one an earlier Hub file of the chain gave. */
+  const tokenName = (symbol: string): string | undefined =>
+    input.tokens?.find((x) => x.symbol === symbol)?.name ?? (c.listing.tokenContent?.[symbol]?.name as string | undefined);
   // Token pages, by symbol: the listing metadata writes one for each token the listing first adds.
   for (const t of input.tokens ?? []) {
     c.listing.tokenContent ??= {};
@@ -411,9 +447,9 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
       a.symbol,
       {
         slug: slugify(`${label}-${a.symbol}`),
-        name: `${a.symbol} on the ${hubName}`,
+        name: tokenName(a.symbol) ?? `${a.symbol} on the ${hubName}`,
         description: `Lend ${a.symbol} on Aave V4's ${hubName}.`,
-        faqs: [],
+        faqs: lendFaqs(a.symbol, tokenName(a.symbol) ?? a.symbol),
         ...tokenText(a.symbol),
         ...given(a),
         symbol: a.symbol,
@@ -434,9 +470,12 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
         spoke: s.label,
         symbol: a,
         content: {
-          name: `${a} on ${spokeName} (${hubName})`,
+          name: tokenName(a) ?? `${a} on ${spokeName} (${hubName})`,
           description: `Borrow ${a} from Aave V4's ${hubName} against ${VENUE[s.integration]} liquidity positions.`,
-          faqs: [{ question: `Where does the ${a} come from?`, answer: `From the ${hubName} of Aave V4, through the ${spokeName} CDP Spoke.` }],
+          faqs: [
+            ...borrowAssetFaqs(a, tokenName(a) ?? a),
+            { question: `Where does the ${a} come from?`, answer: `From the ${hubName} of Aave V4, through the ${spokeName} CDP Spoke.` },
+          ],
           ...tokenText(a),
           ...(text ? given(text) : {}),
           // One page per Spoke: the slug and name carry the Spoke, whatever the shared text.
@@ -525,6 +564,8 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
     values[name] = mv;
     const venue = VENUE[s.integration];
     const fee = slip ? `tick spacing ${p.tickSpacing}` : `${p.fee / 10_000}% fee tier`;
+    // Only the values' own split of the premium over the risk factors; without one the factors carry no bps (the
+    // chain prices one premium per market, so the card shows that single row).
     const bps = mv.riskFactorBps ?? {};
     const risk = mi.risk ? { ...mi.risk, factors: mi.risk.factors.map((x) => (bps[x.id] !== undefined ? { ...x, bps: bps[x.id] } : x)) } : undefined;
     c.listing.markets.push({
@@ -552,9 +593,12 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
         category: mi.category ?? (p.a.match(/USD|DAI|GHO/) && p.b.match(/USD|DAI|GHO/) ? "stable" : "crypto"),
         venueLabel: slip ? `${venue} · CL${p.tickSpacing}` : `${venue} · ${p.fee / 10_000} %`,
         description: `Borrow ${lends.join(", ")} from the ${hubName} against a ${mi.tickLower !== undefined ? "concentrated" : "full-range"} ${p.a}/${p.b} liquidity position in the ${venue} pool with ${fee}.`,
-        faqs: [{ question: "What can I borrow?", answer: `${lends.join(", ")} from the ${hubName}, against the position's value.` }],
-        // A market's `name` is its config name (the test values' key), not its page's.
-        ...{ ...given(mi), name: `${p.a}/${p.b} ${venue}${mi.name ? "" : ` (${hubName})`}` },
+        faqs: [
+          ...poolFaqs(`${p.a} / ${p.b}`),
+          { question: "What can I borrow?", answer: `${lends.join(", ")} from the ${hubName}, against the position's value.` },
+        ],
+        // A market's `name` is its config name (the test values' key), not its page's: the page shows the pair.
+        ...{ ...given(mi), name: `${p.a} / ${p.b}` },
         ...(risk ? { risk } : {}),
       },
     });

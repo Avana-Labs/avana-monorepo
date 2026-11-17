@@ -131,15 +131,27 @@ async function closeSamples(c: LocalChain, say: Say): Promise<number> {
   return s1;
 }
 
+/**
+ * The samples a check reads: the last ones closed, or new ones when there are none or the last is before the chain's
+ * state floor (a node restored from a saved state can no longer read it). The chain then mines past anvil's finality.
+ * Closing samples mines an hour of blocks per sample, which the live indexer takes long to follow on a 2-second chain,
+ * so they are reused; deleting `deployments-local/stack/replay/sample-block-<chain>` closes new ones.
+ */
+async function samples(c: LocalChain, say: Say): Promise<void> {
+  const last = existsSync(sampleFile(c)) ? Number(readFileSync(sampleFile(c), "utf8")) : undefined;
+  if (last === undefined || last < (await stateFloor(c))) {
+    await closeSamples(c, say);
+    return;
+  }
+  await rpc(rpcUrl(c), "anvil_mine", ["0x46"]);
+  say(`${c.network}: samples at block ${last} (last closed), head ${await blockNumber(c)}`);
+}
+
 export async function check(chains: readonly LocalChain[], say: Say): Promise<boolean> {
   return still(chains, async () => {
     let ok = true;
     for (const c of chains) ok = verifyManifest(c, say) && ok;
-    // A sample before the chain's state floor (a node restored from a saved state) can no longer be read: close new ones.
-    for (const c of chains) {
-      if (!existsSync(sampleFile(c)) || Number(readFileSync(sampleFile(c), "utf8")) < (await stateFloor(c))) await closeSamples(c, say);
-      else await rpc(rpcUrl(c), "anvil_mine", ["0x46"]);
-    }
+    for (const c of chains) await samples(c, say);
     try {
       say(`PASS indexer at head ${JSON.stringify(await indexerAtHead(INDEXER_CATCH_UP_MS))}`);
     } catch (e) {
@@ -194,7 +206,7 @@ export async function replay(chains: readonly LocalChain[], say: Say): Promise<b
   return still(chains, async () => {
     let ok = true;
     if (!running("indexer")) throw new Error("no live indexer: run the stack's up command first");
-    for (const c of chains) await closeSamples(c, say);
+    for (const c of chains) await samples(c, say);
     say(`indexer (live): at head ${JSON.stringify(await indexerAtHead(INDEXER_CATCH_UP_MS))}`);
     const live = classify(logPath("indexer"));
     say(`indexer (live): ${live.errors.length} error or warning lines, ${live.tolerated} node timeouts or notices`);

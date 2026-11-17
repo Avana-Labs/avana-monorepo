@@ -1,0 +1,628 @@
+{
+  "schemaVersion": 1,
+  "chainId": 11155111,
+  "network": "sepolia",
+  "release": "v1.0.0",
+  "commit": "bfbe960b364a7458b5ee43087c40a4d53e937108",
+  "abiHash": "0x552d00fab8c18d741115c5ab8a3d75382480e7b7a7db80b39e32d42573e316e7",
+  "deployer": "0xf100000000000000000000000000000000000001",
+  "create3Factory": "0xf100000000000000000000000000000000000002",
+  "feeRecipient": "0xf100000000000000000000000000000000000003",
+  "sequencerFeed": null,
+  "avana": {
+    "aaveAdapter": {
+      "address": "0xf100000000000000000000000000000000000004",
+      "codeHash": "0xf15a07c54ab3420101c38795fc919a27ffb05f1a0049070ba3b8f10bae32af97",
+      "implementation": "0xf100000000000000000000000000000000000005",
+      "implementationCodeHash": "0x954ac1ac9e260da08871d7fc57bda3a56f7e93498a4a8aca6b30e7577f957340",
+      "implementationArtifact": "AaveAdapter.sol:AaveAdapter",
+      "logics": [],
+      "startBlock": 1295
+    },
+    "lpVaultSwap": {
+      "address": "0xf100000000000000000000000000000000000006",
+      "codeHash": "0xf15a07c54ab3420101c38795fc919a27ffb05f1a0049070ba3b8f10bae32af97",
+      "implementation": "0xf100000000000000000000000000000000000007",
+      "implementationCodeHash": "0x2e45c2e0794407fd819e4bf712ba3881d1f0aae8d64282edc2235092a2c30ef6",
+      "implementationArtifact": "LPVaultSwap.sol:LPVaultSwap",
+      "logics": [],
+      "startBlock": 1300
+    },
+    "marketRegistry": {
+      "address": "0xf100000000000000000000000000000000000008",
+      "codeHash": "0xf15a07c54ab3420101c38795fc919a27ffb05f1a0049070ba3b8f10bae32af97",
+      "implementation": "0xf100000000000000000000000000000000000009",
+      "implementationCodeHash": "0x41bcdef3c78422c45cef9e4b673422e78a26b18fde2e1d70c0f59897ab86151e",
+      "implementationArtifact": "MarketRegistry.sol:MarketRegistry",
+      "logics": [],
+      "startBlock": 1274
+    },
+    "parameterStore": {
+      "address": "0xf10000000000000000000000000000000000000a",
+      "codeHash": "0xf15a07c54ab3420101c38795fc919a27ffb05f1a0049070ba3b8f10bae32af97",
+      "implementation": "0xf10000000000000000000000000000000000000b",
+      "implementationCodeHash": "0x23862a347fcfc40fef6015b3efed22f8e4eec46c7474c5dcd82e6713a4c3089a",
+      "implementationArtifact": "ParameterStore.sol:ParameterStore",
+      "logics": [],
+      "startBlock": 1281
+    },
+    "riskModule": {
+      "address": "0xf10000000000000000000000000000000000000c",
+      "codeHash": "0xf15a07c54ab3420101c38795fc919a27ffb05f1a0049070ba3b8f10bae32af97",
+      "implementation": "0xf10000000000000000000000000000000000000d",
+      "implementationCodeHash": "0x67a8bb9d1fcfab94ff26e8a3f670184e754ba54b96f54f713129347d2721bd5d",
+      "implementationArtifact": "RiskModule.sol:RiskModule",
+      "logics": [],
+      "startBlock": 1289
+    },
+    "timelock": {
+      "address": "0xf10000000000000000000000000000000000000e",
+      "codeHash": "0xa440aab57a49319bcc776ff6ed22423e81fa62ed6bef393254ea72159a8ca07b",
+      "startBlock": 1266,
+      "artifact": "AvanaTimelock.sol:AvanaTimelock"
+    },
+    "proxyManager": {
+      "address": "0xf10000000000000000000000000000000000000f",
+      "codeHash": "0x6c5ccd47103a7157f103d4c7067fb849189399deb215a57e128b75277f8c454d",
+      "startBlock": 1304,
+      "artifact": "ProxyManager.sol:ProxyManager"
+    },
+    "collateralization": {
+      "address": "0xf100000000000000000000000000000000000010",
+      "codeHash": "0xc5b81bca57c5c539ce539725ed6012cc92a8f356f36f8e76a19de3dca441c2b5",
+      "startBlock": 1302,
+      "artifact": "Collateralization.sol:Collateralization"
+    },
+    "vaultTokenFactory": {
+      "address": "0xf100000000000000000000000000000000000011",
+      "codeHash": "0x4af3d438eaf0a27aadeb145de06d0a9593f9e90c65b00811a1ab8248461fc4cd",
+      "startBlock": 1303,
+      "artifact": "VaultTokenFactory.sol:VaultTokenFactory"
+    },
+    "payoutEscrow": {
+      "address": "0xf100000000000000000000000000000000000012",
+      "codeHash": "0xea5ef9f2f5ed9745ed2c6da92f6a2c7a48f7104090f3ab88c9884ff00f2de5a5",
+      "startBlock": 1305,
+      "artifact": "PayoutEscrow.sol:PayoutEscrow"
+    },
+    "lock": {
+      "address": "0xf100000000000000000000000000000000000013",
+      "codeHash": "0x34d6f94a3f91993197274890c2aefb4460f856864b02ebff7f2ea450357959db",
+      "startBlock": 1301,
+      "artifact": "Lock.sol:Lock"
+    },
+    "lens": {
+      "address": "0xf100000000000000000000000000000000000014",
+      "codeHash": "0xfa4a1e23cbdb7fb8b5ce790391033b05d16bcfac619aa4b39849708725caecea",
+      "startBlock": 1322,
+      "artifact": "Lens.sol:Lens"
+    },
+    "lensModules": [
+      {
+        "address": "0xf100000000000000000000000000000000000015",
+        "codeHash": "0xa6bc1f120fad00efaa5c4c4589b6dbea322cb2b895f4515fa03bdba9b949a93a",
+        "startBlock": 1313,
+        "artifact": "LensAccountModule.sol:LensAccountModule"
+      },
+      {
+        "address": "0xf100000000000000000000000000000000000016",
+        "codeHash": "0x4a35d0e5023a3a756dbc55d2ff6c5200e9f6521f30c5b1b543139ffec7337c1d",
+        "startBlock": 1314,
+        "artifact": "LensMarketModule.sol:LensMarketModule"
+      },
+      {
+        "address": "0xf100000000000000000000000000000000000017",
+        "codeHash": "0x1779262cf04c134573455c1b4e626c600baaadbbaeab2af3e1468f0948456710",
+        "startBlock": 1315,
+        "artifact": "LensPriceModule.sol:LensPriceModule"
+      },
+      {
+        "address": "0xf100000000000000000000000000000000000018",
+        "codeHash": "0x1133d8345ab3348e1664bd6b22e41d9f7c479294b4a09ee0d3bb65ed7f545240",
+        "startBlock": 1316,
+        "artifact": "LensLiquidationModule.sol:LensLiquidationModule"
+      },
+      {
+        "address": "0xf100000000000000000000000000000000000019",
+        "codeHash": "0x7b5d1a2a5819bac6226e667efd8a35e1cf0ccd63d44d81d0d5adbe00494965bc",
+        "startBlock": 1317,
+        "artifact": "LensRiskModule.sol:LensRiskModule"
+      },
+      {
+        "address": "0xf10000000000000000000000000000000000001a",
+        "codeHash": "0x302ce1f92cafbc7a666ac3271fa5cbcb85e5ac987aed4c97f91d3243f04a7275",
+        "startBlock": 1318,
+        "artifact": "LensPreviewModule.sol:LensPreviewModule"
+      },
+      {
+        "address": "0xf10000000000000000000000000000000000001b",
+        "codeHash": "0x28e4a109c313a94c371e4114550a86065c560f20f4b92c2cf3e02a4318f994eb",
+        "startBlock": 1319,
+        "artifact": "LensMarketsModule.sol:LensMarketsModule"
+      },
+      {
+        "address": "0xf10000000000000000000000000000000000001c",
+        "codeHash": "0x6fc0d503b501afd2c7e74144ff96db876e8398a8284a5752f3bae7e557a00558",
+        "startBlock": 1320,
+        "artifact": "LensPositionsModule.sol:LensPositionsModule"
+      },
+      {
+        "address": "0xf10000000000000000000000000000000000001d",
+        "codeHash": "0x19524accf3a7a0446121f0b28f7b54fc91ddfb96242139b78254438eaf724475",
+        "startBlock": 1321,
+        "artifact": "LensSpeedModule.sol:LensSpeedModule"
+      }
+    ],
+    "lensAaveSizing": {
+      "address": "0xf10000000000000000000000000000000000001e",
+      "codeHash": "0x25000875ee0acdc5c19284598c9a3bb58954a4ac498a47f2215594ab7f088740",
+      "startBlock": 1312,
+      "artifact": "out-aave:LensAaveSizing.sol:LensAaveSizing"
+    },
+    "flashSource": {
+      "address": "0xf10000000000000000000000000000000000001f",
+      "codeHash": "0xa7e5cddc5f39fe99c0f74334993b3e6e44365f695c782f896b4c3e8be68a0189",
+      "startBlock": 1306,
+      "artifact": "AaveV3FlashSource.sol:AaveV3FlashSource"
+    },
+    "flashLiquidator": {
+      "address": "0xf100000000000000000000000000000000000020",
+      "codeHash": "0x43afa3d3ff01be0e4874414de2bcdb8f5f8eda288ba088c99a68381dc1093933",
+      "startBlock": 1307,
+      "artifact": "FlashLiquidator.sol:FlashLiquidator"
+    },
+    "operatorHelpers": [
+      {
+        "address": "0xf100000000000000000000000000000000000021",
+        "codeHash": "0x3c03cec330281c0d402789edc4a778e002928134aebebb3ad8623b28c1e6fa03",
+        "startBlock": 1308,
+        "artifact": "OperatorFlashLiquidator.sol:OperatorFlashLiquidator",
+        "signer": "0xf100000000000000000000000000000000000022",
+        "fundingSafe": "0xf100000000000000000000000000000000000023"
+      }
+    ],
+    "lpVaults": [
+      {
+        "address": "0xf100000000000000000000000000000000000024",
+        "codeHash": "0x208dd4393d2547c2f93f4bed9f6d17a8b470cad95beb1e1961eb373e186b1622",
+        "startBlock": 1309,
+        "artifact": "UniswapV3Integration.sol:UniswapV3Integration",
+        "integrationId": 1,
+        "kind": "uniswap-v3"
+      },
+      {
+        "address": "0xf100000000000000000000000000000000000025",
+        "codeHash": "0xe8a09cce7e675f6afba646e1032d263424bb7f797afa67f91123bf9f8ff9d6e2",
+        "startBlock": 1311,
+        "artifact": "UniswapV4Integration.sol:UniswapV4Integration",
+        "integrationId": 3,
+        "kind": "uniswap-v4"
+      }
+    ],
+    "firstLossReserves": [
+      {
+        "address": "0xf100000000000000000000000000000000000026",
+        "codeHash": "0xafaf1cb7fc5a62efc3d1cf25a639ef527820f3bef4313fd25ac02d4aa3ff2e4a",
+        "startBlock": 1451,
+        "artifact": "AvanaFirstLossReserve.sol:AvanaFirstLossReserve",
+        "asset": "0xf100000000000000000000000000000000000027",
+        "hub": "0xf100000000000000000000000000000000000028"
+      },
+      {
+        "address": "0xf100000000000000000000000000000000000029",
+        "codeHash": "0x791e7408ecf0628559fe9ccf38925516245f93224c9033b474c933e478a4508e",
+        "startBlock": 1452,
+        "artifact": "AvanaFirstLossReserve.sol:AvanaFirstLossReserve",
+        "asset": "0xf10000000000000000000000000000000000002a",
+        "hub": "0xf100000000000000000000000000000000000028"
+      },
+      {
+        "address": "0xf10000000000000000000000000000000000002b",
+        "codeHash": "0x495d4c763bf491fe443816560293473dde324d02a48b40366d93c755cd5d9337",
+        "startBlock": 1453,
+        "artifact": "AvanaFirstLossReserve.sol:AvanaFirstLossReserve",
+        "asset": "0xf10000000000000000000000000000000000002c",
+        "hub": "0xf100000000000000000000000000000000000028"
+      }
+    ],
+    "daoDeficitOffsets": [
+      {
+        "address": "0xf10000000000000000000000000000000000002d",
+        "codeHash": "0x8709cc0aaec5623efec38ecf218d2b27369053c725522ba53658e39ccad3a8f5",
+        "startBlock": 1454,
+        "artifact": "DaoDeficitOffset.sol:DaoDeficitOffset",
+        "asset": "0xf100000000000000000000000000000000000027",
+        "hub": "0xf100000000000000000000000000000000000028"
+      },
+      {
+        "address": "0xf10000000000000000000000000000000000002e",
+        "codeHash": "0xc3d6a448de6c65886d5af1a01bb6edd8c54e28f1720cad32528e1e6de9286631",
+        "startBlock": 1456,
+        "artifact": "DaoDeficitOffset.sol:DaoDeficitOffset",
+        "asset": "0xf10000000000000000000000000000000000002a",
+        "hub": "0xf100000000000000000000000000000000000028"
+      },
+      {
+        "address": "0xf10000000000000000000000000000000000002f",
+        "codeHash": "0x542db1d3cee13c8f8759d7c3c8aff3d60fc7a78b80b2d9c561e3192ade709e17",
+        "startBlock": 1458,
+        "artifact": "DaoDeficitOffset.sol:DaoDeficitOffset",
+        "asset": "0xf10000000000000000000000000000000000002c",
+        "hub": "0xf100000000000000000000000000000000000028"
+      }
+    ],
+    "debtOracleImplementation": {
+      "address": "0xf100000000000000000000000000000000000030",
+      "codeHash": "0x7af30aa1674269ca218fdd9d75fa943d57b640c1e94cdaaaf7962bb73f031492",
+      "startBlock": 1323,
+      "artifact": "DebtOracle.sol:DebtOracle"
+    },
+    "clOracles": [],
+    "proxyCreationCodeHash": "0x2bb919d80d928a3d6546a2ddb367423da3a666f9f096d349c85fafa734f798d7",
+    "gasVault": null
+  },
+  "markets": [
+    {
+      "marketId": "1",
+      "integrationId": 1,
+      "spoke": "0xf100000000000000000000000000000000000031",
+      "vaultToken": {
+        "address": "0xf100000000000000000000000000000000000032",
+        "codeHash": "0xcfa5a7a48f4c65b4787d1c80b9f3476f520d1c4abb9e39e3e571016bd5e122db",
+        "startBlock": 2115,
+        "artifact": "VaultToken.sol:VaultToken"
+      },
+      "lpOracle": {
+        "address": "0xf100000000000000000000000000000000000033",
+        "codeHash": "0xf15a07c54ab3420101c38795fc919a27ffb05f1a0049070ba3b8f10bae32af97",
+        "implementation": "0xf100000000000000000000000000000000000034",
+        "implementationCodeHash": "0x3924233fe446ea4e4bf35d19513bbbfcdab11d663ca4a2035824b91b33e6f326",
+        "implementationArtifact": "LPOracleCL.sol:LPOracleCL",
+        "logics": [],
+        "startBlock": 1954
+      },
+      "reserveId": "3",
+      "pool": "0xf100000000000000000000000000000000000035",
+      "tokens": [
+        "0xf10000000000000000000000000000000000002a",
+        "0xf10000000000000000000000000000000000002c"
+      ],
+      "feeds": [
+        {
+          "feed": "0xf100000000000000000000000000000000000036",
+          "heartbeatSeconds": 86400
+        }
+      ],
+      "routes": [
+        {
+          "address": "0xf100000000000000000000000000000000000037",
+          "codeHash": "0xca25e6de538c21667db9de33887ef06973a04c755181385400a7bee0386c174a",
+          "startBlock": 1955,
+          "artifact": "DexPathRoute.sol:DexPathRoute"
+        }
+      ]
+    },
+    {
+      "marketId": "9",
+      "integrationId": 3,
+      "spoke": "0xf100000000000000000000000000000000000038",
+      "vaultToken": {
+        "address": "0xf100000000000000000000000000000000000039",
+        "codeHash": "0xbb0c459709ce5f4b42328bafb43f9689b2b36c5183a6d125a4ae16fc8ca5ca9a",
+        "startBlock": 2770,
+        "artifact": "VaultToken.sol:VaultToken"
+      },
+      "lpOracle": {
+        "address": "0xf10000000000000000000000000000000000003a",
+        "codeHash": "0xf15a07c54ab3420101c38795fc919a27ffb05f1a0049070ba3b8f10bae32af97",
+        "implementation": "0xf10000000000000000000000000000000000003b",
+        "implementationCodeHash": "0x58b849cf1771a8a653726fca0f6f7c4233d32d924a68709c38f40823e6beb907",
+        "implementationArtifact": "LPOracleV4.sol:LPOracleV4",
+        "logics": [],
+        "startBlock": 2654
+      },
+      "reserveId": "3",
+      "pool": "0x0000000000000000000000000000000000000000",
+      "poolId": "0xbb8befb877085e372f719ee5d9250ce5fd182d0de717b2ba5ec20020b60c6592",
+      "tokens": [
+        "0xf10000000000000000000000000000000000002a",
+        "0xf10000000000000000000000000000000000002c"
+      ],
+      "feeds": [
+        {
+          "feed": "0xf100000000000000000000000000000000000036",
+          "heartbeatSeconds": 86400
+        }
+      ],
+      "routes": [
+        {
+          "address": "0xf10000000000000000000000000000000000003c",
+          "codeHash": "0xca25e6de538c21667db9de33887ef06973a04c755181385400a7bee0386c174a",
+          "startBlock": 2655,
+          "artifact": "DexPathRoute.sol:DexPathRoute"
+        }
+      ]
+    }
+  ],
+  "debtReserves": [
+    {
+      "spoke": "0xf100000000000000000000000000000000000031",
+      "debtReserveId": "0",
+      "asset": "0xf100000000000000000000000000000000000027",
+      "decimals": 18,
+      "isGho": true,
+      "debtOracle": null,
+      "feeds": [
+        {
+          "feed": "0xf10000000000000000000000000000000000003d",
+          "heartbeatSeconds": 86400
+        }
+      ]
+    },
+    {
+      "spoke": "0xf100000000000000000000000000000000000031",
+      "debtReserveId": "1",
+      "asset": "0xf10000000000000000000000000000000000002a",
+      "decimals": 6,
+      "isGho": false,
+      "debtOracle": {
+        "address": "0xf10000000000000000000000000000000000003e",
+        "codeHash": "0xf15a07c54ab3420101c38795fc919a27ffb05f1a0049070ba3b8f10bae32af97",
+        "implementation": "0xf100000000000000000000000000000000000030",
+        "implementationCodeHash": "0x7af30aa1674269ca218fdd9d75fa943d57b640c1e94cdaaaf7962bb73f031492",
+        "implementationArtifact": "DebtOracle.sol:DebtOracle",
+        "logics": [],
+        "startBlock": 1817
+      },
+      "feeds": [
+        {
+          "feed": "0xf100000000000000000000000000000000000036",
+          "heartbeatSeconds": 86400
+        }
+      ]
+    },
+    {
+      "spoke": "0xf100000000000000000000000000000000000038",
+      "debtReserveId": "0",
+      "asset": "0xf100000000000000000000000000000000000027",
+      "decimals": 18,
+      "isGho": true,
+      "debtOracle": null,
+      "feeds": [
+        {
+          "feed": "0xf10000000000000000000000000000000000003d",
+          "heartbeatSeconds": 86400
+        }
+      ]
+    },
+    {
+      "spoke": "0xf100000000000000000000000000000000000038",
+      "debtReserveId": "1",
+      "asset": "0xf10000000000000000000000000000000000002a",
+      "decimals": 6,
+      "isGho": false,
+      "debtOracle": {
+        "address": "0xf10000000000000000000000000000000000003e",
+        "codeHash": "0xf15a07c54ab3420101c38795fc919a27ffb05f1a0049070ba3b8f10bae32af97",
+        "implementation": "0xf100000000000000000000000000000000000030",
+        "implementationCodeHash": "0x7af30aa1674269ca218fdd9d75fa943d57b640c1e94cdaaaf7962bb73f031492",
+        "implementationArtifact": "DebtOracle.sol:DebtOracle",
+        "logics": [],
+        "startBlock": 1817
+      },
+      "feeds": [
+        {
+          "feed": "0xf100000000000000000000000000000000000036",
+          "heartbeatSeconds": 86400
+        }
+      ]
+    }
+  ],
+  "aave": {
+    "hubs": [
+      {
+        "address": "0xf100000000000000000000000000000000000028",
+        "codeHash": "0x55bc056e34b5fd148a6ce8623eb2d2b9e57c9c26dc855c17b68ed0f97ab206ec",
+        "implementation": "0xf10000000000000000000000000000000000003f",
+        "implementationCodeHash": "0xfbcf2a40498e9d4b98580d87cfb9cdb8fbd57db6c381fd53ab140e508979a7a4",
+        "implementationArtifact": "",
+        "logics": [],
+        "startBlock": 10,
+        "label": "ethereum",
+        "tier": 3
+      }
+    ],
+    "borrowSpokes": [
+      {
+        "address": "0xf100000000000000000000000000000000000031",
+        "codeHash": "0x59fe992300d972d3f4ca21c8da430973277337407576501f4d17f6a7f309d18b",
+        "implementation": "0xf100000000000000000000000000000000000040",
+        "implementationCodeHash": "0xe4545299c4beb5e03a4e5bd18d8e64c15b43c8dc9fe6d0a8b099c2e57b06634c",
+        "implementationArtifact": "",
+        "logics": [],
+        "startBlock": 1614,
+        "label": "uniV3Stable"
+      },
+      {
+        "address": "0xf100000000000000000000000000000000000038",
+        "codeHash": "0x93e547c32e11f29fdf84b2e90557883af2c876fafeb8aa6bf4353a078029cdc3",
+        "implementation": "0xf100000000000000000000000000000000000041",
+        "implementationCodeHash": "0x80a7551893aacd49b7474aa94d328c480fcbdca0b936a6940234dfff7229b4c5",
+        "implementationArtifact": "",
+        "logics": [],
+        "startBlock": 2326,
+        "label": "uniV4Stable"
+      }
+    ],
+    "lendSpokes": [
+      {
+        "address": "0xf100000000000000000000000000000000000042",
+        "codeHash": "0x73e748c03284cc9b1f3d42149314cbc98dfd9003447447f48a22430a1b357062",
+        "implementation": "0xf100000000000000000000000000000000000043",
+        "implementationCodeHash": "0x679401ffaaaaa707345b0a8180c977e13f180c032756bce81f149bb64c0c4fb6",
+        "implementationArtifact": "",
+        "logics": [],
+        "startBlock": 12,
+        "label": "lendEthereum"
+      }
+    ],
+    "v3Pool": {
+      "address": "0xf100000000000000000000000000000000000044",
+      "codeHash": "0xe9c33699b81f8c21258f1dbb0e04fae54c030548f202690c890f8780fa1969d9",
+      "implementation": "0xf100000000000000000000000000000000000045",
+      "implementationCodeHash": "0x5c97cf306c5db7b66aaabe19b5ace155ef99ca6ec85aa79174520c65575b7f19",
+      "implementationArtifact": "",
+      "logics": [],
+      "startBlock": 562
+    },
+    "accessManager": "0xf100000000000000000000000000000000000046"
+  },
+  "roles": {
+    "timelock": {
+      "proposers": [
+        "0xf100000000000000000000000000000000000047",
+        "0xf100000000000000000000000000000000000048"
+      ],
+      "executors": [
+        "0xf100000000000000000000000000000000000047"
+      ],
+      "cancellers": [
+        "0xf100000000000000000000000000000000000047",
+        "0xf100000000000000000000000000000000000048",
+        "0xf100000000000000000000000000000000000049",
+        "0xf10000000000000000000000000000000000004a"
+      ],
+      "daoCancellers": [
+        "0xf100000000000000000000000000000000000048"
+      ],
+      "normalDelay": 432000,
+      "publicExecution": true
+    },
+    "governanceSafe": "0xf100000000000000000000000000000000000047",
+    "emergencyGuardian": "0xf100000000000000000000000000000000000049",
+    "aaveProtocolGuardian": "0xf10000000000000000000000000000000000004a",
+    "aaveGovernanceExecutor": "0xf100000000000000000000000000000000000048",
+    "jointConfigSafe": "0xf10000000000000000000000000000000000004b",
+    "marketRegistryGuardians": [
+      "0xf100000000000000000000000000000000000049",
+      "0xf10000000000000000000000000000000000004a",
+      "0xf10000000000000000000000000000000000004b"
+    ],
+    "parameterStorePauseGuardians": [
+      "0xf100000000000000000000000000000000000049",
+      "0xf10000000000000000000000000000000000004a"
+    ],
+    "riskStewards": [
+      "0xf10000000000000000000000000000000000004b"
+    ],
+    "keepers": [
+      "0xf100000000000000000000000000000000000022"
+    ]
+  },
+  "external": [
+    {
+      "name": "hubConfigurator",
+      "group": "aave-v4",
+      "address": "0xf10000000000000000000000000000000000004c",
+      "codeHash": "0x12b260d3b034dbe8159eb89a142071d2ee45fd4dc29ccb69da3120c50c76ecbf",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "spokeConfigurator",
+      "group": "aave-v4",
+      "address": "0xf10000000000000000000000000000000000004d",
+      "codeHash": "0xb0e1af0d5b75693a0e62045f87de43338a7d4b4c181fb59936f5670d6f80c8a5",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "ACLManager",
+      "group": "aave-v3",
+      "address": "0xf10000000000000000000000000000000000004e",
+      "codeHash": "0xa1790181da85ca0b93cb91aa98745d8a88656b21b065dcc7812716025cd73b99",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "GHO",
+      "group": "token",
+      "address": "0xf100000000000000000000000000000000000027",
+      "codeHash": "0x03ff9cd03d949da1dd5c0494918d4dd4464d7df55e4e7f725a07d07f3ce1fe3f",
+      "implementation": null,
+      "standIn": true
+    },
+    {
+      "name": "USDC",
+      "group": "token",
+      "address": "0xf10000000000000000000000000000000000002a",
+      "codeHash": "0xad4a56845a7d5944f44cf2e3439cc762dc53b1d48ee158d56bd909412d2480d2",
+      "implementation": null,
+      "standIn": true
+    },
+    {
+      "name": "USDT",
+      "group": "token",
+      "address": "0xf10000000000000000000000000000000000002c",
+      "codeHash": "0x323ab39a8b1c464e10a076ce9509f484247e76a714f258ece00f7207d63ddc47",
+      "implementation": null,
+      "standIn": true
+    },
+    {
+      "name": "NonfungiblePositionManager",
+      "group": "uniswap-v3",
+      "address": "0xf10000000000000000000000000000000000004f",
+      "codeHash": "0x6d079fa1597b021f1dfc843365fcddec5f61efe2ae73effa9dabc573c77b6eca",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "UniswapV3Factory",
+      "group": "uniswap-v3",
+      "address": "0xf100000000000000000000000000000000000050",
+      "codeHash": "0xf57525be6a85417314d0b72e9207ec6261ac099b5401e0cdb89d7ac0a99953b8",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "PositionManager",
+      "group": "uniswap-v4",
+      "address": "0xf100000000000000000000000000000000000051",
+      "codeHash": "0x2d2cdddf42ba8d9c94e3536a1290928d504f75e94454dbc5dc679fcd35fabc59",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "GHO / USD (primary)",
+      "group": "feed",
+      "address": "0xf10000000000000000000000000000000000003d",
+      "codeHash": "0x9c9fd955ef329aff2d30d1fa3ba546782157e731c23299590058e4d72c1001b3",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "USDC / USD (primary)",
+      "group": "feed",
+      "address": "0xf100000000000000000000000000000000000036",
+      "codeHash": "0x9c9fd955ef329aff2d30d1fa3ba546782157e731c23299590058e4d72c1001b3",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "USDT / USD (primary)",
+      "group": "feed",
+      "address": "0xf100000000000000000000000000000000000052",
+      "codeHash": "0x9c9fd955ef329aff2d30d1fa3ba546782157e731c23299590058e4d72c1001b3",
+      "implementation": null,
+      "standIn": false
+    }
+  ],
+  "uniswapV4": {
+    "poolManager": {
+      "address": "0xf100000000000000000000000000000000000053",
+      "codeHash": "0x631834bc490816eaa972bc9264f3f548f95bd1a1ce7b46887b92b6d1d58fceee",
+      "startBlock": 1215,
+      "artifact": null
+    }
+  }
+}

@@ -105,6 +105,40 @@ function featuredAssetsRecord(markets: LendMarket[]): Record<string, LendFeature
   return record
 }
 
+/** Width and height of the featured cards' sparkline drawing (hot-markets.tsx scales it to the card). */
+const SPARKLINE_WIDTH = 396
+const SPARKLINE_HEIGHT = 60
+
+/**
+ * A featured card's sparkline path ("M0,60L18.857,30…") from its supply APY points, oldest first: higher APY sits
+ * higher. Fewer than two points draw nothing.
+ */
+export function lendSparklinePath(points: readonly number[]): string {
+  if (points.length < 2) return ""
+  const max = Math.max(...points)
+  const min = Math.min(...points)
+  const range = max - min || 1
+  const step = SPARKLINE_WIDTH / (points.length - 1)
+  return points
+    .map((value, index) => {
+      const x = Number((index * step).toFixed(3))
+      const y = Number((((max - value) / range) * SPARKLINE_HEIGHT).toFixed(3))
+      return `${index === 0 ? "M" : "L"}${x},${y}`
+    })
+    .join("")
+}
+
+/** The page's featured cards with their sparklines (`fetchLendSparklines`), by market id; a card without one is unchanged. */
+export function withFeaturedSparklines(page: LendPageData, sparklines: Readonly<Record<string, readonly number[]>>): LendPageData {
+  const featuredAssets: Record<string, LendFeaturedAsset> = {}
+  for (const [id, asset] of Object.entries(page.featuredAssets)) {
+    const points = sparklines[id] ?? []
+    const path = lendSparklinePath(points)
+    featuredAssets[id] = path ? { ...asset, path, values: [...points] } : asset
+  }
+  return { ...page, featuredAssets }
+}
+
 /** Lend list groups from the Hub assets: stablecoins first, then everything else. */
 function buildAssetGroups(markets: LendMarket[]): LendAssetGroup[] {
   const groups: LendAssetGroup[] = [

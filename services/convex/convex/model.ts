@@ -195,10 +195,13 @@ export async function snapshotRows(ctx: QueryCtx, w: World, now: number, only?: 
     }
   }
   if (!only || only === "pool") {
+    // The last 24 h of each chain end at its own series clock when that runs ahead (`seriesNow`).
+    const chainNow = new Map<number, number>();
     for (const m of w.markets) {
+      if (!chainNow.has(m.chainId)) chainNow.set(m.chainId, Math.max(now, await seriesNow(ctx, m.chainId)));
       const debts = w.debts.filter((d) => d.chainId === m.chainId && d.marketId === m.marketId);
       const reserves = w.reserves.filter((r) => r.chainId === m.chainId);
-      const row = poolSnapshot(m, debts, reserves, w.assetsByKey, await pool24h(ctx, w, m, now), contentOf(w, "pool", m.chainId, m.marketId), hubLabelOf(w, m.chainId, m.hub), pairVisuals(w, m));
+      const row = poolSnapshot(m, debts, reserves, w.assetsByKey, await pool24h(ctx, w, m, chainNow.get(m.chainId)!), contentOf(w, "pool", m.chainId, m.marketId), hubLabelOf(w, m.chainId, m.hub), pairVisuals(w, m));
       const spokeName = spokeNameOf(w, m.chainId, m.spoke);
       rows.push(spokeName ? { ...row, spokeName } : row);
     }
@@ -212,6 +215,25 @@ export function bySlug(w: World, scope: PageScope, slug: string): HubAssetDoc | 
   if (scope === "asset") return w.reserves.find((r) => r.slug === slug) ?? null;
   return w.markets.find((m) => m.slug === slug) ?? null;
 }
+
+/**
+ * "Now" for one chain's charts, in seconds: the wall clock, or the chain's own clock when its series already run past
+ * it. The indexer buckets series by block time, and a local chain whose time was advanced (the deploy's timelock steps)
+ * runs ahead of the wall clock: windowing its charts by the wall clock would cut off everything it recorded since.
+ * On a live network the chain's clock trails the wall clock, so this is the wall clock.
+ */
+export async function seriesNow(ctx: QueryCtx, chainId: number | undefined): Promise<number> {
+  const wall = Math.floor(Date.now() / 1000);
+  if (chainId === undefined || !Number.isFinite(chainId)) return wall;
+  const checkpoint = await ctx.db.query("ingestCheckpoints").withIndex("by_chain", (q) => q.eq("chainId", chainId)).first();
+  return Math.max(wall, checkpoint?.seriesThroughTime ?? 0);
+}
+
+/** The chain of a series scope key: every key starts with its chain id ("31337:0x…:0"). */
+export const chainOfScopeKey = (key: string): number | undefined => {
+  const chainId = Number.parseInt(key.split(":")[0] ?? "", 10);
+  return Number.isFinite(chainId) ? chainId : undefined;
+};
 
 /** All stored points of one scope at one resolution, both sources. */
 export async function scopePoints(ctx: QueryCtx, scopeKind: string, scopeKey: string, resolution: "hour" | "day", from = 0): Promise<StoredPoint[]> {

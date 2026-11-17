@@ -1442,6 +1442,7 @@ const dict: TranslationDictionary = {
   "Dashboard Positions": "Dashboard-Positionen",
   "Available to deposit": "Verfügbar zum Einzahlen",
   "against {pool}": "gegen {pool}",
+  "Merkl Rewards": "Merkl-Prämien",
   Locked: "Gesperrt",
   "Next rewards": "Nächste Prämien",
   "Open on Launch Date": "Freischaltung zum Launch-Datum",

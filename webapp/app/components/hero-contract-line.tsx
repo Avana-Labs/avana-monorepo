@@ -57,7 +57,9 @@ export function HeroContractLine({
               >
                 <ArrowUpRight className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
               </a>
-            ) : null}
+            ) : (
+              <ArrowUpRight className="h-4 w-4 text-foreground/45" strokeWidth={1.75} aria-hidden="true" />
+            )}
           </span>
         </>
       ) : null}

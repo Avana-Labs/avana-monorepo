@@ -20,6 +20,7 @@ import { CONTRACTS, type LocalChain, TESTNETS, chainOf, outDir, rpcUrl } from ".
 import { type StepOutcome, currentConfig, executorStandIn, firstRelease, forgeDirs, readStatus, redact, rpc, runRelease, stepEnv, writeBaseConfig } from "../local/lib/chain.ts";
 import { verifyRelease } from "./verify.ts";
 import { FUNDED_ROLES, SIGNER_ROLES, type TestnetRoles, testnetRoles } from "./keys.ts";
+import { rpcSummary, useHealthyRpc } from "./rpc.ts";
 
 /** The timelock's normal delay on a test network, seconds (its floor there is 60 s, REQ-ACCESS-187). */
 export const NORMAL_DELAY = 120;
@@ -57,18 +58,26 @@ function testnet(): LocalChain {
   return c;
 }
 
-/** The chain's RPC URL and the explorer key: the environment, else the encrypted secrets of `stack.ts secrets`. */
+/**
+ * The chain's RPC and the explorer key. The RPC is the healthiest of the providers whose credentials are set
+ * (ALCHEMY_API_KEY; QUICKNODE_ENDPOINT_NAME and QUICKNODE_TOKEN for the backup), or the explicit endpoint
+ * (SEPOLIA_RPC_URL, BASE_SEPOLIA_RPC_URL) when one is set (rpc.ts); each comes from the environment, else the
+ * encrypted secrets of `stack.ts secrets`. Each step picks its provider again (chain.ts runStep).
+ */
 async function loadSecrets(c: LocalChain): Promise<void> {
   const { secretValue } = await import("../local/lib/secrets.ts");
-  for (const n of [c.testnet!.rpcEnv, "ETHERSCAN_API_KEY"] as const) {
-    if (!process.env[n]) {
-      const v = secretValue(n as "SEPOLIA_RPC_URL");
-      if (v) process.env[n] = v;
-    }
+  if (!process.env.ETHERSCAN_API_KEY) {
+    const v = secretValue("ETHERSCAN_API_KEY");
+    if (v) process.env.ETHERSCAN_API_KEY = v;
   }
-  if (!process.env[c.testnet!.rpcEnv]) throw new Stop(`${c.testnet!.rpcEnv} is not set, in the environment or the encrypted secrets store`);
+  try {
+    await useHealthyRpc(c);
+  } catch (e) {
+    throw new Stop(`${c.network} RPC: ${(e as Error).message}`);
+  }
   const id = Number(BigInt(await rpc<string>(rpcUrl(c), "eth_chainId")));
-  if (id !== c.chainId) throw new Stop(`${c.testnet!.rpcEnv} answers chain ${id}, not ${c.label} test network ${c.chainId}`);
+  if (id !== c.chainId) throw new Stop(`the ${c.network} RPC answers chain ${id}, not ${c.label} test network ${c.chainId}`);
+  say(`${c.network}: RPC ${await rpcSummary(c)}`);
 }
 
 /** AVANA_RELEASE, a tag at HEAD (the scripts check it again, with the deployed sources clean). */

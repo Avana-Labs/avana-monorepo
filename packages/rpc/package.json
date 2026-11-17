@@ -1,0 +1,27 @@
+{
+  "name": "@avana/rpc",
+  "version": "0.0.0",
+  "private": true,
+  "license": "BUSL-1.1",
+  "description": "AvanaRPCManager: RPC clients resolved from provider credentials (Alchemy primary, QuickNode backup) as the Aave DAO tooling resolves them, with failover, health checks, duplicate-free transaction sending, WebSocket clients and secret redaction.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "viem": "2.57.11"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0",
+    "ws": "8.22.2"
+  }
+}

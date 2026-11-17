@@ -154,6 +154,8 @@ export type BorrowableAssetCategory = "stable" | "eth" | "btc" | "crypto"
 
 export type BorrowableAsset = {
   id: string
+  /** The Spoke (address) the asset is borrowed from; the borrow list groups assets under it. */
+  spokeId: string
   symbol: string
   name: string
   subtitle: string

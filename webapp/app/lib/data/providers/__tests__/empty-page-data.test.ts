@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 // No services/convex deployment: every snapshot read comes back empty.
 vi.mock("@/app/lib/borrow-system/market-hydration-server", () => ({ fetchConvexMarketSnapshots: async () => [] }))
-vi.mock("@/app/lib/lend-system/market-hydration-server", () => ({ fetchLendMarketSnapshots: async () => [] }))
+vi.mock("@/app/lib/lend-system/market-hydration-server", () => ({ fetchLendMarketSnapshots: async () => [], fetchLendSparklines: async () => ({}) }))
 
 import { fetchBorrowPage } from "@/app/lib/data/providers/borrow/fetch-borrow-page"
 import { fetchLendPage } from "@/app/lib/data/providers/lend/fetch-lend-page"

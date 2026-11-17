@@ -1364,6 +1364,7 @@ const dict: TranslationDictionary = {
   "Dashboard Positions": "مراكز لوحة التحكم",
   "Available to deposit": "متاح للإيداع",
   "against {pool}": "مقابل {pool}",
+  "Merkl Rewards": "مكافآت Merkl",
   Locked: "مقفل",
   "Next rewards": "المكافآت التالية",
   "Open on Launch Date": "تُفتح في تاريخ الإطلاق",
