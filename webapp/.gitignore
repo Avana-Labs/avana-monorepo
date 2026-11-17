@@ -1,16 +1,5 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# local-only docs (kept on disk, hidden from the repo)
-/docs/token-pricing-architecture-audit.md
-/docs/market-data-sot.md
-/docs/ask-ai-audit-commit-plan.md
-/docs/ask-ai-lane-contracts.md
-/docs/ask-ai-production.md
-/docs/ask-ai-remaining-work.md
-/docs/convex-usage-guardrails.md
-/docs/launch-hardening.md
-/docs/perf-improvement-runbook.md
-
 # dependencies
 /node_modules
 

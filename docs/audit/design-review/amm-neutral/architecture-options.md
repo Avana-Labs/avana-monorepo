@@ -235,7 +235,7 @@ Two points apply to every option:
 
 **Decision of 2026-11-10 (`Q-334`):** Base has no GhoFlashMinter and no GSM; GHO there is CCIP-bridged only. Liquidations on every chain use **one** flash-loan source, and it must be an Aave flash loan. This section therefore does not compare settlement assets. It records the risks of a single Aave flash source and answers whether GHO stays the settlement asset on Base.
 
-Sources: the internal liquidation research (mainnet GhoFlashMinter capacity 2,000,000 GHO and fee 0, GSM capacity, GHO DEX depth of about $1.3M on Curve, $93k on Balancer and $47k on Uniswap v3, all on mainnet). The separate verification of Aave V3 and V4 flash facts (`~/Documents/avana-internal-references/research/flash-source.md`) did not exist when this review was written. Every Aave flash fact below is therefore **[UNVERIFIED]** until that file confirms it.
+Sources: the internal liquidation research (mainnet GhoFlashMinter capacity 2,000,000 GHO and fee 0, GSM capacity, GHO DEX depth of about $1.3M on Curve, $93k on Balancer and $47k on Uniswap v3, all on mainnet). The separate verification of Aave V3 and V4 flash facts did not exist when this review was written. Every Aave flash fact below is therefore **[UNVERIFIED]** until that file confirms it.
 
 ### Risks of a single Aave flash source
 

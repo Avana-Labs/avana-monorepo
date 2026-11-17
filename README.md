@@ -62,12 +62,14 @@ Each chain has its own AvanaTimelock. Every privileged change there is scheduled
 |---|---|
 | [`webapp/`](webapp/) | The Next.js web app (Lend, Borrow, Portfolio, detail pages, Swap, Support, Ask AI); it reads `services/convex` |
 | [`contracts/`](contracts/) | Foundry workspace with the Solidity contracts, unit, fuzz, fork and invariant tests, deployment scripts, Certora specifications and the security tools (`contracts/tools/`, including heimdall) |
-| [`services/`](services/) | `indexer/`: the Ponder indexer of Avana and Aave events; `keeper/`: the liquidation keeper; `convex/`: the Convex backend and the design of its import; `monitor/`: the monitoring and alerting service; `common/`: chains, manifest view and export types shared by the services |
+| [`services/`](services/) | `indexer/`: the Ponder indexer of Avana and Aave events; `keeper/`: the liquidation keeper; `convex/`: the Convex backend and the design of its import; `monitor/`: the monitoring and alerting service; `faucet/`: test funds on the local and public test networks; `dashboards/`: Grafana and Prometheus for the compose stack; `common/`: chains, manifest view and export types shared by the services |
 | [`docs/spec/`](docs/spec/) | The protocol specification: architecture, one page per contract, one page per operation, invariants, attack scenarios, external dependencies, design decisions, and the spec-stage verification models |
 | [`docs/governance/`](docs/governance/) | Aave DAO payloads (deployment, listing, collateral-factor, credit-line and refresh AIPs) and the AvanaTimelock operations scheduled by the governance multisig |
 | [`docs/audit/`](docs/audit/) | Audit scope, external reports, formal-verification reports and the evidence cited by findings |
-| [`packages/`](packages/) | `protocol/`: the `@avana/protocol` ABIs and ABI hash the indexer and keeper use |
+| [`packages/`](packages/) | `protocol/`: the `@avana/protocol` ABIs and ABI hash the indexer and keeper use; `export/`: the reader of the indexer's export; `rpc/`: the shared RPC manager |
 | [`deployments/`](deployments/) | Release manifests, one per chain and release, and their schema |
+| [`address-book/`](address-book/) | The generated address, parameter and access-control pages the website's developer reference reads |
+| [`infra/`](infra/) | Configuration templates and the description of where the off-chain services run in production |
 
 ## Toolchain
 
