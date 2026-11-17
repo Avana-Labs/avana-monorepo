@@ -11,6 +11,7 @@ import { join, relative } from "node:path";
 import { CONTRACTS, type LocalChain, REPO, genesisTimestamp, outDir, rpcUrl } from "./env.ts";
 import { addresses, signerEnv } from "./keys.ts";
 import { minObservations } from "./forkPools.ts";
+import { dumpState, hexStateToJson } from "./state.ts";
 import { logPath, running, start, stop, waitFor } from "./procs.ts";
 
 // ─── JSON-RPC ───
@@ -34,13 +35,16 @@ export const answers = async (c: LocalChain) => {
 // ─── The node ───
 
 const nodeName = (c: LocalChain) => `anvil-${c.key}`;
-const statePath = (c: LocalChain) => join(outDir(c), "anvil-state.hex");
+export const statePath = (c: LocalChain) => join(outDir(c), "anvil-state.json");
+/** The state as the stack saved it before it streamed states: anvil_dumpState's hex. `startNode` converts it once. */
+const legacyStatePath = (c: LocalChain) => join(outDir(c), "anvil-state.hex");
 
 /**
  * Starts the chain's anvil node unless one answers on its port: its chain ID, the rehearsal's code-size and gas limits,
  * every sender unlocked for the governance stand-ins, and an optional fork. It starts mining a block per transaction
  * (deploys and releases are not paced by the block time); `setMining(c, "interval")` then mines one block every
- * `blockTime` seconds, as the chain does. A state saved by `stopNode` is loaded back.
+ * `blockTime` seconds, as the chain does. A state saved by `stopNode` is loaded back (`--load-state`); a state saved
+ * as hex by an earlier stack is converted to anvil's JSON state first.
  */
 export async function startNode(c: LocalChain): Promise<"running" | "started" | "restored"> {
   if (await answers(c)) {
@@ -53,18 +57,17 @@ export async function startNode(c: LocalChain): Promise<"running" | "started" | 
     "--host", "127.0.0.1", "--port", String(c.port), "--chain-id", String(c.chainId), "--auto-impersonate",
     "--code-size-limit", "49152", "--gas-limit", "60000000",
   ];
+  if (!existsSync(statePath(c)) && existsSync(legacyStatePath(c))) await hexStateToJson(legacyStatePath(c), statePath(c));
   const restore = existsSync(statePath(c));
+  if (restore) args.push("--load-state", statePath(c));
   if (c.fork) {
     await startForkProxy(c);
     args.push("--fork-url", `http://127.0.0.1:${c.fork.proxyPort}`, "--fork-block-number", String(c.fork.block), "--retries", "10", "--fork-retry-backoff", "2000", "--timeout", "60000");
   } else if (!restore) args.push("--timestamp", String(genesisTimestamp()));
   start(nodeName(c), "anvil", args);
-  await waitFor(`${c.label} node`, () => answers(c), 30_000, 300);
-  if (restore) {
-    await rpc(rpcUrl(c), "anvil_loadState", [readFileSync(statePath(c), "utf8").trim()]);
-    return "restored";
-  }
-  return "started";
+  // A long-running chain's state is over a gigabyte of JSON: anvil answers once it has loaded it.
+  await waitFor(`${c.label} node`, () => answers(c), restore ? 900_000 : 30_000, restore ? 2_000 : 300);
+  return restore ? "restored" : "started";
 }
 
 /** The chain's fork proxy, holding the network's RPC endpoints (environment or encrypted secrets) in its environment. */
@@ -79,12 +82,9 @@ async function startForkProxy(c: LocalChain): Promise<void> {
   await waitFor(`${c.label} fork proxy`, async () => (await fetch(`http://127.0.0.1:${c.fork!.proxyPort}`)).ok, 15_000, 300);
 }
 
-/** Saves the node's state (anvil_dumpState) and stops it. */
+/** Saves the node's state (anvil_dumpState, streamed to anvil's JSON state) and stops it. */
 export async function stopNode(c: LocalChain, save = true): Promise<void> {
-  if (save && (await answers(c))) {
-    const hex = await rpc<string>(rpcUrl(c), "anvil_dumpState");
-    writeFileSync(statePath(c), hex);
-  }
+  if (save && (await answers(c))) await dumpState(rpcUrl(c), statePath(c));
   stop(nodeName(c));
   stop(`fork-proxy-${c.key}`);
 }
