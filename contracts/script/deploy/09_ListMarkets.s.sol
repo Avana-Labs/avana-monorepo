@@ -722,7 +722,8 @@ contract ListMarkets is ListingBase {
             if (!ok) {
                 // The call's own revert data, which forge decodes (a custom error by name), after the call's label.
                 console2.log(
-                    string.concat(op.name, ": this call reverts when simulated, so it would at execution:"), op.labels[i]
+                    string.concat(op.name, ": this call reverts when simulated, so it would at execution:"),
+                    op.labels[i]
                 );
                 assembly ("memory-safe") {
                     revert(add(ret, 0x20), mload(ret))
