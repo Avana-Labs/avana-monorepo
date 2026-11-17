@@ -8,6 +8,190 @@ updated: 2026-11-17
 
 **Deployment values.** Each network's section shows the values that network's deployment listed with, read from its release manifest and deploy output. On mainnet the Aave DAO sets caps, collateral factors, liquidation bonuses, collateral risk premiums and First-Loss Reserve amounts through its proposals.
 
+<!-- network-section:start base-sepolia -->
+## Base Sepolia
+- network: base-sepolia
+- chainId: 84532
+- explorer: https://sepolia.basescan.org
+
+Every Spoke here is on the Avana Base Hub; Hub and Spoke addresses are on [Contract Addresses](/developers/reference/addresses?network=base-sepolia). Spokes are listed by collateral risk, lowest first. Reserves are the debt assets the Hub lists (GHO, USDC, USDT) and one LP collateral reserve per market. `—` means the setting does not apply. Aero Slipstream pools use dynamic fees, so each market is named by its tick spacing.
+
+Generated from release `v0.1.0-alpha.2` (commit `b4946f83`) and its deploy output.
+
+### Interest rate curves
+
+One curve per debt asset on the Avana Base Hub. LP reserves are collateral only and have no curve.
+
+| Hub | Reserve | Base drawn rate | Rate growth before optimal | Rate growth after optimal | Optimal usage ratio | Liquidity fee |
+| --- | --- | --- | --- | --- | --- | --- |
+| Avana Base Hub | GHO | 0% | 4% | 60% | 90% | 0% |
+| Avana Base Hub | USDC | 0% | 4% | 60% | 90% | 0% |
+| Avana Base Hub | USDT | 0% | 4% | 60% | 90% | 0% |
+
+### Credit lines
+
+The Aave DAO funds each borrowable asset by supplying it to the Hub through the Lend Spoke, up to the credit line the MarketRegistry records.
+
+| Origin | Target Hub | Reserve | Credit line size |
+| --- | --- | --- | --- |
+| Aave DAO, through the Lend Spoke | Avana Base Hub | GHO | 100,000,000 GHO |
+| Aave DAO, through the Lend Spoke | Avana Base Hub | USDC | 100,000,000 USDC |
+
+### Add and draw caps
+
+Caps in whole tokens. The Lend Spoke takes supply and draws nothing; CDP Spokes draw the borrowable assets and take LP collateral. Avana's own market caps (under LP market parameters) bound LP collateral further.
+
+| Spoke | Reserve | Add cap | Draw cap |
+| --- | --- | --- | --- |
+| Lend Spoke | GHO | Max | 0 |
+| Lend Spoke | USDC | Max | 0 |
+| Lend Spoke | USDT | Max | 0 |
+| Aero Slipstream Blue-chip | GHO | 0 | 10,000,000 |
+| Aero Slipstream Blue-chip | USDC | 0 | 10,000,000 |
+| Aero Slipstream Blue-chip | USDT | 0 | 5,000,000 |
+| Aero Slipstream Blue-chip | WETH/USDC LP | Max | 0 |
+| Aero Slipstream Blue-chip | cbBTC/USDC LP | Max | 0 |
+| Aero Slipstream Blue-chip | cbBTC/WETH LP | Max | 0 |
+| Aero Slipstream Gov-DeFi | GHO | 0 | 10,000,000 |
+| Aero Slipstream Gov-DeFi | USDC | 0 | 10,000,000 |
+| Aero Slipstream Gov-DeFi | USDT | 0 | 5,000,000 |
+| Aero Slipstream Gov-DeFi | AERO/USDC LP | Max | 0 |
+| Aero Slipstream Gov-DeFi | AERO/WETH LP | Max | 0 |
+| Aero Slipstream Gov-DeFi | LINK/WETH LP | Max | 0 |
+| Aero Slipstream Stocks | GHO | 0 | 10,000,000 |
+| Aero Slipstream Stocks | USDC | 0 | 10,000,000 |
+| Aero Slipstream Stocks | USDT | 0 | 5,000,000 |
+| Aero Slipstream Stocks | AMZNc/USDC LP | Max | 0 |
+| Aero Slipstream Stocks | SNDKc/USDC LP | Max | 0 |
+| Aero Slipstream Stocks | GOOGLc/USDC LP | Max | 0 |
+| Aero Slipstream Stocks | NVDAc/USDC LP | Max | 0 |
+| Aero Slipstream Stocks | SPCXc/USDC LP | Max | 0 |
+| Aero Slipstream Stocks | METAc/USDC LP | Max | 0 |
+
+> `Max` is Aave V4's largest Spoke cap (`MAX_ALLOWED_SPOKE_CAP`). A debt asset that is not borrowable on a CDP Spoke keeps its draw cap but cannot be drawn.
+
+### Risk parameters
+
+LP reserves are collateral only. Debt reserves are never collateral. The Lend Spoke's reserves carry the borrowable flag, but their draw cap is 0, so nothing is drawn through the Lend Spoke.
+
+| Spoke | Reserve | Collateral factor | Max liquidation bonus | Borrowable | Collateral risk | Liquidation fee | Risk premium threshold | receiveShares |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Lend Spoke | GHO | 0% | — | Yes | — | 0% | Max | No |
+| Lend Spoke | USDC | 0% | — | Yes | — | 0% | Max | No |
+| Lend Spoke | USDT | 0% | — | Yes | — | 0% | Max | No |
+| Aero Slipstream Blue-chip | WETH/USDC LP | 72% | 6.5% | No | 800 bps | 0% | Max | No |
+| Aero Slipstream Blue-chip | cbBTC/USDC LP | 72% | 6.5% | No | 800 bps | 0% | Max | No |
+| Aero Slipstream Blue-chip | cbBTC/WETH LP | 72% | 6.5% | No | 800 bps | 0% | Max | No |
+| Aero Slipstream Blue-chip | GHO | 0% | — | Yes | — | 0% | Max | No |
+| Aero Slipstream Blue-chip | USDC | 0% | — | Yes | — | 0% | Max | No |
+| Aero Slipstream Blue-chip | USDT | 0% | — | No | — | 0% | Max | No |
+| Aero Slipstream Gov-DeFi | AERO/USDC LP | 68% | 8% | No | 1,000 bps | 0% | Max | No |
+| Aero Slipstream Gov-DeFi | AERO/WETH LP | 68% | 8% | No | 1,000 bps | 0% | Max | No |
+| Aero Slipstream Gov-DeFi | LINK/WETH LP | 68% | 8% | No | 1,000 bps | 0% | Max | No |
+| Aero Slipstream Gov-DeFi | GHO | 0% | — | Yes | — | 0% | Max | No |
+| Aero Slipstream Gov-DeFi | USDC | 0% | — | Yes | — | 0% | Max | No |
+| Aero Slipstream Gov-DeFi | USDT | 0% | — | No | — | 0% | Max | No |
+| Aero Slipstream Stocks | AMZNc/USDC LP | 65% | 10% | No | 1,200 bps | 0% | Max | No |
+| Aero Slipstream Stocks | SNDKc/USDC LP | 65% | 10% | No | 1,200 bps | 0% | Max | No |
+| Aero Slipstream Stocks | GOOGLc/USDC LP | 65% | 10% | No | 1,200 bps | 0% | Max | No |
+| Aero Slipstream Stocks | NVDAc/USDC LP | 65% | 10% | No | 1,200 bps | 0% | Max | No |
+| Aero Slipstream Stocks | SPCXc/USDC LP | 65% | 10% | No | 1,200 bps | 0% | Max | No |
+| Aero Slipstream Stocks | METAc/USDC LP | 65% | 10% | No | 1,200 bps | 0% | Max | No |
+| Aero Slipstream Stocks | GHO | 0% | — | Yes | — | 0% | Max | No |
+| Aero Slipstream Stocks | USDC | 0% | — | Yes | — | 0% | Max | No |
+| Aero Slipstream Stocks | USDT | 0% | — | No | — | 0% | Max | No |
+
+> Collateral risk is Aave V4's `collateralRisk`: the premium borrowers pay on top of the base rate, and lenders earn, for that collateral. `Max` is Aave V4's `MAX_RISK_PREMIUM_THRESHOLD`. Avana requires a liquidation fee of 0 on every LP reserve; its revenue from a liquidation is the fee share under Fees.
+
+### Price feeds
+
+Each Spoke has its own AaveOracle; these are the sources it reads. Each name links to its address on Contract Addresses. GHO has no feed: it is priced at a fixed $1, served on this network by a fixed price source the listing deploys. Each market's LPOracle is under Markets on Contract Addresses.
+
+| Spoke | Reserve | Oracle |
+| --- | --- | --- |
+| Lend Spoke and every CDP Spoke | GHO | [Fixed $1 price source, GHO](/developers/reference/addresses?network=base-sepolia#avana-core) |
+| Lend Spoke and every CDP Spoke | USDC | [DebtOracle, USDC](/developers/reference/addresses?network=base-sepolia#avana-core) |
+| Lend Spoke and every CDP Spoke | USDT | [USDT / USD price feed](/developers/reference/addresses?network=base-sepolia#external-dependencies) |
+| Aero Slipstream Blue-chip | Each LP reserve | [The market's LPOracle](/developers/reference/addresses?network=base-sepolia#markets) |
+| Aero Slipstream Gov-DeFi | Each LP reserve | [The market's LPOracle](/developers/reference/addresses?network=base-sepolia#markets) |
+| Aero Slipstream Stocks | Each LP reserve | [The market's LPOracle](/developers/reference/addresses?network=base-sepolia#markets) |
+
+### LP market parameters
+
+Avana's own settings for each market: the pool it accepts, how much of the pool's value counts as collateral, and how much can be pledged.
+
+| Spoke | Market | Pool | Fee tier or tick spacing | Pool risk factor | Market cap | Consistency tolerance |
+| --- | --- | --- | --- | --- | --- | --- |
+| Aero Slipstream Blue-chip | WETH/USDC | 0xe6f7FD57bFa6CE33768814cdeAA21F4B2F7CF658 | Tick spacing 100 | 84.71% | $5,000,000 | 1% |
+| Aero Slipstream Blue-chip | cbBTC/USDC | 0xdb1fC04fa74d83e797C30Ff9096A66D205627877 | Tick spacing 100 | 85.72% | $5,000,000 | 1% |
+| Aero Slipstream Blue-chip | cbBTC/WETH | 0xb4210b88FCC92478c40c3b5DA65192eFB3E0abDb | Tick spacing 100 | 85.72% | $5,000,000 | 1% |
+| Aero Slipstream Gov-DeFi | AERO/USDC | 0xCFf2B43d29ED8E71fF8439d4d87BAABdced6F491 | Tick spacing 200 | 89.48% | $5,000,000 | 1% |
+| Aero Slipstream Gov-DeFi | AERO/WETH | 0x4899F35518AF6Cc8F9605EfAb2d7cA5A7Bc658CE | Tick spacing 200 | 89.48% | $5,000,000 | 1% |
+| Aero Slipstream Gov-DeFi | LINK/WETH | 0x46c94f957ee928F1053b41Ef1B7A147f5362A2F7 | Tick spacing 200 | 89.48% | $5,000,000 | 1% |
+| Aero Slipstream Stocks | AMZNc/USDC | 0x42ddF55685992D3C4DA53dAd67D83bdf8Ac1A737 | Tick spacing 100 | 89.05% | $5,000,000 | 1% |
+| Aero Slipstream Stocks | SNDKc/USDC | 0xA21D4BF87fECdd28ffa1eF3a215E92F2E0b2491f | Tick spacing 100 | 89.05% | $5,000,000 | 1% |
+| Aero Slipstream Stocks | GOOGLc/USDC | 0x30C1Df50036E8687c90D6936aDe63140fDFC6989 | Tick spacing 100 | 89.05% | $5,000,000 | 1% |
+| Aero Slipstream Stocks | NVDAc/USDC | 0x8D5c00537672417c6C1eeC1e417727038c980cD7 | Tick spacing 100 | 89.05% | $5,000,000 | 1% |
+| Aero Slipstream Stocks | SPCXc/USDC | 0x41670Db5f6D35ac0053D13508a5B54d79955764a | Tick spacing 100 | 89.05% | $5,000,000 | 1% |
+| Aero Slipstream Stocks | METAc/USDC | 0xD6dB58A4c9C48544304F156AB5fBE75F291494E0 | Tick spacing 100 | 89.05% | $5,000,000 | 1% |
+
+### Slippage allowance
+
+The most below oracle value a liquidation's swaps may settle (`slippageAllowanceBps`), and the floor a tightening cannot go below (`slippageAllowanceMinBps`), as each Spoke's markets were listed.
+
+| Spoke | Slippage allowance | Slippage allowance floor |
+| --- | --- | --- |
+| Aero Slipstream Blue-chip | 251 bps | 50 bps |
+| Aero Slipstream Gov-DeFi | 307 bps | 50 bps |
+| Aero Slipstream Stocks | 380 bps | 50 bps |
+
+### Lend Spoke
+
+Each debt asset has a First-Loss Reserve and a DAO deficit offset on the Hub.
+
+| Asset | Borrowable on CDP Spokes | First-Loss Reserve minimum | DAO deficit offset minimum |
+| --- | --- | --- | --- |
+| GHO | Yes | 100,000 GHO | 75,000 GHO |
+| USDC | Yes | 100,000 USDC | 75,000 USDC |
+| USDT | No | 50,000 USDT | 25,000 USDT |
+
+### Collateral tokens
+
+Each pool token's collateral factor (CF0 and CF1 in the LP collateral factor, `min(CF0, CF1) × poolRiskFactor`) and its exposure cap across every Spoke and market of the Hub.
+
+| Token | Token collateral factor | Token cap |
+| --- | --- | --- |
+| USDC | 90% | $50,000,000 |
+| USDT | 90% | $50,000,000 |
+| WETH | 85% | $50,000,000 |
+| wstETH | 85% | $50,000,000 |
+| cbBTC | 84% | $50,000,000 |
+| AERO | 76% | $10,000,000 |
+| LINK | 76% | $10,000,000 |
+| AMZNc | 73% | $5,000,000 |
+| SNDKc | 73% | $5,000,000 |
+| GOOGLc | 73% | $5,000,000 |
+| NVDAc | 73% | $5,000,000 |
+| SPCXc | 73% | $5,000,000 |
+| METAc | 73% | $5,000,000 |
+
+### Chain settings
+
+| Parameter | Value | Description |
+| --- | --- | --- |
+| `CHAIN_BLOCK_TIME` | 2 s | Block interval of the chain. It sizes the observation buffer a pool needs for the time-weighted price check. |
+| `twapMinObservations` | 901 | Observation slots a pool must hold for a 1,800 s window at 2 s blocks. |
+| `sequencer.feed` | None | No sequencer uptime feed is read on this network; the feed and its grace period apply on Base mainnet only. |
+| `SHORT_DELAY` | 60 s | Timelock delay of an operation whose every call is on the short-delay list. |
+| `normalDelay` | 120 s | Timelock delay of every other operation. |
+| `MIN_NORMAL_DELAY` | 60 s | Floor of `normalDelay` on this chain, fixed when the timelock was deployed. |
+| `publicExecution` | true | Any address may execute a ready timelock operation. |
+| `MAX_MARKET_COUNT` | 128 | Most markets this chain's MarketRegistry ever lists, fixed when it was deployed. |
+| `routeDepthThreshold` | 5,000,000 | Whole units of the route's debt asset each approved swap route must deliver within the slippage allowance in the stress case, set on every route slot at listing. |
+| `pokeMinGas` (DebtOracle, USDC) | 1,000,000 gas | Minimum gas a `poke()` of the USDC DebtOracle needs at entry. |
+
+<!-- network-section:end base-sepolia -->
+
 <!-- network-section:start local-ethereum -->
 ## Local Ethereum development chain
 - network: local-ethereum
