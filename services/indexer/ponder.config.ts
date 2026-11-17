@@ -10,6 +10,7 @@ import {
   activeChains,
   ammPoolSource,
   chainSources,
+  firstLossReserveListedSource,
   firstLossReserveSource,
   debtOracleSource,
   hubRecordedSource,
@@ -60,6 +61,8 @@ export default createConfig({
     VaultToken: { abi: abis.VaultToken, chain: vaultTokenSource() },
     LPOracle: { abi: abis.LPOracle, chain: lpOracleSource() },
     DebtOracle: { abi: abis.DebtOracle, chain: debtOracleSource() },
+    // First-Loss Reserves: the manifest's from their deployment, and every one the MarketRegistry sets, from that event.
+    AvanaFirstLossReserveListed: { abi: abis.AvanaFirstLossReserve, chain: firstLossReserveListedSource() },
     AvanaFirstLossReserve: { abi: abis.AvanaFirstLossReserve, chain: firstLossReserveSource() },
     // The Aave DAO's deficit offsets: every Spoke a manifest Hub adds, read for First-Loss Reserve events
     // (src/config/aaveSources.ts, FIRST_LOSS_SOURCES).

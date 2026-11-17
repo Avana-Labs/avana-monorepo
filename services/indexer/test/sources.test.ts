@@ -94,6 +94,10 @@ describe("indexer sources with several Hubs", () => {
     expect(sources.samplerSource().sepolia).toMatchObject({ startBlock: 125 });
   });
 
+  it("follows the manifest's First-Loss Reserves from their deployment block", () => {
+    expect(sources.firstLossReserveListedSource()).toEqual({ sepolia: { address: [addr(0x41)], startBlock: 130 } });
+  });
+
   it("follows no PoolManager on a chain whose manifest names none", () => {
     expect(sources.poolManagerSource()).toEqual({});
   });

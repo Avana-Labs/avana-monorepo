@@ -178,6 +178,8 @@ An operation's expiry emits no event: `expiresAt = readyAt + GRACE_PERIOD` (14 d
 | `WithdrawalExecuted(uint256 id idx, uint256 withdrawn, uint256 sharesBurned, address to idx, uint256 balanceAfter)` | `coverage_balance` | M |
 | `WithdrawalRequested(uint256 id idx, uint256 amount, address to idx, uint64 executableAt)`, `WithdrawalCancelled(uint256 id idx)`, `ReserveBelowMinimum(uint256 balance, uint256 minimum)`, `BorrowSpokeAllowlistUpdated(address spoke idx, bool allowed)`, `FirstLossReserveMinimumUpdated(uint256 oldMinimum, uint256 newMinimum)`, `AuthorityUpdated(address authority)` | log | M |
 
+A reserve is read from two sources: `AvanaFirstLossReserveListed`, the reserves the manifest lists, from their deployment blocks (the release funds a reserve before the MarketRegistry sets it, so its first `ReserveFunded` precedes `AvanaFirstLossReserveSet`), and `AvanaFirstLossReserve`, every reserve the MarketRegistry sets, from that event (a reserve set after the manifest). A chain whose manifest lists none has no `AvanaFirstLossReserveListed` source.
+
 The same events are read from the Aave DAO's deficit offsets (`DaoDeficitOffset`, a First-Loss Reserve the DAO deploys and registers on a Hub behind the pair's Avana Umbrella). They are followed from the Hub's `AddSpoke` under the `DaoDeficitOffset` source, so an offset registered after start-up is indexed with no restart; Avana's own reserves match that source too and are recorded once. Every log is kept as `AvanaFirstLossReserve.<Event>` with the emitting contract's address, and `coverage_balance` has one row per reserve or offset; `Lens.getTailCoverage` and `getHubAssetExposure` say which address is the offset.
 
 ## Aave V4 Spokes and Hub

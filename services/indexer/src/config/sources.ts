@@ -65,6 +65,8 @@ export function perChain<T>(pick: (m: ServiceManifest) => T): Record<string, T> 
   return Object.fromEntries(activeChains.map((c) => [c.key, pick(manifests.get(c.id)!)]));
 }
 
+const earliest = (xs: readonly { address: `0x${string}`; startBlock: number }[]) => ({ address: xs.map((x) => x.address), startBlock: Math.min(...xs.map((x) => x.startBlock)) });
+
 /** Start block of a chain's Avana deployment: the MarketRegistry's receipt, the first contract children announce from. */
 const registryStart = (m: ServiceManifest) => m.avana.marketRegistry.startBlock;
 
@@ -109,6 +111,19 @@ export const firstLossReserveSource = () =>
     startBlock: registryStart(m),
   }));
 
+/**
+ * The First-Loss Reserves each manifest lists, from their deployment blocks: the release funds a reserve before the
+ * MarketRegistry sets it, and `firstLossReserveSource` follows a reserve only from that event. Only chains whose
+ * manifest lists one (Ponder refuses an empty address list).
+ */
+export const firstLossReserveListedSource = () =>
+  Object.fromEntries(
+    activeChains.flatMap((c) => {
+      const reserves = manifests.get(c.id)!.avana.firstLossReserves;
+      return reserves.length ? [[c.key, earliest(reserves)] as const] : [];
+    }),
+  );
+
 /** The addresses the series sampler starts from on a chain (`@avana/services-common/views`), from its manifest. */
 export function deploymentOf(chainId: number): ChainDeployment {
   const m = manifests.get(chainId);
@@ -124,8 +139,6 @@ export function deploymentOf(chainId: number): ChainDeployment {
     firstLossReserves: m.avana.firstLossReserves.map((c) => ({ address: c.address, asset: c.asset, hub: c.hub })),
   };
 }
-
-const earliest = (xs: readonly { address: `0x${string}`; startBlock: number }[]) => ({ address: xs.map((x) => x.address), startBlock: Math.min(...xs.map((x) => x.startBlock)) });
 
 /** The manifest's Hubs. */
 export const hubSource = () => perChain((m) => earliest(aaveTopology(m).hubs));
