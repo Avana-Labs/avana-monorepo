@@ -6,13 +6,14 @@
 // processed one at a time; a head that arrives during a pass is processed after it. A late head, already behind one
 // processed (a missed block delivered after the newer one), is skipped rather than taken for a reorg.
 //
-// Cadence (KEEPER_SLOW_JOB_SECONDS, 60 s by default, 0 for every block): liquidations, and oracles that are not Live
-// (send on change), are checked at every head. The instance's own status, pending settlement, breaker and
-// configuration pokes, the gas vault, the scheduled oracle pokes and the funding reads (M-16, M-17, M-33) are checked
-// at the first head at least that many seconds of block time after their last check; the funding alerts found there
-// are posted again at every head in between, so the monitor holds them exactly as before. A pass issues every
-// candidate discovery and the reads its checks will make together, so they travel as a few batched eth_calls
-// (chain/client.ts, chain/reads.ts); the jobs then run one after another, in the same order as before.
+// Cadence (KEEPER_SLOW_JOB_SECONDS, 60 s by default, 0 for every block): liquidations, breaker pokes and oracles that
+// are not Live (send on change; every oracle's price state is read at each head) are checked at every head. The
+// instance's own status, pending settlement, configuration pokes, the gas vault, the scheduled oracle pokes and the
+// funding reads (M-16, M-17, M-33) are checked at the first head at least that many seconds of block time after their
+// last check; the funding alerts found there are posted again at every head in between, so the monitor holds them
+// exactly as before. A pass issues every candidate discovery and the reads its checks will make together, so they
+// travel as a few batched eth_calls (chain/client.ts, chain/reads.ts); the jobs then run one after another, in the
+// same order as before.
 
 import { type Address, type PublicClient, decodeFunctionResult, encodeFunctionData } from "viem";
 import { flashLiquidatorAbi } from "@avana/protocol/abis";
@@ -21,10 +22,10 @@ import type { RetryHint } from "../jobs/failureReasons.ts";
 import { createChainReader } from "../chain/reads.ts";
 import type { AccountCache } from "../discovery/accountCache.ts";
 import { type Head, ProcessedHeads, isReorg } from "../discovery/stream.ts";
-import { breakerPokeJob } from "../jobs/breakerPoke.ts";
+import { breakerPokeJob, configPokeJob } from "../jobs/breakerPoke.ts";
 import { gasTopUpJob } from "../jobs/gasTopUp.ts";
 import { liquidationJob } from "../jobs/liquidation.ts";
-import { POKE_LEAD_SECONDS, PokeBook, oraclePokeJob, watchedEveryBlock } from "../jobs/oraclePoke.ts";
+import { POKE_LEAD_SECONDS, PokeBook, everyBlockTargets, oraclePokeJob } from "../jobs/oraclePoke.ts";
 import { settlePendingJob } from "../jobs/settlePending.ts";
 import { blocksFor } from "@avana/services-common";
 import { type AlertSink, m09Level, raise } from "../monitoring/alerts.ts";
@@ -95,6 +96,7 @@ export function chainLoop(d: ChainLoopDeps) {
     from: d.from,
     leadSeconds: slowSeconds === 0 ? POKE_LEAD_SECONDS : POKE_LEAD_SECONDS + slowSeconds + d.cfg.chain.blockTimeSeconds,
   });
+  const breakerJob = breakerPokeJob();
   const jobs: Job<any, any>[] = [
     liquidationJob({
       cache: d.cache,
@@ -121,11 +123,13 @@ export function chainLoop(d: ChainLoopDeps) {
     }),
     settlePendingJob(),
     oracleJob,
-    breakerPokeJob(),
+    breakerJob,
+    configPokeJob(),
     gasTopUpJob(d.from),
   ];
-  // Checked at every head; the others at the slow cadence. The oracle job keeps its not-Live oracles at every head.
-  const everyHead = new Set<Job<any, any>>([jobs[0]!, oracleJob]);
+  // Checked at every head; the others at the slow cadence. Between slow heads the oracle job checks the oracles that
+  // are not Live at the head (or were not at their last read).
+  const everyHead = new Set<Job<any, any>>([jobs[0]!, oracleJob, breakerJob]);
   let lastSlowAt: bigint | null = null;
   const chainId = d.cfg.chain.id;
   const pipeline: PipelineDeps = {
@@ -183,7 +187,7 @@ export function chainLoop(d: ChainLoopDeps) {
     const found = await Promise.allSettled(
       active.map(async (job) => {
         let candidates = await job.discover(ctx);
-        if (job === oracleJob && !slow) candidates = candidates.filter((t: { oracle: Address }) => watchedEveryBlock(book, t.oracle));
+        if (job === oracleJob && !slow) candidates = await everyBlockTargets(ctx, book, candidates);
         await job.prefetch?.(ctx, candidates).catch(() => undefined);
         return candidates;
       }),

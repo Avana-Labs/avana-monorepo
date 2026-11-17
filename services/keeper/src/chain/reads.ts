@@ -4,7 +4,8 @@
 // health factor, prices, gates and sizing of one decision come from the same state. A view read is made once per
 // reader: a second ask for the same read at the same block returns the first answer, so the chain loop can issue the
 // pass's reads together up front (one batched eth_call through the client, chain/client.ts) and the jobs then read the
-// same values as before without another request. Simulations of state-changing calls are never batched or reused.
+// same values as before without another request. Simulations of state-changing calls are never batched with other
+// reads; the breaker pokes of all markets share one simulation (`breakerPokes`, which says why that is safe).
 
 import { type Address, type Hex, type PublicClient, decodeFunctionResult, encodeFunctionData, keccak256, multicall3Abi, parseAbi } from "viem";
 import {
@@ -17,6 +18,7 @@ import {
   lpOracleAbi,
   lpVaultSwapAbi,
   marketRegistryAbi,
+  riskModuleAbi,
 } from "@avana/protocol/abis";
 import { MULTICALL3_ADDRESS } from "@avana/services-common/chains";
 
@@ -233,6 +235,30 @@ export function createChainReader(client: PublicClient, manifest: { avana: { len
      * batched: inside one aggregate3 a simulated write would be seen by the calls after it.
      */
     callAt: (to: Address, data: Hex, from?: Address) => client.call({ ...at, to, data, account: from, batch: false }),
+
+    /**
+     * `RiskModule.pokeBreakers(marketId)` for each market at this block, simulated in one `eth_call` of Multicall3's
+     * aggregate3, in order: the raw return per market, null for an entry that reverted (the caller simulates that one
+     * alone, for its revert). Each entry sees the writes of the entries before it, which leaves its result unchanged:
+     * `pokeBreakers` returns the conditions holding after its own oracle pokes, the earlier entries write only oracle
+     * observations of this same block (which its own pokes store again) and breach records (which the live conditions
+     * do not read). Memoized per block, like a view.
+     */
+    breakerPokes: (riskModule: Address, marketIds: readonly bigint[]): Promise<ReadonlyMap<bigint, Hex | null>> =>
+      once(`breakerPokes:${riskModule}:${marketIds.join(",")}`, async () => {
+        const out = new Map<bigint, Hex | null>();
+        if (marketIds.length === 0) return out;
+        const data = encodeFunctionData({
+          abi: multicall3Abi,
+          functionName: "aggregate3",
+          args: [marketIds.map((id) => ({ target: riskModule, allowFailure: true, callData: encodeFunctionData({ abi: riskModuleAbi, functionName: "pokeBreakers", args: [id] }) }))],
+        });
+        const { data: ret } = await client.call({ ...at, to: MULTICALL3_ADDRESS, data, batch: false });
+        if (!ret) return out;
+        const results = decodeFunctionResult({ abi: multicall3Abi, functionName: "aggregate3", data: ret });
+        marketIds.forEach((id, i) => out.set(id, results[i]?.success ? results[i]!.returnData : null));
+        return out;
+      }),
 
     /**
      * The gas vault's view of `signer` at this block (2.24): whether it is listed, its refill trigger, the signer's

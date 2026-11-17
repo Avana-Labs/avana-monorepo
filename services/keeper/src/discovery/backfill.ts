@@ -10,6 +10,15 @@ import type { AbiEvent, Address, Log, PublicClient } from "viem";
 export const INITIAL_CHUNK = 10_000n;
 export const MIN_CHUNK = 1n;
 
+/**
+ * Where a provider's next incremental sweep starts: its finalized block read before the sweep (logs at or below it
+ * never change), or the head the sweep read to when that is lower. A lagging load-balanced node can answer a head below
+ * the finalized block another node gave, and the blocks between them would otherwise wait for the daily full sweep.
+ */
+export function nextSweepFrom(finalized: bigint, through: bigint): bigint {
+  return finalized < through ? finalized : through;
+}
+
 /** Errors by which providers refuse a range as too large or too many results. */
 export function isRangeRefusal(err: unknown): boolean {
   return err instanceof Error && /range|too many|limit exceeded|more than|response size|query returned/i.test(err.message);

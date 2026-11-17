@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Read cadence and batching (runtime/chainLoop.ts, chain/reads.ts): liquidations and oracles that are not Live are
-// checked at every head; the instance's status, pending settlement, breaker pokes and Live oracles at the first head
-// KEEPER_SLOW_JOB_SECONDS after their last check (0: every head); the funding alerts found at a slow head are posted
-// again at every head until the next one. A view read is made once per block reader; a simulation of a write is never
-// batched. A log range a provider refused is not asked for again in the same read.
+// Read cadence and batching (runtime/chainLoop.ts, chain/reads.ts): liquidations, breaker pokes and oracles that are
+// not Live are checked at every head (every oracle's price state is read at each head); the instance's status, pending
+// settlement, configuration pokes and Live oracles at the first head KEEPER_SLOW_JOB_SECONDS after their last check
+// (0: every head); the funding alerts found at a complete slow check are posted again at every head until the next
+// one, and kept when a check fails. A view read is made once per block reader; a simulation of a write is not batched
+// with reads, and the breaker pokes of all markets share one. A log range a provider refused is not asked for again in
+// the same read, and an incremental sweep never starts above the head it read to.
 
 import { describe, expect, it, vi } from "vitest";
-import type { Address, Hex, PublicClient } from "viem";
+import { type Address, type Hex, type PublicClient, decodeFunctionData, encodeFunctionResult, multicall3Abi } from "viem";
+import { MULTICALL3_ADDRESS } from "@avana/services-common/chains";
 import { CHAINS } from "@avana/services-common";
 import { createChainReader } from "../src/chain/reads.ts";
 import { type ChainConfig, type KeeperConfig, SLOW_JOB_SECONDS, slowJobSeconds } from "../src/config.ts";
 import { AccountCache } from "../src/discovery/accountCache.ts";
-import { getLogsChunked } from "../src/discovery/backfill.ts";
+import { getLogsChunked, nextSweepFrom } from "../src/discovery/backfill.ts";
 import { POKE_LEAD_SECONDS, pokeDue } from "../src/jobs/oraclePoke.ts";
 import { type Alert, HeldAlerts } from "../src/monitoring/alerts.ts";
 import { chainLoop } from "../src/runtime/chainLoop.ts";
@@ -97,22 +100,43 @@ function loop(slowSeconds: number, oracleState: () => number) {
     funding: async (_head, slow) => void fundingAt.push(slow),
   });
   const hash = (n: bigint) => `0x${n.toString(16).padStart(64, "0")}` as Hex;
-  const run = async (heads: number) => {
-    for (let n = 1n; n <= BigInt(heads); n++) await onHead({ number: n, hash: hash(n), parentHash: hash(n - 1n), timestamp: 1_700_000_000n + n * 12n });
+  const run = async (heads: number, from = 1) => {
+    for (let n = BigInt(from); n <= BigInt(heads); n++) await onHead({ number: n, hash: hash(n), parentHash: hash(n - 1n), timestamp: 1_700_000_000n + n * 12n });
   };
   return { run, reads, fundingAt };
 }
 
 describe("slow-cadence jobs", () => {
-  it("checks status, pending settlement, breakers and a Live oracle once per 60 s of block time, funding at the same heads", async () => {
+  it("checks status, pending settlement, configuration pokes and a Live oracle once per 60 s of block time, funding at the same heads", async () => {
     vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     const { run, reads, fundingAt } = loop(60, () => 0);
     await run(10); // 12 s blocks: heads 1 and 6 are 60 s apart
     expect(reads.get("isFrozenAddress")).toBe(2);
     expect(reads.get("getPendingSettlement")).toBe(2);
     expect(reads.get("getSpokes")).toBe(2);
-    expect(reads.get("getPriceState")).toBe(2);
+    expect(reads.get("latestRoundData")).toBe(2);
     expect(fundingAt).toEqual([true, false, false, false, false, true, false, false, false, false]);
+    vi.restoreAllMocks();
+  });
+
+  it("simulates the breaker pokes and reads every oracle's price state at every head", async () => {
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const { run, reads } = loop(60, () => 0);
+    await run(10);
+    expect(reads.get("callAt")).toBe(10);
+    expect(reads.get("getPriceState")).toBe(10);
+    vi.restoreAllMocks();
+  });
+
+  it("checks an oracle at the first head it leaves Live, between two slow heads", async () => {
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    let state = 0;
+    const { run, reads } = loop(60, () => state);
+    await run(2);
+    expect(reads.get("latestRoundData")).toBe(1);
+    state = 2;
+    await run(3, 3);
+    expect(reads.get("latestRoundData")).toBe(2);
     vi.restoreAllMocks();
   });
 
@@ -166,14 +190,22 @@ describe("HeldAlerts", () => {
   it("posts the last run's alerts again at each head until the next run", async () => {
     const sent: Alert[] = [];
     const held = new HeldAlerts({ send: async (a) => void sent.push(a) });
-    held.begin();
-    await held.sink.send(alert(10n, "float:a"));
+    await held.run(10n, () => held.sink.send(alert(10n, "float:a")));
     await held.replay(11n);
     await held.replay(12n);
     expect(sent.map((a) => `${a.blockNumber} ${a.subject}`)).toEqual(["10 float:a", "11 float:a", "12 float:a"]);
-    held.begin();
-    await held.replay(13n);
+    await held.run(13n, async () => {});
+    await held.replay(14n);
     expect(sent).toHaveLength(3);
+  });
+
+  it("keeps the previous run's alerts, and posts them for the head, when a run throws", async () => {
+    const sent: Alert[] = [];
+    const held = new HeldAlerts({ send: async (a) => void sent.push(a) });
+    await held.run(10n, () => held.sink.send(alert(10n, "float:a")));
+    await expect(held.run(15n, async () => { throw new Error("read failed"); })).rejects.toThrow("read failed");
+    await held.replay(16n);
+    expect(sent.map((a) => `${a.blockNumber} ${a.subject}`)).toEqual(["10 float:a", "15 float:a", "16 float:a"]);
   });
 });
 
@@ -192,6 +224,31 @@ describe("block reader", () => {
     expect(reads.get("latestRoundData")).toBe(1);
     await reader.callAt(RISK, "0x1234");
     expect(calls[0]?.batch).toBe(false);
+  });
+
+  it("simulates the breaker pokes of all markets in one unbatched eth_call, an entry that reverted as null", async () => {
+    const { client } = node(() => 0);
+    const calls: { to?: Address; data?: Hex; batch?: boolean }[] = [];
+    (client as unknown as { call: (a: { to?: Address; data?: Hex; batch?: boolean }) => Promise<{ data: Hex }> }).call = async (a) => {
+      calls.push(a);
+      const { args } = decodeFunctionData({ abi: multicall3Abi, data: a.data! });
+      expect((args[0] as readonly unknown[]).length).toBe(2);
+      return { data: encodeFunctionResult({ abi: multicall3Abi, functionName: "aggregate3", result: [{ success: true, returnData: `0x${"4".padStart(64, "0")}` }, { success: false, returnData: "0x" }] }) };
+    };
+    const reader = createChainReader(client, manifest as never, 5n);
+    const [a, b] = await Promise.all([reader.breakerPokes(RISK, [1n, 2n]), reader.breakerPokes(RISK, [1n, 2n])]);
+    expect(a).toBe(b);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ to: MULTICALL3_ADDRESS, batch: false });
+    expect(a.get(1n)).toBe(`0x${"4".padStart(64, "0")}`);
+    expect(a.get(2n)).toBeNull();
+  });
+});
+
+describe("incremental sweep", () => {
+  it("starts at the finalized block, or at the head read to when a lagging node answered one below it", () => {
+    expect(nextSweepFrom(100n, 130n)).toBe(100n);
+    expect(nextSweepFrom(100n, 90n)).toBe(90n);
   });
 });
 

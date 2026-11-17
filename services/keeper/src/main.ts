@@ -17,7 +17,7 @@ import { l1DataFee, paysL1DataFee } from "./chain/gas.ts";
 import { kmsSigner } from "./chain/signer.ts";
 import { type ChainConfig, loadConfig } from "./config.ts";
 import { AccountCache } from "./discovery/accountCache.ts";
-import { getLogsChunked } from "./discovery/backfill.ts";
+import { getLogsChunked, nextSweepFrom } from "./discovery/backfill.ts";
 import { IndexerStream, applyStreamRecords } from "./discovery/indexerStream.ts";
 import { headWatchdog } from "./discovery/stream.ts";
 import { InventoryBook } from "./inventory.ts";
@@ -97,7 +97,8 @@ function reportOneSided(cfg: ChainConfig, cache: AccountCache, rpcThrough: bigin
  * The block-cadence spend alerts, then M-16, M-17 and M-33: the rolling 24 h spend per class for the metrics, M-32 for a
  * class at its budget and M-31 for a spend anomaly, from the spend log; they are judged before the funding reads, so a
  * failed read never hides them. The funding reads run at the slow-cadence heads only; at the heads in between, the
- * alerts the last reads raised are posted again (HeldAlerts), so the monitor holds them as before.
+ * alerts the last complete reads raised are posted again (HeldAlerts), so the monitor holds them as before; a read
+ * that throws keeps them held.
  */
 function spendAndFunding(
   book: SpendBook,
@@ -111,8 +112,7 @@ function spendAndFunding(
     m.spend24h = new Map(CLASSES.map((c) => [c, book.spent24h(head.timestamp, c)] as const));
     for (const a of book.alerts(head)) await alerts.send(a);
     if (!slow) return held.replay(head.number);
-    held.begin();
-    await funding(head);
+    await held.run(head.number, () => funding(head));
   };
 }
 
@@ -209,13 +209,14 @@ for (const cfg of config.chains) {
   applyStreamRecords(first.records, cache, cfg.manifest, cfg.chain.id);
   if (first.kind !== "ok") line({ type: "keeper.stream", chainId: cfg.chain.id, event: first.kind, detail: first.kind === "failed" ? first.error : first.finalized });
   /**
-   * One provider's sweep: logs from `fromBlock` to its head. Returns the head read to and the provider's finalized block
-   * before the read, where the next incremental sweep starts: logs at or below a finalized block never change.
+   * One provider's sweep: logs from `fromBlock` to its head. Returns the head read to and where the next incremental
+   * sweep starts: the provider's finalized block before the read (logs at or below it never change), or the head read
+   * to when that is lower.
    */
   const sweep = async (client: PublicClient, fromBlock: bigint) => {
     const finalized = (await client.getBlock({ blockTag: "finalized" })).number;
     const through = await backfill(cfg, client, cache, fromBlock, await client.getBlockNumber());
-    return { through, next: finalized };
+    return { through, next: nextSweepFrom(finalized, through) };
   };
   const s1 = await sweep(primary, start);
   const s2 = await sweep(fallback, start);

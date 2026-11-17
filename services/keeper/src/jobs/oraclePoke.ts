@@ -122,6 +122,16 @@ export function watchedEveryBlock(book: PokeBook, oracle: Address): boolean {
 }
 
 /**
+ * The oracles to check at a head between two slow checks: every oracle whose price state at this block is not Live,
+ * and every one that was not Live at its last read. The price states of all oracles are read at each head, together
+ * (one batched eth_call), so an oracle leaving Live is checked at the first head it is seen.
+ */
+export async function everyBlockTargets(ctx: BlockContext, book: PokeBook, targets: readonly OracleTarget[]): Promise<OracleTarget[]> {
+  const states = await Promise.all(targets.map((t) => ctx.reader.oracleState(t.oracle, t.kind)));
+  return targets.filter((t, i) => states[i] !== LIVE || watchedEveryBlock(book, t.oracle));
+}
+
+/**
  * `from` is the instance's signer, the sender of the simulated poke. `leadSeconds` is how long before an interval ends
  * a scheduled poke is sent (POKE_LEAD_SECONDS when unset).
  */
