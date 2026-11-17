@@ -3,11 +3,12 @@
 // Run: node --test script/testnet/verify.test.ts (from contracts/)
 
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { ARGS_ON_COMMAND_LINE, cloneImplementation, compilationProfileOf, compilerProfiles, deployedContracts, indexArtifacts, isCreate3Helper, matchArtifact, profileOuts, proxyRequest, sourceRequest, verifyCommand, verifyRelease } from "./verify.ts";
+import { keccak256 } from "./keccak.ts";
+import { ARGS_ON_COMMAND_LINE, changedSources, cloneImplementation, compilationProfileOf, compilerProfiles, deployedContracts, indexArtifacts, isCreate3Helper, matchArtifact, profileOuts, proxyRequest, RECORDED_SOURCES, sourceRequest, verifyCommand, verifyRelease } from "./verify.ts";
 
 // Real creation codes are far longer than the index key (64 bytes); each fixture body is 100 bytes.
 const meta = (n: number) => `${n.toString(16).padStart(2, "0")}`.repeat(100);
@@ -264,4 +265,64 @@ test("a clone the explorer already links to its implementation counts as verifie
   const elsewhere = await run(`0x${"00".repeat(19)}b2`);
   assert.equal(elsewhere.r.failed.length, 1);
   assert.match(elsewhere.r.failed[0]!, /not detected/);
+});
+
+test("keccak256 is Keccak's (Solidity's), across block boundaries", () => {
+  assert.equal(keccak256(""), "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
+  assert.equal(keccak256("abc"), "0x4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45");
+  // 200 bytes: two blocks of the 136-byte rate.
+  assert.equal(keccak256("a".repeat(200)), "0x96ea54061def936c4be90b518992fdc6f12f535068a256229aca54267b4d084d");
+  assert.equal(keccak256("a".repeat(136)), keccak256(new TextEncoder().encode("a".repeat(136))));
+});
+
+test("each recorded copy is the source its name hashes to", () => {
+  const dir = join(import.meta.dirname, "..", "..", RECORDED_SOURCES);
+  const files = readdirSync(dir).filter((f) => f.endsWith(".txt"));
+  assert.ok(files.length > 0);
+  for (const f of files) assert.equal(keccak256(readFileSync(join(dir, f), "utf8").replace(/\r\n/g, "\n")), `0x${f.slice(0, -4)}`, f);
+});
+
+test("a source changed since the build is replaced by its recorded copy, and the contract goes to the explorer's API", async () => {
+  const f = fixture();
+  const lib = "library Lib { }\n";
+  const built = "library Changed { uint256 constant V = 1; }\n";
+  const other = "library Other { uint256 constant V = 2; }\n";
+  mkdirSync(join(f.root, "dependencies", "x"), { recursive: true });
+  writeFileSync(join(f.root, "dependencies", "x", "Lib.sol"), lib.replace(/\n/g, "\r\n"));
+  writeFileSync(join(f.root, "dependencies", "x", "Changed.sol"), "library Changed { uint256 constant V = 9; }\n");
+  writeFileSync(join(f.root, "dependencies", "x", "Other.sol"), "library Other { uint256 constant V = 9; }\n");
+  mkdirSync(join(f.root, RECORDED_SOURCES), { recursive: true });
+  writeFileSync(join(f.root, RECORDED_SOURCES, `${keccak256(built).slice(2)}.txt`), built);
+  const sources = {
+    "dependencies/x/Lib.sol": { keccak256: keccak256(lib) },
+    "dependencies/x/Changed.sol": { keccak256: keccak256(built) },
+    "dependencies/x/Other.sol": { keccak256: keccak256(other) },
+    "src/remapped/Unit.sol": { keccak256: keccak256("not here") },
+  };
+  mkdirSync(join(f.root, "out", "P.sol"), { recursive: true });
+  writeFileSync(
+    join(f.root, "out", "P.sol", "P.json"),
+    JSON.stringify({ bytecode: { object: `0x${meta(7)}`, linkReferences: {} }, metadata: { compiler: { version: "0.8.17+commit.8df45f5f" }, settings: { compilationTarget: { "dependencies/x/P.sol": "P" }, optimizer: { enabled: true, runs: 1 } }, sources } }),
+  );
+  const index = indexArtifacts(f.root, { default: "out" });
+  const m = matchArtifact(index, `0x${meta(7)}`)!;
+  const changed = changedSources(f.root, m.artifact);
+  // Lib differs only in line endings; the remapped unit is no file here.
+  assert.deepEqual(changed, [
+    { path: "dependencies/x/Changed.sol", keccak: keccak256(built), recorded: built },
+    { path: "dependencies/x/Other.sol", keccak: keccak256(other) },
+  ]);
+  const c = verifyCommand(m, "0x0000000000000000000000000000000000000a77", 84_532, true);
+  assert.equal(c.constructorArgs, "");
+  assert.equal(c.args.at(-1), "--show-standard-json-input");
+  // The dry run names the replaced source, and the one it has no copy of.
+  const out = join(f.root, "deployments-local", "x");
+  const runs = join(out, "forge-broadcast", "S.s.sol", "84532");
+  mkdirSync(runs, { recursive: true });
+  writeFileSync(join(runs, "run-1.json"), JSON.stringify({ transactions: [{ transactionType: "CREATE", contractAddress: "0x0000000000000000000000000000000000000a77", transaction: { input: `0x${meta(7)}` } }] }));
+  const lines: string[] = [];
+  await verifyRelease({ contracts: f.root, outDir: out, broadcastRoot: join(out, "forge-broadcast"), chainId: 84_532, dryRun: true, say: (s) => lines.push(s) });
+  assert.ok(lines.some((l) => l.includes("dependencies/x/Changed.sol changed since the build; the build's version from script/testnet/verify-sources")));
+  assert.ok(lines.some((l) => l.includes("dependencies/x/Other.sol changed since the build (no copy of the build's version)")));
+  assert.ok(lines.some((l) => l.includes("--show-standard-json-input | POST ") && l.includes("action=verifysourcecode")));
 });
