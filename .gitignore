@@ -23,8 +23,6 @@ contracts/out-halmos/
 contracts/cache-halmos/
 contracts/dependencies/
 contracts/deployments-local/
-contracts/out-univ3/
-contracts/cache-univ3/
 contracts/out-univ3-periphery/
 contracts/cache-univ3-periphery/
 contracts/out-aerodrome/
@@ -68,7 +66,6 @@ generated/
 
 # Python
 .venv/
-contracts/.venv/
 __pycache__/
 
 # Spec verification tooling
@@ -85,14 +82,9 @@ packages/*
 !packages/protocol/
 !packages/export/
 !packages/rpc/
-.github/workflows/protocol.yml
 
 # Python test cache
 .pytest_cache/
 
 # Empty placeholder folders (tools create them when they first write results)
 **/.gitkeep
-
-# Local working files
-docs/spec/contracts-build-todo.md
-docs/spec/services-build-todo.md

@@ -175,7 +175,7 @@ Each deploy script derives from a base contract with `_expectedChainId()` and re
 - `AVANA_RELEASE` equals that tag. Every step that loads the network config (`03`, `04`, `09`) checks it (`DeployInputs._checkRelease`): it matches `^v[0-9]+\.[0-9]+\.[0-9]+(-[a-z0-9.]+)?$` on every chain, and off anvil (chain ID other than 31337) it is not a learning tag (`-local`, `-test`, `-learn`), HEAD is the tag's commit and `src`, `script/deploy`, `foundry.toml`, `soldeer.lock` and `remappings.txt` have no uncommitted change. The off-anvil check reads git through forge's `--ffi`, which `script/deploy/step.sh` passes on those chains only; a script run without it stops.
 - `03` also compares the run with the release workflow's `release.json` when one is given (`AVANA_RELEASE_RECORD`, or `deployments-local/<network>/release.json`): the same release, commit and CREATE3 factory, each salt and, for a record made for this deployer, each predicted address.
 - A tag is never moved, deleted or reused: a tag deployed once names those addresses for good. A fix is a new tag.
-- External audit reports name the audited and fix commits ([`docs/audit/external/`](../../docs/audit/external/index.md)); a verified manifest names a release whose commit is the fix commit or later with no change to the audited files.
+- Once the external audit has run ([`docs/audit/README.md`](../../docs/audit/README.md#audit-status)), a verified manifest names a release whose commit is the audit's fix commit or later with no change to the audited files.
 
 ## Checks on the build
 

@@ -19,7 +19,7 @@
 //
 // `s.design` selects how the open points of the proposal are read. PROPOSAL is the
 // literal reading of the proposal; FIXED applies the fixes in
-// docs/audit/design-review/amm-neutral/state-machine.md. Each field can be set alone, so a
+// the design review's state-machine report (kept outside the repository). Each field can be set alone, so a
 // test can show one fix at a time.
 //
 // Scenario tests: topology_tests.qnt. Simulation runs: topology_run.sh.
@@ -898,7 +898,7 @@ module topology {
 
   // ============================================================ INVARIANTS
   // TOPO-01 … TOPO-10 are the properties requested for the design review; TOPO-X1, TOPO-X2
-  // are extra checks the review added. Results: docs/audit/design-review/amm-neutral/state-machine.md.
+  // are extra checks the review added. Results: the design review's state-machine report.
 
   // TOPO-01 (INV-002, INV-005): per Spoke, the NFTs its vault custodies are exactly those of
   // its ledger's open records, each holds at least its credited units, and pending units equal
@@ -927,7 +927,7 @@ module topology {
   // TOPO-03 (INV-005, INV-012, INV-041, INV-071): records, supply, debt and deficits stay on
   // their own Spoke and funding Hub, and no seizure or settlement runs through another Hub's
   // LPVaultSwap or bypasses the market's own LPVaultSwap and ledger.
-  // QNT-TOPO-03 verifies: INV-005, INV-012, INV-041, INV-071, AMMN-SM-04, AMMN-RT-03
+  // QNT-TOPO-03 verifies: INV-005, INV-012, INV-041, INV-071
   val topo03_noCrossRouting = and {
     not(s.g.crossRoute), not(s.g.extSeize),
     openIds(s).forall(i => {
@@ -943,15 +943,15 @@ module topology {
   }
 
   // TOPO-04 (INV-057), state form: each Hub's drawn total is within the sum of its draw caps
-  // QNT-TOPO-04 verifies: INV-057, AMMN-SM-02
+  // QNT-TOPO-04 verifies: INV-057
   val topo04_hubDebtWithinCaps = HUBS.forall(h => ASSETS.forall(a => drawnSum(s, h, a) <= capSum(s, h, a)))
   // TOPO-04g, gate form: no draw leaves drawn + deficit above the drawing Spoke's cap
-  // QNT-TOPO-04G verifies: INV-057, AMMN-SM-02
+  // QNT-TOPO-04G verifies: INV-057
   val topo04g_drawGate = not(s.g.overDraw)
 
   // TOPO-05: a funding Hub's draw caps sum to at most its credit line, other Hubs' Spokes'
   // caps to at most its cross-Hub cap, and no foreign draw exceeds the cross-Hub cap.
-  // QNT-TOPO-05 verifies: AMMN-SM-01, AMMN-RT-11, AMMN-FLOW-05
+  // QNT-TOPO-05 verifies: REQ-HUB-103, INV-057, INV-094
   val topo05_crossHubCap = and {
     HUBS.forall(h => ASSETS.forall(a => and {
       capSum(s, h, a) <= s.creditLine.get((h, a)),
@@ -973,7 +973,7 @@ module topology {
 
   // TOPO-07 (INV-067, INV-081): repay, debt-free withdrawal and removal, liquidation and
   // pending settlement are available in exactly the same cases with every Avana stop cleared.
-  // QNT-TOPO-07 verifies: INV-067, INV-081, AMMN-SM-03
+  // QNT-TOPO-07 verifies: INV-067, INV-081
   val topo07_stopsNeverReachExits = {
     val c = clearStops(s)
     and {
@@ -986,7 +986,7 @@ module topology {
   // TOPO-08: migration never duplicates or orphans collateral or debt: it preserves the
   // account's totals and empties the old proxy; one live proxy per (wallet, Spoke), the bound
   // one; every live proxy is served by its Adapter or can be migrated (Avana stops cleared).
-  // QNT-TOPO-08 verifies: AMMN-SM-03, AMMN-RT-04, AMMN-RT-16, AMMN-FLOW-04
+  // QNT-TOPO-08 verifies: INV-065
   val topo08_migration = and {
     not(s.g.migDup),
     tuples(WALLETS, SPOKES).forall(ws => VERSIONS.filter(v => holds(s, (ws._1, ws._2, v))).size() <= 1),
@@ -1009,18 +1009,18 @@ module topology {
   })
 
   // TOPO-10 (INV-075): a price shock in one market never changes the account values on another Spoke
-  // QNT-TOPO-10 verifies: INV-075, AMMN-SM-05
+  // QNT-TOPO-10 verifies: INV-075
   val topo10_shockIsolation = not(s.g.crossShock) and not(s.g.poolShockCross)
   // TOPO-10p: the same for pool-local shocks only (feed stale, disagreement, drained pool)
   // QNT-TOPO-10P verifies: INV-075
   val topo10p_poolShockIsolation = not(s.g.poolShockCross)
 
   // TOPO-X1: a Hub's pause stops every new draw of its liquidity, including cross-Hub draws
-  // QNT-TOPO-X1 verifies: AMMN-SM-06, AMMN-FLOW-19
+  // QNT-TOPO-X1 verifies: REQ-HUB-103, INV-094
   val topoX1_fundingPause = not(s.g.pauseBypass)
   // TOPO-X2: collateral holding a token, on every Spoke that draws from a Hub, stays within
   // that Hub's token cap after every pledge and re-credit
-  // QNT-TOPO-X2 verifies: AMMN-SM-05, AMMN-RT-05
+  // QNT-TOPO-X2 verifies: INV-092, INV-075
   val topoX2_tokenCap = not(s.g.tokenCapBreach)
 
   val allHolding = and {

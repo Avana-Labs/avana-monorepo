@@ -1,10 +1,16 @@
 # audit
 
-Audit scope, external reports and verification evidence for Avana. The official findings register is [5.3 Audit Findings](../spec/05-verification/03-audit-findings.md). [`findings-register.md`](findings-register.md) in this folder is the internal-review view: every finding from Avana's internal review and verification runs, open or resolved, with the run that found it. This folder also holds each run's report, run log and models, and the material the findings and proofs cite. Every check Avana runs on its code and its design has a folder here with how it runs and its latest results; the [index](#internal-verification) lists them all.
+Audit status, the areas under internal review and verification evidence for Avana. The official findings register is [5.3 Audit Findings](../spec/05-verification/03-audit-findings.md). [`findings-register.md`](findings-register.md) in this folder is the internal-review view: every finding from Avana's internal review and verification runs, open or resolved, with the run that found it. This folder also holds each run's report, run log and models, and the material the findings and proofs cite. Every check Avana runs on its code and its design has a folder here with how it runs and its latest results (the design-review record is kept outside the repository, `Q-204`); the [index](#internal-verification) lists them all.
 
-## Scope (`Q-115`)
+## Audit status
 
-The audit covers the code written from the specification:
+Avana is going through an internal audit: an internal manual review of the code and an AI-assisted audit. There has been no external audit yet. When those steps finish, the audit opens to external auditors and to the public.
+
+The bug bounty has not started. It will be announced. Until then, report a vulnerability as [`SECURITY.md`](../../SECURITY.md) describes.
+
+## Areas under internal review (`Q-115`)
+
+These are the areas the internal audit reviews now, written from the specification. The same list sets the scope of the external audit that follows it.
 
 | In scope | Notes |
 |---|---|
@@ -65,7 +71,7 @@ Every check Avana runs, each in its own folder with what it proves, the exact co
 | [`reviews/`](reviews/) | Independent adversarial review per contract | 17 review folders covering 18 contracts (the two CL LPVaults share one) | Contract gate | 2026-11-11 | 1 High, 12 Medium, 33 Low found; the decision and status of each are in [`reviews/`](reviews/README.md) |
 | [`spec-essentials/`](spec-essentials/) | The spec content every check tests against | — | — | 2026-11-10 | — |
 
-Design-stage reviews and proofs stay in their own folders, listed under [Evidence layout](#evidence-layout): [`formal-verification/`](formal-verification/) (custody, control and liquidation models), [`design-review/`](design-review/) (risk review and the AMM-neutral review), [`user-simulation/`](user-simulation/), and the [findings register](findings-register.md).
+Design-stage reviews and proofs stay in their own folders, listed under [Evidence layout](#evidence-layout): [`formal-verification/`](formal-verification/) (custody, control and liquidation models), [`user-simulation/`](user-simulation/), and the [findings register](findings-register.md).
 
 ### How the review process works
 
@@ -85,8 +91,6 @@ Each review or verification run has a folder holding its report, its run log (`R
 | [`formal-verification/custody/`](formal-verification/custody/) | Z3 and Quint models of Collateralization, the vault token and factory, the LPVault and the Adapter's mint and burn paths (`FV-CUS-*`) | 2026-11-10 (`FV-CUS-R5`) | 10 findings: 9 resolved in spec, 1 resolved in spec — re-verification pending (`FV-CUS-F-10`) | [report.md](formal-verification/custody/report.md) | [RUNS.md](formal-verification/custody/RUNS.md) |
 | [`formal-verification/control/`](formal-verification/control/) | Z3, enumeration and Quint models of access control, the timelock, pause, gates, parameters, registry, oracle, upgrades, Lens and breakers (`FV-CTL-*`) | 2026-11-10 (`FV-CTL-R5`) | 28 findings: 23 resolved in spec, 5 resolved in spec — re-verification pending (`FV-CTL-F-25`…`F-29`) | [report.md](formal-verification/control/report.md) | [RUNS.md](formal-verification/control/RUNS.md) |
 | [`formal-verification/liquidation/`](formal-verification/liquidation/) | Z3, Hypothesis and Quint models of LPVaultSwap, SettlementMath, routes, the SettlementBudget, Coverage Spokes and the PayoutEscrow (`FV-LIQ-*`) | 2026-11-09 (`FV-LIQ-R2`) | 0 open: all 19 resolved in spec | [report.md](formal-verification/liquidation/report.md) | [RUNS.md](formal-verification/liquidation/RUNS.md) |
-| [`design-review/`](design-review/) | Adversarial design risk review (`DR-01`…`DR-20`) and its required tests `DR-T-01`…`DR-T-11` | 2026-11-09 (`DR-R1`) | 0 open: 19 resolved in spec (9 pending re-verification), 1 accepted risk | [risk-review.md](design-review/risk-review.md) | [RUNS.md](design-review/RUNS.md) |
-| [`design-review/amm-neutral/`](design-review/amm-neutral/) | AMM-neutral architecture review: red team, flows, integration assumptions, gas/DoS, architecture options, state machine, verification coverage, topology simulation (`AMMN-*`) | 2026-11-10 (`AMMN-R1`, [final re-check](design-review/amm-neutral/final-recheck.md) and its [fix pass](design-review/amm-neutral/final-recheck.md#fix-pass)) | 6 Critical, 13 High, 22 Medium, 14 Low found (score 52/100 as written), plus 3 found in the final re-check (`FINDING-293`…`FINDING-295`); all resolved in spec — re-verification pending, except `AMMN-FLOW-12`, accepted with a playbook, and `AMMN-FLOW-16`, accepted after the idle mechanism was removed (`Q-396`); `AMMN-GAS-02` resolved by decision (no minimum debt, `Q-381`); spec-stage score 99.0/100 after the fix pass, then 98.0/100 after the [parameter decisions](design-review/amm-neutral/final-recheck.md#parameter-decisions-2026-11-10) (`Q-391`…`Q-402`: SettlementBudget, in-kind settlement, idle mechanism, on-chain health floors and alert-only breakers removed), with no WEAK or OPEN item ([re-score](design-review/amm-neutral/final-recheck.md#re-score-after-the-parameter-decisions)) | [report.md](design-review/amm-neutral/report.md) | [topology-options.md](design-review/topology-options.md) |
 | [`user-simulation/`](user-simulation/) | 1,000-agent, 90-day simulation of user journeys, its code and `results/` (`SIM-GAP-01`…`SIM-GAP-12`) | 2026-11-09 (`SIM-R2`) | 0 open: 13 resolved in spec, 1 accepted risk | [report.md](user-simulation/report.md) | [RUNS.md](user-simulation/RUNS.md) |
 
 The formal-verification method shared by the three areas (the areas, proof styles and tools, property families `F-01` onward, the report format and the priority targets `T-01`…`T-80`) is [`formal-verification/methodology.md`](formal-verification/methodology.md). Each area's `audit-mapping.md` maps its properties to the prover rules that carry them to the code and to their `PROP-NNN` in [5.2](../spec/05-verification/02-formal-properties.md).
@@ -96,8 +100,7 @@ Other evidence:
 | Path | Contents |
 |---|---|
 | [`findings-register.md`](findings-register.md) | Every finding from the runs above, with severity, status, resolution and the check that verifies the fix |
-| `docs/audit/` (root) | Scope documents per audit, external audit reports, and evidence files cited by findings |
-| [`external/`](external/index.md) | External audit and formal-verification reports, `YYYY-MM-DD_<Scope>_<Firm>.pdf`, indexed in [`external/index.md`](external/index.md) with the audited commit, fix commit and release of each |
+| `docs/audit/` (root) | Scope documents and evidence files cited by findings |
 | [`docs/audit/formal/`](formal/) | One report per implementation-stage formal property: property ID, scope, model, assumptions and summaries, tool and version, result, reproduction command. Filled as the Certora Prover passes each property ([certora](certora/)). |
 | [`contracts/certora/`](../../contracts/) | CVL specifications and configurations for the prover rules (`Q-041`) |
 | [`contracts/test/`](../../contracts/) | Foundry tests and Halmos symbolic tests |
@@ -116,7 +119,7 @@ The implementation-stage properties `PROP-001` onward are proved with the prover
 
 ## Findings
 
-Every failed check and every attack the design does not fully block is a `FINDING-NNN` in [5.3](../spec/05-verification/03-audit-findings.md), citing the requirement, flow step or invariant it affects and the test or property that confirms the fix. Findings from the internal runs in this folder are recorded first in [`findings-register.md`](findings-register.md) with the statuses Open, Resolved in spec — re-verification pending, Resolved in spec, Accepted risk and Rejected, and are mirrored into 5.3 once they are resolved in spec (re-verification pending or done) or Accepted risk. External auditors' findings are added in the same format, with the raw report kept here.
+Every failed check and every attack the design does not fully block is a `FINDING-NNN` in [5.3](../spec/05-verification/03-audit-findings.md), citing the requirement, flow step or invariant it affects and the test or property that confirms the fix. Findings from the internal runs in this folder are recorded first in [`findings-register.md`](findings-register.md) with the statuses Open, Resolved in spec — re-verification pending, Resolved in spec, Accepted risk and Rejected, and are mirrored into 5.3 once they are resolved in spec (re-verification pending or done) or Accepted risk. Findings from the external audit, once it opens, are added in the same format.
 
 | Severity | Meaning |
 |---|---|

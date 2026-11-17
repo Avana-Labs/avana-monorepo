@@ -114,8 +114,8 @@ def test_hyp_amm03_cl_rounding_never_overvalues(c):
 
 
 # HYP-AMM-04 verifies: SPEC-AMM-CORE-001, REQ-AMM-V3-005, SPEC-AMM-V3-001, REQ-AMM-SLIP-012, SPEC-ORC-006
-# HYP-AMM-V3-PRICE-03 verifies: SPEC-AMM-V3-001, REQ-AMM-V3-005, INV-078, AMMN-RT-02
-# HYP-AMM-SLIP-PRICE-03 verifies: REQ-AMM-SLIP-012, INV-078, AMMN-RT-02
+# HYP-AMM-V3-PRICE-03 verifies: SPEC-AMM-V3-001, REQ-AMM-V3-005, INV-078
+# HYP-AMM-SLIP-PRICE-03 verifies: REQ-AMM-SLIP-012, INV-078
 # Oracle price outside the range -> all token0 (below) or all token1 (above).
 @cfg(200)
 @given(c=cl_case())
@@ -129,8 +129,8 @@ def test_hyp_amm04_cl_out_of_range_single_token(c):
 
 
 # HYP-AMM-05 verifies: REQ-AMM-CORE-006, REQ-AMM-SLIP-008, SPEC-AMM-V4-001, SPEC-BACK-001, REQ-ORACLE-105
-# HYP-AMM-V3-PRICE-04 verifies: REQ-AMM-V3-008, REQ-AMM-CORE-006, INV-005, AMMN-RT-01
-# HYP-AMM-SLIP-PRICE-04 verifies: REQ-AMM-SLIP-008, REQ-AMM-SLIP-017, INV-005, AMMN-RT-01
+# HYP-AMM-V3-PRICE-04 verifies: REQ-AMM-V3-008, REQ-AMM-CORE-006, INV-005
+# HYP-AMM-SLIP-PRICE-04 verifies: REQ-AMM-SLIP-008, REQ-AMM-SLIP-017, INV-005
 # The int24 test `tick % spacing == 0` is the alignment test for every spacing; uint24 casting is not.
 @cfg(500)
 @given(s=st.sampled_from(SPACINGS), t=st.integers(amm.MIN_TICK, amm.MAX_TICK))
@@ -167,7 +167,7 @@ op = st.one_of(
 
 
 # HYP-AMM-06 verifies: REQ-AMM-CORE-008, SPEC-AMM-V2-001
-# HYP-AMM-V2-MANIP-01 verifies: SPEC-AMM-V2-001, INV-078, AMMN-RT-07
+# HYP-AMM-V2-MANIP-01 verifies: SPEC-AMM-V2-001, INV-078
 # In one block, any sequence of swaps, donations (sync or skim), mints and burns raises the
 # fair pool value by at most the attacker's net token inflow at oracle prices, and the per-LP quote
 # (supply + pending protocol-fee liquidity) never exceeds the per-LP redeemable value.
@@ -218,7 +218,7 @@ def test_hyp_amm06_v2_block_sequence_bounded(fee_on, ops):
 
 
 # HYP-AMM-07 verifies: REQ-AMM-CORE-014, REQ-AMM-V2-005
-# HYP-AMM-V2-MANIP-02 verifies: REQ-AMM-V2-005, REQ-AMM-CORE-014, AMMN-RT-07
+# HYP-AMM-V2-MANIP-02 verifies: REQ-AMM-V2-005, REQ-AMM-CORE-014
 # A single swap of any size raises the fair per-LP quote by < 1/sqrt(0.997) - 1 = 0.1503%.
 @cfg(300)
 @given(z=st.booleans(), size=st.integers(10 ** 3, 10 ** 24))
@@ -238,7 +238,7 @@ def test_hyp_amm07_v2_one_swap_bound(z, size):
 
 
 # HYP-AMM-08 verifies: REQ-AMM-V2-002
-# HYP-AMM-V2-PRICE-01 verifies: REQ-AMM-V2-002, AMMN-RT-07
+# HYP-AMM-V2-PRICE-01 verifies: REQ-AMM-V2-002
 # The fee-on-mint overstatement of a totalSupply-based quote is <= (sqrt(k / kLast) - 1) / 6.
 @cfg(200)
 @given(swaps=st.lists(st.integers(10 ** 9, 10 ** 13), min_size=1, max_size=15))
@@ -255,7 +255,7 @@ def test_hyp_amm08_v2_fee_on_mint_bound(swaps):
 
 
 # HYP-AMM-09 verifies: REQ-AMM-V2-001
-# HYP-AMM-V2-MANIP-03 verifies: REQ-AMM-V2-001, AMMN-RT-07
+# HYP-AMM-V2-MANIP-03 verifies: REQ-AMM-V2-001
 # Deliberate: naive spot reserves x price, or reserves read from balanceOf, are manipulable.
 @cfg(150)
 @given(frac=st.integers(50, 2000))
@@ -290,7 +290,7 @@ def ss_case(draw):
 
 
 # HYP-AMM-10 verifies: REQ-AMM-CORE-008, SPEC-AMM-CORE-001, REQ-AMM-CURVE-001, SPEC-AMM-CURVE-001
-# HYP-AMM-CURVE-MANIP-01 verifies: REQ-AMM-CURVE-001, SPEC-AMM-CURVE-001, INV-078, AMMN-RT-07
+# HYP-AMM-CURVE-MANIP-01 verifies: REQ-AMM-CURVE-001, SPEC-AMM-CURVE-001, INV-078
 # Min(p) * D never exceeds the redeemable value after any swaps or donations, and a swap
 # never lowers D (fees stay in the pool; the virtual price only moves up).
 @cfg(200)
@@ -335,7 +335,7 @@ W_SETS = [(F(1, 2), F(1, 2)), (F(4, 5), F(1, 5)), (F(1, 5), F(4, 5)), (F(1, 3), 
 
 
 # HYP-AMM-11 verifies: REQ-AMM-CORE-008, SPEC-AMM-CORE-001, REQ-AMM-BAL-005, SPEC-AMM-BAL-001
-# HYP-AMM-BAL-MANIP-01 verifies: REQ-AMM-BAL-005, SPEC-AMM-BAL-001, INV-078, AMMN-RT-07
+# HYP-AMM-BAL-MANIP-01 verifies: REQ-AMM-BAL-005, SPEC-AMM-BAL-001, INV-078
 # Weighted pool. Fair V = k prod (p_i / w_i)^w_i stays <= sum b_i p_i after any swaps
 # (fee kept in the pool) and donations, and one swap into token i grows k by <= (1 - fee)^-w_i.
 @cfg(200)

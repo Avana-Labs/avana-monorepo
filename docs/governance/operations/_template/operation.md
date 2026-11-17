@@ -36,7 +36,7 @@ What the operation changes and the reason, with the numbers: the current value, 
 ```bash
 cd contracts
 FOUNDRY_PROFILE=governance forge test --match-path test/governance/<Title>.fork.t.sol
-python3 script/governance-diff.py ../governance/operations/<YYYYMMDD_Chain_Title>
+python3 script/governance-diff.py ../docs/governance/operations/<YYYYMMDD_Chain_Title>
 ```
 
 The fork test schedules the batch through the real AvanaTimelock, waits the delay, executes it, writes
