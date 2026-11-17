@@ -38,6 +38,50 @@ export function m01Level(state: number): Level {
 }
 
 /**
+ * The alerts a check raised at its last complete run, posted again at each head until it runs again. A check that reads
+ * only every N seconds (KEEPER_SLOW_JOB_SECONDS) therefore keeps its alerts arriving at every head, as the monitor needs
+ * to hold them open, and its alerts change only when it completes again. A run that throws keeps the previous run's
+ * alerts held and posts them for its head, so a failed read never lets the monitor resolve an open alert.
+ */
+export class HeldAlerts {
+  #held: readonly Alert[] = [];
+  #raised: Alert[] | null = null;
+  readonly #target: AlertSink;
+  /** Forwards to the target and keeps what the current run sends. */
+  readonly sink: AlertSink;
+
+  constructor(target: AlertSink) {
+    this.#target = target;
+    this.sink = {
+      send: (a) => {
+        this.#raised?.push(a);
+        return this.#target.send(a);
+      },
+    };
+  }
+
+  /** Runs the check for `blockNumber`; its alerts replace the held ones only when it completes. */
+  async run(blockNumber: bigint, check: () => Promise<void>): Promise<void> {
+    const raised: Alert[] = [];
+    this.#raised = raised;
+    try {
+      await check();
+      this.#held = raised;
+    } catch (err) {
+      await this.replay(blockNumber).catch(() => undefined);
+      throw err;
+    } finally {
+      this.#raised = null;
+    }
+  }
+
+  /** Posts the last complete run's alerts again for `blockNumber`. */
+  async replay(blockNumber: bigint): Promise<void> {
+    for (const a of this.#held) await this.#target.send({ ...a, blockNumber });
+  }
+}
+
+/**
  * Sends a page only when `confirm` (the same read on the second provider, pinned to the same block) agrees.
  * A disagreement is itself raised as a warn, because the providers disagreeing is an RPC fault to look at.
  */

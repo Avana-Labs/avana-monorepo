@@ -37,6 +37,8 @@ export function gasTopUpJob(signer: Address): Job<GasVaultRef, Decision> {
       return v ? [{ address: v.address, codeHash: v.codeHash }] : [];
     },
 
+    prefetch: (ctx, vaults) => Promise.all(vaults.map((v) => ctx.reader.gasVaultQuote(v.address, signer))),
+
     async check(ctx, vault) {
       const q = await ctx.reader.gasVaultQuote(vault.address, signer);
       if (!q.listed) return { act: false, reason: "notDue", detail: "signer not listed in the gas vault" };

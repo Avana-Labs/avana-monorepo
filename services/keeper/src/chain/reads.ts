@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Live reads pinned to one block. Every decision reads through a ChainReader created for that block, so the
-// health factor, prices, gates and sizing of one decision come from the same state.
+// health factor, prices, gates and sizing of one decision come from the same state. A view read is made once per
+// reader: a second ask for the same read at the same block returns the first answer, so the chain loop can issue the
+// pass's reads together up front (one batched eth_call through the client, chain/client.ts) and the jobs then read the
+// same values as before without another request. Simulations of state-changing calls are never batched with other
+// reads; the breaker pokes of all markets share one simulation (`breakerPokes`, which says why that is safe).
 
 import { type Address, type Hex, type PublicClient, decodeFunctionResult, encodeFunctionData, keccak256, multicall3Abi, parseAbi } from "viem";
 import {
@@ -14,6 +18,7 @@ import {
   lpOracleAbi,
   lpVaultSwapAbi,
   marketRegistryAbi,
+  riskModuleAbi,
 } from "@avana/protocol/abis";
 import { MULTICALL3_ADDRESS } from "@avana/services-common/chains";
 
@@ -26,6 +31,8 @@ export const ACCOUNTS_PER_CALL = 300;
 const routeAbi = parseAbi(["function tokenOut() view returns (address)", "function dependencies() view returns (address[])"]);
 const wrapperAbi = parseAbi(["function asset() view returns (address)", "function aToken() view returns (address)"]);
 const v3PoolAbi = parseAbi(["function getReserveAToken(address asset) view returns (address)"]);
+
+const multicall3BalanceAbi = parseAbi(["function getEthBalance(address addr) view returns (uint256 balance)"]);
 
 const aggregatorAbi = parseAbi([
   "function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)",
@@ -49,6 +56,16 @@ export type AccountRef = { readonly spoke: Address; readonly proxy: Address };
 export function createChainReader(client: PublicClient, manifest: { avana: { lens: { address: Address }; lpVaultSwap: { address: Address }; marketRegistry: { address: Address }; collateralization: { address: Address } } }, blockNumber: bigint) {
   const at = { blockNumber } as const;
   const lens = manifest.avana.lens.address;
+  // One answer per view read at this block; a failed read fails the same way for every caller.
+  const memo = new Map<string, Promise<unknown>>();
+  const once = <T>(key: string, read: () => Promise<T>): Promise<T> => {
+    let p = memo.get(key) as Promise<T> | undefined;
+    if (p === undefined) {
+      p = read();
+      memo.set(key, p);
+    }
+    return p;
+  };
 
   return {
     blockNumber,
@@ -58,9 +75,11 @@ export function createChainReader(client: PublicClient, manifest: { avana: { len
       const out = new Map<Address, AccountData>();
       for (let i = 0; i < accounts.length; i += ACCOUNTS_PER_CALL) {
         const batch = accounts.slice(i, i + ACCOUNTS_PER_CALL);
+        // One eth_call per ACCOUNTS_PER_CALL accounts: that bound is set by gas, not by calldata size.
         const results = await client.multicall({
           ...at,
           allowFailure: true,
+          batchSize: 0,
           multicallAddress: MULTICALL3_ADDRESS,
           contracts: batch.map((a) => ({ address: a.spoke, abi: aaveV4SpokeAbi, functionName: "getUserAccountData", args: [a.proxy] }) as const),
         });
@@ -73,33 +92,47 @@ export function createChainReader(client: PublicClient, manifest: { avana: { len
 
     /** Debt with accrued interest of one reserve, in the debt asset's units. */
     userTotalDebt: (spoke: Address, debtReserveId: bigint, proxy: Address) =>
-      client.readContract({ ...at, address: spoke, abi: aaveV4SpokeAbi, functionName: "getUserTotalDebt", args: [debtReserveId, proxy] }),
+      once(`userTotalDebt:${spoke}:${debtReserveId}:${proxy}`, () =>
+        client.readContract({ ...at, address: spoke, abi: aaveV4SpokeAbi, functionName: "getUserTotalDebt", args: [debtReserveId, proxy] }),
+      ),
 
-    priceState: (vaultToken: Address) => client.readContract({ ...at, address: lens, abi: lensAbi, functionName: "getPriceState", args: [vaultToken] }),
+    priceState: (vaultToken: Address) =>
+      once(`priceState:${vaultToken}`, () => client.readContract({ ...at, address: lens, abi: lensAbi, functionName: "getPriceState", args: [vaultToken] })),
     debtPriceState: (spoke: Address, debtReserveId: bigint) =>
-      client.readContract({ ...at, address: lens, abi: lensAbi, functionName: "getDebtPriceState", args: [spoke, debtReserveId] }),
+      once(`debtPriceState:${spoke}:${debtReserveId}`, () =>
+        client.readContract({ ...at, address: lens, abi: lensAbi, functionName: "getDebtPriceState", args: [spoke, debtReserveId] }),
+      ),
     previewLiquidation: (proxy: Address, debtReserveId: bigint, deadline: bigint) =>
       client.readContract({ ...at, address: lens, abi: lensAbi, functionName: "previewLiquidation", args: [proxy, debtReserveId, deadline] }),
-    breakerStatus: (marketId: bigint) => client.readContract({ ...at, address: lens, abi: lensAbi, functionName: "getBreakerStatus", args: [marketId] }),
+    breakerStatus: (marketId: bigint) =>
+      once(`breakerStatus:${marketId}`, () => client.readContract({ ...at, address: lens, abi: lensAbi, functionName: "getBreakerStatus", args: [marketId] })),
     pendingSettlement: (vaultToken: Address) =>
-      client.readContract({ ...at, address: lens, abi: lensAbi, functionName: "getPendingSettlement", args: [vaultToken] }),
+      once(`pendingSettlement:${vaultToken}`, () =>
+        client.readContract({ ...at, address: lens, abi: lensAbi, functionName: "getPendingSettlement", args: [vaultToken] }),
+      ),
     pending: (vaultToken: Address) =>
-      client.readContract({ ...at, address: manifest.avana.collateralization.address, abi: collateralizationAbi, functionName: "getPending", args: [vaultToken] }),
+      once(`pending:${vaultToken}`, () =>
+        client.readContract({ ...at, address: manifest.avana.collateralization.address, abi: collateralizationAbi, functionName: "getPending", args: [vaultToken] }),
+      ),
     settlementReserve: (marketId: bigint) =>
-      client.readContract({ ...at, address: manifest.avana.marketRegistry.address, abi: marketRegistryAbi, functionName: "settlementReserve", args: [marketId] }),
+      once(`settlementReserve:${marketId}`, () =>
+        client.readContract({ ...at, address: manifest.avana.marketRegistry.address, abi: marketRegistryAbi, functionName: "settlementReserve", args: [marketId] }),
+      ),
     /** The CDP Spokes the MarketRegistry approved (`getSpokes`); a manifest Spoke may not be approved yet. */
-    approvedSpokes: () => client.readContract({ ...at, address: manifest.avana.marketRegistry.address, abi: marketRegistryAbi, functionName: "getSpokes" }),
+    approvedSpokes: () =>
+      once("approvedSpokes", () => client.readContract({ ...at, address: manifest.avana.marketRegistry.address, abi: marketRegistryAbi, functionName: "getSpokes" })),
 
     /** Registry and freeze status of this instance's helper (REQ-SWAP-105, Q-404). */
-    async operatorStatus(helper: Address) {
-      const swap = manifest.avana.lpVaultSwap.address;
-      const [approved, active, frozen] = await Promise.all([
-        client.readContract({ ...at, address: swap, abi: lpVaultSwapAbi, functionName: "isApprovedKeeper", args: [helper] }),
-        client.readContract({ ...at, address: swap, abi: lpVaultSwapAbi, functionName: "activeKeeperCount" }),
-        client.readContract({ ...at, address: lens, abi: lensAbi, functionName: "isFrozenAddress", args: [helper] }),
-      ]);
-      return { approved, activeKeeperCount: active, frozen };
-    },
+    operatorStatus: (helper: Address) =>
+      once(`operatorStatus:${helper}`, async () => {
+        const swap = manifest.avana.lpVaultSwap.address;
+        const [approved, active, frozen] = await Promise.all([
+          client.readContract({ ...at, address: swap, abi: lpVaultSwapAbi, functionName: "isApprovedKeeper", args: [helper] }),
+          client.readContract({ ...at, address: swap, abi: lpVaultSwapAbi, functionName: "activeKeeperCount" }),
+          client.readContract({ ...at, address: lens, abi: lensAbi, functionName: "isFrozenAddress", args: [helper] }),
+        ]);
+        return { approved, activeKeeperCount: active, frozen };
+      }),
 
     /** Flash capacity and premium the helper would pay for `amount` of `asset`. */
     async flashQuote(helper: Address, asset: Address, amount: bigint) {
@@ -151,15 +184,17 @@ export function createChainReader(client: PublicClient, manifest: { avana: { len
       };
     },
 
-    feedRound: (feed: Address) => client.readContract({ ...at, address: feed, abi: aggregatorAbi, functionName: "latestRoundData" }),
+    feedRound: (feed: Address) =>
+      once(`feedRound:${feed}`, () => client.readContract({ ...at, address: feed, abi: aggregatorAbi, functionName: "latestRoundData" })),
 
     /** The oracle's price state at this block (`getPriceState().state`: 0 Live, 1 Drifting, 2 Cached, 3 Expired). */
-    async oracleState(oracle: Address, kind: OracleKind): Promise<number> {
-      const report = kind === "lp"
-        ? await client.readContract({ ...at, address: oracle, abi: lpOracleAbi, functionName: "getPriceState" })
-        : await client.readContract({ ...at, address: oracle, abi: debtOracleAbi, functionName: "getPriceState" });
-      return Number(report.state);
-    },
+    oracleState: (oracle: Address, kind: OracleKind): Promise<number> =>
+      once(`oracleState:${oracle}:${kind}`, async () => {
+        const report = kind === "lp"
+          ? await client.readContract({ ...at, address: oracle, abi: lpOracleAbi, functionName: "getPriceState" })
+          : await client.readContract({ ...at, address: oracle, abi: debtOracleAbi, functionName: "getPriceState" });
+        return Number(report.state);
+      }),
 
     /**
      * The logs `poke()` would emit if sent from `from` on top of this block (`eth_simulateV1`); null when the provider
@@ -188,31 +223,60 @@ export function createChainReader(client: PublicClient, manifest: { avana: { len
         functionName: "aggregate3",
         args: [[{ target: oracle, allowFailure: true, callData: view }, { target: oracle, allowFailure: true, callData: POKE_DATA }, { target: oracle, allowFailure: true, callData: view }]],
       });
-      const { data: ret } = await client.call({ ...at, to: MULTICALL3_ADDRESS, data });
+      const { data: ret } = await client.call({ ...at, to: MULTICALL3_ADDRESS, data, batch: false });
       if (!ret) return { before: null, after: null, pokeOk: false };
       const [before, poke, after] = decodeFunctionResult({ abi: multicall3Abi, functionName: "aggregate3", data: ret });
       const ok = (r: { success: boolean; returnData: Hex } | undefined) => (r?.success ? r.returnData : null);
       return { before: ok(before), after: ok(after), pokeOk: poke?.success ?? false };
     },
 
-    /** eth_call of a state-changing function at this block (pokeBreakers, pokeConfig): its return, without sending. */
-    callAt: (to: Address, data: Hex, from?: Address) => client.call({ ...at, to, data, account: from }),
+    /**
+     * eth_call of a state-changing function at this block (pokeBreakers, pokeConfig): its return, without sending. Never
+     * batched: inside one aggregate3 a simulated write would be seen by the calls after it.
+     */
+    callAt: (to: Address, data: Hex, from?: Address) => client.call({ ...at, to, data, account: from, batch: false }),
+
+    /**
+     * `RiskModule.pokeBreakers(marketId)` for each market at this block, simulated in one `eth_call` of Multicall3's
+     * aggregate3, in order: the raw return per market, null for an entry that reverted (the caller simulates that one
+     * alone, for its revert). Each entry sees the writes of the entries before it, which leaves its result unchanged:
+     * `pokeBreakers` returns the conditions holding after its own oracle pokes, the earlier entries write only oracle
+     * observations of this same block (which its own pokes store again) and breach records (which the live conditions
+     * do not read). Memoized per block, like a view.
+     */
+    breakerPokes: (riskModule: Address, marketIds: readonly bigint[]): Promise<ReadonlyMap<bigint, Hex | null>> =>
+      once(`breakerPokes:${riskModule}:${marketIds.join(",")}`, async () => {
+        const out = new Map<bigint, Hex | null>();
+        if (marketIds.length === 0) return out;
+        const data = encodeFunctionData({
+          abi: multicall3Abi,
+          functionName: "aggregate3",
+          args: [marketIds.map((id) => ({ target: riskModule, allowFailure: true, callData: encodeFunctionData({ abi: riskModuleAbi, functionName: "pokeBreakers", args: [id] }) }))],
+        });
+        const { data: ret } = await client.call({ ...at, to: MULTICALL3_ADDRESS, data, batch: false });
+        if (!ret) return out;
+        const results = decodeFunctionResult({ abi: multicall3Abi, functionName: "aggregate3", data: ret });
+        marketIds.forEach((id, i) => out.set(id, results[i]?.success ? results[i]!.returnData : null));
+        return out;
+      }),
 
     /**
      * The gas vault's view of `signer` at this block (2.24): whether it is listed, its refill trigger, the signer's
      * balance and what `topUp(signer)` would send now and request (0 while paused, not due or capped to 0).
      */
-    async gasVaultQuote(vault: Address, signer: Address): Promise<{ listed: boolean; minBalance: bigint; balance: bigint; amount: bigint; requested: bigint; paused: boolean }> {
-      const v = { ...at, address: vault, abi: avanaGasVaultAbi } as const;
-      const [listed, config, quote, paused, balance] = await Promise.all([
-        client.readContract({ ...v, functionName: "isSigner", args: [signer] }),
-        client.readContract({ ...v, functionName: "signerConfig", args: [signer] }),
-        client.readContract({ ...v, functionName: "quoteTopUp", args: [signer] }),
-        client.readContract({ ...v, functionName: "paused" }),
-        client.getBalance({ ...at, address: signer }),
-      ]);
-      return { listed, minBalance: config.minBalance, balance, amount: quote[0], requested: quote[1], paused };
-    },
+    gasVaultQuote: (vault: Address, signer: Address): Promise<{ listed: boolean; minBalance: bigint; balance: bigint; amount: bigint; requested: bigint; paused: boolean }> =>
+      once(`gasVaultQuote:${vault}:${signer}`, async () => {
+        const v = { ...at, address: vault, abi: avanaGasVaultAbi } as const;
+        // The balance through Multicall3's getEthBalance, so it joins the same batched eth_call as the vault's reads.
+        const [listed, config, quote, paused, balance] = await Promise.all([
+          client.readContract({ ...v, functionName: "isSigner", args: [signer] }),
+          client.readContract({ ...v, functionName: "signerConfig", args: [signer] }),
+          client.readContract({ ...v, functionName: "quoteTopUp", args: [signer] }),
+          client.readContract({ ...v, functionName: "paused" }),
+          client.readContract({ ...at, address: MULTICALL3_ADDRESS, abi: multicall3BalanceAbi, functionName: "getEthBalance", args: [signer] }),
+        ]);
+        return { listed, minBalance: config.minBalance, balance, amount: quote[0], requested: quote[1], paused };
+      }),
 
     async implementationOf(proxy: Address): Promise<Address> {
       const word = await client.getStorageAt({ ...at, address: proxy, slot: IMPLEMENTATION_SLOT });

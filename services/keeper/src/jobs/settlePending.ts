@@ -25,6 +25,8 @@ export function settlePendingJob(): Job<ManifestMarket, Decision> {
       return ctx.config.manifest.markets;
     },
 
+    prefetch: (ctx, markets) => Promise.all(markets.map((m) => ctx.reader.pendingSettlement(m.vaultToken.address))),
+
     async check(ctx, market) {
       const view = await ctx.reader.pendingSettlement(market.vaultToken.address);
       if (view.units === 0n) return { act: false, reason: "nothingPending" };

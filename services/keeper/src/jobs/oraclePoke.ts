@@ -101,16 +101,43 @@ export function pokeIntervalSeconds(heartbeats: readonly number[]): number {
   return Math.min(CHECKPOINT_INTERVAL_SECONDS, ...valid);
 }
 
-/** Due on the first sight, when any feed has a new round since the last poke, or when the interval less the lead has passed. */
-export function pokeDue(now: bigint, lastPoke: bigint | undefined, intervalSeconds: number, newRound: boolean): boolean {
+/**
+ * Due on the first sight, when any feed has a new round since the last poke, or when the interval less the lead has
+ * passed. `leadSeconds` defaults to POKE_LEAD_SECONDS; a keeper that checks Live oracles only every N seconds passes
+ * POKE_LEAD_SECONDS + N, so a poke found due at the latest check still lands inside the interval.
+ */
+export function pokeDue(now: bigint, lastPoke: bigint | undefined, intervalSeconds: number, newRound: boolean, leadSeconds = POKE_LEAD_SECONDS): boolean {
   if (lastPoke === undefined || newRound) return true;
-  const wait = Math.max(0, Math.floor(intervalSeconds) - POKE_LEAD_SECONDS);
+  const wait = Math.max(0, Math.floor(intervalSeconds) - leadSeconds);
   return now - lastPoke >= BigInt(wait);
 }
 
-/** `from` is the instance's signer, the sender of the simulated poke. */
-export function oraclePokeJob(book: PokeBook, opts: { readonly from?: Address } = {}): Job<OracleTarget, OracleDecision> {
+/**
+ * True while the oracle is not Live, or was not Live at its last read: such an oracle is checked every block (send on
+ * change). Live oracles may be checked at a slower cadence (runtime/chainLoop.ts).
+ */
+export function watchedEveryBlock(book: PokeBook, oracle: Address): boolean {
+  const last = book.lastState.get(oracle);
+  return last !== undefined && last !== LIVE;
+}
+
+/**
+ * The oracles to check at a head between two slow checks: every oracle whose price state at this block is not Live,
+ * and every one that was not Live at its last read. The price states of all oracles are read at each head, together
+ * (one batched eth_call), so an oracle leaving Live is checked at the first head it is seen.
+ */
+export async function everyBlockTargets(ctx: BlockContext, book: PokeBook, targets: readonly OracleTarget[]): Promise<OracleTarget[]> {
+  const states = await Promise.all(targets.map((t) => ctx.reader.oracleState(t.oracle, t.kind)));
+  return targets.filter((t, i) => states[i] !== LIVE || watchedEveryBlock(book, t.oracle));
+}
+
+/**
+ * `from` is the instance's signer, the sender of the simulated poke. `leadSeconds` is how long before an interval ends
+ * a scheduled poke is sent (POKE_LEAD_SECONDS when unset).
+ */
+export function oraclePokeJob(book: PokeBook, opts: { readonly from?: Address; readonly leadSeconds?: number } = {}): Job<OracleTarget, OracleDecision> {
   const from = opts.from ?? zeroAddress;
+  const lead = opts.leadSeconds ?? POKE_LEAD_SECONDS;
   return {
     kind: "oraclePoke",
 
@@ -120,6 +147,9 @@ export function oraclePokeJob(book: PokeBook, opts: { readonly from?: Address } 
       const debt = m.debtReserves.flatMap((r): OracleTarget[] => (r.debtOracle ? [{ oracle: r.debtOracle.address, implementation: r.debtOracle.implementation, kind: "debt", feeds: r.feeds }] : []));
       return [...lp, ...debt];
     },
+
+    // Every feed round and price state `check` reads, in one batch.
+    prefetch: (ctx, targets) => Promise.all(targets.flatMap((t) => [...t.feeds.map((f) => ctx.reader.feedRound(f.feed)), ctx.reader.oracleState(t.oracle, t.kind)])),
 
     async check(ctx, t) {
       let newRound = false;
@@ -142,7 +172,7 @@ export function oraclePokeJob(book: PokeBook, opts: { readonly from?: Address } 
       }
       // An oracle with no feed legs in the manifest is still poked every CHECKPOINT_INTERVAL.
       const interval = pokeIntervalSeconds(t.feeds.map((f) => f.heartbeatSeconds));
-      if (!pokeDue(ctx.blockTimestamp, book.lastPokeAt.get(t.oracle), interval, newRound)) return { act: false, reason: "notDue" };
+      if (!pokeDue(ctx.blockTimestamp, book.lastPokeAt.get(t.oracle), interval, newRound, lead)) return { act: false, reason: "notDue" };
       return { act: true, decision: { target: t, jobClass: "scheduled", state } };
     },
 

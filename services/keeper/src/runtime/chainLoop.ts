@@ -5,6 +5,15 @@
 // M-17) and report the head as processed (the monitor's heartbeat). Blocks are
 // processed one at a time; a head that arrives during a pass is processed after it. A late head, already behind one
 // processed (a missed block delivered after the newer one), is skipped rather than taken for a reorg.
+//
+// Cadence (KEEPER_SLOW_JOB_SECONDS, 60 s by default, 0 for every block): liquidations, breaker pokes and oracles that
+// are not Live (send on change; every oracle's price state is read at each head) are checked at every head. The
+// instance's own status, pending settlement, configuration pokes, the gas vault, the scheduled oracle pokes and the
+// funding reads (M-16, M-17, M-33) are checked at the first head at least that many seconds of block time after their
+// last check; the funding alerts found there are posted again at every head in between, so the monitor holds them
+// exactly as before. A pass issues every candidate discovery and the reads its checks will make together, so they
+// travel as a few batched eth_calls (chain/client.ts, chain/reads.ts); the jobs then run one after another, in the
+// same order as before.
 
 import { type Address, type PublicClient, decodeFunctionResult, encodeFunctionData } from "viem";
 import { flashLiquidatorAbi } from "@avana/protocol/abis";
@@ -13,10 +22,10 @@ import type { RetryHint } from "../jobs/failureReasons.ts";
 import { createChainReader } from "../chain/reads.ts";
 import type { AccountCache } from "../discovery/accountCache.ts";
 import { type Head, ProcessedHeads, isReorg } from "../discovery/stream.ts";
-import { breakerPokeJob } from "../jobs/breakerPoke.ts";
+import { breakerPokeJob, configPokeJob } from "../jobs/breakerPoke.ts";
 import { gasTopUpJob } from "../jobs/gasTopUp.ts";
 import { liquidationJob } from "../jobs/liquidation.ts";
-import { PokeBook, oraclePokeJob } from "../jobs/oraclePoke.ts";
+import { POKE_LEAD_SECONDS, PokeBook, everyBlockTargets, oraclePokeJob } from "../jobs/oraclePoke.ts";
 import { settlePendingJob } from "../jobs/settlePending.ts";
 import { blocksFor } from "@avana/services-common";
 import { type AlertSink, m09Level, raise } from "../monitoring/alerts.ts";
@@ -43,8 +52,11 @@ export interface ChainLoopDeps {
   onReorg(head: Head): Promise<void>;
   /** Polls the indexer stream before the pass (discovery/indexerStream.ts); a failure never stops the pass. */
   beforePass?(head: Head): Promise<void>;
-  /** M-16 and M-17 at the head after the pass (monitoring/funding.ts); a failed read is logged, never stops the loop. */
-  funding?(head: Head): Promise<void>;
+  /**
+   * M-16 and M-17 at the head after the pass (monitoring/funding.ts); a failed read is logged, never stops the loop.
+   * `slow` is true at the heads where the slow-cadence checks run (the funding reads among them).
+   */
+  funding?(head: Head, slow: boolean): Promise<void>;
   /** The head this instance has finished processing: the monitor's heartbeat. */
   processed?(head: Head): void;
 }
@@ -77,6 +89,14 @@ export function chainLoop(d: ChainLoopDeps) {
     }
     void d.alerts.send({ signal, level, chainId: d.cfg.chain.id, blockNumber, subject, detail });
   };
+  const slowSeconds = d.keeper.slowJobSeconds;
+  // A Live oracle is checked at most every slowSeconds (plus one block): its scheduled poke is sent that much earlier,
+  // so it still lands inside the interval.
+  const oracleJob = oraclePokeJob(book, {
+    from: d.from,
+    leadSeconds: slowSeconds === 0 ? POKE_LEAD_SECONDS : POKE_LEAD_SECONDS + slowSeconds + d.cfg.chain.blockTimeSeconds,
+  });
+  const breakerJob = breakerPokeJob();
   const jobs: Job<any, any>[] = [
     liquidationJob({
       cache: d.cache,
@@ -102,10 +122,15 @@ export function chainLoop(d: ChainLoopDeps) {
       },
     }),
     settlePendingJob(),
-    oraclePokeJob(book, { from: d.from }),
-    breakerPokeJob(),
+    oracleJob,
+    breakerJob,
+    configPokeJob(),
     gasTopUpJob(d.from),
   ];
+  // Checked at every head; the others at the slow cadence. Between slow heads the oracle job checks the oracles that
+  // are not Live at the head (or were not at their last read).
+  const everyHead = new Set<Job<any, any>>([jobs[0]!, oracleJob, breakerJob]);
+  let lastSlowAt: bigint | null = null;
   const chainId = d.cfg.chain.id;
   const pipeline: PipelineDeps = {
     safety: d.safety,
@@ -153,12 +178,34 @@ export function chainLoop(d: ChainLoopDeps) {
     seen.record(head);
     const ctx: BlockContext = { config: d.cfg, blockNumber: head.number, blockTimestamp: head.timestamp, reader: createChainReader(d.primary, d.cfg.manifest, head.number) };
 
-    // The instance's own status: a frozen helper stops submissions and pages; an unregistered one only warns (Q-404).
-    const status = await ctx.reader.operatorStatus(d.helper.address);
-    if (status.frozen) d.safety.frozenHelperChains.add(chainId);
-    else d.safety.frozenHelperChains.delete(chainId);
+    const slow = slowSeconds === 0 || lastSlowAt === null || head.timestamp - lastSlowAt >= BigInt(slowSeconds);
+    if (slow) lastSlowAt = head.timestamp;
+    const active = jobs.filter((job) => slow || everyHead.has(job));
 
-    for (const job of jobs) await runJob(job, ctx, pipeline);
+    // The instance's status, every active job's candidates and the reads their checks make, issued together.
+    const statusRead = slow ? ctx.reader.operatorStatus(d.helper.address) : null;
+    const found = await Promise.allSettled(
+      active.map(async (job) => {
+        let candidates = await job.discover(ctx);
+        if (job === oracleJob && !slow) candidates = await everyBlockTargets(ctx, book, candidates);
+        await job.prefetch?.(ctx, candidates).catch(() => undefined);
+        return candidates;
+      }),
+    );
+
+    // The instance's own status: a frozen helper stops submissions and pages; an unregistered one only warns (Q-404).
+    // Between slow heads the last status holds.
+    if (statusRead) {
+      const status = await statusRead;
+      if (status.frozen) d.safety.frozenHelperChains.add(chainId);
+      else d.safety.frozenHelperChains.delete(chainId);
+    }
+
+    for (const [i, job] of active.entries()) {
+      const r = found[i]!;
+      if (r.status === "rejected") throw r.reason;
+      await runJob(job, ctx, pipeline, r.value);
+    }
 
     await d.submitter?.followUps(
       ctx,
@@ -180,7 +227,7 @@ export function chainLoop(d: ChainLoopDeps) {
     }
 
     try {
-      await d.funding?.(head);
+      await d.funding?.(head, slow);
     } catch (err) {
       process.stdout.write(`${JSON.stringify({ type: "keeper.fundingCheck", chainId, blockNumber: head.number.toString(10), error: String(err) })}
 `);

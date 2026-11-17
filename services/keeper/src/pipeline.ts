@@ -57,8 +57,9 @@ export function describeCandidate(candidate: unknown): string {
   return JSON.stringify(candidate, (_k, v: unknown) => (typeof v === "bigint" ? v.toString() : v));
 }
 
-export async function runJob<C, D>(job: Job<C, D>, ctx: BlockContext, deps: PipelineDeps): Promise<void> {
-  const candidates = await job.discover(ctx);
+/** `discovered`: the job's candidates when the caller already ran `discover` at this block. */
+export async function runJob<C, D>(job: Job<C, D>, ctx: BlockContext, deps: PipelineDeps, discovered?: readonly C[]): Promise<void> {
+  const candidates = discovered ?? (await job.discover(ctx));
   for (const candidate of candidates) {
     const pass = () => runOne(job, ctx, deps, candidate);
     try {

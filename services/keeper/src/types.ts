@@ -98,6 +98,11 @@ export interface Job<C, D> {
   readonly kind: JobKind;
   /** Candidates from the cache; cached values only choose what to read. */
   discover(ctx: BlockContext): Promise<readonly C[]>;
+  /**
+   * Issues, all at once, the view reads `check` will make for these candidates, so they travel in one batched eth_call;
+   * the reader keeps each answer for the block (chain/reads.ts). Optional, and never decides anything.
+   */
+  prefetch?(ctx: BlockContext, candidates: readonly C[]): Promise<unknown>;
   /** Re-verifies eligibility from live reads pinned to the block. */
   check(ctx: BlockContext, candidate: C): Promise<Check<D>>;
   build(ctx: BlockContext, decision: D): Promise<TxPlan>;

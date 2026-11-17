@@ -70,7 +70,21 @@ export interface KeeperConfig {
   readonly indexerKey: StreamKey;
   /** How long an account may stay one-sided between the discovery sources before M-30 pages, in seconds. */
   readonly discoveryPageSeconds: number;
+  /** Seconds of block time between two checks of the slow-cadence jobs (runtime/chainLoop.ts); 0 checks every head. */
+  readonly slowJobSeconds: number;
 }
+
+/** KEEPER_SLOW_JOB_SECONDS: a whole number of seconds, 0 for every head, 60 when unset. */
+export function slowJobSeconds(env: NodeJS.ProcessEnv): number {
+  const name = "KEEPER_SLOW_JOB_SECONDS";
+  const raw = optionalEnv(env, name);
+  if (raw === undefined) return SLOW_JOB_SECONDS;
+  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw)) || Number(raw) > 3_600) throw new Error(`${name} must be a whole number of seconds from 0 to 3600`);
+  return Number(raw);
+}
+
+/** Default KEEPER_SLOW_JOB_SECONDS. */
+export const SLOW_JOB_SECONDS = 60;
 
 /** KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS: a positive whole number of seconds, 3,600 when unset. */
 export function discoveryPageSeconds(env: NodeJS.ProcessEnv): number {
@@ -271,5 +285,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): KeeperConfig {
     indexerUrl: requireEnv(env, "KEEPER_INDEXER_URL"),
     indexerKey: parseStreamKey(requireEnv(env, "KEEPER_INDEXER_KEY")),
     discoveryPageSeconds: discoveryPageSeconds(env),
+    slowJobSeconds: slowJobSeconds(env),
   };
 }
