@@ -15,7 +15,9 @@ import { pinMarket, recordClientQuest } from "@/app/lib/rewards/record-client-qu
 import {
   RewardsEducationDialog,
   RewardsPinMarketDialog,
+  RewardsReferralDialog,
 } from "@/app/dashboard/_rewards-components/rewards-task-dialogs"
+import { useReferralDialogData } from "@/app/lib/rewards/use-referral-dialog-data"
 import { useAvanaSessions } from "@/app/lib/avana-session/avana-sessions-provider"
 import { PortfolioStatCards } from "@/app/dashboard/portfolio-stat-cards"
 import { PortfolioRewardsCards } from "@/app/dashboard/_rewards-components/rewards-balance-hero"
@@ -124,6 +126,7 @@ export function DashboardPageClient() {
     },
     [router],
   )
+  const referral = useReferralDialogData(dialog === "referral")
   const pinOptions = useMemo(
     () =>
       dialog === "pin-pool"
@@ -240,6 +243,14 @@ export function DashboardPageClient() {
         open={dialog === "primer"}
         onOpenChange={(open) => !open && setDialog(null)}
         onComplete={() => recordClientQuest("review-risk-basics")}
+      />
+      <RewardsReferralDialog
+        open={dialog === "referral"}
+        onOpenChange={(open) => !open && setDialog(null)}
+        link={referral.link}
+        invited={referral.invited}
+        active={referral.active}
+        onCopy={() => recordClientQuest("share-referral-link")}
       />
       <RewardsPinMarketDialog
         open={dialog === "pin-pool" || dialog === "pin-lend"}
