@@ -302,8 +302,10 @@ contract DeployWorld is WorldAerodrome, WorldFeeds, WorldAaveV3, WorldUniswapV4 
         uint256 usd = vm.parseJsonUint(cfg, ".world.aaveV3SupplyUsd");
         uint256 n = _count(cfg, ".world.tokens");
         for (uint256 i = 0; i < n; ++i) {
-            // A hostile token (`kind`) is not a flash source: Aave V3 lists only standard ERC-20s.
-            if (vm.keyExistsJson(cfg, string.concat(".world.tokens[", vm.toString(i), "].kind"))) continue;
+            // A hostile token (`kind`) is not a flash source: Aave V3 lists only standard ERC-20s. A `blocklist` token
+            // is one (Aave V3 lists USDC), and a debt asset needs its flash liquidity.
+            string memory kk = string.concat(".world.tokens[", vm.toString(i), "].kind");
+            if (vm.keyExistsJson(cfg, kk) && keccak256(bytes(vm.parseJsonString(cfg, kk))) != keccak256("blocklist")) continue;
             string memory sym = vm.parseJsonString(cfg, string.concat(".world.tokens[", vm.toString(i), "].symbol"));
             TokenInfo memory t = tokens[keccak256(bytes(sym))];
             _aaveV3List(t.token, sym, primaryFeed[keccak256(bytes(sym))]);
