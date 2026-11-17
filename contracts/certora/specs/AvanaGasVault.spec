@@ -1,6 +1,6 @@
 /*
  * AvanaGasVault (src/periphery/gas-vault/AvanaGasVault.sol, interface src/periphery/gas-vault/IAvanaGasVault.sol,
- * spec 2.23).
+ * spec 2.24).
  *
  * Gas for Avana's own keeper signers. A top-up is permissionless and pays only an allowlisted signer below its
  * `minBalance`, at most `min(targetBalance − balance, periodCap − sentInPeriod, vault balance)`, so it never fills a

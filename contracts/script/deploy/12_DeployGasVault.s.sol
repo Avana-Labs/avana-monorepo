@@ -10,7 +10,7 @@ import {ITimelockOps, TimelockOperations} from "./lib/TimelockOperations.sol";
 import {console2} from "forge-std/console2.sol";
 
 /// @title DeployGasVault
-/// @notice The chain's AvanaGasVault (2.23 `REQ-GASV-001`…): one immutable vault per chain that refills Avana's own
+/// @notice The chain's AvanaGasVault (2.24 `REQ-GASV-001`…): one immutable vault per chain that refills Avana's own
 /// keeper signers. It runs any time after `03-avana` and `05-execute-access-operations`, and before the first
 /// `activateMarket` that needs keeper gas. `AVANA_GAS_VAULT_STEP`:
 /// - `deploy`: `AvanaGasVault(treasury, timelock, guardian, maxSigners)` with `treasury` = the config's `feeRecipient`,

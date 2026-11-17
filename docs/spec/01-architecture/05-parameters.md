@@ -210,7 +210,7 @@ The 30-minute recovery window is a provisional launch setting.
 
 ## Keeper gas
 
-Values of the AvanaGasVault ([2.23](../02-contracts/23-gas-vault.md)) and the keeper's gas policy (`Q-413`). `D` is a signer's measured median daily spend and `B` the burst reserve; per-signer values are re-derived from the gas measurements (`contracts/snapshots/`) before each listing.
+Values of the AvanaGasVault ([2.24](../02-contracts/24-gas-vault.md)) and the keeper's gas policy (`Q-413`). `D` is a signer's measured median daily spend and `B` the burst reserve; per-signer values are re-derived from the gas measurements (`contracts/snapshots/`) before each listing.
 
 | Name | Meaning | Unit | Bounds | Launch value | Stored in | Change |
 |---|---|---|---|---|---|---|
@@ -247,7 +247,7 @@ Measured gas per keeper call, each its own transaction with every account and sl
 |---|---|---|---|---|---|---|
 | `MAX_CREDITED_UNITS` | Largest credited units per record | units | Fixed | `type(uint120).max` (`Q-066`) | Collateralization | Immutable |
 | `MAX_RECORDS_PER_ACCOUNT_MARKET` | Largest number of open records per account (proxy) and market; a pledge that would open one more reverts `TooManyRecords`, rescue top-ups included. 16 records cost at most `4.61M + 16 × 0.17M = 7.33M` gas to seize whole, within the 7.5M liquidation gas budget and under half the 16.78M per-transaction cap | records | Fixed | 16 (`Q-287`) | Collateralization | Immutable |
-| `MAX_MARKET_COUNT` | Most markets the MarketRegistry ever lists on a chain, Cancelled and Closed markets included; a new market past it reverts `MarketCountLimit`, a relisting reuses its identifier. It bounds the ParameterStore's chain-wide re-checks, which walk market identifiers `1 … marketCount` in one transaction (`REQ-MREG-034`) | markets | ≥ 1; the largest count whose fork-measured re-check (most expensive ParameterStore setter, worst supported market configuration, cold reads) uses at most 50 % of the chain's per-transaction gas limit (8,388,608 of 16,777,216 gas on Ethereum, EIP-7825) | 16 on each chain, the value the deployment configuration sets; within the fork measurement of `REQ-MREG-034`, made per chain before launch (launch requirement) | MarketRegistry implementation immutable | Immutable (MarketRegistry upgrade, normal); measured again whenever an upgrade raises the re-check cost |
+| `MAX_MARKET_COUNT` | Most markets the MarketRegistry ever lists on a chain, Cancelled and Closed markets included; a new market past it reverts `MarketCountLimit`, a relisting reuses its identifier. It bounds the ParameterStore's chain-wide re-checks, which walk market identifiers `1 … marketCount` in one transaction (`REQ-MREG-034`) | markets | ≥ 1; the largest count whose fork-measured re-check (most expensive ParameterStore setter, worst supported market configuration, cold reads) uses at most 50 % of the chain's per-transaction gas limit (8,388,608 of 16,777,216 gas on Ethereum, EIP-7825) | The fork-measured count (`REQ-MREG-034`), set per chain before mainnet; test networks use 128 | MarketRegistry implementation immutable | Immutable (MarketRegistry upgrade, normal); measured again whenever an upgrade raises the re-check cost |
 | `LENS_MAX_PAGE` | Largest page size a Lens paged view accepts, sized so a page stays far below the block gas limit (measured by `TEST-123`) | records per call | ≥ 1 | 200 (`Q-194`) | Lens | Immutable (the Lens is immutable; a new Lens is a new deployment) |
 
 ## Aave-side values Avana depends on

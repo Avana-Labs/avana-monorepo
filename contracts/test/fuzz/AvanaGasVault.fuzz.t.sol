@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {AvanaGasVault} from "../../src/periphery/gas-vault/AvanaGasVault.sol";
 import {Test} from "forge-std/Test.sol";
 
-/// @notice AvanaGasVault top-up amount (2.23 `REQ-GASV-004`, `REQ-GASV-005`) for any configuration, signer balance,
+/// @notice AvanaGasVault top-up amount (2.24 `REQ-GASV-004`, `REQ-GASV-005`) for any configuration, signer balance,
 /// vault balance and send history: a top-up sends exactly `min(targetBalance − balance, periodCap − sentInPeriod,
 /// vault balance)`, never above the target, never more than the cap over the window, and only to the signer.
 contract AvanaGasVaultFuzzTest is Test {

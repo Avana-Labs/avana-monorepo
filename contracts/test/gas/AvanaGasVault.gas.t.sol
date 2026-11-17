@@ -9,7 +9,7 @@ import {GasCalibration} from "../utils/GasCalibration.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title AvanaGasVaultGasTest
-/// @notice Gas of the AvanaGasVault's permissionless calls (2.23), each as its own transaction (`isolate = true`,
+/// @notice Gas of the AvanaGasVault's permissionless calls (2.24), each as its own transaction (`isolate = true`,
 /// `GasCalibration._txGas`: intrinsic gas included, every account and slot cold), recorded with `vm.snapshotValue`
 /// (group `AvanaGasVault`): one `topUp`; `topUpAll` over `MAX_SIGNERS_LIMIT` = 8 signers when all are due (the worst
 /// case `MAX_SIGNERS` bounds, `REQ-GASV-006`), both once their send slots are in use (the budget case) and on their

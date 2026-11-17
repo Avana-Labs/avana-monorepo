@@ -199,7 +199,7 @@ export function createChainReader(client: PublicClient, manifest: { avana: { len
     callAt: (to: Address, data: Hex, from?: Address) => client.call({ ...at, to, data, account: from }),
 
     /**
-     * The gas vault's view of `signer` at this block (2.23): whether it is listed, its refill trigger, the signer's
+     * The gas vault's view of `signer` at this block (2.24): whether it is listed, its refill trigger, the signer's
      * balance and what `topUp(signer)` would send now and request (0 while paused, not due or capped to 0).
      */
     async gasVaultQuote(vault: Address, signer: Address): Promise<{ listed: boolean; minBalance: bigint; balance: bigint; amount: bigint; requested: bigint; paused: boolean }> {

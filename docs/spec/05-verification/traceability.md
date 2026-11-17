@@ -10,7 +10,7 @@ Status is the row's implementation state: **Verified** (a counting test or prope
 
 No run results are given to this matrix (it is committed and must not depend on a run), so no Foundry test counts as Verified here; a CVL rule or Halmos check counts when contracts/certora/RUNS.md or docs/audit/halmos/results/ records its pass with a job id or log. The CI evidence job writes the same matrix from the run's results.
 
-**3604 requirements · 118 verified · 0 failed · 1924 not run · 1562 unlinked · 0 changed — re-verify · 0 errors · 3532 warnings**
+**3605 requirements · 118 verified · 0 failed · 1924 not run · 1563 unlinked · 0 changed — re-verify · 0 errors · 3532 warnings**
 
 | Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |
 |---|---|---|---|---|---|---|---|
@@ -1235,8 +1235,8 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `Q-276` | One account per wallet per Borrow Spoke | Superseded by `Q-280`. | — | — | — | `QNT-08`, `QNT-51`, `QNT-T42` | `HYP-73`, `HYP-93`, `HYP-96` | `TEST-271`° | `IProxyManager` (decl.), `ProxyManager` | Not run |
 | `Q-277` | Minimum pledge value stays $10 | `minPledgeUsd` stays $10 per market and there is no minim… | — | `QNT-T42` | `HYP-73`, `HYP-77`, `SIM-05A`, `SIM-05B`, `SIM-05C` | `PROP-062`° | — | Not run |
 | `Q-278` | System invariants and sequence testing | The global invariants include system-level econom… | — | `QNT-51`, `QNT-55`, `QNT-T43` | `HYP-70`, `HYP-71`, `HYP-72`, `HYP-73`, `HYP-74`, `HYP-91`, `HYP-92`, `HYP-96` | `TEST-223`° | — | Not run |
-| `Q-279` | Chains, Hubs and instance scope | Avana runs on several chains, Hubs and AMM protocols. La… | — | — | — | — | — | Unlinked |
-| `Q-280` | CDP Spoke grouping and account isolation | A CDP Spoke is one standard Aave V4 Spoke per (… | — | — | — | — | — | Unlinked |
+| `Q-279` | Chains, Hubs and instance scope | Avana runs on several chains, Hubs and AMM protocols. Et… | — | — | — | — | — | Unlinked |
+| `Q-280` | CDP Spoke grouping and account isolation | A CDP Spoke is a standard Aave V4 Spoke under o… | — | — | — | — | — | Unlinked |
 | `Q-281` | Standard Spoke with three required settings | Every CDP Spoke is a standard, unmodified Aa… | — | — | — | `PROP-061`, `PROP-061`°, `TEST-030`°, `TEST-182`° | `DriftReason`, `IAaveV4Spoke` (decl.), `ILPVaultSwap` (decl.), `IMarketRegistryListing` (decl.), `IMarketRegistryRouteViews` (decl.), `IRiskModuleChecks` (decl.), `MarketRegistryHubsLogic` | Verified |
 | `Q-282` | Lend Spoke, credit lines and funding Hubs | Each chain has one supply-only Lend Spoke. Its… | — | — | — | — | — | Unlinked |
 | `Q-283` | Cross-Hub credit lines | A debt reserve whose funding Hub differs from its CDP Spoke's hom… | — | — | — | — | — | Unlinked |
@@ -1369,6 +1369,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `Q-413` | Keeper gas funding (AvanaGas) | Every maintenance call stays permissionless with no on-cha… | — | — | — | — | — | Unlinked |
 | `Q-414` | Record cap per AMM integration | Decision of 2026-11-15, on the measured whole-account sei… | — | — | — | — | — | Unlinked |
 | `Q-415` | Pool risk factor ceiling | The registry bound on `poolRiskFactor` is 9,000 bps (0.90), rai… | — | — | — | — | — | Unlinked |
+| `Q-416` | One tier-3 Hub per chain | Decision of 2026-11-16. Each chain has one Avana Hub, recorded … | — | — | — | — | — | Unlinked |
 | `REP-001` | `Y` calls `AD.repay(W, m, r, maxRepaySpend, repayAll, deadline)` | AaveAdapter (`Y`) | The… | — | — | — | — | `IAaveAdapterUser` (decl.) | Unlinked |
 | `REP-002` | Take the caller as the payer | `AD` | No caller check: any `msg.sender` is accepted and be… | — | — | — | — | `IAaveAdapterUser` (decl.) | Unlinked |
 | `REP-003` | Check the deadline | `AD` | `block.timestamp ≤ deadline`, in seconds. (Source: Q-075) | — | — | — | — | `IAaveAdapterUser` (decl.) | Unlinked |
@@ -2001,12 +2002,12 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-ARCH-204` | Monitoring service → Lens and contract views (`getBreakerStatus`, `getDebtBreakerStatus`, … | — | — | — | — | — | Unlinked |
 | `REQ-ARCH-205` | Every per-chain contract of 1.2 `REQ-ARCH-206` MUST exist exactly once per chain and MUST … | — | — | — | — | — | Unlinked |
 | `REQ-ARCH-206` | Avana's contracts MUST be instantiated exactly at the following scopes, and every cap, bud… | — | — | — | — | — | Unlinked |
-| `REQ-ARCH-207` | A CDP Spoke MUST be one standard Aave V4 Spoke per (chain, Hub, AMM protocol, risk tier) h… | — | — | — | — | — | Unlinked |
+| `REQ-ARCH-207` | A CDP Spoke MUST be a standard Aave V4 Spoke under one Hub and one AMM protocol, several o… | — | — | — | — | — | Unlinked |
 | `REQ-ARCH-208` | Each wallet MUST have at most one PositionProxy per (CDP Spoke, market), created by CREATE… | — | — | — | — | — | Unlinked |
 | `REQ-ARCH-209` | Avana MUST add a CDP Spoke, a market or a debt reserve only through the chain's AvanaTimel… | — | — | — | — | — | Unlinked |
 | `REQ-ARCH-210` | `IFlashSource` implementation (one per chain) | 2.11 | The flash-loan source of LPVaultSwa… | — | — | — | — | — | Unlinked |
 | `REQ-ARCH-211` | Lending MUST run only through Aave's standard Lend Spoke: a lender's wallet calls the chai… | `MATH-AR-51`, `SYM-193` | — | `HYP-97` | — | — | Unlinked |
-| `REQ-ARCH-212` | AvanaGasVault (one per chain) | 2.23 | Holds the chain's native gas token and refills Avan… | — | — | — | — | — | Unlinked |
+| `REQ-ARCH-212` | AvanaGasVault (one per chain) | 2.24 | Holds the chain's native gas token and refills Avan… | — | — | — | — | — | Unlinked |
 | `REQ-BUDGET-001` | LPVaultSwap MUST NOT call any settlement-budget contract; no such contract exists on any c… | — | — | — | — | — | Unlinked |
 | `REQ-BUDGET-002` | A floor gap that the caller's `maxShortfall` does not cover MUST revert the liquidation wi… | — | — | — | — | `ILPVaultSwapErrors` (decl.) | Unlinked |
 | `REQ-BUDGET-003` | The caller's gap payment MUST be measured as the rise of LPVaultSwap's `T` balance and MUS… | — | — | — | — | — | Unlinked |
@@ -2037,7 +2038,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-BUDGET-028` | No reserve refill exists. (Source: Q-387, Q-397) | — | — | — | — | — | Unlinked |
 | `REQ-BUDGET-029` | No reserved-floor setter exists. (Source: Q-387, Q-397) | — | — | — | — | — | Unlinked |
 | `REQ-BUDGET-030` | Withdrawal above an unreserved balance | Not applicable (Source: Q-387, Q-397) | — | — | — | — | — | Unlinked |
-| `REQ-CHAIN-001` | Avana MUST launch on Ethereum and Base together, with an Avana Stable LP Hub on each, the … | — | — | — | — | `SequencerConfig` | Unlinked |
+| `REQ-CHAIN-001` | Avana MUST be deployed on Ethereum and Base together, with one Avana Hub at tier 3 on each… | — | — | — | — | `SequencerConfig` | Unlinked |
 | `REQ-CHAIN-002` | Each chain MUST have its own AvanaTimelock, 4-of-7 governance Safe, Emergency Guardian 3-o… | — | — | — | — | — | Unlinked |
 | `REQ-CHAIN-003` | On a chain with a sequencer (Base), every LPOracle and DebtOracle MUST read the chain's se… | — | — | — | — | — | Unlinked |
 | `REQ-CHAIN-004` | Every per-chain value in the table above MUST be set from that chain's own measurements an… | — | — | — | — | — | Unlinked |
@@ -2278,7 +2279,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-HELPER-014` | A helper's net payout below `request.minPayout` | reverts with `PayoutTooLow(payout, minPa… | — | — | — | `TEST-174`‡, `TEST-176`‡, `TEST-289`° | `FlashLiquidatorBase`, `IFlashLiquidatorErrors` (decl.), `IFlashLiquidator` (decl.) | Not run |
 | `REQ-HELPER-015` | One lender. The helper MUST borrow every debt asset, GHO included, from `POOL` and from no… | `MATH-ST-128` | — | — | `PROP-036`‡, `TEST-289`°, `TEST-292`°, `TEST-292`‡ | `FlashLiquidatorBase`, `FlashLiquidatorLenders`, `FlashLiquidator`, `IFlashLiquidator` (decl.), `OperatorFlashLiquidator` | Not run |
 | `REQ-HELPER-016` | An operator helper's loan above `⌈D × (10⁴ + LENS_DUST_MARGIN_BPS) / 10⁴⌉`, or a call that… | — | — | — | `TEST-174`‡, `TEST-289`° | `IFlashLiquidatorErrors` (decl.) | Not run |
-| `REQ-HUB-001` | The Avana Stable LP Hub MUST be a standard, unmodified Aave V4 Hub owned and configured on… | — | — | — | — | — | Unlinked |
+| `REQ-HUB-001` | Each chain's one Avana Hub, recorded at tier 3 ("Avana Ethereum Hub", "Avana Base Hub"), M… | — | — | — | — | — | Unlinked |
 | `REQ-HUB-002` | Each Avana Hub on each chain MUST hold only one vault-token asset per market of its CDP Sp… | — | — | — | — | — | Unlinked |
 | `REQ-HUB-003` | Each CDP Spoke MUST be a standard, unmodified Aave V4 Spoke at the pinned release, owned b… | — | — | — | — | — | Unlinked |
 | `REQ-HUB-004` | Avana MUST NOT deploy, modify or wrap any Hub, CDP Spoke, Lend Spoke, AaveOracle, `HubConf… | — | — | — | — | — | Unlinked |
