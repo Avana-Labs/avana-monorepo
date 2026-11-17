@@ -15,6 +15,8 @@ import { Eye, EyeOff } from "@/app/components/icons"
 import { HIGHLIGHT_CARD_CLASS } from "@/app/components/highlight-carousel"
 import { hasConvexClient } from "@/app/lib/convex/has-convex-client"
 import { useAmountDisplayPreferences } from "@/app/components/display-preferences"
+import { formatFixedCurrency, type CurrencyContext } from "@/app/lib/currency/format"
+import { useCurrency } from "@/app/lib/currency/use-currency"
 import { useAvanaIdentity } from "@/app/lib/avana-session/avana-sessions-provider"
 import { formatAskAIGreeting } from "@/app/lib/ask-ai/greeting"
 import { useTranslation } from "@/app/lib/i18n/use-translation"
@@ -66,12 +68,12 @@ function parsePathPoints(path: string) {
   return Array.from(path.matchAll(/[ML]([\d.]+),([\d.]+)/g), (m) => ({ x: Number(m[1]), y: Number(m[2]) }))
 }
 
-function formatValue(value: number, format: ValueFormat): string {
+function formatValue(value: number, format: ValueFormat, ctx: CurrencyContext): string {
   switch (format) {
     case "usd":
-      return `$${Math.round(value).toLocaleString()}`
+      return formatFixedCurrency(value, ctx, 0)
     case "usdCents":
-      return `$${value.toFixed(2)}`
+      return formatFixedCurrency(value, ctx, 2)
     case "percent":
       return `${value.toFixed(2)}%`
   }
@@ -87,12 +89,13 @@ function formatValue(value: number, format: ValueFormat): string {
 function useStatCards(): StatCard[] {
   const { walletId } = useAvanaIdentity()
   const { netValueUsd, netApyPct, walletBalanceUsd } = useDashboardPortfolioSummary(walletId)
+  const { ctx } = useCurrency()
 
   return [
     {
       key: "wallet-balance",
       label: "Wallet Balance",
-      value: formatValue(walletBalanceUsd, "usd"),
+      value: formatValue(walletBalanceUsd, "usd", ctx),
       format: "usd",
       base: walletBalanceUsd > 0 ? walletBalanceUsd : 1,
       amplitude: 0.03,
@@ -102,7 +105,7 @@ function useStatCards(): StatCard[] {
     {
       key: "net-value",
       label: "Net Value",
-      value: formatValue(netValueUsd, "usd"),
+      value: formatValue(netValueUsd, "usd", ctx),
       format: "usd",
       base: netValueUsd > 0 ? netValueUsd : 1,
       amplitude: 0.05,
@@ -112,7 +115,7 @@ function useStatCards(): StatCard[] {
     {
       key: "net-apy",
       label: "Net APY",
-      value: formatValue(netApyPct, "percent"),
+      value: formatValue(netApyPct, "percent", ctx),
       format: "percent",
       base: netApyPct !== 0 ? Math.abs(netApyPct) : 1,
       amplitude: 0.06,
@@ -125,6 +128,7 @@ function useStatCards(): StatCard[] {
 function StatCardView({ card, graphPath }: { card: StatCard; graphPath: string }) {
   const { t } = useTranslation()
   const { showDollarAmounts } = useAmountDisplayPreferences()
+  const { ctx } = useCurrency()
   const [hover, setHover] = useState<{ index: number; left: number } | null>(null)
 
   const { points, path, values } = useMemo(() => {
@@ -195,7 +199,7 @@ function StatCardView({ card, graphPath }: { card: StatCard; graphPath: string }
               {t(card.label)}
             </span>
             <span className="font-medium text-foreground">
-              {card.maskable && !showDollarAmounts ? MASK : formatValue(values[hover.index], card.format)}
+              {card.maskable && !showDollarAmounts ? MASK : formatValue(values[hover.index], card.format, ctx)}
             </span>
           </div>
         </div>

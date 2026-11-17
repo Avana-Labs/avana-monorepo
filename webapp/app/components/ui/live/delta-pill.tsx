@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils"
 
-type Format = "percent" | "number" | "usd" | "bps"
+type Format = "percent" | "number" | "bps"
 
 type DeltaPillProps = {
   /** The delta value. Sign determines color. */
@@ -34,10 +34,6 @@ function formatDelta(value: number, format: Format, digits?: number): string {
     }
     case "bps": {
       return `${abs.toFixed(digits ?? 0)} bps`
-    }
-    case "usd": {
-      const d = digits ?? (abs < 1 ? 4 : 2)
-      return `$${abs.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d })}`
     }
     case "number":
     default: {
