@@ -20,7 +20,7 @@ export function MerklRewardsSection() {
         </div>
         <p className="mt-4 text-[15px] font-normal text-foreground">{t("Coming soon")}</p>
         <p className="mt-1.5 max-w-sm text-[13px] text-muted-foreground">
-          {t("Merkl reward campaigns will appear here once they launch.")}
+          {t("Merkl reward campaigns will appear here once they go live.")}
         </p>
       </Card>
     </section>

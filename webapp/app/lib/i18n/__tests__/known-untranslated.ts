@@ -34,7 +34,7 @@ export const KNOWN_UNTRANSLATED: readonly string[] = [
   "This is taking longer than usual.",
   // Merkl rewards — coming-soon copy awaiting the locale backfill.
   "Coming soon",
-  "Merkl reward campaigns will appear here once they launch.",
+  "Merkl reward campaigns will appear here once they go live.",
   "1 Day",
   "1D",
   "6 Months",
