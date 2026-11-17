@@ -183,6 +183,24 @@
             "label": "Liquidity depth",
             "level": "moderate",
             "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
@@ -206,6 +224,24 @@
             "id": "liquidityDepth",
             "label": "Liquidity depth",
             "level": "moderate",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "low",
             "text": "Local test content for the development chains; not a risk review."
           }
         ]
@@ -231,6 +267,24 @@
             "label": "Liquidity depth",
             "level": "moderate",
             "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
@@ -254,6 +308,24 @@
             "id": "liquidityDepth",
             "label": "Liquidity depth",
             "level": "moderate",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "low",
             "text": "Local test content for the development chains; not a risk review."
           }
         ]
@@ -279,6 +351,24 @@
             "label": "Liquidity depth",
             "level": "moderate",
             "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
@@ -303,9 +393,57 @@
             "label": "Liquidity depth",
             "level": "moderate",
             "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
+    }
+  ],
+  "tokens": [
+    {
+      "symbol": "GHO",
+      "name": "Gho Token"
+    },
+    {
+      "symbol": "USDC",
+      "name": "USD Coin"
+    },
+    {
+      "symbol": "USDT",
+      "name": "Tether USD"
+    },
+    {
+      "symbol": "WETH",
+      "name": "Wrapped Ether"
+    },
+    {
+      "symbol": "cbBTC",
+      "name": "Coinbase Wrapped BTC"
+    },
+    {
+      "symbol": "AERO",
+      "name": "Aerodrome"
+    },
+    {
+      "symbol": "LINK",
+      "name": "Chainlink"
     }
   ]
 }

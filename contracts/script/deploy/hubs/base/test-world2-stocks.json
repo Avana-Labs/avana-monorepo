@@ -153,6 +153,24 @@
             "label": "Market hours",
             "level": "elevated",
             "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
@@ -177,6 +195,24 @@
             "label": "Market hours",
             "level": "elevated",
             "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
@@ -201,6 +237,24 @@
             "label": "Market hours",
             "level": "elevated",
             "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
@@ -225,6 +279,24 @@
             "label": "Market hours",
             "level": "elevated",
             "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
@@ -249,6 +321,24 @@
             "label": "Market hours",
             "level": "elevated",
             "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
@@ -273,9 +363,61 @@
             "label": "Market hours",
             "level": "elevated",
             "text": "Tokenized stocks trade around the clock while their reference market does not. Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "low",
+            "text": "Local test content for the development chains; not a risk review."
           }
         ]
       }
+    }
+  ],
+  "tokens": [
+    {
+      "symbol": "USDC",
+      "name": "USD Coin"
+    },
+    {
+      "symbol": "GHO",
+      "name": "Gho Token"
+    },
+    {
+      "symbol": "AMZNc",
+      "name": "Amazon"
+    },
+    {
+      "symbol": "SNDKc",
+      "name": "Sandisk"
+    },
+    {
+      "symbol": "GOOGLc",
+      "name": "Alphabet"
+    },
+    {
+      "symbol": "NVDAc",
+      "name": "NVIDIA"
+    },
+    {
+      "symbol": "SPCXc",
+      "name": "SpaceX"
+    },
+    {
+      "symbol": "METAc",
+      "name": "Meta Platforms"
     }
   ]
 }
