@@ -10,7 +10,7 @@ import { useQuery } from "convex/react"
 import { isAddress } from "viem"
 import { api } from "@/convex/_generated/api"
 import { hasConvexClient } from "@/app/lib/convex/has-convex-client"
-import { DEFAULT_REDEMPTION } from "@/convex/lib/redemption"
+import { DEFAULT_REDEMPTION } from "@/convex/lib/redemptionRules"
 import type { RedemptionRules } from "./redeem-points"
 
 export type WalletRewards = {

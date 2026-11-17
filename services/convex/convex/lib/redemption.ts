@@ -9,17 +9,9 @@ import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { firstSeenOf } from "../wallet/membership.ts";
 import { TENURE_DISCOUNT_TIERS, tenureDiscountBps } from "./fees.ts";
 import { tenurePoints } from "./rewards.ts";
+import { DEFAULT_REDEMPTION, type RedemptionRules } from "./redemptionRules.ts";
 
-export interface RedemptionRules {
-  readonly pointsPerStep: number;
-  readonly bpsPerStep: number;
-  readonly days: number;
-  /** The most bps off that redemptions may give a wallet at once, on top of its tenure discount. */
-  readonly maxBps: number;
-}
-
-/** 1,000 points = 2 bps off for 30 days; at most 2 bps of redeemed discount at once, so one redemption at a time. */
-export const DEFAULT_REDEMPTION: RedemptionRules = { pointsPerStep: 1000, bpsPerStep: 2, days: 30, maxBps: 2 };
+export { DEFAULT_REDEMPTION, type RedemptionRules };
 
 const DAY_MS = 86_400_000;
 const isPositiveInt = (n: number) => Number.isInteger(n) && n > 0;
