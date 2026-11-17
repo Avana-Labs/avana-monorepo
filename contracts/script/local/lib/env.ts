@@ -19,6 +19,12 @@ export interface LocalChain {
   /** The deploy scripts' network name (AVANA_NETWORK), as on the real network: its outputs go to
    * deployments-local/<network>. The chain ID makes the run local (31337, 31338), not the name. */
   readonly network: string;
+  /** The chain's Hub: its label in the config, its page ("Avana <label> Hub") and its Hub files'
+   * folder, script/deploy/hubs/<hubs>/ (`ethereum` on Ethereum and Sepolia, `base` on Base and Base Sepolia). */
+  readonly hubs: string;
+  /** A public test network (Sepolia, Base Sepolia) deployed from keystores (script/testnet/): no anvil method is
+   * called, its RPC URL comes from `rpcEnv`, and each signer from the testnet keystores. */
+  readonly testnet?: { readonly rpcEnv: string };
   /** The services' chain key (services/common/src/chains.ts, network set `production`): the services read this node as
    * that chain through RPC_<envSuffix> and CHAIN_ID_<envSuffix>. */
   readonly key: string;
@@ -52,6 +58,7 @@ const int = (name: string, d: number) => (process.env[name] ? Number(process.env
 export const CHAINS: readonly LocalChain[] = [
   {
     network: "ethereum",
+    hubs: "ethereum",
     key: "mainnet",
     chainId: 31337,
     label: "Ethereum",
@@ -63,6 +70,7 @@ export const CHAINS: readonly LocalChain[] = [
   },
   {
     network: "base",
+    hubs: "base",
     key: "base",
     chainId: 31338,
     label: "Base",
@@ -74,13 +82,54 @@ export const CHAINS: readonly LocalChain[] = [
   },
 ];
 
+/**
+ * The public test networks, deployed as the local stack is (the same base config, Hub files, world and test values)
+ * by script/testnet/testnet.ts. Their RPC URLs are secrets: `rpcEnv` names the variable (environment, or the encrypted
+ * secrets file of secrets.ts); they never reach a command line or a log.
+ */
+export const TESTNETS: readonly LocalChain[] = [
+  {
+    network: "sepolia",
+    hubs: "ethereum",
+    key: "sepolia",
+    chainId: 11_155_111,
+    label: "Ethereum",
+    envSuffix: "SEPOLIA",
+    port: 0,
+    recorderPort: 0,
+    blockTime: 12,
+    fork: undefined,
+    testnet: { rpcEnv: "SEPOLIA_RPC_URL" },
+  },
+  {
+    network: "base-sepolia",
+    hubs: "base",
+    key: "base-sepolia",
+    chainId: 84_532,
+    label: "Base",
+    envSuffix: "BASE_SEPOLIA",
+    port: 0,
+    recorderPort: 0,
+    blockTime: 2,
+    fork: undefined,
+    testnet: { rpcEnv: "BASE_SEPOLIA_RPC_URL" },
+  },
+];
+
 export const chainOf = (network: string): LocalChain => {
-  const c = CHAINS.find((x) => x.network === network || x.key === network || String(x.chainId) === network);
-  if (!c) throw new Error(`no local chain ${network}: ${CHAINS.map((x) => x.network).join(", ")}`);
+  const all = [...CHAINS, ...TESTNETS];
+  const c = all.find((x) => x.network === network || x.key === network || String(x.chainId) === network);
+  if (!c) throw new Error(`no chain ${network}: ${all.map((x) => x.network).join(", ")}`);
   return c;
 };
 
-export const rpcUrl = (c: LocalChain) => `http://127.0.0.1:${c.port}`;
+/** The chain's RPC: the local node's port, or a test network's URL from its secret variable. */
+export const rpcUrl = (c: LocalChain) => {
+  if (!c.testnet) return `http://127.0.0.1:${c.port}`;
+  const url = process.env[c.testnet.rpcEnv]?.trim();
+  if (!url) throw new Error(`${c.testnet.rpcEnv} is not set: store it with \`node script/local/stack.ts secrets\` or set it in the environment`);
+  return url;
+};
 /** What every service reads to know which node stands in for which chain. */
 export const chainIdEnv = (): Record<string, string> => Object.fromEntries(CHAINS.map((c) => [`CHAIN_ID_${c.envSuffix}`, String(c.chainId)]));
 /** A second spelling of the same node: the monitor and the keeper refuse a fallback equal to the primary. */

@@ -1,0 +1,12 @@
+# The private test-network config file: keep it outside the repository and point AVANA_TESTNET_CONFIG at it.
+KEYSTORE_DIR=<absolute directory of the encrypted keystores>
+PASSWORD_FILE=<absolute path of the file holding their password>
+DEPLOYER=<keystore name>
+GOVERNANCE=<keystore name>
+PAYLOADS_CONTROLLER=<keystore name>
+ORACLES=<keystore name>,<keystore name>,<keystore name>,<keystore name>
+TREASURY=<address>
+KEEPER=<address>
+AAVE_PROTOCOL_GUARDIAN=<address>
+EMERGENCY_GUARDIAN=<address>
+JOINT_CONFIG_SAFE=<address>
