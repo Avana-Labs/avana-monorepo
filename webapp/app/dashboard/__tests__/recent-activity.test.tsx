@@ -1,5 +1,5 @@
-import { fireEvent, render, within } from "@testing-library/react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { fireEvent, render, waitFor, within } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AMOUNT_SIGN_BY_KIND, inferActivityTokenSymbols, RecentActivity } from "@/app/dashboard/recent-activity"
 import { DisplayPreferencesProvider } from "@/app/components/display-preferences"
 import type { PortfolioActivityRow } from "@/app/lib/data/providers/portfolio"
@@ -111,6 +111,69 @@ describe("RecentActivity whole-row navigation", () => {
         }),
       ),
     ).toEqual(["AURA", "WETH"])
+  })
+})
+
+describe("RecentActivity rows older than the indexed window", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-11-17T12:00:00.000Z"))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    window.localStorage.clear()
+  })
+
+  const olderRows = () => [
+    makeRow({ id: "recent", txHash: "sim-recent", at: "2026-11-15T12:00:00.000Z", primaryLabel: "Recent" }),
+    makeRow({
+      id: "older",
+      txHash: "sim-older",
+      at: "2026-10-03T12:00:00.000Z",
+      amountUsd: undefined,
+      tokenAmountLabel: "1,500 USDC",
+      primaryLabel: "Older",
+      secondaryLabel: "",
+    }),
+    makeRow({
+      id: "last-year",
+      txHash: "sim-last-year",
+      at: "2025-10-03T12:00:00.000Z",
+      product: "borrow",
+      kind: "borrow",
+      amountUsd: undefined,
+      tokenAmountLabel: "250 USDC",
+      primaryLabel: "Last year",
+      secondaryLabel: "",
+    }),
+  ]
+
+  it("shows the token amount with its sign in place of the USD value, and the date instead of an age", () => {
+    const { container } = render(
+      <DisplayPreferencesProvider>
+        <RecentActivity rows={olderRows()} />
+      </DisplayPreferencesProvider>,
+    )
+    const view = within(container)
+    expect(view.getByText("-$1.0K")).toBeInTheDocument()
+    expect(view.getByText(/· 2d$/)).toBeInTheDocument()
+    expect(view.getByText("-1,500 USDC")).toBeInTheDocument()
+    expect(view.getByText("Supply · Oct 3")).toBeInTheDocument()
+    expect(view.getByText("+250 USDC")).toBeInTheDocument()
+    expect(view.getByText("Borrow · Oct 3, 2025")).toBeInTheDocument()
+    expect(view.queryByText("$0")).not.toBeInTheDocument()
+  })
+
+  it("hides the token amount like a USD value when amounts are hidden", async () => {
+    window.localStorage.setItem("avana-show-dollar-amounts", "false")
+    const { container } = render(
+      <DisplayPreferencesProvider>
+        <RecentActivity rows={olderRows()} />
+      </DisplayPreferencesProvider>,
+    )
+    const view = within(container)
+    await waitFor(() => expect(view.getAllByText("••••")).toHaveLength(3))
+    expect(view.queryByText(/USDC/)).not.toBeInTheDocument()
   })
 })
 
