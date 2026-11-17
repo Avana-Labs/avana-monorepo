@@ -25,6 +25,20 @@ type Say = (s: string) => void;
 const PAUSE = join(STACK, "activity.paused");
 const sampleFile = (c: LocalChain) => join(STACK, "replay", `sample-block-${c.key}`);
 
+/** The last samples closed on the chain: the block a check reads, and the block that closed its daily bucket. */
+function lastSamples(c: LocalChain): { read: number; closed: number } | undefined {
+  if (!existsSync(sampleFile(c))) return undefined;
+  const [read, closed] = readFileSync(sampleFile(c), "utf8").trim().split(/\s+/).map(Number);
+  // A file of one block (written before the closing block was kept) cannot tell whether the chain sampled since.
+  return read !== undefined && closed !== undefined && Number.isFinite(read) && Number.isFinite(closed) ? { read, closed } : undefined;
+}
+
+const sampleBlock = (c: LocalChain): number => {
+  const s = lastSamples(c);
+  if (!s) throw new Error(`no samples closed on ${c.network}`);
+  return s.read;
+};
+
 /** Ponder's warning, error and fatal lines of a log, less the node's own notices (services-replay.sh `classify`). */
 /**
  * How long the indexer may take to reach the heads. Closing the samples mines a sampler interval on each chain (an hour
@@ -126,25 +140,28 @@ async function closeSamples(c: LocalChain, say: Say): Promise<number> {
   const s2 = await nextSample(c);
   await rpc(rpcUrl(c), "anvil_mine", ["0x46"]);
   mkdirSync(join(STACK, "replay"), { recursive: true });
-  writeFileSync(sampleFile(c), String(s1));
+  writeFileSync(sampleFile(c), `${s1} ${s2}`);
   say(`${c.network}: samples at blocks ${s1} and ${s2}, head ${await blockNumber(c)}`);
   return s1;
 }
 
 /**
- * The samples a check reads: the last ones closed, or new ones when there are none or the last is before the chain's
- * state floor (a node restored from a saved state can no longer read it). The chain then mines past anvil's finality.
+ * The samples a check reads: the last ones closed while the chain has reached no sampler block since, or new ones.
+ * New ones are closed when there are none, when the read block is before the chain's state floor (a node restored from
+ * a saved state can no longer read it), or when the chain has passed a sampler block since (the data layer then holds
+ * a later sample than the one the check would read). The chain then mines past anvil's finality.
  * Closing samples mines an hour of blocks per sample, which the live indexer takes long to follow on a 2-second chain,
- * so they are reused; deleting `deployments-local/stack/replay/sample-block-<chain>` closes new ones.
+ * so samples a check just closed are reused; deleting `deployments-local/stack/replay/sample-block-<chain>` closes new ones.
  */
 async function samples(c: LocalChain, say: Say): Promise<void> {
-  const last = existsSync(sampleFile(c)) ? Number(readFileSync(sampleFile(c), "utf8")) : undefined;
-  if (last === undefined || last < (await stateFloor(c))) {
+  const last = lastSamples(c);
+  const head = await blockNumber(c);
+  if (last === undefined || last.read < (await stateFloor(c)) || head >= last.closed + sampler(c).every) {
     await closeSamples(c, say);
     return;
   }
   await rpc(rpcUrl(c), "anvil_mine", ["0x46"]);
-  say(`${c.network}: samples at block ${last} (last closed), head ${await blockNumber(c)}`);
+  say(`${c.network}: samples at block ${last.read} (last closed), head ${await blockNumber(c)}`);
 }
 
 export async function check(chains: readonly LocalChain[], say: Say): Promise<boolean> {
@@ -161,7 +178,7 @@ export async function check(chains: readonly LocalChain[], say: Say): Promise<bo
     const live = classify(logPath("indexer"));
     say(`${live.errors.length ? "FAIL" : "PASS"} indexer log: ${live.errors.length} error or warning lines, ${live.tolerated} node timeouts or notices`);
     ok = live.errors.length === 0 && ok;
-    for (const c of chains) ok = convexCheck(c, Number(readFileSync(sampleFile(c), "utf8")), say) && ok;
+    for (const c of chains) ok = convexCheck(c, sampleBlock(c), say) && ok;
     for (const c of chains) ok = (await feeSplit(c, say)) && ok;
     for (const c of chains) ok = (await guardianAccess(c, say)) && ok;
     return ok;
@@ -244,7 +261,7 @@ export async function replay(chains: readonly LocalChain[], say: Say): Promise<b
     // A Hub release since the live indexer started changes its build: it then restarts on a new schema from the start blocks.
     await startIndexer();
     say(`indexer (live): restarted on ${runningLiveSchema()}, at head ${JSON.stringify(await indexerAtHead(INDEXER_CATCH_UP_MS))}`);
-    for (const c of chains) ok = convexCheck(c, Number(readFileSync(sampleFile(c), "utf8")), say) && ok;
+    for (const c of chains) ok = convexCheck(c, sampleBlock(c), say) && ok;
     for (const c of chains) say(`${c.network}: rpc-recorder ${await (await fetch(`http://127.0.0.1:${c.recorderPort}`)).text().catch(() => "?")}`);
     return ok;
   });
