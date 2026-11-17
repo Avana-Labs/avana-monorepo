@@ -7,8 +7,11 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { keccak256 } from "./keccak.ts";
+import { keccak256 as keccakBytes, toBytes } from "viem";
 import { ARGS_ON_COMMAND_LINE, changedSources, cloneImplementation, compilationProfileOf, compilerProfiles, deployedContracts, indexArtifacts, isCreate3Helper, matchArtifact, profileOuts, proxyRequest, RECORDED_SOURCES, sourceRequest, verifyCommand, verifyRelease } from "./verify.ts";
+
+// viem's Keccak-256 of a string's UTF-8 bytes, as solc hashes a source.
+const keccak256 = (s: string | Uint8Array) => keccakBytes(typeof s === "string" ? toBytes(s) : s);
 
 // Real creation codes are far longer than the index key (64 bytes); each fixture body is 100 bytes.
 const meta = (n: number) => `${n.toString(16).padStart(2, "0")}`.repeat(100);
@@ -267,7 +270,7 @@ test("a clone the explorer already links to its implementation counts as verifie
   assert.match(elsewhere.r.failed[0]!, /not detected/);
 });
 
-test("keccak256 is Keccak's (Solidity's), across block boundaries", () => {
+test("viem's keccak256 of a source's bytes is Keccak's (Solidity's), across block boundaries", () => {
   assert.equal(keccak256(""), "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
   assert.equal(keccak256("abc"), "0x4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45");
   // 200 bytes: two blocks of the 136-byte rate.

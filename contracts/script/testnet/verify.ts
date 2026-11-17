@@ -25,7 +25,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { keccak256 } from "./keccak.ts";
+import { keccak256, toBytes } from "viem";
 
 export interface Deployed {
   readonly address: string;
@@ -255,7 +255,7 @@ function fileHashes(path: string): string[] {
   if (!existsSync(path)) return [];
   const raw = readFileSync(path, "utf8");
   const lf = toLF(raw);
-  return [...new Set([raw, lf, lf.replace(/\n/g, "\r\n")])].map(keccak256);
+  return [...new Set([raw, lf, lf.replace(/\n/g, "\r\n")])].map((s) => keccak256(toBytes(s)));
 }
 
 /** The sources of `a` whose file in `contracts` differs from what the build read (or is missing, with a copy of the
