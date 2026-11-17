@@ -81,17 +81,8 @@ async function startForkProxy(c: LocalChain): Promise<void> {
   if (running(name)) return;
   const { secretValue } = await import("./secrets.ts");
   const varName = `${c.network.toUpperCase()}_FORK_RPC_URL` as "ETHEREUM_FORK_RPC_URL" | "BASE_FORK_RPC_URL";
-  // The explicit endpoint when set, else the provider endpoints of the real network (packages/rpc, primary first).
-  let urls = secretValue(varName);
-  if (!urls) {
-    const { AvanaRPCManager, CREDENTIAL_NAMES } = await import("../../../../packages/rpc/src/index.ts");
-    const credentials = Object.fromEntries(CREDENTIAL_NAMES.map((n) => [n, secretValue(n)]));
-    try {
-      urls = new AvanaRPCManager({ credentials, logger: null }).endpoints(c.network === "base" ? 8453 : 1).map((e) => e.secretUrl()).join(",");
-    } catch {
-      throw new Error(`fork mode needs the RPC provider credentials (ALCHEMY_API_KEY, or QUICKNODE_ENDPOINT_NAME and QUICKNODE_TOKEN) or ${varName}: set them in the environment, or store them encrypted with \`node script/local/stack.ts secrets\``);
-    }
-  }
+  const urls = secretValue(varName);
+  if (!urls) throw new Error(`fork mode needs ${varName}: set it in the environment, or store it encrypted with \`node script/local/stack.ts secrets --only ${varName}\``);
   start(name, process.execPath, [join(CONTRACTS, "script/local/fork-proxy.ts"), String(c.fork!.proxyPort)], { env: { FORK_UPSTREAMS: urls } });
   await waitFor(`${c.label} fork proxy`, async () => (await fetch(`http://127.0.0.1:${c.fork!.proxyPort}`)).ok, 15_000, 300);
 }

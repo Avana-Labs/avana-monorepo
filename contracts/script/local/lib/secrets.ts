@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The stack's local secrets: the RPC provider credentials (ALCHEMY_API_KEY; QUICKNODE_ENDPOINT_NAME and QUICKNODE_TOKEN
-// for the backup), from which packages/rpc builds every endpoint (the test networks', and the fork's in fork mode), and
-// the explorer key ETHERSCAN_API_KEY. Optional explicit endpoints replace a chain's providers: SEPOLIA_RPC_URL and
-// BASE_SEPOLIA_RPC_URL for script/testnet/, ETHEREUM_FORK_RPC_URL and BASE_FORK_RPC_URL for fork mode. None is ever in
+// for the backup), from which packages/rpc builds the test networks' endpoints (script/testnet/rpc.ts), and the
+// explorer key ETHERSCAN_API_KEY. Explicit endpoints, stored by name: SEPOLIA_RPC_URL and BASE_SEPOLIA_RPC_URL replace a
+// test network's providers; ETHEREUM_FORK_RPC_URL and BASE_FORK_RPC_URL are fork mode's endpoints. None is ever in
 // the repository or on a command line. They are kept in STACK/keystore/secrets.enc, next to the Foundry keystores,
 // encrypted with AES-256-GCM under a key derived (scrypt) from the keystores' password file, and decrypted when used.
 // A variable set in the environment takes precedence over the file.

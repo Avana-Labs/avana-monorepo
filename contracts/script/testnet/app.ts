@@ -14,11 +14,9 @@
 // Inputs, none in the repository:
 // - The deploy outputs: <dir>/<network>/manifest.json and world.json (--deployments, default this checkout's
 //   contracts/deployments-local; point it at the checkout that ran the deploy).
-// - The RPC provider credentials (ALCHEMY_API_KEY; QUICKNODE_ENDPOINT_NAME and QUICKNODE_TOKEN for the backup): the
-//   environment, else the deploying checkout's encrypted secrets (<dir>/stack/keystore/secrets.enc, `stack.ts secrets`).
-//   packages/rpc builds each network's endpoints from them, Alchemy first. An explicit SEPOLIA_RPC_URL or
-//   BASE_SEPOLIA_RPC_URL replaces them (optional SEPOLIA_WS_URL, BASE_SEPOLIA_WS_URL when the provider's WebSocket
-//   endpoint is not the https URL as wss).
+// - SEPOLIA_RPC_URL, BASE_SEPOLIA_RPC_URL: the environment, else the deploying checkout's encrypted secrets
+//   (<dir>/stack/keystore/secrets.enc, `stack.ts secrets`). Optional SEPOLIA_WS_URL, BASE_SEPOLIA_WS_URL when the
+//   provider's WebSocket endpoint is not the https URL as wss.
 // - AVANA_TESTNET_CONFIG: the private test-network config file; the faucet signs with its DEPLOYER keystore, the test
 //   tokens' minter.
 // - Optional KEEPER_KMS_KEY_ID_SEPOLIA, KEEPER_KMS_KEY_ID_BASE_SEPOLIA (and AWS credentials): an active keeper there;
@@ -114,11 +112,7 @@ function appSecrets(chains: readonly AppChain[]): AppSecrets {
   };
 }
 
-/**
- * Each network's endpoints for its proxy: the HTTP ones in order (comma-separated, primary first) and a WebSocket one.
- * The explicit endpoint when one is set, else those the provider credentials give (packages/rpc); each value from the
- * environment, else the deploying checkout's encrypted secrets.
- */
+/** The network's RPC URL (and optional WebSocket URL): the environment, else the deploying checkout's encrypted secrets. */
 async function rpcSecrets(deployments: string, chains: readonly AppChain[]): Promise<Record<string, { http: string; ws?: string }>> {
   const { readSecretsFile } = await import("../local/lib/secrets.ts");
   const keystore = join(deployments, "stack", "keystore");
@@ -129,36 +123,18 @@ async function rpcSecrets(deployments: string, chains: readonly AppChain[]): Pro
     stored ??= readSecretsFile(join(keystore, "secrets.enc"), join(keystore, "password"));
     return stored[name]?.trim() || undefined;
   };
-  const { AvanaRPCManager, CREDENTIAL_NAMES } = await import("../../../packages/rpc/src/index.ts");
-  const credentials = Object.fromEntries(CREDENTIAL_NAMES.map((n) => [n, value(n)]));
-  for (const n of CREDENTIAL_NAMES) SECRETS[n] = credentials[n];
-  const providers = new AvanaRPCManager({ credentials, logger: null });
   const out: Record<string, { http: string; ws?: string }> = {};
   for (const c of chains) {
+    const http = value(c.rpcSecret);
+    if (!http) throw new Stop(`${c.rpcSecret} is not set, in the environment or the encrypted secrets of ${keystore}`);
     const wsName = c.rpcSecret.replace("_RPC_URL", "_WS_URL");
-    const explicit = value(c.rpcSecret);
-    if (explicit) {
-      const ws = value(wsName);
-      SECRETS[c.rpcSecret] = explicit;
-      if (ws) SECRETS[wsName] = ws;
-      out[c.network] = { http: explicit, ws };
-      continue;
-    }
-    let http: string[];
-    let ws: string | undefined;
-    try {
-      http = providers.endpoints(c.chainId).map((e) => e.secretUrl());
-      ws = providers.endpoints(c.chainId, "ws")[0]!.secretUrl();
-    } catch (e) {
-      throw new Stop(`${c.network}: ${(e as Error).message}; in the environment or the encrypted secrets of ${keystore}`);
-    }
-    http.forEach((u, i) => (SECRETS[`${c.rpcSecret}_${i}`] = u));
-    SECRETS[wsName] = ws;
-    out[c.network] = { http: http.join(","), ws };
+    const ws = value(wsName);
+    SECRETS[c.rpcSecret] = http;
+    if (ws) SECRETS[wsName] = ws;
+    out[c.network] = { http, ws };
   }
   // Every process inherits this environment: from here on the URLs reach the proxies only, in their own environment.
   for (const c of APP_CHAINS) for (const n of [c.rpcSecret, c.rpcSecret.replace("_RPC_URL", "_WS_URL")]) delete process.env[n];
-  for (const n of CREDENTIAL_NAMES) delete process.env[n];
   return out;
 }
 

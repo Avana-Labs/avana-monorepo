@@ -4,9 +4,7 @@
 // network through this local proxy (http://127.0.0.1:<port>), so the network's RPC URL, which carries the provider's
 // key, is held by this process alone. The URL reaches it in its environment (PROXY_UPSTREAMS, comma-separated for
 // several endpoints), never on a command line, and no line it writes names it.
-// - JSON-RPC over HTTP is forwarded to the first endpoint in order (Alchemy, then QuickNode, as packages/rpc orders
-//   them) that has not failed in the last 30 s; a rate limit or a failure moves the request to the next one at once,
-//   and backs off only when every endpoint has failed.
+// - JSON-RPC over HTTP is forwarded, retried with backoff on a rate limit or a failure, rotating through the endpoints.
 // - A WebSocket upgrade (the indexer's and the keeper's new-head subscriptions) is tunnelled to the endpoint's
 //   WebSocket (https becomes wss, http ws; PROXY_WS_UPSTREAM when the provider's differs), bytes passed as they are.
 // - Browser requests are answered with CORS headers for PROXY_CORS_ORIGINS only (the webapp's origins).
@@ -47,27 +45,6 @@ export function corsHeaders(origin: string | undefined, allowed: readonly string
   return { "access-control-allow-origin": origin, "access-control-allow-methods": "POST, OPTIONS", "access-control-allow-headers": "content-type", vary: "origin" };
 }
 
-/**
- * Endpoint choice for `n` endpoints in order: the first not failed in the last `coolDownMs`, else (all failed) the
- * one that failed longest ago. `failed(i)` records a failure and says whether another endpoint is still in use (the
- * request then moves at once).
- */
-export function preferredUpstream(n: number, coolDownMs = 30_000, now: () => number = Date.now) {
-  const failedAt = Array.from({ length: n }, () => -Infinity);
-  return {
-    next(): number {
-      const t = now();
-      const up = failedAt.findIndex((f) => t - f >= coolDownMs);
-      return up !== -1 ? up : failedAt.indexOf(Math.min(...failedAt));
-    },
-    failed(i: number): boolean {
-      failedAt[i] = now();
-      const t = now();
-      return failedAt.some((f) => t - f >= coolDownMs);
-    },
-  };
-}
-
 /** Whether an upstream answer is to be retried on another attempt (rate limit, server error). */
 export const retryable = (status: number, text: string) => status === 429 || status >= 500 || /rate limit|too many requests/i.test(text.slice(0, 300));
 
@@ -81,13 +58,12 @@ function main(): void {
   }
   const wsUpstream = wsUpstreamOf(process.env.PROXY_WS_UPSTREAM?.trim() || upstreams[0]!);
   const stats = { forwarded: 0, retried: 0, failed: 0, sockets: 0, socketErrors: 0 };
-  const pick = preferredUpstream(upstreams.length);
+  let next = 0;
 
   async function forward(body: string): Promise<{ status: number; text: string }> {
     let wait = 500;
     for (let attempt = 0; attempt < 8; attempt++) {
-      const i = pick.next();
-      const url = upstreams[i]!;
+      const url = upstreams[next++ % upstreams.length]!;
       try {
         const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body, signal: AbortSignal.timeout(60_000) });
         const text = await r.text();
@@ -97,7 +73,6 @@ function main(): void {
       } catch {
         // The error names the endpoint: it is counted, never written.
         stats.retried++;
-        if (pick.failed(i)) continue;
         await new Promise((res) => setTimeout(res, wait));
         wait = Math.min(wait * 2, 15_000);
       }

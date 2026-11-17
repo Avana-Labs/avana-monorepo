@@ -15,7 +15,6 @@ import { CREDENTIALS, mockManager } from "../../../packages/rpc/test/mock.ts";
 import { TESTNETS, activeRpcProvider, rpcUrl } from "../local/lib/env.ts";
 import { redact } from "../local/lib/chain.ts";
 import { broadcastSnapshot, changedBroadcasts, planFailover, setTestnetRpc, unconfirmed, useHealthyRpc } from "./rpc.ts";
-import { preferredUpstream } from "./rpc-proxy.ts";
 
 const sepolia = TESTNETS.find((c) => c.network === "sepolia")!;
 const fast = { timeoutMs: 0, pollMs: 0, sleep: async () => {} };
@@ -114,22 +113,6 @@ test("no failover while a transaction of the failed attempt is still pending, or
     assert.equal(plan.move, false);
     assert.match((plan as { reason: string }).reason, /nonce 0 of 0x[0-9a-fA-F]{40} was used by a transaction other than 0x1111/);
   }
-});
-
-test("the RPC proxies send each request to the first endpoint not failed in the last 30 s", () => {
-  let t = 0;
-  const pick = preferredUpstream(2, 30_000, () => t);
-  assert.equal(pick.next(), 0);
-  assert.equal(pick.failed(0), true); // the backup is in use: move at once
-  assert.equal(pick.next(), 1);
-  t += 29_999;
-  assert.equal(pick.next(), 1);
-  t += 1;
-  assert.equal(pick.next(), 0); // the primary again after its cool-down
-  assert.equal(pick.failed(0), true);
-  assert.equal(pick.failed(1), false); // every endpoint failed: back off
-  t += 1;
-  assert.equal(pick.next(), 0); // the one that failed longest ago
 });
 
 test("no failover without a healthy backup", async () => {

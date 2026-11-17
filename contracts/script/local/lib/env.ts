@@ -47,8 +47,7 @@ export interface LocalChain {
 /**
  * Fork mode: every chain forks its real network at the block pinned in fork.json, so runs are repeatable and anvil
  * caches what it read; STACK_FORK_BLOCK_<CHAIN> pins another. The network's RPC endpoints are never in the repository:
- * they are built from the RPC provider credentials (packages/rpc), or <CHAIN>_FORK_RPC_URL replaces them, each from the
- * environment or the encrypted secrets file (secrets.ts), and anvil reaches them
+ * <CHAIN>_FORK_RPC_URL comes from the environment or the encrypted secrets file (secrets.ts), and anvil reaches them
  * through the local fork proxy (fork-proxy.ts), so they appear on no command line either.
  */
 function forkOf(network: string, proxyPort: number): LocalChain["fork"] {
