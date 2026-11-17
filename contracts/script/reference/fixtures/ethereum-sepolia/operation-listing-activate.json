@@ -1,0 +1,8 @@
+{
+  "chainId": 11155111,
+  "delay": 60,
+  "labels": [
+    "MR.activateMarket"
+  ],
+  "name": "listing-activate"
+}
