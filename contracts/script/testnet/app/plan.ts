@@ -8,8 +8,9 @@
 // on the same port): the RPC URL itself reaches only the proxy's environment, never a service's environment, a command
 // line, a file or a log line.
 
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 
 export interface AppChain {
   /** The deploy's network name: its outputs are in <deployments>/<network>/ (script/testnet/testnet.ts). */
@@ -194,12 +195,38 @@ const manifests = (p: Plan) => p.chains.map((c) => manifestOf(p.deployments, c))
 /** The proxy of chain `c`: the network's RPC URL in its environment only. */
 export const proxyEnv = (rpcUrl: string, origins: readonly string[]): Record<string, string> => ({ PROXY_UPSTREAMS: rpcUrl, PROXY_CORS_ORIGINS: origins.join(",") });
 
-export function indexerEnv(p: Plan): Record<string, string> {
+/** The indexer's code: what, with the manifests, makes Ponder's build (its config reads them). */
+const INDEXER_CODE = ["package.json", "ponder.config.ts", "ponder.schema.ts", "src"];
+
+function filesUnder(path: string): string[] {
+  if (!existsSync(path)) return [];
+  if (!statSync(path).isDirectory()) return [path];
+  return readdirSync(path).sort().flatMap((n) => filesUnder(join(path, n)));
+}
+
+/**
+ * The indexer's schema: `testnet_<12 hex>`, a hash of the manifest files and the indexer's code. Ponder resumes a schema
+ * only under the same build, and the build includes the manifests, so a Hub release that rewrites a manifest (or a code
+ * change) gets a new schema and a full reindex instead of Ponder refusing the old one.
+ */
+export function indexerSchema(indexerDir: string, manifestPaths: readonly string[]): string {
+  const h = createHash("sha256");
+  for (const f of manifestPaths) h.update(`manifest\0${readFileSync(f)}\0`);
+  for (const f of INDEXER_CODE.flatMap((x) => filesUnder(join(indexerDir, x)))) h.update(`${relative(indexerDir, f).split(sep).join("/")}\0`).update(readFileSync(f)).update("\0");
+  return `testnet_${h.digest("hex").slice(0, 12)}`;
+}
+
+/** The schema file of the app's run directory: the schema the running indexer was started on. */
+export const indexerSchemaFile = (run: string) => join(run, "indexer-schema");
+
+export const manifestPathsOf = (p: Pick<Plan, "chains" | "deployments">) => p.chains.map((c) => manifestOf(p.deployments, c));
+
+export function indexerEnv(p: Plan, schema: string): Record<string, string> {
   const env: Record<string, string> = {
     AVANA_MANIFEST: manifests(p),
     INDEXER_NETWORK_SET: "testnet",
     INDEXER_DATABASE: "pglite",
-    DATABASE_SCHEMA: "testnet",
+    DATABASE_SCHEMA: schema,
     PONDER_TELEMETRY_DISABLED: "true",
     INDEXER_EXPORT_KEYS: `${EXPORT_KEY_ID}:${p.secrets.exportSecret}`,
   };

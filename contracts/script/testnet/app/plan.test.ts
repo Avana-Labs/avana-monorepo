@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createCipheriv, createHash, randomBytes, scryptSync } from "node:crypto";
-import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { type AddressInfo, createServer as createNetServer } from "node:net";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
@@ -29,7 +29,10 @@ import {
   faucetEnv,
   faucetSignerOf,
   indexerEnv,
+  indexerSchema,
+  indexerSchemaFile,
   keeperEnv,
+  manifestPathsOf,
   monitorEnv,
   parseConfigFile,
   proxyEnv,
@@ -53,6 +56,39 @@ const secrets = {
 };
 const plan = (chains = selectChains(undefined)): Plan => ({ chains, ports: appPorts({}), deployments: FIXTURES, run: "/run/testnet-app", secrets });
 const tlsFiles = { cert: "/tls/cert.pem", key: "/tls/key.pem" };
+const SCHEMA = "testnet_0123456789ab";
+
+test("the indexer's schema changes with any manifest or indexer file, and only then", () => {
+  const dir = mkdtempSync(join(tmpdir(), "testnet-app-schema-"));
+  cpSync(FIXTURES, join(dir, "deployments"), { recursive: true });
+  const indexer = join(dir, "indexer");
+  mkdirSync(join(indexer, "src", "handlers"), { recursive: true });
+  writeFileSync(join(indexer, "ponder.config.ts"), "export default {};\n");
+  writeFileSync(join(indexer, "src", "handlers", "a.ts"), "export const a = 1;\n");
+  mkdirSync(join(indexer, "node_modules"), { recursive: true });
+  const p = { chains: APP_CHAINS, deployments: join(dir, "deployments") };
+  const schema = () => indexerSchema(indexer, manifestPathsOf(p));
+
+  const first = schema();
+  assert.match(first, /^testnet_[0-9a-f]{12}$/);
+  assert.equal(schema(), first, "the same manifests and code keep the schema, so a restart resumes it");
+  assert.equal(indexerEnv({ ...plan(), deployments: p.deployments }, first).DATABASE_SCHEMA, first);
+
+  // A Hub release rewrites a manifest: a new schema, so Ponder reindexes instead of refusing the old one.
+  const m = join(dir, "deployments", "base-sepolia", "manifest.json");
+  const json = JSON.parse(readFileSync(m, "utf8"));
+  writeFileSync(m, `${JSON.stringify({ ...json, release: "v0.0.0-fixture-hub" }, null, 2)}\n`);
+  const afterRelease = schema();
+  assert.notEqual(afterRelease, first);
+
+  writeFileSync(join(indexer, "src", "handlers", "a.ts"), "export const a = 2;\n");
+  assert.notEqual(schema(), afterRelease, "a change of the indexer's code changes the schema");
+  const afterCode = schema();
+  writeFileSync(join(indexer, "node_modules", "x.js"), "ignored");
+  writeFileSync(join(indexer, "README.md"), "ignored");
+  assert.equal(schema(), afterCode, "files outside the build leave the schema");
+  assert.equal(indexerSchemaFile("/run/testnet-app"), join("/run/testnet-app", "indexer-schema"));
+});
 
 test("--chains picks the test networks by name or chain ID, in a fixed order, and refuses any other", () => {
   assert.deepEqual(selectChains(undefined).map((c) => c.chainId), [11155111, 84532]);
@@ -96,7 +132,7 @@ test("the faucet signs with the private config's DEPLOYER keystore; only paths a
 test("every service reads the test networks through the local proxies, never the RPC URL", () => {
   const p = plan();
   const envs = {
-    indexer: indexerEnv(p),
+    indexer: indexerEnv(p, SCHEMA),
     convex: convexVars(p),
     keeper: keeperEnv(p, tlsFiles, {}),
     monitor: monitorEnv(p),
@@ -116,7 +152,7 @@ test("every service reads the test networks through the local proxies, never the
 test("the indexer, keeper and monitor run on the testnet network set from the fixture manifests", () => {
   const p = plan();
   const manifests = APP_CHAINS.map((c) => join(FIXTURES, c.network, "manifest.json")).join(",");
-  const indexer = indexerEnv(p);
+  const indexer = indexerEnv(p, SCHEMA);
   assert.equal(indexer.INDEXER_NETWORK_SET, "testnet");
   assert.equal(indexer.AVANA_MANIFEST, manifests);
   assert.equal(indexer.RPC_BASE_SEPOLIA_WS, "ws://127.0.0.1:8666");
@@ -128,7 +164,7 @@ test("the indexer, keeper and monitor run on the testnet network set from the fi
   assert.equal(monitor.MONITOR_KEEPER_INSTANCES, "keeper-sepolia:sepolia,keeper-baseSepolia:baseSepolia");
   assert.equal(monitor.MONITOR_KEEPER_TOKEN_KEEPER_BASESEPOLIA, "keeper-token-base-sepolia");
 
-  const only = indexerEnv(plan(selectChains("base-sepolia")));
+  const only = indexerEnv(plan(selectChains("base-sepolia")), SCHEMA);
   assert.equal(only.AVANA_MANIFEST, join(FIXTURES, "base-sepolia", "manifest.json"));
   assert.equal(only.RPC_SEPOLIA, undefined);
 });

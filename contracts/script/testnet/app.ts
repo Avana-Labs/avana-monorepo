@@ -24,7 +24,8 @@
 // The RPC URLs reach only the proxies' environment; every line this command prints is redacted.
 //
 // Its processes, logs and stores are in contracts/deployments-local/testnet-app/ (logs/<process>.log, app.env lists the
-// endpoints). `up` resumes: a running process is kept. APP_PORT_<NAME> moves a port (plan.ts appPorts);
+// endpoints, indexer-schema the indexer's schema). `up` resumes: a running process is kept, except an indexer whose
+// manifests or code changed since it started (a Hub release), which starts again on a new schema. APP_PORT_<NAME> moves a port (plan.ts appPorts);
 // APP_CONVEX_DIR and APP_WEBAPP_DIR run another checkout's services/convex and webapp.
 
 import { spawnSync } from "node:child_process";
@@ -44,9 +45,12 @@ import {
   faucetSignerOf,
   faucetUrl,
   indexerEnv,
+  indexerSchema,
+  indexerSchemaFile,
   indexerUrl,
   keeperEnv,
   manifestOf,
+  manifestPathsOf,
   monitorEnv,
   outDirOf,
   parseConfigFile,
@@ -166,10 +170,23 @@ async function startProxies(plan: Plan, urls: Record<string, { http: string; ws?
   }
 }
 
+/**
+ * The indexer on the schema of the current manifests and code (plan.ts indexerSchema), recorded in RUN/indexer-schema.
+ * A running indexer on that schema is kept; one on an older schema (a Hub release rewrote a manifest, or the code
+ * changed) is stopped and the new schema indexes every block again from each release's first block.
+ */
 async function startIndexer(plan: Plan): Promise<void> {
-  if (running("indexer")) return;
+  const schema = indexerSchema(INDEXER_DIR, manifestPathsOf(plan));
+  const file = indexerSchemaFile(RUN);
+  const previous = existsSync(file) ? readFileSync(file, "utf8").trim() : undefined;
+  if (running("indexer")) {
+    if (previous === schema) return;
+    stop("indexer");
+    say(`indexer: the manifests or the indexer code changed, so schema ${schema} replaces ${previous ?? "the earlier one"} (a full reindex)`);
+  } else if (previous && previous !== schema) say(`indexer: schema ${schema} replaces ${previous} (the manifests or the indexer code changed; a full reindex)`);
   if (localStackRuns("indexer")) throw new Stop("the local stack's indexer runs in this checkout, on the same PGlite store: run the app from another checkout or stop the stack");
-  start("indexer", process.execPath, [binJs("ponder"), "start", "--port", String(plan.ports.indexer), "--log-format", "json"], { cwd: INDEXER_DIR, env: indexerEnv(plan) });
+  writeFileSync(file, `${schema}\n`);
+  start("indexer", process.execPath, [binJs("ponder"), "start", "--port", String(plan.ports.indexer), "--log-format", "json"], { cwd: INDEXER_DIR, env: indexerEnv(plan, schema) });
   await waitFor("indexer /ready (it backfills from each release's first block)", async () => (await fetch(`${indexerUrl(plan.ports)}/ready`)).ok, 1_800_000, 5_000).catch(failed("indexer"));
 }
 

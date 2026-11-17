@@ -138,7 +138,7 @@ node script/testnet/app.ts down
 | Piece | What runs |
 |---|---|
 | RPC proxies | One per network (`script/testnet/rpc-proxy.ts`, ports 8665 and 8666): HTTP with retries, WebSocket tunnelled, CORS for the webapp only. Every service and the browser read the network through it, so the RPC URL is held by the proxy alone |
-| Indexer | Ponder on the `testnet` network set (PGlite, port 42170), from each release's first block |
+| Indexer | Ponder on the `testnet` network set (PGlite, port 42170), from each release's first block. Its schema is `testnet_<hash>` of the manifests and the indexer's code (recorded in `deployments-local/testnet-app/indexer-schema`): after a Hub release rewrites a manifest, `up` starts it on the new schema, a full reindex |
 | Convex | A local deployment of `services/convex`, its crons on the test networks (`AVANA_CHAIN_IDS=11155111,84532`), each chain's `deployments` row from its manifest |
 | Monitor, keeper | The `testnet` network set. The keeper observes; with `KEEPER_KMS_KEY_ID_SEPOLIA` or `KEEPER_KMS_KEY_ID_BASE_SEPOLIA` set it is active on that chain (a test-network keeper never signs from a local keystore) |
 | Faucet | Test-network mode on port 42180: it mints the grant's test tokens from the deployer keystore of the private config (`AVANA_TESTNET_CONFIG`); `--gas-eth 0.01` also tops each wallet up to that much test ETH |
