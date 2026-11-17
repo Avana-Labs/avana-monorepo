@@ -5,6 +5,7 @@ import { useAction, useQuery } from "convex/react"
 import type { Address } from "viem"
 import { api } from "@/convex/_generated/api"
 import { chainPublicClient } from "@/app/lib/chain/public-client"
+import { everyWhileVisible } from "@/app/lib/chain/visible-interval"
 import { useLendSessionContext } from "@/app/lib/avana-session/avana-sessions-context"
 import { useWalletActivity } from "@/app/lib/activity/use-wallet-activity"
 import { readChainLendPositions, type LendHubAsset } from "@/app/lib/lend-system/chain-lend-positions"
@@ -30,7 +31,8 @@ export function requestLendPositionsRefresh() {
 /**
  * Keeps the lend session's positions in step with the chain on both app chains: services/convex names the Hub assets
  * and their lend reserves (`hubAssets.list`), the Lend Spokes give the wallet's supplies. Re-read every
- * {@link LEND_POSITIONS_REFRESH_MS} and on {@link requestLendPositionsRefresh}. A guest reads nothing.
+ * {@link LEND_POSITIONS_REFRESH_MS} while the tab is visible, when it becomes visible again, when the markets change and
+ * on {@link requestLendPositionsRefresh}. A guest reads nothing.
  *
  * The principal comes from the wallet's whole history (`wallet.history.older` on every chain). It is read when the
  * wallet, its markets or its latest Lend activity change, and is used only when every page was read and the history
@@ -84,12 +86,19 @@ export function useChainLendPositions(walletId: string) {
     // hubAssets is read through marketsKey: its markets, not its live numbers, decide the principal.
   }, [wallet, marketsKey, latestLendKeys, older])
 
+  // The latest Hub assets, read at each tick: a Convex update of their live numbers does not restart the timer or
+  // trigger an extra chain read; a change of markets (marketsKey) does.
+  const latestHubAssets = useRef(hubAssets)
+  latestHubAssets.current = hubAssets
+  const loaded = hubAssets !== undefined
+
   useEffect(() => {
-    if (!wallet || !hubAssets) return
+    if (!wallet || !loaded) return
     let cancelled = false
     let inFlight = false
     const read = () => {
-      if (inFlight) return
+      const hubAssets = latestHubAssets.current
+      if (inFlight || !hubAssets) return
       inFlight = true
       readChainLendPositions({ client: chainPublicClient, wallet, hubAssets })
         .then((next) => {
@@ -104,12 +113,13 @@ export function useChainLendPositions(walletId: string) {
         })
     }
     read()
-    const timer = setInterval(read, LEND_POSITIONS_REFRESH_MS)
+    // A hidden tab reads nothing; it catches up as soon as it is visible again.
+    const stop = everyWhileVisible(read, LEND_POSITIONS_REFRESH_MS)
     refreshListeners.add(read)
     return () => {
       cancelled = true
-      clearInterval(timer)
+      stop()
       refreshListeners.delete(read)
     }
-  }, [wallet, hubAssets, hydratePositions])
+  }, [wallet, loaded, marketsKey, hydratePositions])
 }
