@@ -228,6 +228,8 @@ export async function startConvex(): Promise<ConvexInfo> {
     CONVEX_SESSION_SECRET: secret("convex-session-secret", 48),
     // The webapp's SIWE rate limiter sends the same value (webapp/scripts/local-stack.mjs reads this file).
     CONVEX_RATE_LIMIT_SECRET: secret("convex-rate-limit-secret"),
+    // The chains crons.ts schedules the export pull, the sampler and the intent tracker on (Ethereum and Base mainnet when unset).
+    AVANA_CHAIN_IDS: CHAINS.map((c) => c.chainId).join(","),
     ...chainIdEnv(),
   };
   for (const c of CHAINS) {
@@ -239,12 +241,15 @@ export async function startConvex(): Promise<ConvexInfo> {
     await convexEnv(info, vars);
     return true;
   }, 120_000, 2_000);
-  // The auth config needs SIWE_JWT_ISSUER before the CLI pushes: touch it so `convex dev` pushes again once it is set.
-  if (!/Convex functions ready/.test(log())) {
-    const auth = join(CONVEX_DIR, "convex", "auth.config.ts");
-    if (existsSync(auth)) writeFileSync(auth, readFileSync(auth));
+  // The auth config reads SIWE_JWT_ISSUER and crons.ts reads AVANA_CHAIN_IDS when the CLI pushes: touch both so
+  // `convex dev` pushes again with the environment just set, and wait for that push.
+  const pushes = () => (log().match(/Convex functions ready/g) ?? []).length;
+  const before = pushes();
+  for (const f of ["auth.config.ts", "crons.ts"]) {
+    const p = join(CONVEX_DIR, "convex", f);
+    if (existsSync(p)) writeFileSync(p, readFileSync(p));
   }
-  await waitFor("Convex functions pushed", async () => /Convex functions ready/.test(log()), 300_000, 2_000).catch((e) => {
+  await waitFor("Convex functions pushed", async () => pushes() > before, 300_000, 2_000).catch((e) => {
     throw new Error(`${(e as Error).message}\n${tail("convex", 20)}`);
   });
   for (const c of deployed()) {
