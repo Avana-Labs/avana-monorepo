@@ -768,6 +768,16 @@ export default defineSchema({
     .index("by_open", ["chainId", "open", "checkedAt"]),
 
   /**
+   * Per chain, the intent tracker run that is scheduled while the chain has open intents (intents.ts): `run` is the
+   * time it was scheduled and the token that run carries, so only the latest run schedules the next. No row: no
+   * tracker is scheduled.
+   */
+  intentTrackers: defineTable({
+    chainId: v.number(),
+    run: v.number(),
+  }).index("by_chain", ["chainId"]),
+
+  /**
    * SIWE sign-in sessions the web app's server opens and revokes (siweSessions.ts). `sessionId` is the SHA-256 of the
    * session's JWT ID, never the token; a revoked or expired session no longer authorizes per-wallet features.
    */

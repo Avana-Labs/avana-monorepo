@@ -29,7 +29,7 @@ services:
     mainnet: { RPC_MAINNET: b, RPC_MAINNET_FALLBACK: a }
     base: { RPC_BASE: b, RPC_BASE_FALLBACK: a }
     methods: [eth_getBlockByNumber, eth_call (multicall), eth_getTransactionReceipt, eth_estimateGas, eth_maxPriorityFeePerGas]
-    budget: sampler every 30 s, pull every 10-30 s, intent tracker once a block while intents are open, live reads rate limited per wallet
+    budget: sampler every 60 s, pull every 60 s, intent tracker once a block while intents are open, live reads rate limited per wallet
 
   keeperPrimary:
     mainnet: { RPC_MAINNET: a, RPC_MAINNET_FALLBACK: b, RPC_MAINNET_WS: a, RPC_MAINNET_PRIVATE: ethereumBuilders }
