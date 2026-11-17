@@ -5,6 +5,7 @@ import { useQuery } from "convex/react"
 import type { Address } from "viem"
 import { api } from "@/convex/_generated/api"
 import { chainPublicClient } from "@/app/lib/chain/public-client"
+import { everyWhileVisible } from "@/app/lib/chain/visible-interval"
 import { useBorrowSessionContext } from "@/app/lib/avana-session/avana-sessions-context"
 import {
   chainBorrowPositions,
@@ -75,7 +76,7 @@ export async function readChainAccountViews(
 /**
  * Keeps the borrow session's account in step with the chain: services/convex names the wallet's accounts (markets it
  * opened, UserProxyCreated) and the Lens values them at the head. Re-read every {@link BORROW_POSITIONS_REFRESH_MS}
- * and whenever `refresh` is called (after a transaction). A guest or a wallet with no account keeps an empty account.
+ * while the tab is visible, when it becomes visible again, and whenever `refresh` is called (after a transaction). A guest or a wallet with no account keeps an empty account.
  */
 export function useChainBorrowPositions(walletId: string): { refresh: () => void } {
   const session = useBorrowSessionContext()
@@ -113,10 +114,11 @@ export function useChainBorrowPositions(walletId: string): { refresh: () => void
 
   useEffect(() => {
     refresh()
-    const timer = setInterval(refresh, BORROW_POSITIONS_REFRESH_MS)
+    // A hidden tab reads nothing; it catches up as soon as it is visible again.
+    const stop = everyWhileVisible(refresh, BORROW_POSITIONS_REFRESH_MS)
     const off = onBorrowPositionsRefresh(refresh)
     return () => {
-      clearInterval(timer)
+      stop()
       off()
     }
   }, [refresh])

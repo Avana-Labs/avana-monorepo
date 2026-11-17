@@ -3,8 +3,12 @@ import process from "node:process"
 import bundleAnalyzer from "@next/bundle-analyzer"
 import { withSentryConfig } from "@sentry/nextjs"
 import { sentryDeploymentFlag } from "./app/lib/monitoring/sentry-deployment-flag.mjs"
+import { assertBrowserRpc } from "./app/lib/web3/browser-rpc-guard.mjs"
 
 const isDev = process.env.NODE_ENV === "development"
+
+// NEXT_PUBLIC_RPC_* ship in the page code: a browser URL that carries the services' provider key stops the build.
+assertBrowserRpc(process.env)
 
 // Opt-in bundle analysis: `npm run analyze` (ANALYZE=1) opens the treemap after a build so the
 // first-load JS impact of optimizePackageImports / demand-loading changes is measurable.
