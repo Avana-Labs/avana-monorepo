@@ -17,7 +17,7 @@ interface IParameterStoreListing {
     /// the pool holds at least `twapMinObservations(marketId)` observations and the integration's time-weighted read over
     /// `[twapWindow, 0]` succeeds (`twapWindow == 0` for an AMM protocol with no time-weighted price);
     /// `consistencyToleranceBps >= consistencyToleranceMinBps`;
-    /// `slippageAllowanceBps >= slippageAllowanceMinBps`; `0 < poolRiskFactor <= 4,000`;
+    /// `slippageAllowanceBps >= slippageAllowanceMinBps`; `0 < poolRiskFactor <= 9,000`;
     /// `minPledgeUsd <= 100_000e8`; the listing margin SPEC-CF-004; and the market's LPOracle returns 0 from
     /// `checkConfig(getOracleConfig(lpOracle))`, else `OracleConfigRejected`. May run again while Registered. Emits
     /// `ParameterSet` per field and `MinPledgeUsdSet`.

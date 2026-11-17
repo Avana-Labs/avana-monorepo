@@ -10,7 +10,7 @@ Status is the row's implementation state: **Verified** (a counting test or prope
 
 No run results are given to this matrix (it is committed and must not depend on a run), so no Foundry test counts as Verified here; a CVL rule or Halmos check counts when contracts/certora/RUNS.md or docs/audit/halmos/results/ records its pass with a job id or log. The CI evidence job writes the same matrix from the run's results.
 
-**3604 requirements · 118 verified · 0 failed · 1925 not run · 1561 unlinked · 0 changed — re-verify · 0 errors · 3533 warnings**
+**3605 requirements · 118 verified · 0 failed · 1925 not run · 1562 unlinked · 0 changed — re-verify · 0 errors · 3533 warnings**
 
 | Requirement | Statement | Math (Z3/SymPy) | State (Quint) | Scenario (Hypothesis/Sim) | Impl. test/property | Solidity | Status |
 |---|---|---|---|---|---|---|---|
@@ -1142,7 +1142,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `Q-183` | Cached window | Cached is measured from the first failed read and lasts `cachedWindow` = 1… | — | — | `HYP-56`, `SIM-02A`, `SIM-02D` | `PROP-074`°, `TEST-039`°, `TEST-040`°, `TEST-159`° | `IParameterStoreAdmin` (decl.), `ParameterStoreAdminOracleLogic`, `ParameterStoreForwardAdmin` | Not run |
 | `Q-184` | Feed-agreement tolerance | `feedAgreementToleranceBps` ≥ primary deviation threshold + alt… | — | — | `SIM-01E` | `PROP-026`°, `TEST-039`°, `TEST-219`° | `LPOracleListing`, `LPPriceMath` | Not run |
 | `Q-185` | Keeper cost control | Aave target health factor for liquidation sizing (`aaveTargetHealthF… | `MATH-AR-10` | — | `HYP-35`, `SIM-00A`, `SIM-05D` | — | `IParameterStoreLiquidation` (decl.) | Unlinked |
-| `Q-186` | Initial pool risk factor | 0.40 is the ceiling at launch; the risk service providers set e… | `MATH-AR-01` | — | `SIM-01A`, `SIM-02B`, `SIM-03B`, `SIM-03D`, `SIM-08A`, `SIM-08C` | — | — | Unlinked |
+| `Q-186` | Initial pool risk factor | 0.90 is the ceiling (`Q-415`, raised from 0.40); the risk servi… | `MATH-AR-01` | — | `SIM-01A`, `SIM-02B`, `SIM-03B`, `SIM-03D`, `SIM-08A`, `SIM-08C` | — | — | Unlinked |
 | `Q-187` | Independent backup route | Each pool token has a primary and a backup swap route into each… | — | — | `HYP-71`, `SIM-01C` | `TEST-054`°, `TEST-119`°, `TEST-120`° | — | Not run |
 | `Q-188` | GHO-leg collateral factor | Listing defines an explicit `tokenCollateralFactorBps` for eve… | — | — | — | — | — | Unlinked |
 | `Q-189` | Debit equality and share drift | The liquidation debit check compares the share drop with … | — | `QNT-36`, `QNT-38`, `QNT-T27` | `HYP-03`, `HYP-26` | `PROP-004`°, `PROP-011`°, `PROP-013`°, `PROP-040`°, `PROP-045`, `PROP-045`°, `TEST-056`°, `TEST-150`° | `ICollateralizationErrors` (decl.), `IRiskModuleChecks` (decl.), `RiskModuleDriftLogic`, `RiskModule` | Verified |
@@ -1368,6 +1368,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `Q-412` | No per-wallet deposit cap | Decision of 2026-11-14. There is no per-wallet (per-depositor)… | — | — | — | — | — | Unlinked |
 | `Q-413` | Keeper gas funding (AvanaGas) | Every maintenance call stays permissionless with no on-cha… | — | — | — | — | — | Unlinked |
 | `Q-414` | Record cap per AMM integration | Decision of 2026-11-15, on the measured whole-account sei… | — | — | — | — | — | Unlinked |
+| `Q-415` | Pool risk factor ceiling | The registry bound on `poolRiskFactor` is 9,000 bps (0.90), rai… | — | — | — | — | — | Unlinked |
 | `REP-001` | `Y` calls `AD.repay(W, m, r, maxRepaySpend, repayAll, deadline)` | AaveAdapter (`Y`) | The… | — | — | — | — | `IAaveAdapterUser` (decl.) | Unlinked |
 | `REP-002` | Take the caller as the payer | `AD` | No caller check: any `msg.sender` is accepted and be… | — | — | — | — | `IAaveAdapterUser` (decl.) | Unlinked |
 | `REP-003` | Check the deadline | `AD` | `block.timestamp ≤ deadline`, in seconds. (Source: Q-075) | — | — | — | — | `IAaveAdapterUser` (decl.) | Unlinked |

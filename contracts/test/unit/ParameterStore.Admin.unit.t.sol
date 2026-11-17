@@ -189,7 +189,7 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         store.setPoolRiskFactor(M, 1000);
         _tl();
         vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
-        store.setPoolRiskFactor(M, 4001);
+        store.setPoolRiskFactor(M, 9001);
         _tl();
         vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
         store.setTokenCollateralFactorBps(usdc, 10_000);
