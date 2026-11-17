@@ -44,6 +44,9 @@ contracts/cache-univ4/
 contracts/out-permit2/
 contracts/cache-permit2/
 contracts/broadcast/*/31337/
+contracts/broadcast/*/31338/
+contracts/broadcast/*/11155111/
+contracts/broadcast/*/84532/
 
 # Security tooling (contracts/script/install-security-tools.sh, security-fast.sh, security-slow.sh)
 contracts/out-security/

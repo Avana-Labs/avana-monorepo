@@ -50,7 +50,7 @@ node script/local/stack.ts down
 - `check` is the fast re-check: each manifest against its chain, the indexer at both heads with no error line, and Convex against each chain (`script/e2e/replay-check.ts`). It changes nothing, so a fix to a check or to the data layer is checked in minutes.
 - `replay` runs the indexer replay ([services/REPLAY.md](../../../services/REPLAY.md)) on the running stack. It closes a daily sample on each chain (the chain clock moves two days), then stops the live indexer at the head. A second indexer indexes every block again into a fresh schema, and its tables must equal the live ones. The live indexer then starts again, and `replay-check.ts` checks the local Convex against each chain.
 - While `check` or `replay` runs, the chains mine only on transactions and the activity loops pause, so the heads stand still.
-- `down` stops every process and saves each chain's state (`anvil_dumpState`). `up` loads it back. `--keep-chains` stops only the services.
+- `down` stops every process and saves each chain's state (`anvil_dumpState`, streamed to `deployments-local/<network>/anvil-state.json`, so a state of any size is saved). `up` starts the node with `--load-state` on it. A state saved as `anvil-state.hex` by an earlier stack is converted once. `--keep-chains` stops only the services.
 
 Logs are in `deployments-local/stack/logs/<process>.log`, one per process and one per deploy step (`<chain>.<release>.<step>.log`). Each chain's step record is `deployments-local/<network>/stack-status.json`. `deployments-local/stack/stack.env` lists the endpoints and holds no secret.
 
