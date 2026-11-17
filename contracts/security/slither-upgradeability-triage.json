@@ -61,7 +61,7 @@
       "fingerprint": "7639b87d2c57bd78",
       "check": "initialize-target",
       "file": "src/oracle/lp-oracle/LPOracleV4.sol",
-      "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (REQ-ORACLE-091), and the implementation's constructor calls _disableInitializers; same as LPOracleCL.",
+      "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (REQ-ORACLE-058), and the implementation's constructor calls _disableInitializers; same as LPOracleCL.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     }
   ]

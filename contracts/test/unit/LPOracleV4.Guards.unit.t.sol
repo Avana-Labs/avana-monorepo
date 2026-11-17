@@ -265,4 +265,31 @@ contract LPOracleV4GuardsUnitTest is LPOracleV4Fixture {
         assertEq(both.tickRef, r.tickRef, "same reference");
         assertGe(both.tickDeviation, r.tickDeviation, "spot leg back");
     }
+
+    // ─── Range check ───
+
+    // TEST-331 verifies: REQ-ORACLE-105, REQ-ORACLE-058, REQ-AMM-V4-007
+    /// @notice A v4 key of tick spacing 60 against its fee-500 Uniswap v3 reference pool (spacing 10) lists, and its
+    /// `checkConfig` leaves `CL_CHECK_RANGE` (bit 16) clear: the range check reached through `super._clListingChecks` is
+    /// the v4 module's, at the key's own spacing. The concentrated-liquidity check it overrides compares the reference
+    /// pool's `tickSpacing()` with the stored one and would set the bit, so `initialize` would revert.
+    function test_TEST_331_rangeCheckUsesTheV4KeysSpacingNotTheReferencePools() public {
+        int24 upper60 = -193_980;
+        _initPool(_key(address(0), address(usdc), 500, 60), ETH, USD, 18, 6);
+        assertEq(IUniswapV3Pool(address(ref)).tickSpacing(), 10, "the reference pool's spacing");
+        InitParams memory p = _params();
+        p.market = abi.encode(
+            address(pm),
+            UniswapV4PoolKey(address(0), address(usdc), 500, 60, address(0)),
+            LOWER,
+            upper60,
+            uint256(0),
+            ref
+        );
+        LPOracleV4 wide =
+            LPOracleV4(address(new ERC1967Proxy(address(implementation), abi.encodeCall(ILPOracle.initialize, (p)))));
+        uint256 rangeBit = (1 << 0) << LPOracleCodes.MODULE_CHECKS_SHIFT;
+        assertEq(wide.checkConfig(_config()) & rangeBit, 0, "CL_CHECK_RANGE clear at the v4 spacing");
+        assertEq(oracle.checkConfig(_config()) & rangeBit, 0, "and for the spacing-10 market");
+    }
 }
