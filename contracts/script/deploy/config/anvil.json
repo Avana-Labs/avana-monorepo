@@ -124,6 +124,7 @@
     "initialPoolShareMaxBps": 10000,
     "maxMarketCount": 16,
     "keeperFloor": 1,
+    "timelockNormalDelay": 432000,
     "globals": {
       "cachedWindow": 3600,
       "disagreementPauseMax": 3600,

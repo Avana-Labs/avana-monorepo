@@ -17,6 +17,16 @@ function fixedToNumber(value: bigint, decimals: number) {
 }
 
 /**
+ * A Borrow section's title: its Spoke's listing name as an LP group ("Uniswap v3 Stable" → "Uniswap v3 Stable LPs").
+ * Not the market's own venue label, which carries one pool's fee tier ("Uniswap v3 · 0.05 %").
+ */
+export function spokeSectionLabel(spokeName: string | undefined): string {
+  const name = spokeName?.trim() ?? ""
+  if (!name) return ""
+  return /\bLPs?$/i.test(name) ? name : `${name} LPs`
+}
+
+/**
  * Single source of truth for a borrowable asset's displayed/paid borrow APR:
  * the base borrow rate PLUS the risk premium. The borrow list, the dashboard debt
  * rows, and the action page all resolve the headline rate through this one helper so
@@ -126,7 +136,7 @@ export function selectBorrowMarketSummaries(state: BorrowSystemState, walletId: 
       spoke: market.spokeId,
       ...(market.hubId ? { hubId: market.hubId, hubLabel: market.hubLabel ?? market.hubId } : {}),
       ...(market.spokeName ? { spokeName: market.spokeName } : {}),
-      spokeLabel: market.display.venue || market.spokeId,
+      spokeLabel: spokeSectionLabel(market.spokeName) || market.display.venue || market.spokeId,
       dexId: slugify(dexLabel) || "dex",
       dexLabel,
       chain: market.display.chain,

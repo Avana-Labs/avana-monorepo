@@ -8,7 +8,8 @@
 //   node script/local/stack.ts up [--chains ethereum,base] [--no-activity] [--no-hubs] [--no-webapp]
 //   node script/local/stack.ts deploy [--chains ...]   the chains and their first release only, no services
 //   node script/local/stack.ts status
-//   node script/local/stack.ts secrets          store the fork RPC URLs, encrypted next to the keystores (prompted)
+//   node script/local/stack.ts secrets [--only A,B]  store the fork and test-network RPC URLs and the explorer key,
+//                                               encrypted next to the keystores (prompted)
 //   node script/local/stack.ts check            re-check only: manifests, indexer at head, Convex against the chain
 //   node script/local/stack.ts replay           the indexer replay and replay-check.ts against the local Convex
 //   node script/local/stack.ts add-hub <hub.json> --chain ethereum|base
@@ -121,7 +122,7 @@ async function applyHubFiles(): Promise<void> {
   const { readdirSync } = await import("node:fs");
   const { addHub, hubRelease } = await import("./operator/hub.ts");
   for (const c of CHAINS.filter((x) => existsSync(manifestPath(x)))) {
-    const dir = join(CONTRACTS, "script/deploy/hubs", c.network);
+    const dir = join(CONTRACTS, "script/deploy/hubs", c.hubs);
     if (!existsSync(dir)) continue;
     for (const f of readdirSync(dir).filter((x) => x.endsWith(".json") && x !== "world.json").sort()) {
       if (readStatus(c).steps[`${hubRelease(f)}:manifest`]?.outcome === "pass") continue;
@@ -242,7 +243,7 @@ async function main() {
       case "secrets": {
         ensureKeys();
         const { promptSecrets } = await import("./lib/secrets.ts");
-        await promptSecrets(say);
+        await promptSecrets(say, opt("only")?.split(","));
         break;
       }
       case "deploy":

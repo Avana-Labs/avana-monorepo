@@ -10,7 +10,7 @@ import { chainSlug } from "./lib/format.ts";
 import { hubAssetKey, interestRateModel, marketAllocation, poolBorrowables, headlineReserve } from "./lib/pages.ts";
 import { assetRiskParameters, atRisk, cashflow, contentRiskAssessment, debtPremiumRange, debtRiskAssessment, lendRiskAssessment, lendRiskParameters, liquidationRisk, poolRiskAssessment, poolRiskParameters, type LiquidationWindow } from "./lib/riskViews.ts";
 import type { ChangelogRow, ContractAddressRow, PageScope } from "./lib/uiTypes.ts";
-import { type World, bySlug, contentOf, lendKey, reserveKey, scopePoints, sliceOf, symbolOf } from "./model.ts";
+import { type World, bySlug, contentOf, lendKey, reserveKey, scopePoints, seriesNow, sliceOf, symbolOf } from "./model.ts";
 import { liquidationTotals } from "./lib/rollups.ts";
 import { liquidationPricing } from "./rollups.ts";
 import type { HubAssetDoc, MarketDoc, SpokeReserveDoc } from "./model.ts";
@@ -177,13 +177,14 @@ export async function readCashflow(ctx: QueryCtx, w: World, scope: "lend" | "ass
   if (!row) return null;
   const asset = scope === "lend" ? (row as HubAssetDoc) : w.assetsByKey.get(hubAssetKey(row as SpokeReserveDoc));
   if (!asset) return null;
-  const from = Math.floor(Date.now() / 1000) - 365 * 86_400;
-  const hubDays = filledBuckets("hubAsset", combineSources("hubAsset", await scopePoints(ctx, "hubAsset", hubAssetKey(asset), "day", from - 86_400)), from, Math.floor(Date.now() / 1000), "day");
+  const now = await seriesNow(ctx, asset.chainId);
+  const from = now - 365 * 86_400;
+  const hubDays = filledBuckets("hubAsset", combineSources("hubAsset", await scopePoints(ctx, "hubAsset", hubAssetKey(asset), "day", from - 86_400)), from, now, "day");
   let owedByDay: Map<number, Values> | null = null;
   if (scope === "asset") {
     const r = row as SpokeReserveDoc;
     const slice = await scopePoints(ctx, "hubAssetSpoke", `${hubAssetKey(asset)}:${r.spoke}`, "day", from - 86_400);
-    owedByDay = new Map(filledBuckets("hubAssetSpoke", combineSources("hubAssetSpoke", slice), from, Math.floor(Date.now() / 1000), "day").map((d) => [d.t, d.values]));
+    owedByDay = new Map(filledBuckets("hubAssetSpoke", combineSources("hubAssetSpoke", slice), from, now, "day").map((d) => [d.t, d.values]));
   }
   const days = hubDays.map((d) => ({ t: d.t, hub: d.values, ...(owedByDay ? { owed: owedByDay.get(d.t)?.owed ?? "0" } : {}) }));
   return cashflow(days, asset.decimals, asset.liquidityFeeBps);

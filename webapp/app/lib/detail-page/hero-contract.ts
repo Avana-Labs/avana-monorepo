@@ -12,11 +12,18 @@ type ContractRow = {
   address: string
   label: string
   href: string
+  /** The row's slot: vault, token, riskManager or oracleRouter (`aboutContracts.ts`). */
+  salt?: string
   isSynthetic?: boolean
 }
 
-/** Convex row label of the contract each detail hero shows. */
+/** The contract each detail hero shows: a market's vault (else its token), or an asset's token. */
 export type HeroContractLabel = "Pool" | "Token"
+
+const HERO_SLOTS: Record<HeroContractLabel, readonly string[]> = {
+  Pool: ["vault", "token"],
+  Token: ["token"],
+}
 
 /**
  * The hero contract from the services/convex contract rows, or null when there is no real
@@ -27,7 +34,8 @@ export function heroContractFromRows(
   rows: readonly ContractRow[] | null | undefined,
   label: HeroContractLabel,
 ): HeroContract | null {
-  const row = rows?.find((candidate) => candidate.label === label && candidate.isSynthetic !== true)
+  const real = rows?.filter((candidate) => candidate.isSynthetic !== true) ?? []
+  const row = HERO_SLOTS[label].map((slot) => real.find((candidate) => candidate.salt === slot)).find(Boolean)
   if (!row || !isAddress(row.address, { strict: false })) return null
   const address = getAddress(row.address)
   if (address === zeroAddress) return null

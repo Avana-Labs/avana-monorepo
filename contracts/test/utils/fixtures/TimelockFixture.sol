@@ -60,6 +60,7 @@ abstract contract TimelockFixture is AvanaTest {
             _newTimelockWith(normalDelay, publicExecution, shortEligible, daoOnly, _targetsOf(shortEligible, daoOnly));
     }
 
+    /// @dev Built on a production chain ID (1): the test-network delays of `REQ-ACCESS-187` are `TEST-345`'s.
     function _newTimelockWith(
         uint256 normalDelay,
         bool publicExecution,
@@ -67,6 +68,19 @@ abstract contract TimelockFixture is AvanaTest {
         SelectorPair[] memory daoOnly,
         GovernedTargets memory targets
     ) internal returns (AvanaTimelock) {
+        return _newTimelockOn(1, normalDelay, publicExecution, shortEligible, daoOnly, targets);
+    }
+
+    /// @dev The timelock as deployed on chain `chainId` (its delay floors are fixed at construction); the test's chain
+    /// ID is restored afterwards.
+    function _newTimelockOn(
+        uint256 chainId,
+        uint256 normalDelay,
+        bool publicExecution,
+        SelectorPair[] memory shortEligible,
+        SelectorPair[] memory daoOnly,
+        GovernedTargets memory targets
+    ) internal returns (AvanaTimelock t) {
         address[] memory proposers = new address[](2);
         (proposers[0], proposers[1]) = (governanceMultisig, aaveGovernanceExecutor);
         address[] memory executors = new address[](1);
@@ -75,7 +89,9 @@ abstract contract TimelockFixture is AvanaTest {
         (cancellers[0], cancellers[1]) = (emergencyGuardian, aaveGuardian);
         address[] memory daoCancellers = new address[](1);
         daoCancellers[0] = aaveGovernanceExecutor;
-        return new AvanaTimelock(
+        uint256 testChainId = vm.getChainId();
+        vm.chainId(chainId);
+        t = new AvanaTimelock(
             proposers,
             executors,
             cancellers,
@@ -86,6 +102,7 @@ abstract contract TimelockFixture is AvanaTest {
             daoOnly,
             targets
         );
+        vm.chainId(testChainId);
     }
 
     /// @dev The fixture's ParameterStore, MarketRegistry and LPVaultSwap recorders as the governed targets, or fixed

@@ -8,16 +8,18 @@ pragma solidity 0.8.28;
 /// AvanaTimelock. OpenZeppelin `getMinDelay()` returns `SHORT_DELAY` for life. Every view here except
 /// `requiredDelay` (length mismatch) never reverts.
 interface IAvanaTimelockViews {
-    /// @notice Short delay: 43,200 seconds (12 hours).
-    /// @custom:spec REQ-ACCESS-140, SPEC-GOV-001
+    /// @notice Short delay: 43,200 seconds (12 hours); 60 seconds on a test network or development node (Sepolia, Base
+    /// Sepolia, chain IDs 31337 and 31338), fixed at construction.
+    /// @custom:spec REQ-ACCESS-140, REQ-ACCESS-187, SPEC-GOV-001
     function SHORT_DELAY() external view returns (uint256);
 
     /// @notice Upper bound of the normal delay: 432,000 seconds (5 days).
     /// @custom:spec REQ-ACCESS-140, SPEC-GOV-003
     function MAX_DELAY() external view returns (uint256);
 
-    /// @notice Lower bound of the normal delay: 345,600 seconds (4 days), the exit-window floor.
-    /// @custom:spec REQ-ACCESS-140, REQ-ACCESS-154, SPEC-GOV-003, SPEC-GOV-015
+    /// @notice Lower bound of the normal delay: 345,600 seconds (4 days), the exit-window floor; 60 seconds on a test
+    /// network or development node (Sepolia, Base Sepolia, chain IDs 31337 and 31338), fixed at construction.
+    /// @custom:spec REQ-ACCESS-140, REQ-ACCESS-154, REQ-ACCESS-187, SPEC-GOV-003, SPEC-GOV-015
     function MIN_NORMAL_DELAY() external view returns (uint256);
 
     /// @notice How long a ready operation stays executable: 1,209,600 seconds (14 days).

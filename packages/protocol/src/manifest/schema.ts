@@ -98,7 +98,9 @@ const manifestProps: Record<string, Schema> = {
       executors: arr(address),
       cancellers: arr(address),
       daoCancellers: arr(address),
-      normalDelay: { type: "integer", minimum: 345600, maximum: 432000 },
+      // 345,600 on every chain but a test network or development node, where the floor is 60 (REQ-ACCESS-187,
+      // checked against chainId by validate).
+      normalDelay: { type: "integer", minimum: 60, maximum: 432000 },
       publicExecution: { type: "boolean" },
     }),
     governanceSafe: address,
@@ -170,17 +172,36 @@ export interface SchemaError {
 }
 
 /** Validates `value` against `schema` (the subset above); returns every failure, empty when valid. */
+/** The chains whose AvanaTimelock floors are 60 s (spec 2.15 REQ-ACCESS-187): Sepolia, Base Sepolia, the local nodes. */
+export const TEST_NETWORK_CHAIN_IDS: ReadonlySet<number> = new Set([11_155_111, 84_532, 31_337, 31_338]);
+/** The timelock's MIN_NORMAL_DELAY on `chainId`. */
+export const minNormalDelay = (chainId: number) => (TEST_NETWORK_CHAIN_IDS.has(chainId) ? 60 : 345_600);
+
 export function validate(value: unknown, schema: Schema = releaseManifestSchema, root: Schema = schema, path = "$"): SchemaError[] {
+  if (schema === releaseManifestSchema && path === "$") {
+    const errors = validateShape(value, schema, root, path);
+    // The normal delay's floor depends on the chain (REQ-ACCESS-187).
+    const m = value as { chainId?: unknown; roles?: { timelock?: { normalDelay?: unknown } } };
+    const d = m?.roles?.timelock?.normalDelay;
+    if (typeof m?.chainId === "number" && typeof d === "number" && d >= 60 && d < minNormalDelay(m.chainId)) {
+      errors.push({ path: "$.roles.timelock.normalDelay", message: `must be ≥ ${minNormalDelay(m.chainId)} on chain ${m.chainId}` });
+    }
+    return errors;
+  }
+  return validateShape(value, schema, root, path);
+}
+
+function validateShape(value: unknown, schema: Schema, root: Schema, path: string): SchemaError[] {
   const errors: SchemaError[] = [];
   const fail = (message: string) => errors.push({ path, message });
   if (typeof schema.$ref === "string") {
     const name = schema.$ref.replace("#/$defs/", "");
     const target = (root.$defs as Record<string, Schema> | undefined)?.[name];
     if (!target) return [{ path, message: `unknown $ref ${schema.$ref}` }];
-    return validate(value, target, root, path);
+    return validateShape(value, target, root, path);
   }
   if (Array.isArray(schema.anyOf)) {
-    const ok = (schema.anyOf as Schema[]).some((s) => validate(value, s, root, path).length === 0);
+    const ok = (schema.anyOf as Schema[]).some((s) => validateShape(value, s, root, path).length === 0);
     return ok ? [] : [{ path, message: "matches no allowed form" }];
   }
   if ("const" in schema && value !== schema.const) fail(`must be ${JSON.stringify(schema.const)}`);
@@ -206,7 +227,7 @@ export function validate(value: unknown, schema: Schema = releaseManifestSchema,
       break;
     case "array":
       if (!Array.isArray(value)) return [{ path, message: "must be an array" }];
-      value.forEach((v, i) => errors.push(...validate(v, schema.items as Schema, root, `${path}[${i}]`)));
+      value.forEach((v, i) => errors.push(...validateShape(v, schema.items as Schema, root, `${path}[${i}]`)));
       break;
     case "object": {
       if (typeof value !== "object" || value === null || Array.isArray(value)) return [{ path, message: "must be an object" }];
@@ -216,7 +237,7 @@ export function validate(value: unknown, schema: Schema = releaseManifestSchema,
       for (const [key, v] of Object.entries(rec)) {
         if (key === "$schema") continue;
         const sub = props[key];
-        if (sub) errors.push(...validate(v, sub, root, `${path}.${key}`));
+        if (sub) errors.push(...validateShape(v, sub, root, `${path}.${key}`));
         else if (schema.additionalProperties === false) errors.push({ path: `${path}.${key}`, message: "is not allowed" });
       }
       break;

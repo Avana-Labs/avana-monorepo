@@ -93,8 +93,6 @@ interface IRelistedToken {
 contract ListMarkets is ListingBase {
     uint32 internal constant LP_ORACLE_POKE_MIN_GAS = 1_000_000;
     uint256 internal constant LP_ORACLE_POKE_GAS = 1_500_000;
-    uint256 internal constant SHORT_DELAY = 43_200;
-    uint256 internal constant NORMAL_DELAY = 432_000;
 
     // From the network inputs (`ChainInputs` holds arrays of structs, which the legacy pipeline cannot copy to storage).
     address internal safe;
@@ -115,22 +113,25 @@ contract ListMarkets is ListingBase {
         }
         string memory step = vm.envString("AVANA_LISTING_STEP");
         if (_eq(step, "setup")) {
-            _propose(_setup(c), NORMAL_DELAY);
+            _propose(_setup(c), false);
         } else if (_eq(step, "oracles")) {
             _oracles();
         } else if (_eq(step, "markets")) {
             (Operation memory op, uint256[] memory starts) = _markets();
-            _proposeInParts(op, starts, NORMAL_DELAY);
+            _proposeInParts(op, starts);
         } else if (_eq(step, "activate")) {
-            _propose(_activate(), SHORT_DELAY);
+            _propose(_activate(), true);
         } else {
             revert(string.concat("unknown AVANA_LISTING_STEP ", step));
         }
     }
 
+    /// @notice Writes the operation and, with `AVANA_SCHEDULE`, schedules it as the Safe at the delay the timelock
+    /// requires of it: the short delay for an operation that must be short (`short`, the activation), else the normal
+    /// delay set at deployment.
     function _propose(
         Operation memory op,
-        uint256 delay
+        bool short
     ) private {
         // Every step lists only what the config adds to the chain; with nothing new there is no operation to schedule,
         // and the previous operation file (already executed) stays as it is.
@@ -142,6 +143,11 @@ contract ListMarkets is ListingBase {
         bytes32 id = _writeOperation(timelock, op);
         console2.log(op.name, vm.toString(id), _operationPath(op.name));
         if (vm.envOr("AVANA_SCHEDULE", false)) {
+            uint256 delay = ITimelockOps(timelock).requiredDelay(op.targets, op.payloads);
+            require(
+                !short || delay == ITimelockOps(timelock).getMinDelay(),
+                string.concat(op.name, " is not a short-delay operation")
+            );
             vm.broadcast(safe);
             ITimelockOps(timelock).scheduleBatch(op.targets, op.values, op.payloads, op.predecessor, op.salt, delay);
             console2.log("scheduled as the governance Safe", safe);
@@ -601,11 +607,10 @@ contract ListMarkets is ListingBase {
     /// load once every market of the listing is on chain; the others' salts derive from it.
     function _proposeInParts(
         Operation memory op,
-        uint256[] memory starts,
-        uint256 delay
+        uint256[] memory starts
     ) private {
         if (op.targets.length == 0) {
-            _propose(op, delay);
+            _propose(op, false);
             return;
         }
         uint256[] memory gas = _simulatedGas(op);
@@ -618,7 +623,7 @@ contract ListMarkets is ListingBase {
             part.predecessor = previous;
             console2.log(part.name, "calls", part.targets.length);
             console2.log("  estimated execution gas", part.gasEstimate, "budget", budget);
-            _propose(part, delay);
+            _propose(part, false);
             previous = _operationId(timelock, part);
         }
         if (parts > 1) console2.log("listing-markets split in", parts, "operations, executed in order");

@@ -315,7 +315,10 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         a.shortEligible = TimelockShortDelayLists.shortEligible(storeAddr, registryAddr, swapAddr);
         a.daoOnly = TimelockShortDelayLists.daoOnlyCancel(registryAddr, swapAddr);
         a.targets = GovernedTargets(storeAddr, registryAddr, swapAddr);
-        return new AvanaTimelock(
+        // Built on a production chain ID: the test-network delays of REQ-ACCESS-187 are TEST-345's.
+        uint256 chainId = vm.getChainId();
+        vm.chainId(1);
+        AvanaTimelock t = new AvanaTimelock(
             a.proposers,
             a.executors,
             a.cancellers,
@@ -326,6 +329,8 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
             a.daoOnly,
             a.targets
         );
+        vm.chainId(chainId);
+        return t;
     }
 
     function _installRegistry(

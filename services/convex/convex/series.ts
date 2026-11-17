@@ -7,14 +7,14 @@ import { v } from "convex/values";
 import { RESOLUTION_SECONDS } from "@avana/services-common/series";
 import { query } from "./_generated/server";
 import { combineSources, filledBuckets } from "./lib/charts.ts";
-import { scopePoints } from "./model.ts";
+import { chainOfScopeKey, scopePoints, seriesNow } from "./model.ts";
 
 const kind = v.union(v.literal("hubAsset"), v.literal("hubAssetSpoke"), v.literal("market"), v.literal("marketReserve"), v.literal("pool"), v.literal("position"));
 
 export const get = query({
   args: { scopeKind: kind, scopeKey: v.string(), metric: v.string(), resolution: v.union(v.literal("hour"), v.literal("day")), days: v.optional(v.number()) },
   handler: async (ctx, { scopeKind, scopeKey, metric, resolution, days }) => {
-    const now = Math.floor(Date.now() / 1000);
+    const now = await seriesNow(ctx, chainOfScopeKey(scopeKey));
     const span = Math.min(days ?? (resolution === "hour" ? 7 : 365), resolution === "hour" ? 30 : 3_650);
     const from = now - span * RESOLUTION_SECONDS.day;
     const stored = await scopePoints(ctx, scopeKind, scopeKey.toLowerCase(), resolution, from - RESOLUTION_SECONDS[resolution] * 48);

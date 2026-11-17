@@ -306,7 +306,7 @@ export const avanaTimelockAbi = [
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "pure"
+    "stateMutability": "view"
   },
   {
     "type": "function",

@@ -584,6 +584,8 @@ sepolia = "${RPC_SEPOLIA}"
 base = "${RPC_BASE}"
 base_sepolia = "${RPC_BASE_SEPOLIA}"
 anvil = "http://127.0.0.1:8545"
+# The node script/deploy/step.sh runs a step on, from the environment, so the URL is on no command line.
+avana_step = "${AVANA_RPC_URL}"
 
 [etherscan]
 mainnet = { key = "${ETHERSCAN_API_KEY}", chain = 1 }

@@ -14,7 +14,7 @@ import { explorerLinks } from "./lib/explorer.ts";
 import { hubAssetKey, lendSnapshot, assetSnapshot, poolSnapshot } from "./lib/pages.ts";
 import type { DaySeries, DetailTxRow, MarketSnapshotRow, PageScope } from "./lib/uiTypes.ts";
 import { lendTotals } from "./lib/hubViews.ts";
-import { type World, bySlug, hubLabelOf, loadWorld, priceAsset, reserveKey, scopePoints, sliceOf, snapshotRows, symbolOf } from "./model.ts";
+import { type World, bySlug, chainOfScopeKey, hubLabelOf, loadWorld, priceAsset, reserveKey, scopePoints, seriesNow, sliceOf, snapshotRows, symbolOf } from "./model.ts";
 import type { HubAssetDoc, MarketDoc, SpokeReserveDoc } from "./model.ts";
 
 const scopeArg = v.union(v.literal("asset"), v.literal("pool"), v.literal("lend"));
@@ -54,7 +54,7 @@ export const getMarketSnapshot = query({
 
 /** Day buckets of a scope, with gaps filled, keyed by bucket start. */
 async function days(ctx: QueryCtx, kind: "hubAsset" | "hubAssetSpoke" | "market" | "pool", key: string): Promise<Map<number, Values>> {
-  const filled = filledBuckets(kind, combineSources(kind, await scopePoints(ctx, kind, key, "day")), 0, nowSeconds(), "day");
+  const filled = filledBuckets(kind, combineSources(kind, await scopePoints(ctx, kind, key, "day")), 0, await seriesNow(ctx, chainOfScopeKey(key)), "day");
   return new Map(filled.map((d) => [d.t, d.values]));
 }
 
@@ -62,10 +62,10 @@ const list = (m: Map<number, Values>) => [...m.entries()].map(([t, values]) => (
 
 /** The previous day's snapshot row of a page, from the hourly bucket 24 hours ago, for the quick-stat deltas. */
 async function snapshot24hAgo(ctx: QueryCtx, w: World, scope: PageScope, slug: string): Promise<MarketSnapshotRow | null> {
-  const at = nowSeconds() - 86_400;
-  const hour = async (kind: string, key: string) => valueAt(combineSources(kind as "hubAsset", await scopePoints(ctx, kind, key, "hour", at - 7_200)), at);
   const row = bySlug(w, scope, slug);
   if (!row) return null;
+  const at = (await seriesNow(ctx, row.chainId)) - 86_400;
+  const hour = async (kind: string, key: string) => valueAt(combineSources(kind as "hubAsset", await scopePoints(ctx, kind, key, "hour", at - 7_200)), at);
   if (scope === "lend") {
     const a = row as HubAssetDoc;
     const past = await hour("hubAsset", hubAssetKey(a));
@@ -120,7 +120,7 @@ function hubMetric(metric: string, decimals: number): (v: Values) => number {
 
 export async function lendSeries(ctx: QueryCtx, a: HubAssetDoc, metric: "supply" | "borrow" | "utilization" | "apy", range: RangeId, live: number): Promise<DaySeries> {
   const d = await days(ctx, "hubAsset", hubAssetKey(a));
-  return daySeries(`${a.slug}:hero:${metric}:${range}`, metric, list(d), hubMetric(metric === "apy" ? "supplyApy" : metric, a.decimals), range, nowSeconds(), live);
+  return daySeries(`${a.slug}:hero:${metric}:${range}`, metric, list(d), hubMetric(metric === "apy" ? "supplyApy" : metric, a.decimals), range, await seriesNow(ctx, a.chainId), live);
 }
 
 export const getLendHeroSeries = query({
@@ -146,13 +146,14 @@ export const getAssetHeroSeries = query({
     const live = assetSnapshot(r, s, a, null, "");
     const hub = await days(ctx, "hubAsset", hubAssetKey(a));
     const id = `${slug}:hero:${metric}:${range}`;
+    const now = await seriesNow(ctx, a.chainId);
     if (metric === "borrow") {
       const slice = await days(ctx, "hubAssetSpoke", `${hubAssetKey(a)}:${r.spoke}`);
       const joined = list(slice).map(({ t, values }) => ({ t, values: { ...values, priceUsd8: hub.get(t)?.priceUsd8 ?? a.priceUsd8 } }));
-      return daySeries(id, metric, joined, hubMetric("borrow", a.decimals), range, nowSeconds(), live.borrowedUsd);
+      return daySeries(id, metric, joined, hubMetric("borrow", a.decimals), range, now, live.borrowedUsd);
     }
     const tip = metric === "supply" ? live.suppliedUsd : metric === "utilization" ? live.utilizationPct : metric === "price" ? Number(BigInt(a.priceUsd8)) / 1e8 : live.borrowAprPct;
-    return daySeries(id, metric, list(hub), hubMetric(metric === "apy" ? "borrowApr" : metric, a.decimals), range, nowSeconds(), tip);
+    return daySeries(id, metric, list(hub), hubMetric(metric === "apy" ? "borrowApr" : metric, a.decimals), range, now, tip);
   },
 });
 
@@ -169,12 +170,13 @@ export const getPoolHeroSeries = query({
     if (!m) return null;
     const live = (await readMarketSnapshot(ctx, w, "pool", slug))!;
     const id = `${slug}:hero:${metric}:${range}`;
+    const now = await seriesNow(ctx, m.chainId);
     if (metric === "volume" || metric === "fees") {
       const pool = await days(ctx, "pool", `${m.chainId}:${m.pool}`);
       const idx = m.tokens.findIndex((t) => priceAsset(w, m.chainId, t, m.hub) !== undefined);
       const asset = idx >= 0 ? priceAsset(w, m.chainId, m.tokens[idx]!, m.hub) : undefined;
       const fn = (x: Values) => (asset ? usdOf(x[`${metric === "volume" ? "volume" : "fees"}${idx}`], asset.decimals, asset.priceUsd8) : 0);
-      return daySeries(id, metric, list(pool), fn, range, nowSeconds(), null);
+      return daySeries(id, metric, list(pool), fn, range, now, null);
     }
     const market = await days(ctx, "market", `${m.chainId}:${m.marketId}`);
     const usd8 = (x: string | undefined) => Number(BigInt(x ?? "0")) / 1e8;
@@ -187,7 +189,7 @@ export const getPoolHeroSeries = query({
             ? (x: Values) => (usd8(x.suppliedUsd8) > 0 ? Math.min(100, (usd8(x.debtUsd8) / usd8(x.suppliedUsd8)) * 100) : 0)
             : () => 0;
     const tip = metric === "tvl" ? live.suppliedUsd : metric === "borrowed" ? live.borrowedUsd : metric === "utilization" ? live.utilizationPct : 0;
-    return daySeries(id, metric, list(market), fn, range, nowSeconds(), tip);
+    return daySeries(id, metric, list(market), fn, range, now, tip);
   },
 });
 
@@ -210,7 +212,7 @@ async function supplyBorrow(ctx: QueryCtx, w: World, scope: "lend" | "asset", sl
   const live = assetSnapshot(r, s, a, null, "");
   const hub = await days(ctx, "hubAsset", hubAssetKey(a));
   const slice = await days(ctx, "hubAssetSpoke", `${hubAssetKey(a)}:${r.spoke}`);
-  const now = nowSeconds();
+  const now = await seriesNow(ctx, a.chainId);
   const sliceJoined = list(slice).map(({ t, values }) => ({ t, values: { ...values, priceUsd8: hub.get(t)?.priceUsd8 ?? a.priceUsd8 } }));
   return {
     supplied: make(daySeries("", "", list(hub), hubMetric("supply", a.decimals), "1Y", now, live.suppliedUsd), "Supplied"),
