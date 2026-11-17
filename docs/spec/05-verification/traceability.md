@@ -2981,7 +2981,7 @@ No run results are given to this matrix (it is committed and must not depend on 
 | `REQ-ROLE-114` | LPVaultSwap | `deleverage(DeleverageRequest)` (`reportRecoveryShortfall` and `probeLiquida… | — | — | — | — | — | Unlinked |
 | `REQ-ROLE-115` | AaveAdapter; Collateralization; LPVault | `removeLiquidity`, `recredit`, `repayWithCollate… | — | — | — | — | — | Unlinked |
 | `REQ-ROLE-116` | Every signer key of the governance multisig, the Emergency Guardian and the Avana treasury… | — | — | — | — | — | Unlinked |
-| `REQ-ROLE-117` | The Joint Configuration Safe of each chain (2-of-3: one Avana Labs, one Aave Labs and one … | — | — | — | `TEST-062`° | `AvanaRoles` | Not run |
+| `REQ-ROLE-117` | The Joint Configuration Safe of each chain (2-of-3: one Avana Labs, one Aave service-provi… | — | — | — | `TEST-062`° | `AvanaRoles` | Not run |
 | `REQ-ROLE-118` | The AvanaGasVault of each chain MUST check `msg.sender == TIMELOCK` for `addSigner`, `setS… | — | — | — | — | — | Unlinked |
 | `REQ-ROUTE-001` | A market can be activated only if, for every token of the market and every debt asset appr… | — | — | — | `TEST-054`°, `TEST-054`‡, `TEST-245`°, `TEST-245`‡ | — | Not run |
 | `REQ-ROUTE-002` | Route classes per token class (`Q-339`). For each (token, debt asset) pair the primary rou… | — | — | — | `TEST-054`°, `TEST-054`‡ | `DexHop`, `DexHops`, `DexPathRoute`, `IMarketRegistryRoutes` (decl.), `IPegModuleRoute` (decl.), `ISettlementRoute` (decl.), `MarketRegistryRouteChecks`, `MarketRegistryRoutesLogic`, `PegModuleRoute`, `PegModuleStep`, `WrapperStep`, `WrapperThenDexRoute` | Not run |
