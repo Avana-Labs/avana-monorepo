@@ -15,7 +15,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { CHAINS, CONTRACTS, EXPORT_KEY_ID, type LocalChain, PORTS, REPO, STACK, chainIdEnv, fallbackUrl, manifestPath, outDir, recorderUrl, rpcUrl } from "./env.ts";
 import { PASSWORD_FILE, keystorePath } from "./keys.ts";
-import { rpc } from "./chain.ts";
+import { rpc, stateFloor } from "./chain.ts";
 import { binJs, logPath, running, start, stop, tail, waitFor } from "./procs.ts";
 
 export const CONVEX_DIR = process.env.STACK_CONVEX_DIR ?? join(REPO, "services/convex");
@@ -50,8 +50,11 @@ export async function startRecorders(): Promise<void> {
 
 // ─── Indexer ───
 
-export function indexerEnv(schema: string): NodeJS.ProcessEnv {
+export function indexerEnv(schema: string, stateFloors = ""): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
+    // A chain restored from a saved state has no state before its floor: the sampler starts there (services/indexer
+    // src/lib/stateFloor.ts).
+    INDEXER_STATE_FLOOR: stateFloors,
     AVANA_MANIFEST: manifests(),
     ...chainIdEnv(),
     INDEXER_NETWORK_SET: "production",
@@ -104,15 +107,36 @@ export function runningLiveSchema(): string {
   return existsSync(LIVE_SCHEMA_FILE) ? readFileSync(LIVE_SCHEMA_FILE, "utf8").trim() : "live";
 }
 
-/** Starts the indexer on `schema` under the process name `name` (the live indexer is `indexer` on `liveSchema()`). */
+const STATE_FLOOR_FILE = join(STACK, "indexer-state-floor");
+
+/** Each deployed chain's state floor above 0, as INDEXER_STATE_FLOOR takes it (`<chainId>:<block>,...`). */
+export async function stateFloors(): Promise<string> {
+  const floors: string[] = [];
+  for (const c of deployed()) {
+    const f = await stateFloor(c);
+    if (f > 0) floors.push(`${c.chainId}:${f}`);
+  }
+  return floors.join(",");
+}
+
+/** The state floors the live indexer was last started with: a replay indexes from the same, so the tables compare. */
+export const liveStateFloors = (): string | undefined => (existsSync(STATE_FLOOR_FILE) ? readFileSync(STATE_FLOOR_FILE, "utf8").trim() : undefined);
+
+/**
+ * Starts the indexer on `schema` under the process name `name` (the live indexer is `indexer` on `liveSchema()`). The
+ * live indexer takes the chains' state floors now; another indexer (the replay) takes the live one's.
+ */
 export async function startIndexer(schema?: string, name = "indexer"): Promise<void> {
   if (running(name)) return;
+  let floors: string;
   if (!schema) {
     schema = liveSchema();
+    floors = await stateFloors();
     mkdirSync(STACK, { recursive: true });
     writeFileSync(LIVE_SCHEMA_FILE, schema);
-  }
-  start(name, process.execPath, [binJs("ponder"), "start", "--port", String(PORTS.indexer), "--log-format", "json"], { cwd: INDEXER_DIR, env: indexerEnv(schema) });
+    writeFileSync(STATE_FLOOR_FILE, floors);
+  } else floors = liveStateFloors() ?? (await stateFloors());
+  start(name, process.execPath, [binJs("ponder"), "start", "--port", String(PORTS.indexer), "--log-format", "json"], { cwd: INDEXER_DIR, env: indexerEnv(schema, floors) });
   await waitFor(`${name} /ready`, async () => (await fetch(`${indexerUrl()}/ready`)).ok, 900_000, 2_000).catch((e) => {
     throw new Error(`${(e as Error).message}\n${tail(name, 15)}`);
   });
