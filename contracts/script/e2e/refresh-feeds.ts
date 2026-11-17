@@ -23,6 +23,26 @@ export const RPC_TIMEOUT_MS = 120_000;
 /** The node: the local rehearsal's RPC_ANVIL, else the deploy steps' AVANA_RPC_URL. */
 export const feedsRpc = () => process.env.RPC_ANVIL ?? process.env.AVANA_RPC_URL ?? "http://127.0.0.1:8545";
 
+/** A node's refusal of a nonce it already counts as used (geth's and some providers' wording). */
+export const isStaleNonce = (e: unknown) => /nonce too low|lower than the current nonce/i.test((e as Error)?.message ?? String(e));
+
+/**
+ * `send`, sent again while the node rejects its nonce as already used. A load-balanced RPC (QuickNode on Base Sepolia)
+ * can answer the pending nonce from a node one block behind, even after the previous receipt: the next transmit then
+ * carries the mined nonce and is refused. A refused nonce means nothing was broadcast, so a retry after a short wait,
+ * which takes a fresh nonce, is safe; any other error is thrown at once.
+ */
+export async function retryStaleNonce<T>(send: () => Promise<T>, tries = 6, waitMs = 3000): Promise<T> {
+  for (let i = 1; ; i++) {
+    try {
+      return await send();
+    } catch (e) {
+      if (i >= tries || !isStaleNonce(e)) throw e;
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+}
+
 /** Every (symbol, aggregator, proxy) of the world, or of `symbols` when given. */
 export function worldFeeds(network: string, symbols?: readonly string[]) {
   const world = JSON.parse(readFileSync(join(CONTRACTS, "deployments-local", network, "world.json"), "utf8")) as {
@@ -56,7 +76,9 @@ export async function refreshFeeds(
     const answer =
       opts.prices?.[f.symbol] ??
       ((await client.readContract({ address: f.proxy, abi: OCR2_ABI, functionName: "latestRoundData" })) as readonly bigint[])[1]!;
-    const h = await transmit(client, wallet, f.aggregator, answer);
+    const h = live
+      ? await retryStaleNonce(() => transmit(client, wallet, f.aggregator, answer))
+      : await transmit(client, wallet, f.aggregator, answer);
     if (live) {
       const r = await client.waitForTransactionReceipt({ hash: h });
       if (r.status !== "success") throw new Error(`transmit ${h} reverted`);
