@@ -118,8 +118,7 @@ export function BorrowWorkspace({ pageData, initialIsDesktop = true }: BorrowWor
   const borrowAssetsBySpoke = useMemo(() => {
     const assetsBySpoke = new Map<string, BorrowableAsset[]>()
     for (const asset of pageData.borrowableAssets) {
-      const spokeId = asset.id.includes(":") ? asset.id.split(":")[0] : ""
-      if (!spokeId) continue
+      const spokeId = asset.spokeId.toLowerCase()
       const assets = assetsBySpoke.get(spokeId) ?? []
       assets.push(asset)
       assetsBySpoke.set(spokeId, assets)
@@ -128,7 +127,7 @@ export function BorrowWorkspace({ pageData, initialIsDesktop = true }: BorrowWor
     const next: Record<string, BorrowableAsset[]> = {}
     for (const group of poolGroups) {
       for (const entry of group.spokes) {
-        next[entry.spoke.id] = assetsBySpoke.get(entry.spoke.id) ?? []
+        next[entry.spoke.id] = assetsBySpoke.get(entry.spoke.id.toLowerCase()) ?? []
       }
     }
     return next
@@ -166,10 +165,9 @@ export function BorrowWorkspace({ pageData, initialIsDesktop = true }: BorrowWor
 
   const handleAssetBorrowMobile = useCallback(
     (asset: BorrowableAsset) => {
-      const assetSpokeId = asset.id.includes(":") ? asset.id.split(":")[0] : null
+      const assetSpokeId = asset.spokeId.toLowerCase()
       const sameSpokeSupplies = supplies.filter((row) => {
-        if (!assetSpokeId) return false
-        if (marketSpokeById.get(row.pool.id) !== assetSpokeId) return false
+        if (marketSpokeById.get(row.pool.id)?.toLowerCase() !== assetSpokeId) return false
         return Number.isFinite(row.healthFactor ?? NaN) || row.borrowedUsd === 0
       })
       const best = sameSpokeSupplies.reduce<SupplyRowContext | null>((acc, row) => {
