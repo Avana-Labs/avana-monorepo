@@ -13,7 +13,7 @@ import { chainOf } from "../lib/env.ts";
 import { baseConfig, testValues } from "../lib/chain.ts";
 import { baseRoles, testnetPatch } from "../../testnet/testnet.ts";
 import { ADDRESS_ROLES, SIGNER_ROLES, type TestnetRoles } from "../../testnet/keys.ts";
-import { type HubInput, type TestValues, planHub, splitPremium } from "./hub.ts";
+import { type HubInput, type TestValues, planHub } from "./hub.ts";
 
 const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
 const roles = {
@@ -53,15 +53,18 @@ for (const testnet of ["sepolia", "base-sepolia"] as const) {
     }
   });
 
-  test(`${testnet}: every market's risk card lists the five factors and splits its premium`, () => {
+  test(`${testnet}: every market's risk card lists the five factors, unrated, with bps only from the test values`, () => {
     const { config } = planned(testnet);
     const tv = testValues() as TestValues;
     for (const m of config.listing.markets) {
-      const ids = m.content.risk.factors.map((f: { id: string }) => f.id);
+      const factors: { id: string; level: string; text: string; bps?: number }[] = m.content.risk.factors;
+      const ids = factors.map((f) => f.id);
       for (const id of FIVE.filter((x) => x !== "liquidityDepth")) assert.ok(ids.includes(id), `${m.name} lists ${id}`);
-      if (tv.markets?.[m.name]?.riskFactorBps) continue;
-      const sum = m.content.risk.factors.reduce((a: number, f: { bps?: number }) => a + (f.bps ?? 0), 0);
-      assert.equal(sum, m.collateralRisk, `${m.name}: factor bps add up to the premium`);
+      for (const f of factors.filter((x) => ["oracle", "smartContract", "expectedIl"].includes(x.id))) {
+        assert.equal(f.text, "Not rated on the test networks.", `${m.name} ${f.id} text`);
+      }
+      const given = tv.markets?.[m.name]?.riskFactorBps ?? {};
+      for (const f of factors) assert.equal(f.bps, given[f.id], `${m.name} ${f.id}: bps only from the test values`);
     }
   });
 
@@ -79,10 +82,3 @@ for (const testnet of ["sepolia", "base-sepolia"] as const) {
     assert.doesNotThrow(() => parseMetadata(bytes, keccak256(bytes), chain.chainId));
   });
 }
-
-test("splitPremium gives whole bps that add up to the premium, heaviest factor first", () => {
-  assert.deepEqual(splitPremium(400, FIVE), { pairVolatility: 168, liquidityDepth: 72, oracle: 88, smartContract: 48, expectedIl: 24 });
-  const odd = splitPremium(333, ["pairVolatility", "marketHours", "oracle"]);
-  assert.equal(Object.values(odd).reduce((a, b) => a + b, 0), 333);
-  assert.deepEqual(splitPremium(100, []), {});
-});

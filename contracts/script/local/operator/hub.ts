@@ -271,23 +271,6 @@ export function poolFaqs(name: string): Faq[] {
   ];
 }
 
-/** Each risk factor's weight in a market's premium when the values give no split (a factor not named here weighs 0.18). */
-const FACTOR_WEIGHTS: Readonly<Record<string, number>> = { pairVolatility: 0.42, liquidityDepth: 0.18, oracle: 0.22, smartContract: 0.12, expectedIl: 0.06 };
-
-/**
- * The premium (`collateralRisk`, bps) split over a market's listed risk factors by their weights, in whole bps that add
- * up to the premium (the rounding rest goes to the heaviest factor). Display only: the chain has one premium.
- */
-export function splitPremium(premiumBps: number, factorIds: readonly string[]): Record<string, number> {
-  if (factorIds.length === 0) return {};
-  const weights = factorIds.map((id) => FACTOR_WEIGHTS[id] ?? 0.18);
-  const total = weights.reduce((a, b) => a + b, 0);
-  const parts = weights.map((w) => Math.floor((premiumBps * w) / total));
-  const heaviest = weights.indexOf(Math.max(...weights));
-  parts[heaviest]! += premiumBps - parts.reduce((a, b) => a + b, 0);
-  return Object.fromEntries(factorIds.map((id, i) => [id, parts[i]!]));
-}
-
 function given(t: PageText): Partial<PageText> {
   const out: Json = {};
   for (const k of ["name", "description", "longText", "faqs", "links", "iconUrl"] as const) if (t[k] !== undefined) out[k] = t[k];
@@ -581,8 +564,9 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
     values[name] = mv;
     const venue = VENUE[s.integration];
     const fee = slip ? `tick spacing ${p.tickSpacing}` : `${p.fee / 10_000}% fee tier`;
-    // The values' split of the premium over the risk factors, else the premium split by the factors' weights.
-    const bps = mv.riskFactorBps ?? (mi.risk ? splitPremium(mv.collateralRisk, mi.risk.factors.map((x) => x.id)) : {});
+    // Only the values' own split of the premium over the risk factors; without one the factors carry no bps (the
+    // chain prices one premium per market, so the card shows that single row).
+    const bps = mv.riskFactorBps ?? {};
     const risk = mi.risk ? { ...mi.risk, factors: mi.risk.factors.map((x) => (bps[x.id] !== undefined ? { ...x, bps: bps[x.id] } : x)) } : undefined;
     c.listing.markets.push({
       ...template(INTEGRATION_ID[s.integration]),

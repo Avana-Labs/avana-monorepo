@@ -187,20 +187,20 @@
           {
             "id": "oracle",
             "label": "Oracle",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           },
           {
             "id": "smartContract",
             "label": "Smart-contract surface",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           },
           {
             "id": "expectedIl",
             "label": "Expected IL",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           }
         ]
       }
@@ -229,20 +229,20 @@
           {
             "id": "oracle",
             "label": "Oracle",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           },
           {
             "id": "smartContract",
             "label": "Smart-contract surface",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           },
           {
             "id": "expectedIl",
             "label": "Expected IL",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           }
         ]
       }
@@ -271,20 +271,20 @@
           {
             "id": "oracle",
             "label": "Oracle",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           },
           {
             "id": "smartContract",
             "label": "Smart-contract surface",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           },
           {
             "id": "expectedIl",
             "label": "Expected IL",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           }
         ]
       }
@@ -313,20 +313,20 @@
           {
             "id": "oracle",
             "label": "Oracle",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           },
           {
             "id": "smartContract",
             "label": "Smart-contract surface",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           },
           {
             "id": "expectedIl",
             "label": "Expected IL",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           }
         ]
       }
@@ -355,20 +355,20 @@
           {
             "id": "oracle",
             "label": "Oracle",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           },
           {
             "id": "smartContract",
             "label": "Smart-contract surface",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           },
           {
             "id": "expectedIl",
             "label": "Expected IL",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           }
         ]
       }
@@ -397,20 +397,20 @@
           {
             "id": "oracle",
             "label": "Oracle",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           },
           {
             "id": "smartContract",
             "label": "Smart-contract surface",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           },
           {
             "id": "expectedIl",
             "label": "Expected IL",
-            "level": "low",
-            "text": "Local test content for the development chains; not a risk review."
+            "level": "moderate",
+            "text": "Not rated on the test networks."
           }
         ]
       }
