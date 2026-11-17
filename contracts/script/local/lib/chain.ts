@@ -10,6 +10,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { CONTRACTS, type LocalChain, REPO, genesisTimestamp, outDir, rpcUrl } from "./env.ts";
 import { addresses, signerEnv } from "./keys.ts";
+import { minObservations } from "./forkPools.ts";
 import { logPath, running, start, stop, waitFor } from "./procs.ts";
 
 // ─── JSON-RPC ───
@@ -127,6 +128,9 @@ export function writeBaseConfig(c: LocalChain): string {
   cfg.network = c.network;
   cfg.chainId = c.chainId;
   cfg.chain.blockTime = c.blockTime;
+  // Every world pool keeps a 30-minute TWAP at this chain's block time: the LPOracle refuses a pool whose observation
+  // cardinality is below twapMinObservations (anvil.json's 151 suits 12-second blocks, not Base's 2).
+  cfg.world.observationCardinality = Math.max(Number(cfg.world.observationCardinality ?? 0), minObservations(1800, c.blockTime));
   // The MarketRegistry's MAX_MARKET_COUNT is fixed at deployment: room for every Hub file the stack may add.
   cfg.parameters.maxMarketCount = Number(process.env.STACK_MAX_MARKETS ?? 128);
   cfg.parameters.globals.feeRecipient = a.treasury;
