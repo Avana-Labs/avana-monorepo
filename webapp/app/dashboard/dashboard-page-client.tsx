@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import type { RewardsPromoTabId, RewardsQuest } from "@/app/lib/data/rewards/catalog"
 import {
@@ -15,11 +16,11 @@ import { pinMarket, recordClientQuest } from "@/app/lib/rewards/record-client-qu
 import {
   RewardsEducationDialog,
   RewardsPinMarketDialog,
-  RewardsRedeemDialog,
   RewardsReferralDialog,
 } from "@/app/dashboard/_rewards-components/rewards-task-dialogs"
 import { useReferralDialogData } from "@/app/lib/rewards/use-referral-dialog-data"
-import { maxRedeemSteps, redeemPoints } from "@/app/lib/rewards/redeem-points"
+import { maxRedeemSteps } from "@/app/lib/rewards/redeem-points"
+import { actionPagePath } from "@/app/lib/action-system/contracts"
 import { useAvanaSessions } from "@/app/lib/avana-session/avana-sessions-provider"
 import { PortfolioStatCards } from "@/app/dashboard/portfolio-stat-cards"
 import { PortfolioRewardsCards } from "@/app/dashboard/_rewards-components/rewards-balance-hero"
@@ -114,9 +115,13 @@ export function DashboardPageClient() {
     if (rewards && !connectDone) void recordClientQuest("connect-wallet")
   }, [rewards, connectDone])
   // A quest's button opens the page or the dialog where it is done; quests that are not live have no action.
-  const [dialog, setDialog] = useState<QuestDialog | "redeem" | null>(null)
+  const [dialog, setDialog] = useState<QuestDialog | null>(null)
   const heldBps = rewards?.activeRedemptions.reduce((sum, r) => sum + r.bps, 0) ?? 0
   const canRedeem = rewards ? maxRedeemSteps(rewards.availablePoints, heldBps, rewards.redemption) > 0 : false
+  // Redeeming is its own action page, like every other action; it comes back to this tab.
+  const redeemHref = canRedeem
+    ? actionPagePath("rewards", "claim", { return: `/dashboard?tab=${activeDashboardTab}` })
+    : undefined
   const openQuest = useCallback(
     async (questId: string) => {
       const target = questDialog(questId)
@@ -177,7 +182,7 @@ export function DashboardPageClient() {
             <PortfolioRewardsCards
               earnedAmount={rewards?.earnedPoints ?? 0}
               claimableAmount={rewards?.availablePoints ?? 0}
-              onClaim={canRedeem ? () => setDialog("redeem") : undefined}
+              claimHref={redeemHref}
               activeTab={activeDashboardTab}
               showQuickActions
             />
@@ -247,16 +252,6 @@ export function DashboardPageClient() {
         onOpenChange={(open) => !open && setDialog(null)}
         onComplete={() => recordClientQuest("review-risk-basics")}
       />
-      {rewards ? (
-        <RewardsRedeemDialog
-          open={dialog === "redeem"}
-          onOpenChange={(open) => !open && setDialog(null)}
-          available={rewards.availablePoints}
-          rules={rewards.redemption}
-          held={rewards.activeRedemptions}
-          onRedeem={async (steps) => (await redeemPoints(steps)).ok}
-        />
-      ) : null}
       <RewardsReferralDialog
         open={dialog === "referral"}
         onOpenChange={(open) => !open && setDialog(null)}
@@ -274,14 +269,19 @@ export function DashboardPageClient() {
 
       {activeDashboardTab === "rewards" ? (
         <MobileDetailActionBar>
-          <button
-            type="button"
-            disabled={!canRedeem}
-            onClick={() => setDialog("redeem")}
-            className={primaryCtaClass({ size: "compact", disabled: !canRedeem, className: "w-full" })}
-          >
-            {canRedeem ? t("Claim Rewards") : t("No rewards ready")}
-          </button>
+          {redeemHref ? (
+            <Link href={redeemHref} className={primaryCtaClass({ size: "compact", className: "w-full" })}>
+              {t("Claim Rewards")}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className={primaryCtaClass({ size: "compact", disabled: true, className: "w-full" })}
+            >
+              {t("No rewards ready")}
+            </button>
+          )}
         </MobileDetailActionBar>
       ) : null}
     </>

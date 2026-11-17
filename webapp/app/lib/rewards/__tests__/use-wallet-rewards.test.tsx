@@ -18,7 +18,7 @@ describe("wallet reward points", () => {
       completedQuests: new Set(),
       historyChecked: true,
       availablePoints: 0,
-      redemption: { pointsPerStep: 1000, bpsPerStep: 2, days: 30, maxBps: 4 },
+      redemption: { pointsPerStep: 1000, bpsPerStep: 2, days: 30, maxBps: 2 },
       activeRedemptions: [],
     })
     expect(useQuery.mock.calls.every((c) => c[1] === "skip")).toBe(true)

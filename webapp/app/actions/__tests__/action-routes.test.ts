@@ -9,6 +9,7 @@ const ACTION_ROUTES = [
   ["borrow", "claim"],
   ["lend", "deposit"],
   ["lend", "withdraw"],
+  ["rewards", "claim"],
 ] as const
 
 describe("action routes", () => {

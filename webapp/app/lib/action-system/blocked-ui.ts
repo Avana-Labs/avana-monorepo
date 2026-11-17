@@ -47,6 +47,8 @@ export function blockedCtaLabel(reason: string, options?: { symbol?: string }): 
     return { label: "Not available here" }
   }
   if (r.includes("nothing to claim")) return { label: "Nothing to claim" }
+  if (r.includes("not enough points")) return { label: "Not enough points" }
+  if (r.includes("largest discount")) return { label: "Discount limit reached" }
   if (r.includes("select rewards")) return { label: "Select rewards" }
   if (r.includes("no deposited position") || r.includes("position does not exist")) {
     return { label: "Nothing to withdraw" }

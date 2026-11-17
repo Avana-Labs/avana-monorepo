@@ -1,11 +1,12 @@
 import { safeInternalHref } from "@/app/lib/safe-links"
 
-export type ActionProduct = "borrow" | "lend"
+export type ActionProduct = "borrow" | "lend" | "rewards"
 
 export type BorrowActionKind = "borrow" | "repay" | "supply" | "remove" | "claim" | "pledge"
 export type LendActionKind = "deposit" | "withdraw"
+export type RewardsActionKind = "claim"
 
-export type ActionKind = BorrowActionKind | LendActionKind
+export type ActionKind = BorrowActionKind | LendActionKind | RewardsActionKind
 
 export type ActionPageMode = "page" | "overlay" | "embedded"
 
@@ -166,6 +167,15 @@ export const ACTION_DESCRIPTORS: Record<ActionProduct, Partial<Record<ActionKind
       primaryVerb: "Withdraw",
     },
   },
+  rewards: {
+    claim: {
+      product: "rewards",
+      kind: "claim",
+      title: "Redeem points",
+      subtitle: "Spend points on a temporary fee discount.",
+      primaryVerb: "Redeem",
+    },
+  },
 }
 
 export function normalizeActionKind(product: string, kind: string): ActionKind {
@@ -183,7 +193,7 @@ export function getActionDescriptor(product: ActionProduct, kind: ActionKind): A
 }
 
 export function isValidActionProduct(product: string): product is ActionProduct {
-  return product === "borrow" || product === "lend"
+  return product === "borrow" || product === "lend" || product === "rewards"
 }
 
 export function isValidAction(product: string, kind: string): product is ActionProduct {
@@ -200,6 +210,7 @@ export function actionPagePath(product: ActionProduct, kind: ActionKind, params?
 const ACTION_CLOSE_HREF: Record<ActionProduct, string> = {
   borrow: "/borrow",
   lend: "/lend",
+  rewards: "/dashboard?tab=rewards",
 }
 
 function normalizeReturnHref(returnHref: string) {

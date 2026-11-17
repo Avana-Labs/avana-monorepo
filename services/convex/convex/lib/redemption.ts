@@ -7,7 +7,7 @@
 
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { firstSeenOf } from "../wallet/membership.ts";
-import { MAX_FEE_BPS, tenureDiscountBps } from "./fees.ts";
+import { TENURE_DISCOUNT_TIERS, tenureDiscountBps } from "./fees.ts";
 import { tenurePoints } from "./rewards.ts";
 
 export interface RedemptionRules {
@@ -18,16 +18,22 @@ export interface RedemptionRules {
   readonly maxBps: number;
 }
 
-/** 1,000 points = 2 bps off for 30 days; at most 4 bps of redeemed discount at once. */
-export const DEFAULT_REDEMPTION: RedemptionRules = { pointsPerStep: 1000, bpsPerStep: 2, days: 30, maxBps: 4 };
+/** 1,000 points = 2 bps off for 30 days; at most 2 bps of redeemed discount at once, so one redemption at a time. */
+export const DEFAULT_REDEMPTION: RedemptionRules = { pointsPerStep: 1000, bpsPerStep: 2, days: 30, maxBps: 2 };
 
 const DAY_MS = 86_400_000;
 const isPositiveInt = (n: number) => Number.isInteger(n) && n > 0;
 
-/** Throws when a redemption rule is not a positive whole number, or when a full discount could pass the fee ceiling. */
-export function checkRedemptionRules(r: RedemptionRules): void {
+/** The most bps the tenure tiers ever take off. */
+const MAX_TENURE_BPS = Math.max(...TENURE_DISCOUNT_TIERS.map((t) => t.bps));
+
+/**
+ * Throws when a redemption rule is not a positive whole number, or when the tenure discount plus `maxBps` would leave no
+ * fee: together they must stay below the base fee (`baseBps`, the default rate), so a fee is always left to pay.
+ */
+export function checkRedemptionRules(r: RedemptionRules, baseBps: number): void {
   for (const [name, value] of Object.entries(r)) if (!isPositiveInt(value)) throw new Error(`redemption ${name} must be a positive whole number`);
-  if (r.maxBps + 3 > MAX_FEE_BPS) throw new Error(`redemption maxBps ${r.maxBps} with the tenure discount would pass ${MAX_FEE_BPS} bps`);
+  if (MAX_TENURE_BPS + r.maxBps >= baseBps) throw new Error(`redemption maxBps ${r.maxBps} with the ${MAX_TENURE_BPS} bps tenure discount must stay below the ${baseBps} bps base fee`);
 }
 
 export async function redemptionRules(ctx: Pick<QueryCtx, "db">): Promise<RedemptionRules> {

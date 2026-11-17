@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { DisplayPreferencesProvider } from "@/app/components/display-preferences"
 import { PortfolioRewardsCards } from "@/app/dashboard/_rewards-components/rewards-balance-hero"
@@ -9,10 +9,10 @@ vi.mock("@/app/lib/i18n/use-translation", () => ({
 
 afterEach(cleanup)
 
-const cards = (onClaim?: () => void) =>
+const cards = (claimHref?: string) =>
   render(
     <DisplayPreferencesProvider>
-      <PortfolioRewardsCards earnedAmount={3000} claimableAmount={2000} onClaim={onClaim} />
+      <PortfolioRewardsCards earnedAmount={3000} claimableAmount={2000} claimHref={claimHref} />
     </DisplayPreferencesProvider>,
   )
 
@@ -22,10 +22,10 @@ describe("Claim Rewards button", () => {
     expect((screen.getByText("Claim Rewards").closest("button") as HTMLButtonElement).disabled).toBe(true)
   })
 
-  it("opens the redemption when points can be redeemed", () => {
-    const onClaim = vi.fn()
-    cards(onClaim)
-    fireEvent.click(screen.getByText("Claim Rewards"))
-    expect(onClaim).toHaveBeenCalledTimes(1)
+  it("links to the redeem page when points can be redeemed", () => {
+    cards("/actions/rewards/claim?return=%2Fdashboard%3Ftab%3Dwallet")
+    expect(screen.getByText("Claim Rewards").closest("a")?.getAttribute("href")).toBe(
+      "/actions/rewards/claim?return=%2Fdashboard%3Ftab%3Dwallet",
+    )
   })
 })

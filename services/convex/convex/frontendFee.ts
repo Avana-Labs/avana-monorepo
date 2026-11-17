@@ -87,7 +87,7 @@ export const setConfig = internalMutation({
   },
   handler: async (ctx, a) => {
     checkFeeRules(a);
-    if (a.redemption) checkRedemptionRules(a.redemption);
+    if (a.redemption) checkRedemptionRules(a.redemption, a.defaultBps);
     const row = { key: "default", ...a, updatedAt: Date.now() };
     const existing = await ctx.db.query("feeConfig").withIndex("by_key", (q) => q.eq("key", "default")).unique();
     if (existing) await ctx.db.replace(existing._id, row);

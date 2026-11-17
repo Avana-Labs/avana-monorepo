@@ -1,17 +1,14 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { describe, expect, it, vi } from "vitest"
 import {
   RewardsEducationDialog,
   RewardsPinMarketDialog,
-  RewardsRedeemDialog,
   RewardsReferralDialog,
 } from "@/app/dashboard/_rewards-components/rewards-task-dialogs"
 
 vi.mock("@/app/lib/i18n/use-translation", () => ({
   useTranslation: () => ({ t: (value: string) => value, language: "EN" }),
 }))
-
-afterEach(cleanup)
 
 describe("rewards task dialogs", () => {
   it("records the risk primer when it is finished, and closes", async () => {
@@ -76,57 +73,6 @@ describe("rewards task dialogs", () => {
     )
     expect(screen.getByText("Getting your link…")).toBeTruthy()
     expect((screen.getByText("Copy link") as HTMLButtonElement).disabled).toBe(true)
-  })
-
-  describe("redeeming points", () => {
-    const rules = { pointsPerStep: 1000, bpsPerStep: 2, days: 30, maxBps: 4 }
-    const open = (over: Partial<Parameters<typeof RewardsRedeemDialog>[0]> = {}) =>
-      render(
-        <RewardsRedeemDialog
-          open
-          onOpenChange={() => {}}
-          available={2500}
-          rules={rules}
-          held={[]}
-          onRedeem={async () => true}
-          {...over}
-        />,
-      )
-
-    it("offers the steps the points and the cap allow, and spends the chosen one", async () => {
-      const onRedeem = vi.fn(async () => true)
-      const onOpenChange = vi.fn()
-      open({ onRedeem, onOpenChange })
-      expect(screen.getByText("2500 points available")).toBeTruthy()
-      expect(screen.getByText("1000 pts → 2 bps off")).toBeTruthy()
-      expect(screen.getByText("2000 pts → 4 bps off")).toBeTruthy()
-      expect(screen.queryByText("3000 pts → 6 bps off")).toBeNull()
-      fireEvent.click(screen.getByText("2000 pts → 4 bps off"))
-      fireEvent.click(screen.getByText("Redeem"))
-      await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
-      expect(onRedeem).toHaveBeenCalledWith(2)
-    })
-
-    it("keeps the dialog open and says so when the redemption did not happen", async () => {
-      const onOpenChange = vi.fn()
-      open({ onRedeem: async () => false, onOpenChange })
-      fireEvent.click(screen.getByText("Redeem"))
-      await waitFor(() => expect(screen.getByText("Could not redeem. Try again.")).toBeTruthy())
-      expect(onOpenChange).not.toHaveBeenCalledWith(false)
-    })
-
-    it("says what is missing when nothing can be redeemed", () => {
-      open({ available: 400 })
-      expect(screen.getByText("Not enough points yet: 1000 are needed.")).toBeTruthy()
-      expect((screen.getByText("Redeem") as HTMLButtonElement).disabled).toBe(true)
-    })
-
-    it("says so at the cap, and lists the discounts held", () => {
-      open({ available: 9000, held: [{ bps: 4, endsAt: 1_900_000_000_000 }] })
-      expect(screen.getByText("You already hold the largest discount allowed.")).toBeTruthy()
-      expect(screen.getByText("Active discounts")).toBeTruthy()
-      expect(screen.getByText(/^4 bps off until /)).toBeTruthy()
-    })
   })
 
   it("names the old demo environment nowhere", () => {

@@ -27,12 +27,14 @@ async function member(extra = 0) {
 }
 
 describe("redemption rules", () => {
-  test("default to 1,000 points for 2 bps over 30 days, at most 4 bps at once", () => {
-    expect(DEFAULT_REDEMPTION).toEqual({ pointsPerStep: 1000, bpsPerStep: 2, days: 30, maxBps: 4 })
-    expect(() => checkRedemptionRules(DEFAULT_REDEMPTION)).not.toThrow()
-    expect(() => checkRedemptionRules({ ...DEFAULT_REDEMPTION, maxBps: 23 })).toThrow()
-    expect(() => checkRedemptionRules({ ...DEFAULT_REDEMPTION, days: 0 })).toThrow()
-    expect(() => checkRedemptionRules({ ...DEFAULT_REDEMPTION, bpsPerStep: 1.5 })).toThrow()
+  test("default to 1,000 points for 2 bps over 30 days, at most 2 bps at once, so one redemption at a time", () => {
+    expect(DEFAULT_REDEMPTION).toEqual({ pointsPerStep: 1000, bpsPerStep: 2, days: 30, maxBps: 2 })
+    expect(() => checkRedemptionRules(DEFAULT_REDEMPTION, 10)).not.toThrow()
+    expect(() => checkRedemptionRules({ ...DEFAULT_REDEMPTION, maxBps: 6 }, 10)).not.toThrow()
+    expect(() => checkRedemptionRules({ ...DEFAULT_REDEMPTION, maxBps: 7 }, 10)).toThrow(/below the 10 bps base fee/)
+    expect(() => checkRedemptionRules({ ...DEFAULT_REDEMPTION, maxBps: 7 }, 12)).not.toThrow()
+    expect(() => checkRedemptionRules({ ...DEFAULT_REDEMPTION, days: 0 }, 10)).toThrow()
+    expect(() => checkRedemptionRules({ ...DEFAULT_REDEMPTION, bpsPerStep: 1.5 }, 10)).toThrow()
   })
 })
 
@@ -52,12 +54,13 @@ describe("redeeming points", () => {
   test("refuses more than the balance, more than the cap, a bad step count, a wallet without membership", async () => {
     const { t, asUser } = await member(3_000)
     await expect(asUser.mutation(api.wallet.redemptions.redeem, { wallet: WALLET, steps: 5 })).rejects.toThrow(/INSUFFICIENT_POINTS/)
-    await asUser.mutation(api.wallet.redemptions.redeem, { wallet: WALLET, steps: 2 })
+    await expect(asUser.mutation(api.wallet.redemptions.redeem, { wallet: WALLET, steps: 2 })).rejects.toThrow(/REDEMPTION_CAP/)
+    await asUser.mutation(api.wallet.redemptions.redeem, { wallet: WALLET, steps: 1 })
     await expect(asUser.mutation(api.wallet.redemptions.redeem, { wallet: WALLET, steps: 1 })).rejects.toThrow(/REDEMPTION_CAP/)
     for (const steps of [0, 101, 1.5]) await expect(asUser.mutation(api.wallet.redemptions.redeem, { wallet: WALLET, steps })).rejects.toThrow(/INVALID_REDEMPTION/)
     await t.run((ctx) => awardPoints(ctx, { wallet: OTHER, kind: "quest", key: "quest:y", points: 5_000, at: 1 }))
     await expect(t.withIdentity({ subject: OTHER }).mutation(api.wallet.redemptions.redeem, { wallet: OTHER, steps: 1 })).rejects.toThrow(/NO_MEMBERSHIP/)
-    expect(await t.query(api.wallet.rewards.summary, { wallet: WALLET })).toMatchObject({ redeemedPoints: 2000 })
+    expect(await t.query(api.wallet.rewards.summary, { wallet: WALLET })).toMatchObject({ redeemedPoints: 1000 })
   })
 
   test("needs the signed-in wallet", async () => {
@@ -73,8 +76,8 @@ describe("redeeming points", () => {
       await ctx.db.insert("rewardTotals", { wallet: "0xdead", questPoints: 0, feePoints: 0, questIds: [], updatedAt: 0 })
     })
     expect(await t.run((ctx) => discountBpsOf(ctx, WALLET, Date.now()))).toBe(3)
-    await asUser.mutation(api.wallet.redemptions.redeem, { wallet: WALLET, steps: 2 })
-    expect(await t.run((ctx) => discountBpsOf(ctx, WALLET, Date.now()))).toBe(3 + 4)
+    await asUser.mutation(api.wallet.redemptions.redeem, { wallet: WALLET, steps: 1 })
+    expect(await t.run((ctx) => discountBpsOf(ctx, WALLET, Date.now()))).toBe(3 + 2)
     expect(await t.run((ctx) => discountBpsOf(ctx, WALLET, Date.now() + 31 * DAY))).toBe(3)
     expect(await t.run((ctx) => discountBpsOf(ctx, OTHER, Date.now()))).toBe(0)
   })
@@ -87,6 +90,6 @@ describe("redeeming points", () => {
     expect(r).toMatchObject({ points: 1000, bps: 2 })
     expect(r.endsAt - Date.now()).toBeLessThanOrEqual(7 * DAY)
     await expect(asUser.mutation(api.wallet.redemptions.redeem, { wallet: WALLET, steps: 1 })).rejects.toThrow(/REDEMPTION_CAP/)
-    await expect(t.mutation(internal.frontendFee.setConfig, { ...fee, redemption: { pointsPerStep: 500, bpsPerStep: 1, days: 7, maxBps: 30 } })).rejects.toThrow()
+    await expect(t.mutation(internal.frontendFee.setConfig, { ...fee, redemption: { pointsPerStep: 500, bpsPerStep: 1, days: 7, maxBps: 7 } })).rejects.toThrow(/base fee/)
   })
 })
