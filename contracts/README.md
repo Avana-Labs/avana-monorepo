@@ -91,7 +91,7 @@ contracts/
 │   │   ├── lp-vault-swap/          ILPVaultSwap
 │   │   ├── settlement-routes/      ISettlementRoute (swap routes from each unwound token into the debt asset)
 │   │   └── payout-escrow/         IPayoutEscrow
-│   ├── docs/governance/
+│   ├── governance/
 │   │   ├── timelock/               IAvanaTimelock
 │   │   └── roles/                  AvanaRoles (role IDs)
 │   ├── lock/
@@ -210,7 +210,7 @@ FOUNDRY_PROFILE=aave forge build                       # Aave V4 artifacts for f
 
 forge test                                             # unit, fuzz, integration, invariant smoke
 forge test --match-path 'test/unit/**'                 # one folder
-forge test --match-path test/unit/LPVault.Pledge.unit.t.sol
+forge test --match-path test/unit/Collateralization.Pledge.unit.t.sol
 forge test --match-test 'test_TEST_027_'               # one TEST-NNN
 FOUNDRY_PROFILE=ci forge test                          # CI depth
 FOUNDRY_PROFILE=invariant forge test                   # deep invariant campaign

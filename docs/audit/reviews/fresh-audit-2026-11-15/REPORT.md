@@ -2,7 +2,7 @@
 
 Scope: Avana contracts on `origin/main` at `a024490` (`contracts/src`), checked against `docs/spec`, `docs/governance` and the pinned dependencies in `contracts/dependencies` (Aave V4 `a3ef63e`, Uniswap v3 core and periphery, Slipstream 1.0.0 and main). Uniswap v4 is out of scope. Open PR #71 (head `2ca647d`) was read for its cap and debt-mark changes, and the Medium finding was re-run against it.
 
-Method: a manual review of every state-changing entry point, traced into the real Aave V4 Spoke, Hub and LiquidationLogic code and into the AMM pool and position-manager code. The review was done in four parts: custody and adapter, oracle, liquidation and coverage, and policy and governance. Every candidate was checked against the code before it was reported, and then against `docs/audit/findings-register.md`, `docs/spec/05-verification/03-audit-findings.md`, `docs/spec/04-security/04-design-decisions.md` and `contracts/security/*-triage.json`. Anything already recorded or accepted is listed in section 4 and is not reported as new. Every Medium finding has a passing proof-of-concept test. The tests pass on the unfixed code, so they are kept off `main`: they live on branch `claude/fresh-audit-pocs` (commit `b082463`, `contracts/test/audit/`), and each fix PR ports its test as an inverted regression test (section 9).
+Method: a manual review of every state-changing entry point, traced into the real Aave V4 Spoke, Hub and LiquidationLogic code and into the AMM pool and position-manager code. The review was done in four parts: custody and adapter, oracle, liquidation and coverage, and policy and governance. Every candidate was checked against the code before it was reported, and then against `docs/audit/findings-register.md`, `docs/spec/05-verification/03-audit-findings.md`, `docs/spec/04-security/04-design-decisions.md` and `contracts/security/*-triage.json`. Anything already recorded or accepted is listed in section 4 and is not reported as new. Every Medium finding has a passing proof-of-concept test. The tests pass on the unfixed code, so they are kept off `main`: they live in commit `b082463` (`contracts/test/audit/`), which is in the history of `main` but not in its tree, and each fix PR ports its test as an inverted regression test (section 9).
 
 ## 1. Result
 
@@ -12,7 +12,7 @@ No Critical or High finding. No path was found by which an attacker can take use
 
 The core money paths held up under every attack class tried: custody, units-to-vault-token backing, seizure accounting, payout identity and oracle valuation. Each is enforced by balance-delta checks and exact postconditions rather than by assumptions.
 
-| ID | Severity | Contract · function | Title | PoC (branch `claude/fresh-audit-pocs`) |
+| ID | Severity | Contract · function | Title | PoC (commit `b082463`) |
 |---|---|---|---|---|
 | M-01 | Medium | `RiskModulePledgeLogic._caps` | A rescue top-up made entirely from the slice is refused once a token (or depositor) counter is at or above its cap | `M01_RescueTopUpTokenCap.audit.t.sol` (3 pass on main, 2 pass on PR #71) |
 | L-01 | Low (design decision Q-337, amended) | `LPVaultSwapLiquidationLogic._waterfall` | Borrower surplus is paid out of a liquidation that books a deficit for the First-Loss Reserve to cover | n/a (Low) |
@@ -40,7 +40,7 @@ The core money paths held up under every attack class tried: custody, units-to-v
   5. On main the depositor counter does the same to a borrower's own second rescue. PR #71 removes the depositor counter.
 - **Preconditions:** a counter at or above its cap; a market without regular room; a borrower with HF < `rescueHealthFactor` (1.10). These are the conditions the slice exists for (Q-157, Q-252, REQ-RISK-022).
 - **Impact in funds:** borrowers who would have restored their health factor are liquidated instead. Each loses the net liquidation bonus on the seized amount, and the Avana fee share is taken from the same bonus. With a 5% bonus, a $100,000 position seized in a $1M stress wave costs the borrower about $5,000. The loss falls on the borrowers in a stress event, not on the protocol. Rated Medium: no theft, but it disables a safety mechanism, can be set off by an ordinary governance action (tighten to 0 in PR #71), and affects every market sharing the token.
-- **Proof of concept:** `contracts/test/audit/M01_RescueTopUpTokenCap.audit.t.sol` on branch `claude/fresh-audit-pocs`.
+- **Proof of concept:** `contracts/test/audit/M01_RescueTopUpTokenCap.audit.t.sol` in commit `b082463`.
   - `test_M01_sliceOnlyRescueBlockedOnceTokenCounterPassesCap`: the first rescue passes with `sliceUsd = usdCharge`, and the second identical one reverts `CapExceeded("TOKEN")`.
   - `test_M01_tokenCapTightenedBelowExposureBlocksAllRescues`: tightening the cap below current exposure blocks every rescue.
   - `test_M01_depositorCounterAboveCapBlocksOwnSecondRescue`: main only.
@@ -109,7 +109,7 @@ The core money paths held up under every attack class tried: custody, units-to-v
 
 - **Where:** `LPOracleStorage.sol:83` (`POOL_CALL_GAS = 100_000`), used by `LPOracleCLPool._meanTick`.
 - **Concern raised:** anyone can raise a pool's observation buffer to 65,535 slots, and the buffer never shrinks. If `observe` then needed more than 100k gas, the consistency check would read as unavailable for good. The market would stay Drifting, blocking borrowing, withdraw-with-debt and every ParameterStore setter for that market.
-- **Measured:** `contracts/test/audit/I01_ObserveGasAtMaxCardinality.audit.t.sol` on branch `claude/fresh-audit-pocs`.
+- **Measured:** `contracts/test/audit/I01_ObserveGasAtMaxCardinality.audit.t.sol` in commit `b082463`.
   - Setup: a full 65,535-slot buffer of initialized observations, storage cooled, `observe([1800, 0])`.
   - Uniswap v3 pool: 90,173 gas.
   - Slipstream v1 and main pools (real EIP-1167 clones from the pinned factories, implementation cooled): 93,023 gas.
@@ -231,12 +231,12 @@ All borrower and liquidation entry points run under the transient Lock (`Lock.so
 
 ## 9. Where each fix and regression test lives
 
-The proof-of-concept tests on `claude/fresh-audit-pocs` show the defects and pass on the unfixed code. Each fix PR ports the relevant test with its assertions inverted, so the test then guards the fix. This table is updated as fixes land.
+The proof-of-concept tests in commit `b082463` show the defects and pass on the unfixed code. Each fix PR ports the relevant test with its assertions inverted, so the test then guards the fix. This table is updated as fixes land.
 
 | ID | Fix | Regression test |
 |---|---|---|
 | M-01 | PR #71 (`contracts/decisions-rest`) | Ported from `M01_RescueTopUpTokenCap.audit.t.sol` in PR #71 |
-| L-01 | PR #80 (`claude/audit-fixes-lows`) | `LPVaultSwap.BadDebt.integration.t.sol`: `test_TEST_216_deficitSurplusFundsTheFirstLossReserve`, `test_TEST_216_unusableReserveLeavesTheSurplusWithTheBorrower` |
+| L-01 | PR #80 | `LPVaultSwap.BadDebt.integration.t.sol`: `test_TEST_216_deficitSurplusFundsTheFirstLossReserve`, `test_TEST_216_unusableReserveLeavesTheSurplusWithTheBorrower` |
 | L-01 (split liquidation) | PR #90 (`test/l01-split-measure`): every call on an account whose collateral value is below its debt times the liquidation bonus funds the First-Loss Reserve; measurements in `L-01-split-measurement.md` | `LPVaultSwap.SplitLiquidation.integration.t.sol`: `test_TEST_216_splitLiquidationFundsTheReserve_stable`, `_correlated`, `_volatile`, `_largeAccount`, `test_TEST_216_partialCallOnAnUnderwaterAccountFundsTheReserve` |
 | L-02 | PR #80 | `Collateralization.SpeedCredit.unit.t.sol`: `test_TEST_018_rescueChargeIsNotCreditedBack`, `test_TEST_237_mixedRecordCreditsOnlyItsChargedShare` |
 | L-03 | PR #80 | `ParameterStore.Bounds.unit.t.sol`: `test_TEST_064_feeShareRiseKeepsTheFeeBound` |

@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Avana Labs
 """Per-chain gas model of one liquidation (SPEC-CHAIN-001).
 
-MATH-CH-01 verifies: SPEC-CHAIN-001, INV-096, LIQ-087, AMMN-GAS-01, AMMN-GAS-02
+MATH-CH-01 verifies: SPEC-CHAIN-001, INV-096, LIQ-087
 
 Avana has no minimum debt on any chain (Q-381). Avana's own keepers liquidate every account and pay the gas, so no
 liquidation depends on a keeper's profit, and SPEC-CHAIN-001 states only the gas model, in gas units:

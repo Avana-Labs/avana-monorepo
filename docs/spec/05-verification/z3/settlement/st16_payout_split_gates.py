@@ -245,14 +245,14 @@ for k in range(NC):
     sfk, gk, fk = _sf(k)
     cdom += [cD[k] >= 0, cP[k] >= 0, cK[k] >= cD[k], cR[k] >= 0, cM[k] >= 0, cX[k] >= 0, cS[k] == sfk,
              cM[k] - cR[k] <= cX[k], gk <= cX[k]]
-# MATH-ST-109 verifies: SPEC-SET-001, SPEC-LIQ-019, REQ-SWAP-073, INV-097, AMMN-RT-13, Q-397
+# MATH-ST-109 verifies: SPEC-SET-001, SPEC-LIQ-019, REQ-SWAP-073, INV-097, Q-397
 check("MATH-ST-109",
       f"{NC} liquidations on different markets, in any order: each settles with Kf + R' >= D + A + B and R' >= minRec "
       f"from its own caller's funds and top-up, whatever the others did",
       cdom + [Or(*[Or(cK[k] + cR[k] + cS[k] < cD[k] + cP[k], cR[k] + cS[k] < cM[k], cS[k] > cX[k])
                    for k in range(NC)])],
       "PROVED")
-# MATH-ST-109 verifies: SPEC-SET-001, AMMN-RT-13
+# MATH-ST-109 verifies: SPEC-SET-001
 check("MATH-ST-109",
       "wrong reading (a shared pool closing gaps): one market's gaps drain the pool and the next market's call "
       "cannot settle (counterexample expected)",

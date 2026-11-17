@@ -26,7 +26,6 @@ on:
       - "docs/audit/formal-verification/**"
       - "docs/audit/user-simulation/**"
       - "docs/audit/traceability/**"
-      - "docs/audit/design-review/**"
       - "docs/spec/05-verification/requirements.txt"
       - "docs/spec/05-verification/package-lock.json"
       - "docs/spec/05-verification/contract_checklist.py"

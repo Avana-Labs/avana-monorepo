@@ -24,7 +24,7 @@ from _common import prove, witness, note, finish, StableSwap
 
 # ---------------------------------------------------------------------------------------------------
 # C1  Weighted pool: the fair quote never exceeds the redeemable value at oracle prices
-# MATH-AMM-BAL-PRICE-01 verifies: SPEC-AMM-CORE-001, SPEC-AMM-BAL-001, REQ-AMM-BAL-005, INV-078, AMMN-RT-07
+# MATH-AMM-BAL-PRICE-01 verifies: SPEC-AMM-CORE-001, SPEC-AMM-BAL-001, REQ-AMM-BAL-005, INV-078
 a, c, x, y = Reals('a c x y')             # b1 = a^5, b2 = c^5, p1/w1 = x^5, p2/w2 = y^5 (80/20)
 pos = [a > 0, c > 0, x > 0, y > 0]
 V8020 = a ** 4 * c * x ** 4 * y           # k * prod (p_i/w_i)^w_i with k = b1^0.8 b2^0.2
@@ -44,7 +44,7 @@ prove('AMM-C1d', '50/50 pool at the oracle price: a donation raises V by at most
 
 # ---------------------------------------------------------------------------------------------------
 # C2  StableSwap: D lies between the geometric bound and the sum of balances (n = 2)
-# MATH-AMM-CURVE-PRICE-01 verifies: SPEC-AMM-CORE-001, SPEC-AMM-CURVE-001, REQ-AMM-CURVE-001, INV-078, AMMN-RT-07
+# MATH-AMM-CURVE-PRICE-01 verifies: SPEC-AMM-CORE-001, SPEC-AMM-CURVE-001, REQ-AMM-CURVE-001, INV-078
 A, D, xx, yy, pm, px, py, gm = Reals('A D x y pmin px py gm')
 inv = [A > 0, xx > 0, yy > 0, D > 0, 4 * A * (xx + yy) + D == 4 * A * D + D ** 3 / (4 * xx * yy)]
 prove('AMM-C2a', 'n = 2: any positive D solving the invariant satisfies D <= x + y', inv, D <= xx + yy)
@@ -57,7 +57,7 @@ witness('AMM-C2d', 'deliberate: max(p) * D (or a mean price) is NOT a safe quote
 
 # ---------------------------------------------------------------------------------------------------
 # Simulations (exact integers for StableSwap; 80-digit reals for the weighted pool)
-# MATH-AMM-CURVE-PRICE-02 verifies: SPEC-AMM-CURVE-001, REQ-AMM-CURVE-006, REQ-AMM-CORE-014, AMMN-RT-07
+# MATH-AMM-CURVE-PRICE-02 verifies: SPEC-AMM-CURVE-001, REQ-AMM-CURVE-006, REQ-AMM-CORE-014
 E18 = 10 ** 18
 pool = StableSwap([10 ** 6 * E18, 10 ** 6 * E18])
 vp0 = pool.virtual_price()
@@ -90,7 +90,7 @@ p.donate([10 ** 5 * E18, 0])
 note('AMM-C5', 'StableSwap donation of 100,000 of coin 0 (balance-read pool, e.g. rebasing coins or a direct balance update)',
      f'vp x{p.virtual_price() / vp0:.6f}: the quote rises by about the donation / supply and the donation stays in the pool')
 
-# MATH-AMM-BAL-PRICE-02 verifies: REQ-AMM-BAL-005, REQ-AMM-CORE-014, AMMN-RT-07
+# MATH-AMM-BAL-PRICE-02 verifies: REQ-AMM-BAL-005, REQ-AMM-CORE-014
 mpmath.mp.dps = 80
 W = [mpmath.mpf(4) / 5, mpmath.mpf(1) / 5]
 

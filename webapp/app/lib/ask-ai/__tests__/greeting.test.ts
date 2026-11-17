@@ -16,8 +16,8 @@ describe("dayPartFromLocalHour", () => {
 
 describe("firstNameFromDisplayName", () => {
   it("uses the first token and ignores blanks", () => {
-    expect(firstNameFromDisplayName("Josue")).toBe("Josue")
-    expect(firstNameFromDisplayName("  Josue  Perez ")).toBe("Josue")
+    expect(firstNameFromDisplayName("Ada")).toBe("Ada")
+    expect(firstNameFromDisplayName("  Ada  Lovelace ")).toBe("Ada")
     expect(firstNameFromDisplayName("")).toBeNull()
     expect(firstNameFromDisplayName("   ")).toBeNull()
     expect(firstNameFromDisplayName(undefined)).toBeNull()
@@ -26,14 +26,14 @@ describe("firstNameFromDisplayName", () => {
 
 describe("formatAskAIGreeting", () => {
   it("includes the first name for daytime greetings", () => {
-    const morning = formatAskAIGreeting("Josue", new Date(2026, 7, 23, 9, 0, 0))
-    expect(morning).toMatch(/Josue/)
+    const morning = formatAskAIGreeting("Ada", new Date(2026, 7, 23, 9, 0, 0))
+    expect(morning).toMatch(/Ada/)
     expect(morning.split(/\s+/).length).toBeLessThanOrEqual(7)
   })
 
   it("avoids awkward late-night time labels", () => {
-    const late = formatAskAIGreeting("Josue", new Date(2026, 7, 23, 23, 30, 0))
-    expect(late).toMatch(/Josue/)
+    const late = formatAskAIGreeting("Ada", new Date(2026, 7, 23, 23, 30, 0))
+    expect(late).toMatch(/Ada/)
     expect(late.toLowerCase()).not.toMatch(/morning|afternoon|evening/)
   })
 

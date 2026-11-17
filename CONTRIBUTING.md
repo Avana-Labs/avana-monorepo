@@ -4,7 +4,7 @@ Avana's contracts are written from the specification in [`docs/spec/`](docs/spec
 
 ## Security reports
 
-Do not open a public issue, pull request or discussion for a vulnerability. Email **support@avana.cc** with "Security" in the subject; [`SECURITY.md`](SECURITY.md) says what to include and what happens next. The bug bounty is published at [avana.cc/developers/safety/bug-bounty](https://www.avana.cc/developers/safety/bug-bounty).
+Do not open a public issue, pull request or discussion for a vulnerability. Email **support@avana.cc** with "Security" in the subject; [`SECURITY.md`](SECURITY.md) says what to include and what happens next. The bug bounty has not started; audit and bug-bounty status is in [`docs/audit/README.md`](docs/audit/README.md#audit-status).
 
 ## Setup
 

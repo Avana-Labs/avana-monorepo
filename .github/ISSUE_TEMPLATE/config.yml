@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability
-    url: https://www.avana.cc/developers/safety/bug-bounty
-    about: Do not open an issue. Email support@avana.cc with "Security" in the subject; SECURITY.md has the details and the bug bounty.
+    url: https://github.com/Avana-Labs/avana-monorepo/blob/main/SECURITY.md
+    about: Do not open an issue. Email support@avana.cc with "Security" in the subject; SECURITY.md has the details.
   - name: Product support
     url: https://avana.cc/developers
     about: Questions about using Avana or building on it; support@avana.cc for account help.
