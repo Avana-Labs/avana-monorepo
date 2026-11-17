@@ -3,15 +3,17 @@
 # artifacts. A new AMM integration may switch its own rows back on.
 name: models
 
-# Python and Quint models outside the spec-stage quick path. Every pull request and every push to main runs the
+# Off by default (2026-11-17): runs only on a pull request that changes the models
+# or their checks and pinned tools (the paths below) and by hand; nothing on a push to main, a schedule or a tag. A
+# change to the spec text runs spec.yml's trace check only; run this workflow by hand when the spec's meaning changes.
+# Python and Quint models outside the spec-stage quick path. Every such pull request runs the
 # formal-verification areas of docs/audit/formal-verification/ (each area's run.sh: every Z3, enumeration and Quint model,
 # then check_ids.py where the area has one), the user simulation of docs/audit/user-simulation/ (the reported run with
 # --extra-seeds 4, and the deployment-topology grid one seed per job) and contract_checklist.py --all --check
 # --links-only: every contract key of contract_checklist.py, and the TEST rows on no contract's checklist, must be
 # linked by a tag on a test of their own (a row is "not run" here, since this workflow runs no test; contracts.yml's
 # evidence job checks that the linked tests ran and passed), and check-mock-counterparts.py: every mocked external has a
-# fork test on its chain (TEST-005). The nightly run (06:00 UTC), every
-# release tag (`v*`) and every manual run also run the topology simulator checks of docs/spec/05-verification/quint/topology_run.sh, the part that
+# fork test on its chain (TEST-005). A manual run also runs the topology simulator checks of docs/spec/05-verification/quint/topology_run.sh, the part that
 # run_all.sh --nightly adds to the quick path; spec.yml runs the quick path. A simulation job also fails when a run
 # reports an invariant violation, since run_simulation.py exits 0 whenever it completes.
 # Tool versions are pinned: Python packages by docs/spec/05-verification/requirements.txt, Quint by
@@ -24,34 +26,17 @@ on:
       - "docs/audit/formal-verification/**"
       - "docs/audit/user-simulation/**"
       - "docs/audit/traceability/**"
-      - "docs/spec/**"
-      - "contracts/src/**"
-      - "contracts/test/**"
-      - "contracts/certora/**"
+      - "docs/spec/05-verification/requirements.txt"
+      - "docs/spec/05-verification/package-lock.json"
+      - "docs/spec/05-verification/contract_checklist.py"
+      - "docs/spec/05-verification/quint/**"
       - "contracts/script/check-mock-counterparts.py"
       - "contracts/script/mock-counterparts.json"
       - ".github/workflows/models.yml"
-  push:
-    branches: [main]
-    tags: ["v*"]
-    paths:
-      - "docs/audit/formal-verification/**"
-      - "docs/audit/user-simulation/**"
-      - "docs/audit/traceability/**"
-      - "docs/spec/**"
-      - "contracts/src/**"
-      - "contracts/test/**"
-      - "contracts/certora/**"
-      - "contracts/script/check-mock-counterparts.py"
-      - "contracts/script/mock-counterparts.json"
-      - ".github/workflows/models.yml"
-  schedule:
-    # Nightly at 06:00 UTC on main (GitHub runs a schedule on the default branch only).
-    - cron: "0 6 * * *"
   workflow_dispatch:
 
 concurrency:
-  # A newer pull-request run cancels the older one on the same ref; runs on main finish.
+  # A newer pull-request run cancels the older one on the same ref; a manual run finishes.
   group: models-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -222,7 +207,7 @@ jobs:
     # The topology simulator runs of quint/topology_run.sh (1,000 traces x 25 steps per check), which
     # run_all.sh --nightly adds to the quick path.
     name: quint topology simulator (topology_run.sh)
-    if: (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     defaults:
@@ -260,7 +245,7 @@ jobs:
           retention-days: 14
 
   gate:
-    # Passes only when every job above passed, or a long job was skipped outside a nightly, release or manual run.
+    # Passes only when every job above passed, or a long job was skipped outside a manual run.
     name: models-gate
     if: always()
     needs: [formal-verification, user-simulation, contract-checklists, quint-topology]
@@ -272,7 +257,7 @@ jobs:
         working-directory: ${{ runner.temp }}
         env:
           RESULTS: ${{ toJSON(needs) }}
-          LONG: ${{ (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
+          LONG: ${{ github.event_name == 'workflow_dispatch' }}
           MAIN_ONLY: '["quint-topology"]'
         run: |
           echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'

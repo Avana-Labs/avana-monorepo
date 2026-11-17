@@ -1,15 +1,13 @@
 name: gitleaks
 
-# Secret scan: each pull request's own commits, and the full git history (every branch and tag) on every push to main
-# and once a week.
+# Secret scan: each pull request's own commits, and the full git history (every branch and tag) once a week and by
+# hand. A push to main does not rerun it: the pull request scanned the same commits.
 # Runs the Gitleaks CLI (MIT) directly, checksum-verified; the gitleaks-action wrapper needs a paid licence for
 # organisations. Rules: the upstream defaults plus the allowlists in .gitleaks.toml. Findings are redacted in the log and
 # uploaded to code scanning.
 
 on:
   pull_request:
-  push:
-    branches: [main]
   schedule:
     - cron: "0 7 * * 1" # Mondays 07:00 UTC
   workflow_dispatch:
@@ -51,7 +49,7 @@ jobs:
           gitleaks version
 
       # A pull request scans its own commits, so a finding on one branch never fails another branch's pull request; the
-      # push to main and the weekly run scan every branch and tag. The pre-commit hook (.githooks/pre-commit) runs the
+      # weekly and manual runs scan every branch and tag. The pre-commit hook (.githooks/pre-commit) runs the
       # same rules on staged changes, so a finding is fixed before it enters history.
       - name: Scan the pull request's commits, or the full history
         env:

@@ -1,22 +1,27 @@
 name: contracts
 
-# Foundry workspace in contracts/. Every pull request runs the short set in about 10 minutes: format, lint and build,
-# the ci test profile in 10 shards (invariant suites as a short check, 256 runs at depth 64), gas snapshots, branch
-# coverage, traceability, the evidence report (which spec rows a test that ran and passed checks, from the shards'
-# results) and the fast security tier. A pull request labelled `hotfix` (playbook P-05) also runs the
-# touched contracts' invariant campaigns at full depth, one per job. Every push to main runs the same set with the ci
-# profile (invariants 1,000 runs at depth 100) in 30 shards: each file of test/invariant/ is one campaign, and a
-# campaign over 20 minutes runs as segments of its runs, so each shard fits in its 60 minutes. The long checks run every
-# night at 06:00 UTC, on every release tag (`v*`) and by hand: the deep invariant campaign (there the test shards, 10,
-# leave test/invariant/ out, so each campaign runs once), fork tests, the FFI
-# differential suite, SMTChecker and Certora (paused unless the repository variable CERTORA_ENABLED is `true`), one
-# target per job, each at most 4 hours (a deep invariant file at most 6): `plan` lists the invariant files,
-# SMTChecker contracts and Certora confs with script/ci-shards.py, so a new one gets its own job on the next run. Halmos runs in the slow security tier, one job per check at loop 16. The slow
-# security tier (security-slow.yml), the per-layer mutation gates (mutation-gate.yml) and the spec model parts (spec.yml) run on the
-# same nightly, release and manual schedule. An upgrade is scheduled from a release tag, so every long check has run
-# before the timelock delay ends; a failure is a reason to cancel the operation. A long check that cannot run (a missing
-# secret, fork pins still 0, every fork test skipped) reports "not run" in its job summary, and the gate fails on it in
-# the runs where it is due; outside them the gate lists it as not due.
+# Foundry workspace in contracts/. CI runs three suites (decided 2026-11-17 to cut Actions minutes):
+# - fast (every pull request that touches contracts/, and `suite: fast` by hand): the `changes` job sorts the pull
+#   request's files. A change to Solidity, foundry.toml, the dependencies, test/ or snapshots/ runs format, lint and
+#   build, the ci test profile in 3 shards at a short depth (fuzz 1,000 runs, invariants 64 runs at depth 64), gas
+#   snapshots and the generated-ABI check. A change to Solidity scripts only (script/**/*.sol) runs the build alone. A
+#   change to shell or Python scripts, certora/ or docs only runs the script tests (script/*.test.sh) and no forge;
+#   security/ (size margins, licence allowlist) runs the build.
+#   A pull request labelled `hotfix` (playbook P-05) also runs the touched contracts' invariant campaigns at full depth.
+# - full (`suite: full` by hand): the ci profile in 10 shards (fuzz 10,000 runs, invariants 1,000 at depth 100), gas,
+#   ABIs, branch coverage, the fast security tier, traceability and the evidence report.
+# - long (`suite: long` by hand, the default of a manual run): the full suite plus the long checks: the deep invariant
+#   campaign (the 10 test shards then leave test/invariant/ out, so each campaign runs once), fork tests, the FFI
+#   differential suite, SMTChecker and Certora (paused unless the repository variable CERTORA_ENABLED is `true`), one
+#   target per job, each at most 4 hours (a deep invariant file at most 6): `plan` lists the invariant files,
+#   SMTChecker contracts and Certora confs with script/ci-shards.py, so a new one gets its own job on the next run.
+#   Run it after a large protocol change and on the commit of a release tag before an upgrade is scheduled. Halmos
+#   runs in the slow security tier, one job per check at loop 16. The slow security tier (security-slow.yml), the
+#   per-layer mutation gates (mutation-gate.yml) and the spec model parts (spec.yml) are manual as well.
+# Nothing runs on a push to main, on a schedule or on a tag: the pull request already ran the fast suite on the same
+# change. A manual run on main records the base contract sizes that pull requests compare against. A long check that
+# cannot run (a missing secret, fork pins still 0, every fork test skipped) reports "not run" in its job summary, and
+# the gate fails on it in a long run; outside one the gate lists it as not due.
 # Tool versions are pinned: Foundry by contracts/.foundry-version, Node by .nvmrc, every action by commit SHA (the
 # release tag in the trailing comment), dependencies by soldeer.lock, Python tools (Slither, Halmos, Semgrep, ...)
 # by contracts/requirements.txt and contracts/requirements-mythril.txt, solhint and @openzeppelin/upgrades-core by
@@ -31,27 +36,17 @@ on:
     paths:
       - "contracts/**"
       - "docs/audit/**/*.sol"
-      - "docs/spec/05-verification/trace.py"
-      - "docs/spec/05-verification/evidence.py"
-      - "docs/spec/05-verification/contract_checklist.py"
-      - "packages/protocol/**"
+      - "packages/protocol/src/abis/**"
+      - "packages/protocol/scripts/generate-abis.mjs"
       - ".github/workflows/contracts.yml"
-  push:
-    branches: [main]
-    tags: ["v*"]
-    paths:
-      - "contracts/**"
-      - "docs/audit/**/*.sol"
-      - "docs/spec/05-verification/trace.py"
-      - "docs/spec/05-verification/evidence.py"
-      - "docs/spec/05-verification/contract_checklist.py"
-      - "packages/protocol/**"
-      - ".github/workflows/contracts.yml"
-  schedule:
-    # Nightly at 06:00 UTC on main (GitHub runs a schedule on the default branch only).
-    - cron: "0 6 * * *"
   workflow_dispatch:
     inputs:
+      suite:
+        description: "fast (the pull-request suite), full (10 shards at ci depth, coverage, security fast tier, evidence) or long (full plus every long check)"
+        required: true
+        type: choice
+        default: long
+        options: [fast, full, long]
       only:
         # One or a few long-check targets, to prove a change to one of them without the whole long set: the plan keeps
         # only these legs, and the short set and the other long checks are skipped (the gate lists them as not
@@ -69,7 +64,7 @@ on:
         type: string
 
 concurrency:
-  # A newer pull-request run cancels the older one on the same ref; runs on main finish, so the next merge never
+  # A newer pull-request run cancels the older one on the same ref; a manual run finishes, so a later one never
   # cancels a long check.
   group: contracts-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -85,8 +80,78 @@ defaults:
     working-directory: contracts
 
 jobs:
+  changes:
+    # Sorts a pull request's files: `tests` when a change can alter what forge builds or tests, `build` when it also
+    # covers Solidity scripts. A file this list does not know counts as `tests`. A manual run sets both.
+    name: changed files
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      tests: ${{ steps.sort.outputs.tests }}
+      build: ${{ steps.sort.outputs.build }}
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Sort the changed files
+        id: sort
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != pull_request ]; then
+            echo "tests=true" >> "$GITHUB_OUTPUT"; echo "build=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          # Listed first, so a failed API call fails the job instead of leaving an empty list that skips the tests.
+          files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
+          [ -n "$files" ] || { echo "::error::the pull request lists no changed files"; exit 1; }
+          tests=false build=false
+          while IFS= read -r f; do
+            case "$f" in
+              *.md) kind=none ;;
+              contracts/script/install-security-tools.sh) kind=tests ;;
+              # security/ holds the size margins and licence allowlist the build job checks.
+              contracts/script/*.sol|contracts/security/*) kind=build ;;
+              contracts/script/*|contracts/certora/*|contracts/tools/*) kind=none ;;
+              contracts/echidna.yaml|contracts/medusa.json|contracts/slither.config.json|contracts/aderyn.toml) kind=none ;;
+              contracts/requirements.txt|contracts/requirements-mythril.txt|contracts/package.json|contracts/package-lock.json) kind=none ;;
+              contracts/Makefile) kind=none ;;
+              *) kind=tests ;;
+            esac
+            echo "$kind $f"
+            case "$kind" in tests) tests=true; build=true ;; build) build=true ;; esac
+          done <<< "$files"
+          echo "tests=$tests" | tee -a "$GITHUB_OUTPUT"
+          echo "build=$build" | tee -a "$GITHUB_OUTPUT"
+          { echo "### Changed files"; echo "forge tests: $tests; forge build: $build"; } >> "$GITHUB_STEP_SUMMARY"
+
+  scripts:
+    # Each runs its script on fixtures, with stand-ins on PATH for the tools it calls: check-sizes.test.sh,
+    # mutation-records.test.sh (multi-line mutants and Necessist removals kept whole, timed-out mutants never
+    # counted as killed), mutation-ledger.test.sh (the mutation gate's target keys), security-gate.test.sh
+    # (the triage's reviewed-file hashes), check-ai-credit.test.sh (AI credit in commit messages), and
+    # upgrade-operation.test.sh, the slow-tier gate of every timelock upgrade (TEST-263) with a stand-in `gh`.
+    name: script tests (script/*.test.sh)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Script tests
+        run: for t in script/*.test.sh; do echo "== $t"; "$t"; done
+
   build:
     name: fmt, lint, build
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -124,14 +189,6 @@ jobs:
         # BUSL-1.1 SPDX and Avana Labs copyright on every Avana-owned .sol file; ported files carry the identifier in
         # security/licence-allowlist.txt; no file carries UNLICENSED (LICENSING.md, THIRD_PARTY_LICENSES.md).
         run: script/check-licence.sh
-
-      - name: Script tests (script/*.test.sh)
-        # Each runs its script on fixtures, with stand-ins on PATH for the tools it calls: check-sizes.test.sh,
-        # mutation-records.test.sh (multi-line mutants and Necessist removals kept whole, timed-out mutants never
-        # counted as killed), mutation-ledger.test.sh (the nightly mutation gate's target keys), security-gate.test.sh
-        # (the triage's reviewed-file hashes), check-ai-credit.test.sh (AI credit in commit messages), and
-        # upgrade-operation.test.sh, the slow-tier gate of every timelock upgrade (TEST-263) with a stand-in `gh`.
-        run: for t in script/*.test.sh; do echo "== $t"; "$t"; done
 
       - name: Lint src
         run: forge lint src
@@ -173,12 +230,12 @@ jobs:
           fi
           { echo '### Contract sizes'; echo '```'; cat sizes.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Record this commit's sizes as the base for pull requests
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Record this commit's sizes as the base for pull requests (a manual run on main)
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
         run: cp out-security/sizes.json out-security/sizes-base.json
 
       - name: Save the base sizes
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: contracts/out-security/sizes-base.json
@@ -213,27 +270,29 @@ jobs:
           retention-days: 7
 
   test:
-    # The suite is split into shards that run side by side (30 on a push to main, 10 otherwise): every test file
-    # (fork and differential excluded) is assigned by its measured run time (script/test-shard.sh,
+    # The suite is split into shards that run side by side (3 in the fast suite, 10 in the full and long ones): every
+    # test file (fork and differential excluded) is assigned by its measured run time (script/test-shard.sh,
     # script/test-shard.py, script/test-timings.json), so the shards take about equal time and each unit runs in
     # exactly one shard. A file of test/invariant/ is one unit: Foundry runs all invariants of a test contract in one
     # campaign, so running them one by one would repeat the campaign's calls per invariant. A campaign over 20 minutes runs as
     # segments of ceil(runs / m) runs each, at the same depth and with a seed of their own. Each shard reuses the build
-    # job's compiled output. In a nightly, release or manual run the deep invariant job runs every file of
-    # test/invariant/, so the shards leave them out (TEST_SHARD_SKIP_INVARIANT) and the rest fits in 10 shards.
-    name: tests (ci profile, shard ${{ matrix.shard }}/${{ (github.event_name == 'pull_request' || (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && 10 || 30 }})
-    needs: build
-    if: ${{ !inputs.only }}
+    # job's compiled output. In a long run the deep invariant job runs every file of test/invariant/, so the shards
+    # leave them out (TEST_SHARD_SKIP_INVARIANT).
+    name: tests (ci profile, shard ${{ matrix.shard }}/${{ (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && 10 || 3 }})
+    needs: [changes, build]
+    if: ${{ needs.changes.outputs.tests == 'true' && !inputs.only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON((github.event_name == 'pull_request' || (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && '[1,2,3,4,5,6,7,8,9,10]' || '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]') }}
+        shard: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && '[1,2,3,4,5,6,7,8,9,10]' || '[1,2,3]') }}
     env:
       FOUNDRY_PROFILE: ci
-      SHARDS: ${{ (github.event_name == 'pull_request' || (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && 10 || 30 }}
-      TEST_SHARD_SKIP_INVARIANT: ${{ ((github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && '1' || '0' }}
+      SHARDS: ${{ (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && 10 || 3 }}
+      # The fast suite: fuzz 1,000 runs (the default profile's) and invariants 64 runs at depth 64.
+      FAST: ${{ (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && '0' || '1' }}
+      TEST_SHARD_SKIP_INVARIANT: ${{ (github.event_name == 'workflow_dispatch' && inputs.suite == 'long') && '1' || '0' }}
       # script/test-shard.sh writes each forge invocation's results here (`--json-file`); the evidence job reads them.
       TEST_RESULTS_DIR: ${{ github.workspace }}/contracts/out-results
     steps:
@@ -263,17 +322,17 @@ jobs:
           name: forge-out
           path: contracts
 
-      - name: Unit, fuzz, integration, hostile and invariant suites, shard ${{ matrix.shard }} (fuzz 10,000 runs; invariants 1,000 x 100 on main, 256 x 64 on a pull request, deep job only on long runs; TEST-007)
-        # A fresh seed per run widens coverage over time; the seed is printed for reproduction. A pull request runs the
-        # invariant suites as a short check; every push to main runs them at the full ci profile, and its gate requires
-        # every shard. A nightly, release or manual run leaves them to the deep invariant job.
+      - name: Unit, fuzz, integration, hostile and invariant suites, shard ${{ matrix.shard }} (fast suite fuzz 1,000 and invariants 64 x 64; full suite fuzz 10,000 and invariants 1,000 x 100; long suite leaves invariants to the deep job; TEST-007)
+        # A fresh seed per run widens coverage over time; the seed is printed for reproduction. The fast suite runs the
+        # fuzz and invariant suites as a short check; the full suite runs them at the ci profile. A long run leaves
+        # the invariant suites to the deep invariant job.
         # test/hostile/ does not exist yet: contracts/test/README.md section 6 describes the hostile suite it will hold.
         run: |
           SEED=$(printf '0x%x' "$(( $(date +%s) + ${{ matrix.shard }} ))")
           echo "fuzz seed: $SEED"
-          if [ "${{ github.event_name }}" = pull_request ]; then
-            export FOUNDRY_INVARIANT_RUNS=256 FOUNDRY_INVARIANT_DEPTH=64
-            echo "invariant suites: 256 runs at depth 64 (pull request)"
+          if [ "$FAST" = 1 ]; then
+            export FOUNDRY_FUZZ_RUNS=1000 FOUNDRY_INVARIANT_RUNS=64 FOUNDRY_INVARIANT_DEPTH=64
+            echo "fast suite: fuzz 1,000 runs, invariant suites 64 runs at depth 64"
           fi
           if [ "$TEST_SHARD_SKIP_INVARIANT" = 1 ]; then
             echo "invariant suites: left out here; the deep invariant job runs each file of test/invariant/"
@@ -367,8 +426,8 @@ jobs:
 
   gas:
     name: gas snapshots
-    needs: build
-    if: ${{ !inputs.only }}
+    needs: [changes, build]
+    if: ${{ needs.changes.outputs.tests == 'true' && !inputs.only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -412,8 +471,8 @@ jobs:
     # The ABIs that packages/protocol publishes to the services and the app are generated from these builds; a contract
     # change that alters an ABI must commit the regenerated files (`npm run generate -w packages/protocol`).
     name: generated ABIs (packages/protocol)
-    needs: build
-    if: ${{ !inputs.only }}
+    needs: [changes, build]
+    if: ${{ needs.changes.outputs.tests == 'true' && !inputs.only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -464,8 +523,8 @@ jobs:
 
   plan:
     name: plan the long jobs
-    # Long check: nightly, release tags and manual runs only.
-    if: (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    # Long check: a manual run of the long suite (or with `only`) only.
+    if: github.event_name == 'workflow_dispatch' && (inputs.suite == 'long' || inputs.only)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -511,7 +570,7 @@ jobs:
     # with a fresh seed; its results (forge --json-file) go to the evidence job like the shards'.
     name: deep invariant campaign (${{ matrix.file }})
     needs: [build, plan]
-    if: ((github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.invariant != '[]'
+    if: (github.event_name == 'workflow_dispatch' && (inputs.suite == 'long' || inputs.only)) && needs.plan.outputs.invariant != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     strategy:
@@ -576,10 +635,10 @@ jobs:
     # Runs the fork profile when the RPC_MAINNET and RPC_BASE secrets are set and both blocks of
     # test/utils/fixtures/ForkConstants.sol are pinned (TEST-003). Otherwise, or when every fork test skips, the job
     # writes "not run" and why to its summary and sets `ran` to false; the gate fails on that in the runs where the job
-    # is due (nightly, release tags, by hand). Any failing fork test fails the job.
+    # is due (a long run). Any failing fork test fails the job.
     needs: build
-    # Long check: nightly, release tags and manual runs only.
-    if: ((github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && !inputs.only
+    # Long check: a manual run of the long suite only.
+    if: github.event_name == 'workflow_dispatch' && inputs.suite == 'long' && !inputs.only
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     outputs:
@@ -691,8 +750,8 @@ jobs:
   differential:
     name: FFI differential (LPOracle vs mpmath)
     needs: build
-    # Long check: nightly, release tags and manual runs only.
-    if: ((github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && !inputs.only
+    # Long check: a manual run of the long suite only.
+    if: github.event_name == 'workflow_dispatch' && inputs.suite == 'long' && !inputs.only
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
@@ -756,7 +815,7 @@ jobs:
     # unproved targets are listed in the job summary and the log artifact, not hidden.
     name: SMTChecker ${{ matrix.contract }}
     needs: [plan]
-    if: ((github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.smt != '[]'
+    if: (github.event_name == 'workflow_dispatch' && (inputs.suite == 'long' || inputs.only)) && needs.plan.outputs.smt != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
@@ -940,7 +999,7 @@ jobs:
     # fast security tier (`cvl`) still runs on every pull request.
     name: Certora ${{ matrix.conf }}
     needs: [build, plan]
-    if: vars.CERTORA_ENABLED == 'true' && ((github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && needs.plan.outputs.certora != '[]'
+    if: vars.CERTORA_ENABLED == 'true' && (github.event_name == 'workflow_dispatch' && (inputs.suite == 'long' || inputs.only)) && needs.plan.outputs.certora != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
@@ -956,7 +1015,7 @@ jobs:
           persist-credentials: false
 
       - name: Not run without a Certora key
-        # This job runs only where it is due (nightly, release tags, by hand), so a missing key fails it: the rules did
+        # This job runs only where it is due (a long run), so a missing key fails it: the rules did
         # not run, and the gate must not count that as a pass.
         if: env.CERTORAKEY == ''
         run: |
@@ -1032,6 +1091,8 @@ jobs:
 
   traceability:
     name: traceability
+    # Report only; the full and long suites.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
@@ -1056,16 +1117,16 @@ jobs:
 
   evidence:
     # Which spec rows a test that ran and passed checks. Reads every test shard's results (forge --json-file), the deep
-    # invariant, fork, differential and Certora results of a nightly, release or manual run, the prover results recorded in
+    # invariant, fork, differential and Certora results of a long run, the prover results recorded in
     # contracts/certora/RUNS.md and the Halmos logs in docs/audit/halmos/results/, then:
     # contract_checklist.py --all --check (every contract key, and the TEST rows on no checklist) and trace.py with the
     # run's results (fails on errors; its coverage-gap warnings are listed, not enforced). Each step runs even when an
     # earlier one fails, so the summary shows every list.
     name: evidence (checklists, traceability)
-    # The long jobs run only in nightly, release and manual runs; elsewhere they are skipped at once, so this job waits
+    # The long jobs run only in a long run; elsewhere they are skipped at once, so this job waits
     # for the test shards only, and the rows only a fork, differential or prover run checks read "not run".
     needs: [test, invariant, fork, differential, certora]
-    if: ${{ !cancelled() && !inputs.only }}
+    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
@@ -1133,8 +1194,9 @@ jobs:
 
   coverage:
     name: branch coverage (per-file minimums)
+    # The full and long suites.
     needs: build
-    if: ${{ !inputs.only }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -1179,7 +1241,8 @@ jobs:
 
   fast-security:
     name: security (fast tier)
-    if: ${{ !inputs.only }}
+    # The full and long suites; a contracts pull request is reviewed by hand.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
@@ -1292,48 +1355,61 @@ jobs:
           retention-days: 14
 
   gate:
-    # The one check branch protection requires: it passes only when every job and every leg of each matrix above
-    # passed. A long check is due in a nightly, release or manual run; elsewhere it is skipped by design and listed as
-    # not due. A due long check that did not run (the fork job's `ran` output false: a missing secret, an unpinned
-    # block, every fork test skipped) fails the gate, as a failed one does.
+    # Passes only when every job and every leg of each matrix that is due in this run passed. Due: `changes` and
+    # `scripts` always; `build` when the changes need a forge build; tests, gas and ABIs when they need forge tests;
+    # coverage and the fast security tier in the full and long suites; the long checks in the long suite (Certora only
+    # while CERTORA_ENABLED is `true`); `hotfix-plan` on a pull request labelled `hotfix`. A job that is not due is
+    # skipped by design and listed as not due; a due job that was skipped, failed or was cancelled fails the gate. A
+    # due long check that did not run (the fork job's `ran` output false: a missing secret, an unpinned block, every
+    # fork test skipped) fails the gate, as a failed one does. No branch rule requires this check.
     name: gate
     if: always()
     # traceability and evidence (spec rows) are report only since 2026-11-13 and not required here.
-    needs: [build, plan, test, hotfix-plan, hotfix, gas, abis, invariant, fork, differential, smtchecker, certora, coverage, fast-security]
+    needs: [changes, scripts, build, plan, test, hotfix-plan, hotfix, gas, abis, invariant, fork, differential, smtchecker, certora, coverage, fast-security]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Require every job and shard to pass
-        # This job has no checkout, so contracts/ does not exist here. The hotfix jobs run only on a pull request
-        # labelled `hotfix` (and `hotfix` only when a touched contract has invariants).
+      - name: Require every due job and shard to pass
+        # This job has no checkout, so contracts/ does not exist here.
         working-directory: .
         env:
           RESULTS: ${{ toJSON(needs) }}
-          LONG: ${{ (github.event_name == 'schedule' && vars.NIGHTLY_ENABLED == 'true') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
+          BUILD: ${{ needs.changes.outputs.build == 'true' }}
+          TESTS: ${{ needs.changes.outputs.tests == 'true' && !inputs.only }}
+          FULL: ${{ github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only }}
+          LONG: ${{ github.event_name == 'workflow_dispatch' && inputs.suite == 'long' }}
           HOTFIX: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix') }}
           CERTORA: ${{ vars.CERTORA_ENABLED == 'true' }}
           # A manual run with `only` runs just those long-check targets; every skipped job is not selected.
           ONLY: ${{ inputs.only != '' && inputs.only != null }}
         run: |
-          long='["plan","invariant","fork","differential","smtchecker","certora"]'
-          report=$(echo "$RESULTS" | jq -r --argjson due "$LONG" --argjson long "$long" --argjson certora "$CERTORA" --argjson only "$ONLY" '
+          args=(--argjson build "$BUILD" --argjson tests "$TESTS" --argjson full "$FULL" --argjson longrun "$LONG"
+            --argjson hotfix "$HOTFIX" --argjson certora "$CERTORA" --argjson only "$ONLY"
+            --argjson long '["plan","invariant","fork","differential","smtchecker","certora"]')
+          defs='def due($k):
+              if $k == "changes" or $k == "scripts" then true
+              elif $k == "build" then $build
+              elif $k == "test" or $k == "gas" or $k == "abis" then $tests
+              elif $k == "coverage" or $k == "fast-security" then $full
+              elif $k == "certora" then ($longrun or $only) and $certora
+              elif ($long | index($k)) != null then ($longrun or $only)
+              elif $k == "hotfix-plan" then $hotfix
+              else false end;
+            def notrun($k; $v): $k == "fork" and $v.result == "success" and ($v.outputs.ran // "false") != "true";'
+          report=$(echo "$RESULTS" | jq -r "${args[@]}" "$defs"'
             to_entries[] | .key as $k | .value as $v
             | if $only and $v.result == "skipped" then "\($k): not selected (manual run with only)"
               elif $k == "certora" and ($certora | not) and $v.result == "skipped" then "\($k): paused (repository variable CERTORA_ENABLED is not true)"
-              elif ($long | index($k)) and ($due | not) and $v.result == "skipped" then "\($k): not due (long check; runs nightly, on release tags and by hand)"
-              elif $k == "fork" and $v.result == "success" and ($v.outputs.ran // "false") != "true" then "\($k): NOT RUN (\($v.outputs.reason // "no reason given"))"
+              elif (due($k) | not) and $v.result == "skipped" then "\($k): not due in this run"
+              elif notrun($k; $v) then "\($k): NOT RUN (\($v.outputs.reason // "no reason given"))"
               else "\($k): \($v.result)" end')
           echo "$report"
           { echo '### Gate'; echo '```'; echo "$report"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          bad=$(echo "$RESULTS" | jq -r --argjson due "$LONG" --argjson long "$long" --argjson hotfix "$HOTFIX" --argjson certora "$CERTORA" --argjson only "$ONLY" '
+          bad=$(echo "$RESULTS" | jq -r "${args[@]}" "$defs"'
             [to_entries[] | .key as $k | .value as $v
              | select(
-                 ($v.result != "success"
-                   and ((($v.result == "skipped") and ($long | index($k)) and ($due | not))
-                        or ($only and $v.result == "skipped")
-                        or ($k == "certora" and ($certora | not) and $v.result == "skipped")
-                        or ($k == "hotfix" and $v.result == "skipped")
-                        or ($k == "hotfix-plan" and ($hotfix | not) and $v.result == "skipped")) == false)
-                 or ($k == "fork" and $v.result == "success" and ($v.outputs.ran // "false") != "true"))
+                 ($v.result == "failure" or $v.result == "cancelled")
+                 or ($v.result == "skipped" and due($k) and ($only | not))
+                 or notrun($k; $v))
              | $k] | join(", ")')
           if [ -n "$bad" ]; then echo "not passed: $bad"; exit 1; fi

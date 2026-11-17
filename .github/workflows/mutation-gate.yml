@@ -1,8 +1,8 @@
 name: mutation-gate
 
-# Mutation gates every night on main (06:00 UTC) and on every release tag (`v*`) over each layer's contracts
-# (security/mutation-layers.json). By hand (workflow_dispatch): one layer or all six, optionally only some contracts
-# and tools. Pull requests run contracts.yml only. `plan` lists the targets with script/ci-shards.py, so a new contract
+# Mutation gates over each layer's contracts (security/mutation-layers.json), by hand only (workflow_dispatch; no
+# schedule and no tag trigger since 2026-11-17): one layer or all six, optionally
+# only some contracts and tools. Pull requests run contracts.yml only. `plan` lists the targets with script/ci-shards.py, so a new contract
 # or test file gets its own job on the next run; every job then runs in at most 4 hours:
 # - mutants: lists slither-mutate's mutants of every target once (script/mutation-slither.py list: one Slither run
 #   over the project) and splits each contract into shards of at most 40 mutants;
@@ -14,10 +14,9 @@ name: mutation-gate
 #   warning and runs nothing.
 # Every mutant builds in the `mutation` profile of foundry.toml (no optimizer, no via-IR outside the files that need
 # it) and compiles only src/ and its own tests. A timed-out mutant is its own outcome, never counted as killed.
-# Nightly runs test only what changed: script/mutation-ledger.py keys every target by its file, its tests and
-# everything they import, and the `ledger` job keeps the passed reports per key (Actions cache mutation-ledger-*);
-# a target whose key has a passed report of every job is skipped. Release tags and runs by hand test everything
-# (by hand, `changed_only` gives the nightly behaviour).
+# With `changed_only`, a run tests only what changed: script/mutation-ledger.py keys every target by its file, its
+# tests and everything they import, and the `ledger` job keeps the passed reports per key (Actions cache
+# mutation-ledger-*); a target whose key has a passed report of every job is skipped. Without it, everything runs.
 # `mutation-summary` passes only when every job passed.
 # Tool versions are pinned: Foundry by contracts/.foundry-version, Node by .nvmrc, every action by commit SHA (the
 # release tag in the trailing comment), dependencies by soldeer.lock, Python tools (Slither, Halmos, Semgrep, ...)
@@ -27,11 +26,6 @@ name: mutation-gate
 # pinned certora-cli wheel.
 
 on:
-  schedule:
-    # Nightly at 06:00 UTC on main (GitHub runs a schedule on the default branch only).
-    - cron: "0 6 * * *"
-  push:
-    tags: ["v*"]
   workflow_dispatch:
     inputs:
       layer:
@@ -51,7 +45,7 @@ on:
         type: string
         default: "mutate gambit necessist certora-mutate"
       changed_only:
-        description: "Only targets changed since their last passed report (as the nightly run)"
+        description: "Only targets changed since their last passed report"
         required: false
         type: boolean
         default: false
@@ -70,7 +64,7 @@ env:
   LAYERS: ${{ (inputs.layer != '' && inputs.layer != 'all') && inputs.layer || '' }}
   CONTRACTS: ${{ inputs.contracts || '' }}
   TOOLS: ${{ inputs.tools || 'mutate gambit necessist certora-mutate' }}
-  CHANGED_ONLY: ${{ (github.event_name == 'schedule' || inputs.changed_only) && 'true' || 'false' }}
+  CHANGED_ONLY: ${{ inputs.changed_only && 'true' || 'false' }}
 
 defaults:
   run:
@@ -79,8 +73,6 @@ defaults:
 jobs:
   plan:
     name: plan the jobs
-    # Nightly runs only when the repository variable NIGHTLY_ENABLED is true (paused until the final slow run).
-    if: github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -211,8 +203,6 @@ jobs:
 
   build:
     name: dependency builds
-    # Nightly runs only when the repository variable NIGHTLY_ENABLED is true (paused until the final slow run).
-    if: github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true'
     # The mutation jobs' isolated copies link these outputs, which the test fixtures deploy from (vm.getCode and
     # deployCode of out-aave/, out-univ3/, out-univ3-periphery/, out-slipstream-v1/, out-slipstream-main/,
     # out-aerodrome/, out-univ4/, out-permit2/); the same builds as contracts.yml.
@@ -763,7 +753,7 @@ jobs:
   ledger:
     name: ledger of passed reports
     # Adds this run's passed reports to the ledger (script/mutation-ledger.py merge), keyed by each target's key, and
-    # keeps it as the next mutation-ledger-* cache, so the next nightly run skips what did not change. Runs after
+    # keeps it as the next mutation-ledger-* cache, so the next `changed_only` run skips what did not change. Runs after
     # every job, whatever their results: only reports with a `done` file (written when the job's tool step passed)
     # are kept.
     if: always() && needs.plan.result == 'success'
@@ -808,7 +798,7 @@ jobs:
     # by its `if` (the selected layers, contracts or tools hold no such target, or every target is current in the
     # ledger); with the plan and the build passed, skipped can mean nothing else.
     name: mutation-summary
-    if: always() && (github.event_name != 'schedule' || vars.NIGHTLY_ENABLED == 'true')
+    if: always()
     needs: [plan, build, mutants, mutate-1, mutate-2, mutate-3, gambit, necessist, certora-mutate, ledger]
     runs-on: ubuntu-24.04
     timeout-minutes: 5

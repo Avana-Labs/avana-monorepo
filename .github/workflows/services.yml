@@ -2,7 +2,7 @@ name: services
 
 # The off-chain TypeScript packages: services/common, services/indexer, services/keeper, services/monitor, services/faucet, packages/protocol (the ABIs
 # and ABI hash the services are built against), packages/export (the export client) and packages/rpc (the RPC manager). They form one npm workspace whose root is the repository's
-# package.json, with one package-lock.json beside it. Every pull request and push to main that changes one of them, the
+# package.json, with one package-lock.json beside it. Every pull request (a push to main does not rerun it) that changes one of them, the
 # workspace manifests, deployments/ or this file runs one job per package: refuse an `@avana/` dependency that would come from the
 # public registry, install the whole workspace with npm ci from the lock file (lifecycle scripts never run), then Ponder
 # codegen where the package defines it (the indexer), the package's typecheck script (tsc --noEmit) and its test
@@ -15,19 +15,6 @@ name: services
 
 on:
   pull_request:
-    paths:
-      - "services/**"
-      - "packages/protocol/**"
-      - "packages/export/**"
-      - "packages/rpc/**"
-      - "deployments/**"
-      - "package.json"
-      - "package-lock.json"
-      - ".nvmrc"
-      - ".github/workflows/services.yml"
-      - ".dockerignore"
-  push:
-    branches: [main]
     paths:
       - "services/**"
       - "packages/protocol/**"
