@@ -18,11 +18,7 @@
 # stops at the first action that needs an earlier one) and writes nothing under the network's outputs: a simulated
 # deploy goes to deployments-local/<network>-dry-run/. With --broadcast the transaction is sent.
 #
-# Signing: each role signs from its own encrypted Foundry keystore (`cast wallet import <name> --interactive`), never a
-# raw key: DRILL_ACCOUNT_<ROLE> names it (default gas-drill-<role>, roles deployer, treasury, timelock, guardian,
-# signer), and DRILL_PASSWORD_FILE, a file outside the repository, holds its password (forge prompts without it).
-# DRILL_DEPLOYER, DRILL_TREASURY, DRILL_TIMELOCK, DRILL_GUARDIAN and DRILL_SIGNER are the five addresses
-# (`cast wallet address --account <name>`); they must differ. RPC: RPC_SEPOLIA or RPC_BASE_SEPOLIA (contracts/.env).
+# Signing: each role signs from its own encrypted Foundry keystore held outside the repository, never a raw key.
 # On anvil every role is an unlocked account (anvil --auto-impersonate) and RPC_ANVIL is the node.
 
 set -euo pipefail
