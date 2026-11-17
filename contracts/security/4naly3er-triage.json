@@ -789,15 +789,6 @@
       "review": "Reviewed per call site, group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if."
     },
     {
-      "fingerprint": "3198db416f389b3e",
-      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/policy/risk-module/RiskModuleBreakerLogic.sol",
-      "function": "RiskModuleBreakerLogic._tripped",
-      "reason": "uint64(until): until = lastBreach + gateRecoverySeconds with lastBreach a uint64 timestamp and gateRecoverySeconds at most 7,200 (GATE_RECOVERY_MAX, the ParameterStore bound), so it fits 64 bits for any reachable block time (SPEC-BRK-007). Covered by TEST-228 (poolShareGateRecovers). forge-lint unsafe-typecast suppression on the line above with the bound.",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if."
-    },
-    {
       "fingerprint": "278f069456f00b59",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
       "file": "src/policy/risk-module/RiskModulePledgeLogic.sol",
