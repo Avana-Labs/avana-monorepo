@@ -1,10 +1,10 @@
-# Reference pages
+# Address book
 
-`addresses.md`, `parameters.md` and `access-controls.md` are the source of the website's developer reference pages (Contract Addresses, Market Parameters and Access Control, under /developers/reference/). The website reads them from this folder on GitHub. They are generated: do not edit them by hand.
+`addresses.md`, `parameters.md` and `access-controls.md` are the address book: the source of the website's developer pages Contract Addresses, Market Parameters and Access Control (under /developers/reference/). The website reads them from this folder on GitHub. They are generated: do not edit them by hand.
 
 ## How they are made
 
-`contracts/script/reference/reference.ts` writes one network's section of all three files from that network's deployment folder:
+`contracts/script/address-book/address-book.ts` writes one network's section of all three files from that network's deployment folder:
 
 - `manifest.json`: every Avana, Aave, AMM, token and feed address, the market IDs, vault tokens and LPOracles, and the role holders and timelock settings;
 - `world.json`: pool addresses, Uniswap v4 PoolIds and their v3 reference pools;
@@ -12,12 +12,12 @@
 - `operation-listing-activate.json`: the timelock's short delay;
 - `listing-oracles.json`: a fixed price source the listing deployed, if any.
 
-The other networks' sections stay as they are. The text around the sections (the intro and each page's "All networks" part) comes from `contracts/script/reference/templates/`.
+The other networks' sections stay as they are. The text around the sections (the intro and each page's "All networks" part) comes from `contracts/script/address-book/templates/`.
 
 After a deployment, from the repo root:
 
 ```sh
-node contracts/script/reference/reference.ts --network <id> --deployment <folder>
+node contracts/script/address-book/address-book.ts --network <id> --deployment <folder>
 ```
 
 | `--network` | Chain ID | Section |
@@ -27,11 +27,11 @@ node contracts/script/reference/reference.ts --network <id> --deployment <folder
 | `ethereum`, `base` | 1, 8453 | Ethereum, Base |
 | `local-ethereum`, `local-base` | 31337, 31338 | the local stack's development chains (`contracts/deployments-local/<ethereum\|base>`) |
 
-Options: `--out <dir>` (default `docs/reference`), `--date YYYY-MM-DD` (the pages' `updated`, default today), `--config <file>` (another config than the last release's), `--allow-rehearsal`.
+Options: `--out <dir>` (default `address-book`), `--date YYYY-MM-DD` (the pages' `updated`, default today), `--config <file>` (another config than the last release's), `--allow-rehearsal`.
 
 The script writes nothing and lists every problem when the folder holds a rehearsal's outputs (`.rehearsal`), when the manifest's chain ID or network is not the one named, when the manifest fails its schema, when a value the pages show is missing or still a placeholder, or when the manifest's role holders differ from the pages' wording. A row a network legitimately lacks is written as such: the AvanaGasVault shows "Not deployed on this network", a chain without a sequencer feed has no feed row, and the local chains, which list swap routes without a depth threshold, show `routeDepthThreshold` as not set. A role holder counts as a Safe only when the manifest records its address in `external` with the group `safe`.
 
-Tests: `node --test script/reference/reference.test.ts` (from `contracts/`), on the fixture deployment in `contracts/script/reference/fixtures/`.
+Tests: `node --test script/address-book/address-book.test.ts` (from `contracts/`), on the fixture deployment in `contracts/script/address-book/fixtures/`.
 
 ## Format
 

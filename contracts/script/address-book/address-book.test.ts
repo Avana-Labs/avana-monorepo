@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The reference-page generator on a small fixture deployment (fixtures/ethereum-sepolia/: one Hub, a Uniswap v3 and a
+// The address book generator on a small fixture deployment (fixtures/ethereum-sepolia/: one Hub, a Uniswap v3 and a
 // Uniswap v4 Stable Spoke with one market each, made-up addresses): the three sections it writes, the refusals
 // (rehearsal, other chain, placeholder, missing value), the rows a deployment legitimately lacks, and that rerunning
 // one network keeps the others.
-// Run: node --test script/reference/reference.test.ts (from contracts/)
+// Run: node --test script/address-book/address-book.test.ts (from contracts/)
 
 import assert from "node:assert/strict";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -13,7 +13,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { isPlaceholder } from "./model.ts";
-import { assemble, generate, parseArgs, readSections } from "./reference.ts";
+import { assemble, generate, parseArgs, readSections } from "./address-book.ts";
 import { cell, pct, seconds } from "./render.ts";
 
 const FIXTURE = join(dirname(fileURLToPath(import.meta.url)), "fixtures", "ethereum-sepolia");
@@ -21,7 +21,7 @@ const DATE = "2026-11-17";
 
 /** A writable copy of the fixture and an empty output folder; `edit` changes one JSON file of the copy. */
 function workspace() {
-  const root = mkdtempSync(join(tmpdir(), "reference-"));
+  const root = mkdtempSync(join(tmpdir(), "address-book-"));
   const dep = join(root, "deployment");
   cpSync(FIXTURE, dep, { recursive: true });
   const out = join(root, "out");
