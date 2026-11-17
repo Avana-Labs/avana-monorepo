@@ -3,11 +3,11 @@
 // Run: node --test script/testnet/verify.test.ts (from contracts/)
 
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { cloneImplementation, deployedContracts, indexArtifacts, isCreate3Helper, matchArtifact, profileOuts, proxyRequest, verifyCommand, verifyRelease } from "./verify.ts";
+import { ARGS_ON_COMMAND_LINE, cloneImplementation, compilationProfileOf, compilerProfiles, deployedContracts, indexArtifacts, isCreate3Helper, matchArtifact, profileOuts, proxyRequest, sourceRequest, verifyCommand, verifyRelease } from "./verify.ts";
 
 // Real creation codes are far longer than the index key (64 bytes); each fixture body is 100 bytes.
 const meta = (n: number) => `${n.toString(16).padStart(2, "0")}`.repeat(100);
@@ -75,6 +75,58 @@ test("profiles map to their out directories; other tables are not profiles", () 
   assert.deepEqual(profileOuts('[profile.default]\nout = "out"\n[profile.univ3]\nout = "out-univ3"\n[etherscan]\nout = "x"\n'), { default: "out", univ3: "out-univ3" });
 });
 
+// The default profile's extra compiler profiles span several lines; univ3 empties them, chainlink inherits them, and
+// aave declares its own on one line.
+const TOML = `[profile.default]
+out = "out"
+optimizer_runs = 10_000
+via_ir = false
+additional_compiler_profiles = [
+  { name = "collateralization", optimizer = true, via_ir = true, optimizer_runs = 200 },
+  { name = "lporacle", optimizer = true, via_ir = false, optimizer_runs = 200 },
+]
+
+[profile.aave]
+out = "out-aave"
+optimizer_runs = 44_444_444
+additional_compiler_profiles = [{ name = "hub", via_ir = true, optimizer_runs = 22_300 }, { name = "spoke", via_ir = true, optimizer_runs = 750 }]
+
+[profile.univ3]
+optimizer_runs = 800
+additional_compiler_profiles = []
+
+[profile.chainlink]
+optimizer_runs = 1_000_000
+
+[etherscan]
+optimizer_runs = 1
+`;
+
+test("each profile's compiler profiles: its own, or the default profile's when it names none", () => {
+  const c = compilerProfiles(TOML);
+  assert.deepEqual(Object.keys(c).sort(), ["aave", "chainlink", "default", "univ3"]);
+  assert.deepEqual(c.default!.base, { name: "default", runs: 10_000, viaIR: false });
+  assert.deepEqual(c.default!.additional.map((x) => [x.name, x.runs, x.viaIR]), [["collateralization", 200, true], ["lporacle", 200, false]]);
+  assert.deepEqual(c.aave!.base, { name: "default", runs: 44_444_444, viaIR: false });
+  assert.deepEqual(c.aave!.additional.map((x) => x.name), ["hub", "spoke"]);
+  assert.deepEqual(c.univ3!.additional, []);
+  assert.deepEqual(c.chainlink!.base, { name: "default", runs: 1_000_000, viaIR: false });
+  assert.deepEqual(c.chainlink!.additional.map((x) => x.name), ["collateralization", "lporacle"]);
+});
+
+test("an artifact's compiler profile is the one whose settings built it, the base settings first", () => {
+  const c = compilerProfiles(TOML);
+  const at = (runs: number, viaIR: boolean) => ({ optimizer: { enabled: true, runs }, viaIR });
+  assert.equal(compilationProfileOf(at(10_000, false), c.default!), "default");
+  assert.equal(compilationProfileOf(at(200, true), c.default!), "collateralization");
+  assert.equal(compilationProfileOf(at(200, false), c.default!), "lporacle");
+  assert.equal(compilationProfileOf(at(22_300, true), c.aave!), "hub");
+  assert.equal(compilationProfileOf(at(750, true), c.aave!), "spoke");
+  // Profiles that inherit extra compiler profiles but build everything with their base settings.
+  assert.equal(compilationProfileOf(at(1_000_000, false), c.chainlink!), "default");
+  assert.equal(compilationProfileOf(at(800, false), c.univ3!), "default");
+});
+
 test("every contract a release created is read: forge creations, contracts created inside a call, and created.json", () => {
   const f = fixture();
   const d = deployedContracts(f.broadcast, 11_155_111, join(f.out, "created.json"));
@@ -100,14 +152,49 @@ test("the forge verify-contract command carries the profile, compiler settings, 
   const index = indexArtifacts(f.root, { default: "out", aave: "out-aave" });
   assert.deepEqual(verifyCommand(matchArtifact(index, `0x${A}${ARG}`)!, "0xa1", 11_155_111), {
     profile: "default",
-    args: ["verify-contract", "0xa1", "src/A.sol:A", "--chain", "11155111", "--compiler-version", "v0.8.28+commit.7893614a", "--num-of-optimizations", "10000", "--evm-version", "cancun", "--constructor-args", `0x${ARG}`, "--watch"],
+    args: ["verify-contract", "0xa1", "src/A.sol:A", "--chain", "11155111", "--compiler-version", "v0.8.28+commit.7893614a", "--num-of-optimizations", "10000", "--evm-version", "cancun", "--constructor-args", `0x${ARG}`, "--watch", "--retries", "20", "--delay", "15"],
   });
   assert.deepEqual(verifyCommand(matchArtifact(index, `0x${L.replace(PLACEHOLDER, LIB)}`)!, "0xb2", 84_532), {
     profile: "aave",
     args: [
       "verify-contract", "0xb2", "dependencies/aave/L.sol:L", "--chain", "84532", "--compiler-version", "v0.8.28+commit.7893614a", "--num-of-optimizations", "22300",
-      "--via-ir", "--evm-version", "cancun", "--libraries", `dependencies/aave/Lib.sol:Lib:0x${LIB}`, "--watch",
+      "--via-ir", "--evm-version", "cancun", "--libraries", `dependencies/aave/Lib.sol:Lib:0x${LIB}`, "--watch", "--retries", "20", "--delay", "15",
     ],
+  });
+});
+
+test("with the profiles' settings known, the command names the compiler profile that built the contract", () => {
+  const f = fixture();
+  const index = indexArtifacts(f.root, { default: "out", aave: "out-aave" }, compilerProfiles(TOML));
+  const a = verifyCommand(matchArtifact(index, `0x${A}${ARG}`)!, "0xa1", 11_155_111).args;
+  assert.deepEqual(a.slice(a.indexOf("--compilation-profile"), a.indexOf("--compilation-profile") + 2), ["--compilation-profile", "default"]);
+  const l = verifyCommand(matchArtifact(index, `0x${L.replace(PLACEHOLDER, LIB)}`)!, "0xb2", 84_532).args;
+  assert.deepEqual(l.slice(l.indexOf("--compilation-profile"), l.indexOf("--compilation-profile") + 2), ["--compilation-profile", "hub"]);
+});
+
+test("constructor arguments too long for a command line go to the explorer with forge's standard JSON input", () => {
+  const f = fixture();
+  const index = indexArtifacts(f.root, { default: "out", aave: "out-aave" });
+  // The Aave V4 instance batches take a Spoke's creation code: about 50,000 hex characters, over Windows' 32,767.
+  const long = "ab".repeat(25_000);
+  assert.ok(long.length > ARGS_ON_COMMAND_LINE);
+  const c = verifyCommand(matchArtifact(index, `0x${A}${long}`)!, "0xa1", 84_532);
+  assert.equal(c.constructorArgs, long);
+  assert.equal(c.args.at(-1), "--show-standard-json-input");
+  assert.ok(!c.args.includes("--constructor-args") && !c.args.includes("--watch"));
+  assert.ok(c.args.join(" ").length < ARGS_ON_COMMAND_LINE);
+  assert.equal(verifyCommand(matchArtifact(index, `0x${A}${ARG}`)!, "0xa1", 84_532).constructorArgs, undefined);
+  assert.deepEqual(sourceRequest(84_532, "0xa1", "src/A.sol:A", "v0.8.28+commit.7893614a", long), {
+    url: "https://api.etherscan.io/v2/api?chainid=84532",
+    form: {
+      module: "contract",
+      action: "verifysourcecode",
+      codeformat: "solidity-standard-json-input",
+      contractaddress: "0xa1",
+      contractname: "src/A.sol:A",
+      compilerversion: "v0.8.28+commit.7893614a",
+      constructorArguements: long,
+    },
   });
 });
 
@@ -132,6 +219,7 @@ test("a dry run prints each command with the key redacted, and a contract alread
   assert.equal(commands.length, 3, "a1, b2 and f6; d4 is verified already and c3 matches no build output");
   assert.ok(commands.every((l) => l.includes("ETHERSCAN_API_KEY=<redacted>") && !l.includes("secret-key-value")));
   assert.ok(commands.some((l) => l.startsWith("  FOUNDRY_PROFILE=aave ") && l.includes("--via-ir")));
+  assert.ok(commands.every((l) => l.includes("--compilation-profile default")), "the fixture's profiles have no extra compiler profiles");
   // The clone is verified as a proxy of A, with the key redacted; the CREATE3 helper is skipped as one.
   const proxies = lines.filter((l) => l.includes("verifyproxycontract"));
   assert.equal(proxies.length, 1);
@@ -140,4 +228,40 @@ test("a dry run prints each command with the key redacted, and a contract alread
   assert.ok(!lines.some((l) => l.includes("secret-key-value")));
   assert.equal(r.skipped, 3);
   assert.equal(r.failed.length, 0);
+});
+
+test("a clone the explorer already links to its implementation counts as verified; one linked elsewhere fails", async () => {
+  const IMPL = "0x00000000000000000000000000000000000000a1";
+  const run = async (recorded: string) => {
+    const f = fixture();
+    // Every contract verified already: only the clone's proxy request runs, against an explorer stand-in.
+    const done = Object.fromEntries(["a1", "b2", "d4", "f6"].map((a) => [`0x${"00".repeat(19)}${a}`, "x"]));
+    writeFileSync(join(f.out, "verified.json"), JSON.stringify(done));
+    const calls: string[] = [];
+    const real = globalThis.fetch;
+    globalThis.fetch = (async (url: string, init?: { body?: URLSearchParams }) => {
+      const action = init?.body?.get("action") ?? new URL(url).searchParams.get("action");
+      calls.push(action!);
+      const body =
+        action === "verifyproxycontract" ? { status: "1", result: "guid" }
+        : action === "checkproxyverification" ? { status: "0", result: "A corresponding implementation contract was unfortunately not detected for the proxy address." }
+        : { status: "1", result: [{ Proxy: "2", Implementation: recorded }] };
+      return { json: async () => body };
+    }) as unknown as typeof fetch;
+    process.env.ETHERSCAN_API_KEY = "k";
+    try {
+      const r = await verifyRelease({ contracts: f.root, outDir: f.out, broadcastRoot: f.broadcast, chainId: 11_155_111, dryRun: false, say: () => {}, pollMs: 0 });
+      return { r, calls, ledger: JSON.parse(readFileSync(join(f.out, "verified.json"), "utf8")) as Record<string, string> };
+    } finally {
+      globalThis.fetch = real;
+      delete process.env.ETHERSCAN_API_KEY;
+    }
+  };
+  const linked = await run(IMPL.toUpperCase().replace("0X", "0x"));
+  assert.deepEqual(linked.calls, ["verifyproxycontract", "checkproxyverification", "getsourcecode"]);
+  assert.equal(linked.r.failed.length, 0);
+  assert.equal(linked.ledger["proxy:0x0000000000000000000000000000000000000c10"], IMPL);
+  const elsewhere = await run(`0x${"00".repeat(19)}b2`);
+  assert.equal(elsewhere.r.failed.length, 1);
+  assert.match(elsewhere.r.failed[0]!, /not detected/);
 });

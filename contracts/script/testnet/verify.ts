@@ -12,7 +12,9 @@
 // both contain. The match gives the source and contract name, the compiler profile that built it (its out directory),
 // the compiler version, optimizer runs, IR pipeline and EVM version from the artifact's metadata, the linked libraries
 // and the constructor arguments (the rest of the init code). One `forge verify-contract` runs per contract, under
-// FOUNDRY_PROFILE=<that profile>, the explorer key only in the environment (ETHERSCAN_API_KEY, never an argument).
+// FOUNDRY_PROFILE=<that profile> and with --compilation-profile naming the compiler profile within it whose settings
+// built the artifact (forge cannot tell it from a missing cache, nor from one that records the contract under several),
+// the explorer key only in the environment (ETHERSCAN_API_KEY, never an argument).
 // A contract recorded in verified.json, or that the explorer reports verified already, is skipped, so a rerun only
 // retries what is left. Init code that matches no artifact (data contracts, proxies of a factory outside the build) is
 // listed as skipped.
@@ -37,6 +39,9 @@ export interface Artifact {
   readonly optimizer: { readonly enabled: boolean; readonly runs?: number };
   readonly viaIR: boolean;
   readonly evmVersion?: string;
+  /** The compiler profile within `profile` that built it (`--compilation-profile`); set when the index knows the
+   * profiles' settings. */
+  readonly compilationProfile?: string;
 }
 export interface Match {
   readonly artifact: Artifact;
@@ -68,6 +73,62 @@ export function profileOuts(foundryToml: string): Record<string, string> {
   return outs;
 }
 
+/** A compiler profile of a Foundry profile: the base settings (`default`) or one of `additional_compiler_profiles`. */
+export interface CompilerProfile {
+  readonly name: string;
+  readonly runs?: number;
+  readonly viaIR?: boolean;
+}
+/** Each Foundry profile's base settings and additional compiler profiles, those it leaves out taken from the default
+ * profile's, as Foundry inherits them. */
+export function compilerProfiles(foundryToml: string): Record<string, { readonly base: CompilerProfile; readonly additional: CompilerProfile[] }> {
+  const own: Record<string, { runs?: number; viaIR?: boolean; additional?: CompilerProfile[] }> = { default: {} };
+  const num = (s: string) => Number(s.replace(/_/g, ""));
+  const lines = foundryToml.split(/\r?\n/);
+  let profile: string | undefined;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    const h = /^\[profile\.([A-Za-z0-9_-]+)\]\s*$/.exec(line);
+    if (h) {
+      profile = h[1]!;
+      own[profile] ??= {};
+      continue;
+    }
+    if (/^\[/.test(line)) profile = undefined;
+    if (!profile) continue;
+    const p = own[profile]!;
+    const runs = /^optimizer_runs\s*=\s*([0-9_]+)/.exec(line);
+    if (runs) p.runs = num(runs[1]!);
+    const ir = /^via_ir\s*=\s*(true|false)/.exec(line);
+    if (ir) p.viaIR = ir[1] === "true";
+    if (/^additional_compiler_profiles\s*=/.test(line)) {
+      let text = line;
+      while (!/\]\s*(#.*)?$/.test(text.replace(/\{[^}]*\}/g, "")) && i + 1 < lines.length) text += `\n${lines[++i]}`;
+      p.additional = [...text.matchAll(/\{([^}]*)\}/g)].map(([, t]) => {
+        const r = /optimizer_runs\s*=\s*([0-9_]+)/.exec(t!);
+        const v = /via_ir\s*=\s*(true|false)/.exec(t!);
+        return { name: /name\s*=\s*"([^"]+)"/.exec(t!)![1]!, runs: r ? num(r[1]!) : undefined, viaIR: v ? v[1] === "true" : undefined };
+      });
+    }
+  }
+  const d = own.default!;
+  return Object.fromEntries(
+    Object.entries(own).map(([name, p]) => [
+      name,
+      { base: { name: "default", runs: p.runs ?? d.runs, viaIR: p.viaIR ?? d.viaIR ?? false }, additional: p.additional ?? d.additional ?? [] },
+    ]),
+  );
+}
+
+/** The compiler profile that built `a`, for `forge verify-contract --compilation-profile`: the base settings when they
+ * are the artifact's, else the first additional profile whose settings are. Forge otherwise reads it from the profile's
+ * cache, and fails when the cache is missing or records the contract under several compiler profiles. */
+export function compilationProfileOf(a: Pick<Artifact, "optimizer" | "viaIR">, p: { base: CompilerProfile; additional: CompilerProfile[] }): string {
+  const fits = (c: CompilerProfile) => (c.viaIR === undefined || c.viaIR === a.viaIR) && (c.runs === undefined || c.runs === a.optimizer.runs);
+  if (fits(p.base)) return "default";
+  return p.additional.find(fits)?.name ?? "default";
+}
+
 function readArtifact(profile: string, file: string, contracts: string): Artifact | undefined {
   const j = JSON.parse(readFileSync(file, "utf8")) as Record<string, any>;
   const creation = strip(j.bytecode?.object ?? "");
@@ -93,8 +154,9 @@ function readArtifact(profile: string, file: string, contracts: string): Artifac
   };
 }
 
-/** Every artifact of every profile's out directory, indexed by the start of its creation code. */
-export function indexArtifacts(contracts: string, outs: Record<string, string>): Map<string, Artifact[]> {
+/** Every artifact of every profile's out directory, indexed by the start of its creation code; with `compilers`, each
+ * names the compiler profile that built it. */
+export function indexArtifacts(contracts: string, outs: Record<string, string>, compilers?: ReturnType<typeof compilerProfiles>): Map<string, Artifact[]> {
   const index = new Map<string, Artifact[]>();
   for (const [profile, out] of Object.entries(outs)) {
     const dir = join(contracts, out);
@@ -105,8 +167,9 @@ export function indexArtifacts(contracts: string, outs: Record<string, string>):
       const d = join(dir, sub);
       if (!statSync(d).isDirectory()) continue;
       for (const f of readdirSync(d).filter((x) => x.endsWith(".json"))) {
-        const a = readArtifact(profile, join(d, f), contracts);
-        if (!a) continue;
+        const read = readArtifact(profile, join(d, f), contracts);
+        if (!read) continue;
+        const a = compilers?.[profile] ? { ...read, compilationProfile: compilationProfileOf(read, compilers[profile]) } : read;
         const key = a.links.some((l) => l.at < KEY) ? EARLY_LINK : a.creation.slice(0, KEY);
         index.set(key, [...(index.get(key) ?? []), a]);
       }
@@ -168,16 +231,29 @@ export function deployedContracts(broadcastRoot: string, chainId: number, create
   return [...out.values()];
 }
 
-/** The `forge verify-contract` invocation of one match: its arguments and the profile it runs under. */
-export function verifyCommand(m: Match, address: string, chainId: number): { profile: string; args: string[] } {
+/** The longest constructor arguments (hex characters) passed to forge on its command line. Windows refuses a command
+ * line over 32,767 characters, and the Aave V4 instance batches take a Spoke's or Hub's creation code (about 50,000):
+ * longer arguments go to the explorer's API with the standard JSON input forge prints instead. */
+export const ARGS_ON_COMMAND_LINE = 16_000;
+/** How long forge checks a submitted verification: the explorer's queue can hold one for minutes, and forge's default
+ * (5 checks, 5 seconds apart) gave up on contracts the explorer verified later. */
+const WAIT = ["--retries", "20", "--delay", "15"];
+
+/** The `forge verify-contract` invocation of one match: its arguments and the profile it runs under. With constructor
+ * arguments too long for a command line, forge prints the standard JSON input (`--show-standard-json-input`) and the
+ * arguments are returned for the explorer request (sourceRequest). */
+export function verifyCommand(m: Match, address: string, chainId: number): { profile: string; args: string[]; constructorArgs?: string } {
   const a = m.artifact;
+  const inline = m.args.length <= ARGS_ON_COMMAND_LINE;
   const args = ["verify-contract", address, `${a.source}:${a.name}`, "--chain", String(chainId), "--compiler-version", a.compiler];
   if (a.optimizer.enabled && a.optimizer.runs !== undefined) args.push("--num-of-optimizations", String(a.optimizer.runs));
   if (a.viaIR) args.push("--via-ir");
   if (a.evmVersion) args.push("--evm-version", a.evmVersion);
-  if (m.args) args.push("--constructor-args", `0x${m.args}`);
+  if (a.compilationProfile) args.push("--compilation-profile", a.compilationProfile);
+  if (m.args && inline) args.push("--constructor-args", `0x${m.args}`);
   for (const l of m.libraries) args.push("--libraries", `${l.source}:${l.name}:${l.address}`);
-  args.push("--watch");
+  if (!inline) return { profile: a.profile, args: [...args, "--show-standard-json-input"], constructorArgs: m.args };
+  args.push("--watch", ...WAIT);
   return { profile: a.profile, args };
 }
 
@@ -188,6 +264,8 @@ export interface VerifyOptions {
   readonly chainId: number;
   readonly dryRun: boolean;
   readonly say: (s: string) => void;
+  /** Milliseconds between checks of a submitted verification (5 seconds). */
+  readonly pollMs?: number;
 }
 
 /** The implementation an EIP-1167 minimal proxy (a clone: Slipstream's pools and gauges, for example) delegates to. */
@@ -210,20 +288,56 @@ export function proxyRequest(chainId: number, address: string, implementation?: 
   };
 }
 
-async function submitProxy(chainId: number, address: string, implementation: string | undefined): Promise<string | undefined> {
+/** The explorer's source verification request (Etherscan v2) for a standard JSON input, sent with the input as
+ * `sourceCode`: the contract, its compiler and its constructor arguments. */
+export function sourceRequest(chainId: number, address: string, contract: string, compiler: string, constructorArgs: string): { url: string; form: Record<string, string> } {
+  return {
+    url: `https://api.etherscan.io/v2/api?chainid=${chainId}`,
+    form: {
+      module: "contract",
+      action: "verifysourcecode",
+      codeformat: "solidity-standard-json-input",
+      contractaddress: address,
+      contractname: contract,
+      compilerversion: compiler,
+      // The explorer's own spelling.
+      constructorArguements: constructorArgs,
+    },
+  };
+}
+
+/** Submits `form` and waits for the explorer's verdict through `check`: undefined once verified, else its message. */
+async function submit(url: string, form: Record<string, string>, check: string, pollMs: number): Promise<string | undefined> {
   const key = process.env.ETHERSCAN_API_KEY!;
-  const { url, form } = proxyRequest(chainId, address, implementation);
   const post = await fetch(url, { method: "POST", body: new URLSearchParams({ ...form, apikey: key }) });
   const sent = (await post.json()) as { status: string; result: string };
-  if (sent.status !== "1") return sent.result;
-  for (let i = 0; i < 20; i++) {
-    await new Promise((r) => setTimeout(r, 5_000));
-    const check = await fetch(`${url}&module=contract&action=checkproxyverification&guid=${encodeURIComponent(sent.result)}&apikey=${key}`);
-    const c = (await check.json()) as { status: string; result: string };
-    if (c.status === "1") return undefined;
-    if (!/pending|in queue/i.test(c.result)) return c.result;
+  if (sent.status !== "1") return /already verified/i.test(sent.result) ? undefined : sent.result;
+  for (let i = 0; i < 60; i++) {
+    await new Promise((r) => setTimeout(r, pollMs));
+    const res = await fetch(`${url}&module=contract&action=${check}&guid=${encodeURIComponent(sent.result)}&apikey=${key}`);
+    const c = (await res.json()) as { status: string; result: string };
+    if (c.status === "1" || /already verified/i.test(c.result)) return undefined;
+    if (!/pending|in queue|rate limit/i.test(c.result)) return c.result;
   }
   return "the explorer did not answer in time";
+}
+
+/** The implementation the explorer records for `address` as a proxy, if it records one. */
+async function recordedImplementation(chainId: number, address: string): Promise<string | undefined> {
+  const res = await fetch(`https://api.etherscan.io/v2/api?chainid=${chainId}&module=contract&action=getsourcecode&address=${address}&apikey=${process.env.ETHERSCAN_API_KEY!}`);
+  const r = (await res.json()) as { status: string; result: { Proxy?: string; Implementation?: string }[] | string };
+  const c = Array.isArray(r.result) ? r.result[0] : undefined;
+  return c && c.Proxy !== "0" && c.Implementation ? c.Implementation : undefined;
+}
+
+/** Marks a proxy as one on the explorer. A clone the explorer has linked to its implementation by itself (Slipstream's
+ * pools and gauges) is refused with "implementation … not detected"; it counts as verified when the explorer's record
+ * names the expected implementation. */
+async function submitProxy(chainId: number, address: string, implementation: string | undefined, pollMs: number): Promise<string | undefined> {
+  const { url, form } = proxyRequest(chainId, address, implementation);
+  const err = await submit(url, form, "checkproxyverification", pollMs);
+  if (!err || !implementation || !/not detected/i.test(err)) return err;
+  return (await recordedImplementation(chainId, address))?.toLowerCase() === implementation.toLowerCase() ? undefined : err;
 }
 
 /**
@@ -236,7 +350,8 @@ export async function verifyRelease(o: VerifyOptions): Promise<{ verified: numbe
   const ledgerPath = join(o.outDir, "verified.json");
   const ledger = (existsSync(ledgerPath) ? JSON.parse(readFileSync(ledgerPath, "utf8")) : {}) as Record<string, string>;
   const save = () => writeFileSync(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`);
-  const index = indexArtifacts(o.contracts, profileOuts(readFileSync(join(o.contracts, "foundry.toml"), "utf8")));
+  const toml = readFileSync(join(o.contracts, "foundry.toml"), "utf8");
+  const index = indexArtifacts(o.contracts, profileOuts(toml), compilerProfiles(toml));
   const failed: string[] = [];
   const proxies: { address: string; implementation?: string; name: string }[] = [];
   let verified = 0;
@@ -256,20 +371,30 @@ export async function verifyRelease(o: VerifyOptions): Promise<{ verified: numbe
       skipped++;
       continue;
     }
-    const { profile, args } = verifyCommand(m, d.address, o.chainId);
+    const { profile, args, constructorArgs } = verifyCommand(m, d.address, o.chainId);
+    const contract = `${m.artifact.source}:${m.artifact.name}`;
     if (o.dryRun) {
-      o.say(`  FOUNDRY_PROFILE=${profile} ETHERSCAN_API_KEY=<redacted> forge ${args.join(" ")}`);
+      const request = constructorArgs === undefined ? undefined : sourceRequest(o.chainId, d.address, contract, m.artifact.compiler, constructorArgs);
+      const post = request ? ` | POST ${request.url} ${new URLSearchParams({ ...request.form, constructorArguements: `<${constructorArgs!.length / 2} bytes>`, sourceCode: "<the standard JSON input>", apikey: "<redacted>" }).toString()}` : "";
+      o.say(`  FOUNDRY_PROFILE=${profile} ETHERSCAN_API_KEY=<redacted> forge ${args.join(" ")}${post}`);
       continue;
     }
     const r = spawnSync("forge", args, { cwd: o.contracts, env: { ...process.env, FOUNDRY_PROFILE: profile }, encoding: "utf8", maxBuffer: 1 << 26 });
     const text = `${r.stdout ?? ""}${r.stderr ?? ""}`;
-    if (r.status === 0 || /already verified/i.test(text)) {
-      ledger[key] = `${m.artifact.source}:${m.artifact.name}`;
+    let error: string | undefined;
+    if (r.error || r.status !== 0) {
+      if (!/already verified/i.test(text)) error = r.error?.message ?? (text.trim().split(/\r?\n/).filter((l) => /error|fail/i.test(l)).slice(0, 2).join(" ") || `forge exited with ${r.status}`);
+    } else if (constructorArgs !== undefined) {
+      const { url, form } = sourceRequest(o.chainId, d.address, contract, m.artifact.compiler, constructorArgs);
+      error = await submit(url, { ...form, sourceCode: r.stdout.trim() }, "checkverifystatus", o.pollMs ?? 5_000);
+    }
+    if (error === undefined) {
+      ledger[key] = contract;
       save();
       verified++;
       o.say(`  verified ${d.address} ${m.artifact.name}`);
     } else {
-      failed.push(`${d.address} ${m.artifact.name}: ${text.trim().split(/\r?\n/).filter((l) => /error|fail/i.test(l)).slice(0, 2).join(" ")}`);
+      failed.push(`${d.address} ${m.artifact.name}: ${error}`);
       o.say(`  FAILED ${d.address} ${m.artifact.name}`);
     }
   }
@@ -285,7 +410,7 @@ export async function verifyRelease(o: VerifyOptions): Promise<{ verified: numbe
       o.say(`  POST ${url} ${new URLSearchParams({ ...form, apikey: "<redacted>" }).toString()}`);
       continue;
     }
-    const err = await submitProxy(o.chainId, p.address, p.implementation);
+    const err = await submitProxy(o.chainId, p.address, p.implementation, o.pollMs ?? 5_000);
     if (err) {
       failed.push(`${p.address} ${p.name} as a proxy: ${err}`);
       o.say(`  FAILED ${p.address} as a proxy`);
