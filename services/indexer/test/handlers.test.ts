@@ -125,9 +125,17 @@ describe("First-Loss Reserves and deficit offsets", () => {
     const run = new Run();
     const reserve = addr(0xf1);
     const funded = (source: string): LogSpec => ({ source, event: "ReserveFunded", args: { funder: WALLET, amount: 50n, shares: 50n, balanceAfter: 150n }, address: reserve, block: 40n, logIndex: 0 });
-    await run.deliverAll([funded("AvanaFirstLossReserve"), funded("DaoDeficitOffset")]);
+    await run.deliverAll([funded("AvanaFirstLossReserveListed"), funded("AvanaFirstLossReserve"), funded("DaoDeficitOffset")]);
     expect(run.store.rows(schema.eventLog).map((r) => r.kind)).toEqual(["AvanaFirstLossReserve.ReserveFunded"]);
     expect(run.store.rows(schema.coverageBalance)).toMatchObject([{ firstLossReserve: lower(reserve), balance: 150n }]);
+  });
+
+  it("records the funding of a manifest reserve before the MarketRegistry sets it", async () => {
+    const run = new Run();
+    const reserve = addr(0xf3);
+    await run.deliver({ source: "AvanaFirstLossReserveListed", event: "ReserveFunded", args: { funder: WALLET, amount: 6n, shares: 6n, balanceAfter: 6n }, address: reserve, block: 12n, logIndex: 0 });
+    expect(run.store.rows(schema.eventLog).map((r) => r.kind)).toEqual(["AvanaFirstLossReserve.ReserveFunded"]);
+    expect(run.store.rows(schema.coverageBalance)).toMatchObject([{ firstLossReserve: lower(reserve), balance: 6n }]);
   });
 
   it("follows a deficit offset that only the Hub's AddSpoke announced", async () => {
