@@ -4,7 +4,7 @@ Avana's monitoring service: the signals `M-01` to `M-36` of [services/README.md]
 
 ## How it works
 
-Each chain is read every `MONITOR_INTERVAL_SECONDS` (12 by default), one round at a time:
+Each chain is read every `MONITOR_INTERVAL_SECONDS` (60 by default), one round at a time:
 
 1. The keeper's findings at the head: alerts the keeper instances posted (held while they keep arriving, resolved once the head is more than two blocks past the last report) and each instance's heartbeat (3 blocks behind the head pages its on-call engineer).
 2. Each probe ([src/probes.ts](src/probes.ts)) reads its inputs at the head on the primary provider and judges them: the chain snapshot of `@avana/services-common/views`, the oracles, coverage and pools, contract events since the last round, issuer probes, route depth (every `MONITOR_ROUTE_CHECK_HOURS`, 24 by default), each market's oracle checkpoint, and where configured the Safes, the Core Hub GHO rate and the frontend. A subject whose read fails is unread: its open alert is neither resolved nor re-sent.
@@ -44,7 +44,7 @@ Routing (services/README.md, Rules): warns reach the on-call engineer and the si
 | M-24 | snapshot, events, keeper | Pause state and Hub application state changes, manual trips, address freezes and unfreezes, the standby switch, pause reasons; the keeper pages when a liquidation reverts with `AddressIsFrozen` (it stops its helper on that chain) |
 | M-25 | issuers, events | `paused()` and `basisPointsRate()` of every pool token and debt asset (a change warns); a blocklist naming LPVaultSwap, an LPVault, Collateralization or the AaveAdapter pages, another Avana contract warns |
 | M-26 | keeper | As the keeper posts it: a code-check mismatch, or the Aave V3 Pool's implementation changed (flash funding stops) |
-| M-27 | frontend | The page's sha256 against `MONITOR_FRONTEND_SHA256` (a mismatch pages; without it a change warns); DNS records and the `server` header (a change warns). No second RPC provider applies: the confirming read fetches again |
+| M-27 | frontend | The page's sha256, with the values that change on every load blanked: the app's CSP nonce wherever it appears (only one value per page, in the app's format of 48 base64 characters; any other is hashed as served), and the trace id, sampling flag and sample of Sentry's `sentry-trace` and `baggage` tags, each in its exact format; against `MONITOR_FRONTEND_SHA256` (a mismatch pages; without it a change warns); DNS records and the `server` header (a change warns). No second RPC provider applies: the confirming read fetches again |
 | M-28 | coverage | Each listed pool's in-range `liquidity()`: −20 % / −40 % within the hour |
 | M-29 | snapshot, ghoRate | Any rate-curve change warns; GHO's `baseDrawnRate` below the Core Hub's (`MONITOR_CORE_HUB_GHO`) pages |
 | M-30 | keeper | As the keeper posts it, one alert per chain: accounts only one of its discovery sources holds (the indexer stream or the RPC log backfill) warn, one-sided for `KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS` pages |

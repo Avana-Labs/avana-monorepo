@@ -11,7 +11,7 @@ import type { Address } from "viem";
 import type { ChainConfig, MonitorConfig } from "../src/config.ts";
 import type { Probe } from "../src/probe.ts";
 import { probesFor } from "../src/probes.ts";
-import { SAFE_GUARD_SLOT, frontendProbe, ghoRateProbe, issuerProbe, m29Gho, safeChanges, safesProbe } from "../src/probes/external.ts";
+import { SAFE_GUARD_SLOT, frontendProbe, ghoRateProbe, issuerProbe, m29Gho, safeChanges, safesProbe, withoutNonces, withoutPerLoadValues } from "../src/probes/external.ts";
 import { EMPTY_MANIFEST, contextOf, fakeProvider, fixtureSnapshot, on } from "./fakeChain.ts";
 
 const SAFE = "0x00000000000000000000000000000000000005af" as Address;
@@ -107,6 +107,55 @@ describe("M-27 frontend", () => {
     expect((await run(probe, p, 1)).findings).toEqual([]);
     page = "b";
     expect((await run(probe, p, 2)).findings.map((f) => `${f.subject}:${f.kind}:${f.level}`)).toEqual(["frontend:bundle:event:warn"]);
+  });
+
+  it("ignores the per-load CSP nonce, wherever the page repeats it, and Sentry's trace tags, but not a change of the page", async () => {
+    let n = 0;
+    let app = "app";
+    const page = () => {
+      const nonce = btoa(`${String(++n).padStart(8, "0")}-0000-4000-8000-000000000000`);
+      const trace = String(n).padStart(32, "0");
+      const sentry = `<meta name="sentry-trace" content="${trace}-${"a".repeat(16)}-${n % 2}"/><meta name="baggage" content="sentry-trace_id=${trace},sentry-sampled=${n % 2 === 1},sentry-sample_rand=0.${n}"/>`;
+      return `<html>${sentry}<script nonce="${nonce}">theme()</script><script>self.__next_f.push([1,"{\\"nonce\\":\\"${nonce}\\"}"])</script>${app}</html>`;
+    };
+    const probe = frontendProbe({ url: "https://app.example", expectedSha256: null }, { fetchText: async () => ({ body: page(), server: "" }), resolve: async () => "" });
+    const p = fakeProvider();
+    expect((await run(probe, p, 1)).findings).toEqual([]);
+    expect((await run(probe, p, 2)).findings).toEqual([]);
+    app = "evil";
+    expect((await run(probe, p, 3)).findings.map((f) => `${f.subject}:${f.kind}:${f.level}`)).toEqual(["frontend:bundle:event:warn"]);
+  });
+
+  it("blanks the app's nonce wherever it appears and leaves a page without one as served", () => {
+    const nonce = btoa(crypto.randomUUID());
+    expect(withoutNonces(`<script nonce="${nonce}">x</script><link rel="preload" nonce="${nonce}">"${nonce}"`)).toBe(`<script nonce="">x</script><link rel="preload" nonce="">""`);
+    expect(withoutNonces("<html>app</html>")).toBe("<html>app</html>");
+  });
+
+  it("hashes the page as served when a nonce is not the app's, or the page carries two", () => {
+    const a = btoa(crypto.randomUUID());
+    const b = btoa(crypto.randomUUID());
+    const injected = `<script nonce="${a}">x</script><script nonce="x><script src=//evil.example/a.js></script>">y</script>`;
+    expect(withoutNonces(injected)).toBe(injected);
+    const two = `<script nonce="${a}">x</script><script nonce="${b}">y</script>`;
+    expect(withoutNonces(two)).toBe(two);
+    const unquoted = `<script nonce=${a}>x</script>`;
+    expect(withoutNonces(unquoted)).toBe(unquoted);
+  });
+
+  it("blanks Sentry's per-request trace values in their exact format and keeps the rest of its tags", () => {
+    const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+    const tags = (trace: string, sampled: string, rand: string) =>
+      `<meta name="sentry-trace" content="${trace}-${hex(16)}-${sampled === "true" ? 1 : 0}"/><meta name="baggage" content="sentry-environment=production,sentry-release=abc,sentry-trace_id=${trace},sentry-sampled=${sampled},sentry-sample_rand=${rand},sentry-sample_rate=0.1"/>`;
+    const blanked = `<meta name="sentry-trace" content=""/><meta name="baggage" content="sentry-environment=production,sentry-release=abc,sentry-trace_id=,sentry-sampled=,sentry-sample_rand=,sentry-sample_rate=0.1"/>`;
+    expect(withoutPerLoadValues(tags(hex(32), "false", "0.6561982643347349"))).toBe(blanked);
+    expect(withoutPerLoadValues(tags(hex(32), "true", "0.02"))).toBe(blanked);
+    // A changed release, or anything but a trace value where one belongs, is hashed as served.
+    expect(withoutPerLoadValues(tags(hex(32), "false", "0.5").replace("release=abc", "release=def"))).not.toBe(blanked);
+    const injected = `<meta name="sentry-trace" content="x"/><script src=//evil.example/a.js></script>"/>`;
+    expect(withoutPerLoadValues(injected)).toBe(injected);
+    const baggage = `<meta name="baggage" content="sentry-trace_id=</script><script>x()</script>"/>`;
+    expect(withoutPerLoadValues(baggage)).toBe(baggage);
   });
 });
 

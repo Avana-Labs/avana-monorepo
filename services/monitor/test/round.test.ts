@@ -127,7 +127,7 @@ describe("loadConfig", () => {
     expect(c.chains.map((x) => [x.chain.key, x.rpc.second, x.deployment.hubs[0]!.label])).toEqual([["mainnet", "https://b.example", "Stable"]]);
     expect(c.channels.map((x) => x.kind)).toEqual(["webhook", "pagerduty", "log"]);
     expect(c.keeperTokens.get("eth-primary")).toBe("kt");
-    expect([c.port, c.intervalSeconds]).toEqual([9470, 12]);
+    expect([c.port, c.intervalSeconds]).toEqual([9470, 60]);
     expect(routeEnvName("riskProviders")).toBe("MONITOR_ROUTE_RISK_PROVIDERS");
   });
 

@@ -201,13 +201,58 @@ export interface FrontendDeps {
   resolve(host: string): Promise<string>;
 }
 
+/** The app's CSP nonce: `btoa(crypto.randomUUID())` (webapp/proxy.ts), 48 base64 characters. */
+const APP_NONCE = /^"[A-Za-z0-9+/]{48}"$/;
+/** A `nonce` attribute in a tag, with its value as written (quoted or not). */
+const NONCE_ATTRIBUTE = /<[A-Za-z][^>]*?\snonce\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/g;
+
+/**
+ * The page without its per-load CSP nonce: the app sets a fresh nonce on every request (webapp/proxy.ts), so the raw
+ * body hashes differently on each fetch. The nonce is blanked only when every `nonce` attribute of the page carries a
+ * value in the app's format and all carry the same one; that value is then blanked wherever it appears (the attributes
+ * and any copy in the page's serialized data) and everything else is hashed as served. Any other nonce (another
+ * format, or two values on one page) leaves the page as served, so its hash changes and the probe reports it.
+ */
+export function withoutNonces(body: string): string {
+  const values = [...body.matchAll(NONCE_ATTRIBUTE)].map((m) => m[1]!);
+  if (values.length === 0) return body;
+  const distinct = new Set(values);
+  const [value] = distinct;
+  if (distinct.size !== 1 || !APP_NONCE.test(value!)) return body;
+  return body.split(value!.slice(1, -1)).join("");
+}
+
+/** Sentry's `sentry-trace` tag: a fresh trace id, span id and sampling flag on every request. */
+const SENTRY_TRACE = /<meta name="sentry-trace" content="[0-9a-f]{32}-[0-9a-f]{16}(?:-[01])?"/g;
+/** Sentry's `baggage` tag; its per-request entries are blanked one by one (BAGGAGE_PER_LOAD). */
+const BAGGAGE = /<meta name="baggage" content="([^"]*)"/g;
+const BAGGAGE_PER_LOAD = /^(sentry-trace_id=)[0-9a-f]{32}$|^(sentry-sampled=)(?:true|false)$|^(sentry-sample_rand=)(?:0|1|0\.\d+)$/;
+
+/**
+ * The page without the values that change on every request: the app's CSP nonce (`withoutNonces`) and the trace
+ * values of Sentry's `sentry-trace` and `baggage` tags, each blanked only in its exact format (hex ids, a 0/1 or
+ * true/false flag, a decimal sample). Everything else, the other `baggage` entries (environment, release, sample rate)
+ * among them, is hashed as served.
+ */
+export function withoutPerLoadValues(body: string): string {
+  return withoutNonces(body)
+    .replace(SENTRY_TRACE, '<meta name="sentry-trace" content=""')
+    .replace(BAGGAGE, (_tag, content: string) => {
+      const entries = content.split(",").map((e) => {
+        const m = BAGGAGE_PER_LOAD.exec(e);
+        return m ? (m[1] ?? m[2] ?? m[3])! : e;
+      });
+      return `<meta name="baggage" content="${entries.join(",")}"`;
+    });
+}
+
 export function frontendProbe(cfg: FrontendConfig, deps: FrontendDeps): Probe<FrontendRead> {
   let last: FrontendRead | null = null;
   return {
     name: "frontend",
     async read() {
       const { body, server } = await deps.fetchText(cfg.url);
-      return { sha256: createHash("sha256").update(body).digest("hex"), server, dns: await deps.resolve(new URL(cfg.url).hostname) };
+      return { sha256: createHash("sha256").update(withoutPerLoadValues(body)).digest("hex"), server, dns: await deps.resolve(new URL(cfg.url).hostname) };
     },
     evaluate(input) {
       const out: Finding[] = [];
