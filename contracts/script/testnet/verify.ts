@@ -12,7 +12,9 @@
 // both contain. The match gives the source and contract name, the compiler profile that built it (its out directory),
 // the compiler version, optimizer runs, IR pipeline and EVM version from the artifact's metadata, the linked libraries
 // and the constructor arguments (the rest of the init code). One `forge verify-contract` runs per contract, under
-// FOUNDRY_PROFILE=<that profile>, the explorer key only in the environment (ETHERSCAN_API_KEY, never an argument).
+// FOUNDRY_PROFILE=<that profile> and with --compilation-profile naming the compiler profile within it whose settings
+// built the artifact (forge cannot tell it from a missing cache, nor from one that records the contract under several),
+// the explorer key only in the environment (ETHERSCAN_API_KEY, never an argument).
 // A contract recorded in verified.json, or that the explorer reports verified already, is skipped, so a rerun only
 // retries what is left. Init code that matches no artifact (data contracts, proxies of a factory outside the build) is
 // listed as skipped.
@@ -37,6 +39,9 @@ export interface Artifact {
   readonly optimizer: { readonly enabled: boolean; readonly runs?: number };
   readonly viaIR: boolean;
   readonly evmVersion?: string;
+  /** The compiler profile within `profile` that built it (`--compilation-profile`); set when the index knows the
+   * profiles' settings. */
+  readonly compilationProfile?: string;
 }
 export interface Match {
   readonly artifact: Artifact;
@@ -68,6 +73,62 @@ export function profileOuts(foundryToml: string): Record<string, string> {
   return outs;
 }
 
+/** A compiler profile of a Foundry profile: the base settings (`default`) or one of `additional_compiler_profiles`. */
+export interface CompilerProfile {
+  readonly name: string;
+  readonly runs?: number;
+  readonly viaIR?: boolean;
+}
+/** Each Foundry profile's base settings and additional compiler profiles, those it leaves out taken from the default
+ * profile's, as Foundry inherits them. */
+export function compilerProfiles(foundryToml: string): Record<string, { readonly base: CompilerProfile; readonly additional: CompilerProfile[] }> {
+  const own: Record<string, { runs?: number; viaIR?: boolean; additional?: CompilerProfile[] }> = { default: {} };
+  const num = (s: string) => Number(s.replace(/_/g, ""));
+  const lines = foundryToml.split(/\r?\n/);
+  let profile: string | undefined;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    const h = /^\[profile\.([A-Za-z0-9_-]+)\]\s*$/.exec(line);
+    if (h) {
+      profile = h[1]!;
+      own[profile] ??= {};
+      continue;
+    }
+    if (/^\[/.test(line)) profile = undefined;
+    if (!profile) continue;
+    const p = own[profile]!;
+    const runs = /^optimizer_runs\s*=\s*([0-9_]+)/.exec(line);
+    if (runs) p.runs = num(runs[1]!);
+    const ir = /^via_ir\s*=\s*(true|false)/.exec(line);
+    if (ir) p.viaIR = ir[1] === "true";
+    if (/^additional_compiler_profiles\s*=/.test(line)) {
+      let text = line;
+      while (!/\]\s*(#.*)?$/.test(text.replace(/\{[^}]*\}/g, "")) && i + 1 < lines.length) text += `\n${lines[++i]}`;
+      p.additional = [...text.matchAll(/\{([^}]*)\}/g)].map(([, t]) => {
+        const r = /optimizer_runs\s*=\s*([0-9_]+)/.exec(t!);
+        const v = /via_ir\s*=\s*(true|false)/.exec(t!);
+        return { name: /name\s*=\s*"([^"]+)"/.exec(t!)![1]!, runs: r ? num(r[1]!) : undefined, viaIR: v ? v[1] === "true" : undefined };
+      });
+    }
+  }
+  const d = own.default!;
+  return Object.fromEntries(
+    Object.entries(own).map(([name, p]) => [
+      name,
+      { base: { name: "default", runs: p.runs ?? d.runs, viaIR: p.viaIR ?? d.viaIR ?? false }, additional: p.additional ?? d.additional ?? [] },
+    ]),
+  );
+}
+
+/** The compiler profile that built `a`, for `forge verify-contract --compilation-profile`: the base settings when they
+ * are the artifact's, else the first additional profile whose settings are. Forge otherwise reads it from the profile's
+ * cache, and fails when the cache is missing or records the contract under several compiler profiles. */
+export function compilationProfileOf(a: Pick<Artifact, "optimizer" | "viaIR">, p: { base: CompilerProfile; additional: CompilerProfile[] }): string {
+  const fits = (c: CompilerProfile) => (c.viaIR === undefined || c.viaIR === a.viaIR) && (c.runs === undefined || c.runs === a.optimizer.runs);
+  if (fits(p.base)) return "default";
+  return p.additional.find(fits)?.name ?? "default";
+}
+
 function readArtifact(profile: string, file: string, contracts: string): Artifact | undefined {
   const j = JSON.parse(readFileSync(file, "utf8")) as Record<string, any>;
   const creation = strip(j.bytecode?.object ?? "");
@@ -93,8 +154,9 @@ function readArtifact(profile: string, file: string, contracts: string): Artifac
   };
 }
 
-/** Every artifact of every profile's out directory, indexed by the start of its creation code. */
-export function indexArtifacts(contracts: string, outs: Record<string, string>): Map<string, Artifact[]> {
+/** Every artifact of every profile's out directory, indexed by the start of its creation code; with `compilers`, each
+ * names the compiler profile that built it. */
+export function indexArtifacts(contracts: string, outs: Record<string, string>, compilers?: ReturnType<typeof compilerProfiles>): Map<string, Artifact[]> {
   const index = new Map<string, Artifact[]>();
   for (const [profile, out] of Object.entries(outs)) {
     const dir = join(contracts, out);
@@ -105,8 +167,9 @@ export function indexArtifacts(contracts: string, outs: Record<string, string>):
       const d = join(dir, sub);
       if (!statSync(d).isDirectory()) continue;
       for (const f of readdirSync(d).filter((x) => x.endsWith(".json"))) {
-        const a = readArtifact(profile, join(d, f), contracts);
-        if (!a) continue;
+        const read = readArtifact(profile, join(d, f), contracts);
+        if (!read) continue;
+        const a = compilers?.[profile] ? { ...read, compilationProfile: compilationProfileOf(read, compilers[profile]) } : read;
         const key = a.links.some((l) => l.at < KEY) ? EARLY_LINK : a.creation.slice(0, KEY);
         index.set(key, [...(index.get(key) ?? []), a]);
       }
@@ -175,6 +238,7 @@ export function verifyCommand(m: Match, address: string, chainId: number): { pro
   if (a.optimizer.enabled && a.optimizer.runs !== undefined) args.push("--num-of-optimizations", String(a.optimizer.runs));
   if (a.viaIR) args.push("--via-ir");
   if (a.evmVersion) args.push("--evm-version", a.evmVersion);
+  if (a.compilationProfile) args.push("--compilation-profile", a.compilationProfile);
   if (m.args) args.push("--constructor-args", `0x${m.args}`);
   for (const l of m.libraries) args.push("--libraries", `${l.source}:${l.name}:${l.address}`);
   args.push("--watch");
@@ -236,7 +300,8 @@ export async function verifyRelease(o: VerifyOptions): Promise<{ verified: numbe
   const ledgerPath = join(o.outDir, "verified.json");
   const ledger = (existsSync(ledgerPath) ? JSON.parse(readFileSync(ledgerPath, "utf8")) : {}) as Record<string, string>;
   const save = () => writeFileSync(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`);
-  const index = indexArtifacts(o.contracts, profileOuts(readFileSync(join(o.contracts, "foundry.toml"), "utf8")));
+  const toml = readFileSync(join(o.contracts, "foundry.toml"), "utf8");
+  const index = indexArtifacts(o.contracts, profileOuts(toml), compilerProfiles(toml));
   const failed: string[] = [];
   const proxies: { address: string; implementation?: string; name: string }[] = [];
   let verified = 0;
