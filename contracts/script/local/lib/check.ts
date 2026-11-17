@@ -19,7 +19,7 @@ import { encodeFunctionData, parseAbi, toFunctionSelector } from "viem";
 import { CONTRACTS, EXPORT_KEY_ID, type LocalChain, PORTS, REPO, STACK, chainIdEnv, manifestPath, outDir, rpcUrl } from "./env.ts";
 import { answers, blockNumber, refreshFeeds, rpc, setMining, stepEnv } from "./chain.ts";
 import { logPath, running, sleep, stop } from "./procs.ts";
-import { PGLITE, indexerAtHead, indexerUrl, secret, startIndexer } from "./services.ts";
+import { PGLITE, indexerAtHead, indexerUrl, runningLiveSchema, secret, startIndexer } from "./services.ts";
 
 type Say = (s: string) => void;
 const PAUSE = join(STACK, "activity.paused");
@@ -190,6 +190,7 @@ export async function replay(chains: readonly LocalChain[], say: Say): Promise<b
     const live = classify(logPath("indexer"));
     say(`indexer (live): ${live.errors.length} error or warning lines, ${live.tolerated} node timeouts or notices`);
     for (const l of live.errors.slice(0, 5)) say(`  ${l.slice(0, 500)}`);
+    const liveName = runningLiveSchema();
     stop("indexer");
     await sleep(3_000);
 
@@ -214,13 +215,14 @@ export async function replay(chains: readonly LocalChain[], say: Say): Promise<b
     if (ok) {
       const log = logPath("check-indexer-tables");
       rmSync(log, { force: true });
-      const r = node([join(CONTRACTS, "script/e2e/replay-check.ts"), "--indexer", REPO, PGLITE, "live", schema], chainIdEnv(), log);
+      const r = node([join(CONTRACTS, "script/e2e/replay-check.ts"), "--indexer", REPO, PGLITE, liveName, schema], chainIdEnv(), log);
       say(`${r.ok ? "PASS" : "FAIL"} indexer tables: ${r.out.trim().split(/\r?\n/).filter((l) => /replay: /.test(l)).join(" | ").slice(0, 800)}`);
       ok = r.ok && ok;
     }
 
-    await startIndexer("live", "indexer");
-    say(`indexer (live): restarted, at head ${JSON.stringify(await indexerAtHead(600_000))}`);
+    // A Hub release since the live indexer started changes its build: it then restarts on a new schema from the start blocks.
+    await startIndexer();
+    say(`indexer (live): restarted on ${runningLiveSchema()}, at head ${JSON.stringify(await indexerAtHead(600_000))}`);
     for (const c of chains) ok = convexCheck(c, Number(readFileSync(sampleFile(c), "utf8")), say) && ok;
     for (const c of chains) say(`${c.network}: rpc-recorder ${await (await fetch(`http://127.0.0.1:${c.recorderPort}`)).text().catch(() => "?")}`);
     return ok;

@@ -9,8 +9,8 @@
 // session's worktree), whose node_modules must be installed.
 
 import { spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { CHAINS, CONTRACTS, EXPORT_KEY_ID, type LocalChain, PORTS, REPO, STACK, chainIdEnv, fallbackUrl, manifestPath, outDir, recorderUrl, rpcUrl } from "./env.ts";
@@ -76,9 +76,42 @@ export async function indexerStatus(): Promise<Record<number, number>> {
   return Object.fromEntries(Object.values(j).map((s) => [s.id, s.block.number]));
 }
 
-/** Starts the indexer on `schema` under the process name `name` (the live indexer is `indexer` on schema `live`). */
-export async function startIndexer(schema = "live", name = "indexer"): Promise<void> {
+const LIVE_SCHEMA_FILE = join(STACK, "indexer-schema");
+
+/** Every file under `p`, in name order. */
+function files(p: string): string[] {
+  if (!statSync(p).isDirectory()) return [p];
+  return readdirSync(p).sort().flatMap((f) => files(join(p, f)));
+}
+
+/**
+ * An indexer schema named `<prefix>_<hash>`. Ponder resumes a schema only under the build that wrote it, and that build
+ * covers the manifests its config reads, which a Hub release rewrites: the hash covers those manifests and the indexer's
+ * code, so an indexer started after a release or a code change indexes into a new schema instead of refusing the old one.
+ */
+export function indexerSchema(prefix: string, manifestPaths: readonly string[]): string {
+  const h = createHash("sha256");
+  for (const p of manifestPaths) h.update(readFileSync(p));
+  for (const f of ["ponder.config.ts", "ponder.schema.ts", "src"].flatMap((p) => files(join(INDEXER_DIR, p)))) h.update(readFileSync(f));
+  return `${prefix}_${h.digest("hex").slice(0, 12)}`;
+}
+
+/** The live indexer's schema for the manifests deployed now. */
+export const liveSchema = (): string => indexerSchema("live", deployed().map(manifestPath));
+
+/** The schema the live indexer was last started on. */
+export function runningLiveSchema(): string {
+  return existsSync(LIVE_SCHEMA_FILE) ? readFileSync(LIVE_SCHEMA_FILE, "utf8").trim() : "live";
+}
+
+/** Starts the indexer on `schema` under the process name `name` (the live indexer is `indexer` on `liveSchema()`). */
+export async function startIndexer(schema?: string, name = "indexer"): Promise<void> {
   if (running(name)) return;
+  if (!schema) {
+    schema = liveSchema();
+    mkdirSync(STACK, { recursive: true });
+    writeFileSync(LIVE_SCHEMA_FILE, schema);
+  }
   start(name, process.execPath, [binJs("ponder"), "start", "--port", String(PORTS.indexer), "--log-format", "json"], { cwd: INDEXER_DIR, env: indexerEnv(schema) });
   await waitFor(`${name} /ready`, async () => (await fetch(`${indexerUrl()}/ready`)).ok, 900_000, 2_000).catch((e) => {
     throw new Error(`${(e as Error).message}\n${tail(name, 15)}`);
