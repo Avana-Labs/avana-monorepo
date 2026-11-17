@@ -150,7 +150,7 @@ export function baseConfig(
   cfg.chain.blockTime = c.blockTime;
   // Every world pool keeps a 30-minute TWAP at this chain's block time: the LPOracle refuses a pool whose observation
   // cardinality is below twapMinObservations (anvil.json's 151 suits 12-second blocks, not Base's 2).
-  cfg.world.observationCardinality = Math.max(Number(cfg.world.observationCardinality ?? 0), minObservations(1800, c.blockTime));
+  cfg.world.observationCardinality = Math.max(Number(cfg.world.observationCardinality ?? 0), minObservations(TWAP_WINDOW, c.blockTime));
   // The MarketRegistry's MAX_MARKET_COUNT is fixed at deployment: room for every Hub file the stack may add.
   cfg.parameters.maxMarketCount = Number(process.env.STACK_MAX_MARKETS ?? 128);
   cfg.parameters.globals.feeRecipient = a.treasury;
@@ -322,6 +322,7 @@ export async function runStep(c: LocalChain, release: string, step: string, conf
     if (step === "multicall3") detail = c.testnet ? await checkMulticall3(c) : await placeMulticall3(c);
     else if (step === "place-executor") detail = c.testnet ? await deployExecutor(c, config) : await placeExecutor(c, config);
     else if (step.startsWith("advance:")) detail = c.testnet ? await waitOnChain(c, Number(step.slice(8)), env, log) : await advance(c, Number(step.slice(8)), env, log);
+    else if (step === "twap-history") detail = await waitForTwapHistory(c);
     else if (step === "manifest") detail = manifest(c, env, log);
     else if (step === "treasury") detail = c.testnet ? "skipped on a test network: the local faucet and activity loop are not deployed there" : await fundTreasuries(c);
     else if (step === "swap-contracts") detail = await swapContracts(c);
@@ -438,6 +439,37 @@ async function waitOnChain(c: LocalChain, seconds: number, env: NodeJS.ProcessEn
   return `waited ${Math.round((Date.now() - t0) / 1000)} s for ${seconds} s of chain time`;
 }
 
+/** The world pools' TWAP window, seconds: the listing checks each pool's `observe([TWAP_WINDOW, 0])`. */
+export const TWAP_WINDOW = 1800;
+/** `observe(uint32[])` of Uniswap v3 and Slipstream pools, with [TWAP_WINDOW, 0]. */
+const OBSERVE_WINDOW = `0x883bdbfd${[0x20, 2, TWAP_WINDOW, 0].map((n) => n.toString(16).padStart(64, "0")).join("")}`;
+
+/**
+ * A test network's listing waits until every Uniswap v3 and Slipstream world pool has a TWAP window of history: a pool
+ * answers `observe` over the window only once its first observation is that old, and the world's last pools are
+ * created at the end of a long step 02. On anvil the timelock advance moves the clock days ahead, so this never waits.
+ */
+async function waitForTwapHistory(c: LocalChain): Promise<string> {
+  const world = JSON.parse(readFileSync(join(outDir(c), "world.json"), "utf8")) as Record<string, Record<string, string> | undefined>;
+  const pools = [...Object.values(world.uniswapPools ?? {}), ...Object.values(world.slipstreamPools ?? {})];
+  const now = async () => Number(BigInt((await rpc<{ timestamp: string }>(rpcUrl(c), "eth_getBlockByNumber", ["latest", false])).timestamp));
+  const young = async () => {
+    const out: string[] = [];
+    for (const p of pools) await rpc(rpcUrl(c), "eth_call", [{ to: p, data: OBSERVE_WINDOW }, "latest"]).catch(() => out.push(p));
+    return out;
+  };
+  const t0 = Date.now();
+  // A pool's history only grows with the chain's clock: one window from now, every pool created before now answers.
+  const deadline = (await now()) + TWAP_WINDOW + 60;
+  let left = await young();
+  while (left.length > 0) {
+    if ((await now()) > deadline) throw new Error(`no ${TWAP_WINDOW} s TWAP history yet on ${left.join(", ")}`);
+    await new Promise((r) => setTimeout(r, 15_000));
+    left = await young();
+  }
+  return `${pools.length} pools answer a ${TWAP_WINDOW} s TWAP; waited ${Math.round((Date.now() - t0) / 1000)} s`;
+}
+
 /** Aave governance v3's executor stand-in at the config's Aave DAO account, its owner the PayloadsController. */
 async function placeExecutor(c: LocalChain, config: string): Promise<string> {
   const cfg = JSON.parse(readFileSync(config, "utf8")) as Record<string, any>;
@@ -508,7 +540,7 @@ export function firstRelease(c: LocalChain, d = releaseDelays(c)): string[] {
 export function laterRelease(c: LocalChain, d = releaseDelays(c)): string[] {
   return [
     "01-aave-v4", "04-access-operations", `advance:${d.normal + 1}`, "05-execute-access-operations", "06-aave-deployment-aip",
-    "07-deploy-first-loss-reserves", "08-aave-loss-layers-aip", "07-fund-first-loss-reserves", ...listingSteps(d), "manifest",
+    "07-deploy-first-loss-reserves", "08-aave-loss-layers-aip", "07-fund-first-loss-reserves", ...listingSteps(d, c.testnet !== undefined), "manifest",
   ];
 }
 
@@ -522,11 +554,14 @@ function listingSetupSteps(d: { normal: number }) {
   return ["09-listing-setup", `advance:${d.normal + 1}`, "09-execute-listing-setup", "09-debt-oracles", "10-aave-debt-reserves-aip"];
 }
 
-/** A listing: its setup, then the markets (metadata, listing operation, Aave side) and their activation. */
-function listingSteps(d: { normal: number; short: number }) {
+/**
+ * A listing: its setup, then the markets (metadata, listing operation, Aave side) and their activation. On a test
+ * network the listing first waits for the pools' TWAP history (waitForTwapHistory).
+ */
+function listingSteps(d: { normal: number; short: number }, testnet = false) {
   return [
     ...listingSetupSteps(d),
-    "09-market-metadata", "09-listing-markets", `advance:${d.normal + 1}`, "09-execute-listing-markets", "10-aave-markets-aip",
+    "09-market-metadata", ...(testnet ? ["twap-history"] : []), "09-listing-markets", `advance:${d.normal + 1}`, "09-execute-listing-markets", "10-aave-markets-aip",
     "09-listing-activate", `advance:${d.short + 1}`, "09-execute-listing-activate",
   ];
 }

@@ -64,7 +64,10 @@ test("a test network's release deploys the executor before Aave V4 and waits its
   assert.deepEqual(FIRST_RELEASE.slice(0, 4), ["multicall3", "00-factories", "01-aave-v4", "place-executor"]);
   assert.deepEqual(LATER_RELEASE.filter((s) => s.startsWith("advance:")), ["advance:432001", "advance:432001", "advance:432001", "advance:43201"]);
   assert.equal(first.length, FIRST_RELEASE.length);
-  assert.equal(later.length, LATER_RELEASE.length);
+  // Only a test network's listing waits for the pools' TWAP history, right before its listing operation.
+  assert.equal(later.indexOf("twap-history"), later.indexOf("09-listing-markets") - 1);
+  assert.ok(!LATER_RELEASE.includes("twap-history"));
+  assert.deepEqual(later.filter((s) => s !== "twap-history").length, LATER_RELEASE.length);
 });
 
 test("a test network's market parameters are the local stack's, from test-values.json alone", () => {
