@@ -59,9 +59,19 @@ type LendMarketRow = {
   reserveFactor: number
 }
 
+/** A market's supply in USD: services/convex's figure, else tokens × price. */
+function suppliedUsdOf(market: LendMarket): number {
+  return market.totalSuppliedUsd ?? market.totalSupplied * market.assetPriceUsd
+}
+
+/** A market's available liquidity in USD: services/convex's figure, else tokens × price. */
+function availableUsdOf(market: LendMarket): number {
+  return market.availableLiquidityUsd ?? market.availableLiquidity * market.assetPriceUsd
+}
+
 /** Featured Lend cards: the three largest Hub assets by supply. */
 function featuredMarkets(markets: LendMarket[]): LendMarket[] {
-  return [...markets].sort((a, b) => b.totalSupplied * b.assetPriceUsd - a.totalSupplied * a.assetPriceUsd).slice(0, 3)
+  return [...markets].sort((a, b) => suppliedUsdOf(b) - suppliedUsdOf(a)).slice(0, 3)
 }
 
 export function buildLendFeaturedSnapshots(markets: LendMarket[]): LendFeaturedSnapshot[] {
@@ -102,8 +112,8 @@ function buildAssetGroups(markets: LendMarket[]): LendAssetGroup[] {
     { title: LEND_GROUP_TITLES.crypto, rows: [] },
   ]
   for (const market of markets) {
-    const tvlUsd = market.totalSupplied * market.assetPriceUsd
-    const availableUsd = market.availableLiquidity * market.assetPriceUsd
+    const tvlUsd = suppliedUsdOf(market)
+    const availableUsd = availableUsdOf(market)
     const group = market.category === "stable" ? groups[0] : groups[1]
     group.rows.push({
       symbol: market.asset.symbol,
@@ -137,7 +147,7 @@ function formatTotalApyLabel(totalApy: number, tvlUsd: number) {
 }
 
 export function catalogMarketToRow(market: LendMarket): LendMarketRow {
-  const tvlUsd = market.totalSupplied * market.assetPriceUsd
+  const tvlUsd = suppliedUsdOf(market)
   return {
     marketId: market.marketId,
     href: `/lend/markets/${market.marketId}`,
@@ -147,8 +157,8 @@ export function catalogMarketToRow(market: LendMarket): LendMarketRow {
     supplyApyLabel: formatSupplyApyLabel(market.supplyApy, tvlUsd),
     rewardsApyLabel: market.rewardsApy > 0 ? formatPercent(market.rewardsApy * 100) : "No rewards",
     totalApyLabel: formatTotalApyLabel(market.totalApy, tvlUsd),
-    totalSuppliedLabel: formatCompactUsd(market.totalSupplied * market.assetPriceUsd),
-    availableLiquidityLabel: formatCompactUsd(market.availableLiquidity * market.assetPriceUsd),
+    totalSuppliedLabel: formatCompactUsd(suppliedUsdOf(market)),
+    availableLiquidityLabel: formatCompactUsd(availableUsdOf(market)),
     utilizationLabel: formatPercent(market.utilization * 100),
     reserveFactorLabel: formatPercent(market.reserveFactor * 100),
     status: market.status,
@@ -185,19 +195,15 @@ export function buildLendPageData(_walletId: string, state?: LendSystemState): L
         supplyApyValue: rowMarket?.supplyApy ?? row.apyValue / 100,
         rewardsApyValue: rowMarket?.rewardsApy ?? 0,
         totalDepositsLabel: market ? formatTokenQuantity(market.totalSupplied, market.asset.symbol) : undefined,
-        totalDepositsSecondaryLabel: market
-          ? formatPositiveUsd(market.totalSupplied * market.assetPriceUsd)
-          : undefined,
-        totalDepositsSortValue: market ? market.totalSupplied * market.assetPriceUsd : undefined,
+        totalDepositsSecondaryLabel: market ? formatPositiveUsd(suppliedUsdOf(market)) : undefined,
+        totalDepositsSortValue: market ? suppliedUsdOf(market) : undefined,
         utilizationLabel: rowMarket?.utilizationLabel ?? "—",
         utilizationValue: rowMarket?.utilization ?? 0,
         availableLiquidityLabel: market
           ? formatTokenQuantity(market.availableLiquidity, market.asset.symbol)
           : undefined,
-        availableLiquiditySecondaryLabel: market
-          ? formatPositiveUsd(market.availableLiquidity * market.assetPriceUsd)
-          : undefined,
-        availableLiquiditySortValue: market ? market.availableLiquidity * market.assetPriceUsd : undefined,
+        availableLiquiditySecondaryLabel: market ? formatPositiveUsd(availableUsdOf(market)) : undefined,
+        availableLiquiditySortValue: market ? availableUsdOf(market) : undefined,
         reserveFactorLabel: rowMarket?.reserveFactorLabel ?? "—",
         reserveFactorValue: rowMarket?.reserveFactor ?? 0,
         status: rowMarket?.status ?? "active",
@@ -211,8 +217,8 @@ export function buildLendPageData(_walletId: string, state?: LendSystemState): L
       name: market.asset.name,
       apy: market.totalApy * 100,
       apyChange24h: 0,
-      tvl: formatCompactUsd(market.totalSupplied * market.assetPriceUsd),
-      tvlUsd: market.totalSupplied * market.assetPriceUsd,
+      tvl: formatCompactUsd(suppliedUsdOf(market)),
+      tvlUsd: suppliedUsdOf(market),
       utilization: Math.round(market.utilization * 100),
       type: market.riskTier,
       protocol: market.asset.symbol,
@@ -279,7 +285,7 @@ export function buildLendStrategyBuckets(markets: LendMarket[]): PortfolioStrate
       pools: tierMarkets.map((market) => ({
         name: `Aave ${market.asset.symbol}`,
         apyPct: market.totalApy * 100,
-        tvlUsd: market.totalSupplied * market.assetPriceUsd,
+        tvlUsd: suppliedUsdOf(market),
         isUp: market.rewardsApy > 0,
         allocationUsd: 0,
       })),
@@ -420,7 +426,7 @@ export function buildLendActivityHistory(
       amountUsd:
         item.kind === "claim"
           ? item.amount
-          : (item.amountUsd ?? item.amount * (state?.markets[item.marketId]?.assetPriceUsd ?? 0)),
+          : (item.amountUsd ?? item.amount * (state?.markets[item.marketId]?.assetPriceUsd ?? Number.NaN)),
       primaryLabel: item.asset,
       secondaryLabel:
         item.kind === "claim"

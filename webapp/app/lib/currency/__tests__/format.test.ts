@@ -5,6 +5,7 @@ import {
   formatActivityTokenAmount,
   formatCompactCurrency,
   formatExactCurrency,
+  formatFixedCurrency,
   redenominateCompactUsd,
 } from "@/app/lib/currency/format"
 
@@ -95,5 +96,14 @@ describe("redenominateCompactUsd", () => {
     expect(redenominateCompactUsd("Uniswap v3, Chainlink ETH", currencyContext("EUR"))).toBe(
       "Uniswap v3, Chainlink ETH",
     )
+  })
+})
+
+describe("formatFixedCurrency", () => {
+  it("converts to the currency with fixed decimals, none for zero-decimal currencies, and '—' without a value", () => {
+    expect(formatFixedCurrency(12.3456, currencyContext("EUR", 0.9), 4)).toBe("€11.1110")
+    expect(formatFixedCurrency(-1500, currencyContext("USD"), 0)).toBe("-$1,500")
+    expect(formatFixedCurrency(10, currencyContext("JPY", 151), 2)).toBe("¥1,510")
+    expect(formatFixedCurrency(Number.NaN, currencyContext("USD"), 2)).toBe("—")
   })
 })

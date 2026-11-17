@@ -41,13 +41,13 @@ function categoryOf(value: string | undefined): LendMarketCategory {
 }
 
 /**
- * One Lend market built only from what services/convex reports. Amounts are kept in USD terms
- * when the row carries no price (price 1), so supplied/borrowed/available stay consistent with
- * the row; nothing is filled from a static catalog.
+ * One Lend market built only from what services/convex reports; nothing is filled from a static catalog. The USD
+ * figures are kept as reported. With no price for the asset the price is NaN, so token amounts and USD values derived
+ * from it read "—" instead of treating the asset as worth $1.
  */
 export function lendMarketFromSnapshot(snap: LendConvexSnapshot, rank: number, now: number): LendMarket {
   const livePrice = finite(snap.assetPriceUsd)
-  const price = livePrice !== undefined && livePrice > 0 ? livePrice : 1
+  const price = livePrice !== undefined && livePrice > 0 ? livePrice : Number.NaN
   const supplyApy = (finite(snap.supplyApyPct) ?? 0) / 100
   const rewardsApy = (finite(snap.rewardsApyPct) ?? 0) / 100
   const symbol = snap.symbol?.trim() || snap.slug.toUpperCase()
@@ -64,6 +64,9 @@ export function lendMarketFromSnapshot(snap: LendConvexSnapshot, rank: number, n
     totalSupplied: snap.suppliedUsd / price,
     totalBorrowed: snap.borrowedUsd / price,
     availableLiquidity: snap.availableUsd / price,
+    totalSuppliedUsd: snap.suppliedUsd,
+    totalBorrowedUsd: snap.borrowedUsd,
+    availableLiquidityUsd: snap.availableUsd,
     utilization: (finite(snap.utilizationPct) ?? 0) / 100,
     reserveFactor: (finite(snap.reserveFactorPct) ?? 0) / 100,
     status: "active",

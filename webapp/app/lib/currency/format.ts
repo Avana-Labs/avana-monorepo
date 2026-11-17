@@ -97,6 +97,20 @@ export function formatExactCurrency(usd: number, ctx: CurrencyContext): string {
 }
 
 /**
+ * A USD value in the active currency with a fixed number of decimals (none for zero-decimal currencies), e.g. a live
+ * counter that ticks in its fourth decimal.
+ */
+export function formatFixedCurrency(usd: number, ctx: CurrencyContext, fractionDigits: number): string {
+  if (!Number.isFinite(usd)) return "—"
+  const value = convertFromUsd(usd, ctx)
+  const digits = ZERO_DECIMAL_CURRENCIES.has(ctx.currency) ? 0 : fractionDigits
+  return `${value < 0 ? "-" : ""}${ctx.symbol}${formatNumber(Math.abs(value), {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  })}`
+}
+
+/**
  * Per-unit price with adaptive precision, so `amount × displayed price` reconciles with the
  * displayed value instead of rounding a near-$1 token to a flat "$1.00" (13,349.72 USDC @ "$1.00"
  * would read "$13,343.63"). Large prices keep two decimals (unchanged for blue-chips), mid prices

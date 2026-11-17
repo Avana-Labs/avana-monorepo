@@ -35,7 +35,6 @@ const assetA: BorrowableAsset = {
   totalBorrowedUsd: 9_600_000,
   utilization: 62,
   availableUsd: 4_200_000,
-  walletBalanceLabel: "0.00",
   hasWalletBalance: false,
   visual: { symbol: "WBTC", shortLabel: "W", bgClass: "bg-amber-100", textClass: "text-amber-700" },
   trendUp: true,

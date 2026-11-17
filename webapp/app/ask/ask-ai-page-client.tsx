@@ -25,6 +25,7 @@ import {
 import { AskAIThreadList } from "./components/ask-ai-thread-list"
 import { AskAILoadingBody } from "./components/ask-ai-skeleton"
 import { buildAaveCard } from "./components/ask-ai-aave-card"
+import { formatActionUsd } from "@/app/lib/action-system/formatters"
 import type { AskAIFinancialResult } from "./components/ask-ai-financial-result-card"
 import { AskAIMessagePartsSubscriber, type AskAIMessagePartsRow } from "./message-parts-subscriber"
 import { askAiModeRunsEnabled } from "@/convex/lib/askAI/config"
@@ -58,9 +59,7 @@ const asObject = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {}
 
 const usd = (value: unknown): string | null =>
-  typeof value === "number" && Number.isFinite(value)
-    ? `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    : null
+  typeof value === "number" && Number.isFinite(value) ? formatActionUsd(value, { exact: true }) : null
 
 const pct = (ratio: unknown): string | null =>
   typeof ratio === "number" && Number.isFinite(ratio)

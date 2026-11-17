@@ -60,13 +60,13 @@ export function formatActionPercentBeforeAfter(beforePct: number, afterPct: numb
 }
 
 export function formatActionNetworkFee(value: number) {
-  if (!Number.isFinite(value) || value <= 0) return "~ $0.00"
+  if (!Number.isFinite(value) || value <= 0) return `~ ${formatActionUsd(0, { exact: true })}`
   return `~ ${formatActionUsd(value)}`
 }
 
 /**
  * The "Avana Platform Fee" row: the Q-409 front-end fee of `action` on the action's USD amount, from
- * the fee rules in Convex (app/lib/fees/front-end-fee.ts). "~ $0.00" for an action without a fee.
+ * the fee rules in Convex (app/lib/fees/front-end-fee.ts). "~ 0.00" in the display currency for an action without a fee.
  */
 export function formatActionFeeSummary(action: string, amountUsd: number) {
   return formatActionNetworkFee(frontendFeeUsd(action, amountUsd))

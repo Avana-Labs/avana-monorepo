@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils"
 import { useCanonicalPriceFor } from "@/app/lib/prices/token-prices-context"
-import { formatTokenPrice } from "@/app/lib/prices/format"
+import { useCurrency } from "@/app/lib/currency/use-currency"
 import { formatTokenDisplaySymbol } from "@/app/lib/token-icons"
 
 const FACE =
@@ -50,6 +50,7 @@ export function TickerPriceFlip({ symbol, detail }: { symbol: string; detail: st
 /** `TickerPriceFlip` with the live canonical (DefiLlama) unit price. */
 export function TokenTickerPriceLabel({ symbol }: { symbol: string }) {
   const priceFor = useCanonicalPriceFor()
+  const { price: formatPrice } = useCurrency()
   const price = priceFor(symbol)
-  return <TickerPriceFlip symbol={symbol} detail={price === undefined ? undefined : formatTokenPrice(price)} />
+  return <TickerPriceFlip symbol={symbol} detail={price === undefined ? undefined : formatPrice(price)} />
 }
