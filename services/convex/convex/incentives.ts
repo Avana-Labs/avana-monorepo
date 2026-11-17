@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Merkl incentives (lib/incentives.ts). Hourly per chain, `refresh` reads Merkl's live opportunities (paged, at most
-// 10 pages of 100) and stores one match per page; `forPage` tells the app "rewards" with the APR, "none" (checked,
-// no campaign) or "unknown" (Merkl unreachable or the last check older than 3 hours). `MERKL_API_URL` overrides
-// https://api.merkl.xyz.
+// 10 pages of 100) and stores one match per page; `forPage` tells the app "rewards" with the APR or "none" (checked,
+// no campaign), each with `asOf` (the last successful check) and `stale` (Merkl unreachable since, or that check
+// older than 3 hours), or "unknown" when no check has succeeded yet. `MERKL_API_URL` overrides https://api.merkl.xyz.
 
 import { v } from "convex/values";
 import { optionalEnv } from "@avana/services-common/env";

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Merkl matching per page ("rewards", a checked "none", or "unknown" when the check failed or is stale) and the
+// Merkl matching per page ("rewards" or a checked "none" as of the last good check, flagged stale after 3 hours, or
+// "unknown" before any check succeeded) and the
 // market risk score's inputs, caps and levels.
 
 import { describe, expect, it } from "vitest";
@@ -31,14 +32,23 @@ describe("Merkl incentives", () => {
     expect(lend).toMatchObject({ aprPct: 2, opportunities: 1 });
   });
 
-  it("says none only after a fresh successful check, else unknown", () => {
+  it("says none only after a successful check, and unknown before any", () => {
     const now = 1_000_000_000;
     const none = { aprPct: 0, rewardTokens: [], opportunities: 0 };
-    expect(incentiveStatus(none, now - 1_000, now)).toEqual({ status: "none" });
-    expect(incentiveStatus(null, now - 1_000, now)).toEqual({ status: "none" });
+    expect(incentiveStatus(none, now - 1_000, now)).toEqual({ status: "none", asOf: now - 1_000, stale: false });
+    expect(incentiveStatus(null, now - 1_000, now)).toEqual({ status: "none", asOf: now - 1_000, stale: false });
     expect(incentiveStatus(none, null, now)).toEqual({ status: "unknown" });
-    expect(incentiveStatus(none, now - INCENTIVES_STALE_MS - 1, now)).toEqual({ status: "unknown" });
-    expect(incentiveStatus({ aprPct: 3, rewardTokens: ["AERO"], opportunities: 1 }, now, now)).toEqual({ status: "rewards", aprPct: 3, rewardTokens: ["AERO"] });
+    expect(incentiveStatus(null, null, now)).toEqual({ status: "unknown" });
+    expect(incentiveStatus({ aprPct: 3, rewardTokens: ["AERO"], opportunities: 1 }, now, now)).toEqual({ status: "rewards", aprPct: 3, rewardTokens: ["AERO"], asOf: now, stale: false });
+  });
+
+  it("keeps the last known value with its check time, flagged stale after 3 hours", () => {
+    const now = 1_000_000_000;
+    const match = { aprPct: 3, rewardTokens: ["AERO"], opportunities: 1 };
+    expect(incentiveStatus(match, now - INCENTIVES_STALE_MS, now)).toMatchObject({ status: "rewards", stale: false });
+    const old = now - INCENTIVES_STALE_MS - 1;
+    expect(incentiveStatus(match, old, now)).toEqual({ status: "rewards", aprPct: 3, rewardTokens: ["AERO"], asOf: old, stale: true });
+    expect(incentiveStatus({ aprPct: 0, rewardTokens: [], opportunities: 0 }, old, now)).toEqual({ status: "none", asOf: old, stale: true });
   });
 });
 
