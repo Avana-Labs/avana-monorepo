@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
@@ -163,7 +163,7 @@ contract AaveAdapterRiskModuleGatesIntegrationTest is AaveAdapterRiskFixture {
     function test_TEST_284_aaveSourceSwitchIsDriftForNewRiskOnly() public {
         rstore.setTokenCap(aave.hub, address(usdc), 1e30);
         rstore.setTokenCap(aave.hub, address(usdt), 1e30);
-        PledgeCounters memory k = ICollateralizationViews(address(coll)).getCounters(vt, bob);
+        PledgeCounters memory k = ICollateralization(address(coll)).getCounters(vt, bob);
         address bobProxy_ = makeAddr("bob's proxy");
         rm.checkPledge(bob, bobProxy_, MARKET_ID, INTEGRATION, bytes32(uint256(77)), UNITS, k, false);
         vm.prank(aaveDao);

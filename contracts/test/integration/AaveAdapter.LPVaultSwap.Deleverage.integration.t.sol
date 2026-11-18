@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {AdapterSwapFixture} from "../utils/fixtures/AdapterSwapFixture.sol";
@@ -106,7 +106,7 @@ contract AaveAdapterLPVaultSwapDeleverageIntegrationTest is AdapterSwapFixture {
     /// @notice A repay with collateral that repays the last debt clears the account's indebted mark, so the market reads
     /// debt-free for `closeMarket` with no keeper `refreshDebtMark`.
     function test_TEST_272_fullDeleverageClearsTheDebtMark() public {
-        ICollateralizationViews views = ICollateralizationViews(address(coll));
+        ICollateralization views = ICollateralization(address(coll));
         assertFalse(views.getMarketDebtFree(vt), "marked by the borrow");
         uint128 units = 7_000_000_000;
         _setLegs(units, 0);
@@ -122,7 +122,7 @@ contract AaveAdapterLPVaultSwapDeleverageIntegrationTest is AdapterSwapFixture {
         _setLegs(units, 0);
         _rwcAsAlice(_params(units, new uint256[](0)));
         assertGt(_borrowCountOf(proxy), 0, "debt remains");
-        assertFalse(ICollateralizationViews(address(coll)).getMarketDebtFree(vt), "still marked");
+        assertFalse(ICollateralization(address(coll)).getMarketDebtFree(vt), "still marked");
     }
 
     // TEST-239 verifies: REQ-SWAP-087, REQ-SWAP-095, REQ-SWAP-003

@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../custody/collateralization/ICollateralizationAdapter.sol";
-import {ICollateralizationDebtMark} from "../../custody/collateralization/ICollateralizationDebtMark.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
@@ -83,8 +82,8 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         IVaultToken vt = IVaultToken(m.vaultToken);
         if (!vt.isValidProxy(proxy)) vt.addValidProxy(proxy);
         int256 gapBefore = _gap(m.vaultToken);
-        (recordId, credited) = ICollateralizationAdapter(_COLLATERALIZATION)
-            .pledge(msg.sender, proxy, m.vaultToken, positionKey, requireRescue);
+        (recordId, credited) =
+            ICollateralization(_COLLATERALIZATION).pledge(msg.sender, proxy, m.vaultToken, positionKey, requireRescue);
         if (credited == 0) revert ZeroAmount();
         vt.mint(proxy, credited);
         _supply(proxy, m.spoke, m.vaultToken, reserveId, vt.marketId(), credited);
@@ -150,7 +149,7 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (nonce != expectedNonce) revert BadNonce(nonce, expectedNonce);
         _s().borrowNonce[proxy] = nonce + 1;
         IRiskModule(_RISK_MODULE).preBorrowCheck(proxy, debtReserveId, amount);
-        ICollateralizationDebtMark(_COLLATERALIZATION).markIndebted(proxy);
+        ICollateralization(_COLLATERALIZATION).markIndebted(proxy);
         _borrowStep(proxy, account.spoke, debtReserveId, amount, receiver);
         uint256 hf = IRiskModule(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
         emit Borrowed(msg.sender, marketId, debtReserveId, receiver, amount, nonce, hf);
@@ -232,7 +231,7 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (moved) {
             emit Repaid(msg.sender, borrower, marketId, debtReserveId, paid, debtAfter, repayAll);
             // Collateralization reads `borrowCount` itself and clears the mark only at 0.
-            if (debtAfter == 0) ICollateralizationDebtMark(_COLLATERALIZATION).markDebtFree(proxy);
+            if (debtAfter == 0) ICollateralization(_COLLATERALIZATION).markDebtFree(proxy);
         }
         _release();
         spent = paid;

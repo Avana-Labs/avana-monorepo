@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {RiskStatus} from "../../src/amm/types/RiskStatus.sol";
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
@@ -359,7 +359,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         c.regularUsed = 1_200_000e8;
         vm.mockCall(
             registry.COLLATERALIZATION(),
-            abi.encodeCall(ICollateralizationViews.getCounters, (vaultToken, address(0))),
+            abi.encodeCall(ICollateralization.getCounters, (vaultToken, address(0))),
             abi.encode(c)
         );
         // (max(1,500,000, 1,200,000) + 100,000) / $1 = 1,600,000 ≤ addCap 2,000,000.

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {BreakerReasons} from "../../../src/policy/market-registry/types/Breaker.sol";
@@ -31,7 +31,7 @@ interface IRiskHandlerConfigurator {
 /// @notice The contracts and parameters the risk handler drives.
 struct RiskWorld {
     IAaveAdapter adapter;
-    ICollateralizationViews coll;
+    ICollateralization coll;
     AdapterRegistryMock registry;
     RiskLPOracleMock lpOracle;
     RiskDebtOracleMock usdcOracle;

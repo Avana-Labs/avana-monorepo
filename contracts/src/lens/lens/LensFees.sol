@@ -10,8 +10,8 @@ import {ClMarketConfig} from "../../amm/types/ClMarketConfig.sol";
 import {FeeMode} from "../../amm/types/FeeMode.sol";
 import {IUniswapV4Integration} from "../../amm/uniswap-v4/IUniswapV4Integration.sol";
 import {UniswapV4State} from "../../amm/uniswap-v4/UniswapV4State.sol";
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
-import {BackingRecord} from "../../custody/collateralization/types/BackingRecord.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
+import {BackingRecord} from "../../custody/collateralization/types/CollateralizationTypes.sol";
 import {IUniswapV4PoolManager} from "../../interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {Market} from "../../types/Market.sol";
@@ -70,7 +70,7 @@ abstract contract LensFees is LensBase, ILensFees {
         (address proxy, bool deployed) = _proxy(wallet, marketId, m.spoke);
         if (!deployed) return fees;
         // forge-lint: disable-start(unused-return)
-        (, BackingRecord[] memory records) = ICollateralizationViews(_COLLATERALIZATION)
+        (, BackingRecord[] memory records) = ICollateralization(_COLLATERALIZATION)
             .getAccountRecords(proxy, m.vaultToken, 0, AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET);
         // forge-lint: disable-end(unused-return)
         fees = new PositionFeesView[](records.length);

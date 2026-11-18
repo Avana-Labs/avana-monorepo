@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
@@ -165,7 +165,7 @@ contract CollateralizationDebtMarkReadsUnitTest is CollateralizationFixture {
         vm.prank(adapter);
         (bool ok, bytes memory ret) = address(coll).call{gas: 800_000}(abi.encodeCall(coll.markDebtFree, (aliceProxy)));
         assertFalse(ok, "starved read");
-        assertEq(bytes4(ret), ICollateralizationErrors.InsufficientGas.selector);
+        assertEq(bytes4(ret), ICollateralizationBase.InsufficientGas.selector);
         (uint256 left, uint256 required) = abi.decode(_tail(ret), (uint256, uint256));
         assertEq(required, 50_000, "DEBT_MARK_GAS_FLOOR");
         assertLt(left, 50_000, "the gas left is below the floor");
@@ -182,11 +182,11 @@ contract CollateralizationDebtMarkReadsUnitTest is CollateralizationFixture {
         _mark(aliceProxy);
         bytes memory read = abi.encodeCall(IAaveV4Spoke.getUserAccountData, (aliceProxy));
         bytes memory starved =
-            abi.encodeWithSelector(ICollateralizationErrors.InsufficientGas.selector, 12_345, 1_000_000);
+            abi.encodeWithSelector(ICollateralizationBase.InsufficientGas.selector, 12_345, 1_000_000);
         vm.mockCallRevert(aave.cdpSpoke, read, starved);
         vm.startPrank(adapter);
         lock.acquire();
-        vm.expectPartialRevert(ICollateralizationErrors.InsufficientGas.selector);
+        vm.expectPartialRevert(ICollateralizationBase.InsufficientGas.selector);
         coll.markDebtFree(aliceProxy);
         lock.release();
         vm.stopPrank();

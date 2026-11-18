@@ -2,19 +2,19 @@
   "excluded_detectors": [],
   "accepted": [
     {
-      "fingerprint": "2e2c4cb6f3627377",
+      "fingerprint": "5c077c7c01c8eb73",
       "check": "missing-assignment",
-      "file": "src/custody/collateralization/CollateralizationDebtMark.sol",
-      "function": "CollateralizationDebtMark.markIndebted",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
+      "function": "CollateralizationSeizure.markIndebted",
       "reason": "Semgrep parse gap: the rule excludes `++$VAR` and `--$VAR` but not a prefix increment or decrement of an indexed element, so `++indebtedCount[vt];` (which writes storage) is matched as a statement without effect. The statement is the specified counter update. Runs once per proxy, guarded by the indebted flag (REQ-COLL-040).",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group A (Semgrep missing-assignment parse gap): checked 2026-11-11, the statement is a prefix ++/-- of a mapping element, a storage write the rule's ++$VAR exclusion misses; not in an approved pattern."
     },
     {
-      "fingerprint": "d017888c8895c335",
+      "fingerprint": "e2710ea04941f428",
       "check": "missing-assignment",
-      "file": "src/custody/collateralization/CollateralizationDebtMark.sol",
-      "function": "CollateralizationDebtMark.markDebtFree",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
+      "function": "CollateralizationSeizure.markDebtFree",
       "reason": "Semgrep parse gap: the rule excludes `++$VAR` and `--$VAR` but not a prefix increment or decrement of an indexed element, so `--indebtedCount[vt];` (which writes storage) is matched as a statement without effect. The statement is the specified counter update. Runs only after the indebted flag of the proxy was set, so the counter is at least 1 (REQ-COLL-040).",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group A (Semgrep missing-assignment parse gap): checked 2026-11-11, the statement is a prefix ++/-- of a mapping element, a storage write the rule's ++$VAR exclusion misses; not in an approved pattern."
@@ -47,37 +47,37 @@
       "review": "Reviewed per call site, group A (Semgrep missing-assignment parse gap): checked 2026-11-11, the statement is a prefix ++/-- of a mapping element, a storage write the rule's ++$VAR exclusion misses; not in an approved pattern."
     },
     {
-      "fingerprint": "9a18544c14d1c401",
+      "fingerprint": "272455507d1d11ea",
       "check": "basic-arithmetic-underflow",
-      "file": "src/custody/collateralization/CollateralizationPending.sol",
-      "function": "CollateralizationPending (SupplyDropMismatch argument)",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
+      "function": "CollateralizationSeizure (SupplyDropMismatch argument)",
       "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `limit - units`: units <= pendingUnits <= limit is checked on the line before (PendingExceeded).",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
     },
     {
-      "fingerprint": "6a9fe13501b9926f",
+      "fingerprint": "a4db8e2ed62c248d",
       "check": "basic-arithmetic-underflow",
-      "file": "src/custody/collateralization/CollateralizationPending.sol",
-      "function": "CollateralizationPending (pending amount debit)",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
+      "function": "CollateralizationSeizure (pending amount debit)",
       "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `held - out`: out = mulDiv(held, units, pendingUnits) with units <= pendingUnits, so out <= held.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
     },
     {
-      "fingerprint": "23e4bf9b0d9ea5d7",
+      "fingerprint": "a75233e604be5ad7",
       "check": "basic-arithmetic-underflow",
-      "file": "src/custody/collateralization/CollateralizationPending.sol",
-      "function": "CollateralizationPending (pending units debit)",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
+      "function": "CollateralizationSeizure (pending units debit)",
       "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `pendingUnits - units`: units > pendingUnits reverts PendingExceeded first.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."
     },
     {
-      "fingerprint": "da4e2478739df225",
+      "fingerprint": "5c8348e3a6c60e9d",
       "check": "basic-arithmetic-underflow",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
-      "function": "CollateralizationRelease partial removal",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "function": "CollateralizationPledge partial removal",
       "reason": "Checked arithmetic (solc 0.8.28, not inside an unchecked block): the rule's sink is a subtraction of an external parameter, written for pre-0.8 wraparound; here an underflow can only revert. `credited - units`: units >= credited reverts PartialRemovalTooLarge two lines above.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group B (checked subtraction with an enforced precondition): checked 2026-11-11, solc 0.8.28 checked arithmetic outside any unchecked block and the stated precondition holds, so no wrap and no reachable revert; not in an approved pattern."

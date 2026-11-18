@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationSeizure} from "../../../src/custody/collateralization/ICollateralizationSeizure.sol";
+import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwapErrors} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {DeleverageRequest} from "../../../src/liquidation/lp-vault-swap/types/DeleverageRequest.sol";
@@ -212,10 +212,10 @@ contract LPVaultSwapMock is ILPVaultSwapErrors {
         uint256 tokenCount
     ) external returns (uint256 seized) {
         ILock(lock).acquire();
-        ICollateralizationSeizure(collateralization).beginSeizure(proxy, vaultToken);
+        ICollateralization(collateralization).beginSeizure(proxy, vaultToken);
         seized = _seize(spoke, collateralReserveId, debtReserveId, proxy, debtToCover, vaultToken);
         if (seized != 0) IAaveAdapter(ADAPTER).burnSeized(marketId, vaultToken, seized);
-        ICollateralizationSeizure(collateralization).settleSeizure(proxy, vaultToken, seized, new uint256[](tokenCount));
+        ICollateralization(collateralization).settleSeizure(proxy, vaultToken, seized, new uint256[](tokenCount));
         ILock(lock).release();
     }
 
@@ -259,7 +259,7 @@ contract LPVaultSwapMock is ILPVaultSwapErrors {
     ) external {
         ILock(lock).acquire();
         IAaveAdapter(ADAPTER).burnSeized(marketId, vaultToken, units);
-        ICollateralizationSeizure(collateralization).settlePending(vaultToken, units);
+        ICollateralization(collateralization).settlePending(vaultToken, units);
         ILock(lock).release();
     }
 

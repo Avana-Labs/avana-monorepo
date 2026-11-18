@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
 import {IClIntegration} from "../../src/amm/IClIntegration.sol";
 import {IClPositionManager} from "../../src/amm/concentrated-liquidity/IClPositionManager.sol";
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
 import {GovernedTargets} from "../../src/governance/timelock/types/GovernedTargets.sol";
@@ -623,12 +623,10 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
     function _cFactory() internal returns (VaultTokenFactory factory) {
         Core memory c = _cCore();
         factory = new VaultTokenFactory(c.adapter, c.lpVaultSwap, c.coll, c.timelock, c.registry);
-        vm.mockCall(
-            c.coll, abi.encodeCall(ICollateralizationViews.VAULT_TOKEN_FACTORY, ()), abi.encode(address(factory))
-        );
-        vm.mockCall(c.coll, abi.encodeCall(ICollateralizationViews.ADAPTER, ()), abi.encode(c.adapter));
-        vm.mockCall(c.coll, abi.encodeCall(ICollateralizationViews.LP_VAULT_SWAP, ()), abi.encode(c.lpVaultSwap));
-        vm.mockCall(c.coll, abi.encodeCall(ICollateralizationViews.LOCK, ()), abi.encode(address(c.lock)));
+        vm.mockCall(c.coll, abi.encodeCall(ICollateralization.VAULT_TOKEN_FACTORY, ()), abi.encode(address(factory)));
+        vm.mockCall(c.coll, abi.encodeCall(ICollateralization.ADAPTER, ()), abi.encode(c.adapter));
+        vm.mockCall(c.coll, abi.encodeCall(ICollateralization.LP_VAULT_SWAP, ()), abi.encode(c.lpVaultSwap));
+        vm.mockCall(c.coll, abi.encodeCall(ICollateralization.LOCK, ()), abi.encode(address(c.lock)));
     }
 
     /// @notice The LPVault registered in the real factory and the vault token of market 1 deployed by it.

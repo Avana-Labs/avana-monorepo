@@ -391,9 +391,9 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "22330cb295c0dba4",
+      "fingerprint": "2bc8e33fbf58fb53",
       "check": "reentrancy-state-change",
-      "file": "src/custody/collateralization/CollateralizationDebtMark.sol",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
       "function": "markDebtFree",
       "reason": "Aderyn form of the reentrancy finding: the record is written after receivePosition, marketOfPosition, poke and checkPledge because the credit must be the units read after custody (REQ-VAULT-012, SPEC-BACK-002) and the charge the RiskModule's answer; in markDebtFree the write follows a STATICCALL to the Aave Spoke, which cannot change state. All callees are Avana immutables, Aave or a view, under the Lock. Covered by TEST-010, TEST-272.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -479,33 +479,33 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "8ca41ba89dadf74b",
+      "fingerprint": "979dd67334b5e604",
       "check": "costly-loop",
-      "file": "src/custody/collateralization/CollateralizationPending.sol",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
       "function": "settlePending",
       "reason": "Storage writes inside loops bounded by the record limit (at most 16 list entries, SPEC-BACK-016) or the market's token count (at most 8 counters or pending amounts, REQ-COLL-028); the gas is part of the measured seizure budget of SPEC-BACK-016. Covered by TEST-269, TEST-124, TEST-057.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "5a0d8b98e4734ab3",
+      "fingerprint": "6941ac95a3621901",
       "check": "require-revert-in-loop",
-      "file": "src/custody/collateralization/CollateralizationPending.sol",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
       "function": "settlePending",
       "reason": "SafeERC20.safeTransfer of each non-zero pending amount to LPVaultSwap in settlePending: a reverting market token must revert the whole settlement and leave the pending balance for a later one (REQ-VAULT-142); the loop is at most 8 tokens. Covered by TEST-152, TEST-177.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "2084acb30d7e1cbc",
+      "fingerprint": "57c3a35009a8f850",
       "check": "state-change-without-event",
-      "file": "src/custody/collateralization/CollateralizationDebtMark.sol",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
       "function": "markIndebted",
       "reason": "markIndebted and markDebtFree change only the indebted mark and indebtedCount, which 2.3 gives no event (REQ-COLL-039, REQ-COLL-040); they run inside the Adapter's borrow, repay and LPVaultSwap's liquidation, whose own events record the action, and getMarketDebtFree exposes the count. Covered by TEST-272.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "05570b5e610cc4d7",
+      "fingerprint": "b21426e1e3c60a6d",
       "check": "state-change-without-event",
-      "file": "src/custody/collateralization/CollateralizationDebtMark.sol",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
       "function": "markDebtFree",
       "reason": "markIndebted and markDebtFree change only the indebted mark and indebtedCount, which 2.3 gives no event (REQ-COLL-039, REQ-COLL-040); they run inside the Adapter's borrow, repay and LPVaultSwap's liquidation, whose own events record the action, and getMarketDebtFree exposes the count. Covered by TEST-272.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -527,17 +527,17 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "1c70fef2b3fa8eab",
+      "fingerprint": "8bc46641c93fca21",
       "check": "unchecked-return",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "releasePartial",
       "reason": "Aderyn form of unused-return: the LPVault calls (marketOf, returnPosition, topUpPosition, releaseToDepositor) and LPOracle.poke revert on failure, and their reported values are deliberately not used (shape enforced by the LPVault, live units read after a top-up per REQ-COLL-037, measured deltas per REQ-VAULT-088, price state read by the RiskModule). Covered by TEST-018, TEST-237, TEST-238.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "78006a2948516101",
+      "fingerprint": "9888df951f51fda9",
       "check": "unchecked-return",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "collectFees",
       "reason": "Aderyn form of unused-return: the LPVault calls (marketOf, returnPosition, topUpPosition, releaseToDepositor) and LPOracle.poke revert on failure, and their reported values are deliberately not used (shape enforced by the LPVault, live units read after a top-up per REQ-COLL-037, measured deltas per REQ-VAULT-088, price state read by the RiskModule). Covered by TEST-018, TEST-237, TEST-238.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"

@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
-import {BackingRecord} from "../../custody/collateralization/types/BackingRecord.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
+import {BackingRecord} from "../../custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
@@ -70,7 +70,7 @@ abstract contract LensAccountMath is LensBase {
         address proxy,
         uint256 cf
     ) internal view returns (uint256) {
-        uint256 u = ICollateralizationViews(_COLLATERALIZATION).getAccountRescueUnits(proxy, m.vaultToken);
+        uint256 u = ICollateralization(_COLLATERALIZATION).getAccountRescueUnits(proxy, m.vaultToken);
         if (u == 0) return 0;
         int256 served = ILPOracle(m.lpOracle).latestAnswer();
         // forge-lint: disable-next-line(unsafe-typecast)
@@ -124,7 +124,7 @@ abstract contract LensAccountMath is LensBase {
         Market memory m,
         address proxy
     ) internal view returns (RecordRemoval[] memory out) {
-        ICollateralizationViews coll = ICollateralizationViews(_COLLATERALIZATION);
+        ICollateralization coll = ICollateralization(_COLLATERALIZATION);
         // forge-lint: disable-start(unused-return)
         (, BackingRecord[] memory recs) =
             coll.getAccountRecords(proxy, m.vaultToken, 0, AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET);

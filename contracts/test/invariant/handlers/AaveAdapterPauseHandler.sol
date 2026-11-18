@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {PauseReason} from "../../../src/types/PauseReason.sol";
@@ -16,7 +16,7 @@ import {Test} from "forge-std/Test.sol";
 /// @notice The contracts the pause handler drives.
 struct PauseWorld {
     IAaveAdapter adapter;
-    ICollateralizationViews coll;
+    ICollateralization coll;
     AdapterRegistryMock registry;
     AdapterRiskModuleMock risk;
     CollLPVaultMock lpVault;

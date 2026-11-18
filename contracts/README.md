@@ -164,7 +164,7 @@ Callers import only the piece they call, for example `IRiskModule` for `checkPle
 | ParameterStore | `IParameterStoreTighten`, `IParameterStoreLoosen`, `IParameterStoreListing`, `IParameterStore`, `IParameterStore`, `IParameterStore`, `IParameterStore`, `IParameterStore`, `IParameterStore` |
 | AaveAdapter | `IAaveAdapter`, `IAaveAdapter`, `IAaveAdapter`, `IAaveAdapter`, `IAaveAdapter` |
 | LPVault | `ILPVault`, which implements `IAmmIntegration` and `IAmmIntegrationHooks` (`src/amm/`) |
-| Collateralization | `ICollateralizationAdapter`, `ICollateralizationSeizure`, `ICollateralizationUser`, `ICollateralizationDebtMark`, `ICollateralizationViews` |
+| Collateralization | `ICollateralization`, `ICollateralization`, `ICollateralization`, `ICollateralization`, `ICollateralization` |
 | LPVaultSwap | `ILPVaultSwapKeeper`, `ILPVaultSwapPermissionless`, `ILPVaultSwapDeleverage`, `ILPVaultSwapAdmin`, `ILPVaultSwapViews` |
 | RiskModule | `IRiskModule`, `IRiskModule`, `IRiskModule` |
 | PositionProxy | `IPositionProxy` |

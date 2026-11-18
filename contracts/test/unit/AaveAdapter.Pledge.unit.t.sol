@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../src/custody/collateralization/ICollateralizationAdapter.sol";
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
@@ -317,7 +317,7 @@ contract AaveAdapterPledgeUnitTest is AaveAdapterFixture {
         // The indebted account tops up.
         bytes32 key2 = _newKey();
         lpVault.mintPosition(key2, alice, MARKET_ID, UNITS);
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralizationAdapter.pledge, (alice, proxy, vt, key2, false)));
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.pledge, (alice, proxy, vt, key2, false)));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key2), d);
         assertEq(_sharesOf(proxy, vtReserveId), 2 * UNITS, "top-up supplied");
@@ -331,7 +331,7 @@ contract AaveAdapterPledgeUnitTest is AaveAdapterFixture {
         _pause(PauseState.Paused, PauseReason.General);
         bytes32 key = _newKey();
         lpVault.mintPosition(key, alice, MARKET_ID, UNITS);
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralizationAdapter.pledge, (alice, proxy, vt, key, true)));
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.pledge, (alice, proxy, vt, key, true)));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key), _deadline());
         // The RiskModule refusing the rescue reverts the whole pledge, custody included.
@@ -354,7 +354,7 @@ contract AaveAdapterPledgeUnitTest is AaveAdapterFixture {
         registry.setFrozen(bob, true);
         bytes32 key = _newKey();
         lpVault.mintPosition(key, alice, MARKET_ID, UNITS);
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralizationAdapter.pledge, (alice, proxy, vt, key, true)));
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.pledge, (alice, proxy, vt, key, true)));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key), _deadline());
         bytes32 keyB = _newKey();
@@ -371,9 +371,7 @@ contract AaveAdapterPledgeUnitTest is AaveAdapterFixture {
         bytes32 key = _newKey();
         lpVault.mintPosition(key, alice, MARKET_ID, UNITS);
         address predicted = adapterC.predictProxy(alice, MARKET_ID);
-        vm.expectCall(
-            address(coll), abi.encodeCall(ICollateralizationAdapter.pledge, (alice, predicted, vt, key, false))
-        );
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.pledge, (alice, predicted, vt, key, false)));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key), _deadline());
     }
@@ -461,7 +459,7 @@ contract AaveAdapterPledgeUnitTest is AaveAdapterFixture {
         lpVault.mintPosition(key, alice, MARKET_ID, UNITS);
         vm.mockCall(
             address(coll),
-            abi.encodeWithSelector(ICollateralizationAdapter.pledge.selector),
+            abi.encodeWithSelector(ICollateralization.pledge.selector),
             abi.encode(uint256(1), uint128(UNITS))
         );
         uint256 d = _deadline();
@@ -477,7 +475,7 @@ contract AaveAdapterPledgeUnitTest is AaveAdapterFixture {
         lpVault.mintPosition(key, alice, MARKET_ID, UNITS);
         vm.mockCall(
             address(coll),
-            abi.encodeWithSelector(ICollateralizationAdapter.pledge.selector),
+            abi.encodeWithSelector(ICollateralization.pledge.selector),
             abi.encode(uint256(1), uint128(0))
         );
         vm.expectCall(vt, abi.encodeWithSelector(IVaultToken.mint.selector), 0);
@@ -515,7 +513,7 @@ contract AaveAdapterPledgeUnitTest is AaveAdapterFixture {
         bytes32 key = _newKey();
         lpVault.mintPosition(key, alice, MARKET_ID, 1_000_000_000);
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.TooManyRecords.selector, 16));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.TooManyRecords.selector, 16));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key), d);
     }

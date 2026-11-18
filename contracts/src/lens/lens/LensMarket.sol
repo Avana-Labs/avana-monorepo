@@ -5,9 +5,8 @@ pragma solidity 0.8.28;
 
 import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {RiskStatus} from "../../amm/types/RiskStatus.sol";
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
-import {BackingRecord} from "../../custody/collateralization/types/BackingRecord.sol";
-import {Pending} from "../../custody/collateralization/types/Pending.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
+import {BackingRecord, Pending} from "../../custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol";
@@ -42,8 +41,8 @@ abstract contract LensMarket is LensBase, ILensMarket {
         (block.number, block.timestamp, marketId, m.hub, vaultToken);
         (b.assetId, b.reserveId) = (assetId, m.reserveId);
         b.totalSupply = IERC20(vaultToken).totalSupply();
-        b.totalCredited = ICollateralizationViews(_COLLATERALIZATION).getTotalCredited(vaultToken);
-        Pending memory p = ICollateralizationViews(_COLLATERALIZATION).getPending(vaultToken);
+        b.totalCredited = ICollateralization(_COLLATERALIZATION).getTotalCredited(vaultToken);
+        Pending memory p = ICollateralization(_COLLATERALIZATION).getPending(vaultToken);
         (b.pendingUnits, b.pendingAmounts) = (p.units, p.amounts);
         b.unsettledSeizedUnits = IERC20(vaultToken).balanceOf(_LP_VAULT_SWAP);
         b.hubBalance = IERC20(vaultToken).balanceOf(m.hub);
@@ -71,7 +70,7 @@ abstract contract LensMarket is LensBase, ILensMarket {
         _unlocked();
         if (_emptyPage(limit)) return records;
         (, Market memory m) = _marketOfToken(vaultToken);
-        ICollateralizationViews coll = ICollateralizationViews(_COLLATERALIZATION);
+        ICollateralization coll = ICollateralization(_COLLATERALIZATION);
         uint256 n = coll.getMarketRecordCount(vaultToken);
         if (offset >= n) return records;
         uint256 k = n - offset;
@@ -89,7 +88,7 @@ abstract contract LensMarket is LensBase, ILensMarket {
     ) external view override returns (PendingView memory v) {
         _unlocked();
         (uint256 marketId, Market memory m) = _marketOfToken(vaultToken);
-        Pending memory p = ICollateralizationViews(_COLLATERALIZATION).getPending(vaultToken);
+        Pending memory p = ICollateralization(_COLLATERALIZATION).getPending(vaultToken);
         (v.blockNumber, v.timestamp, v.vaultToken, v.units, v.amounts) =
         (block.number, block.timestamp, vaultToken, p.units, p.amounts);
         v.unsettledSeizedUnits = IERC20(vaultToken).balanceOf(_LP_VAULT_SWAP);
@@ -108,7 +107,7 @@ abstract contract LensMarket is LensBase, ILensMarket {
     ) external view override returns (CapView memory c) {
         _unlocked();
         (uint256 marketId, Market memory m) = _marketOfToken(vaultToken);
-        PledgeCounters memory k = ICollateralizationViews(_COLLATERALIZATION).getCounters(vaultToken, depositor);
+        PledgeCounters memory k = ICollateralization(_COLLATERALIZATION).getCounters(vaultToken, depositor);
         (c.blockNumber, c.timestamp, c.hub, c.vaultToken, c.depositor) =
         (block.number, block.timestamp, m.hub, vaultToken, depositor);
         c.minPledgeUsd = _store().minPledgeUsd(marketId);

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
@@ -198,7 +198,7 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
         Market memory m = _market(marketId);
         if (m.vaultToken == address(0)) revert MarketNotActive(marketId);
         limits = _store().marketSpeedLimits(marketId);
-        PledgeCounters memory c = ICollateralizationViews(_COLLATERALIZATION).getCounters(m.vaultToken, address(0));
+        PledgeCounters memory c = ICollateralization(_COLLATERALIZATION).getCounters(m.vaultToken, address(0));
         bookedUsd = uint256(c.regularUsed) + c.sliceUsed;
     }
 

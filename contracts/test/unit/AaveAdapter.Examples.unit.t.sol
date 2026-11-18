@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../src/custody/collateralization/ICollateralizationAdapter.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
@@ -269,7 +269,7 @@ contract AaveAdapterExamplesUnitTest is AaveAdapterFixture {
         lpVault.mintPosition(key, carol, MARKET_ID, 50_000_000_001);
         vm.mockCall(
             address(coll),
-            abi.encodeWithSelector(ICollateralizationAdapter.pledge.selector),
+            abi.encodeWithSelector(ICollateralization.pledge.selector),
             abi.encode(uint256(99), uint128(50_000_000_001))
         );
         uint256 supplyAfter = token.totalSupply() + 50_000_000_001;

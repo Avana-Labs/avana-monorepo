@@ -216,9 +216,9 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "e284f01cefb57761",
+      "fingerprint": "c43682311f057b75",
       "check": "reentrancy-no-eth",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "releaseForDeleverage",
       "reason": "Collateralization's external calls go only to the market's registered immutable LPVault, the factory-validated vault token, the Aave Hub and Spoke, and in pledge and recredit the RiskModule's view check and the market's LPOracle poke, always while a Lock member holds the Lock; every LPVault value move requires the Lock and Collateralization as caller, and every Collateralization state change requires the Lock held by its named caller, so no call can re-enter (REQ-VAULT-086, REQ-LOCK-010). The writes after a call are the ones 2.3 orders after it: the credit is read only after custody (REQ-VAULT-012) and pending amounts are booked from the balance delta measured around the unwind (REQ-VAULT-135). Covered by TEST-060, TEST-010, TEST-150, TEST-151, PROP-037 (Halmos).",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -240,25 +240,25 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "1732600171e2b0bf",
+      "fingerprint": "ad5b75ce0be79fcb",
       "check": "reentrancy-no-eth",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "releasePartial",
       "reason": "Collateralization's external calls go only to the market's registered immutable LPVault, the factory-validated vault token, the Aave Hub and Spoke, and in pledge and recredit the RiskModule's view check and the market's LPOracle poke, always while a Lock member holds the Lock; every LPVault value move requires the Lock and Collateralization as caller, and every Collateralization state change requires the Lock held by its named caller, so no call can re-enter (REQ-VAULT-086, REQ-LOCK-010). The writes after a call are the ones 2.3 orders after it: the credit is read only after custody (REQ-VAULT-012) and pending amounts are booked from the balance delta measured around the unwind (REQ-VAULT-135). Covered by TEST-060, TEST-010, TEST-150, TEST-151, PROP-037 (Halmos).",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "6f3fc246cb42c7e5",
+      "fingerprint": "5a8f5893e1ed51d0",
       "check": "reentrancy-no-eth",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "releaseZeroCredit",
       "reason": "Collateralization's external calls go only to the market's registered immutable LPVault, the factory-validated vault token, the Aave Hub and Spoke, and in pledge and recredit the RiskModule's view check and the market's LPOracle poke, always while a Lock member holds the Lock; every LPVault value move requires the Lock and Collateralization as caller, and every Collateralization state change requires the Lock held by its named caller, so no call can re-enter (REQ-VAULT-086, REQ-LOCK-010). The writes after a call are the ones 2.3 orders after it: the credit is read only after custody (REQ-VAULT-012) and pending amounts are booked from the balance delta measured around the unwind (REQ-VAULT-135). Covered by TEST-060, TEST-010, TEST-150, TEST-151, PROP-037 (Halmos).",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "29ebeceebb9e32ce",
+      "fingerprint": "2456842cd076a922",
       "check": "reentrancy-no-eth",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "release",
       "reason": "Collateralization's external calls go only to the market's registered immutable LPVault, the factory-validated vault token, the Aave Hub and Spoke, and in pledge and recredit the RiskModule's view check and the market's LPOracle poke, always while a Lock member holds the Lock; every LPVault value move requires the Lock and Collateralization as caller, and every Collateralization state change requires the Lock held by its named caller, so no call can re-enter (REQ-VAULT-086, REQ-LOCK-010). The writes after a call are the ones 2.3 orders after it: the credit is read only after custody (REQ-VAULT-012) and pending amounts are booked from the balance delta measured around the unwind (REQ-VAULT-135). Covered by TEST-060, TEST-010, TEST-150, TEST-151, PROP-037 (Halmos).",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -296,9 +296,9 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "9945ae0e30e46dd2",
+      "fingerprint": "82b1d3bca2eb527b",
       "check": "unused-return",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "releasePartial",
       "reason": "The ignored values are not needed and using them would be wrong: marketOf's shape is the LPVault's to enforce (Collateralization needs pool, poolId and tokens only); returnPosition's depositor is the LPVault's own record; topUpPosition's report is superseded by the live units read next (REQ-COLL-037); poke's price state is read by the RiskModule itself (Q-199); releaseToDepositor's report is replaced by the depositor's measured balance deltas (REQ-VAULT-088). Each call reverts on failure. Covered by TEST-238, TEST-237, TEST-018.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -336,9 +336,9 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "45aa62736846ed9e",
+      "fingerprint": "e3b49db9905fce3e",
       "check": "reentrancy-benign",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "release",
       "reason": "Same call graph as the reentrancy-no-eth entries: callees are Avana immutables, Aave, and the RiskModule view, all under the Lock, so no re-entry is possible; the order (custody before credit, measured deltas) is the one 2.3 fixes (REQ-VAULT-089). Covered by TEST-060, TEST-010, TEST-150.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -352,17 +352,17 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "8ab72d2ad89f0d95",
+      "fingerprint": "490a07c230561647",
       "check": "reentrancy-benign",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "releaseZeroCredit",
       "reason": "Same call graph as the reentrancy-no-eth entries: callees are Avana immutables, Aave, and the RiskModule view, all under the Lock, so no re-entry is possible; the order (custody before credit, measured deltas) is the one 2.3 fixes (REQ-VAULT-089). Covered by TEST-060, TEST-010, TEST-150.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "f655d9168b1e990c",
+      "fingerprint": "06260b7316cf6b24",
       "check": "reentrancy-benign",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "releaseForDeleverage",
       "reason": "Same call graph as the reentrancy-no-eth entries: callees are Avana immutables, Aave, and the RiskModule view, all under the Lock, so no re-entry is possible; the order (custody before credit, measured deltas) is the one 2.3 fixes (REQ-VAULT-089). Covered by TEST-060, TEST-010, TEST-150.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -376,17 +376,17 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "90c60d6017fcce29",
+      "fingerprint": "b4befe8e0b627087",
       "check": "reentrancy-events",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "releaseZeroCredit",
       "reason": "Events report amounts returned by the LPVault call before them (RecordDebited, SeizureSettled, SeizureReconciled) or are emitted after custody as 2.3 orders (CollateralPledged after the record, REQ-VAULT-022); every call runs under the Lock with Avana immutables or Aave as callee, so no event can be reordered by a re-entry. Covered by TEST-010, TEST-056, TEST-150.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "8295356cd00796e0",
+      "fingerprint": "00af3d4d6526155a",
       "check": "reentrancy-events",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "releaseForDeleverage",
       "reason": "Events report amounts returned by the LPVault call before them (RecordDebited, SeizureSettled, SeizureReconciled) or are emitted after custody as 2.3 orders (CollateralPledged after the record, REQ-VAULT-022); every call runs under the Lock with Avana immutables or Aave as callee, so no event can be reordered by a re-entry. Covered by TEST-010, TEST-056, TEST-150.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -424,17 +424,17 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "f6d923c44e6c75e0",
+      "fingerprint": "2ef11d16441518dc",
       "check": "reentrancy-events",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "release",
       "reason": "Events report amounts returned by the LPVault call before them (RecordDebited, SeizureSettled, SeizureReconciled) or are emitted after custody as 2.3 orders (CollateralPledged after the record, REQ-VAULT-022); every call runs under the Lock with Avana immutables or Aave as callee, so no event can be reordered by a re-entry. Covered by TEST-010, TEST-056, TEST-150.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "9e00ec38e3530c8c",
+      "fingerprint": "1e5053d9cc11b784",
       "check": "reentrancy-events",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "releasePartial",
       "reason": "Events report amounts returned by the LPVault call before them (RecordDebited, SeizureSettled, SeizureReconciled) or are emitted after custody as 2.3 orders (CollateralPledged after the record, REQ-VAULT-022); every call runs under the Lock with Avana immutables or Aave as callee, so no event can be reordered by a re-entry. Covered by TEST-010, TEST-056, TEST-150.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -464,18 +464,18 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "ef24f14ff0f0c97f",
+      "fingerprint": "332383a7fe5a47fa",
       "check": "low-level-calls",
-      "file": "src/custody/collateralization/CollateralizationDebtMark.sol",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
       "function": "markDebtFree",
       "reason": "markDebtFree reads Spoke.getUserAccountData with a STATICCALL so that a failing or short read changes nothing and never reverts an authorized caller (REQ-COLL-040: a stale mark only delays closeMarket, while a revert would block repay and liquidation); the return data is length-checked before decoding. Covered by TEST-272 (debtFreeNeverReverts).",
       "approval": "approved (Josue, 2026-11-11; re-confirmed after the InsufficientGas floor)"
     },
     {
-      "fingerprint": "9dc044a97129416c",
+      "fingerprint": "d7199e159fa4a846",
       "check": "unimplemented-functions",
-      "file": "src/custody/collateralization/CollateralizationPending.sol",
-      "function": "CollateralizationPending",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
+      "function": "CollateralizationSeizure",
       "reason": "The facet is abstract and implements its share of the interface by design (the Adapter path is split into CollateralizationPledge and CollateralizationRelease, the seizure interface into CollateralizationSeizure and CollateralizationPending); the deployed Collateralization inherits every facet and implements every ICollateralization function (the build would fail otherwise). Covered by TEST-060, TEST-032.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
@@ -496,10 +496,10 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "919236ccd8fcba54",
+      "fingerprint": "470379079b49a02b",
       "check": "unimplemented-functions",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
-      "function": "CollateralizationRelease",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
+      "function": "CollateralizationPledge",
       "reason": "The facet is abstract and implements its share of the interface by design (the Adapter path is split into CollateralizationPledge and CollateralizationRelease, the seizure interface into CollateralizationSeizure and CollateralizationPending); the deployed Collateralization inherits every facet and implements every ICollateralization function (the build would fail otherwise). Covered by TEST-060, TEST-032.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },

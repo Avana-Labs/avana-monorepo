@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationDebtMark} from "../../src/custody/collateralization/ICollateralizationDebtMark.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
@@ -61,7 +61,7 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
     function test_TEST_027_borrowGho() public {
         uint256 amount = 5000e18;
         vm.expectCall(address(risk), abi.encodeCall(IRiskModule.preBorrowCheck, (aliceProxy, debtReserveId, amount)));
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralizationDebtMark.markIndebted, (aliceProxy)));
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.markIndebted, (aliceProxy)));
         vm.expectCall(address(risk), abi.encodeCall(IRiskModule.postHealthCheck, (aliceProxy, 1.5e18)));
         // $20,000 of collateral at CF 80% over $5,000 of GHO debt.
         uint256 hfExpected = uint256(16_000e18) * 1e18 / amount;

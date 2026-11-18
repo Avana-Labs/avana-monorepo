@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
@@ -87,7 +87,7 @@ abstract contract LensActions is LensAccountMath, ILensActions {
         _unlocked();
         Acct memory a;
         (a, v) = _start(wallet, marketId);
-        ICollateralizationViews coll = ICollateralizationViews(_COLLATERALIZATION);
+        ICollateralization coll = ICollateralization(_COLLATERALIZATION);
         uint256 id = coll.recordIdOf(a.m.integrationId, positionKey);
         if (id != 0 && coll.getRecord(id).proxy == a.proxy) {
             v.amount = coll.previewRelease(a.m.integrationId, positionKey);

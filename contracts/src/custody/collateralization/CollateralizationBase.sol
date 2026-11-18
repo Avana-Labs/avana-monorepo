@@ -12,11 +12,8 @@ import {PledgeCharge} from "../../policy/risk-module/types/RiskModuleTypes.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
-import {ICollateralizationErrors} from "./ICollateralizationErrors.sol";
-import {ICollateralizationEvents} from "./ICollateralizationEvents.sol";
-import {BackingRecord} from "./types/BackingRecord.sol";
-import {CounterKind} from "./types/CounterKind.sol";
-import {Pending} from "./types/Pending.sol";
+import {ICollateralizationBase} from "./ICollateralizationBase.sol";
+import {BackingRecord, CounterKind, Pending} from "./types/CollateralizationTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
@@ -29,7 +26,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 // forge-lint: disable-start(unused-state-variables)
 /// @title CollateralizationBase
 /// @notice Storage, caller and lock checks and exposure counters shared by the Collateralization facets.
-abstract contract CollateralizationBase is ICollateralizationEvents, ICollateralizationErrors {
+abstract contract CollateralizationBase is ICollateralizationBase {
     enum Bucket {
         Regular,
         Slice

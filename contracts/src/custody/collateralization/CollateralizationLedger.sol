@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {PledgeCounters} from "../../types/PledgeCounters.sol";
 import {CollateralizationBase} from "./CollateralizationBase.sol";
-import {BackingRecord} from "./types/BackingRecord.sol";
-import {Pending} from "./types/Pending.sol";
+import {BackingRecord, Pending} from "./types/CollateralizationTypes.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 // External calls go only to known protocol contracts while a Lock member holds the Lock, so nothing can re-enter.

@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../src/custody/collateralization/ICollateralizationAdapter.sol";
-import {ICollateralizationEvents} from "../../src/custody/collateralization/ICollateralizationEvents.sol";
-import {CounterKind} from "../../src/custody/collateralization/types/CounterKind.sol";
-import {Pending} from "../../src/custody/collateralization/types/Pending.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {CounterKind, Pending} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {INonfungiblePositionManager} from "../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
 import {IUniswapV3Pool} from "../../src/interfaces/external/uniswap/IUniswapV3Pool.sol";
@@ -105,7 +104,7 @@ contract CollateralizationSurfaceUnitTest is CollateralizationFixture {
         (bool sent,) = address(coll).call{value: 1}("");
         assertFalse(sent, "ETH accepted");
         assertEq(
-            ICollateralizationAdapter.pledge.selector,
+            ICollateralization.pledge.selector,
             bytes4(keccak256("pledge(address,address,address,bytes32,bool)")),
             "pledge takes no deadline and no borrow"
         );
@@ -147,7 +146,7 @@ contract CollateralizationSurfaceUnitTest is CollateralizationFixture {
         assertFalse(_pushes(code, bytes4(keccak256("isValidSignature(bytes32,bytes)"))), "ERC-1271");
         assertFalse(code.hasOpcode(0, code.length, 0xf4), "DELEGATECALL");
         assertTrue(_pushes(code, ILPOracle.poke.selector), "scan sanity: the pledge's poke");
-        assertTrue(_pushes(code, ICollateralizationAdapter.pledge.selector), "scan sanity: the dispatcher");
+        assertTrue(_pushes(code, ICollateralization.pledge.selector), "scan sanity: the dispatcher");
     }
 
     /// @dev Whether `code` builds `selector` as a call's first word in any of the forms the via-IR optimizer emits:
@@ -373,9 +372,9 @@ contract CollateralizationSurfaceUnitTest is CollateralizationFixture {
         address hubAddr = h.HUB();
 
         vm.expectEmit(address(h));
-        emit ICollateralizationEvents.CounterSaturated(CounterKind.MarketRegular, hubAddr, h.VT(), regular, charge);
+        emit ICollateralizationBase.CounterSaturated(CounterKind.MarketRegular, hubAddr, h.VT(), regular, charge);
         vm.expectEmit(address(h));
-        emit ICollateralizationEvents.CounterSaturated(CounterKind.Token, hubAddr, h.TOKEN0(), token0, charge);
+        emit ICollateralizationBase.CounterSaturated(CounterKind.Token, hubAddr, h.TOKEN0(), token0, charge);
         h.close(id);
 
         (uint256 r, uint256 t0, uint256 t1) = h.counters();

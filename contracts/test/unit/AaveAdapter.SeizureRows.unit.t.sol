@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {ICollateralizationSeizure} from "../../src/custody/collateralization/ICollateralizationSeizure.sol";
-import {Pending} from "../../src/custody/collateralization/types/Pending.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {Pending} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
@@ -196,8 +196,8 @@ contract AaveAdapterSeizureRowsUnitTest is AaveAdapterFixture {
 
         // No burn: the supply check fails.
         bytes memory err =
-            swap.callUnderLock(address(coll), abi.encodeCall(ICollateralizationSeizure.settlePending, (vt, kept)));
-        assertEq(bytes4(err), ICollateralizationErrors.SupplyDropMismatch.selector, "settlement without the burn");
+            swap.callUnderLock(address(coll), abi.encodeCall(ICollateralization.settlePending, (vt, kept)));
+        assertEq(bytes4(err), ICollateralizationBase.SupplyDropMismatch.selector, "settlement without the burn");
         // Burn callers and markets.
         vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         vm.prank(alice);
@@ -207,8 +207,8 @@ contract AaveAdapterSeizureRowsUnitTest is AaveAdapterFixture {
         vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnknownMarket.selector, MARKET_B));
         swap.burnUnderLock(MARKET_B, vt, kept);
         // More than pending.
-        err = swap.callUnderLock(address(coll), abi.encodeCall(ICollateralizationSeizure.settlePending, (vt, kept + 1)));
-        assertEq(bytes4(err), ICollateralizationErrors.PendingExceeded.selector, "above the pending balance");
+        err = swap.callUnderLock(address(coll), abi.encodeCall(ICollateralization.settlePending, (vt, kept + 1)));
+        assertEq(bytes4(err), ICollateralizationBase.PendingExceeded.selector, "above the pending balance");
 
         int256 gap0 = int256(coll.getTotalCredited(vt) + coll.getPending(vt).units) - int256(token.totalSupply());
         uint256 usdc0 = usdc.balanceOf(lpVaultSwap);

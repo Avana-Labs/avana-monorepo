@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
@@ -68,7 +67,7 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
 
         _setPoolUnits(2e12 + 1);
         _acquire(address(adapter));
-        assertEq(ICollateralizationViews(address(ledger)).poolUnits(poolKey), 2e12 + 1, "settled value read");
+        assertEq(ICollateralization(address(ledger)).poolUnits(poolKey), 2e12 + 1, "settled value read");
         vm.expectRevert(
             abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.POOL_SHARE)
         );
@@ -88,9 +87,9 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
     function test_TEST_060_ledgerReadsRefusedUnderLPVaultSwapLock() public {
         address swapMember = address(lpVaultSwap);
         _acquire(swapMember);
-        vm.expectRevert(ICollateralizationErrors.Locked.selector);
+        vm.expectRevert(ICollateralizationBase.Locked.selector);
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        vm.expectRevert(ICollateralizationErrors.Locked.selector);
+        vm.expectRevert(ICollateralizationBase.Locked.selector);
         riskModule.postHealthCheck(address(proxy), 0);
         _release(swapMember);
         // Free again: the same checks pass.
@@ -153,7 +152,7 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
         uint256 units
     ) internal {
         stdstore.target(address(ledger))
-            .sig(ICollateralizationViews.poolUnits.selector)
+            .sig(ICollateralization.poolUnits.selector)
             .with_key(poolKey)
             .checked_write(units);
     }

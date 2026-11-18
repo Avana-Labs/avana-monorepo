@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../src/custody/collateralization/ICollateralizationAdapter.sol";
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
@@ -151,7 +151,7 @@ contract AaveAdapterCollateralUnitTest is AaveAdapterFixture {
     /// `PartialRemovalTooLarge`; a whole record leaves through `withdraw`.
     function test_TEST_237_wholeRecordRefused() public {
         _expectRemoveRevert(
-            abi.encodeWithSelector(ICollateralizationErrors.PartialRemovalTooLarge.selector, UNITS, UNITS), UNITS
+            abi.encodeWithSelector(ICollateralizationBase.PartialRemovalTooLarge.selector, UNITS, UNITS), UNITS
         );
     }
 
@@ -161,7 +161,7 @@ contract AaveAdapterCollateralUnitTest is AaveAdapterFixture {
     function test_TEST_237_minimums() public {
         uint256 d = _deadline();
         uint256[] memory three = new uint256[](3);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.LengthMismatch.selector, 2, 3));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.LengthMismatch.selector, 2, 3));
         vm.prank(alice);
         adapterC.removeLiquidity(MARKET_ID, _ref(k1), 1_000_000_000, three, d, 0);
         uint256[] memory high = new uint256[](2);
@@ -197,7 +197,7 @@ contract AaveAdapterCollateralUnitTest is AaveAdapterFixture {
         uint256[] memory amounts = new uint256[](2);
         vm.mockCall(
             address(coll),
-            abi.encodeWithSelector(ICollateralizationAdapter.releasePartial.selector),
+            abi.encodeWithSelector(ICollateralization.releasePartial.selector),
             abi.encode(uint128(UNITS - 1), amounts)
         );
         _expectRemoveRevert(abi.encodeWithSelector(IAaveAdapterBase.BackingMismatch.selector, UNITS - 1, UNITS, 0), 1);
@@ -229,7 +229,7 @@ contract AaveAdapterCollateralUnitTest is AaveAdapterFixture {
     /// @notice Nothing added reverts `NothingToRecredit`; a wallet that is not the depositor reverts `NotDepositor`.
     function test_TEST_238_recreditRefusals() public {
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.NothingToRecredit.selector, k1));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.NothingToRecredit.selector, k1));
         vm.prank(alice);
         adapterC.recredit(MARKET_ID, _ref(k1), "", d);
         lpVault.addUnits(k1, 1_000_000);
@@ -266,16 +266,12 @@ contract AaveAdapterCollateralUnitTest is AaveAdapterFixture {
         _pause(PauseState.None, PauseReason.None);
         _borrowAs(alice, MARKET_ID, debtReserveId, 100e18);
         _pause(PauseState.Paused, PauseReason.General);
-        vm.expectCall(
-            address(coll), abi.encodeCall(ICollateralizationAdapter.recredit, (alice, p, vt, k1, "", true)), 1
-        );
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.recredit, (alice, p, vt, k1, "", true)), 1);
         vm.prank(alice);
         adapterC.recredit(MARKET_ID, _ref(k1), "", d);
         lpVault.addUnits(k1, 1_000_000_000);
         _pause(PauseState.Frozen, PauseReason.None);
-        vm.expectCall(
-            address(coll), abi.encodeCall(ICollateralizationAdapter.recredit, (alice, p, vt, k1, "", false)), 1
-        );
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.recredit, (alice, p, vt, k1, "", false)), 1);
         vm.prank(alice);
         adapterC.recredit(MARKET_ID, _ref(k1), "", d);
     }
@@ -285,9 +281,7 @@ contract AaveAdapterCollateralUnitTest is AaveAdapterFixture {
     function test_TEST_229_frozenRecreditIsRescue() public {
         lpVault.addUnits(k1, 1_000_000_000);
         registry.setFrozen(alice, true);
-        vm.expectCall(
-            address(coll), abi.encodeCall(ICollateralizationAdapter.recredit, (alice, p, vt, k1, "", true)), 1
-        );
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.recredit, (alice, p, vt, k1, "", true)), 1);
         vm.prank(alice);
         adapterC.recredit(MARKET_ID, _ref(k1), "", _deadline());
     }
@@ -299,7 +293,7 @@ contract AaveAdapterCollateralUnitTest is AaveAdapterFixture {
         uint256 d = _deadline();
         vm.mockCall(
             address(coll),
-            abi.encodeWithSelector(ICollateralizationAdapter.recredit.selector),
+            abi.encodeWithSelector(ICollateralization.recredit.selector),
             abi.encode(uint128(0), uint128(0))
         );
         vm.expectRevert(IAaveAdapterBase.ZeroAmount.selector);
@@ -307,7 +301,7 @@ contract AaveAdapterCollateralUnitTest is AaveAdapterFixture {
         adapterC.recredit(MARKET_ID, _ref(k1), "", d);
         vm.mockCall(
             address(coll),
-            abi.encodeWithSelector(ICollateralizationAdapter.recredit.selector),
+            abi.encodeWithSelector(ICollateralization.recredit.selector),
             abi.encode(uint128(5), uint128(0))
         );
         vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.BackingMismatch.selector, UNITS + 5, UNITS, 0));

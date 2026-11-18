@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../custody/collateralization/ICollateralizationAdapter.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILock} from "../../lock/lock/ILock.sol";
 import {PositionRef} from "../../types/PositionRef.sol";
@@ -81,7 +81,7 @@ contract AaveAdapterSettlementLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _checkReleaseSession(proxy, account.vaultToken, position, units, minAmounts);
         _markStep(STEP_RELEASED);
         _withdrawAndBurn(proxy, account.spoke, account.vaultToken, _reserveIdOf(account.vaultToken), units);
-        (amounts, closed) = ICollateralizationAdapter(_COLLATERALIZATION)
+        (amounts, closed) = ICollateralization(_COLLATERALIZATION)
             .releaseForDeleverage(proxy, account.vaultToken, position.positionKey, units, minAmounts);
     }
 

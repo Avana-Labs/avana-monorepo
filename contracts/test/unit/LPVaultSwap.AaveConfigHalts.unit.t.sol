@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
@@ -73,7 +73,7 @@ contract LPVaultSwapAaveConfigHaltsUnitTest is LPVaultSwapUnitBase {
     }
 
     function _gap() internal view returns (int256) {
-        ICollateralizationViews v = ICollateralizationViews(address(coll));
+        ICollateralization v = ICollateralization(address(coll));
         return int256(v.getTotalCredited(address(vt)) + v.getPending(address(vt)).units) - int256(vt.totalSupply());
     }
 
@@ -94,7 +94,7 @@ contract LPVaultSwapAaveConfigHaltsUnitTest is LPVaultSwapUnitBase {
         _setFee(1000);
         uint256 sharesBefore = _suppliedUnits(proxy);
         uint256 supplyBefore = vt.totalSupply();
-        uint256 pendingBefore = ICollateralizationViews(address(coll)).getPending(address(vt)).units;
+        uint256 pendingBefore = ICollateralization(address(coll)).getPending(address(vt)).units;
         int256 gapBefore = _gap();
         LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, 1950e6));
         uint256 drop = sharesBefore - _suppliedUnits(proxy);
@@ -103,13 +103,11 @@ contract LPVaultSwapAaveConfigHaltsUnitTest is LPVaultSwapUnitBase {
         assertGt(fee, 0, "Aave took fee shares");
         assertEq(supplyBefore - vt.totalSupply(), r.unitsSeized, "only the seized units were burned");
         assertEq(
-            ICollateralizationViews(address(coll)).getPending(address(vt)).units,
-            pendingBefore + fee,
-            "fee units pending"
+            ICollateralization(address(coll)).getPending(address(vt)).units, pendingBefore + fee, "fee units pending"
         );
         assertEq(_gap(), gapBefore, "backing gap unchanged");
         assertEq(
-            ICollateralizationViews(address(coll)).getAccountCredited(proxy, address(vt)),
+            ICollateralization(address(coll)).getAccountCredited(proxy, address(vt)),
             _suppliedUnits(proxy),
             "credit equals supplied shares"
         );
@@ -124,11 +122,11 @@ contract LPVaultSwapAaveConfigHaltsUnitTest is LPVaultSwapUnitBase {
         feeBps = uint16(bound(feeBps, 1, 5000));
         _setFee(feeBps);
         uint256 sharesBefore = _suppliedUnits(proxy);
-        uint256 pendingBefore = ICollateralizationViews(address(coll)).getPending(address(vt)).units;
+        uint256 pendingBefore = ICollateralization(address(coll)).getPending(address(vt)).units;
         int256 gapBefore = _gap();
         LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, 1950e6));
         uint256 fee = sharesBefore - _suppliedUnits(proxy) - r.unitsSeized;
-        assertEq(ICollateralizationViews(address(coll)).getPending(address(vt)).units, pendingBefore + fee);
+        assertEq(ICollateralization(address(coll)).getPending(address(vt)).units, pendingBefore + fee);
         assertEq(_gap(), gapBefore);
     }
 

@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {BackingRecord} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
@@ -270,7 +270,7 @@ contract FullStackPolicyIntegrationTest is FullStackMarkets {
         assertGt(_sharesOf(pB, mkt[mA].reserveId), shares, "and supplied for Bob's proxy");
         assertEq(coll.getCounters(vtA, bob).regularUsed - usedBefore, _charge(added), "charged at the LPOracle price");
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.NothingToRecredit.selector, kB));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.NothingToRecredit.selector, kB));
         IAaveAdapter(adapter).recredit(mA, _ref(kB), "", _deadline());
         uint256 used = coll.getCounters(vtA, bob).regularUsed;
         _govern(address(store), _sliceTo(1e8));

@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {RiskStatus} from "../../amm/types/RiskStatus.sol";
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IFlashSource} from "../../flash/IFlashSource.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
@@ -93,7 +93,7 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
     ) external view override returns (uint128 added, uint256 usdCharge, bool rescueOnly) {
         _unlocked();
         Market memory m = _market(marketId);
-        ICollateralizationViews coll = ICollateralizationViews(_COLLATERALIZATION);
+        ICollateralization coll = ICollateralization(_COLLATERALIZATION);
         added = coll.previewRecredit(m.integrationId, positionKey);
         if (added == 0) return (0, 0, false);
         // forge-lint: disable-next-line(unused-return)
@@ -208,7 +208,7 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
     function _rescueExclusion(
         Borrow memory b
     ) internal view returns (uint256 e) {
-        uint256 u = ICollateralizationViews(_COLLATERALIZATION).getAccountRescueUnits(b.proxy, b.m.vaultToken);
+        uint256 u = ICollateralization(_COLLATERALIZATION).getAccountRescueUnits(b.proxy, b.m.vaultToken);
         if (u == 0) return 0;
         uint32 key = IAaveV4Spoke(b.m.spoke).getUserPosition(b.m.reserveId, b.proxy).dynamicConfigKey;
         uint256 cf = IAaveV4Spoke(b.m.spoke).getDynamicReserveConfig(b.m.reserveId, key).collateralFactor;
@@ -253,7 +253,7 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
         RiskStatus memory rs =
             IAmmIntegration(m.integration).riskStatus(marketId, _store().getMarketParams(marketId).twapWindow);
         if (!rs.depthAvailable) return true;
-        uint256 units = ICollateralizationViews(_COLLATERALIZATION).poolUnits(key) + added;
+        uint256 units = ICollateralization(_COLLATERALIZATION).poolUnits(key) + added;
         return RiskModuleMath.poolShareExceeds(units, cap, rs.depthUnits);
     }
 }

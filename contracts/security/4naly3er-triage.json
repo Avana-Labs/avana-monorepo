@@ -217,9 +217,9 @@
       "review": "Reviewed per call site, group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
     },
     {
-      "fingerprint": "855ab4cdf7b816b9",
+      "fingerprint": "9814eae9b454b62b",
       "check": "Some tokens may revert when zero value transfers are made",
-      "file": "src/custody/collateralization/CollateralizationPending.sol",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
       "reason": "Zero-value transfer not possible: guarded by amounts[i] != 0 on the same line.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."

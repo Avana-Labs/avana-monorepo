@@ -4,10 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {ICollateralizationEvents} from "../../src/custody/collateralization/ICollateralizationEvents.sol";
-import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
-import {Pending} from "../../src/custody/collateralization/types/Pending.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {BackingRecord, Pending} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
@@ -56,7 +54,7 @@ contract CollateralizationExitUnitTest is CollateralizationFixture {
         vm.expectCall(address(riskModule), abi.encodeWithSelector(IRiskModule.checkPledge.selector), 0);
         vm.expectCall(address(oracle), abi.encodeCall(CollOracleMock.poke, ()), 0);
         vm.expectEmit(address(coll));
-        emit ICollateralizationEvents.CollateralReleased(1, KEY42, alice, aliceProxy, vt, 5_000_000_000);
+        emit ICollateralizationBase.CollateralReleased(1, KEY42, alice, aliceProxy, vt, 5_000_000_000);
         vm.prank(adapter);
         coll.release(aliceProxy, vt, KEY42, 5_000_000_000);
         _release(adapter);
@@ -85,13 +83,13 @@ contract CollateralizationExitUnitTest is CollateralizationFixture {
         _pledge(bob, bobProxy, KEY7, 4_000_000_000);
         _acquire(adapter);
         vm.startPrank(adapter);
-        vm.expectRevert(ICollateralizationErrors.RecordNotFound.selector);
+        vm.expectRevert(ICollateralizationBase.RecordNotFound.selector);
         coll.release(aliceProxy, vt, _key(1), 1);
-        vm.expectRevert(ICollateralizationErrors.NotRecordProxy.selector);
+        vm.expectRevert(ICollateralizationBase.NotRecordProxy.selector);
         coll.release(bobProxy, vt, KEY42, 5_000_000_000);
-        vm.expectRevert(ICollateralizationErrors.UnitsMismatch.selector);
+        vm.expectRevert(ICollateralizationBase.UnitsMismatch.selector);
         coll.release(aliceProxy, vt, KEY42, 4_999_999_999);
-        vm.expectRevert(ICollateralizationErrors.UnitsMismatch.selector);
+        vm.expectRevert(ICollateralizationBase.UnitsMismatch.selector);
         coll.release(aliceProxy, vt, KEY42, 0);
         vm.stopPrank();
         _release(adapter);
@@ -108,21 +106,21 @@ contract CollateralizationExitUnitTest is CollateralizationFixture {
         _acquire(adapter);
         _withdrawAndBurn(aliceProxy, 1_000_000_000);
         vm.expectEmit(address(coll));
-        emit ICollateralizationEvents.RecordReduced(1, 1_000_000_000, 200_000_000_000);
+        emit ICollateralizationBase.RecordReduced(1, 1_000_000_000, 200_000_000_000);
         vm.prank(adapter);
         (uint128 remaining, uint256[] memory amounts) =
             coll.releasePartial(aliceProxy, vt, KEY42, 1_000_000_000, new uint256[](2));
         vm.expectRevert(
             abi.encodeWithSelector(
-                ICollateralizationErrors.PartialRemovalTooLarge.selector, uint128(4_000_000_000), uint128(4_000_000_000)
+                ICollateralizationBase.PartialRemovalTooLarge.selector, uint128(4_000_000_000), uint128(4_000_000_000)
             )
         );
         vm.prank(adapter);
         coll.releasePartial(aliceProxy, vt, KEY42, 4_000_000_000, new uint256[](2));
-        vm.expectRevert(ICollateralizationErrors.UnitsMismatch.selector);
+        vm.expectRevert(ICollateralizationBase.UnitsMismatch.selector);
         vm.prank(adapter);
         coll.releasePartial(aliceProxy, vt, KEY42, 0, new uint256[](2));
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.LengthMismatch.selector, 2, 3));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.LengthMismatch.selector, 2, 3));
         vm.prank(adapter);
         coll.releasePartial(aliceProxy, vt, KEY42, 1, new uint256[](3));
         _release(adapter);
@@ -168,12 +166,12 @@ contract CollateralizationExitUnitTest is CollateralizationFixture {
         assertFalse(closed);
         assertEq(amounts[0], 640_000_000);
         assertEq(usdc.balanceOf(lpVaultSwap), 640_000_000, "principal to LPVaultSwap");
-        vm.expectRevert(ICollateralizationErrors.UnitsMismatch.selector);
+        vm.expectRevert(ICollateralizationBase.UnitsMismatch.selector);
         vm.prank(adapter);
         coll.releaseForDeleverage(aliceProxy, vt, KEY7, 3_200_000_001, new uint256[](2));
         _withdrawAndBurn(aliceProxy, 3_200_000_000);
         vm.expectEmit(address(coll));
-        emit ICollateralizationEvents.CollateralReleased(1, KEY7, alice, aliceProxy, vt, 3_200_000_000);
+        emit ICollateralizationBase.CollateralReleased(1, KEY7, alice, aliceProxy, vt, 3_200_000_000);
         vm.prank(adapter);
         (, closed) = coll.releaseForDeleverage(aliceProxy, vt, KEY7, 3_200_000_000, new uint256[](2));
         _release(adapter);
@@ -278,7 +276,7 @@ contract CollateralizationExitUnitTest is CollateralizationFixture {
         booked[0] = c * 800_000 / 1e6;
         booked[1] = c * 1_250_000 / 1e6;
         vm.expectEmit(address(coll));
-        emit ICollateralizationEvents.SeizureReconciled(aliceProxy, vt, c, booked);
+        emit ICollateralizationBase.SeizureReconciled(aliceProxy, vt, c, booked);
         vm.prank(adapter);
         coll.release(aliceProxy, vt, KEY42, units);
         _release(adapter);
@@ -309,7 +307,7 @@ contract CollateralizationExitUnitTest is CollateralizationFixture {
         _acquire(adapter);
         // The proxy has debt, so a withdrawal is only possible up to its health; the check under test is the
         // ledger's: the post-reconcile amount is refused while reconciliation is skipped.
-        vm.expectRevert(ICollateralizationErrors.UnitsMismatch.selector);
+        vm.expectRevert(ICollateralizationBase.UnitsMismatch.selector);
         vm.prank(adapter);
         coll.release(aliceProxy, vt, KEY42, 5_000_000_000 - c);
         _release(adapter);
@@ -331,14 +329,14 @@ contract CollateralizationExitUnitTest is CollateralizationFixture {
         assertLt(c, 3_500_000_000);
         assertEq(coll.previewRelease(INTEGRATION, KEY7), 0, "head record fully reconciled");
         _acquire(adapter);
-        vm.expectRevert(ICollateralizationErrors.NotDepositor.selector);
+        vm.expectRevert(ICollateralizationBase.NotDepositor.selector);
         vm.prank(adapter);
         coll.releaseZeroCredit(bob, vt, KEY7);
         vm.expectEmit(address(coll));
-        emit ICollateralizationEvents.CollateralReleased(2, KEY7, alice, aliceProxy, vt, 0);
+        emit ICollateralizationBase.CollateralReleased(2, KEY7, alice, aliceProxy, vt, 0);
         vm.prank(adapter);
         coll.releaseZeroCredit(alice, vt, KEY7);
-        vm.expectRevert(ICollateralizationErrors.RecordHasCredit.selector);
+        vm.expectRevert(ICollateralizationBase.RecordHasCredit.selector);
         vm.prank(adapter);
         coll.releaseZeroCredit(alice, vt, KEY42);
         _release(adapter);
@@ -360,10 +358,10 @@ contract CollateralizationExitUnitTest is CollateralizationFixture {
         lpVault.addUnits(KEY7, 1);
         // Reconcile through releaseZeroCredit's sibling: a re-credit reconciles first, then finds 0 credited units.
         _acquire(adapter);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.NothingToRecredit.selector, KEY7));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.NothingToRecredit.selector, KEY7));
         vm.prank(adapter);
         coll.recredit(alice, aliceProxy, vt, KEY7, "", false);
-        vm.expectRevert(ICollateralizationErrors.NotDepositor.selector);
+        vm.expectRevert(ICollateralizationBase.NotDepositor.selector);
         vm.prank(adapter);
         coll.collectFees(bob, vt, KEY7);
         vm.prank(adapter);

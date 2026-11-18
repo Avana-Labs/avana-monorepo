@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 
 /// @title CollateralizationAccessUnitTest
@@ -42,7 +42,7 @@ contract CollateralizationAccessUnitTest is CollateralizationFixture {
                     vm.prank(callers[c]);
                     (bool ok, bytes memory ret) = address(coll).staticcall(views[v]);
                     assertEq(ok, admitted, "view admission");
-                    if (!admitted) assertEq(ret, abi.encodeWithSelector(ICollateralizationErrors.Locked.selector));
+                    if (!admitted) assertEq(ret, abi.encodeWithSelector(ICollateralizationBase.Locked.selector));
                 }
             }
             _exit(state);
@@ -68,7 +68,7 @@ contract CollateralizationAccessUnitTest is CollateralizationFixture {
                     if (ok) {
                         assertEq(abi.decode(ret, (uint256)), v == 0 ? 0 : 5_000_000_000, "value");
                     } else {
-                        assertEq(ret, abi.encodeWithSelector(ICollateralizationErrors.Locked.selector));
+                        assertEq(ret, abi.encodeWithSelector(ICollateralizationBase.Locked.selector));
                     }
                 }
             }
@@ -114,14 +114,14 @@ contract CollateralizationAccessUnitTest is CollateralizationFixture {
             abi.encodeCall(coll.markIndebted, (bobProxy))
         ];
         bytes[8] memory admitted = [
-            abi.encodeWithSelector(ICollateralizationErrors.UnknownProxy.selector, bobProxy),
-            abi.encodeWithSelector(ICollateralizationErrors.RecordNotFound.selector),
-            abi.encodeWithSelector(ICollateralizationErrors.RecordNotFound.selector),
-            abi.encodeWithSelector(ICollateralizationErrors.RecordNotFound.selector),
-            abi.encodeWithSelector(ICollateralizationErrors.RecordNotFound.selector),
-            abi.encodeWithSelector(ICollateralizationErrors.RecordNotFound.selector),
-            abi.encodeWithSelector(ICollateralizationErrors.RecordNotFound.selector),
-            abi.encodeWithSelector(ICollateralizationErrors.UnknownProxy.selector, bobProxy)
+            abi.encodeWithSelector(ICollateralizationBase.UnknownProxy.selector, bobProxy),
+            abi.encodeWithSelector(ICollateralizationBase.RecordNotFound.selector),
+            abi.encodeWithSelector(ICollateralizationBase.RecordNotFound.selector),
+            abi.encodeWithSelector(ICollateralizationBase.RecordNotFound.selector),
+            abi.encodeWithSelector(ICollateralizationBase.RecordNotFound.selector),
+            abi.encodeWithSelector(ICollateralizationBase.RecordNotFound.selector),
+            abi.encodeWithSelector(ICollateralizationBase.RecordNotFound.selector),
+            abi.encodeWithSelector(ICollateralizationBase.UnknownProxy.selector, bobProxy)
         ];
         address[4] memory callers = [stranger, adapter, lpVaultSwap, address(lpVault)];
         for (uint8 state = FREE; state <= SWAP_HOLDS; ++state) {
@@ -130,9 +130,9 @@ contract CollateralizationAccessUnitTest is CollateralizationFixture {
                 for (uint256 c = 0; c < callers.length; ++c) {
                     bytes memory expected;
                     if (callers[c] != adapter) {
-                        expected = abi.encodeWithSelector(ICollateralizationErrors.NotAdapter.selector);
+                        expected = abi.encodeWithSelector(ICollateralizationBase.NotAdapter.selector);
                     } else if (state != ADAPTER_HOLDS) {
-                        expected = abi.encodeWithSelector(ICollateralizationErrors.LockNotHeld.selector);
+                        expected = abi.encodeWithSelector(ICollateralizationBase.LockNotHeld.selector);
                     } else {
                         expected = admitted[i];
                     }
@@ -155,9 +155,9 @@ contract CollateralizationAccessUnitTest is CollateralizationFixture {
             abi.encodeCall(coll.settlePending, (vt, 1))
         ];
         bytes[3] memory admitted = [
-            abi.encodeWithSelector(ICollateralizationErrors.UnknownProxy.selector, bobProxy),
-            abi.encodeWithSelector(ICollateralizationErrors.SeizureMismatch.selector),
-            abi.encodeWithSelector(ICollateralizationErrors.PendingExceeded.selector)
+            abi.encodeWithSelector(ICollateralizationBase.UnknownProxy.selector, bobProxy),
+            abi.encodeWithSelector(ICollateralizationBase.SeizureMismatch.selector),
+            abi.encodeWithSelector(ICollateralizationBase.PendingExceeded.selector)
         ];
         address[4] memory callers = [stranger, adapter, lpVaultSwap, address(lpVault)];
         for (uint8 state = FREE; state <= SWAP_HOLDS; ++state) {
@@ -166,9 +166,9 @@ contract CollateralizationAccessUnitTest is CollateralizationFixture {
                 for (uint256 c = 0; c < callers.length; ++c) {
                     bytes memory expected;
                     if (callers[c] != lpVaultSwap) {
-                        expected = abi.encodeWithSelector(ICollateralizationErrors.NotLPVaultSwap.selector);
+                        expected = abi.encodeWithSelector(ICollateralizationBase.NotLPVaultSwap.selector);
                     } else if (state != SWAP_HOLDS) {
-                        expected = abi.encodeWithSelector(ICollateralizationErrors.LockNotHeld.selector);
+                        expected = abi.encodeWithSelector(ICollateralizationBase.LockNotHeld.selector);
                     } else {
                         expected = admitted[i];
                     }
@@ -192,9 +192,9 @@ contract CollateralizationAccessUnitTest is CollateralizationFixture {
             for (uint256 c = 0; c < callers.length; ++c) {
                 address caller = callers[c];
                 if (caller != adapter && caller != lpVaultSwap) {
-                    _expectFail(caller, call, abi.encodeWithSelector(ICollateralizationErrors.NotAdapter.selector));
+                    _expectFail(caller, call, abi.encodeWithSelector(ICollateralizationBase.NotAdapter.selector));
                 } else if (caller != holder) {
-                    _expectFail(caller, call, abi.encodeWithSelector(ICollateralizationErrors.LockNotHeld.selector));
+                    _expectFail(caller, call, abi.encodeWithSelector(ICollateralizationBase.LockNotHeld.selector));
                 } else {
                     vm.prank(caller);
                     (bool ok,) = address(coll).call(call);

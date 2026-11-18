@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {CloseAccountView} from "../../src/lens/lens/types/CloseAccountView.sol";
@@ -92,7 +92,7 @@ contract LensInverseSizingUnitTest is LensFixture {
         _borrow(aliceProxy, 8000e18);
         vm.mockCall(
             address(coll),
-            abi.encodeCall(ICollateralizationViews.getAccountRescueUnits, (aliceProxy, vt)),
+            abi.encodeCall(ICollateralization.getAccountRescueUnits, (aliceProxy, vt)),
             abi.encode(uint256(1000e6))
         );
         uint256 e = RiskModuleMath.rescueValue(1000e6, 2e8, 8000, VT_DECIMALS);

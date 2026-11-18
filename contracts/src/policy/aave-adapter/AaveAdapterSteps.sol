@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
@@ -88,7 +88,7 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
     function _backing(
         address vaultToken
     ) internal view returns (uint256 supply, uint256 credited, uint256 pending) {
-        ICollateralizationViews coll = ICollateralizationViews(_COLLATERALIZATION);
+        ICollateralization coll = ICollateralization(_COLLATERALIZATION);
         supply = IVaultToken(vaultToken).totalSupply();
         credited = coll.getTotalCredited(vaultToken);
         pending = coll.getPending(vaultToken).units;

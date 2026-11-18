@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
-import {BackingRecord} from "../../../src/custody/collateralization/types/BackingRecord.sol";
+import {BackingRecord} from "../../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILock} from "../../../src/lock/lock/ILock.sol";
 import {VaultToken} from "../../../src/vault-token/vault-token/VaultToken.sol";

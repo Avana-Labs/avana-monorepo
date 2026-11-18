@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {BreakerReasons} from "../../../src/policy/market-registry/types/Breaker.sol";
 import {
@@ -518,7 +518,7 @@ contract AdapterRiskModuleMock {
         if (broken) revert RiskModuleBroken();
         if (vaultToken != address(0)) {
             // The reviewed RiskModule reads the account's rescue units here, under the Adapter's Lock.
-            ICollateralizationViews(COLLATERALIZATION).getAccountRescueUnits(proxy, vaultToken);
+            ICollateralization(COLLATERALIZATION).getAccountRescueUnits(proxy, vaultToken);
         }
         healthFactor = IAaveV4Spoke(SPOKE).getUserAccountData(proxy).healthFactor;
         if (approveAll) return healthFactor;

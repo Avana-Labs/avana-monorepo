@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 
 /// @title CollateralizationSeizureCreditUnitTest
@@ -51,7 +51,7 @@ contract CollateralizationSeizureCreditUnitTest is CollateralizationFixture {
         uint256 seized = _seize(7000e18);
         assertGt(seized, 5_000_000_000, "the seizure exceeds the credit");
         vm.prank(lpVaultSwap);
-        vm.expectRevert(ICollateralizationErrors.InsufficientCredit.selector);
+        vm.expectRevert(ICollateralizationBase.InsufficientCredit.selector);
         coll.settleSeizure(aliceProxy, vt, seized, new uint256[](2));
         vm.prank(lpVaultSwap);
         lock.release();

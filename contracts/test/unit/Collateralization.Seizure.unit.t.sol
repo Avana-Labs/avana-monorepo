@@ -3,10 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {ICollateralizationEvents} from "../../src/custody/collateralization/ICollateralizationEvents.sol";
-import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
-import {Pending} from "../../src/custody/collateralization/types/Pending.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {BackingRecord, Pending} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
@@ -85,25 +83,23 @@ contract CollateralizationSeizureUnitTest is CollateralizationFixture {
         _begin(aliceProxy);
         uint256 seized = _seizeAndKeep(aliceProxy, 2400e18);
         vm.startPrank(lpVaultSwap);
-        vm.expectRevert(ICollateralizationErrors.DebitMismatch.selector);
+        vm.expectRevert(ICollateralizationBase.DebitMismatch.selector);
         coll.settleSeizure(aliceProxy, vt, seized + 1, new uint256[](2));
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.SupplyDropMismatch.selector, seized, 0));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.SupplyDropMismatch.selector, seized, 0));
         coll.settleSeizure(aliceProxy, vt, seized, new uint256[](2));
-        vm.expectRevert(ICollateralizationErrors.SeizureMismatch.selector);
+        vm.expectRevert(ICollateralizationBase.SeizureMismatch.selector);
         coll.settleSeizure(bobProxy, vt, seized, new uint256[](2));
         vm.stopPrank();
         vm.prank(adapter);
         token.burn(lpVaultSwap, seized - 1);
-        vm.expectRevert(
-            abi.encodeWithSelector(ICollateralizationErrors.SupplyDropMismatch.selector, seized, seized - 1)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.SupplyDropMismatch.selector, seized, seized - 1));
         vm.prank(lpVaultSwap);
         coll.settleSeizure(aliceProxy, vt, seized, new uint256[](2));
         vm.prank(adapter);
         token.burn(lpVaultSwap, 1);
         vm.prank(lpVaultSwap);
         coll.settleSeizure(aliceProxy, vt, seized, new uint256[](2));
-        vm.expectRevert(ICollateralizationErrors.SeizureMismatch.selector);
+        vm.expectRevert(ICollateralizationBase.SeizureMismatch.selector);
         vm.prank(lpVaultSwap);
         coll.settleSeizure(aliceProxy, vt, 0, new uint256[](2));
         _endLock();
@@ -117,17 +113,17 @@ contract CollateralizationSeizureUnitTest is CollateralizationFixture {
         vm.prank(lpVaultSwap);
         lock.acquire();
         vm.startPrank(lpVaultSwap);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.UnknownProxy.selector, bobProxy));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.UnknownProxy.selector, bobProxy));
         coll.beginSeizure(bobProxy, vt);
         coll.beginSeizure(aliceProxy, vt);
-        vm.expectRevert(ICollateralizationErrors.SeizureActive.selector);
+        vm.expectRevert(ICollateralizationBase.SeizureActive.selector);
         coll.beginSeizure(aliceProxy, vt);
-        vm.expectRevert(ICollateralizationErrors.SeizureActive.selector);
+        vm.expectRevert(ICollateralizationBase.SeizureActive.selector);
         coll.settlePending(vt, 1);
         coll.settleSeizure(aliceProxy, vt, 0, new uint256[](2));
         uint256 shares = IAaveV4Hub(aave.hub).getAddedShares(vtAssetId);
         vm.mockCall(aave.hub, abi.encodeCall(IAaveV4Hub.getAddedAssets, (vtAssetId)), abi.encode(shares + 1));
-        vm.expectRevert(ICollateralizationErrors.SharesNotEqualAssets.selector);
+        vm.expectRevert(ICollateralizationBase.SharesNotEqualAssets.selector);
         coll.beginSeizure(aliceProxy, vt);
         vm.stopPrank();
         vm.clearMockedCalls();
@@ -140,7 +136,7 @@ contract CollateralizationSeizureUnitTest is CollateralizationFixture {
     function test_TEST_208_zeroUnitSettlement() public {
         _underwater();
         _begin(aliceProxy);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.LengthMismatch.selector, 2, 1));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.LengthMismatch.selector, 2, 1));
         vm.prank(lpVaultSwap);
         coll.settleSeizure(aliceProxy, vt, 0, new uint256[](1));
         vm.prank(lpVaultSwap);
@@ -163,7 +159,7 @@ contract CollateralizationSeizureUnitTest is CollateralizationFixture {
         token.burn(lpVaultSwap, seized);
         uint256[] memory mins = new uint256[](2);
         mins[1] = seized * 1_250_000 / 1e6 + 1;
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.BelowMinimum.selector, 1, mins[1] - 1, mins[1]));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.BelowMinimum.selector, 1, mins[1] - 1, mins[1]));
         vm.prank(lpVaultSwap);
         coll.settleSeizure(aliceProxy, vt, seized, mins);
         lpVault.setPoolLocked(true);
@@ -287,13 +283,13 @@ contract CollateralizationSeizureUnitTest is CollateralizationFixture {
         vm.prank(lpVaultSwap);
         lock.acquire();
         vm.startPrank(lpVaultSwap);
-        vm.expectRevert(ICollateralizationErrors.PendingExceeded.selector);
+        vm.expectRevert(ICollateralizationBase.PendingExceeded.selector);
         coll.settlePending(vt, c + 1);
-        vm.expectRevert(ICollateralizationErrors.PendingExceeded.selector);
+        vm.expectRevert(ICollateralizationBase.PendingExceeded.selector);
         coll.settlePending(vt, 0);
         vm.expectRevert(
             abi.encodeWithSelector(
-                ICollateralizationErrors.SupplyDropMismatch.selector, token.totalSupply() - 1, token.totalSupply()
+                ICollateralizationBase.SupplyDropMismatch.selector, token.totalSupply() - 1, token.totalSupply()
             )
         );
         coll.settlePending(vt, 1);
@@ -325,11 +321,11 @@ contract CollateralizationSeizureUnitTest is CollateralizationFixture {
             abi.encodeCall(coll.settlePending, (vt, 1))
         ];
         for (uint256 i = 0; i < calls.length; ++i) {
-            _expectFail(adapter, calls[i], abi.encodeWithSelector(ICollateralizationErrors.NotLPVaultSwap.selector));
-            _expectFail(lpVaultSwap, calls[i], abi.encodeWithSelector(ICollateralizationErrors.LockNotHeld.selector));
+            _expectFail(adapter, calls[i], abi.encodeWithSelector(ICollateralizationBase.NotLPVaultSwap.selector));
+            _expectFail(lpVaultSwap, calls[i], abi.encodeWithSelector(ICollateralizationBase.LockNotHeld.selector));
             vm.prank(adapter);
             lock.acquire();
-            _expectFail(lpVaultSwap, calls[i], abi.encodeWithSelector(ICollateralizationErrors.LockNotHeld.selector));
+            _expectFail(lpVaultSwap, calls[i], abi.encodeWithSelector(ICollateralizationBase.LockNotHeld.selector));
             vm.prank(adapter);
             lock.release();
         }
@@ -338,7 +334,7 @@ contract CollateralizationSeizureUnitTest is CollateralizationFixture {
         _expectFail(
             lpVaultSwap,
             abi.encodeCall(coll.settlePending, (makeAddr("notAToken"), 1)),
-            abi.encodeWithSelector(ICollateralizationErrors.InvalidVaultToken.selector)
+            abi.encodeWithSelector(ICollateralizationBase.InvalidVaultToken.selector)
         );
         _endLock();
     }

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ActionPreview} from "../../src/lens/lens/types/ActionPreview.sol";
 import {MarketView} from "../../src/lens/lens/types/MarketView.sol";
@@ -68,7 +68,7 @@ contract LensActionsConfigFuzzTest is LensFixture {
         rescue = bound(rescue, 1, units);
         vm.mockCall(
             address(coll),
-            abi.encodeCall(ICollateralizationViews.getAccountRescueUnits, (aliceProxy, vt)),
+            abi.encodeCall(ICollateralization.getAccountRescueUnits, (aliceProxy, vt)),
             abi.encode(rescue)
         );
         RemovalSizing memory s = lens.previewMaxWithdraw(alice, MARKET_ID, target);

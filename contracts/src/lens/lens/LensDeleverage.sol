@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
@@ -102,7 +102,7 @@ abstract contract LensDeleverage is LensAccountMath {
         IAaveV4Hub hub = IAaveV4Hub(m.hub);
         if (hub.getAddedAssets(m.hubAssetId) != hub.getAddedShares(m.hubAssetId)) return 0;
         if (!_marketPriceUsable(m) || !_debtView(m.spoke, r.def).liquidationFresh) return 0;
-        ICollateralizationViews coll = ICollateralizationViews(_COLLATERALIZATION);
+        ICollateralization coll = ICollateralization(_COLLATERALIZATION);
         uint256 id = coll.recordIdOf(m.integrationId, r.positionKey);
         if (id == 0 || coll.getRecord(id).proxy != r.proxy) return 0;
         return coll.previewRelease(m.integrationId, r.positionKey);

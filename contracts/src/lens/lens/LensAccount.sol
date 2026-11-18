@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
-import {BackingRecord} from "../../custody/collateralization/types/BackingRecord.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
+import {BackingRecord} from "../../custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IPayoutEscrow} from "../../liquidation/payout-escrow/IPayoutEscrow.sol";
@@ -70,7 +70,7 @@ abstract contract LensAccount is LensBase, ILensAccount {
         // forge-lint: disable-next-line(unused-return)
         (address spoke,, address vaultToken, uint256 reserveId) = IAaveAdapter(_ADAPTER).accountOf(proxy);
         if (spoke == address(0)) revert UnknownProxy(proxy);
-        (uint256[] memory ids, BackingRecord[] memory all) = ICollateralizationViews(_COLLATERALIZATION)
+        (uint256[] memory ids, BackingRecord[] memory all) = ICollateralization(_COLLATERALIZATION)
             .getAccountRecords(proxy, vaultToken, 0, AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET);
         uint256[] memory after_ = _creditedAfterReconcile(proxy, vaultToken, spoke, reserveId, all);
         if (offset >= after_.length) return records;
@@ -148,7 +148,7 @@ abstract contract LensAccount is LensBase, ILensAccount {
         Market memory m,
         uint32 reasons
     ) internal view returns (MarketPosition memory p) {
-        ICollateralizationViews coll = ICollateralizationViews(_COLLATERALIZATION);
+        ICollateralization coll = ICollateralization(_COLLATERALIZATION);
         (p.vaultToken, p.reserveId, p.breakerReasons) = (m.vaultToken, m.reserveId, reasons);
         p.suppliedShares = IAaveV4Spoke(m.spoke).getUserSuppliedShares(m.reserveId, proxy);
         p.suppliedAssets = ILensHubReads(m.hub).previewRemoveByShares(m.hubAssetId, p.suppliedShares);
@@ -173,7 +173,7 @@ abstract contract LensAccount is LensBase, ILensAccount {
         uint256 listed = 0;
         while (listed < all.length && all[listed].inList) ++listed;
         out = new uint256[](listed);
-        uint256 credited = ICollateralizationViews(_COLLATERALIZATION).getAccountCredited(proxy, vaultToken);
+        uint256 credited = ICollateralization(_COLLATERALIZATION).getAccountCredited(proxy, vaultToken);
         uint256 supplied = IAaveV4Spoke(spoke).getUserSuppliedShares(reserveId, proxy);
         uint256 rem = credited > supplied && _sharesEqualAssetsOf(spoke, reserveId) ? credited - supplied : 0;
         for (uint256 i = 0; i < listed; ++i) {
@@ -208,7 +208,7 @@ abstract contract LensAccount is LensBase, ILensAccount {
         uint32 integrationId,
         bytes32 positionKey
     ) internal view returns (uint256 units) {
-        address lpVault = ICollateralizationViews(_COLLATERALIZATION).lpVaultOf(integrationId);
+        address lpVault = ICollateralization(_COLLATERALIZATION).lpVaultOf(integrationId);
         if (IAmmIntegration(lpVault).depositorOf(positionKey) != address(0)) {
             units = IAmmIntegration(lpVault).unitsOf(positionKey);
         }

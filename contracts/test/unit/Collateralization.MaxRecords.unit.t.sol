@@ -3,10 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {ICollateralizationEvents} from "../../src/custody/collateralization/ICollateralizationEvents.sol";
-import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
-import {Pending} from "../../src/custody/collateralization/types/Pending.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {BackingRecord, Pending} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 import {CollateralizationLedgerModel} from "./Collateralization.LedgerModel.sol";
@@ -76,7 +74,7 @@ contract CollateralizationMaxRecordsUnitTest is CollateralizationLedgerModel {
         lpVault.mintPosition(_key(500), alice, MARKET_ID, 1_000_000);
         vm.startPrank(adapter);
         lock.acquire();
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.TooManyRecords.selector, 16));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.TooManyRecords.selector, 16));
         coll.pledge(alice, aliceProxy, vt, _key(500), false);
         lock.release();
         vm.stopPrank();
@@ -195,20 +193,20 @@ contract CollateralizationMaxRecordsEightTokensUnitTest is CollateralizationFixt
             sums[i] = (UNITS - c) * rate / 1e6 + 15 * (UNITS * rate / 1e6);
         }
         vm.startPrank(lpVaultSwap);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.LengthMismatch.selector, N, 7));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.LengthMismatch.selector, N, 7));
         coll.settleSeizure(aliceProxy, vt, seized, new uint256[](7));
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.LengthMismatch.selector, N, 9));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.LengthMismatch.selector, N, 9));
         coll.settleSeizure(aliceProxy, vt, seized, new uint256[](9));
         uint256[] memory mins = _copy(sums);
         mins[7] = sums[7] + 1;
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.BelowMinimum.selector, 7, sums[7], sums[7] + 1));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.BelowMinimum.selector, 7, sums[7], sums[7] + 1));
         coll.settleSeizure(aliceProxy, vt, seized, mins);
         mins[0] = sums[0] + 1;
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.BelowMinimum.selector, 0, sums[0], sums[0] + 1));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.BelowMinimum.selector, 0, sums[0], sums[0] + 1));
         coll.settleSeizure(aliceProxy, vt, seized, mins);
         mins = _copy(sums);
         vm.expectEmit(address(coll));
-        emit ICollateralizationEvents.SeizureSettled(aliceProxy, vt, seized, sums, 16);
+        emit ICollateralizationBase.SeizureSettled(aliceProxy, vt, seized, sums, 16);
         uint256[] memory amounts = coll.settleSeizure(aliceProxy, vt, seized, mins);
         lock.release();
         vm.stopPrank();
@@ -240,7 +238,7 @@ contract CollateralizationMaxRecordsEightTokensUnitTest is CollateralizationFixt
         lock.acquire();
         _withdrawAndBurn(aliceProxy, 1_000_000_000);
         vm.prank(adapter);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.LengthMismatch.selector, N, 2));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.LengthMismatch.selector, N, 2));
         coll.releasePartial(aliceProxy, vt, bytes32(uint256(2)), 1_000_000_000, new uint256[](2));
         vm.prank(adapter);
         (, uint256[] memory amounts) =

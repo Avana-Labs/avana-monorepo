@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {ICollateralizationUser} from "../../src/custody/collateralization/ICollateralizationUser.sol";
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
@@ -189,8 +188,8 @@ contract AaveAdapterLockUnitTest is AaveAdapterFixture {
         adapterC.withdraw(MARKET_ID, _ref(kA2), UNITS / 2, _deadline(), 0);
         assertEq(coll.getAccountRescueUnits(pA, vt), 0, "free Lock: answers");
         bytes memory err =
-            swap.callUnderLock(address(coll), abi.encodeCall(ICollateralizationViews.getAccountRescueUnits, (pA, vt)));
-        assertEq(err, abi.encodeWithSelector(ICollateralizationErrors.Locked.selector), "Locked under LPVaultSwap");
+            swap.callUnderLock(address(coll), abi.encodeCall(ICollateralization.getAccountRescueUnits, (pA, vt)));
+        assertEq(err, abi.encodeWithSelector(ICollateralizationBase.Locked.selector), "Locked under LPVaultSwap");
     }
 
     // TEST-270 verifies: REQ-LOCK-028, REQ-ADAPTER-096, REQ-ADAPTER-097, REQ-ADAPTER-050
@@ -199,15 +198,15 @@ contract AaveAdapterLockUnitTest is AaveAdapterFixture {
     /// by the depositor reverts `NotAdapter`, and one from the Adapter's address without the Lock reverts
     /// `LockNotHeld`.
     function test_TEST_270_feesAndZeroCreditOnlyThroughAdapter() public {
-        vm.expectRevert(ICollateralizationErrors.NotAdapter.selector);
+        vm.expectRevert(ICollateralizationBase.NotAdapter.selector);
         vm.prank(alice);
-        ICollateralizationUser(address(coll)).collectFees(alice, vt, kA);
-        vm.expectRevert(ICollateralizationErrors.NotAdapter.selector);
+        ICollateralization(address(coll)).collectFees(alice, vt, kA);
+        vm.expectRevert(ICollateralizationBase.NotAdapter.selector);
         vm.prank(alice);
-        ICollateralizationUser(address(coll)).releaseZeroCredit(alice, vt, kA);
-        vm.expectRevert(ICollateralizationErrors.LockNotHeld.selector);
+        ICollateralization(address(coll)).releaseZeroCredit(alice, vt, kA);
+        vm.expectRevert(ICollateralizationBase.LockNotHeld.selector);
         vm.prank(adapter);
-        ICollateralizationUser(address(coll)).collectFees(alice, vt, kA);
+        ICollateralization(address(coll)).collectFees(alice, vt, kA);
         lpVault.accrueFees(kA, 7);
         vm.prank(alice);
         uint256[] memory fees = adapterC.collectFees(MARKET_ID, _ref(kA), _deadline());

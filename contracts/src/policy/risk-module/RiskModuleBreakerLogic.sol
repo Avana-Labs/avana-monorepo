@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {RiskStatus} from "../../amm/types/RiskStatus.sol";
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
@@ -174,7 +174,7 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
         }
         if (!RiskModuleMath.atOrBelowPeg(quotes)) return false;
         if (!rs.depthAvailable) return true;
-        uint256 units = unitsGiven ? poolUnits : ICollateralizationViews(_COLLATERALIZATION).poolUnits(key);
+        uint256 units = unitsGiven ? poolUnits : ICollateralization(_COLLATERALIZATION).poolUnits(key);
         tripped = RiskModuleMath.poolShareExceeds(units, cap, rs.depthUnits);
     }
 

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {Market} from "../../types/Market.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
@@ -35,7 +35,7 @@ contract MarketRegistryWindDownLogic is MarketRegistryStorage, IMarketRegistryLo
         if (m.status != MarketStatus.Offboarding) revert IMarketRegistry.MarketNotOffboarding(marketId);
         uint256 notBefore = uint256(_s().windDown[marketId].offboardedAt) + OFFBOARD_NOTICE_SECONDS;
         if (block.timestamp < notBefore) revert IMarketRegistry.OffboardNoticeRunning(notBefore);
-        if (!ICollateralizationViews(_COLLATERALIZATION).getMarketDebtFree(m.vaultToken)) {
+        if (!ICollateralization(_COLLATERALIZATION).getMarketDebtFree(m.vaultToken)) {
             revert IMarketRegistry.MarketHasDebt(marketId);
         }
         m.status = MarketStatus.Closed;

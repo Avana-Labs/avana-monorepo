@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {Pending} from "../../src/custody/collateralization/types/Pending.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {Pending} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
@@ -61,7 +61,7 @@ contract CollateralizationEdgesUnitTest is CollateralizationFixture {
         vm.prank(adapter);
         token.mint(aliceProxy, 1);
         assertEq(token.totalSupply(), supply0 + 1, "supply above the snapshot");
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.SupplyDropMismatch.selector, seized, 0));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.SupplyDropMismatch.selector, seized, 0));
         vm.prank(lpVaultSwap);
         coll.settleSeizure(aliceProxy, vt, seized, new uint256[](2));
         vm.prank(lpVaultSwap);
@@ -83,7 +83,7 @@ contract CollateralizationEdgesUnitTest is CollateralizationFixture {
             abi.encodeWithSelector(IAmmIntegration.receivePosition.selector, MARKET_ID, alice, KEY42),
             abi.encode(uint128(0))
         );
-        vm.expectRevert(ICollateralizationErrors.ZeroUnits.selector);
+        vm.expectRevert(ICollateralizationBase.ZeroUnits.selector);
         coll.pledge(alice, aliceProxy, vt, KEY42, false);
         lock.release();
         vm.stopPrank();

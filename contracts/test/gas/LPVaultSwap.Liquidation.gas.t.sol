@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
@@ -170,7 +170,7 @@ contract LPVaultSwapLiquidationGasTest is LPVaultSwapUnitBase {
         address five = _sixteenSmall(alice, units, 5e18, true);
         bytes32 extra = bytes32(nextKey++);
         lpVault.mintPosition(extra, carol, MARKET_ID, uint128(units));
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.TooManyRecords.selector, uint256(16)));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.TooManyRecords.selector, uint256(16)));
         adapter.pledge(one, carol, extra);
         // A collapse to $0.00000001 a vault token: both accounts are liquidatable and Aave's seizure exceeds the
         // collateral, so the dust rule takes the whole reserve.

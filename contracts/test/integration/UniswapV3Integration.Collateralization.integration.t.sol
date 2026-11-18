@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {BackingRecord} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
@@ -252,7 +252,7 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
         vm.expectRevert(ILPVaultErrors.NotTokenOwner.selector);
         coll.pledge(attacker, bobProxy, vt2, bytes32(pushed), false);
         // A third party cannot re-credit the donated liquidity.
-        vm.expectRevert(ICollateralizationErrors.NotDepositor.selector);
+        vm.expectRevert(ICollateralizationBase.NotDepositor.selector);
         coll.recredit(attacker, aliceProxy, vt2, key, "", false);
         lock.release();
         vm.stopPrank();
@@ -411,9 +411,9 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
         vm.startPrank(adapter);
         lock.acquire();
         token2.addValidProxy(aliceProxy);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.InvalidDepositor.selector, address(coll)));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.InvalidDepositor.selector, address(coll)));
         coll.pledge(address(coll), aliceProxy, vt2, bytes32(id), false);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.InvalidDepositor.selector, address(v3Vault)));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.InvalidDepositor.selector, address(v3Vault)));
         coll.pledge(address(v3Vault), aliceProxy, vt2, bytes32(id), false);
         lock.release();
         vm.stopPrank();

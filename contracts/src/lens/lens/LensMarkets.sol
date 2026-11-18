@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {IClIntegration} from "../../amm/IClIntegration.sol";
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
@@ -106,7 +106,7 @@ abstract contract LensMarkets is LensBase, ILensMarkets {
         IAaveV4Spoke.DynamicReserveConfig memory c = IAaveV4Spoke(m.spoke).getDynamicReserveConfig(m.reserveId, key);
         (v.collateralFactorBps, v.liquidationThresholdBps) = (c.collateralFactor, c.collateralFactor);
         (v.maxLiquidationBonusBps, v.liquidationFeeBps) = (c.maxLiquidationBonus, c.liquidationFee);
-        PledgeCounters memory k = ICollateralizationViews(_COLLATERALIZATION).getCounters(m.vaultToken, address(0));
+        PledgeCounters memory k = ICollateralization(_COLLATERALIZATION).getCounters(m.vaultToken, address(0));
         (v.marketUsdCap, v.topUpSliceUsd) = (_store().marketUsdCap(marketId), _store().topUpSliceUsd(marketId));
         v.marketHeadroomUsd = _room(v.marketUsdCap, k.regularUsed);
         v.sliceHeadroomUsd = _room(v.topUpSliceUsd, k.sliceUsed);

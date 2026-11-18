@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
 import {IAmmIntegrationHooks} from "../../src/amm/IAmmIntegrationHooks.sol";
 import {UniswapV4State} from "../../src/amm/uniswap-v4/UniswapV4State.sol";
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {IUniswapV4PoolManager} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
 import {PositionFeesView} from "../../src/lens/lens/types/PositionFeesView.sol";
@@ -199,7 +199,7 @@ contract MultiMarketUniswapV4IntegrationTest is RealStackUniswapV4 {
         assertFalse(p.eligible, "a 9th record is not eligible");
         assertEq(p.reason, IRiskModuleErrors.TooManyRecords.selector, "preview names the record cap");
         vm.prank(c.wallet);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.TooManyRecords.selector, uint256(8)));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.TooManyRecords.selector, uint256(8)));
         adapterC.pledge(c.marketId, PositionRef(V4, key), _deadline());
     }
 }

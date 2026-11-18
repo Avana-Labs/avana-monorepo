@@ -10,7 +10,7 @@ pragma solidity 0.8.28;
 
 import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {RiskStatus} from "../../amm/types/RiskStatus.sol";
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
@@ -79,7 +79,7 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         Market memory m = _market(marketId);
         address proxy = IAaveAdapter(_ADAPTER).proxyOf(depositor, marketId);
         if (proxy == address(0)) proxy = IAaveAdapter(_ADAPTER).predictProxy(depositor, marketId);
-        ICollateralizationViews coll = ICollateralizationViews(_COLLATERALIZATION);
+        ICollateralization coll = ICollateralization(_COLLATERALIZATION);
         PledgeCounters memory k = coll.getCounters(m.vaultToken, depositor);
         k.accountRecords = coll.getOpenRecordCount(proxy, m.vaultToken);
         p.isTopUp = _accountData(m.spoke, proxy).borrowCount > 0;

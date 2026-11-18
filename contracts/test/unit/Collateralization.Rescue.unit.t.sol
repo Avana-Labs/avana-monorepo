@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
@@ -94,12 +94,12 @@ contract CollateralizationRescueUnitTest is CollateralizationFixture {
         riskModule.setOverride(
             PledgeCharge({usdCharge: 100_000_000_000, sliceUsd: 0, rescue: true, rescueUnits: 499_999_999})
         );
-        vm.expectRevert(ICollateralizationErrors.InvalidCharge.selector);
+        vm.expectRevert(ICollateralizationBase.InvalidCharge.selector);
         coll.recredit(alice, aliceProxy, vt, K1, "", true);
         riskModule.setOverride(
             PledgeCharge({usdCharge: 100_000_000_000, sliceUsd: 0, rescue: false, rescueUnits: 500_000_001})
         );
-        vm.expectRevert(ICollateralizationErrors.InvalidCharge.selector);
+        vm.expectRevert(ICollateralizationBase.InvalidCharge.selector);
         coll.recredit(alice, aliceProxy, vt, K1, "", false);
         riskModule.clearOverride();
         riskModule.setRescue(true);

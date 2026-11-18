@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationUser} from "../../src/custody/collateralization/ICollateralizationUser.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
 import {GovernedTargets} from "../../src/governance/timelock/types/GovernedTargets.sol";
 import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
@@ -270,7 +270,7 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
         lock.acquire();
         vm.expectRevert();
         vm.prank(adapter);
-        ICollateralizationUser(address(coll)).collectFees(attacker, vt, kA2);
+        ICollateralization(address(coll)).collectFees(attacker, vt, kA2);
         vm.prank(adapter);
         lock.release();
         assertEq(usdc.balanceOf(attacker), 0, "no fees to the attacker");

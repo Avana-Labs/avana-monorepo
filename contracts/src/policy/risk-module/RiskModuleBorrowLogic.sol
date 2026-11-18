@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwapViews} from "../../liquidation/lp-vault-swap/ILPVaultSwapViews.sol";
@@ -118,7 +118,7 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
         lpOracle = m.lpOracle;
         IAaveV4Spoke.UserAccountData memory a = _accountData(spoke, proxy);
         hf = a.healthFactor;
-        uint256 u = ICollateralizationViews(_COLLATERALIZATION).getAccountRescueUnits(proxy, m.vaultToken);
+        uint256 u = ICollateralization(_COLLATERALIZATION).getAccountRescueUnits(proxy, m.vaultToken);
         if (u == 0) return (hf, hf, 0, marketId, lpOracle);
         IAaveV4Spoke sp = IAaveV4Spoke(spoke);
         uint32 key = sp.getUserPosition(m.reserveId, proxy).dynamicConfigKey;

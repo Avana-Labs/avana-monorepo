@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {BackingRecord} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {CollateralizationLedgerModel} from "./Collateralization.LedgerModel.sol";
 
 /// @title CollateralizationLedgerUnitTest
@@ -164,13 +164,13 @@ contract CollateralizationLedgerUnitTest is CollateralizationLedgerModel {
 
         vm.startPrank(adapter);
         lock.acquire();
-        vm.expectRevert(ICollateralizationErrors.RecordHasCredit.selector);
+        vm.expectRevert(ICollateralizationBase.RecordHasCredit.selector);
         coll.releaseZeroCredit(alice, vt, _key(1));
-        vm.expectRevert(ICollateralizationErrors.NotDepositor.selector);
+        vm.expectRevert(ICollateralizationBase.NotDepositor.selector);
         coll.releaseZeroCredit(bob, vt, _key(4));
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.NothingToRecredit.selector, _key(4)));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.NothingToRecredit.selector, _key(4)));
         coll.recredit(alice, aliceProxy, vt, _key(4), "", false);
-        vm.expectRevert(ICollateralizationErrors.UnitsMismatch.selector);
+        vm.expectRevert(ICollateralizationBase.UnitsMismatch.selector);
         coll.release(aliceProxy, vt, _key(4), 0);
         lock.release();
         vm.stopPrank();

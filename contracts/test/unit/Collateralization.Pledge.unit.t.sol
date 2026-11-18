@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {ICollateralizationEvents} from "../../src/custody/collateralization/ICollateralizationEvents.sol";
-import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {BackingRecord} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
@@ -71,7 +70,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         _acquire(adapter);
         _register(aliceProxy);
         vm.expectEmit(address(coll));
-        emit ICollateralizationEvents.CollateralPledged(
+        emit ICollateralizationBase.CollateralPledged(
             1, KEY42, alice, INTEGRATION, aliceProxy, vt, 5_000_000_000, 1_000_000_000_000, 0
         );
         (uint256 id, uint128 credited) = _pledgeAs(alice, aliceProxy, KEY42);
@@ -153,13 +152,13 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
     function test_TEST_171_foreignVaultTokenRefused() public {
         address fake = makeAddr("fakeVaultToken");
         _acquire(adapter);
-        vm.expectRevert(ICollateralizationErrors.InvalidVaultToken.selector);
+        vm.expectRevert(ICollateralizationBase.InvalidVaultToken.selector);
         vm.prank(adapter);
         coll.pledge(alice, aliceProxy, fake, KEY42, false);
 
         // A real VaultToken with this ledger's bindings that the factory never deployed.
         address unregistered = _unregisteredToken();
-        vm.expectRevert(ICollateralizationErrors.InvalidVaultToken.selector);
+        vm.expectRevert(ICollateralizationBase.InvalidVaultToken.selector);
         vm.prank(adapter);
         coll.pledge(alice, aliceProxy, unregistered, KEY42, false);
         _release(adapter);
@@ -177,14 +176,14 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         _register(aliceProxy);
         vm.expectRevert(ILPVaultErrors.NotTokenOwner.selector);
         _pledgeAs(bob, aliceProxy, KEY42);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.InvalidDepositor.selector, address(lpVault)));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.InvalidDepositor.selector, address(lpVault)));
         _pledgeAs(address(lpVault), aliceProxy, KEY42);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.InvalidDepositor.selector, address(coll)));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.InvalidDepositor.selector, address(coll)));
         _pledgeAs(address(coll), aliceProxy, KEY42);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.InvalidDepositor.selector, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.InvalidDepositor.selector, address(0)));
         _pledgeAs(address(0), aliceProxy, KEY42);
         _pledgeAs(alice, aliceProxy, KEY42);
-        vm.expectRevert(ICollateralizationErrors.AlreadyPledged.selector);
+        vm.expectRevert(ICollateralizationBase.AlreadyPledged.selector);
         _pledgeAs(alice, aliceProxy, KEY42);
         _release(adapter);
     }
@@ -195,11 +194,11 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
     function test_TEST_011_unitBoundsAndUnknownProxy() public {
         lpVault.mintPosition(KEY42, alice, MARKET_ID, 1);
         _acquire(adapter);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.UnknownProxy.selector, aliceProxy));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.UnknownProxy.selector, aliceProxy));
         _pledgeAs(alice, aliceProxy, KEY42);
         _register(aliceProxy);
         lpVault.setReceiveOverride(uint256(type(uint120).max) + 1);
-        vm.expectRevert(ICollateralizationErrors.LiquidityAboveBound.selector);
+        vm.expectRevert(ICollateralizationBase.LiquidityAboveBound.selector);
         _pledgeAs(alice, aliceProxy, KEY42);
         lpVault.setReceiveOverride(type(uint120).max);
         riskModule.setOverride(PledgeCharge(1, 0, false, 0));
@@ -220,7 +219,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         _pledgeAs(alice, aliceProxy, KEY42);
         lpVault.mintPosition(KEY42, alice, MARKET_ID, 5_000_000_000);
         lpVault.setMarketOfPositionOverride(MARKET_ID + 1);
-        vm.expectRevert(ICollateralizationErrors.ShapeMismatch.selector);
+        vm.expectRevert(ICollateralizationBase.ShapeMismatch.selector);
         _pledgeAs(alice, aliceProxy, KEY42);
         _release(adapter);
         assertEq(lpVault.ownerOf(KEY42), alice, "custody rolled back");
@@ -248,7 +247,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         ];
         for (uint256 i = 0; i < bad.length; ++i) {
             riskModule.setOverride(bad[i]);
-            vm.expectRevert(ICollateralizationErrors.InvalidCharge.selector);
+            vm.expectRevert(ICollateralizationBase.InvalidCharge.selector);
             _pledgeAs(alice, aliceProxy, KEY42);
         }
         riskModule.setOverride(PledgeCharge(2 ** 64 - 1, 0, true, 5_000_000_000));
@@ -323,7 +322,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         assertEq(coll.getOpenRecordCount(aliceProxy, vt), 16);
         lpVault.mintPosition(_key(200), alice, MARKET_ID, 1_000_000);
         _acquire(adapter);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.TooManyRecords.selector, 16));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.TooManyRecords.selector, 16));
         _pledgeAs(alice, aliceProxy, _key(200));
         _release(adapter);
         assertEq(lpVault.ownerOf(_key(200)), alice, "no custody call");
@@ -340,7 +339,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         _acquire(adapter);
         vm.prank(adapter);
         _tokenAt(second).addValidProxy(aliceProxy);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.ProxyMarketMismatch.selector, aliceProxy));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.ProxyMarketMismatch.selector, aliceProxy));
         vm.prank(adapter);
         coll.pledge(alice, aliceProxy, second, KEY7, false);
         _release(adapter);
@@ -393,17 +392,17 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         lpVault.addUnits(KEY42, 1_500_000_000);
         assertEq(coll.previewRecredit(INTEGRATION, KEY42), 1_500_000_000);
         _acquire(adapter);
-        vm.expectRevert(ICollateralizationErrors.NotDepositor.selector);
+        vm.expectRevert(ICollateralizationBase.NotDepositor.selector);
         vm.prank(adapter);
         coll.recredit(bob, aliceProxy, vt, KEY42, "", false);
-        vm.expectRevert(ICollateralizationErrors.NotRecordProxy.selector);
+        vm.expectRevert(ICollateralizationBase.NotRecordProxy.selector);
         vm.prank(adapter);
         coll.recredit(alice, bobProxy, vt, KEY42, "", false);
         vm.expectEmit(address(coll));
-        emit ICollateralizationEvents.RecordRecredited(1, 1_500_000_000, 300_000_000_000, 0);
+        emit ICollateralizationBase.RecordRecredited(1, 1_500_000_000, 300_000_000_000, 0);
         vm.prank(adapter);
         (uint128 added, uint128 rescue) = coll.recredit(alice, aliceProxy, vt, KEY42, "", false);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.NothingToRecredit.selector, KEY42));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.NothingToRecredit.selector, KEY42));
         vm.prank(adapter);
         coll.recredit(alice, aliceProxy, vt, KEY42, "", false);
         _release(adapter);
@@ -435,7 +434,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         (uint128 added,) = coll.recredit(alice, aliceProxy, vt, KEY42, abi.encode(uint128(250_000_000)), false);
         assertEq(added, 250_000_000);
         lpVault.addUnits(KEY42, type(uint120).max);
-        vm.expectRevert(ICollateralizationErrors.LiquidityAboveBound.selector);
+        vm.expectRevert(ICollateralizationBase.LiquidityAboveBound.selector);
         vm.prank(adapter);
         coll.recredit(alice, aliceProxy, vt, KEY42, "", false);
         _release(adapter);
@@ -448,7 +447,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         _pledge(alice, aliceProxy, KEY42, 1_000_000_000);
         lpVault.addUnits(KEY42, 1);
         _acquire(adapter);
-        vm.expectRevert(ICollateralizationErrors.InvalidCharge.selector);
+        vm.expectRevert(ICollateralizationBase.InvalidCharge.selector);
         vm.prank(adapter);
         coll.recredit(alice, aliceProxy, vt, KEY42, "", false);
         _release(adapter);
@@ -469,22 +468,22 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
             abi.encodeCall(coll.collectFees, (alice, vt, KEY42))
         ];
         for (uint256 i = 0; i < calls.length; ++i) {
-            _expectFail(lpVaultSwap, calls[i], abi.encodeWithSelector(ICollateralizationErrors.NotAdapter.selector));
-            _expectFail(alice, calls[i], abi.encodeWithSelector(ICollateralizationErrors.NotAdapter.selector));
-            _expectFail(adapter, calls[i], abi.encodeWithSelector(ICollateralizationErrors.LockNotHeld.selector));
+            _expectFail(lpVaultSwap, calls[i], abi.encodeWithSelector(ICollateralizationBase.NotAdapter.selector));
+            _expectFail(alice, calls[i], abi.encodeWithSelector(ICollateralizationBase.NotAdapter.selector));
+            _expectFail(adapter, calls[i], abi.encodeWithSelector(ICollateralizationBase.LockNotHeld.selector));
             _acquire(lpVaultSwap);
-            _expectFail(adapter, calls[i], abi.encodeWithSelector(ICollateralizationErrors.LockNotHeld.selector));
+            _expectFail(adapter, calls[i], abi.encodeWithSelector(ICollateralizationBase.LockNotHeld.selector));
             _release(lpVaultSwap);
         }
         _expectFail(
             alice,
             abi.encodeCall(coll.markIndebted, (aliceProxy)),
-            abi.encodeWithSelector(ICollateralizationErrors.NotAdapter.selector)
+            abi.encodeWithSelector(ICollateralizationBase.NotAdapter.selector)
         );
         _expectFail(
             adapter,
             abi.encodeCall(coll.markIndebted, (aliceProxy)),
-            abi.encodeWithSelector(ICollateralizationErrors.LockNotHeld.selector)
+            abi.encodeWithSelector(ICollateralizationBase.LockNotHeld.selector)
         );
     }
 

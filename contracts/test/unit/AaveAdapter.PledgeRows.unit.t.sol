@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
@@ -84,10 +84,10 @@ contract AaveAdapterPledgeRowsUnitTest is AaveAdapterFixture {
         adapterC.pledge(MARKET_ID, _ref(bobKey), d);
         uint256 recordId = coll.recordIdOf(INTEGRATION, bobKey);
         assertGt(recordId, 0, "record open");
-        vm.expectRevert(ICollateralizationErrors.AlreadyPledged.selector);
+        vm.expectRevert(ICollateralizationBase.AlreadyPledged.selector);
         vm.prank(bob);
         adapterC.pledge(MARKET_ID, _ref(bobKey), d);
-        vm.expectRevert(ICollateralizationErrors.AlreadyPledged.selector);
+        vm.expectRevert(ICollateralizationBase.AlreadyPledged.selector);
         vm.prank(bob);
         adapterC.pledge(MARKET_B, _ref(bobKey), d);
         assertEq(token.totalSupply(), UNITS, "one credit in market A");
@@ -115,7 +115,7 @@ contract AaveAdapterPledgeRowsUnitTest is AaveAdapterFixture {
         lpVault.mintPosition(key, alice, MARKET_ID, 1_000_000_000);
         uint256 supply = token.totalSupply();
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.TooManyRecords.selector, 16));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.TooManyRecords.selector, 16));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key), d);
         assertEq(token.totalSupply(), supply, "17th record minted nothing");

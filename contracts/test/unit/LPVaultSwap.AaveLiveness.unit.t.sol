@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationDebtMark} from "../../src/custody/collateralization/ICollateralizationDebtMark.sol";
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
@@ -113,7 +112,7 @@ contract LPVaultSwapAaveLivenessUnitTest is LPVaultSwapUnitBase {
     /// in the last liquidation, so the market reads debt-free with no keeper `refreshDebtMark`.
     function test_TEST_272_liquidationToZeroBorrowsClearsTheMark() public {
         _mark(proxy);
-        ICollateralizationViews views = ICollateralizationViews(address(coll));
+        ICollateralization views = ICollateralization(address(coll));
         assertFalse(views.getMarketDebtFree(address(vt)), "marked before");
         lpOracle.setAnswer(100_000_000);
         for (uint256 i = 0; i < 30 && _suppliedUnits(proxy) != 0; ++i) {
@@ -134,7 +133,7 @@ contract LPVaultSwapAaveLivenessUnitTest is LPVaultSwapUnitBase {
         _mark(proxy);
         _liquidateAs(keeper, _params(proxy, 1950e6));
         assertGt(_debtOf(proxy, usdcReserveId), 0, "debt remains");
-        assertFalse(ICollateralizationViews(address(coll)).getMarketDebtFree(address(vt)), "still marked");
+        assertFalse(ICollateralization(address(coll)).getMarketDebtFree(address(vt)), "still marked");
     }
 
     /// @dev The fixture's Adapter stand-in borrows without marking; mark the account as the real Adapter's `borrow`.
@@ -143,7 +142,7 @@ contract LPVaultSwapAaveLivenessUnitTest is LPVaultSwapUnitBase {
     ) internal {
         vm.startPrank(address(adapter));
         lock.acquire();
-        ICollateralizationDebtMark(address(coll)).markIndebted(p);
+        ICollateralization(address(coll)).markIndebted(p);
         lock.release();
         vm.stopPrank();
     }

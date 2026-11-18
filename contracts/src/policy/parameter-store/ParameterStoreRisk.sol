@@ -12,7 +12,7 @@ import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {IntegrationCapabilities} from "../../amm/types/IntegrationCapabilities.sol";
 import {RiskStatus} from "../../amm/types/RiskStatus.sol";
 import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
@@ -506,7 +506,7 @@ abstract contract ParameterStoreRisk is ParameterStoreStorage {
         uint256 addCap = hub.getSpokeConfig(m.hubAssetId, m.spoke).addCap;
         if (addCap == hub.MAX_ALLOWED_SPOKE_CAP()) return;
         PledgeCounters memory c =
-            ICollateralizationViews(_REGISTRY.COLLATERALIZATION()).getCounters(m.vaultToken, address(0));
+            ICollateralization(_REGISTRY.COLLATERALIZATION()).getCounters(m.vaultToken, address(0));
         uint256 usd = (cap > c.regularUsed ? cap : c.regularUsed) + (slice > c.sliceUsed ? slice : c.sliceUsed);
         if (addCap < (usd + floor - 1) / floor) revert AddCapTooSmall();
     }

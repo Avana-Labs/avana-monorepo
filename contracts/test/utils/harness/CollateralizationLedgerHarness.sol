@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {CollateralizationBase} from "../../../src/custody/collateralization/CollateralizationBase.sol";
 import {CollateralizationLedger} from "../../../src/custody/collateralization/CollateralizationLedger.sol";
-import {BackingRecord} from "../../../src/custody/collateralization/types/BackingRecord.sol";
+import {BackingRecord} from "../../../src/custody/collateralization/types/CollateralizationTypes.sol";
 
 /// @notice Lock stand-in with a settable holder, for the gate checks of the harness.
 contract HarnessLock {

@@ -3,10 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../src/custody/collateralization/ICollateralizationAdapter.sol";
-import {ICollateralizationDebtMark} from "../../src/custody/collateralization/ICollateralizationDebtMark.sol";
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {ICollateralizationEvents} from "../../src/custody/collateralization/ICollateralizationEvents.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
@@ -74,7 +72,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     /// position to its depositor and emits `CollateralWithdrawn(…, false, type(uint256).max)`.
     function test_TEST_018_debtFreeWithdraw() public {
         vm.expectCall(vt, abi.encodeCall(IVaultToken.burn, (p, UNITS)), 1);
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralizationAdapter.release, (p, vt, k1, UNITS)), 1);
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.release, (p, vt, k1, UNITS)), 1);
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.postHealthCheck.selector), 0);
         vm.expectEmit(adapter);
@@ -111,7 +109,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
                 if (from == aave.hub && to == p) hubToProxy = i;
                 if (from == p && to == address(0)) burn = i;
             }
-            if (logs[i].emitter == address(coll) && t0 == ICollateralizationEvents.CollateralReleased.selector) {
+            if (logs[i].emitter == address(coll) && t0 == ICollateralizationBase.CollateralReleased.selector) {
                 released = i;
             }
             if (logs[i].emitter == adapter && t0 == IAaveAdapterBase.CollateralDisabled.selector) disabled = i;
@@ -278,7 +276,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     /// @notice Units other than the record's credited units fail in Collateralization with `UnitsMismatch`, undoing
     /// the Spoke withdrawal and the burn.
     function test_TEST_018_unitsMustEqualCredited() public {
-        _expectWithdrawRevert(abi.encodeWithSelector(ICollateralizationErrors.UnitsMismatch.selector), k1, UNITS / 2);
+        _expectWithdrawRevert(abi.encodeWithSelector(ICollateralizationBase.UnitsMismatch.selector), k1, UNITS / 2);
         assertEq(_sharesOf(p, vtReserveId), UNITS + UNITS / 2, "nothing withdrawn");
     }
 
@@ -287,7 +285,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     function test_TEST_026_cannotWithdrawOthersRecord() public {
         _pledgeAs(bob, MARKET_ID, UNITS);
         uint256 d = _deadline();
-        vm.expectRevert(ICollateralizationErrors.NotRecordProxy.selector);
+        vm.expectRevert(ICollateralizationBase.NotRecordProxy.selector);
         vm.prank(bob);
         adapterC.withdraw(MARKET_ID, _ref(k1), UNITS, d, 0);
     }
@@ -295,7 +293,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     // TEST-209 verifies: REQ-ADAPTER-069, REQ-ADAPTER-075, SPEC-PROXY-008
     /// @notice A Collateralization that skips the debit makes the burn unmatched: `BackingMismatch`.
     function test_TEST_209_skippedDebitRevertsBackingMismatch() public {
-        vm.mockCall(address(coll), abi.encodeWithSelector(ICollateralizationAdapter.release.selector), "");
+        vm.mockCall(address(coll), abi.encodeWithSelector(ICollateralization.release.selector), "");
         uint256 supplyAfter = UNITS / 2;
         uint256 credited = UNITS + UNITS / 2;
         _expectWithdrawRevert(
@@ -327,7 +325,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         vm.prank(alice);
         adapterC.repay(alice, MARKET_ID, debtReserveId, debtLeft, true, _deadline());
         // The list starts with the larger record k1, so the shortfall is debited from it.
-        _expectWithdrawRevert(abi.encodeWithSelector(ICollateralizationErrors.UnitsMismatch.selector), k1, UNITS);
+        _expectWithdrawRevert(abi.encodeWithSelector(ICollateralizationBase.UnitsMismatch.selector), k1, UNITS);
         uint256 units = coll.previewRelease(INTEGRATION, k1);
         assertEq(units, UNITS - seized, "reconciled from the head of the list");
         _withdraw(k1, units, 0);
@@ -515,7 +513,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         vm.prank(bob);
         adapterC.collectFees(MARKET_ID, _ref(k1), d);
         _pledgeAs(bob, MARKET_ID, UNITS);
-        vm.expectRevert(ICollateralizationErrors.NotDepositor.selector);
+        vm.expectRevert(ICollateralizationBase.NotDepositor.selector);
         vm.prank(bob);
         adapterC.collectFees(MARKET_ID, _ref(k1), d);
         vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.IntegrationMismatch.selector, MARKET_ID, 9));
@@ -545,7 +543,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         adapterC.releaseZeroCredit(MARKET_ID, _ref(zero), d);
         assertEq(lpVault.ownerOf(zero), alice, "returned");
         if (coll.getRecord(coll.recordIdOf(INTEGRATION, left)).credited != 0) {
-            vm.expectRevert(ICollateralizationErrors.RecordHasCredit.selector);
+            vm.expectRevert(ICollateralizationBase.RecordHasCredit.selector);
             vm.prank(alice);
             adapterC.releaseZeroCredit(MARKET_ID, _ref(left), d);
         }
@@ -566,7 +564,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         vm.clearMockedCalls();
         assertFalse(coll.getMarketDebtFree(vt), "stale mark");
         registry.setBroken(true);
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralizationDebtMark.markDebtFree, (p)), 1);
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.markDebtFree, (p)), 1);
         vm.prank(attacker);
         adapterC.refreshDebtMark(p);
         assertTrue(coll.getMarketDebtFree(vt), "cleared");

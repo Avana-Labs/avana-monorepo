@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {PoolKeying} from "../../amm/types/PoolKeying.sol";
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
 import {PositionShape} from "../../types/PositionShape.sol";
@@ -261,9 +261,9 @@ contract VaultTokenFactory is IVaultTokenFactory {
     function _checkCore() private view {
         address coll = _COLLATERALIZATION;
         if (
-            _readAddress(coll, abi.encodeCall(ICollateralizationViews.VAULT_TOKEN_FACTORY, ())) != address(this)
-                || _readAddress(coll, abi.encodeCall(ICollateralizationViews.ADAPTER, ())) != _ADAPTER
-                || _readAddress(coll, abi.encodeCall(ICollateralizationViews.LP_VAULT_SWAP, ())) != _LP_VAULT_SWAP
+            _readAddress(coll, abi.encodeCall(ICollateralization.VAULT_TOKEN_FACTORY, ())) != address(this)
+                || _readAddress(coll, abi.encodeCall(ICollateralization.ADAPTER, ())) != _ADAPTER
+                || _readAddress(coll, abi.encodeCall(ICollateralization.LP_VAULT_SWAP, ())) != _LP_VAULT_SWAP
         ) revert InvalidIntegration();
     }
 
@@ -275,7 +275,7 @@ contract VaultTokenFactory is IVaultTokenFactory {
         bool protocolOk;
         uint256 protocol;
         (protocolOk, protocol) = _readWord(lpVault, abi.encodeCall(IAmmIntegration.AMM_PROTOCOL, ()));
-        address lock = _readAddress(_COLLATERALIZATION, abi.encodeCall(ICollateralizationViews.LOCK, ()));
+        address lock = _readAddress(_COLLATERALIZATION, abi.encodeCall(ICollateralization.LOCK, ()));
         if (
             !idOk || id != integrationId || !protocolOk || protocol == 0 || lock == address(0)
                 || _readAddress(lpVault, abi.encodeCall(ILPVault.COLLATERALIZATION, ())) != _COLLATERALIZATION

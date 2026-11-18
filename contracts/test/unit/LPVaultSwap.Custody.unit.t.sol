@@ -3,10 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {ICollateralizationEvents} from "../../src/custody/collateralization/ICollateralizationEvents.sol";
-import {ICollateralizationSeizure} from "../../src/custody/collateralization/ICollateralizationSeizure.sol";
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
@@ -24,7 +22,7 @@ import {Vm} from "forge-std/Vm.sol";
 /// Every attempt is caught, so the outer call goes on; the test reads the recorded errors.
 contract LVSReentryProbe {
     ILPVaultSwapLiquidation internal immutable LVS;
-    ICollateralizationViews internal immutable COLL;
+    ICollateralization internal immutable COLL;
     address internal immutable PROXY;
     address internal immutable VT;
     IERC20 internal immutable USDC;
@@ -43,7 +41,7 @@ contract LVSReentryProbe {
         address usdc_
     ) {
         (LVS, COLL, PROXY, VT, USDC) =
-        (ILPVaultSwapLiquidation(lvs_), ICollateralizationViews(coll_), proxy_, vt_, IERC20(usdc_));
+        (ILPVaultSwapLiquidation(lvs_), ICollateralization(coll_), proxy_, vt_, IERC20(usdc_));
     }
 
     function arm(
@@ -134,28 +132,28 @@ contract LPVaultSwapCustodyUnitTest is LPVaultSwapUnitBase {
         assertGe(gap, 0, "supply <= credited + pending");
 
         vm.prank(attacker);
-        vm.expectRevert(ICollateralizationErrors.NotLPVaultSwap.selector);
-        ICollateralizationSeizure(address(coll)).settlePending(v, kept);
+        vm.expectRevert(ICollateralizationBase.NotLPVaultSwap.selector);
+        ICollateralization(address(coll)).settlePending(v, kept);
         vm.prank(address(lvs));
-        vm.expectRevert(ICollateralizationErrors.LockNotHeld.selector);
-        ICollateralizationSeizure(address(coll)).settlePending(v, kept);
+        vm.expectRevert(ICollateralizationBase.LockNotHeld.selector);
+        ICollateralization(address(coll)).settlePending(v, kept);
 
         uint256 snap = vm.snapshotState();
         vm.startPrank(address(lvs));
         ILock(address(lock)).acquire();
-        vm.expectRevert(ICollateralizationErrors.PendingExceeded.selector);
-        ICollateralizationSeizure(address(coll)).settlePending(v, 0);
-        vm.expectRevert(ICollateralizationErrors.PendingExceeded.selector);
-        ICollateralizationSeizure(address(coll)).settlePending(v, kept + 1);
+        vm.expectRevert(ICollateralizationBase.PendingExceeded.selector);
+        ICollateralization(address(coll)).settlePending(v, 0);
+        vm.expectRevert(ICollateralizationBase.PendingExceeded.selector);
+        ICollateralization(address(coll)).settlePending(v, kept + 1);
         uint256 supply = vt.totalSupply();
         uint256 limit = coll.getTotalCredited(v) + kept;
         vm.expectRevert(
-            abi.encodeWithSelector(ICollateralizationErrors.SupplyDropMismatch.selector, limit - kept, supply)
+            abi.encodeWithSelector(ICollateralizationBase.SupplyDropMismatch.selector, limit - kept, supply)
         );
-        ICollateralizationSeizure(address(coll)).settlePending(v, kept);
-        ICollateralizationSeizure(address(coll)).beginSeizure(proxy, v);
-        vm.expectRevert(ICollateralizationErrors.SeizureActive.selector);
-        ICollateralizationSeizure(address(coll)).settlePending(v, kept);
+        ICollateralization(address(coll)).settlePending(v, kept);
+        ICollateralization(address(coll)).beginSeizure(proxy, v);
+        vm.expectRevert(ICollateralizationBase.SeizureActive.selector);
+        ICollateralization(address(coll)).settlePending(v, kept);
         vm.stopPrank();
         // Roll back the Lock and the snapshot the refusals above left open.
         vm.revertToState(snap);
@@ -165,14 +163,14 @@ contract LPVaultSwapCustodyUnitTest is LPVaultSwapUnitBase {
         uint256[] memory amounts = new uint256[](2);
         (amounts[0], amounts[1]) = (a0, a1);
         vm.expectEmit(true, false, false, true, address(coll));
-        emit ICollateralizationEvents.PendingSettled(v, kept, amounts);
+        emit ICollateralizationBase.PendingSettled(v, kept, amounts);
         vm.startStateDiffRecording();
         vm.prank(stranger);
         lvs.settlePending(MARKET_ID, usdcReserveId);
         Vm.AccountAccess[] memory acc = vm.stopAndReturnStateDiff();
         (bool burned, uint256 iBurn) = acc.firstCall(address(adapter), adapter.burnSeized.selector, address(lvs), 0);
         (bool settled, uint256 iSettle) =
-            acc.firstCall(address(coll), ICollateralizationSeizure.settlePending.selector, address(lvs), 0);
+            acc.firstCall(address(coll), ICollateralization.settlePending.selector, address(lvs), 0);
         assertTrue(burned && settled, "burn and settlement both ran");
         assertLt(iBurn, iSettle, "the Adapter burns the units before Collateralization debits them");
         assertEq(coll.getPending(v).units, 0, "pending balance 0");
@@ -203,9 +201,9 @@ contract LPVaultSwapCustodyUnitTest is LPVaultSwapUnitBase {
         (address alice2,) = _openAccount(alice, 6000e6, 10_300e6, 250_000_000);
         vm.startPrank(address(lvs));
         ILock(address(lock)).acquire();
-        ICollateralizationSeizure(address(coll)).beginSeizure(proxy, address(vt));
-        vm.expectRevert(ICollateralizationErrors.SeizureMismatch.selector);
-        ICollateralizationSeizure(address(coll)).settleSeizure(alice2, address(vt), 1, new uint256[](0));
+        ICollateralization(address(coll)).beginSeizure(proxy, address(vt));
+        vm.expectRevert(ICollateralizationBase.SeizureMismatch.selector);
+        ICollateralization(address(coll)).settleSeizure(alice2, address(vt), 1, new uint256[](0));
         vm.stopPrank();
     }
 
@@ -309,8 +307,8 @@ contract LPVaultSwapCustodyUnitTest is LPVaultSwapUnitBase {
         for (uint256 i = 0; i < probe.errorCount(); i += 4) {
             assertEq(probe.errorAt(i), lockHeld, "liquidate: LockHeld");
             assertEq(probe.errorAt(i + 1), lockHeld, "settlePending: LockHeld");
-            assertEq(probe.errorAt(i + 2), _err(ICollateralizationErrors.Locked.selector), "credited view: Locked");
-            assertEq(probe.errorAt(i + 3), _err(ICollateralizationErrors.Locked.selector), "pending view: Locked");
+            assertEq(probe.errorAt(i + 2), _err(ICollateralizationBase.Locked.selector), "credited view: Locked");
+            assertEq(probe.errorAt(i + 3), _err(ICollateralizationBase.Locked.selector), "pending view: Locked");
         }
         assertEq(r.unitsSeized, clean.unitsSeized, "same seizure");
         assertEq(r.recovered, clean.recovered, "same recovery");

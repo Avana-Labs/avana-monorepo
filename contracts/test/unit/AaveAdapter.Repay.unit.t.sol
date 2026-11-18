@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationDebtMark} from "../../src/custody/collateralization/ICollateralizationDebtMark.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
@@ -333,7 +333,7 @@ contract AaveAdapterRepayUnitTest is AaveAdapterFixture {
         assertFalse(coll.getMarketDebtFree(vt), "still indebted");
         uint256 u = _debtOf(p, usdcReserveId);
         _fund(alice, usdcReserveId, u);
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralizationDebtMark.markDebtFree, (p)), 1);
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.markDebtFree, (p)), 1);
         _repayAs(alice, usdcReserveId, u, true);
         assertEq(_borrowCountOf(p), 0, "borrowCount 0");
         assertTrue(coll.getMarketDebtFree(vt), "mark cleared");
@@ -343,7 +343,7 @@ contract AaveAdapterRepayUnitTest is AaveAdapterFixture {
     /// @notice A repay that leaves the reserve with debt makes no `markDebtFree` call.
     function test_TEST_029_noDebtMarkWhileDebtRemains() public {
         _fund(alice, debtReserveId, 100e18);
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralizationDebtMark.markDebtFree, (p)), 0);
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.markDebtFree, (p)), 0);
         _repayAs(alice, debtReserveId, 100e18, false);
     }
 

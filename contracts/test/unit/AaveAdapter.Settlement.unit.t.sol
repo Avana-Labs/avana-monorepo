@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../src/custody/collateralization/ICollateralizationAdapter.sol";
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {DeleverageRequest} from "../../src/liquidation/lp-vault-swap/types/DeleverageRequest.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
@@ -69,9 +68,7 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
         uint256 hfAfter = uint256((UNITS - RELEASE) * 2 * 8000 / 10_000) * 1e12 * 1e18 / 7000e18;
         vm.expectCall(vt, abi.encodeCall(IVaultToken.burn, (p, RELEASE)), 1);
         vm.expectCall(
-            address(coll),
-            abi.encodeCall(ICollateralizationAdapter.releaseForDeleverage, (p, vt, k1, RELEASE, _mins())),
-            1
+            address(coll), abi.encodeCall(ICollateralization.releaseForDeleverage, (p, vt, k1, RELEASE, _mins())), 1
         );
         vm.expectEmit(adapter);
         emit IAaveAdapterBase.RepaidWithCollateral(
@@ -132,7 +129,7 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
     /// @notice A repay with collateral that leaves no borrow clears the account's indebted mark in the same call; one
     /// that leaves debt keeps it.
     function test_TEST_272_debtFreeDeleverageClearsTheMark() public {
-        ICollateralizationViews views = ICollateralizationViews(address(coll));
+        ICollateralization views = ICollateralization(address(coll));
         assertFalse(views.getMarketDebtFree(vt), "marked by the borrow");
         _rwcAs(alice, _rwc(MARKET_ID, k1, RELEASE, debtReserveId));
         assertFalse(views.getMarketDebtFree(vt), "debt remains: still marked");
@@ -321,7 +318,7 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
         uint256[] memory amounts = new uint256[](2);
         vm.mockCall(
             address(coll),
-            abi.encodeWithSelector(ICollateralizationAdapter.releaseForDeleverage.selector),
+            abi.encodeWithSelector(ICollateralization.releaseForDeleverage.selector),
             abi.encode(amounts, false)
         );
         // The mock's swap needs no tokens: its recovery is minted.

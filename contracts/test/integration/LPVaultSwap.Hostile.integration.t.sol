@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {AvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {ICollateralizationSeizure} from "../../src/custody/collateralization/ICollateralizationSeizure.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
@@ -167,18 +167,16 @@ contract LPVaultSwapHostileIntegrationTest is RealStackVolatile {
         _run(vt, abi.encodeWithSignature("mint(address,uint256)", lpVaultSwap, 1));
 
         _run(address(lock), abi.encodeCall(ILock.acquire, ()));
-        _run(address(coll), abi.encodeCall(ICollateralizationSeizure.beginSeizure, (healthy, vt)));
+        _run(address(coll), abi.encodeCall(ICollateralization.beginSeizure, (healthy, vt)));
         uint256 c = _hostileSeizeAndKeep(bobProxy, 500e6);
         assertGt(c, 0, "bob seized");
         vm.expectRevert();
         _run(adapter, abi.encodeCall(IAaveAdapter.burnSeized, (mA, vt, c + 1)));
         _run(adapter, abi.encodeCall(IAaveAdapter.burnSeized, (mA, vt, c)));
-        vm.expectRevert(ICollateralizationErrors.SeizureMismatch.selector);
-        _run(
-            address(coll), abi.encodeCall(ICollateralizationSeizure.settleSeizure, (bobProxy, vt, c, new uint256[](0)))
-        );
-        vm.expectRevert(ICollateralizationErrors.DebitMismatch.selector);
-        _run(address(coll), abi.encodeCall(ICollateralizationSeizure.settleSeizure, (healthy, vt, c, new uint256[](0))));
+        vm.expectRevert(ICollateralizationBase.SeizureMismatch.selector);
+        _run(address(coll), abi.encodeCall(ICollateralization.settleSeizure, (bobProxy, vt, c, new uint256[](0))));
+        vm.expectRevert(ICollateralizationBase.DebitMismatch.selector);
+        _run(address(coll), abi.encodeCall(ICollateralization.settleSeizure, (healthy, vt, c, new uint256[](0))));
         _run(address(lock), abi.encodeCall(ILock.release, ()));
         assertEq(coll.getAccountCredited(healthy, vt), aliceCredited, "alice's records untouched");
     }

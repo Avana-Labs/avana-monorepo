@@ -3,9 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../custody/collateralization/ICollateralizationAdapter.sol";
-import {ICollateralizationDebtMark} from "../../custody/collateralization/ICollateralizationDebtMark.sol";
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequencerUptimeFeed.sol";
 import {ILPVaultSwapDeleverage} from "../../liquidation/lp-vault-swap/ILPVaultSwapDeleverage.sol";
@@ -84,7 +82,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         int256 gapBefore = _gap(account.vaultToken);
         _withdrawAndBurn(proxy, account.spoke, account.vaultToken, reserveId, units);
         uint128 remaining;
-        (remaining, amounts) = ICollateralizationAdapter(_COLLATERALIZATION)
+        (remaining, amounts) = ICollateralization(_COLLATERALIZATION)
             .releasePartial(proxy, account.vaultToken, positionKey, units, minAmounts);
         hf = type(uint256).max;
         if (debtFree) {
@@ -112,7 +110,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         uint128 rescueUnits;
         (added, rescueUnits) = _credit(proxy, account, position.positionKey, topUp, requireRescue);
         uint256 recordId =
-            ICollateralizationViews(_COLLATERALIZATION).recordIdOf(position.integrationId, position.positionKey);
+            ICollateralization(_COLLATERALIZATION).recordIdOf(position.integrationId, position.positionKey);
         emit CollateralRecredited(
             msg.sender, marketId, account.vaultToken, recordId, position.positionKey, added, rescueUnits
         );
@@ -128,7 +126,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
     ) private returns (uint128 added, uint128 rescueUnits) {
         uint256 reserveId = _reserveIdOf(account.vaultToken);
         int256 gapBefore = _gap(account.vaultToken);
-        (added, rescueUnits) = ICollateralizationAdapter(_COLLATERALIZATION)
+        (added, rescueUnits) = ICollateralization(_COLLATERALIZATION)
             .recredit(msg.sender, proxy, account.vaultToken, positionKey, topUp, requireRescue);
         if (added == 0) revert ZeroAmount();
         IVaultToken(account.vaultToken).mint(proxy, added);
@@ -185,7 +183,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         // Each swap leg may fill anywhere above its oracle minimum, so this bounds a sandwich on the leftover.
         if (debtAssetToWallet < p.minAssetOut) revert AssetOutBelowMinimum(debtAssetToWallet, p.minAssetOut);
         if (hfAfter == type(uint256).max) {
-            ICollateralizationDebtMark(_COLLATERALIZATION).markDebtFree(b.proxy);
+            ICollateralization(_COLLATERALIZATION).markDebtFree(b.proxy);
             _cleanup(b.proxy, b.spoke, b.reserveId);
         }
         _clearSession();

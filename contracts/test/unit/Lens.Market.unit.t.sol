@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
-import {Pending} from "../../src/custody/collateralization/types/Pending.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
+import {Pending} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
@@ -436,12 +436,8 @@ contract LensMarketUnitTest is LensFixture {
     function test_TEST_060_pendingAndCapHeadroomRefuseOnTheLensCheck() public {
         Pending memory none;
         PledgeCounters memory zero;
-        vm.mockCall(
-            address(coll), abi.encodeWithSelector(ICollateralizationViews.getPending.selector), abi.encode(none)
-        );
-        vm.mockCall(
-            address(coll), abi.encodeWithSelector(ICollateralizationViews.getCounters.selector), abi.encode(zero)
-        );
+        vm.mockCall(address(coll), abi.encodeWithSelector(ICollateralization.getPending.selector), abi.encode(none));
+        vm.mockCall(address(coll), abi.encodeWithSelector(ICollateralization.getCounters.selector), abi.encode(zero));
         _holdLock();
         vm.expectRevert(ILensErrors.Locked.selector);
         lens.getPendingSettlement(vt);

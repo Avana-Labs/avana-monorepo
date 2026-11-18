@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {CapView} from "../../src/types/CapView.sol";
 import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
@@ -23,7 +23,7 @@ contract LensCapHeadroomCountersUnitTest is LensFixture {
     /// same headroom and USDT is reported at its full $250,000 cap, never a revert on the shorter list.
     // TEST-247 verifies: REQ-LENS-018
     function test_TEST_247_capHeadroomTokenMissingFromCounters() public {
-        PledgeCounters memory k = ICollateralizationViews(address(coll)).getCounters(vt, alice);
+        PledgeCounters memory k = ICollateralization(address(coll)).getCounters(vt, alice);
         assertEq(k.tokenUsed.length, 2, "one counter per pool token");
         assertGt(k.tokenUsed[0] + k.tokenUsed[1], 0, "the pledge is counted");
         CapView memory full = lens.getCapHeadroom(vt, alice);
@@ -34,7 +34,7 @@ contract LensCapHeadroomCountersUnitTest is LensFixture {
         uint256 usdcUsed = k.tokenUsed[0];
         k.tokenUsed = new uint256[](1);
         k.tokenUsed[0] = usdcUsed;
-        vm.mockCall(address(coll), abi.encodeCall(ICollateralizationViews.getCounters, (vt, alice)), abi.encode(k));
+        vm.mockCall(address(coll), abi.encodeCall(ICollateralization.getCounters, (vt, alice)), abi.encode(k));
         CapView memory short_ = lens.getCapHeadroom(vt, alice);
         assertEq(short_.tokenHeadroomUsd.length, 2, "still one headroom per market token");
         assertEq(short_.tokenHeadroomUsd[0], full.tokenHeadroomUsd[0], "the listed token is unchanged");

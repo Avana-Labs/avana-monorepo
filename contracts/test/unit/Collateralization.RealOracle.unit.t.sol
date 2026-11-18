@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../src/custody/collateralization/ICollateralizationAdapter.sol";
-import {ICollateralizationUser} from "../../src/custody/collateralization/ICollateralizationUser.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
@@ -155,7 +154,7 @@ contract CollateralizationRealOracleUnitTest is CollateralizationFixture {
         vm.startStateDiffRecording();
         vm.startPrank(adapter);
         lock.acquire();
-        uint256[] memory fees = ICollateralizationUser(address(coll)).collectFees(alice, address(tokenB), key);
+        uint256[] memory fees = ICollateralization(address(coll)).collectFees(alice, address(tokenB), key);
         lock.release();
         vm.stopPrank();
         vm.prank(adapter);
@@ -164,7 +163,7 @@ contract CollateralizationRealOracleUnitTest is CollateralizationFixture {
         IAaveV4Spoke(aave.cdpSpoke).withdraw(reserveB, 5_000_000_000, proxyB);
         vm.startPrank(adapter);
         tokenB.burn(proxyB, 5_000_000_000);
-        ICollateralizationAdapter(address(coll)).release(proxyB, address(tokenB), key, 5_000_000_000);
+        ICollateralization(address(coll)).release(proxyB, address(tokenB), key, 5_000_000_000);
         lock.release();
         vm.stopPrank();
         Vm.AccountAccess[] memory acc = vm.stopAndReturnStateDiff();

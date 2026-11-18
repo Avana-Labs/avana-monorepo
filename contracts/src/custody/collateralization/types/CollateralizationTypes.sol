@@ -21,3 +21,17 @@ struct BackingRecord {
     uint64 originalUsdCharge;
     uint64 currentUsdCharge;
 }
+
+/// @notice Exposure counter named in a `CounterSaturated` event.
+enum CounterKind {
+    MarketRegular,
+    MarketSlice,
+    Token
+}
+
+/// @notice Pending-settlement balance of a market.
+/// @dev `units`: reconciled units not yet burned; `amounts`: principal per market token backing them.
+struct Pending {
+    uint256 units;
+    uint256[] amounts;
+}

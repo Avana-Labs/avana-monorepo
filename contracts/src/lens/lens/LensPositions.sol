@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
@@ -71,7 +71,7 @@ abstract contract LensPositions is LensAccountMath, ILensPositions {
         Market memory m = _market(marketId);
         (v.blockNumber, v.timestamp) = (block.number, block.timestamp);
         (address proxy,) = _proxy(wallet, marketId, m.spoke);
-        ICollateralizationViews coll = ICollateralizationViews(_COLLATERALIZATION);
+        ICollateralization coll = ICollateralization(_COLLATERALIZATION);
         uint256 id = coll.recordIdOf(m.integrationId, positionKey);
         bool own = id != 0 && coll.getRecord(id).proxy == proxy;
         uint256 limit = own ? coll.previewRelease(m.integrationId, positionKey) : 0;

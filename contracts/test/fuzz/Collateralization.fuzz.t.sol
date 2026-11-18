@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {BackingRecord} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {CollateralizationLedgerHarness, HarnessLock} from "../utils/harness/CollateralizationLedgerHarness.sol";
 import {Test} from "forge-std/Test.sol";
 
@@ -93,7 +93,7 @@ contract CollateralizationFuzzTest is Test {
         }
         if (u > sum) {
             u = bound(u, sum + 1, type(uint128).max);
-            vm.expectRevert(ICollateralizationErrors.InsufficientCredit.selector);
+            vm.expectRevert(ICollateralizationBase.InsufficientCredit.selector);
             h.debit(PROXY, u);
             return;
         }
