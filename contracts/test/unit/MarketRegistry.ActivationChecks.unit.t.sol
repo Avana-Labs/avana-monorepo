@@ -122,35 +122,10 @@ contract MarketRegistryActivationChecksUnitTest is MarketRegistryFixture {
     }
 
     // TEST-138 verifies: REQ-CONFIG-047, REQ-CONFIG-038
-    // Every LPOracle state other than Live fails "oracleLive".
-    function test_TEST_138_everyNonLiveOracleStateRefused() public {
-        PriceState[3] memory bad = [PriceState.Drifting, PriceState.Cached, PriceState.Expired];
-        for (uint256 i = 0; i < 3; ++i) {
-            lpo.setState(bad[i]);
-            _expectCheck("oracleLive");
-        }
-        lpo.setState(PriceState.Live);
-        _activate();
-    }
-
-    // TEST-138 verifies: REQ-CONFIG-047, REQ-CONFIG-038
     // An LPOracle whose state read reverts fails "oracleLive" (the read is a static call that fails closed).
     function test_TEST_138_unreadableOracleStateRefused() public {
-        vm.mockCallRevert(address(lpo), abi.encodeWithSignature("getPriceState()"), "down");
+        vm.mockCallRevert(address(lpo), abi.encodeWithSignature("getPriceStatus()"), "down");
         _expectCheck("oracleLive");
-    }
-
-    // TEST-138 verifies: REQ-CONFIG-047, REQ-CONFIG-027
-    // An LPOracle that rejects the ParameterStore's configuration with any non-zero failure code fails "oracleConfig".
-    function testFuzz_TEST_138_anyFailedConfigCheckRefused(
-        uint256 failed
-    ) public {
-        lpo.setFailed(failed);
-        if (failed == 0) {
-            _activate();
-        } else {
-            _expectCheck("oracleConfig");
-        }
     }
 
     // TEST-231 verifies: REQ-CONFIG-026, REQ-CONFIG-034, REQ-MREG-027
@@ -181,15 +156,15 @@ contract MarketRegistryActivationChecksUnitTest is MarketRegistryFixture {
     }
 
     // TEST-138 verifies: REQ-CONFIG-047, REQ-CONFIG-038
-    /// @notice The LPOracle state read needs at least 64 bytes: a 32-byte answer fails "oracleLive", and an answer of
-    /// exactly 64 bytes whose state word is Live passes.
+    /// @notice The LPOracle status read needs the whole 128-byte `PriceStatus`: a 32-byte answer fails "oracleLive",
+    /// and a full answer whose liquidation-fresh word is set passes.
     function test_TEST_138_oracleStateAnswerLength() public {
-        vm.mockCall(address(lpo), abi.encodeWithSignature("getPriceState()"), abi.encode(uint256(32)));
+        vm.mockCall(address(lpo), abi.encodeWithSignature("getPriceStatus()"), abi.encode(uint256(32)));
         _expectCheck("oracleLive");
         vm.mockCall(
             address(lpo),
-            abi.encodeWithSignature("getPriceState()"),
-            abi.encode(uint256(32), uint256(uint8(PriceState.Live)))
+            abi.encodeWithSignature("getPriceStatus()"),
+            abi.encode(int256(2e8), uint64(block.timestamp), true, true)
         );
         _activate();
     }

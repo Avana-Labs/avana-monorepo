@@ -108,7 +108,6 @@ function feeSwitchDebt() {
     fixedPrice: false,
     stressRiseBps: 500,
     floorRoundingAllowance: "1000000",
-    debtOraclePokeMinGas: 1000000,
     address: `$world:.tokens.${sym}`,
     feeds: { primary: `$world:.feeds.${sym}.primary` },
   });

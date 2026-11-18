@@ -166,25 +166,6 @@ contract LensPreviewCollateralUnitTest is LensFixture {
         assertGt(after_, hf, "and is shown");
     }
 
-    // TEST-239 verifies: REQ-LENS-038, REQ-LENS-007
-    function test_TEST_239_repayWithCollateralPriceGates() public {
-        _borrow(aliceProxy, 8000e18);
-        _borrowUsdc(aliceProxy, 100e6);
-        uint256 hf = _hf(aliceProxy);
-        lpo.setState(PriceState.Cached, 0, true);
-        _assertRwcZero(alice, _key(1), 100e6, debtReserveId, hf, "market not liquidation-grade");
-        lpo.setState(PriceState.Live, 0, false);
-        lpo.setTokenAt(0, uint64(block.timestamp - FEED_AGE - 1), 0);
-        _assertRwcZero(alice, _key(1), 100e6, debtReserveId, hf, "an input past its liquidation age");
-        lpo.setTokenAt(0, uint64(block.timestamp), 0);
-        usdcOracle.set(1e8, PriceState.Cached, 1e8, uint64(block.timestamp));
-        _assertRwcZero(alice, _key(1), 100e6, usdcReserveId, _hf(aliceProxy), "debt price not fresh");
-        hf = _hf(aliceProxy);
-        vm.mockCall(aave.hub, abi.encodeWithSignature("getAddedAssets(uint256)", vtAssetId), abi.encode(1));
-        _assertRwcZero(alice, _key(1), 100e6, debtReserveId, hf, "Hub shares differ from assets");
-        vm.clearMockedCalls();
-    }
-
     // TEST-239 verifies: REQ-LENS-038
     function test_TEST_239_repayWithCollateralUndeployedProxy() public view {
         (uint256 x, uint256 out, uint256 hf) =

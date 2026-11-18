@@ -6,11 +6,9 @@ pragma solidity 0.8.28;
 // External calls go only to known protocol contracts while a Lock member holds the Lock, so nothing can re-enter.
 // Ledger writes happen only inside entry points that emit their own event.
 
-import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {PledgeCharge} from "../../policy/risk-module/types/RiskModuleTypes.sol";
 import {PledgeCounters} from "../../types/PositionTypes.sol";
-import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {ILPVault} from "../lp-vault/ILPVault.sol";
 import {CollateralizationLedger} from "./CollateralizationLedger.sol";
 import {ICollateralization} from "./ICollateralization.sol";

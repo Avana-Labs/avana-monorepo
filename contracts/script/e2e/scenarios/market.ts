@@ -28,7 +28,6 @@ import {
   aaveV4SpokeAbi,
   collateralizationAbi,
   firstLossReserveAbi,
-  debtOracleAbi,
   lensAbi,
   lpOracleAbi,
   lpVaultAbi,
@@ -37,9 +36,8 @@ import {
   riskModuleAbi,
   vaultTokenAbi,
 } from "../../../../packages/protocol/src/abis/index.ts";
-import { refreshFeeds, worldFeeds } from "../refresh-feeds.ts";
-import type { Scenario, ScenarioContext, ScenarioRun, SendResult } from "./context.ts";
-import { transmit } from "./ocr2.ts";
+import { refreshFeeds } from "../refresh-feeds.ts";
+import type { Scenario, ScenarioContext, ScenarioRun } from "./context.ts";
 
 // ─── Third-party interfaces (Uniswap v3 periphery 24ccf01, Slipstream 1.0.0, test tokens) ───
 
@@ -130,20 +128,7 @@ export const withErrors = (abi: readonly unknown[]) => [...abi, ...ERRORS] as re
 export const WAD = 10n ** 18n;
 const RAY = 10n ** 27n;
 const ONE_USD = 100_000_000n;
-/** Gas for `poke()`: the LPOracle's and the DebtOracle's `pokeMinGas` is 1,000,000 at entry. */
-const POKE_GAS = 1_500_000n;
-const STATES = ["Live", "Drifting", "Cached", "Expired"] as const;
-const LIVE = 0;
-const DRIFTING = 1;
-const CACHED = 2;
-const EXPIRED = 3;
-// LPOracle reason bits (LPOracleTypes.sol, LPOracleCodes).
-const USD_BAND = 1n << 3n;
-const CONSISTENCY_DEVIATION = 1n << 4n;
-const PRICE_CLAMPED = 1n << 6n;
-const IN_GRACE = 1n << 10n;
-const QUOTE_CHANGE_CAPPED = 1n << 18n;
-/** Feed age past which a leg is stale: heartbeat 86,400 s plus margin 1,800 s. */
+/** Feed age past which a leg is stale: heartbeat 86,400 s plus margin 1,800 s (its `liquidationPriceMaxAge`). */
 const STALE_AFTER = 88_200;
 /** The symbols the four listed markets and their debt reserves read. */
 const MARKET_SYMBOLS = ["USDC", "USDT", "WETH", "GHO"] as const;
@@ -235,22 +220,6 @@ const eq = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 export const pct = (x: bigint, bps: bigint) => (x * bps) / 10_000n;
 export const fmt = (x: bigint, decimals: number) => formatUnits(x, decimals);
 export const usd8 = (x: bigint) => `$${formatUnits(x, 8)}`;
-const stateName = (s: number) => STATES[s] ?? `state ${s}`;
-
-function isqrt(n: bigint): bigint {
-  if (n < 2n) return n;
-  let x = n;
-  let y = (x + 1n) / 2n;
-  while (y < x) {
-    x = y;
-    y = (x + n / x) / 2n;
-  }
-  return x;
-}
-
-/** `sqrt(raw1 / raw0) × 2^96` at USD prices `p0`, `p1` (8 decimals), as 02_DeployWorld initialises its pools. */
-const sqrtPriceX96 = (p0: bigint, p1: bigint, d0: number, d1: number) =>
-  isqrt((p0 * 10n ** BigInt(d1) * (1n << 192n)) / (p1 * 10n ** BigInt(d0)));
 
 /** The first revert reason viem decoded along an error's cause chain, else its first line. */
 export function errorName(e: unknown): string {
@@ -428,63 +397,29 @@ export class Env {
     await refreshFeeds(this.ctx.client, this.ctx.network, { symbols: symbols ?? Object.keys(prices), prices });
   }
 
-  async poke(oracle: Address, abi: readonly unknown[] = lpOracleAbi): Promise<SendResult> {
-    await this.gasFor(WALLETS.poker);
-    return this.ctx.send(WALLETS.poker, oracle, withErrors(abi), "poke", [], { gas: POKE_GAS });
-  }
-
+  /** The market LPOracle's served price and its freshness (`getPriceStatus`); the oracle is stateless, so this is the
+   * price every read at this block sees. */
   async priceState(oracle: Address): Promise<any> {
-    return this.read(oracle, lpOracleAbi, "getPriceState");
+    return this.read(oracle, lpOracleAbi, "getPriceStatus");
   }
 
   describe(s: any): string {
-    return `${stateName(Number(s.state))} answer ${usd8(BigInt(s.answer))} accepted ${usd8(BigInt(s.acceptedAnswer))} reasons 0x${BigInt(s.reasons).toString(16)} liqPaused ${s.liquidationPaused} grace ${s.inGrace} borrowAllowed ${s.borrowAllowed}`;
-  }
-
-  /** Every DebtOracle (non-fixed price source) of the listed markets' CDP Spokes. */
-  async debtOracles(): Promise<Address[]> {
-    const outList: Address[] = [];
-    const spokes = [...new Set(this.markets.map((m) => m.spoke.toLowerCase()))] as Address[];
-    for (const spoke of spokes) {
-      const ids = (await this.read(this.registry, marketRegistryAbi, "getDebtReserveIds", [spoke])) as bigint[];
-      for (const id of ids) {
-        const d = await this.read(this.registry, marketRegistryAbi, "getDebtReserve", [spoke, id]);
-        if (!d.fixedPrice && !outList.some((o) => eq(o, d.priceSource))) outList.push(d.priceSource);
-      }
-    }
-    return outList;
+    return `answer ${usd8(BigInt(s.answer))} updatedAt ${s.updatedAt} borrowFresh ${s.borrowFresh} liquidationFresh ${s.liquidationFresh}`;
   }
 
   /**
-   * Restores the configured prices (one fresh round per feed of `symbols`, all world symbols when `all`), pokes every
-   * listed LPOracle and DebtOracle, and waits out any grace window so the next step starts Live and outside grace.
+   * Restores the configured prices (one fresh round per feed of `symbols`, all world symbols when `all`). The oracles
+   * are stateless, so every listed market reads the restored prices at once; returns each market's price status.
    */
   async settle(all = false): Promise<string> {
     const symbols = all ? Object.keys(this.prices) : [...MARKET_SYMBOLS];
     const prices: Record<string, bigint> = {};
     for (const s of symbols) if (this.prices[s] !== undefined) prices[s] = this.prices[s]!;
     await this.refresh(prices, symbols);
-    const debt = await this.debtOracles();
     let notes = "";
-    for (let round = 0; round < 3; round++) {
-      let grace = false;
-      notes = "";
-      for (const m of this.markets) {
-        await this.poke(m.lpOracle);
-        const s = await this.priceState(m.lpOracle);
-        grace ||= Boolean(s.inGrace);
-        notes += `${m.name} ${stateName(Number(s.state))}${s.inGrace ? " (grace)" : ""}; `;
-      }
-      for (const o of debt) {
-        await this.poke(o, debtOracleAbi);
-        const s = await this.read(o, debtOracleAbi, "getPriceState");
-        grace ||= Boolean(s.inGrace);
-        notes += `DebtOracle ${o.slice(0, 8)} ${stateName(Number(s.state))}${s.inGrace ? " (grace)" : ""}; `;
-      }
-      if (!grace) break;
-      const graceDuration = Number(this.ctx.config.parameters?.globals?.graceDuration ?? 1800);
-      await this.advance(graceDuration + 1);
-      await this.refresh(prices, symbols);
+    for (const m of this.markets) {
+      const s = await this.priceState(m.lpOracle);
+      notes += `${m.name} ${s.liquidationFresh ? "fresh" : "stale"}; `;
     }
     return notes.trim();
   }
@@ -830,10 +765,9 @@ export class Env {
     return r < capBps ? r : capBps;
   }
 
-  /** WETH moved to `bps` of its configured price, USDC at its configured price; every WETH market's LPOracle poked. */
-  async setWeth(bps: bigint, oracles: readonly Address[]) {
+  /** WETH moved to `bps` of its configured price, USDC at its configured price; the stateless LPOracles read it at once. */
+  async setWeth(bps: bigint) {
     await this.refresh({ WETH: pct(this.prices.WETH!, bps), USDC: this.prices.USDC! });
-    for (const o of oracles) await this.poke(o);
   }
 }
 
@@ -1032,78 +966,13 @@ async function slipstreamLifecycle(e: Env) {
 
 // ─── 3. Price paths ───
 
-/**
- * The 1 % quote cap in one block: poke A accepts the configured price, then WETH and USDC both move down 1.5 % (their
- * ratio, and so the pool-consistency check, unchanged; the vault token's price falls 1.5 %), then poke C in the same
- * block reads Cached with QUOTE_CHANGE_CAPPED; poke D in the next block reads Live and accepts the new price. Mining
- * is paused for the block; A and C come from one sender (nonce order) and A carries the highest priority fee, C the
- * lowest, so A, the rounds and C are mined in that order under both fee and FIFO ordering.
- */
-async function quoteCapBlock(e: Env, oracle: Address) {
-  const w0 = e.prices.WETH!;
-  const u0 = e.prices.USDC!;
-  // Fresh rounds at the configured prices, not yet accepted (A accepts them).
-  await e.refresh({ WETH: w0, USDC: u0 });
-  const feeds = worldFeeds(e.ctx.network, ["WETH", "USDC"]);
-  await e.gasFor(WALLETS.poker);
-  const gwei = 1_000_000_000n;
-  const poke = (tip: bigint) =>
-    e.ctx.wallet.writeContract({
-      account: WALLETS.poker,
-      chain: null,
-      address: oracle,
-      abi: lpOracleAbi,
-      functionName: "poke",
-      gas: POKE_GAS,
-      maxFeePerGas: 1_000n * gwei,
-      maxPriorityFeePerGas: tip,
-    } as any);
-  await e.rpc("evm_setAutomine", [false]);
-  let hA: Hex | undefined;
-  let hC: Hex | undefined;
-  const hT: Hex[] = [];
-  try {
-    hA = await poke(100n * gwei);
-    for (const f of feeds) hT.push(await transmit(e.ctx.client, e.ctx.wallet, f.aggregator, pct(f.symbol === "WETH" ? w0 : u0, 9_850n)));
-    hC = await poke(1n);
-    await e.rpc("evm_mine", []);
-  } finally {
-    await e.rpc("evm_setAutomine", [true]);
-  }
-  if (!hA || !hC) throw new StepError("quote cap: the block's transactions were not sent");
-  const rA = await e.ctx.client.waitForTransactionReceipt({ hash: hA });
-  const rT = await Promise.all(hT.map((hash) => e.ctx.client.waitForTransactionReceipt({ hash })));
-  const rC = await e.ctx.client.waitForTransactionReceipt({ hash: hC });
-  const sameBlock = rT.every((r) => r.blockNumber === rA.blockNumber) && rC.blockNumber === rA.blockNumber;
-  const ordered = rT.every((r) => r.transactionIndex > rA.transactionIndex && r.transactionIndex < rC.transactionIndex);
-  const events = parseEventLogs({ abi: lpOracleAbi as any, logs: rC.logs }).filter((l: any) => eq(l.address, oracle)) as any[];
-  const capped = events.find((l) => l.eventName === "QuoteChangeCapped");
-  const changed = events.find((l) => l.eventName === "PriceStateChanged");
-  // The view at the end of A's block evaluates the cap as C did (the accepted price is A's, stored in that block).
-  const atBlock = await e.ctx.client
-    .readContract({ address: oracle, abi: lpOracleAbi as any, functionName: "getPriceState", blockNumber: rA.blockNumber })
-    .then((v: any) => e.describe(v))
-    .catch((err: unknown) => `view failed: ${errorName(err)}`);
-  const rD = await e.poke(oracle);
-  const sD = await e.priceState(oracle);
-  e.numbers["2.quoteCap"] =
-    `block ${rA.blockNumber}: A ${rA.status}, ${rT.length} rounds, C ${rC.status}; sameBlock ${sameBlock} ordered ${ordered}; C QuoteChangeCapped ${capped ? `${usd8(capped.args.accepted)} -> ${usd8(capped.args.quoted)}` : "absent"}; C PriceStateChanged ${changed ? `${stateName(Number(changed.args.previous))} -> ${stateName(Number(changed.args.current))} reasons 0x${BigInt(changed.args.reasons).toString(16)}` : "none"}; view at that block: ${atBlock}`;
-  e.numbers["2.quoteCap.nextBlock"] = `D ${rD.ok ? "ok" : rD.error}: ${e.describe(sD)}`;
-  const ok =
-    rA.status === "success" &&
-    rC.status === "success" &&
-    sameBlock &&
-    ordered &&
-    capped !== undefined &&
-    (changed === undefined || (Number(changed.args.current) === CACHED && (BigInt(changed.args.reasons) & QUOTE_CHANGE_CAPPED) !== 0n)) &&
-    Number(sD.state) === LIVE &&
-    BigInt(sD.acceptedAnswer) === BigInt(sD.answer);
-  // Back to the configured prices.
-  await e.refresh({ WETH: w0, USDC: u0 });
-  await e.poke(oracle);
-  return ok;
-}
+const fresh = (s: any) => Boolean(s.borrowFresh) && Boolean(s.liquidationFresh);
 
+/**
+ * The stateless LPOracle prices each token from its Chainlink route on every read: a drift, a crash and a depeg are
+ * served at once, with no pool-consistency check, quote cap or grace window. Past a leg's `liquidationPriceMaxAge`
+ * neither gate's freshness holds; a fresh round on every feed restores both.
+ */
 async function pricePaths(e: Env) {
   const mw = e.market("uni-WETH-USDC-500");
   const ms = e.market("uni-USDC-USDT-100");
@@ -1118,126 +987,58 @@ async function pricePaths(e: Env) {
   const u0 = e.prices.USDC!;
   const t0 = e.prices.USDT!;
   n.settle = await e.settle();
-  let s = await e.priceState(oW);
-  n["0.baseline"] = `WETH market ${e.describe(s)}; stable market ${e.describe(await e.priceState(oS))}`;
-  expect(Number(s.state) === LIVE, "baseline WETH market not Live");
+  const s0 = await e.priceState(oW);
+  n["0.baseline"] = `WETH market ${e.describe(s0)}; stable market ${e.describe(await e.priceState(oS))}`;
+  expect(fresh(s0), "baseline WETH market not fresh");
 
-  // 1. Slow drift: WETH down 0.2 % per step, 0.6 % in all, within the market's 100-tick pool-consistency tolerance.
-  for (let k = 1n; k <= 3n; k++) {
-    await e.refresh({ WETH: pct(w0, 10_000n - 20n * k), USDC: u0 });
-    await e.poke(oW);
-    s = await e.priceState(oW);
-    n[`1.drift-${k * 20n}bps`] = e.describe(s);
-    expect(Number(s.state) === LIVE && BigInt(s.acceptedAnswer) === BigInt(s.answer), `drift step ${k}: not Live or not accepted`);
+  // 1. A slow drift (WETH down 0.6 %), then crashes of 30, 60 and 90 %: the served price falls with each round, the
+  // pool unmoved.
+  let last = BigInt(s0.answer);
+  for (const bps of [9_940n, 7_000n, 4_000n, 1_000n]) {
+    await e.refresh({ WETH: pct(w0, bps), USDC: u0 });
+    const s = await e.priceState(oW);
+    n[`1.weth-${bps}bps`] = e.describe(s);
+    expect(fresh(s) && BigInt(s.answer) < last, `WETH at ${bps} bps: price did not follow, or not fresh`);
+    last = BigInt(s.answer);
   }
   await e.refresh({ WETH: w0, USDC: u0 });
-  await e.poke(oW);
 
-  // 2. The 1 % same-block quote cap.
-  expect(await quoteCapBlock(e, oW), "quote cap: C not Cached with QUOTE_CHANGE_CAPPED in A's block, or D not Live in the next");
-
-  // 3. Crashes of 30, 60 and 90 %. The pool has not followed: the oracle tick is far from the pool's 30-minute mean
-  // tick, so the market is Drifting (CONSISTENCY_DEVIATION) and serves the fresh price, liquidation not paused. Once
-  // the pool trades at the new price for a full TWAP window the market is Live and accepts the price.
-  const pool = mw.pool;
-  const startSqrt = (await e.read(pool, POOL, "slot0"))[0] as bigint;
-  const d0 = e.dec(mw.token0);
-  const d1 = e.dec(mw.token1);
-  const ratioAt = (wethPrice: bigint) => {
-    const p0 = e.sym(mw.token0) === "WETH" ? wethPrice : u0;
-    const p1 = e.sym(mw.token1) === "WETH" ? wethPrice : u0;
-    return sqrtPriceX96(p0, p1, d0, d1);
-  };
-  // The market's TWAP window (09_ListMarkets: twapWindow 1,800 s).
-  const twap = 1800;
-  for (const drop of [30n, 60n, 90n]) {
-    const price = pct(w0, 10_000n - drop * 100n);
-    await e.refresh({ WETH: price, USDC: u0 });
-    await e.poke(oW);
-    s = await e.priceState(oW);
-    n[`3.crash-${drop}.pool-static`] = e.describe(s);
-    expect(
-      Number(s.state) === DRIFTING &&
-        (BigInt(s.reasons) & CONSISTENCY_DEVIATION) !== 0n &&
-        BigInt(s.answer) === BigInt(s.freshAnswer) &&
-        !s.liquidationPaused,
-      `crash ${drop} %: not Drifting on consistency at the fresh price`,
-    );
-    n[`3.crash-${drop}.pool`] = await e.moveUniswapPool(pool, ratioAt(price));
-    await e.advance(twap + 1);
-    await e.poke(oW);
-    s = await e.priceState(oW);
-    n[`3.crash-${drop}.pool-followed`] = e.describe(s);
-    expect(Number(s.state) === LIVE && BigInt(s.acceptedAnswer) === BigInt(s.answer), `crash ${drop} %: not Live and accepted once the pool followed`);
-  }
-  n["3.restore.pool"] = await e.moveUniswapPool(pool, startSqrt);
-  await e.advance(twap + 1);
-  await e.refresh({ WETH: w0, USDC: u0 });
-  await e.poke(oW);
-  s = await e.priceState(oW);
-  n["3.restore"] = e.describe(s);
-  expect(Number(s.state) === LIVE, "WETH market not Live after the pool and price were restored");
-
-  // 4. USDT depeg on the stable market ([-50, 50]): at $0.95 the oracle ratio is outside the range (PRICE_CLAMPED) and
-  // far from the pool (Drifting), still inside the USD band (0.95 >= 0.90^2); at $0.80 it leaves the band (USD_BAND).
+  // 2. USDT depeg on the stable market: the token price follows USDT down (the stable ceiling caps only above $1).
   for (const [label, price] of [
     ["0.95", 95_000_000n],
     ["0.80", 80_000_000n],
   ] as const) {
     await e.refresh({ USDT: price, USDC: u0 });
-    await e.poke(oS);
-    s = await e.priceState(oS);
-    n[`4.depeg-${label}`] = `${e.describe(s)} usdLevel ${usd8(BigInt(s.usdLevel))}`;
-    expect(Number(s.state) !== LIVE && (BigInt(s.reasons) & PRICE_CLAMPED) !== 0n, `USDT ${label}: not clamped or still Live`);
-    if (label === "0.80") expect((BigInt(s.reasons) & USD_BAND) !== 0n, "USDT 0.80: USD_BAND not set");
-    else expect((BigInt(s.reasons) & USD_BAND) === 0n, "USDT 0.95: USD_BAND set");
+    const [tokenPrices] = (await e.read(oS, lpOracleAbi, "getTokenPrices")) as readonly [readonly bigint[], bigint];
+    const s = await e.priceState(oS);
+    n[`2.depeg-${label}`] = `${e.describe(s)} token prices ${tokenPrices.map((p) => usd8(BigInt(p))).join(", ")}`;
+    expect(tokenPrices.some((p) => BigInt(p) <= price), `USDT ${label}: no token priced at or below ${usd8(price)}`);
   }
   await e.refresh({ USDT: t0, USDC: u0 });
-  await e.poke(oS);
-  s = await e.priceState(oS);
-  n["4.restore"] = e.describe(s);
-  expect(Number(s.state) === LIVE, "stable market not Live after the depeg was restored");
 
-  // 5. Staleness: past 88,200 s Cached, past the 3,600 s cached window Expired (latestAnswer 1), then a fresh round
-  // recovers Live in grace.
+  // 3. Staleness: past the 88,200 s liquidationPriceMaxAge neither market is fresh; a fresh round on every feed
+  // restores both.
   await e.refresh({ WETH: w0, USDC: u0, USDT: t0 });
-  await e.poke(oW);
-  await e.poke(oS);
   await e.advance(STALE_AFTER + 2);
   for (const [label, o] of [
     ["WETH", oW],
     ["stable", oS],
   ] as const) {
-    await e.poke(o);
-    s = await e.priceState(o);
-    n[`5.stale.${label}`] = e.describe(s);
-    expect(Number(s.state) === CACHED && s.liquidationPaused, `${label}: not Cached past ${STALE_AFTER} s`);
-  }
-  const cachedWindow = Number(e.ctx.config.parameters?.globals?.cachedWindow ?? 3600);
-  await e.advance(cachedWindow);
-  for (const [label, o] of [
-    ["WETH", oW],
-    ["stable", oS],
-  ] as const) {
-    await e.poke(o);
-    s = await e.priceState(o);
-    const answer = (await e.read(o, lpOracleAbi, "latestAnswer")) as bigint;
-    n[`5.expired.${label}`] = `${e.describe(s)} latestAnswer ${answer}`;
-    expect(Number(s.state) === EXPIRED && answer === 1n, `${label}: not Expired with latestAnswer 1`);
+    const s = await e.priceState(o);
+    n[`3.stale.${label}`] = e.describe(s);
+    expect(!s.liquidationFresh && !s.borrowFresh, `${label}: still fresh past ${STALE_AFTER} s`);
   }
   await e.refresh(e.prices, Object.keys(e.prices));
   for (const [label, o] of [
     ["WETH", oW],
     ["stable", oS],
   ] as const) {
-    await e.poke(o);
-    s = await e.priceState(o);
-    n[`5.recovered.${label}`] = `${e.describe(s)} graceEndsAt ${s.graceEndsAt}`;
-    expect(Number(s.state) === LIVE && s.inGrace && (BigInt(s.reasons) & IN_GRACE) !== 0n, `${label}: not Live in grace after the fresh round`);
+    const s = await e.priceState(o);
+    n[`3.recovered.${label}`] = e.describe(s);
+    expect(fresh(s), `${label}: not fresh after the fresh round`);
   }
-  // Every price back at its configured value, every oracle out of grace.
   n.restored = await e.settle(true);
-  return { ok: fails.length === 0, detail: fails.length === 0 ? "drift, quote cap, crashes, depeg and staleness as documented" : fails.join("; ") };
+  return { ok: fails.length === 0, detail: fails.length === 0 ? "drift, crashes, depeg and staleness as documented" : fails.join("; ") };
 }
 
 // ─── 4. Keeper liquidations through LPVaultSwap ───
@@ -1269,7 +1070,7 @@ async function keeperLiquidations(e: Env) {
     if (hf > hfMax) hfMax = hf;
   }
   const bps = Env.crashBpsFor(hfMax, 85n * 10n ** 16n, 7_000n);
-  await e.setWeth(bps, [um.lpOracle, sm.lpOracle]);
+  await e.setWeth(bps);
   n.crash = `WETH to ${bps} bps of ${usd8(e.prices.WETH!)}: ${usd8(pct(e.prices.WETH!, bps))}`;
   let ok = true;
   const detail: string[] = [];
@@ -1377,7 +1178,7 @@ async function uniswapV4BlockedBorrowerLiquidation(e: Env) {
   try {
     n.blocked = `USDC isBlocked(${w}) ${await e.read(usdc, BLOCKLIST, "isBlocked", [w])}`;
     const bps = Env.crashBpsFor(await e.healthFactor(m, a), 85n * 10n ** 16n, 7_000n);
-    await e.setWeth(bps, [m.lpOracle]);
+    await e.setWeth(bps);
     n.crash = `WETH to ${bps} bps of ${usd8(e.prices.WETH!)}: ${usd8(pct(e.prices.WETH!, bps))}`;
     const hf = await e.healthFactor(m, a);
     n.hf = fmt(hf, 18);
@@ -1431,7 +1232,7 @@ async function selfLiquidation(e: Env) {
 
   // (2) Underwater account: the borrower calls the CDP Spoke's liquidationCall on its own proxy directly.
   const bps = Env.crashBpsFor(hf1, 85n * 10n ** 16n, 7_000n);
-  await e.setWeth(bps, [m.lpOracle]);
+  await e.setWeth(bps);
   const hf2 = await e.healthFactor(m, a);
   const r2 = await e.tryCall(b, m.spoke, aaveV4SpokeAbi, "liquidationCall", [a.collateralReserveId, a.debtReserveId, a.proxy, cover, false]);
   n["2.underwater.Spoke.liquidationCall"] = `WETH at ${bps} bps, HF ${fmt(hf2, 18)}: ${r2.reverted ? `reverted ${r2.name}` : "SUCCEEDED"}`;
@@ -1476,7 +1277,7 @@ async function deficitCoverage(e: Env) {
   const r = (target * target * 10_000n) / (coll * coll);
   const bps = r < 1_000n ? r : 1_000n;
   n.position = `collateral ${usd8(coll)} debt ${fmt(debt, d)} ${e.sym(m.debtAsset)} HF ${fmt(await e.healthFactor(m, a), 18)}; crash to ${bps} bps (${10_000n - bps} bps down)`;
-  await e.setWeth(bps, [m.lpOracle]);
+  await e.setWeth(bps);
   const after = await e.collateralUsd8(m, a);
   n.crash = `collateral ${usd8(after)} vs debt ${usd8(debtUsd)}; HF ${fmt(await e.healthFactor(m, a), 18)}`;
 
@@ -1603,7 +1404,7 @@ async function failoverDrill(e: Env) {
   const helper = e.ctx.manifest.avana.operatorHelpers[0] as { address: Address; signer: Address; fundingSafe: Address };
   n.helper = `${helper.address} signer ${helper.signer} Safe ${helper.fundingSafe}`;
 
-  await e.setWeth(10_000n, [um.lpOracle, sm.lpOracle]);
+  await e.setWeth(10_000n);
   n.settle = await e.settle();
   // `since`: the first block whose state has the account below HF 1; `minedAt`: the block that includes its liquidation.
   const accounts: { m: Market; a: Account; label: string; since: bigint | null; minedAt: bigint | null }[] = [];
@@ -1710,7 +1511,7 @@ async function failoverDrill(e: Env) {
     // transaction sent meanwhile joins that block.
     await e.rpc("evm_setAutomine", [false]);
     let crashed = false;
-    const crash = e.setWeth(bps, [um.lpOracle, sm.lpOracle]).finally(() => {
+    const crash = e.setWeth(bps).finally(() => {
       crashed = true;
     });
     crash.catch(() => undefined);
@@ -1843,7 +1644,7 @@ export function marketScenarios(ctx: ScenarioContext): Scenario[] {
     s("LP pledges a Uniswap v3 position, borrows GHO, collects fees, repays and withdraws", uniswapLifecycle),
     s("LP pledges a Slipstream position, borrows USDC, removes liquidity, adds collateral", slipstreamLifecycle),
     s("LP pledges a Uniswap v4 position, borrows GHO, collects fees, repays and withdraws", uniswapV4Lifecycle),
-    s("price paths: slow drift, 30/60/90 % crashes, depeg, feed staleness", pricePaths),
+    s("price paths: slow drift, 30/60/90 % crashes, depeg, feed staleness (stateless LPOracle)", pricePaths),
     s("keeper liquidates through LPVaultSwap on a Uniswap pool and on a Slipstream pool", keeperLiquidations),
     s("keeper liquidates a borrower the USDC issuer has blocked on a Uniswap v4 market (fees go with the principal)", uniswapV4BlockedBorrowerLiquidation),
     s("self-liquidation attempt by the borrower", selfLiquidation),

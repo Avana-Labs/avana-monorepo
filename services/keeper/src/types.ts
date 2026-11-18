@@ -7,14 +7,14 @@ import type { ChainConfig } from "./config.ts";
 import type { ChainReader } from "./chain/reads.ts";
 import type { Revert } from "./jobs/failureReasons.ts";
 
-export type JobKind = "liquidation" | "settlePending" | "oraclePoke" | "breakerPoke" | "configPoke" | "gasTopUp";
+export type JobKind = "liquidation" | "settlePending" | "breakerPoke" | "configPoke" | "gasTopUp";
 
 /**
  * Fee class of a transaction, declared by its job (keeper DESIGN.md, Fees):
- * - `urgent`: a liquidation, a breaker or configuration poke whose simulation returned non-zero, and an oracle poke
- *   while the oracle is not Live that would change its stored state. Tip: the 90th percentile of the last 5 blocks,
- *   at least `minTipUrgent`; never budget-limited.
- * - `scheduled`: the checkpoint and feed-round oracle pokes, which have the POKE_LEAD_SECONDS window. Tip `minTipScheduled`.
+ * - `urgent`: a liquidation, and a breaker or configuration poke whose simulation returned non-zero. Tip: the 90th
+ *   percentile of the last 5 blocks, at least `minTipUrgent`; never budget-limited.
+ * - `scheduled`: tip `minTipScheduled`; the fees a lazy transaction is sent at after `lazyMaxWait`. No job declares
+ *   it now that the oracles are stateless and never poked.
  * - `urgent` also covers the gas vault's `topUpAll` when the signer is below its `minBalance` (jobs/gasTopUp.ts).
  * - `lazy`: `settlePending`, with no deadline measured in blocks. Tip `minTipLazy`, sent only at a low base fee or
  *   after `lazyMaxWait`, then at scheduled fees.
@@ -30,7 +30,6 @@ export type SkipReason =
   | "marketNotLiquidatable"
   | "priceTooOld"
   | "disagreementPause"
-  | "sequencerDown"
   | "graceAboveThreshold"
   | "noPricedDebtReserve"
   | "previewGateFalse"

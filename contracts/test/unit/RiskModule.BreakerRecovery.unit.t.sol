@@ -73,27 +73,6 @@ contract RiskModuleBreakerRecoveryUnitTest is RiskModuleFixture {
 
     // ----------------------------------------------------------------------------------------- oracle pokes
 
-    // TEST-228 verifies: REQ-RISK-091, REQ-RISK-056
-    function test_TEST_228_pokeBreakersPokesTheOraclesFirst() public {
-        _enableUsdcDebt();
-        uint256 lpBefore = oracle.pokes();
-        uint256 debtBefore = usdcOracle.pokes();
-        riskModule.pokeBreakers(mid);
-        assertEq(oracle.pokes(), lpBefore + 1, "the market's LPOracle");
-        assertEq(usdcOracle.pokes(), debtBefore + 1, "the DebtOracle of a reserve without a fixed price");
-    }
-
-    // TEST-228 verifies: REQ-RISK-091
-    /// @dev A poke that fails (in production only below its own gas floor) reverts the whole call, so no breach is
-    /// recorded from a state the poke did not refresh.
-    function test_TEST_228_aFailedPokeRecordsNothing() public {
-        oracle.setState(PriceState.Drifting, 1 << 3, false);
-        oracle.setPokeReverts(true);
-        vm.expectRevert();
-        riskModule.pokeBreakers(mid);
-        assertEq(registry.lastBreachAt(bytes32(mid)), 0);
-    }
-
     // ----------------------------------------------------------------------------------------- reserve pause
 
     // TEST-268 verifies: REQ-RISK-014, REQ-RISK-078, REQ-RISK-088, REQ-RISK-090
@@ -120,23 +99,6 @@ contract RiskModuleBreakerRecoveryUnitTest is RiskModuleFixture {
 
     // ----------------------------------------------------------------------------------------- cap price
 
-    // TEST-230 verifies: REQ-RISK-026, SPEC-CAP-001, SPEC-CAP-002
-    /// @dev While the accepted price lags a rally ($2.00 accepted, $2.30 fresh, the market Drifting), the caps are
-    /// charged at $2.30 and the minimum is tested at $2.00.
-    function test_TEST_230_capsChargeTheFreshPriceAfterARally() public {
-        oracle.setState(PriceState.Drifting, 1 << 3, true);
-        oracle.setFresh(2.3e8);
-        // $100,000 of market cap room.
-        store.setMarket(mid, 4000, 10e8, 100_000e8, 100_000e8, 1e8);
-        PledgeCounters memory k = _counters();
-        // 43,478 whole tokens at $2.30 are $99,999.40: they fit; at the accepted $2.00 they would book $86,956.
-        PledgeCharge memory c = _pledge(43_478e18, k, false);
-        assertEq(c.usdCharge, 99_999.4e8, "charged at the fresh price");
-        // 43,479 tokens are $100,001.70 at $2.30: refused, although $86,958 at $2.00 would fit.
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("MARKET")));
-        _pledge(43_479e18, k, false);
-    }
-
     // TEST-230 verifies: REQ-RISK-026, REQ-RISK-057
     function test_TEST_230_minimumStaysAtTheLowerPrice() public {
         oracle.setState(PriceState.Drifting, 1 << 3, true);
@@ -147,18 +109,5 @@ contract RiskModuleBreakerRecoveryUnitTest is RiskModuleFixture {
         _pledge(50_000e18, _counters(), false);
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.BelowMinPledge.selector, 99_998e8, 100_000e8));
         _pledge(49_999e18, _counters(), false);
-    }
-
-    // TEST-230 verifies: REQ-RISK-026, REQ-RISK-031, SPEC-CAP-001
-    function test_TEST_230_previewChargesTheFreshPrice() public {
-        bytes32 key = bytes32(uint256(7));
-        rVault.setPosition(key, wallet, 10_000e18);
-        coll.setCounters(_counters());
-        oracle.setFresh(2.4e8);
-        PledgePreview memory p = riskModule.previewPledge(wallet, mid, key);
-        assertEq(p.usdCharge, 24_000e8, "the preview books the charge as checkPledge does");
-        oracle.setFresh(1.5e8);
-        p = riskModule.previewPledge(wallet, mid, key);
-        assertEq(p.usdCharge, 15_000e8);
     }
 }

@@ -25,7 +25,7 @@ export function priorityFee(rewardsP90LastFiveBlocks: readonly bigint[], minTip:
 export interface FeePolicy {
   /** Floor of the urgent tip; the urgent tip is the 90th percentile of the last 5 blocks when that is higher. */
   readonly minTipUrgent: bigint;
-  /** The scheduled tip: checkpoint and feed-round oracle pokes. */
+  /** The scheduled tip: a lazy transaction after `lazyMaxWait`, and any job that declares `scheduled`. */
   readonly minTipScheduled: bigint;
   /** The lazy tip, used only while the base fee is at most `lazyBaseFeeMax`. */
   readonly minTipLazy: bigint;

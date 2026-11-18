@@ -92,22 +92,6 @@ contract AaveAdapterGateParityFuzzTest is AaveAdapterRiskFixture {
         assertEq(_sharesOf(p, vtReserveId), 0, "account closed");
     }
 
-    // TEST-019 verifies: REQ-PROXY-019, REQ-PROXY-020, REQ-PROXY-036, REQ-PROXY-079, REQ-ADAPTER-049, SPEC-PROXY-002, INV-072
-    /// @notice For a random combination of conditions: a borrow passes iff none holds; a withdrawal with debt passes
-    /// iff none holds apart from `Offboarding` and the Aave freeze.
-    function testFuzz_TEST_019_borrowAndWithDebtGateParity(
-        uint8 mask
-    ) public {
-        mask = mask & 63;
-        _apply(mask);
-        uint256 snap = vm.snapshotState();
-        bool borrowed = _borrowPasses();
-        vm.revertToState(snap);
-        bool withdrew = _withDebtWithdrawPasses();
-        assertEq(borrowed, mask == 0, "borrow passes exactly when every gate is open");
-        assertEq(withdrew, mask & (PRICE | FEED | DEBT | BREAKER) == 0, "withdraw with debt shares all but two gates");
-    }
-
     // TEST-099 verifies: REQ-ADAPTER-047, REQ-ADAPTER-086, REQ-PROXY-032, REQ-PROXY-035, REQ-ADAPTER-071, INV-043, INV-045
     /// @notice For a random combination of conditions, repay, `repayAllAndWithdraw` and the debt-free withdrawal
     /// complete.
@@ -116,39 +100,6 @@ contract AaveAdapterGateParityFuzzTest is AaveAdapterRiskFixture {
     ) public {
         _apply(mask & 63);
         _exitsPass();
-    }
-
-    // TEST-019 verifies: REQ-PROXY-036, REQ-PROXY-079, REQ-ADAPTER-049
-    /// @notice The same parity over all 64 combinations, each from the same starting state.
-    function test_TEST_019_allCombinations() public {
-        uint256 snap = vm.snapshotState();
-        for (uint8 mask = 0; mask < 64; ++mask) {
-            _apply(mask);
-            uint256 inner = vm.snapshotState();
-            bool borrowed = _borrowPasses();
-            vm.revertToState(inner);
-            bool withdrew = _withDebtWithdrawPasses();
-            assertEq(borrowed, mask == 0, "borrow");
-            assertEq(withdrew, mask & (PRICE | FEED | DEBT | BREAKER) == 0, "withdraw with debt");
-            vm.revertToState(snap);
-        }
-    }
-
-    // TEST-237 verifies: REQ-ADAPTER-078, REQ-PROXY-036, REQ-ADAPTER-049
-    /// @notice A partial removal that leaves debt follows the same parity as a withdrawal with debt: it passes iff
-    /// none of the conditions holds apart from `Offboarding` and the Aave freeze.
-    function testFuzz_TEST_237_removalWithDebtParity(
-        uint8 mask
-    ) public {
-        mask = mask & 63;
-        _apply(mask);
-        uint256 d = _deadline();
-        uint256[] memory mins = new uint256[](2);
-        vm.prank(alice);
-        (bool ok,) =
-            adapter.call(abi.encodeCall(adapterC.removeLiquidity, (MARKET_ID, _ref(k1), 1_000_000_000, mins, d, 0)));
-        assertEq(ok, mask & (PRICE | FEED | DEBT | BREAKER) == 0, "removal with debt");
-        assertEq(_sharesOf(p, vtReserveId), ok ? UNITS + UNITS / 2 - 1_000_000_000 : UNITS + UNITS / 2, "units");
     }
 
     // TEST-237 verifies: REQ-ADAPTER-078, REQ-ADAPTER-086, REQ-ADAPTER-047

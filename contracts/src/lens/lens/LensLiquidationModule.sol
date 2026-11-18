@@ -18,7 +18,7 @@ import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {LensBase} from "./LensBase.sol";
 import {LensConstants} from "./LensConstants.sol";
 import {LensLiquidationSizing} from "./LensLiquidationSizing.sol";
-import {LiquidationPreview, PriceInput, RouteStatus} from "./types/LensTypes.sol";
+import {LiquidationPreview, RouteStatus} from "./types/LensTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensLiquidationModule

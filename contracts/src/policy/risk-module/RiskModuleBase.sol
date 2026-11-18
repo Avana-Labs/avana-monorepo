@@ -4,32 +4,19 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequencerUptimeFeed.sol";
 import {ILPOracle} from "../../oracle/ILPOracle.sol";
-import {LPPriceMath} from "../../oracle/LPPriceMath.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {IRiskModuleErrors} from "./IRiskModuleErrors.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
-import {RiskModuleMath} from "./RiskModuleMath.sol";
 import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleBase
 /// @notice Implementation immutables and the reads shared by the RiskModule and its logic contracts.
 /// @dev Holds no state.
 abstract contract RiskModuleBase is IRiskModuleErrors {
-    uint256 internal constant SEQUENCER_CALL_GAS = 50_000;
-    /// @dev ABI length of `latestRoundData()`: five words.
-    uint256 internal constant ROUND_LENGTH = 160;
-    /// @dev LPOracle market reason bits that make a market Drifting, and the USD-band breach bit.
-    uint256 internal constant PRICE_DRIFTING_BITS = 0x7c;
-    uint256 internal constant PRICE_USD_BAND = 1 << 3;
-    /// @dev LPOracle token reason bits SECOND_SOURCE_DISAGREE and SECOND_SOURCE_UNAVAILABLE.
-    uint32 internal constant TOKEN_SECOND_SOURCE_BITS = (1 << 4) | (1 << 5);
-    /// @dev LPOracle market reason bit: some token's second source unconfirmed.
-    uint256 internal constant PRICE_SECOND_SOURCE_BIT = 1 << 16;
     /// @dev A pool-share cap of 10,000 bps is no limit.
     uint256 internal constant NO_POOL_SHARE_CAP = 10_000;
 

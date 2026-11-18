@@ -5,11 +5,11 @@
 // larger bound can cure. Pure rules plus revert decoding; the liquidation job applies them.
 
 import { type Abi, type Hex, decodeErrorResult, slice } from "viem";
-import { aaveV4SpokeAbi, debtOracleAbi, flashLiquidatorAbi, lpOracleAbi, lpVaultSwapAbi } from "@avana/protocol/abis";
+import { aaveV4SpokeAbi, flashLiquidatorAbi, lpOracleAbi, lpVaultSwapAbi } from "@avana/protocol/abis";
 import { BPS } from "./liquidationRules.ts";
 
 /** Errors a liquidation can revert with: LPVaultSwap and the helper first, then the oracles and the Spoke it reaches. */
-export const LIQUIDATION_ERROR_ABI: Abi = [...lpVaultSwapAbi, ...flashLiquidatorAbi, ...lpOracleAbi, ...debtOracleAbi, ...aaveV4SpokeAbi] as Abi;
+export const LIQUIDATION_ERROR_ABI: Abi = [...lpVaultSwapAbi, ...flashLiquidatorAbi, ...lpOracleAbi, ...aaveV4SpokeAbi] as Abi;
 
 export interface Revert {
   readonly selector: Hex;

@@ -68,8 +68,8 @@ export interface SendResult {
 
 /**
  * Sends a transaction as `from` (unlocked) and waits; returns the receipt status, gas, the simulated return value and
- * the receipt, or the revert. `opts.gas` replaces the padded estimate (for a call with a gas floor at entry, such as
- * `poke()` with its `pokeMinGas`); `opts.value` is the ether sent with the call.
+ * the receipt, or the revert. `opts.gas` replaces the padded estimate (for a call with a gas floor at entry);
+ * `opts.value` is the ether sent with the call.
  */
 export async function send(
   from: Address,

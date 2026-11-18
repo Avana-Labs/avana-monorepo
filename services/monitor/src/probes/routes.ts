@@ -78,7 +78,7 @@ export function routesProbe(intervalSeconds = 86_400): Probe<RoutesInput> {
     type Plan = { marketId: string; token: Address; tokenDecimals: number; tokenPrice: bigint; debt: { asset: Address; decimals: number; price: bigint }; kind: number; slippageBps: bigint };
     const plans: Plan[] = [];
     markets.forEach((x, k) => {
-      const prices = pre[2 * k] as readonly [readonly bigint[], bigint, number] | null;
+      const prices = pre[2 * k] as readonly [readonly bigint[], bigint] | null;
       const params = pre[2 * k + 1] as { slippageAllowanceBps: number } | null;
       const debts = ctx.snapshot.spokeReserves.filter((r) => r.spoke.toLowerCase() === x.spoke.toLowerCase());
       x.tokens.forEach((token, i) => {

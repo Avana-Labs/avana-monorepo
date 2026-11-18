@@ -11,15 +11,7 @@ import {
     UniswapV4PoolKey
 } from "../../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {IUniswapV3Factory} from "../../../src/interfaces/external/uniswap/IUniswapV3Factory.sol";
-import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
-import {LPOracleCL} from "../../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {LPOracleCLInitLogic} from "../../../src/oracle/lp-oracle/LPOracleCLInitLogic.sol";
-import {LPOracleCLListingLogic} from "../../../src/oracle/lp-oracle/LPOracleCLListingLogic.sol";
-import {LPOracleCLPokeLogic} from "../../../src/oracle/lp-oracle/LPOracleCLPokeLogic.sol";
-import {LPOracleCLViewLogic} from "../../../src/oracle/lp-oracle/LPOracleCLViewLogic.sol";
-import {InitParams, LPOracleLogicSet} from "../../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {LPOracleV4} from "../../../src/oracle/lp-oracle/LPOracleV4.sol";
-import {LPOracleV4ModuleLogic} from "../../../src/oracle/lp-oracle/LPOracleV4ModuleLogic.sol";
+import {LPOracle} from "../../../src/oracle/LPOracle.sol";
 import {DebtReserveDef, RiskTier, SpokeDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketDef} from "../../../src/types/MarketTypes.sol";
 import {PositionRef, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
@@ -33,6 +25,7 @@ import {
     ICollHubConfigurator,
     ICollSpokeConfigurator
 } from "./CollateralizationFixture.sol";
+import {LPOracleTestDeployer} from "./LPOracleTestDeployer.sol";
 import {RealStackVolatile} from "./RealStackVolatile.sol";
 import {IPermit2Approve, IV4TestPositionManager, TestWETH9, V4PoolActor} from "./UniswapV4WorldFixture.sol";
 import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
@@ -70,7 +63,6 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
     uint256 internal v4GhoReserveS;
     uint256 internal v4UsdcReserveV;
     uint256 internal v4GhoReserveV;
-    LPOracleV4 internal v4OracleImpl;
     mapping(uint256 marketId => PoolKey) internal v4KeyOf;
 
     /// @dev Native ETH refunds of the PositionManager's `SWEEP` after a mint.
@@ -132,17 +124,6 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
         registry.recordIntegrationContracts(V4, amm);
         registry.finalizeIntegrationContracts(V4);
         vm.stopPrank();
-        address m = address(
-            new LPOracleV4ModuleLogic(address(timelock), BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, address(weth))
-        );
-        address t = address(timelock);
-        LPOracleLogicSet memory logics = LPOracleLogicSet(
-            address(new LPOracleCLPokeLogic(t, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, m)),
-            address(new LPOracleCLInitLogic(t, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, m)),
-            address(new LPOracleCLListingLogic(t, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, m)),
-            address(new LPOracleCLViewLogic(t, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, m))
-        );
-        v4OracleImpl = new LPOracleV4(t, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, m, logics, address(weth));
     }
 
     // ─── CDP Spokes and debt reserves (as the Slipstream fixture's, for integration V4) ───
@@ -331,7 +312,8 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
         m.pool = ref;
         v4KeyOf[id] = key;
         (uint8 d, uint8 k) = _v4UnitOf(t0, t1, key.tickSpacing);
-        m.oracle = _v4Oracle(id, key, ref, t0, t1, k);
+        m.oracle = _v4Oracle(id, t0, t1, d);
+        (k, ref);
         m.vaultToken = _v4VaultToken(id, key, d, site, address(m.oracle));
         _v4List(key, ref, site, m.vaultToken, address(m.oracle), t0, t1);
         _storeVolatile(id);
@@ -414,34 +396,17 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
 
     function _v4Oracle(
         uint256 id,
-        PoolKey memory key,
-        IClPool ref,
         address t0,
         address t1,
-        uint8 k
-    ) private returns (LPOracleCL o) {
+        uint8 d
+    ) private returns (LPOracle o) {
         address[] memory toks = new address[](2);
         (toks[0], toks[1]) = (t0, t1);
-        InitParams memory ip;
-        ip.timelock = address(timelock);
-        ip.parameterStore = address(store);
-        ip.marketRegistry = address(registry);
-        ip.marketId = id;
-        ip.integration = v4Vault;
-        ip.isUsdStable = new bool[](2);
-        (ip.isUsdStable[0], ip.isUsdStable[1]) = (_isStable(t0), _isStable(t1));
-        ip.description = "Uniswap v4 LP / USD";
-        ip.pokeMinGas = POKE_FLOOR;
-        ip.config = _oracleConfigFor(id, toks);
-        if (!ip.isUsdStable[0] || !ip.isUsdStable[1]) {
-            (ip.config.usdBandLow, ip.config.usdBandHigh) = (0, type(uint256).max);
-        }
-        (int24 lower, int24 upper) = _v4FullRange(key.tickSpacing);
-        UniswapV4PoolKey memory k4 = UniswapV4PoolKey(
-            Currency.unwrap(key.currency0), Currency.unwrap(key.currency1), key.fee, key.tickSpacing, address(0)
+        bool[] memory stable = new bool[](2);
+        (stable[0], stable[1]) = (_isStable(t0), _isStable(t1));
+        o = LPOracleTestDeployer.deploy(
+            id, v4Vault, address(store), address(registry), toks, stable, d, "Uniswap v4 LP / USD"
         );
-        ip.market = abi.encode(address(v4pm), k4, lower, upper, uint256(k), address(ref));
-        o = LPOracleCL(address(new ERC1967Proxy(address(v4OracleImpl), abi.encodeCall(ILPOracle.initialize, (ip)))));
     }
 
     // ─── Positions and prices ───

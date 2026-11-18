@@ -62,19 +62,13 @@ export interface AvanaFirstLossReserve extends Immutable {
   readonly hub: Address;
 }
 
-/** The concentrated-liquidity LPOracle implementation an integration registers as its pricing, with its logic. */
-export interface ClOracle extends Immutable {
-  readonly integrationId: number;
-  readonly moduleLogic: Immutable;
-  readonly logics: readonly Logic[];
-}
-
 export interface Market {
   readonly marketId: string;
   readonly integrationId: number;
   readonly spoke: Address;
   readonly vaultToken: Immutable;
-  readonly lpOracle: Upgradeable;
+  /** The market's stateless LPOracle, a plain contract deployed at listing. */
+  readonly lpOracle: Immutable;
   readonly reserveId: string;
   /** The pool contract; address(0) for a Uniswap v4 market, whose pool is a key in the PoolManager. */
   readonly pool: Address;
@@ -91,7 +85,6 @@ export interface DebtReserve {
   readonly asset: Address;
   readonly decimals: number;
   readonly isGho: boolean;
-  readonly debtOracle: Upgradeable | null;
   readonly feeds: readonly { readonly feed: Address; readonly heartbeatSeconds: number }[];
 }
 
@@ -168,9 +161,6 @@ export interface ReleaseManifest {
     readonly firstLossReserves: readonly AvanaFirstLossReserve[];
     /** The Aave DAO's deficit offset behind each First-Loss Reserve (2.14), deployed on the Aave side. */
     readonly daoDeficitOffsets: readonly AvanaFirstLossReserve[];
-    readonly debtOracleImplementation: Immutable;
-    /** Null while the concentrated-liquidity LPOracle implementation is not deployed. */
-    readonly clOracles: readonly ClOracle[];
     readonly proxyCreationCodeHash: Hex;
     /** The chain's AvanaGasVault (2.24) and its immutables; null while it is not deployed (step 12-gas-vault). */
     readonly gasVault: GasVault | null;

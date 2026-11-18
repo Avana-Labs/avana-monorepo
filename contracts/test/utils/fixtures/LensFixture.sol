@@ -27,6 +27,7 @@ import {LPVaultSwapLensMock} from "../mocks/LPVaultSwapLensMock.sol";
 import {
     LensCoverageMock,
     LensDebtOracleMock,
+    LensFeedEcho,
     LensFlashSourceMock,
     LensLPOracleMock,
     LensLPVaultMock,
@@ -211,6 +212,8 @@ abstract contract LensFixture is CollateralizationFixture {
         usdcCov.set(50_000e6, 50_000e6);
         lpo.addToken(address(usdc), feedUsdc, address(0), uint64(T0 - 600), 1e8);
         lpo.addToken(address(usdt), feedUsdt, address(0), uint64(T0 - 600), 1e8);
+        _echoFeed(feedUsdc);
+        _echoFeed(feedUsdt);
         lpo.setAccepted(2e8, uint64(T0 - 600));
         store.setAges(feedUsdc, FEED_AGE, FEED_AGE);
         store.setAges(feedUsdt, FEED_AGE, FEED_AGE);
@@ -351,5 +354,12 @@ abstract contract LensFixture is CollateralizationFixture {
         bool paused
     ) internal {
         _spokeConfig(abi.encodeWithSignature("updatePaused(address,uint256,bool)", aave.cdpSpoke, reserveId, paused));
+    }
+
+    /// @dev Gives a feed address the code of a Chainlink feed dated at the LPOracle mock's recorded time for it.
+    function _echoFeed(
+        address feed
+    ) internal {
+        vm.etch(feed, address(new LensFeedEcho(lpo)).code);
     }
 }

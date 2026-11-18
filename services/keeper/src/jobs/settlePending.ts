@@ -48,7 +48,7 @@ export function settlePendingJob(): Job<ManifestMarket, Decision> {
         reservations: [],
         targets: [
           { kind: "upgradeable", address: m.avana.lpVaultSwap.address, implementation: m.avana.lpVaultSwap.implementation },
-          { kind: "upgradeable", address: market.lpOracle.address, implementation: market.lpOracle.implementation },
+          { kind: "immutable", address: market.lpOracle.address, codeHash: market.lpOracle.codeHash },
           { kind: "immutable", address: m.avana.collateralization.address, codeHash: m.avana.collateralization.codeHash },
           { kind: "immutable", address: market.vaultToken.address, codeHash: market.vaultToken.codeHash },
           ...market.routes.map((r) => ({ kind: "immutable" as const, address: r.address, codeHash: r.codeHash })),

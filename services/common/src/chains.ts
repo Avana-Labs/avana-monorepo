@@ -19,7 +19,7 @@ export interface ChainInfo {
   readonly networkSet: NetworkSet;
   /** Block time in seconds; sets the 3-block liquidation deadline (REQ-SWAP-074) and the M-09 block counts. */
   readonly blockTimeSeconds: number;
-  /** True on an L2 whose sequencer-uptime feed gates borrowing and liquidation (EMG-093, EMG-094). */
+  /** True on an L2 run by a sequencer, with a sequencer-uptime feed (recorded in the ParameterStore). */
   readonly hasSequencer: boolean;
   /** Ethereum sends to builder endpoints; Base sends to the sequencer endpoint (no public mempool). */
   readonly privateFlow: "builders" | "sequencer";

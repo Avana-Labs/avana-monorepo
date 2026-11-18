@@ -66,8 +66,6 @@ describe("keeper stream kinds", () => {
     ProxyManager: abis.ProxyManager,
     LPVaultSwap: abis.LPVaultSwap,
     AaveSpoke: abis.AaveSpoke,
-    LPOracle: abis.LPOracle,
-    DebtOracle: abis.DebtOracle,
     Collateralization: abis.Collateralization,
     MarketRegistry: abis.MarketRegistry,
   };

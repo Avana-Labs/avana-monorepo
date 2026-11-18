@@ -29,8 +29,9 @@ export interface MarketGateInput {
 
 /**
  * Step 3, the market gate from `Lens.getPriceState`: Live or Drifting, no disagreement pause, and inside a grace
- * window only accounts below `graceHealthFactor` (0.95). Input age and the sequencer gate are part of the preview
- * (`previewGate`), which re-evaluates every gate as LPVaultSwap does.
+ * window only accounts below `graceHealthFactor` (0.95). Input age is part of the preview (`previewGate`), which
+ * re-evaluates every gate as LPVaultSwap does. The stateless oracles report no disagreement or grace window, so those
+ * two conditions never hold; they are kept while the Lens still reports them.
  */
 export function marketGate(m: MarketGateInput): SkipReason | null {
   if (m.liquidationState !== 0 && m.liquidationState !== 1) return "marketNotLiquidatable";
@@ -42,7 +43,7 @@ export function marketGate(m: MarketGateInput): SkipReason | null {
 /** The preview fields that decide whether LPVaultSwap would accept the call at this block. */
 export interface PreviewGateInput {
   readonly aaveLiquidatable: boolean;
-  /** Every input within `liquidationPriceMaxAge`, sequencer up, no disagreement pause. */
+  /** Every input within `liquidationPriceMaxAge`. */
   readonly pricesUsable: boolean;
   readonly debtPriceFresh: boolean;
   readonly inGrace: boolean;

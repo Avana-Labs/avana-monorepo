@@ -5,10 +5,11 @@ pragma solidity 0.8.28;
 
 import {RiskStatus} from "../../../src/amm/types/AmmTypes.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {DebtPriceView} from "../../../src/oracle/debt-oracle/types/DebtPriceView.sol";
+import {ILPOracle} from "../../../src/oracle/ILPOracle.sol";
 import {MarketSpeedLimits, SpeedLimit} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {OracleConfig, PriceState, PriceStateView, TokenPriceView} from "../../../src/types/OracleTypes.sol";
 import {PledgeCounters} from "../../../src/types/PositionTypes.sol";
+import {DebtPriceView} from "./DebtPriceView.sol";
 import {RegistryHubMock, RegistrySpokeMock} from "./MarketRegistryAaveMocks.sol";
 import {
     RegistryAdapterMock,
@@ -567,6 +568,23 @@ contract RiskLPOracleMock {
         ++pokes;
         return _pv.state;
     }
+
+    /// @notice The stateless oracle's report: fresh to borrow while Live and allowed, to liquidate while Live or
+    /// Drifting.
+    function getPriceStatus() external view returns (ILPOracle.PriceStatus memory s) {
+        s.answer = _pv.answer;
+        s.updatedAt = uint64(block.timestamp);
+        s.borrowFresh = _pv.state == PriceState.Live && _pv.borrowAllowed;
+        s.liquidationFresh = _pv.state == PriceState.Live || _pv.state == PriceState.Drifting;
+    }
+
+    function getTokenPrices() external view returns (uint256[] memory prices, uint64 updatedAt) {
+        prices = new uint256[](_pv.tokens.length);
+        for (uint256 i = 0; i < prices.length; ++i) {
+            prices[i] = _pv.tokens[i].quote;
+        }
+        updatedAt = uint64(block.timestamp);
+    }
 }
 
 /// @title RiskDebtOracleMock
@@ -603,6 +621,15 @@ contract RiskDebtOracleMock is RegistryDebtOracleMock {
     function poke() external returns (PriceState) {
         ++pokes;
         return _dv.state;
+    }
+
+    /// @notice The debt source as a Chainlink feed: a current round while the report is Live, allowed and within
+    /// `borrowPriceMaxAge`, otherwise a round at time 0.
+    function latestRoundData() external view override returns (uint80, int256, uint256, uint256, uint80) {
+        bool fresh = _dv.state == PriceState.Live && _dv.borrowAllowed && _dv.servedUpdatedAt <= block.timestamp
+            && block.timestamp - _dv.servedUpdatedAt <= borrowPriceMaxAge;
+        uint256 at = fresh ? block.timestamp : 0;
+        return (0, latestAnswer, at, at, 0);
     }
 }
 

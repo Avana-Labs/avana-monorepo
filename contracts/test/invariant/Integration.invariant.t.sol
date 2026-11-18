@@ -239,7 +239,6 @@ contract IntegrationInvariantTest is RealStackFlows, HandlerReach, IIntegrationW
         uint256 price8
     ) public {
         _depegUsdt(price8);
-        usdcOracle.poke();
     }
 
     /// @notice Steers `wallet`'s account below HF 1, as the stand-in fixture's price lever did. The USD band leaves the
@@ -304,8 +303,6 @@ contract IntegrationInvariantTest is RealStackFlows, HandlerReach, IIntegrationW
         vm.warp(block.timestamp + secs);
         vm.roll(block.number + secs / BLOCK_TIME + 1);
         _refreshFeeds();
-        _pokeAll();
-        usdcOracle.poke();
     }
 
     // TEST-100 verifies: INV-046, INV-067, REQ-SWAP-001, REQ-SWAP-003, REQ-ADAPTER-070, REQ-HELPER-002

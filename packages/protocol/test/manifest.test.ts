@@ -106,18 +106,10 @@ describe("contract table", () => {
 });
 
 describe("integration artifacts", () => {
-  it("names the LPVault, LPOracle implementation and module logic of each kind", () => {
-    expect(integrationArtifacts("uniswap-v3")).toEqual({
-      lpVault: "UniswapV3Integration.sol:UniswapV3Integration",
-      lpOracle: "LPOracleCL.sol:LPOracleCL",
-      moduleLogic: "LPOracleCLModuleLogic.sol:LPOracleCLModuleLogic",
-    });
+  it("names the LPVault of each kind", () => {
+    expect(integrationArtifacts("uniswap-v3")).toEqual({ lpVault: "UniswapV3Integration.sol:UniswapV3Integration" });
     expect(integrationArtifacts("slipstream").lpVault).toBe("SlipstreamIntegration.sol:SlipstreamIntegration");
-    expect(integrationArtifacts("uniswap-v4")).toEqual({
-      lpVault: "UniswapV4Integration.sol:UniswapV4Integration",
-      lpOracle: "LPOracleV4.sol:LPOracleV4",
-      moduleLogic: "LPOracleV4ModuleLogic.sol:LPOracleV4ModuleLogic",
-    });
+    expect(integrationArtifacts("uniswap-v4")).toEqual({ lpVault: "UniswapV4Integration.sol:UniswapV4Integration" });
     expect(() => integrationArtifacts("curve")).toThrow(/unknown integration kind/);
   });
 
@@ -125,8 +117,7 @@ describe("integration artifacts", () => {
     expect(profileOf("UniswapV3Integration.sol")).toBe("clvault");
     expect(profileOf("SlipstreamIntegration.sol")).toBe("clvault");
     expect(profileOf("UniswapV4Integration.sol")).toBe("collateralization");
-    expect(profileOf("LPOracleV4.sol")).toBe("lporacle");
-    expect(profileOf("LPOracleV4ModuleLogic.sol")).toBe("lporacle");
+    expect(profileOf("LPOracle.sol")).toBe("lporacle");
     expect(profileOf("Lock.sol")).toBe("");
   });
 });

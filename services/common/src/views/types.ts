@@ -133,7 +133,7 @@ export interface SpokeReserveRow {
   readonly assetId: DecimalString;
   readonly asset: Address;
   readonly decimals: number;
-  /** The CDP Spoke's served debt price (DebtOracle, or the fixed GHO source); shown as debt-price status only. */
+  /** The CDP Spoke's served debt price (the asset's Chainlink feed, or the fixed GHO source); shown as debt-price status only. */
   readonly debtPrice: DecimalString;
   readonly fixedPrice: boolean;
   readonly paused: boolean;

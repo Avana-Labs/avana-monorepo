@@ -46,7 +46,6 @@ abstract contract RealStackUniswapV4Journeys is RealStackUniswapV4 {
         _ageNewPools(refs);
         mS = _addV4Market(stableKey, stableRef, VT_CF);
         mE = _addV4Market(ethKey, ethRef, VT_CF);
-        _pokeAll();
         for (uint256 k = 0; k < 2; ++k) {
             IClPool r = routePoolOf[address(weth)][address(gho)][k];
             (int24 lower, int24 upper) = _fullRange(r);

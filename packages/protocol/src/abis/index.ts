@@ -9,7 +9,6 @@ export { avanaGasVaultAbi } from "./avanaGasVault.ts";
 export { avanaTimelockAbi } from "./avanaTimelock.ts";
 export { collateralizationAbi } from "./collateralization.ts";
 export { firstLossReserveAbi } from "./firstLossReserve.ts";
-export { debtOracleAbi } from "./debtOracle.ts";
 export { flashLiquidatorAbi } from "./flashLiquidator.ts";
 export { lensAbi } from "./lens.ts";
 export { lpOracleAbi } from "./lpOracle.ts";
@@ -32,7 +31,6 @@ export const ABI_ARTIFACTS = {
   avanaTimelockAbi: "AvanaTimelock",
   collateralizationAbi: "ICollateralization",
   firstLossReserveAbi: "AvanaFirstLossReserve",
-  debtOracleAbi: "IDebtOracle",
   flashLiquidatorAbi: "IFlashLiquidator",
   lensAbi: "ILens",
   lpOracleAbi: "ILPOracle",
@@ -48,4 +46,4 @@ export const ABI_ARTIFACTS = {
 } as const;
 
 /** keccak256 of the canonical JSON of every ABI above; the release manifest's abiHash must equal it (TEST-149). */
-export const ABI_HASH = "0x970353d392280bd3d572b980221d078feb4d243422e2683ec2aef0999baa7999" as const;
+export const ABI_HASH = "0x554e6db14034fc48bcb3a518d8af608ab902ae428d0cf8b07d4ab16d22ae5201" as const;

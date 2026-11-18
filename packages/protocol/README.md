@@ -18,7 +18,7 @@ Import paths: `@avana/protocol/abis`, `@avana/protocol/addresses`, `@avana/proto
 
 | Export | Artifact | Build |
 |---|---|---|
-| `aaveAdapterAbi`, `collateralizationAbi`, `debtOracleAbi`, `flashLiquidatorAbi`, `lensAbi`, `lpOracleAbi`, `lpVaultAbi`, `lpVaultSwapAbi`, `marketRegistryAbi`, `parameterStoreAbi`, `payoutEscrowAbi`, `proxyManagerAbi`, `riskModuleAbi`, `vaultTokenAbi`, `vaultTokenFactoryAbi` | The contract's interface (`IAaveAdapter`, `ICollateralization`, ...), which carries its functions, events and errors | `contracts/out` |
+| `aaveAdapterAbi`, `collateralizationAbi`, `flashLiquidatorAbi`, `lensAbi`, `lpOracleAbi`, `lpVaultAbi`, `lpVaultSwapAbi`, `marketRegistryAbi`, `parameterStoreAbi`, `payoutEscrowAbi`, `proxyManagerAbi`, `riskModuleAbi`, `vaultTokenAbi`, `vaultTokenFactoryAbi` | The contract's interface (`IAaveAdapter`, `ICollateralization`, ...), which carries its functions, events and errors | `contracts/out` |
 | `avanaTimelockAbi` | `AvanaTimelock`: `IAvanaTimelock` declares only what the timelock adds to OpenZeppelin's `TimelockController`, so the contract's own ABI supplies `CallScheduled`, `CallExecuted`, `Cancelled` and the role events | `contracts/out` |
 | `firstLossReserveAbi` | `AvanaFirstLossReserve`: `IAvanaFirstLossReserve` does not inherit `IAvanaFirstLossReserve`, so the contract's own ABI supplies `BorrowSpokeAllowlistUpdated` and `FirstLossReserveMinimumUpdated` | `contracts/out` |
 | `aaveV4SpokeAbi`, `aaveV4HubAbi` | Aave's `ISpoke` and `IHub` at the pinned Aave V4 commit, not Avana's minimal interfaces, so every Spoke and Hub event decodes | `contracts/out-aave` |

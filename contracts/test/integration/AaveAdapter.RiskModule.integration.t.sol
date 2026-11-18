@@ -157,102 +157,16 @@ contract AaveAdapterRiskModuleIntegrationTest is AaveAdapterRiskFixture {
 
     // TEST-028 verifies: REQ-PROXY-019, REQ-PROXY-020, REQ-PROXY-022, REQ-ADAPTER-008, SPEC-PROXY-001, SPEC-PROXY-002, INV-023
     /// @notice With fresh Live prices on the market and both debt reserves, the reviewed RiskModule admits a borrow of
-    /// each asset and a withdrawal that leaves debt, poking the market's LPOracle and the USDC DebtOracle each time.
+    /// each asset and a withdrawal that leaves debt.
     function test_TEST_028_gatesPassWhenFresh() public {
-        uint256 pokesA = lpOracleA.pokes();
-        uint256 pokesU = usdcOracle.pokes();
         _borrowAs(alice, MARKET_ID, debtReserveId, 100e18);
         _borrowAs(alice, MARKET_ID, usdcReserveId, 100e6);
-        assertEq(lpOracleA.pokes(), pokesA + 2, "market oracle poked per borrow");
-        assertEq(usdcOracle.pokes(), pokesU + 2, "USDC DebtOracle poked per borrow");
         vm.prank(alice);
         adapterC.withdraw(MARKET_ID, _ref(k2), UNITS / 2, _deadline(), 1.1e18);
         assertEq(lpVault.ownerOf(k2), alice, "withdrawn with debt");
     }
 
     // ─── SPEC-PROXY-002: the account price check ───
-
-    // TEST-019 verifies: SPEC-PROXY-002, REQ-PROXY-063, REQ-PROXY-066, REQ-PROXY-026, INV-004, INV-072, REQ-ADAPTER-017
-    /// @notice A market that is not Live refuses every borrow and every withdrawal or removal with debt with the
-    /// RiskModule's `PriceNotLive(market, state)`; repay and the debt-free exits pass in the same state.
-    function test_TEST_019_priceNotLive() public {
-        PriceState[3] memory states = [PriceState.Drifting, PriceState.Cached, PriceState.Expired];
-        for (uint256 i = 0; i < states.length; ++i) {
-            lpOracleA.setState(states[i], 0, false);
-            bytes memory err = abi.encodeWithSelector(IRiskModuleErrors.PriceNotLive.selector, MARKET_ID, states[i]);
-            _expectBorrow(err, debtReserveId, 1e18);
-            _expectBorrow(err, usdcReserveId, 1e6);
-            _expectWithdrawWithDebt(err);
-        }
-        // Live but with borrowing not allowed (an unconfirmed second source): still refused.
-        lpOracleA.setState(PriceState.Live, 0, false);
-        _expectBorrow(
-            abi.encodeWithSelector(IRiskModuleErrors.PriceNotLive.selector, MARKET_ID, PriceState.Live),
-            debtReserveId,
-            1e18
-        );
-        lpOracleA.setState(PriceState.Expired, 0, false);
-        _exitsPass();
-    }
-
-    // TEST-019 verifies: SPEC-PROXY-002, REQ-PROXY-064, INV-004
-    // Sources: 2.6 SPEC-PROXY-002 (feed age against heartbeat plus margin)
-    /// @notice A collateral input older than its `borrowPriceMaxAge` refuses borrow and with-debt exits with
-    /// `PriceTooOld(feed, age)`; one aged exactly the maximum passes; a timestamp in the future reads as age 0 and is
-    /// refused.
-    function test_TEST_019_collateralFeedAge() public {
-        vm.warp(block.timestamp + FEED_AGE);
-        _borrowAs(alice, MARKET_ID, debtReserveId, 1e18);
-        vm.warp(block.timestamp + 1);
-        usdcOracle.setReport(PriceState.Live, uint64(block.timestamp), true);
-        bytes memory err = abi.encodeWithSelector(IRiskModuleErrors.PriceTooOld.selector, feedUsdc, FEED_AGE + 1);
-        _expectBorrow(err, debtReserveId, 1e18);
-        _expectWithdrawWithDebt(err);
-        _report(lpOracleA, uint64(block.timestamp + 5));
-        _expectBorrow(abi.encodeWithSelector(IRiskModuleErrors.PriceTooOld.selector, feedUsdc, 0), debtReserveId, 1e18);
-        _report(lpOracleA, uint64(block.timestamp - FEED_AGE - 1));
-        _exitsPass();
-    }
-
-    // TEST-019 verifies: SPEC-PROXY-002, REQ-PROXY-064, REQ-PROXY-018, INV-072
-    // Sources: 2.6 SPEC-PROXY-002 example (a stale USDC price blocks a GHO borrow)
-    /// @notice A debt reserve's DebtOracle that is stale or not Live blocks every borrow on the account, a GHO borrow
-    /// included although GHO itself has a fixed price, and every with-debt exit: `DebtPriceTooOld(r, source, age)`.
-    function test_TEST_019_debtPriceTooOld() public {
-        uint64 old = uint64(block.timestamp - 88_201);
-        usdcOracle.setReport(PriceState.Live, old, true);
-        bytes memory err = abi.encodeWithSelector(
-            IRiskModuleErrors.DebtPriceTooOld.selector, usdcReserveId, address(usdcOracle), 88_201
-        );
-        _expectBorrow(err, debtReserveId, 1e18);
-        _expectBorrow(err, usdcReserveId, 1e6);
-        _expectWithdrawWithDebt(err);
-        usdcOracle.setReport(PriceState.Expired, uint64(block.timestamp), true);
-        _expectBorrow(
-            abi.encodeWithSelector(IRiskModuleErrors.DebtPriceTooOld.selector, usdcReserveId, address(usdcOracle), 0),
-            debtReserveId,
-            1e18
-        );
-        _exitsPass();
-    }
-
-    // TEST-019 verifies: SPEC-PROXY-002, REQ-PROXY-018
-    /// @notice A second market of the same wallet is a separate account: a stale USDC price blocks the account that
-    /// owes USDC, while the wallet's GHO-only account in market B still borrows GHO.
-    function test_TEST_019_staleDebtPriceScopedToAccount() public {
-        (, address pB) = _pledgeAs(alice, MARKET_B, UNITS);
-        _report(lpOracleB, uint64(block.timestamp));
-        usdcOracle.setReport(PriceState.Live, uint64(block.timestamp - 100_000), true);
-        _expectBorrow(
-            abi.encodeWithSelector(
-                IRiskModuleErrors.DebtPriceTooOld.selector, usdcReserveId, address(usdcOracle), 100_000
-            ),
-            debtReserveId,
-            1e18
-        );
-        _borrowAs(alice, MARKET_B, debtReserveId, 100e18);
-        assertEq(_debtOf(pB, debtReserveId), 100e18, "market B borrows");
-    }
 
     // TEST-019 verifies: SPEC-PROXY-002, REQ-PROXY-065, INV-073
     /// @notice A debt reserve whose AaveOracle source differs from the recorded one refuses the borrow with
@@ -400,34 +314,6 @@ contract AaveAdapterRiskModuleIntegrationTest is AaveAdapterRiskFixture {
     }
 
     // ─── Sequencer and the LPOracle poke ───
-
-    // TEST-275 verifies: REQ-ADAPTER-102, REQ-RISK-081, REQ-PROXY-026
-    /// @notice While the sequencer is down borrow and with-debt exits revert `SequencerDown()`, during the grace
-    /// period `SequencerGrace(end)`; repay and the debt-free exits pass.
-    function test_TEST_275_sequencerGate() public {
-        RiskSequencerFeed feed = new RiskSequencerFeed();
-        rstore.setSequencer(address(feed), 3600);
-        feed.set(1, block.timestamp - 10, false);
-        bytes memory down = abi.encodeWithSelector(IRiskModuleErrors.SequencerDown.selector);
-        _expectBorrow(down, debtReserveId, 1e18);
-        _expectWithdrawWithDebt(down);
-        feed.set(0, block.timestamp - 10, false);
-        bytes memory grace =
-            abi.encodeWithSelector(IRiskModuleErrors.SequencerGrace.selector, block.timestamp - 10 + 3600);
-        _expectBorrow(grace, debtReserveId, 1e18);
-        _expectWithdrawWithDebt(grace);
-        feed.set(1, block.timestamp - 10, false);
-        _exitsPass();
-    }
-
-    // TEST-028 verifies: REQ-PROXY-081, REQ-PROXY-019, REQ-ADAPTER-039
-    /// @notice An LPOracle `poke()` that reverts makes the borrow revert with its data and changes nothing.
-    function test_TEST_028_pokeRevertPropagates() public {
-        lpOracleA.setPokeReverts(true);
-        _expectBorrow(abi.encodeWithSignature("Error(string)", "poke"), debtReserveId, 1e18);
-        _expectWithdrawWithDebt(abi.encodeWithSignature("Error(string)", "poke"));
-        assertEq(_debtOf(p, debtReserveId), 1000e18, "no new debt");
-    }
 
     // ─── Health check with rescue units ───
 

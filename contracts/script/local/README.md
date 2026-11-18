@@ -82,7 +82,7 @@ It runs three steps, each a plain function with JSON input and output in `operat
 2. **`releaseHub(chain, release, config)`** runs the release steps on that config, each acting only on what it adds:
    - the Aave side: Hub, Spokes, assets and loss layers;
    - the timelock operations;
-   - the listing: tokens, feeds, CDP Spokes, First-Loss Reserves, credit lines, DebtOracles, routes and markets;
+   - the listing: tokens, feeds, CDP Spokes, First-Loss Reserves, credit lines, debt price sources, routes and markets;
    - the listing metadata and activation;
    - the manifest, produced and verified.
    Each step is recorded, and a rerun resumes at the failed one. The chain mines on every transaction meanwhile, then returns to its block time.

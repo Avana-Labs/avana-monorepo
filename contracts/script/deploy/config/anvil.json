@@ -995,7 +995,6 @@
         "fixedPrice": false,
         "stressRiseBps": 500,
         "floorRoundingAllowance": "1000000",
-        "debtOraclePokeMinGas": 1000000,
         "address": "$world:.tokens.USDC",
         "feeds": {
           "primary": "$world:.feeds.USDC.primary"

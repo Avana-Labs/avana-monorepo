@@ -110,11 +110,4 @@ struct AvanaDeployment {
     address lens;
     address[] lensModules;
     address lensAaveSizing;
-    address debtOracleImplementation;
-    // Per integration (same order as `integrations`): the concentrated-liquidity LPOracle implementation the
-    // integration registers as its pricing (`LPOracleV4` for Uniswap v4), its module logic and its four logic contracts
-    // (poke, init, listing, view).
-    address[] clOraclePricing;
-    address[] clOracleModuleLogics;
-    address[] clOracleLogics;
 }

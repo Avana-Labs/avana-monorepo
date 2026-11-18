@@ -14,9 +14,7 @@ import {
   avanaTimelockAbi,
   collateralizationAbi,
   firstLossReserveAbi,
-  debtOracleAbi,
   flashLiquidatorAbi,
-  lpOracleAbi,
   lpVaultAbi,
   lpVaultSwapAbi,
   marketRegistryAbi,
@@ -42,8 +40,6 @@ export const abis = {
   MarketRegistry: mergeAbis([marketRegistryAbi, upgradeAndRoleEvents]),
   ParameterStore: mergeAbis([parameterStoreAbi, upgradeAndRoleEvents]),
   RiskModule: mergeAbis([riskModuleAbi, upgradeAndRoleEvents]),
-  LPOracle: mergeAbis([lpOracleAbi, upgradeAndRoleEvents]),
-  DebtOracle: mergeAbis([debtOracleAbi, upgradeAndRoleEvents]),
   AvanaTimelock: avanaTimelockAbi,
   ProxyManager: proxyManagerAbi,
   Collateralization: collateralizationAbi,
@@ -65,10 +61,8 @@ export const abis = {
 export const factoryEvents = {
   /** VaultTokenFactory: a market's vault token; child address in `vaultToken`. */
   vaultTokenDeployed: getAbiItem({ abi: vaultTokenFactoryAbi, name: "VaultTokenDeployed" }),
-  /** MarketRegistry: a listed market and its LPOracle; child address in `lpOracle`. */
+  /** MarketRegistry: a listed market; child address in `pool` (its AMM pool). */
   marketRegistered: getAbiItem({ abi: marketRegistryAbi, name: "MarketRegistered" }),
-  /** MarketRegistry: an approved debt reserve and its DebtOracle; child address in `priceSource`. */
-  debtReserveApproved: getAbiItem({ abi: marketRegistryAbi, name: "DebtReserveApproved" }),
   /** MarketRegistry: the First-Loss Reserve of a Hub asset; child address in `firstLossReserve`. */
   firstLossReserveSet: getAbiItem({ abi: marketRegistryAbi, name: "AvanaFirstLossReserveSet" }),
   /** MarketRegistry: a recorded Hub; child address in `hub`. */

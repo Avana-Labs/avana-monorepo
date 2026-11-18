@@ -3,11 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DebtPriceView} from "../../../src/oracle/debt-oracle/types/DebtPriceView.sol";
+import {ILPOracle} from "../../../src/oracle/ILPOracle.sol";
 import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {Market} from "../../../src/types/MarketTypes.sol";
 import {PriceState, PriceStateView, TokenPriceView} from "../../../src/types/OracleTypes.sol";
+import {DebtPriceView} from "./DebtPriceView.sol";
 
 /// @title LVSMarketRegistryMock
 /// @notice MarketRegistry stand-in for the LPVaultSwap suites: the market and debt-reserve records, the settlement
@@ -211,6 +213,16 @@ contract LVSParameterStoreMock {
         uint32 age = _liquidationAge[feed];
         return age == 0 ? defaultLiquidationAge : age;
     }
+
+    /// @notice A feed's definition as the stateless price reads see it: 8 decimals, both age limits the feed's
+    /// liquidation age.
+    function getFeed(
+        address feed
+    ) external view returns (FeedDef memory d) {
+        uint32 age = _liquidationAge[feed];
+        if (age == 0) age = defaultLiquidationAge;
+        (d.decimals, d.borrowPriceMaxAge, d.liquidationPriceMaxAge) = (8, age, age);
+    }
 }
 
 /// @title LVSLPOracleMock
@@ -317,8 +329,34 @@ contract LVSLPOracleMock {
         return state;
     }
 
-    function getTokenPrices() external view returns (uint256[] memory prices, uint64 servedUpdatedAt, PriceState s) {
-        return (_prices, uint64(block.timestamp), state);
+    function getTokenPrices() external view returns (uint256[] memory prices, uint64 updatedAt) {
+        return (_prices, uint64(block.timestamp));
+    }
+
+    address public store;
+
+    function setStore(
+        address s
+    ) external {
+        store = s;
+    }
+
+    /// @notice Fresh to liquidate while Live or Drifting, not paused, and every leg within the store's age.
+    function getPriceStatus() external view returns (ILPOracle.PriceStatus memory s) {
+        s.answer = latestAnswer;
+        s.updatedAt = uint64(block.timestamp);
+        bool ok = (state == PriceState.Live || state == PriceState.Drifting) && !liquidationPaused
+            && !disagreementPauseActive && !disagreementExpired;
+        for (uint256 i = 0; i < _tokens.length && ok; ++i) {
+            for (uint256 k = 0; k < 2; ++k) {
+                address feed = _legFeeds[i][k];
+                if (feed == address(0) || store == address(0)) continue;
+                uint256 at = _legUpdatedAt[i][k];
+                uint256 age = block.timestamp > at ? block.timestamp - at : 0;
+                if (age > LVSParameterStoreMock(store).liquidationPriceMaxAge(feed)) ok = false;
+            }
+        }
+        (s.borrowFresh, s.liquidationFresh) = (ok && state == PriceState.Live, ok);
     }
 
     function getPriceState() external view returns (PriceStateView memory v) {
@@ -409,6 +447,27 @@ contract LVSDebtOracleMock {
         v.liquidationPaused = liquidationPaused;
         v.legFeeds = _legFeeds;
         v.legUpdatedAt = _legUpdatedAt;
+    }
+
+    /// @notice The debt source as a Chainlink feed: a current round while Live, not paused and every leg within its
+    /// age (when a store is set), otherwise a round at time 0.
+    address public store;
+
+    function setStore(
+        address s
+    ) external {
+        store = s;
+    }
+
+    function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
+        bool ok = state == PriceState.Live && !liquidationPaused;
+        for (uint256 k = 0; k < 2 && ok && store != address(0); ++k) {
+            if (_legFeeds[k] == address(0)) continue;
+            uint256 age = block.timestamp > _legUpdatedAt[k] ? block.timestamp - _legUpdatedAt[k] : 0;
+            if (age > LVSParameterStoreMock(store).liquidationPriceMaxAge(_legFeeds[k])) ok = false;
+        }
+        uint256 at = ok ? block.timestamp : 0;
+        return (0, latestAnswer, at, at, 0);
     }
 }
 

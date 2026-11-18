@@ -199,7 +199,6 @@ contract LiquidationLensPreviewIntegrationTest is RealStackVolatile {
         // fails and serves Cached), USDC and so the debt price kept fresh (a keeper pokes the DebtOracle).
         _letFeedsAge();
         _republish(address(usdc));
-        usdcOracle.poke();
         LiquidationPreview memory p = lens.previewLiquidation(proxy, usdcReserveId, _deadlineIn());
         assertFalse(p.pricesUsable, "preview: collateral price unusable");
         assertTrue(p.debtPriceFresh, "preview: the debt price is fresh");
@@ -252,7 +251,7 @@ contract LiquidationLensPreviewIntegrationTest is RealStackVolatile {
         LiquidationPreview memory p = lens.previewLiquidation(proxy, usdcReserveIdV, _deadlineIn());
         assertTrue(p.aaveLiquidatable, "liquidatable on Aave");
         assertFalse(p.debtPriceFresh, "preview: debt price stale");
-        assertFalse(mkt[m].oracle.getPriceState().liquidationPaused, "the collateral price is usable");
+        assertTrue(mkt[m].oracle.getPriceStatus().liquidationFresh, "the collateral price is usable");
         ClTestToken(address(usdc)).mint(keeper, p.params.debtToCover);
         vm.startPrank(keeper);
         usdc.approve(lpVaultSwap, p.params.debtToCover);
@@ -261,7 +260,6 @@ contract LiquidationLensPreviewIntegrationTest is RealStackVolatile {
         usdc.approve(lpVaultSwap, 0);
         vm.stopPrank();
         _refreshFeeds();
-        usdcOracle.poke();
         p = lens.previewLiquidation(proxy, usdcReserveIdV, _deadlineIn());
         assertTrue(p.pricesUsable && p.debtPriceFresh, "gates clear");
         LiquidationResult memory r = _liquidateOn(spokeV, keeper, p.params);
@@ -278,8 +276,6 @@ contract LiquidationLensPreviewIntegrationTest is RealStackVolatile {
     /// @dev Every feed republished, then every LPOracle and the USDC DebtOracle poked, as a keeper does.
     function _refreshAndPoke() internal {
         _refreshFeeds();
-        _pokeAll();
-        usdcOracle.poke();
     }
 
     /// @dev A new round now, at its current answer, on every feed of `token`.

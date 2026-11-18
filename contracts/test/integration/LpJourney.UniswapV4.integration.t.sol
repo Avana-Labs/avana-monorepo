@@ -85,7 +85,6 @@ contract LpJourneyUniswapV4IntegrationTest is RealStackUniswapV4Journeys {
         vm.warp(block.timestamp + 30 days);
         vm.roll(block.number + 30 days / BLOCK_TIME);
         _refreshFeeds();
-        _pokeAll();
         uint256 owed = _debtOn(v4SpokeS, proxy, v4GhoReserveS);
         _repayOn(carol, alice, mS, v4GhoReserveS, owed / 4, false);
         assertApproxEqAbs(_debtOn(v4SpokeS, proxy, v4GhoReserveS), owed - owed / 4, 1, "a quarter repaid");

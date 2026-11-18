@@ -7,7 +7,7 @@ Avana's monitoring service: the signals `M-01` to `M-36` of [services/README.md]
 Each chain is read every `MONITOR_INTERVAL_SECONDS` (60 by default), one round at a time:
 
 1. The keeper's findings at the head: alerts the keeper instances posted (held while they keep arriving, resolved once the head is more than two blocks past the last report) and each instance's heartbeat (3 blocks behind the head pages its on-call engineer).
-2. Each probe ([src/probes.ts](src/probes.ts)) reads its inputs at the head on the primary provider and judges them: the chain snapshot of `@avana/services-common/views`, the oracles, coverage and pools, contract events since the last round, issuer probes, route depth (every `MONITOR_ROUTE_CHECK_HOURS`, 24 by default), each market's oracle checkpoint, and where configured the Safes, the Core Hub GHO rate and the frontend. A subject whose read fails is unread: its open alert is neither resolved nor re-sent.
+2. Each probe ([src/probes.ts](src/probes.ts)) reads its inputs at the head on the primary provider and judges them: the chain snapshot of `@avana/services-common/views`, the oracles, coverage and pools, contract events since the last round, issuer probes, route depth (every `MONITOR_ROUTE_CHECK_HOURS`, 24 by default), and where configured the Safes, the Core Hub GHO rate and the frontend. A subject whose read fails is unread: its open alert is neither resolved nor re-sent.
 3. Each page is confirmed: the probe is read again on the second provider at the same block, and the values the page was judged from must match. A page they contradict goes out as a warn with a note; with the second provider down it still pages, marked unconfirmed.
 4. The alert book turns findings into notices: a condition is sent when it opens, on each level change and when it resolves; an event every time. A page that stays true is sent once.
 5. Each notice goes to its recipients' channels (PagerDuty, an https webhook, the log), retried with backoff, and is appended to the incident log with each channel's answer.
@@ -18,11 +18,11 @@ Routing (services/README.md, Rules): warns reach the on-call engineer and the si
 
 | Signal | Probe | Reads and levels |
 |---|---|---|
-| M-01 | snapshot, oracle | Market price state and each DebtOracle's (Lens `getDebtPriceState`): Cached warns, Expired pages |
-| M-02 | oracle | LPOracle `disagreeSince` against the market's `disagreementPauseMax`: warns from the start, pages 30 minutes before the end |
+| M-01 | snapshot, oracle | Market price state (Lens `getPriceState`) and each non-GHO debt reserve's (Lens `getDebtPriceState`): Cached, an input past its `liquidationPriceMaxAge`, warns; Expired pages |
+| M-02 | — | Retired: the stateless LPOracle records no disagreement, so no probe raises it |
 | M-03 | oracle | Every Chainlink leg of the manifest against its ParameterStore `feedMaxAge`: 50 % / 90 % |
-| M-04 | oracle | Debt price age against the DebtOracle's `borrowPriceMaxAge` / 90 % of `liquidationPriceMaxAge`; GHO's fixed price skipped |
-| M-05 | oracle | LPOracle `usdLevel` (√(q0·q1)) below 0.95 / 0.90, for markets with a USD band only |
+| M-04 | oracle | Debt price age against its source feed's ParameterStore `borrowPriceMaxAge(feed)` / 90 % of `liquidationPriceMaxAge(feed)` (the feed is the Lens `source`); GHO's fixed price skipped |
+| M-05 | oracle | √(p0·p1) of LPOracle `getTokenPrices` below 0.95 / 0.90, for markets with a USD band only |
 | M-06 | snapshot | Collateral value per market, −10 % / −25 % from the hour's peak |
 | M-07 | coverage | Lens `getCapHeadroom` pool share: above 75 % of `poolShareMaxBps` / above it |
 | M-08 | snapshot | Market and debt-reserve breakers; a security freeze (issuer, deficit, manual, configuration drift) pages |
@@ -51,7 +51,7 @@ Routing (services/README.md, Rules): warns reach the on-call engineer and the si
 | M-31 | keeper | As the keeper posts it, every block: the rolling 24 h gas spend from its spend log above 3x the 7-day median daily spend warns, above 5x pages |
 | M-32 | keeper | As the keeper posts it, every block while it holds: a scheduled or lazy fee class at its rolling 24 h budget (`KEEPER_DAILY_BUDGET_WEI_{SCHEDULED,LAZY}_<CHAIN>`) has stopped sending; pages |
 | M-33 | keeper | As the keeper posts it, every block: the standby signer's gas balance below `KEEPER_STANDBY_MIN_BALANCE_WEI_<CHAIN>` warns |
-| M-34 | checkpoint | Each market's LPOracle `priceCheckpoint().at`, read from the chain at the round's block: older than 7,200 s pages, confirmed on the second provider; resolves once a poke stores a new checkpoint. Independent of the keeper's heartbeat |
+| M-34 | — | Retired: the stateless oracles are never poked, so no probe raises it |
 | M-35 | gasVault | The chain's AvanaGasVault balance (`getEthBalance` through Multicall3) against what it sent per day (`ToppedUp` logs from the vault's deployment block, over the last 30 days, never below `MONITOR_GAS_VAULT_DAILY_WEI`, `chain:wei`): under 30 days warns, under 14 days pages, confirmed on the second provider; judged once the log reads have caught up with the head. No vault in the manifest: nothing |
 | M-36 | gasVault | Each `ToppedUp` whose amount is below its `requested` and each `TopUpFailed` pages once, confirmed on the second provider over the same block range |
 

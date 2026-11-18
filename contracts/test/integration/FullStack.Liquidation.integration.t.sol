@@ -92,8 +92,6 @@ contract FullStackLiquidationIntegrationTest is FullStackMarkets {
         }
         _publish(address(usdc), 93_000_000);
         _publish(address(usdt), 93_000_000);
-        mkt[mA].oracle.poke();
-        mkt[mB].oracle.poke();
         vm.prank(carol);
         IAaveAdapter(adapter).removeLiquidity(mA, _ref(freeKey), units / 2, _mins(), _deadline(), 0);
         uint256 liquidated = 0;
@@ -138,7 +136,6 @@ contract FullStackLiquidationIntegrationTest is FullStackMarkets {
             lpVault.bindMarket(mA, address(poolA), toks, rates, int24(-887_272), int24(887_272));
             _publish(address(usdc), 93_000_000);
             _publish(address(usdt), 93_000_000);
-            mkt[mA].oracle.poke();
             address sold = toks[side];
             uint256 before = IERC20(sold).balanceOf(address(swap));
             uint256 other = IERC20(toks[1 - side]).balanceOf(address(swap));

@@ -251,13 +251,6 @@
         "hub": "0xf100000000000000000000000000000000000028"
       }
     ],
-    "debtOracleImplementation": {
-      "address": "0xf100000000000000000000000000000000000030",
-      "codeHash": "0x7af30aa1674269ca218fdd9d75fa943d57b640c1e94cdaaaf7962bb73f031492",
-      "startBlock": 1323,
-      "artifact": "DebtOracle.sol:DebtOracle"
-    },
-    "clOracles": [],
     "proxyCreationCodeHash": "0x2bb919d80d928a3d6546a2ddb367423da3a666f9f096d349c85fafa734f798d7",
     "gasVault": null
   },
@@ -275,11 +268,8 @@
       "lpOracle": {
         "address": "0xf100000000000000000000000000000000000033",
         "codeHash": "0xf15a07c54ab3420101c38795fc919a27ffb05f1a0049070ba3b8f10bae32af97",
-        "implementation": "0xf100000000000000000000000000000000000034",
-        "implementationCodeHash": "0x3924233fe446ea4e4bf35d19513bbbfcdab11d663ca4a2035824b91b33e6f326",
-        "implementationArtifact": "LPOracleCL.sol:LPOracleCL",
-        "logics": [],
-        "startBlock": 1954
+        "startBlock": 1954,
+        "artifact": "LPOracle.sol:LPOracle"
       },
       "reserveId": "3",
       "pool": "0xf100000000000000000000000000000000000035",
@@ -315,11 +305,8 @@
       "lpOracle": {
         "address": "0xf10000000000000000000000000000000000003a",
         "codeHash": "0xf15a07c54ab3420101c38795fc919a27ffb05f1a0049070ba3b8f10bae32af97",
-        "implementation": "0xf10000000000000000000000000000000000003b",
-        "implementationCodeHash": "0x58b849cf1771a8a653726fca0f6f7c4233d32d924a68709c38f40823e6beb907",
-        "implementationArtifact": "LPOracleV4.sol:LPOracleV4",
-        "logics": [],
-        "startBlock": 2654
+        "startBlock": 2654,
+        "artifact": "LPOracle.sol:LPOracle"
       },
       "reserveId": "3",
       "pool": "0x0000000000000000000000000000000000000000",
@@ -351,7 +338,6 @@
       "asset": "0xf100000000000000000000000000000000000027",
       "decimals": 18,
       "isGho": true,
-      "debtOracle": null,
       "feeds": [
         {
           "feed": "0xf10000000000000000000000000000000000003d",
@@ -365,15 +351,6 @@
       "asset": "0xf10000000000000000000000000000000000002a",
       "decimals": 6,
       "isGho": false,
-      "debtOracle": {
-        "address": "0xf10000000000000000000000000000000000003e",
-        "codeHash": "0xf15a07c54ab3420101c38795fc919a27ffb05f1a0049070ba3b8f10bae32af97",
-        "implementation": "0xf100000000000000000000000000000000000030",
-        "implementationCodeHash": "0x7af30aa1674269ca218fdd9d75fa943d57b640c1e94cdaaaf7962bb73f031492",
-        "implementationArtifact": "DebtOracle.sol:DebtOracle",
-        "logics": [],
-        "startBlock": 1817
-      },
       "feeds": [
         {
           "feed": "0xf100000000000000000000000000000000000036",
@@ -387,7 +364,6 @@
       "asset": "0xf100000000000000000000000000000000000027",
       "decimals": 18,
       "isGho": true,
-      "debtOracle": null,
       "feeds": [
         {
           "feed": "0xf10000000000000000000000000000000000003d",
@@ -401,15 +377,6 @@
       "asset": "0xf10000000000000000000000000000000000002a",
       "decimals": 6,
       "isGho": false,
-      "debtOracle": {
-        "address": "0xf10000000000000000000000000000000000003e",
-        "codeHash": "0xf15a07c54ab3420101c38795fc919a27ffb05f1a0049070ba3b8f10bae32af97",
-        "implementation": "0xf100000000000000000000000000000000000030",
-        "implementationCodeHash": "0x7af30aa1674269ca218fdd9d75fa943d57b640c1e94cdaaaf7962bb73f031492",
-        "implementationArtifact": "DebtOracle.sol:DebtOracle",
-        "logics": [],
-        "startBlock": 1817
-      },
       "feeds": [
         {
           "feed": "0xf100000000000000000000000000000000000036",

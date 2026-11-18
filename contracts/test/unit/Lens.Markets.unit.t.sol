@@ -68,21 +68,6 @@ contract LensMarketsUnitTest is LensFixture {
         assertEq(v.breakerReasons, 0, "no breaker");
     }
 
-    // TEST-247 verifies: REQ-LENS-045, REQ-LENS-007
-    function test_TEST_247_marketStateChanges() public {
-        rm.setMarketBreaker(MARKET_ID, 4, uint64(block.timestamp + 60));
-        reg.setPause(aave.hub, PauseState.Paused, PauseReason.General);
-        lpo.setState(PriceState.Expired, 0, true);
-        lpo.setAccepted(1.9e8, uint64(block.timestamp));
-        reg.setStatus(MARKET_ID, uint8(MarketStatus.Offboarding));
-        MarketView memory v = lens.getMarket(MARKET_ID);
-        assertEq(v.breakerReasons, 4, "breaker");
-        assertEq(uint8(v.pauseState), uint8(PauseState.Paused), "paused");
-        assertEq(uint8(v.priceState), uint8(PriceState.Expired), "Expired, reported");
-        assertEq(v.suppliedUsd, 1_900_000_000_000, "valued at the accepted price");
-        assertEq(uint8(v.status), uint8(MarketStatus.Offboarding), "Offboarding");
-    }
-
     // TEST-247 verifies: REQ-LENS-022
     function test_TEST_247_unknownMarketReverts() public {
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 9));

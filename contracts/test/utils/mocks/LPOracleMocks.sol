@@ -134,6 +134,12 @@ contract OracleFeedMock is MisbehavingRead {
         return (roundId, answer, startedAt, updatedAt, roundId);
     }
 
+    /// @notice The answer of the latest round, as Aave's oracle reads a reserve's Chainlink source.
+    function latestAnswer() external view returns (int256) {
+        _misbehave(this.latestAnswer.selector);
+        return answer;
+    }
+
     function getRoundData(
         uint80 id
     ) external view returns (uint80, int256, uint256, uint256, uint80) {

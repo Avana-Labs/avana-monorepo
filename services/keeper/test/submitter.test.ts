@@ -159,9 +159,9 @@ describe("reorgs", () => {
 describe("follow-ups", () => {
   it("waits in the block the transaction was sent in, even when its simulation already fails", async () => {
     // A poke sent at block 10 and mined at once (anvil): state read at block 10 cannot show it, and its re-simulation
-    // fails because the oracle is already poked; cancelling there would send at a consumed nonce.
+    // fails because the breaker is already recorded; cancelling there would send at a consumed nonce.
     const { s, post } = setup({ ceilingWei: 10n ** 30n });
-    const poke: TxPlan = { ...plan, job: "oraclePoke", subject: `1:${addr(0x0c)}`, deadline: null, reservations: [] };
+    const poke: TxPlan = { ...plan, job: "breakerPoke", subject: `1:${addr(0x0c)}`, deadline: null, reservations: [] };
     await s.submit(ctx(10n), poke, sim);
     const client = (s as unknown as { client: { call: () => Promise<unknown> } }).client;
     client.call = async () => {
@@ -221,7 +221,7 @@ describe("private send", () => {
 });
 
 describe("liquidation pre-emption", () => {
-  const poke = (n: number): TxPlan => ({ ...plan, job: "oraclePoke", subject: `1:${addr(0x100 + n)}`, deadline: null, reservations: [], params: { oracle: addr(0x100 + n) } });
+  const poke = (n: number): TxPlan => ({ ...plan, job: "breakerPoke", subject: `1:${addr(0x100 + n)}`, deadline: null, reservations: [], params: { marketId: BigInt(n) } });
 
   it("sends a due liquidation at the lowest nonce a pending poke holds, as a replacement of that poke at a higher fee", async () => {
     const { s, post } = setup({ ceilingWei: 10n ** 30n });
@@ -242,7 +242,7 @@ describe("liquidation pre-emption", () => {
     expect(s.pending.get(poke(1).subject)!.nonce).toBe(6);
     expect(s.pending.get(poke(2).subject)!.nonce).toBe(7);
     expect(preempted).toHaveBeenCalledWith(poke(0));
-    expect(lines).toContainEqual(expect.objectContaining({ job: "oraclePoke", subject: poke(0).subject, outcome: "preempted", nonce: 5 }));
+    expect(lines).toContainEqual(expect.objectContaining({ job: "breakerPoke", subject: poke(0).subject, outcome: "preempted", nonce: 5 }));
     // The pre-emption took no new nonce: the next send gets 8.
     await s.submit(ctx(11n), poke(9), sim);
     expect(s.pending.get(poke(9).subject)!.nonce).toBe(8);

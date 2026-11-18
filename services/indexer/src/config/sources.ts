@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Chains and contract sources built from the verified manifests. Every address and start block comes from a
-// manifest; none is written in code. Contracts created after deployment (vault tokens, LPOracles, DebtOracles,
-// First-Loss Reserves, recorded Hubs, approved CDP Spokes, Spokes a Hub adds) are followed through the event that
-// announces them.
+// manifest; none is written in code. Contracts created after deployment (vault tokens, First-Loss Reserves, recorded
+// Hubs, approved CDP Spokes, Spokes a Hub adds, market pools) are followed through the event that announces them. The
+// stateless LPOracles and the debt assets' Chainlink feeds emit no events and are not indexed.
 
 import { factory } from "ponder";
 import { ABI_HASH } from "@avana/protocol/abis";
@@ -78,27 +78,6 @@ export const vaultTokenSource = () =>
       parameter: "vaultToken",
     }),
     startBlock: m.avana.vaultTokenFactory.startBlock,
-  }));
-
-export const lpOracleSource = () =>
-  perChain((m) => ({
-    address: factory({
-      address: m.avana.marketRegistry.address,
-      event: factoryEvents.marketRegistered,
-      parameter: "lpOracle",
-    }),
-    startBlock: registryStart(m),
-  }));
-
-/** For GHO the price source is the Spoke's fixed source, which emits none of these events. */
-export const debtOracleSource = () =>
-  perChain((m) => ({
-    address: factory({
-      address: m.avana.marketRegistry.address,
-      event: factoryEvents.debtReserveApproved,
-      parameter: "priceSource",
-    }),
-    startBlock: registryStart(m),
   }));
 
 export const firstLossReserveSource = () =>

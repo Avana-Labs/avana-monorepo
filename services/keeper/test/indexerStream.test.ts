@@ -152,13 +152,13 @@ describe("applying records", () => {
     const cache = new AccountCache();
     const rec = (kind: string, args: Record<string, unknown>) => ({ ...created(5, addr(0xa)), kind, args });
     const applied = applyStreamRecords(
-      [rec("AaveSpoke.Borrow", { user: addr(0xa).toUpperCase().replace("0X", "0x") }), rec("Collateralization.SeizureReconciled", {}), rec("LPVaultSwap.KeeperRemoved", {}), rec("LPOracle.PriceStateChanged", {})],
+      [rec("AaveSpoke.Borrow", { user: addr(0xa).toUpperCase().replace("0X", "0x") }), rec("Collateralization.SeizureReconciled", {}), rec("LPVaultSwap.KeeperRemoved", {})],
       cache,
       manifest,
       1,
     );
     expect([...applied.touched]).toEqual([addr(0xa)]);
-    expect(applied).toMatchObject({ announced: 0, pending: true, status: true, market: true });
+    expect(applied).toMatchObject({ announced: 0, pending: true, status: true });
     expect(cache.ofChain(1)).toHaveLength(0);
   });
 

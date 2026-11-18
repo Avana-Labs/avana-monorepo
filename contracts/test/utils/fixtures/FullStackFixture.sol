@@ -7,8 +7,6 @@ import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.s
 import {AvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IDebtOracle} from "../../../src/oracle/debt-oracle/IDebtOracle.sol";
-import {DebtOracleInitParams} from "../../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
 import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
 import {
     DebtReserveDef,
@@ -68,7 +66,8 @@ abstract contract FullStackFixture is FullStackDeploy {
     IClPool internal poolB;
     CollPriceSource internal ghoPrice;
     OracleFeedMock internal ghoFeed;
-    IDebtOracle internal usdcOracle;
+    // USDC's debt price source: its primary Chainlink feed, as Aave reads it.
+    OracleFeedMock internal usdcOracle;
     RegistryFlashSourceMock internal flash;
     /// @dev The MarketRegistry's flash source: `address(flash)`, or the real `AaveV3FlashSource` on the real stack.
     address internal flashSource;
@@ -270,21 +269,9 @@ abstract contract FullStackFixture is FullStackDeploy {
         );
     }
 
-    /// @dev USDC (the pools' own token): its DebtOracle, then the Hub asset and a CDP reserve priced by it.
+    /// @dev USDC (the pools' own token): the Hub asset and a CDP reserve priced by its Chainlink feed.
     function _enableUsdc() private {
-        vm.prank(address(timelock));
-        store.tightenDebtStressRiseBps(address(usdc), 500);
-        IDebtOracle impl = IDebtOracle(deployCode("DebtOracle.sol:DebtOracle", abi.encode(address(timelock))));
-        DebtOracleInitParams memory p = DebtOracleInitParams({
-            timelock: address(timelock),
-            asset: address(usdc),
-            marketRegistry: address(registry),
-            parameterStore: address(store),
-            description: "USDC / USD",
-            pokeMinGas: 600_000
-        });
-        usdcOracle = IDebtOracle(address(new ERC1967Proxy(address(impl), abi.encodeCall(IDebtOracle.initialize, (p)))));
-        vm.label(address(usdcOracle), "DebtOracle USDC");
+        usdcOracle = feedsOf[address(usdc)][0];
         (usdcAssetId, usdcReserveId) = _addDebtAsset(usdc, 6, address(usdcOracle));
         address cs = _coverage(address(usdc), usdcAssetId);
         _enableDebt(

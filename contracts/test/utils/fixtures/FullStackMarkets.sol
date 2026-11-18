@@ -8,9 +8,7 @@ import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {INonfungiblePositionManager} from "../../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
 import {DexHop, HopKind, RouteConfig} from "../../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
-import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
-import {LPOracleCL} from "../../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {InitParams} from "../../../src/oracle/lp-oracle/LPOracleTypes.sol";
+import {LPOracle} from "../../../src/oracle/LPOracle.sol";
 import {
     FeedDef,
     MarketParams,
@@ -29,7 +27,7 @@ import {
     ICollSpokeConfigurator
 } from "./CollateralizationFixture.sol";
 import {FullStackFixture} from "./FullStackFixture.sol";
-import {LPOracleCLDeployer} from "./LPOracleCLFixture.sol";
+import {LPOracleTestDeployer} from "./LPOracleTestDeployer.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -63,7 +61,7 @@ abstract contract FullStackMarkets is FullStackFixture {
     struct MarketInfo {
         IClPool pool;
         address vaultToken;
-        LPOracleCL oracle;
+        LPOracle oracle;
         uint256 assetId;
         uint256 reserveId;
     }
@@ -77,8 +75,6 @@ abstract contract FullStackMarkets is FullStackFixture {
     address[2][] internal routePairs;
     uint256 internal keyNonce;
     uint256 internal opNonce;
-    /// @dev The LPOracleCL implementation of the Uniswap v3 markets `_addMarket` lists, deployed with the first.
-    LPOracleCL private oracleImpl;
 
     // ─── Listing ───
 
@@ -144,26 +140,13 @@ abstract contract FullStackMarkets is FullStackFixture {
     function _deployOracle(
         uint256 id,
         IClPool p
-    ) private returns (LPOracleCL o) {
-        (int24 lower, int24 upper) = _fullRange(p);
-        // One implementation serves every market's proxy, as on a chain.
-        if (address(oracleImpl) == address(0)) {
-            oracleImpl = LPOracleCLDeployer.deploy(address(timelock), BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7);
-        }
-        InitParams memory ip;
-        ip.timelock = address(timelock);
-        ip.parameterStore = address(store);
-        ip.marketRegistry = address(registry);
-        ip.marketId = id;
-        ip.integration = integration;
-        ip.isUsdStable = new bool[](2);
-        (ip.isUsdStable[0], ip.isUsdStable[1]) = (true, true);
-        ip.description = "USDC/USDT LP / USD";
-        ip.pokeMinGas = POKE_FLOOR;
-        ip.config = _oracleConfig(id);
-        // USDC/USDT at $1 on any tier lists its one-spacing range at d <= 16, so the pool's unit exponent is 0.
-        ip.market = abi.encode(address(p), lower, upper, uint256(0));
-        o = LPOracleCL(address(new ERC1967Proxy(address(oracleImpl), abi.encodeCall(ILPOracle.initialize, (ip)))));
+    ) private returns (LPOracle o) {
+        bool[] memory stable = new bool[](2);
+        (stable[0], stable[1]) = (true, true);
+        o = LPOracleTestDeployer.deploy(
+            id, integration, address(store), address(registry), _poolTokens(), stable, VT_DECIMALS, "USDC/USDT LP / USD"
+        );
+        p;
     }
 
     /// @dev The configuration the ParameterStore serves the market's LPOracle (`getOracleConfig`), built from the

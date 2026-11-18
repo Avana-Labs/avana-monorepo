@@ -108,28 +108,6 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
         assertEq(usdcOracle.pokes(), 0);
     }
 
-    // TEST-028 verifies: REQ-ADAPTER-038, REQ-ADAPTER-016
-    // Sources: 2.7 REQ-ADAPTER-016 (per-feed heartbeat plus margin, 88,200 s)
-    function test_TEST_028_statusFeedAges() public {
-        _report(uint64(block.timestamp - 100), 1e8, 1e8);
-        AccountGateStatus memory s = _status();
-        assertEq(s.markets[0].oldestFeedAge, 100);
-        assertFalse(s.markets[0].feedTooOld);
-        assertTrue(s.borrowAllowed);
-        // One second past the feed's limit: too old, and both actions refused.
-        _report(uint64(block.timestamp - FEED_AGE - 1), 1e8, 1e8);
-        s = _status();
-        assertEq(s.markets[0].oldestFeedAge, FEED_AGE + 1);
-        assertTrue(s.markets[0].feedTooOld);
-        _assertBlocked(s);
-        // An input dated in the future is never fresh; its age reads 0.
-        _report(uint64(block.timestamp + 1), 1e8, 1e8);
-        s = _status();
-        assertEq(s.markets[0].oldestFeedAge, 0);
-        assertTrue(s.markets[0].feedTooOld);
-        _assertBlocked(s);
-    }
-
     // TEST-028 verifies: REQ-ADAPTER-038, REQ-ADAPTER-012, REQ-ADAPTER-013, REQ-ADAPTER-019
     function test_TEST_028_statusCollateralScope() public {
         // The first collateral reserve that maps to no market of the account, in reserve order.
@@ -220,40 +198,6 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
         assertEq(s.haltedDebtReserveId, USDC_RESERVE);
         assertTrue(s.markets[0].noSettlementPath);
         assertTrue(s.markets[0].liquidationHalted);
-        _assertBlocked(s);
-    }
-
-    // TEST-228 verifies: REQ-ADAPTER-038, REQ-RISK-065, SPEC-BRK-007, SPEC-BRK-008
-    function test_TEST_228_statusBreakers() public {
-        rSpoke.setStatus(address(proxy), USDC_RESERVE, false, true);
-        vm.prank(emergencyGuardian);
-        registry.tripDebtBreaker(address(spoke), USDC_RESERVE);
-        AccountGateStatus memory s = _status();
-        assertEq(s.breakerDebtReserveId, USDC_RESERVE);
-        assertEq(s.debtBreakerReasons, BreakerReasons.MANUAL);
-        assertEq(s.markets[0].breakerReasons, 0);
-        // A borrow applies only the borrowed reserve's debt breaker, so a borrow of another reserve still passes;
-        // a withdraw-with-debt applies every held reserve's.
-        assertTrue(s.borrowAllowed);
-        assertFalse(s.withdrawWithDebtAllowed);
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        vm.prank(emergencyGuardian);
-        registry.resetDebtBreaker(address(spoke), USDC_RESERVE);
-        assertTrue(_status().borrowAllowed);
-        // A temporary market gate reports its reasons and the time it reopens.
-        oracle.setState(PriceState.Drifting, 1 << 2, false);
-        s = _status();
-        assertEq(uint8(s.markets[0].priceState), uint8(PriceState.Drifting));
-        assertEq(s.markets[0].breakerReasons, BreakerReasons.ORACLE);
-        assertEq(s.markets[0].breakerLatchedUntil, block.timestamp + 1800);
-        _assertBlocked(s);
-        oracle.setState(PriceState.Live, 0, true);
-        // A latched security reason.
-        vm.prank(emergencyGuardian);
-        registry.tripMarketBreaker(mid);
-        s = _status();
-        assertEq(s.markets[0].breakerReasons, BreakerReasons.MANUAL);
-        assertEq(s.breakerDebtReserveId, NONE);
         _assertBlocked(s);
     }
 
@@ -393,7 +337,7 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
         PositionProxy orphan = new PositionProxy(address(adapter), wallet, address(spoke), 999);
         _assertUnavailable(riskModule.getAccountGateStatus(address(orphan)));
         // The account's LPOracle report reverts: the body reverts, the view does not.
-        vm.mockCallRevert(address(oracle), abi.encodeWithSignature("getPriceState()"), "oracle");
+        vm.mockCallRevert(address(oracle), abi.encodeWithSignature("getPriceStatus()"), "oracle");
         _assertUnavailable(_status());
         vm.clearMockedCalls();
         assertFalse(_status().statusUnavailable);
@@ -414,7 +358,7 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
     function test_TEST_028_statusUnavailableOnABrokenDebtOracle() public {
         rSpoke.setStatus(address(proxy), USDC_RESERVE, false, true);
         assertTrue(_status().borrowAllowed);
-        vm.mockCallRevert(address(usdcOracle), abi.encodeWithSignature("getPriceState()"), "debt");
+        vm.mockCallRevert(address(usdcOracle), abi.encodeWithSignature("latestRoundData()"), "debt");
         _assertUnavailable(_status());
     }
 

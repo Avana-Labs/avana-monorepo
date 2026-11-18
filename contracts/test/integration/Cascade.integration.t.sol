@@ -113,7 +113,6 @@ contract CascadeIntegrationTest is RealStackFlows {
         vm.warp(block.timestamp + TWAP_WAIT);
         vm.roll(block.number + TWAP_WAIT / BLOCK_TIME);
         _refreshFeeds();
-        _pokeAll();
     }
 
     /// @dev Outside LPs remove `removalBps` of their liquidity from both pools; the Lens's pool share and the

@@ -108,7 +108,7 @@ export interface DebtAssetValues {
   offsetMinimum?: number;
   stressRiseBps?: number;
   floorRoundingAllowance?: string;
-  /** A fixed-price debt asset (no DebtOracle): its primary feed's deviation instead of a stress rise. */
+  /** A fixed-price debt asset (not priced by its feed): its primary feed's deviation instead of a stress rise. */
   fixedPrice?: boolean;
   deviationBps?: number;
   creditLineWhole?: number;
@@ -423,7 +423,7 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
       if (liquidityFeeBps !== undefined) (target.liquidityFeeByHub ??= {})[label] = liquidityFeeBps;
       if (wasLent) rateKept.push({ symbol: a.symbol, ...(rateModel ? { rateModel } : {}), ...(liquidityFeeBps !== undefined ? { liquidityFeeBps } : {}) });
     }
-    // A debt asset borrowable on a CDP Spoke needs its listing entry (its DebtOracle) once per chain.
+    // A debt asset borrowable on a CDP Spoke needs its listing entry (its price source) once per chain.
     const borrowed = (Object.values(input.borrowable) as string[][]).some((x) => x.includes(a.symbol));
     if (borrowed && !(c.listing.debtAssets as Json[]).some((x) => x.symbol === a.symbol)) {
       const fixed = dv?.fixedPrice === true;
@@ -432,7 +432,7 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
       c.listing.debtAssets.push({
         symbol: a.symbol,
         fixedPrice: fixed,
-        ...(fixed ? { deviationBps: dv.deviationBps } : { stressRiseBps: dv.stressRiseBps, debtOraclePokeMinGas: 1000000 }),
+        ...(fixed ? { deviationBps: dv.deviationBps } : { stressRiseBps: dv.stressRiseBps }),
         floorRoundingAllowance: dv.floorRoundingAllowance,
         ...(dv.creditLineWhole ? { creditLineWhole: dv.creditLineWhole } : {}),
         ...(dv.debtMinWhole ? { debtMinWhole: dv.debtMinWhole, debtMaxWhole: dv.debtMaxWhole } : {}),

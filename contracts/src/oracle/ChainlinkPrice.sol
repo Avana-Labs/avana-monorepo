@@ -26,7 +26,9 @@ library ChainlinkPrice {
         address feed,
         address parameterStore
     ) internal view returns (Reading memory r) {
+        // forge-lint: disable-next-line(calls-loop)
         FeedDef memory d = IParameterStore(parameterStore).getFeed(feed);
+        // forge-lint: disable-next-line(calls-loop, unused-return)
         (, int256 raw,, uint256 at,) = IAggregatorV3(feed).latestRoundData();
         r.price8 = LPPriceMath.normalizeAnswer(raw, d.decimals);
         r.updatedAt = at;

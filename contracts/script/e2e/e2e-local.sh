@@ -557,7 +557,7 @@ fi
 # drill accounts and the manifest must still verify against the chain. E2E_DRILLS="caps hub-pause" runs only those
 # (between setup and teardown). They run after the services step, whose indexer reads the deployment's early blocks,
 # which anvil no longer serves once the drills have added a few thousand more.
-DRILL_LIST="${E2E_DRILLS:-caps aave-caps-zero aave-caps-zero-v4 market-breaker debt-breaker debt-breaker-v4 hub-freeze hub-pause pause-all freeze-address aave-freeze aave-freeze-v4 oracle-standby keeper-kill-switch deficit-coverage deficit-coverage-v4 remove-debt-reserve offboard-close offboard-close-v4 cancel-registration retire-spoke retire-spoke-v4 rate-aip rate-role}"
+DRILL_LIST="${E2E_DRILLS:-caps aave-caps-zero aave-caps-zero-v4 market-breaker debt-breaker debt-breaker-v4 hub-freeze hub-pause pause-all freeze-address aave-freeze aave-freeze-v4 keeper-kill-switch deficit-coverage deficit-coverage-v4 remove-debt-reserve offboard-close offboard-close-v4 cancel-registration retire-spoke retire-spoke-v4 rate-aip rate-role}"
 # These drills put the chain back with evm_snapshot and evm_revert. The replay step's live indexer cannot follow anvil
 # back: it is still reading blocks the revert removed, and fails on them. With the replay step they are not run.
 REWINDING_DRILLS="offboard-close offboard-close-v4 cancel-registration retire-spoke retire-spoke-v4"

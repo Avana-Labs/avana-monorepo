@@ -256,7 +256,13 @@ abstract contract LensBase is ILensErrors {
         for (uint256 i = 0; i < tokenCount; ++i) {
             address[] memory feeds = o.feedsOf(i);
             for (uint256 j = 0; j < feeds.length; ++j) {
-                (,,, uint256 at,) = IAggregatorV3(feeds[j]).latestRoundData();
+                // An unreadable feed reports updated at 0: stale for both actions, and the view still answers.
+                uint256 at = 0;
+                if (feeds[j].code.length != 0) {
+                    try IAggregatorV3(feeds[j]).latestRoundData() returns (uint80, int256, uint256, uint256 u, uint80) {
+                        at = u;
+                    } catch {}
+                }
                 inputs[n++] = _input(feeds[j], at);
             }
         }

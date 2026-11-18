@@ -104,7 +104,6 @@ export function profileOf(file: string): string {
   if (
     file === "Collateralization.sol" ||
     file === "UniswapV4Integration.sol" ||
-    file.startsWith("DebtOracle") ||
     (file.startsWith("LPVaultSwap") && file.endsWith("Logic.sol")) ||
     (file.startsWith("Lens") && file.endsWith("Module.sol"))
   ) {
@@ -138,15 +137,10 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
     ["LensAaveSizing", m.avana.lensAaveSizing],
     ["AaveV3FlashSource", m.avana.flashSource],
     ["FlashLiquidator", m.avana.flashLiquidator],
-    ["DebtOracle implementation", m.avana.debtOracleImplementation],
     ...(m.avana.gasVault ? [["AvanaGasVault", m.avana.gasVault] as [string, Immutable]] : []),
     ...m.avana.lensModules.map((x, i): [string, Immutable] => [`Lens module ${i}`, x]),
     ...m.avana.operatorHelpers.map((x, i): [string, Immutable] => [`OperatorFlashLiquidator ${i}`, x]),
     ...m.avana.lpVaults.map((x): [string, Immutable] => [`LPVault ${x.integrationId} (${x.kind})`, x]),
-    ...m.avana.clOracles.flatMap((x): [string, Immutable][] => [
-      [`LPOracle implementation ${x.integrationId}`, x],
-      [`LPOracle module logic ${x.integrationId}`, x.moduleLogic],
-    ]),
     ...(m.uniswapV4 ? [["Uniswap v4 PoolManager", m.uniswapV4.poolManager] as [string, Immutable]] : []),
   ];
   const upgradeables: [string, Upgradeable][] = [
@@ -173,9 +167,6 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
     await compare(`${label} proxy`, u.address, u.codeHash, null);
     await compare(`${label} implementation`, u.implementation, u.implementationCodeHash, u.implementationArtifact);
     for (const l of u.logics) await compare(`${label} ${l.name}`, l.address, l.codeHash, l.artifact);
-  }
-  for (const x of m.avana.clOracles) {
-    for (const l of x.logics) await compare(`LPOracleCL ${x.integrationId} ${l.name}`, l.address, l.codeHash, l.artifact);
   }
   for (const e of m.external) add(`code hash ${e.group} ${e.name}`, (await codeHash(client, e.address).catch(() => "0x")) === e.codeHash, e.address);
 
@@ -259,13 +250,12 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
       add(`LPVault ${v.integrationId} POOL_MANAGER`, !!m.uniswapV4 && pm === getAddress(m.uniswapV4.poolManager.address), pm);
     }
   }
-  // Listed markets: vault tokens, routes and LPOracles are the recorded code, and each LPOracle proxy points at its
-  // integration's LPOracle implementation (LPOracleCL, or LPOracleV4 for Uniswap v4); First-Loss Reserves and the DAO deficit offsets are the recorded code.
+  // Listed markets: vault tokens, routes and the stateless LPOracles are the recorded code; First-Loss Reserves and the
+  // DAO deficit offsets are the recorded code.
   for (const mk of m.markets) {
     await compare(`market ${mk.marketId} vault token`, mk.vaultToken.address, mk.vaultToken.codeHash, null);
     for (const [i, r] of mk.routes.entries()) await compare(`market ${mk.marketId} route ${i}`, r.address, r.codeHash, r.artifact);
-    const cl = m.avana.clOracles.find((x) => x.integrationId === mk.integrationId);
-    add(`market ${mk.marketId} LPOracle implementation`, !!cl && (await implementationOf(client, mk.lpOracle.address)) === cl.address, mk.lpOracle.implementation);
+    await compare(`market ${mk.marketId} LPOracle`, mk.lpOracle.address, mk.lpOracle.codeHash, mk.lpOracle.artifact);
     // A Uniswap v4 market: the PoolKey its LPVault bound hashes to the recorded PoolId.
     const vault = m.avana.lpVaults.find((x) => x.integrationId === mk.integrationId);
     if (vault?.kind === "uniswap-v4") {
@@ -274,24 +264,21 @@ export async function verifyManifest(m: ReleaseManifest, client: PublicClient, c
       add(`market ${mk.marketId} PoolId`, !!mk.poolId && id === mk.poolId.toLowerCase(), id);
     }
   }
-  for (const d of m.debtReserves) {
-    if (d.debtOracle) add(`DebtOracle ${d.asset} implementation`, (await implementationOf(client, d.debtOracle.address)) === d.debtOracle.implementation, d.debtOracle.implementation);
-  }
   for (const x of [...m.avana.firstLossReserves, ...m.avana.daoDeficitOffsets]) {
     await compare(`loss layer ${x.hub} ${x.asset}`, x.address, x.codeHash, x.artifact);
   }
 
-  // Each integration is registered with its LPVault and its LPOracle implementation as pricing (REQ-CONFIG-016).
+  // Each integration is registered with its LPVault, which is also its pricing: each market's stateless LPOracle reads
+  // the composition from it (REQ-CONFIG-016).
   const integrationOf = parseAbi(["function integrationOf(uint32 integrationId) view returns (address lpVault, address pricing)"]);
   for (const v of m.avana.lpVaults) {
-    const cl = m.avana.clOracles.find((x) => x.integrationId === v.integrationId);
     const [lpVault, pricing] = (await client.readContract({
       address: m.avana.marketRegistry.address, abi: integrationOf, functionName: "integrationOf", args: [v.integrationId],
     })) as readonly [Address, Address];
     if (lpVault === "0x0000000000000000000000000000000000000000") {
       add(`integration ${v.integrationId} registered`, "pending", "registered by the chain-wiring operation, not executed yet");
     } else {
-      add(`integration ${v.integrationId} registered`, lpVault === v.address && !!cl && pricing === cl.address, `${lpVault} ${pricing}`);
+      add(`integration ${v.integrationId} registered`, lpVault === v.address && pricing === v.address, `${lpVault} ${pricing}`);
     }
   }
   return checks;

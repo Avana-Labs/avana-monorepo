@@ -97,34 +97,18 @@ The position managers' own events (`IncreaseLiquidity`, `DecreaseLiquidity`, `Co
 
 ## Oracles
 
-LPOracle (one per market, followed from `MarketRegistered.lpOracle`) and DebtOracle (one per non-GHO debt asset, followed from `DebtReserveApproved.priceSource`):
-
-| Contract | Event | Updates | Used by |
-|---|---|---|---|
-| LPOracle | `PriceStateChanged(PriceState previous, PriceState current, uint256 reasons, uint64 servedUpdatedAt)` | `oracle_state.state` | K M (`M-01`) |
-| LPOracle | `PriceAccepted(int256 answer, uint64 updatedAt, uint256[] prices)` | `oracle_state.acceptedPrice` | C |
-| LPOracle | `DisagreementRecorded(uint64 since, uint256[] primary, uint256[] alternate)`, `DisagreementCleared(uint64 since, uint64 clearedAt)` | `oracle_state.disagreeSince` | K M (`M-02`) |
-| LPOracle | `GraceStarted(uint64 recoveredAt, uint64 graceEndsAt, bool fromLatch)` | `oracle_state.graceEndsAt` | K |
-| LPOracle | `TokenDecimalsMismatch(uint8 token, uint8 stored, uint8 read, bool readable)`, `TokenDecimalsRestored(uint64 verifiedAt)` | log | K M |
-| LPOracle | `PriceSeeded`, `RouteChanged`, `FailureRecorded`, `FailureCleared`, `OutageExpiredLatched`, `QuoteChangeCapped`, `PokeMinGasUpdated`, `PriceCheckpointed`, `PriceRouteVersionObserved` | log | M |
-| DebtOracle | `DebtPriceStateChanged(PriceState previous, PriceState current, uint256 reasons)` | `oracle_state.state` | K M (`M-01`) |
-| DebtOracle | `DebtPriceAccepted(uint256 price8, uint64 updatedAt, RouteSlot source)` | `oracle_state.acceptedPrice` | C |
-| DebtOracle | `DebtDisagreementRecorded(uint64 since, uint256 primary, uint256 alternate)`, `DebtDisagreementCleared(uint64 since, uint64 clearedAt)` | `oracle_state.disagreeSince` | K M |
-| DebtOracle | `DebtGraceStarted(uint64 recoveredAt, uint64 graceEndsAt, bool fromLatch)` | `oracle_state.graceEndsAt` | K |
-| DebtOracle | `DebtPriceSeeded`, `DebtRouteChanged`, `DebtFailureRecorded`, `DebtFailureCleared`, `DebtOutageExpiredLatched`, `DebtRouteVersionObserved`, `PokeMinGasUpdated` | log | M |
-
-An oracle emits only when it is poked or read by a transaction. A market becomes Cached or Expired by the passage of time, with no event until the next poke, so `oracle_state` is never a current state.
+No oracle is indexed. Each market's LPOracle is a stateless contract that emits no events, and a non-GHO debt reserve's price source is its asset's own Chainlink USD feed (GHO keeps its fixed source). Prices and their freshness are read live (see [Live reads](#live-reads)).
 
 ## MarketRegistry
 
 | Event | Updates | Used by |
 |---|---|---|
-| `MarketRegistered(uint256 marketId idx, uint32 integrationId idx, address pool, bytes32 poolId, address[] tokens, address vaultToken, address lpOracle, address spoke idx)` | `market` insert; starts the LPOracle source | K C M |
+| `MarketRegistered(uint256 marketId idx, uint32 integrationId idx, address pool, bytes32 poolId, address[] tokens, address vaultToken, address lpOracle, address spoke idx)` | `market` insert; starts the `AmmPool` source | K C M |
 | `MarketActivated(uint256 marketId, uint256 chainId, address spoke, uint256 reserveId, address hub, uint256 hubAssetId)` | `market` Active | K C M |
 | `MarketRegistrationCancelled(uint256 marketId)`, `MarketClosed(uint256 marketId idx)` | `market.status` | K C M |
 | `MarketOffboarding(uint256 marketId)` | `market.status` Offboarding, `market.offboardedAt` (block time; the notice ends at `offboardedAt + 5 days`, the earliest time of the Aave DAO's one threshold drop to `windDownState(marketId).targetLtBps` and of `closeMarket`) | K C M |
 | `SettlementReserveSet(uint256 marketId idx, uint256 debtReserveId)` | `market.settlementReserveId` | K |
-| `DebtReserveApproved(address spoke idx, uint256 reserveId idx, address asset, address fundingHub, uint256 hubAssetId, address priceSource, address firstLossReserve)` | `debt_reserve`; starts the DebtOracle source | K C M |
+| `DebtReserveApproved(address spoke idx, uint256 reserveId idx, address asset, address fundingHub, uint256 hubAssetId, address priceSource, address firstLossReserve)` | `debt_reserve` | K C M |
 | `DebtReserveRemoved(address spoke idx, uint256 reserveId idx)` | `debt_reserve.approved` | K C M |
 | `SpokeApproved(address spoke idx, address hub idx, uint32 integrationId idx, address implementation, address aaveOracle)` | `cdp_spoke`; starts the `AaveSpokeApproved` source | C M (`M-20`) |
 | `HubRecorded(address hub idx, uint8 tier)` | `hub`; starts the `AaveHubRecorded` source | C M |
@@ -150,7 +134,7 @@ An oracle emits only when it is poked or read by a transaction. A market becomes
 | ParameterStore | `ParameterTightened`, `ParameterLoosened` (`bytes32 name, bytes32 scope, uint256 oldValue, uint256 newValue, address caller`), `ParameterSet(bytes32 name, bytes32 scope, uint256 oldValue, uint256 newValue)` | log | K (reloads cached parameters) M |
 | ParameterStore | `MarketSpeedLimitsSet(uint256 marketId idx, MarketSpeedLimits oldLimits, MarketSpeedLimits newLimits, bool tightened)`, `DebtSpeedLimitSet(address hub idx, address asset idx, SpeedLimit oldLimit, SpeedLimit newLimit, bool tightened)` | log | M |
 | ParameterStore | `CapTightened`, `CapLoosened` (`bytes32 capKind, bytes32 scope, uint256 oldValue, uint256 newValue, address caller`), `StressFloorSet`, `MinPledgeUsdSet`, `RouteDepthThresholdSet`, `DebtAssetParamsSet` | log | C M |
-| ParameterStore | `FeedConfigured(address feed, uint8 decimals, int256 minAnswer, int256 maxAnswer, uint32 feedHeartbeat, uint16 heartbeatMargin, uint32 feedMaxAge, uint16 feedDeviationThresholdBps, uint16 heartbeatDriftBps, uint32 borrowPriceMaxAge, uint32 liquidationPriceMaxAge)` | log | K (poke cadence) M (`M-03`, `M-04`) |
+| ParameterStore | `FeedConfigured(address feed, uint8 decimals, int256 minAnswer, int256 maxAnswer, uint32 feedHeartbeat, uint16 heartbeatMargin, uint32 feedMaxAge, uint16 feedDeviationThresholdBps, uint16 heartbeatDriftBps, uint32 borrowPriceMaxAge, uint32 liquidationPriceMaxAge)` | log | M (`M-03`, `M-04`) |
 | ParameterStore | `SequencerSet(address feed, uint32 gracePeriod)`, `SecondSourceSwitched(address token idx, bool standby, address by)` | log | K M |
 | RiskModule | `ConfigDriftDetected(address spoke idx, DriftReason reason)` | log | K M (`M-20`) |
 | RiskModule | `BreakersPoked(uint256 marketId idx, uint32 reasons)` | log | M |
@@ -251,10 +235,9 @@ These values change with time, interest or prices and emit no event, or emit onl
 | Health factor, collateral value, debt value, borrow count | `Spoke.getUserAccountData(proxy)` | K (every block, multicall pinned to the block), C (on view and after each receipt) |
 | Debt per reserve with accrued interest | `Spoke.getUserTotalDebt(reserveId, proxy)`, `Spoke.getUserPosition(reserveId, proxy)`; `Lens.getAccount(wallet, marketId).debts` | K C |
 | Liquidation sizing and gates | `Lens.previewLiquidation(proxy, debtReserveId, deadline)` | K |
-| Market price state, age, disagreement, grace | `Lens.getPriceState(vaultToken)`; `LPOracle.getPriceState()`; `LPOracle.liquidationPriceMaxAge()` | K C M |
-| Debt reserve price state | `Lens.getDebtPriceState(spoke, debtReserveId)`; `DebtOracle.getPriceState()` | K C M |
-| Chainlink feed rounds (poke cadence, `M-03`, `M-04`) | `latestRoundData()` of every feed leg in the manifest | K M |
-| Sequencer status (Base) | Sequencer-uptime feed `latestRoundData()` | K M |
+| Market price and freshness | `Lens.getPriceState(vaultToken)`; `LPOracle.getPriceStatus()`, `LPOracle.getTokenPrices()` | K C M |
+| Debt reserve price and freshness | `Lens.getDebtPriceState(spoke, debtReserveId)` (its `source` is the asset's Chainlink feed); `ParameterStore.borrowPriceMaxAge(feed)`, `liquidationPriceMaxAge(feed)` | K C M |
+| Chainlink feed rounds (`M-03`, `M-04`) | `latestRoundData()` of every feed leg in the manifest | M |
 | Breakers | `Lens.getBreakerStatus(marketId)`, `Lens.getDebtBreakerStatus(spoke, debtReserveId)`; `MarketRegistry.lastBreachAt(key)`; a breaker condition true now: `eth_call RiskModule.pokeBreakers(marketId)` | K C M |
 | Spoke setting drift | `eth_call RiskModule.pokeConfig(spoke)` | K M (`M-20`) |
 | Application state and freezes | `MarketRegistry.pauseState(hub)`, `pauseReason(hub)`, `isFrozenAddress(account)` | K C |

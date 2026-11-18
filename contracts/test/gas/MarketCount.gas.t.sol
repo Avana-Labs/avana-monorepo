@@ -55,7 +55,6 @@ contract MarketCountGasTest is RealStackFlows, GasCalibration {
         vm.warp(block.timestamp + 7200);
         vm.roll(block.number + 7200 / BLOCK_TIME);
         _refreshFeeds();
-        usdcOracle.poke();
         margin = store.feedAgreementMarginBps();
     }
 
@@ -152,7 +151,6 @@ contract MarketCountGasTest is RealStackFlows, GasCalibration {
             inset = 0;
             if (next < 4 && registry.marketCount() == at[next]) {
                 vm.pauseGasMetering();
-                _pokeAll();
                 vm.resumeGasMetering();
                 rows[next] = _measure(at[next]);
                 ++next;

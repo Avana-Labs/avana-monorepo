@@ -5,18 +5,13 @@ pragma solidity 0.8.28;
 
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequencerUptimeFeed.sol";
 import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {DeleverageRequest} from "../../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {LPPriceMath} from "../../oracle/LPPriceMath.sol";
 import {Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
 import {PositionRef} from "../../types/PositionTypes.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
-import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {IRiskModule} from "../risk-module/IRiskModule.sol";
-import {IRiskModuleErrors} from "../risk-module/IRiskModuleErrors.sol";
-import {RiskModuleMath} from "../risk-module/RiskModuleMath.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
@@ -30,10 +25,6 @@ import {AaveAdapterImmutables, AdapterAccount, RepayWithCollateralParams} from "
 // forge-lint: disable-start(reentrancy-events)
 // forge-lint: disable-next-line(missing-inheritance)
 contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
-    uint256 internal constant SEQUENCER_CALL_GAS = 50_000;
-    /// @dev ABI length of `latestRoundData()`: five words.
-    uint256 internal constant ROUND_LENGTH = 160;
-
     constructor(
         AaveAdapterImmutables memory im
     ) AaveAdapterStorage(im) {}

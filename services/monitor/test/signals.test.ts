@@ -29,9 +29,10 @@ describe("signal catalog", () => {
     expect(signal("M-30")).toMatchObject({ source: "keeper", responders: ["keeperOnCall"], playbook: "P-08 (EMG-082)" });
   });
 
-  it("takes M-31 to M-33 from the keeper feed and reads M-34 from the chain", () => {
+  it("takes M-31 to M-33 from the keeper feed and keeps M-34 as a retired row", () => {
     for (const id of ["M-31", "M-32", "M-33"] as const) expect(signal(id).source).toBe("keeper");
     expect(signal("M-34")).toMatchObject({ source: "snapshot", responders: ["keeperOnCall", "operators"], playbook: "P-08 (EMG-082)" });
+    expect(signal("M-34").name).toContain("retired");
   });
 
   it("reads the gas vault's M-35 from the chain and M-36 from its events, under the keeper-gas playbook", () => {

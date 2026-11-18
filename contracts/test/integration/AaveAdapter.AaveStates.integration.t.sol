@@ -87,8 +87,6 @@ contract AaveAdapterAaveStatesIntegrationTest is RealStackFlows {
     /// @dev Feeds republished, every LPOracle and the USDC DebtOracle poked, as a keeper does.
     function _refreshPrices() internal {
         _refreshFeeds();
-        _pokeAll();
-        usdcOracle.poke();
     }
 
     /// @dev The LPOracles' grace window (`graceDuration`, 1,800 s) passes with fresh rounds.

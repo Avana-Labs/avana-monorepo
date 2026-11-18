@@ -15,16 +15,12 @@
         "utils/mocks/ChainlinkCostMocks.sol:OcrAggregatorMock",
         "utils/mocks/LPOracleMocks.sol:OracleFeedMock",
         "utils/mocks/MarketRegistryMocks.sol:RegistryFeedMock",
+        "utils/mocks/MarketRegistryMocks.sol:RegistryDebtOracleMock",
+        "utils/mocks/RiskModuleMocks.sol:RiskDebtOracleMock",
+        "utils/mocks/LPVaultSwapMocks.sol:LVSDebtOracleMock",
+        "utils/mocks/LensMocks.sol:LensDebtOracleMock",
+        "utils/mocks/LensMocks.sol:LensFeedEcho",
         "unit/ParameterStore.Feeds.unit.t.sol:RevertingRoundFeed"
-      ]
-    },
-    "sequencer-uptime-feed": {
-      "external": "Chainlink L2 sequencer-uptime feed on Base",
-      "functions": [],
-      "fork_tests": {"base": ["TEST-275"]},
-      "mocks": [
-        "utils/mocks/AaveAdapterMocks.sol:AdapterSequencerFeed",
-        "utils/mocks/RiskModuleMocks.sol:RiskSequencerFeed"
       ]
     },
     "uniswap-v3": {
@@ -36,7 +32,6 @@
         "utils/mocks/UniswapV3Mocks.sol:MockV3Factory",
         "utils/mocks/UniswapV3Mocks.sol:MockV3Pool",
         "utils/mocks/ParameterStoreMocks.sol:MockPool",
-        "unit/LPOracle.SpotReads.unit.t.sol:SpotLiarPool",
         "invariant/echidna/UniswapV3IntegrationProperties.sol:EchidnaNfpm"
       ]
     },
@@ -50,7 +45,6 @@
         "utils/mocks/SlipstreamMocks.sol:MockCLPool",
         "utils/mocks/SlipstreamMocks.sol:MockCLGauge",
         "utils/mocks/SlipstreamMocks.sol:MockLeafVoter",
-        "unit/LPOracleCL.Module.unit.t.sol:SixWordSlot0Pool",
         "invariant/echidna/SlipstreamIntegrationProperties.sol:EchidnaSlipNpm",
         "invariant/echidna/SlipstreamIntegrationProperties.sol:EchidnaCLFactory",
         "invariant/echidna/SlipstreamIntegrationProperties.sol:EchidnaCLPool"
@@ -110,6 +104,8 @@
     }
   },
   "not_external": {
-    "utils/mocks/LPVaultSwapMocks.sol:LVSFlashSourceMock": "stands in for Avana's own IFlashSource (evidence.STAND_INS), not the Aave V3 Pool"
+    "utils/mocks/LPVaultSwapMocks.sol:LVSFlashSourceMock": "stands in for Avana's own IFlashSource (evidence.STAND_INS), not the Aave V3 Pool",
+    "utils/mocks/AaveAdapterMocks.sol:AdapterSequencerFeed": "answers the ParameterStore's sequencer setting, which no gate reads since the stateless oracles",
+    "utils/mocks/RiskModuleMocks.sol:RiskSequencerFeed": "answers the ParameterStore's sequencer setting, which no gate reads since the stateless oracles"
   }
 }

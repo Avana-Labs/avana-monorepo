@@ -77,27 +77,6 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         store.tightenConsistencyToleranceBps(M, 9);
     }
 
-    // TEST-064 verifies: REQ-PSTORE-009, REQ-PSTORE-013, REQ-CONFIG-051, SPEC-GOV-011
-    function test_TEST_064_tightenRerunsCheckConfig() public {
-        // A check the tightening's own write breaks reverts it, naming only that check.
-        lpOracle.setFloors(45, 0, 0);
-        _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 4));
-        store.tightenConsistencyToleranceBps(M, 40);
-        // A check that failed before the write is not the tightening's doing and never blocks it.
-        lpOracle.setFloors(0, 0, 0);
-        lpOracle.setFailed(16);
-        _tl();
-        store.tightenConsistencyToleranceBps(M, 40);
-        assertEq(store.getMarketParams(M).consistencyToleranceBps, 40);
-        // Nor does a checkConfig that already reverted.
-        lpOracle.setFailed(0);
-        lpOracle.setReverts(true);
-        _tl();
-        store.tightenConsistencyToleranceBps(M, 30);
-        assertEq(store.getMarketParams(M).consistencyToleranceBps, 30);
-    }
-
     // TEST-064 verifies: REQ-CONFIG-024, REQ-CONFIG-052, SPEC-GOV-009, REQ-ACCESS-040, REQ-ACCESS-098, REQ-ACCESS-077
     function test_TEST_064_feedToleranceNeverBelowLowerBound() public {
         // dev(primary) 25 + dev(alternate) 25 + margin 50 = 100.

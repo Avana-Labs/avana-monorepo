@@ -135,8 +135,6 @@ export interface DebtAsset {
   readonly fixedPrice: boolean;
   /** The fixed price source the listing deployed for a fixed-price asset (a test-network stand-in), if any. */
   readonly fixedPriceSource?: string;
-  readonly debtOracle?: string;
-  readonly debtOraclePokeMinGas?: number;
   readonly creditLineWhole?: number;
   readonly firstLossReserve: string;
   readonly daoDeficitOffset: string;
@@ -367,11 +365,7 @@ export function buildModel(d: Deployment, problems: string[]): Model {
     const l = listingDebt.find((x) => x.symbol === sym);
     const byHub = (field: string) => p[`${field}ByHub`]?.[hubLabel] ?? p[field];
     const rate = byHub("rateModel") ?? DEFAULT_RATE_MODEL;
-    const oracles = [...new Set(m.debtReserves.filter((r) => same(r.asset, address) && r.debtOracle).map((r) => r.debtOracle!.address.toLowerCase()))];
-    if (oracles.length > 1) problems.push(`${sym}: the debt reserves name ${oracles.length} different DebtOracles`);
-    const debtOracle = oracles.length ? m.debtReserves.find((r) => same(r.debtOracle?.address, oracles[0]))!.debtOracle!.address : undefined;
     const fixedPrice = l?.fixedPrice === true;
-    if (l && !fixedPrice) need(`${sym} DebtOracle (manifest debtReserves)`, debtOracle);
     const flr = m.avana.firstLossReserves.find((x) => same(x.asset, address) && same(x.hub, hub.address));
     const offset = m.avana.daoDeficitOffsets.find((x) => same(x.asset, address) && same(x.hub, hub.address));
     return {
@@ -390,8 +384,6 @@ export function buildModel(d: Deployment, problems: string[]): Model {
       listed: !!l,
       fixedPrice,
       fixedPriceSource: fixedPrice && d.listingOracles[sym] ? need(`${sym} fixed price source (listing-oracles.json)`, d.listingOracles[sym]) : undefined,
-      debtOracle,
-      debtOraclePokeMinGas: l && !fixedPrice ? num(`${sym} debtOraclePokeMinGas`, l.debtOraclePokeMinGas) : undefined,
       creditLineWhole: l ? num(`${sym} creditLineWhole`, l.creditLineWhole ?? listing.creditLineWhole) : undefined,
       firstLossReserve: need(`First-Loss Reserve of ${sym} (manifest avana.firstLossReserves)`, flr?.address),
       daoDeficitOffset: need(`DAO deficit offset of ${sym} (manifest avana.daoDeficitOffsets)`, offset?.address),

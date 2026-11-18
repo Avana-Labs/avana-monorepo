@@ -6,8 +6,6 @@ pragma solidity 0.8.28;
 import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
 import {IAvanaTimelock, SelectorPair} from "../../src/governance/timelock/IAvanaTimelock.sol";
 import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
-import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
@@ -145,7 +143,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
     /// initializer selector, can be made short-eligible or DAO-only at construction.
     // TEST-244 verifies: REQ-ACCESS-142, REQ-ACCESS-152, REQ-ACCESS-181, INV-090
     function test_TEST_244_constructorRefusesForbiddenPairs() public {
-        bytes4[17] memory forbidden = [
+        bytes4[15] memory forbidden = [
             IAccessControl.grantRole.selector,
             IAccessControl.revokeRole.selector,
             IAccessControl.renounceRole.selector,
@@ -160,8 +158,6 @@ contract AvanaTimelockUnitTest is TimelockFixture {
             IParameterStore.initialize.selector,
             IAaveAdapter.initialize.selector,
             IRiskModule.initialize.selector,
-            ILPOracle.initialize.selector,
-            IDebtOracle.initialize.selector,
             ILPVaultSwap.initialize.selector
         ];
         SelectorPair[] memory none = new SelectorPair[](0);

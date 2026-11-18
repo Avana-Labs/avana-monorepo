@@ -22,7 +22,7 @@
 #   07-fund-first-loss-reserves       Avana Labs funds each Umbrella to its minimum
 #   09-listing-setup              tokens, feeds, CDP Spokes, First-Loss Reserves, credit lines (timelock, normal delay)
 #   09-execute-listing-setup
-#   09-debt-oracles               GHO's fixed source and the DebtOracle of every other debt asset
+#   09-debt-oracles               GHO's fixed source; every other debt asset's own Chainlink feed
 #   10-aave-debt-reserves-aip     AAVE  debt-reserve price sources, borrowable
 #   09-market-metadata            the listing metadata file (market and debt-reserve pages); its hash is the next salt
 #   09-listing-markets            LPOracles, swap routes, the listing batch (timelock, normal delay)

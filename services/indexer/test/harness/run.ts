@@ -19,7 +19,6 @@ import "../../src/handlers/governance.ts";
 import "../../src/handlers/hubs.ts";
 import "../../src/handlers/liquidation.ts";
 import "../../src/handlers/markets.ts";
-import "../../src/handlers/oracles.ts";
 import "../../src/handlers/premium.ts";
 import "../../src/handlers/pools.ts";
 import "../../src/handlers/poolManager.ts";

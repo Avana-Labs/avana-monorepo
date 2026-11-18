@@ -51,8 +51,6 @@ export function sampleManifest(): ReleaseManifest {
       lpVaults: [{ ...imm(34), integrationId: 1, kind: "uniswap-v3" }],
       firstLossReserves: [],
       daoDeficitOffsets: [],
-      debtOracleImplementation: imm(35),
-      clOracles: [],
       proxyCreationCodeHash: H(36),
       gasVault: { ...imm(37), artifact: "AvanaGasVault.sol:AvanaGasVault", treasury: A(3), timelock: A(20), guardian: A(52), maxSigners: 8 },
     },

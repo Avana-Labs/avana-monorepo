@@ -23,7 +23,7 @@ function write(name: string, body: unknown): string {
 const BIG_ID = "18446744073709551617"; // 2^64 + 1: not representable as a JavaScript number
 
 const sample = sampleManifest();
-const lpOracle = { ...sample.aave.v3Pool, logics: [] };
+const lpOracle = { ...sample.avana.lock, artifact: "LPOracle.sol:LPOracle" };
 const manifest = {
   ...sample,
   abiHash: ABI_HASH,
@@ -41,7 +41,7 @@ const manifest = {
       routes: [],
     },
   ],
-  debtReserves: [{ spoke: sample.aave.borrowSpokes[0]!.address, debtReserveId: "3", asset: sample.external[0]!.address, decimals: 18, isGho: false, debtOracle: null, feeds: [] }],
+  debtReserves: [{ spoke: sample.aave.borrowSpokes[0]!.address, debtReserveId: "3", asset: sample.external[0]!.address, decimals: 18, isGho: false, feeds: [] }],
 };
 
 describe("loadManifest", () => {

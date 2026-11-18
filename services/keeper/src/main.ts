@@ -7,7 +7,7 @@
 import { createServer } from "node:http";
 import { KMSClient } from "@aws-sdk/client-kms";
 import { type Address, type PublicClient, createPublicClient, parseAbi, parseAbiItem, webSocket } from "viem";
-import { debtOracleAbi, marketRegistryAbi } from "@avana/protocol/abis";
+import { lensAbi, marketRegistryAbi } from "@avana/protocol/abis";
 import { awsKmsKey } from "./adapters/awsKms.ts";
 import { localKeystoreSigner } from "./adapters/localKeystore.ts";
 import { logAlertSink } from "./adapters/logAlertSink.ts";
@@ -151,9 +151,9 @@ for (const cfg of config.chains) {
   const spendBook = new SpendBook(cfg.chain.id, cfg.dailyBudgetWei, cfg.gasDailySpendWei ?? 0n);
   const hubs = new HubBook((spoke) => primary.readContract({ address: cfg.manifest.avana.marketRegistry.address, abi: marketRegistryAbi, functionName: "hubOf", args: [spoke] }));
   /**
-   * D4: a liquidation's reward Kr valued in wei of the gas token, from the debt asset's accepted USD price (its
-   * DebtOracle; GHO's is fixed at 1 USD) and KEEPER_NATIVE_USD_FEED_<CHAIN>, at the block it was mined. Without that
-   * feed the metric is not reported; the spend line still carries the cost.
+   * D4: a liquidation's reward Kr valued in wei of the gas token, from the debt reserve's served USD price (Lens
+   * `getDebtPriceState`: the asset's Chainlink feed, GHO's fixed source) and KEEPER_NATIVE_USD_FEED_<CHAIN>, at the
+   * block it was mined. Without that feed the metric is not reported; the spend line still carries the cost.
    */
   const smallAccount = async (s: IncludedSpend) => {
     const feed = cfg.nativeUsdFeed;
@@ -162,14 +162,13 @@ for (const cfg of config.chains) {
     const reserve = cfg.manifest.debtReserves.find((r) => r.asset.toLowerCase() === reward.debtAsset.toLowerCase());
     if (!reserve) return;
     const at = { blockNumber: s.blockNumber } as const;
-    const assetUsd8 = reserve.debtOracle
-      ? (await primary.readContract({ ...at, address: reserve.debtOracle.address, abi: debtOracleAbi, functionName: "lastAcceptedPrice" }))[0]
-      : 10n ** 8n;
-    const [round, feedDecimals] = await Promise.all([
+    const [debtPrice, round, feedDecimals] = await Promise.all([
+      primary.readContract({ ...at, address: cfg.manifest.avana.lens.address, abi: lensAbi, functionName: "getDebtPriceState", args: [reserve.spoke, reserve.debtReserveId] }),
       primary.readContract({ ...at, address: feed, abi: NATIVE_FEED_ABI, functionName: "latestRoundData" }),
       primary.readContract({ ...at, address: feed, abi: NATIVE_FEED_ABI, functionName: "decimals" }),
     ]);
-    if (round[1] <= 0n) return;
+    const assetUsd8 = debtPrice.price;
+    if (round[1] <= 0n || assetUsd8 === 0n) return;
     const rewardWei = valueInWei(reward.keeperReward, reserve.decimals, assetUsd8 * 10n ** BigInt(feedDecimals), round[1] * 10n ** 8n);
     chainMetrics.smallAccounts.record({ hub: s.hub, gasCostWei: s.costWei, rewardWei });
   };

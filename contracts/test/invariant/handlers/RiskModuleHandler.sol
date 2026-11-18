@@ -227,7 +227,7 @@ contract RiskModuleHandler is Test {
     function _clear(
         bool isBorrow
     ) internal view returns (bool) {
-        if (w.oracle.getPriceState().state != PriceState.Live || !w.oracle.getPriceState().borrowAllowed) return false;
+        if (!w.oracle.getPriceStatus().borrowFresh) return false;
         if (block.timestamp - _reportAt > w.feedAge) return false;
         if (_vtPaused || _debtPaused || _drift || _issuer) return false;
         if (isBorrow && (_frozen || _offboarding)) return false;

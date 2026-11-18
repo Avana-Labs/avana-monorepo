@@ -36,7 +36,6 @@ const CONTRACTS = [
   ["avanaTimelockAbi", "avana", "AvanaTimelock"],
   ["collateralizationAbi", "avana", "ICollateralization"],
   ["firstLossReserveAbi", "avana", "AvanaFirstLossReserve"],
-  ["debtOracleAbi", "avana", "IDebtOracle"],
   ["flashLiquidatorAbi", "avana", "IFlashLiquidator"],
   ["lensAbi", "avana", "ILens"],
   ["lpOracleAbi", "avana", "ILPOracle"],

@@ -154,30 +154,6 @@ contract CollateralizationChecksUnitTest is CollateralizationFixture {
         assertEq(coll.getAccountRescueUnits(aliceProxy, vt), maxUnits);
     }
 
-    // TEST-171 verifies: REQ-COLL-002, REQ-VAULT-014, Q-199
-    // Sources: 2.3 REQ-VAULT-014 (the pledge pokes the market's LPOracle)
-    /// @notice A pledge whose LPOracle poke reverts reverts whole, with the oracle's error, and writes nothing; a
-    /// re-credit pokes too.
-    function test_TEST_171_failingPokeRevertsThePledge() public {
-        lpVault.mintPosition(KEY42, alice, MARKET_ID, 5_000_000_000);
-        oracle.setFail(true);
-        _acquire(adapter);
-        _register(aliceProxy);
-        _expectPledgeFail(alice, aliceProxy, vt, KEY42, abi.encodeWithSelector(CollOracleMock.PokeFailed.selector));
-        _release(adapter);
-        assertEq(coll.getTotalCredited(vt), 0);
-        oracle.setFail(false);
-        _pledge(alice, aliceProxy, KEY42, 5_000_000_000);
-        lpVault.addUnits(KEY42, 1_000_000);
-        oracle.setFail(true);
-        _acquire(adapter);
-        vm.expectRevert(CollOracleMock.PokeFailed.selector);
-        vm.prank(adapter);
-        coll.recredit(alice, aliceProxy, vt, KEY42, "", false);
-        _release(adapter);
-        assertEq(coll.getRecord(1).credited, 5_000_000_000, "no re-credit");
-    }
-
     // TEST-018 verifies: REQ-VAULT-068, REQ-VAULT-102, REQ-VAULT-113, REQ-COLL-003, REQ-COLL-031
     // Sources: 2.3 REQ-VAULT-068 (the record's market), REQ-COLL-003
     /// @notice Every exit and the re-credit name the record's own market: called with another registered market's

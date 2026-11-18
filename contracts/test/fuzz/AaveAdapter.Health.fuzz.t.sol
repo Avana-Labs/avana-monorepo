@@ -141,52 +141,6 @@ contract AaveAdapterHealthFuzzTest is AaveAdapterRiskFixture {
 
     // ─── SPEC-PROXY-002 boundaries ───
 
-    // TEST-019 verifies: SPEC-PROXY-002, REQ-PROXY-064
-    /// @notice A collateral feed aged at most its `borrowPriceMaxAge` admits a borrow; one second older is refused
-    /// with `PriceTooOld(feed, age)`.
-    function testFuzz_TEST_019_feedAgeBoundary(
-        uint32 age
-    ) public {
-        age = uint32(bound(age, 0, 2 * uint256(FEED_AGE)));
-        _borrowAs(alice, MARKET_ID, debtReserveId, 1e18);
-        uint64 at = uint64(block.timestamp);
-        vm.warp(block.timestamp + age);
-        usdcOracle.setReport(PriceState.Live, uint64(block.timestamp), true);
-        _report(lpOracleA, at);
-        if (age > FEED_AGE) {
-            vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.PriceTooOld.selector, feedUsdc, uint256(age)));
-        }
-        uint256 d = _deadline();
-        vm.prank(alice);
-        adapterC.borrow(MARKET_ID, debtReserveId, 1e18, alice, d, 0, 1);
-        assertEq(adapterC.borrowNonce(p), age > FEED_AGE ? 1 : 2, "nonce");
-    }
-
-    // TEST-019 verifies: SPEC-PROXY-002, REQ-PROXY-064, REQ-PROXY-018
-    /// @notice With USDC debt on the account, a GHO borrow passes exactly when the USDC DebtOracle's served price is
-    /// Live and aged at most its `borrowPriceMaxAge()`.
-    function testFuzz_TEST_019_debtPriceAgeBoundary(
-        uint32 age,
-        bool live
-    ) public {
-        age = uint32(bound(age, 0, 200_000));
-        _borrowAs(alice, MARKET_ID, usdcReserveId, 100e6);
-        uint256 maxAge = usdcOracle.borrowPriceMaxAge();
-        usdcOracle.setReport(live ? PriceState.Live : PriceState.Cached, uint64(block.timestamp - age), true);
-        bool passes = live && age <= maxAge;
-        if (!passes) {
-            vm.expectRevert(
-                abi.encodeWithSelector(
-                    IRiskModuleErrors.DebtPriceTooOld.selector, usdcReserveId, address(usdcOracle), uint256(age)
-                )
-            );
-        }
-        uint256 d = _deadline();
-        vm.prank(alice);
-        adapterC.borrow(MARKET_ID, debtReserveId, 1e18, alice, d, 0, 1);
-        assertEq(_debtOf(p, debtReserveId), passes ? 1e18 : 0, "GHO debt");
-    }
-
     // ─── Remaining record ───
 
     // TEST-237 verifies: REQ-ADAPTER-078, REQ-ADAPTER-089, REQ-RISK-070

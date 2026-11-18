@@ -14,7 +14,6 @@ import {IAaveV4ExtSload} from "../../interfaces/external/aave/IAaveV4ExtSload.so
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
-import {PriceState} from "../../types/OracleTypes.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {FeedDef} from "../parameter-store/types/ParameterStoreTypes.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";

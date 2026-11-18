@@ -145,15 +145,12 @@ def profile_of(file: str) -> str:
     it ("" for the default profile)."""
     if (
         file == "Collateralization.sol"
-        or file.startswith("DebtOracle")
         or (file.startswith("LPVaultSwap") and file.endswith("Logic.sol"))
         or (file.startswith("Lens") and file.endswith("Module.sol"))
     ):
         return "collateralization"
     if file in ("UniswapV3Integration.sol", "SlipstreamIntegration.sol"):
         return "clvault"
-    if file.startswith("LPOracle"):
-        return "lporacle"
     return ""
 
 

@@ -72,20 +72,18 @@ const LENS_MODULES = [
   "LensSpeedModule",
 ] as const;
 
-/** The four logic contracts of each LPOracleCL implementation, in `LPOracleLogicSet` order (AvanaDeploy.sol). */
-const CL_ORACLE_LOGICS = ["LPOracleCLPokeLogic", "LPOracleCLInitLogic", "LPOracleCLListingLogic", "LPOracleCLViewLogic"] as const;
-
 const art = (name: string) => `${name}.sol:${name}`;
 
-/** The artifacts an integration kind deploys (AvanaPeripheryDeploy.sol `_deployLpVault`, AvanaDeploy.sol `_deployClOracles`). */
-export function integrationArtifacts(kind: string): { lpVault: string; lpOracle: string; moduleLogic: string } {
+/** The artifacts an integration kind deploys (AvanaPeripheryDeploy.sol `_deployLpVault`). Every market's LPOracle is
+ * the one stateless `LPOracle` contract, whatever the integration. */
+export function integrationArtifacts(kind: string): { lpVault: string } {
   switch (kind) {
     case "uniswap-v3":
-      return { lpVault: art("UniswapV3Integration"), lpOracle: art("LPOracleCL"), moduleLogic: art("LPOracleCLModuleLogic") };
+      return { lpVault: art("UniswapV3Integration") };
     case "slipstream":
-      return { lpVault: art("SlipstreamIntegration"), lpOracle: art("LPOracleCL"), moduleLogic: art("LPOracleCLModuleLogic") };
+      return { lpVault: art("SlipstreamIntegration") };
     case "uniswap-v4":
-      return { lpVault: art("UniswapV4Integration"), lpOracle: art("LPOracleV4"), moduleLogic: art("LPOracleV4ModuleLogic") };
+      return { lpVault: art("UniswapV4Integration") };
     default:
       throw new Error(`unknown integration kind ${kind}`);
   }
@@ -256,31 +254,10 @@ export async function produceManifest(o: ProduceOptions): Promise<ReleaseManifes
   const lpVaultAddrs = avana.lpVaults as string[];
   const ids = avana.integrationIds as number[];
   const kinds = avana.integrationKinds as string[];
-  const kindOf = (integrationId: number) => {
-    const i = ids.findIndex((id) => Number(id) === integrationId);
-    if (i < 0) throw new Error(`integration ${integrationId} is not in the deploy output`);
-    return kinds[i]!;
-  };
-  const { markets, debtReserves } = await listedMarkets(client, outDir, config, outputs, imm, kindOf);
+  const { markets, debtReserves } = await listedMarkets(client, outDir, config, outputs, imm);
   const hubOf = (tier: number) => hubs.find((h) => h.tier === tier) ?? hubs[0];
   if (!hubOf(1)) throw new Error("no Aave Hub in the config");
   const helpersCfg = (at(config, "operatorHelpers") as { signer: string; fundingSafe: string }[]) ?? [];
-  const pricing = avana.clOraclePricing as string[];
-  const moduleLogics = avana.clOracleModuleLogics as string[];
-  const clLogics = avana.clOracleLogics as string[];
-  const clOracles = await Promise.all(
-    pricing.map(async (a, i) => ({
-      ...(await imm(a, integrationArtifacts(kinds[i]!).lpOracle)),
-      integrationId: ids[i]!,
-      moduleLogic: await imm(moduleLogics[i], integrationArtifacts(kinds[i]!).moduleLogic),
-      logics: await Promise.all(
-        CL_ORACLE_LOGICS.map(async (name, j) => {
-          const address = getAddress(clLogics[4 * i + j]!);
-          return { name, address, codeHash: await codeHash(client, address), artifact: art(name) };
-        }),
-      ),
-    })),
-  );
   const uniswapV4 = await uniswapV4PoolManager(client, lpVaultAddrs, kinds, imm);
   const proxyManager = getAddress(avana.proxyManager as string);
   const proxyCreationCodeHash = (await client.readContract({
@@ -341,8 +318,6 @@ export async function produceManifest(o: ProduceOptions): Promise<ReleaseManifes
       ),
       firstLossReserves,
       daoDeficitOffsets,
-      debtOracleImplementation: await imm(avana.debtOracleImplementation, art("DebtOracle")),
-      clOracles,
       proxyCreationCodeHash,
       gasVault: await gasVaultOf(client, outDir, imm),
     },
@@ -410,8 +385,9 @@ const VIEWS = parseAbi([
 ]);
 
 /**
- * The markets and debt reserves 09_ListMarkets listed (listing-markets.json, listing-oracles.json and the config's
- * `listing` section), with code hashes, implementation slots and reserve IDs read from the chain.
+ * The markets and debt reserves 09_ListMarkets listed (listing-markets.json and the config's `listing` section), with
+ * code hashes and reserve IDs read from the chain. A non-GHO debt reserve's Aave price source is its own Chainlink USD
+ * feed (its `primary` feed), so the reserve records no oracle contract of its own.
  */
 async function listedMarkets(
   client: PublicClient,
@@ -419,7 +395,6 @@ async function listedMarkets(
   config: Json,
   outputs: (file: string) => Json,
   imm: (a: unknown, artifact: string | null) => Promise<Immutable>,
-  kindOf: (integrationId: number) => string,
 ): Promise<{ markets: Market[]; debtReserves: DebtReserve[] }> {
   if (!existsSync(join(outDir, "listing-markets.json"))) return { markets: [], debtReserves: [] };
   const listing = at(config, "listing") as Json;
@@ -428,18 +403,6 @@ async function listedMarkets(
   const feedsOf = (token: Address) => {
     const e = tokenEntries.find((t) => resolveAddress(t.address, outputs) === token);
     return e ? Object.values(e.feeds as Record<string, string>).map((f) => ({ feed: resolveAddress(f, outputs), heartbeatSeconds: heartbeat })) : [];
-  };
-  const upgradeableAt = async (proxy: Address, artifact: string): Promise<Upgradeable> => {
-    const implementation = (await implementationOf(client, proxy)) ?? proxy;
-    return {
-      address: proxy,
-      codeHash: await codeHash(client, proxy),
-      implementation,
-      implementationCodeHash: await codeHash(client, implementation),
-      implementationArtifact: artifact,
-      logics: [],
-      startBlock: (await imm(proxy, null)).startBlock,
-    };
   };
   const markets: Market[] = [];
   for (const m of Object.values(outputs("listing-markets") as Record<string, Json>)) {
@@ -454,7 +417,7 @@ async function listedMarkets(
       integrationId: Number(m.integrationId),
       spoke,
       vaultToken: await imm(vaultToken, "VaultToken.sol:VaultToken"),
-      lpOracle: await upgradeableAt(getAddress(m.lpOracle as string), integrationArtifacts(kindOf(Number(m.integrationId))).lpOracle),
+      lpOracle: await imm(m.lpOracle, art("LPOracle")),
       reserveId: String(reserveId),
       // address(0) for a Uniswap v4 market, whose pool is a key in the PoolManager.
       pool: getAddress(m.pool as string),
@@ -464,7 +427,6 @@ async function listedMarkets(
       routes: await Promise.all((m.routes as string[]).map((r) => imm(r, "DexPathRoute.sol:DexPathRoute"))),
     });
   }
-  const sources = outputs("listing-oracles") as Record<string, string>;
   const debtReserves: DebtReserve[] = [];
   for (const r of (listing.debtReserves as Json[]) ?? []) {
     const symbol = r.symbol as string;
@@ -477,14 +439,12 @@ async function listedMarkets(
     const assetId = (await client.readContract({ address: hub, abi: VIEWS, functionName: "getAssetId", args: [asset] })) as bigint;
     const id = (await client.readContract({ address: spoke, abi: VIEWS, functionName: "getReserveId", args: [hub, assetId] })) as bigint;
     const decimals = Number(await client.readContract({ address: asset, abi: VIEWS, functionName: "decimals" }));
-    const fixed = entry.fixedPrice === true;
     debtReserves.push({
       spoke,
       debtReserveId: String(id),
       asset,
       decimals,
       isGho: symbol === "GHO",
-      debtOracle: fixed ? null : await upgradeableAt(getAddress(sources[symbol]!), "DebtOracle.sol:DebtOracle"),
       feeds: feedsOf(asset),
     });
   }

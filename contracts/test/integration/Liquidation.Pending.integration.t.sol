@@ -68,7 +68,8 @@ contract LiquidationPendingIntegrationTest is RealStackFlows {
         uint256 x
     ) internal view returns (uint256) {
         uint256 bonusBps = lens.previewLiquidation(proxy, usdcReserveId, block.timestamp + 120).bonusBps;
-        uint256 pDebt = uint256(usdcOracle.latestAnswer());
+        (, int256 usdcPrice,,,) = usdcOracle.latestRoundData();
+        uint256 pDebt = uint256(usdcPrice);
         uint256 pVt = uint256(mkt[mA].oracle.latestAnswer());
         return x * bonusBps * pDebt / (10_000 * pVt);
     }

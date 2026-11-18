@@ -10,7 +10,6 @@ import type { ChainInfo } from "@avana/services-common";
 /** The event kinds of the indexer stream (services/README.md, Discovery), shared with the indexer that serves them. */
 export {
   KEEPER_ACCOUNT_KINDS as ACCOUNT_EVENTS,
-  KEEPER_MARKET_KINDS as MARKET_EVENTS,
   KEEPER_PENDING_KINDS as PENDING_EVENTS,
   KEEPER_STATUS_KINDS as STATUS_EVENTS,
 } from "@avana/services-common";

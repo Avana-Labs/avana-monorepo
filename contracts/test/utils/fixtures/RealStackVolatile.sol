@@ -10,9 +10,7 @@ import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {INonfungiblePositionManager} from "../../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
 import {LiquidationParams, LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
-import {LPOracleCL} from "../../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {InitParams} from "../../../src/oracle/lp-oracle/LPOracleTypes.sol";
+import {LPOracle} from "../../../src/oracle/LPOracle.sol";
 import {DebtReserveDef, RiskTier, SpokeDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {
     MarketParams,
@@ -33,7 +31,7 @@ import {
     ICollHubConfigurator,
     ICollSpokeConfigurator
 } from "./CollateralizationFixture.sol";
-import {LPOracleCLDeployer} from "./LPOracleCLFixture.sol";
+import {LPOracleTestDeployer} from "./LPOracleTestDeployer.sol";
 import {RealStackFlows} from "./RealStackFlows.sol";
 import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -317,8 +315,6 @@ abstract contract RealStackVolatile is RealStackFlows {
         vm.warp(block.timestamp + 7200);
         vm.roll(block.number + 7200 / BLOCK_TIME);
         _refreshFeeds();
-        _pokeAll();
-        usdcOracle.poke();
     }
 
     /// @notice Lists and activates the full range of the volatile pool `p` on the Volatile Spoke, as `_addMarket`
@@ -343,7 +339,8 @@ abstract contract RealStackVolatile is RealStackFlows {
         MarketInfo storage m = mkt[id];
         m.pool = p;
         (uint8 d, uint8 k) = _unitOf(p);
-        m.oracle = _volatileOracle(id, p, k, site);
+        m.oracle = _volatileOracle(id, p, d, site);
+        k;
         m.vaultToken = _volatileVaultToken(id, p, address(m.oracle), d, site);
         _listVolatile(p, m.vaultToken, address(m.oracle), site);
         require(IClIntegration(site.lpVault).unitExponent(id) == k, "the LPVault bound the pool's unit exponent");
@@ -376,31 +373,16 @@ abstract contract RealStackVolatile is RealStackFlows {
     function _volatileOracle(
         uint256 id,
         IClPool p,
-        uint8 k,
+        uint8 d,
         ClSite memory site
-    ) private returns (LPOracleCL o) {
-        (int24 lower, int24 upper) = _fullRange(p);
-        LPOracleCL impl =
-            LPOracleCLDeployer.deploy(address(timelock), BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, site.slot0Words);
+    ) private returns (LPOracle o) {
         address[] memory toks = new address[](2);
         (toks[0], toks[1]) = (p.token0(), p.token1());
-        InitParams memory ip;
-        ip.timelock = address(timelock);
-        ip.parameterStore = address(store);
-        ip.marketRegistry = address(registry);
-        ip.marketId = id;
-        ip.integration = site.lpVault;
-        ip.isUsdStable = new bool[](2);
-        (ip.isUsdStable[0], ip.isUsdStable[1]) = (_isStable(toks[0]), _isStable(toks[1]));
-        ip.description = "CL LP / USD";
-        ip.pokeMinGas = POKE_FLOOR;
-        ip.config = _oracleConfigFor(id, toks);
-        // A market with a token that is not a USD stable has no USD band (REQ-ORACLE-056).
-        if (!ip.isUsdStable[0] || !ip.isUsdStable[1]) {
-            (ip.config.usdBandLow, ip.config.usdBandHigh) = (0, type(uint256).max);
-        }
-        ip.market = abi.encode(address(p), lower, upper, uint256(k));
-        o = LPOracleCL(address(new ERC1967Proxy(address(impl), abi.encodeCall(ILPOracle.initialize, (ip)))));
+        bool[] memory stable = new bool[](2);
+        (stable[0], stable[1]) = (_isStable(toks[0]), _isStable(toks[1]));
+        o = LPOracleTestDeployer.deploy(
+            id, site.lpVault, address(store), address(registry), toks, stable, d, "CL LP / USD"
+        );
     }
 
     function _volatileVaultToken(
@@ -638,8 +620,6 @@ abstract contract RealStackVolatile is RealStackFlows {
         vm.roll(block.number + TWAP_WAIT / BLOCK_TIME);
         _refreshFeeds();
         _alignRoutes();
-        _pokeAll();
-        usdcOracle.poke();
     }
 
     function _hfOn(

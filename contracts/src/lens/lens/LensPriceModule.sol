@@ -94,9 +94,9 @@ contract LensPriceModule is LensDeleverage {
         (v.blockNumber, v.timestamp, v.vaultToken, v.feed) = (block.number, block.timestamp, vaultToken, lpOracle);
         v.state = st.liquidationFresh ? PriceState.Live : PriceState.Cached;
         v.liquidationState = v.state;
-        // The oracle serves at least 1.
+        // The oracle serves at least 1; a non-positive answer is reported as 0.
         // forge-lint: disable-next-line(unsafe-typecast)
-        v.price = uint256(st.answer);
+        v.price = st.answer > 0 ? uint256(st.answer) : 0;
         (v.acceptedPrice, v.acceptedAt) = (v.price, st.updatedAt);
         v.inputs = _inputs(lpOracle);
         v.borrowAllowed = st.borrowFresh;

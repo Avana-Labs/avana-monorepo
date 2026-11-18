@@ -23,10 +23,10 @@ contract LPOracle is ILPOracle {
     uint8 internal constant _DECIMALS = 8;
     uint256 internal constant _MAX_LEGS = 2;
 
-    uint256 public immutable override marketId;
-    address public immutable override integration;
-    address public immutable override parameterStore;
-    uint8 public immutable override vaultDecimals;
+    uint256 internal immutable _MARKET_ID;
+    address internal immutable _INTEGRATION;
+    address internal immutable _PARAMETER_STORE;
+    uint8 internal immutable _VAULT_DECIMALS;
 
     string internal _description;
     address[] internal _tokens;
@@ -44,8 +44,11 @@ contract LPOracle is ILPOracle {
             p.marketId == 0 || p.integration == address(0) || p.parameterStore == address(0)
                 || n < AmmConstants.MIN_POOL_TOKENS || n > AmmConstants.MAX_POOL_TOKENS
         ) revert InvalidMarket(p.marketId);
-        (marketId, integration, parameterStore, _description) =
+        (_MARKET_ID, _INTEGRATION, _PARAMETER_STORE, _description) =
         (p.marketId, p.integration, p.parameterStore, p.description);
+        // Each token's and leg's decimals are read once here; a bad route refuses the whole deployment.
+        // forge-lint: disable-start(calls-loop)
+        // forge-lint: disable-start(require-revert-in-loop)
         for (uint256 i = 0; i < n; ++i) {
             TokenRoute memory r = p.routes[i];
             uint256 legs = r.feeds.length;
@@ -66,10 +69,12 @@ contract LPOracle is ILPOracle {
             _feeds.push(r.feeds);
             _feedDecimals.push(fd);
         }
+        // forge-lint: disable-end(require-revert-in-loop)
+        // forge-lint: disable-end(calls-loop)
         if (p.vaultDecimals < LPPriceMath.MIN_VAULT_DECIMALS || p.vaultDecimals > LPPriceMath.MAX_VAULT_DECIMALS) {
             revert InvalidMarket(p.marketId);
         }
-        vaultDecimals = p.vaultDecimals;
+        _VAULT_DECIMALS = p.vaultDecimals;
     }
 
     /// @inheritdoc ILPOracle
@@ -123,6 +128,26 @@ contract LPOracle is ILPOracle {
         return _tokens;
     }
 
+    /// @inheritdoc ILPOracle
+    function marketId() external view override returns (uint256) {
+        return _MARKET_ID;
+    }
+
+    /// @inheritdoc ILPOracle
+    function integration() external view override returns (address) {
+        return _INTEGRATION;
+    }
+
+    /// @inheritdoc ILPOracle
+    function parameterStore() external view override returns (address) {
+        return _PARAMETER_STORE;
+    }
+
+    /// @inheritdoc ILPOracle
+    function vaultDecimals() external view override returns (uint8) {
+        return _VAULT_DECIMALS;
+    }
+
     function _evaluate() internal view returns (int256 answer, uint64 updatedAt) {
         uint256[] memory prices;
         (prices, updatedAt,,) = _prices(false);
@@ -137,6 +162,11 @@ contract LPOracle is ILPOracle {
         uint256 n = _tokens.length;
         prices = new uint256[](n);
         (updatedAt, borrowOk, liquidationOk) = (type(uint64).max, true, true);
+        // Every leg is read on every price; a leg that cannot be read reverts the read, as an unreadable Chainlink source
+        // does for Aave.
+        // forge-lint: disable-start(calls-loop)
+        // forge-lint: disable-start(require-revert-in-loop)
+        // forge-lint: disable-start(unused-return)
         for (uint256 i = 0; i < n; ++i) {
             address[] storage feeds = _feeds[i];
             uint256 price = LPPriceMath.PRICE_UNIT;
@@ -148,7 +178,7 @@ contract LPOracle is ILPOracle {
                 price = Math.mulDiv(price, leg, LPPriceMath.PRICE_UNIT);
                 if (at < updatedAt) updatedAt = SafeCast.toUint64(at);
                 if (ages) {
-                    FeedDef memory d = IParameterStore(parameterStore).getFeed(feed);
+                    FeedDef memory d = IParameterStore(_PARAMETER_STORE).getFeed(feed);
                     borrowOk = borrowOk && LPPriceMath.borrowFresh(at, d.borrowPriceMaxAge);
                     liquidationOk = liquidationOk && LPPriceMath.liquidationFresh(at, d.liquidationPriceMaxAge);
                 }
@@ -156,22 +186,26 @@ contract LPOracle is ILPOracle {
             if (price == 0 || price > LPPriceMath.MAX_ROUTE_ANSWER) revert InvalidPrice(feeds[0]);
             prices[i] = LPPriceMath.valuationPrice(price, _isUsdStable[i]);
         }
+        // forge-lint: disable-end(unused-return)
+        // forge-lint: disable-end(require-revert-in-loop)
+        // forge-lint: disable-end(calls-loop)
     }
 
     /// @dev USD value of one whole vault token at `prices`.
     function _value(
         uint256[] memory prices
     ) internal view returns (int256) {
-        return SafeCast.toInt256(_priceOf(10 ** uint256(vaultDecimals), prices));
+        return SafeCast.toInt256(_priceOf(10 ** uint256(_VAULT_DECIMALS), prices));
     }
 
     function _priceOf(
         uint256 units,
         uint256[] memory prices
     ) internal view returns (uint256 price8) {
-        (uint256[] memory amounts,) = ILPVault(integration).composition(marketId, units, prices);
+        // forge-lint: disable-next-line(unused-return)
+        (uint256[] memory amounts,) = ILPVault(_INTEGRATION).composition(_MARKET_ID, units, prices);
         bool valid;
         (valid, price8) = LPPriceMath.lpPrice(amounts, prices, _tokenDecimals);
-        if (!valid) revert InvalidComposition(marketId);
+        if (!valid) revert InvalidComposition(_MARKET_ID);
     }
 }

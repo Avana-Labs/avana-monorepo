@@ -54,7 +54,7 @@ logOnly("AvanaTimelock", ["CallSalt", "MinDelayChange", "NormalDelayChanged", "S
  * kind its logs are recorded under: every Aave Hub or Spoke source records under the Aave contract's name.
  */
 const UPGRADEABLE = [
-  ...(["AaveAdapter", "LPVaultSwap", "MarketRegistry", "ParameterStore", "RiskModule", "LPOracle", "DebtOracle"] as const).map((c) => [c, c] as const),
+  ...(["AaveAdapter", "LPVaultSwap", "MarketRegistry", "ParameterStore", "RiskModule"] as const).map((c) => [c, c] as const),
   ...AAVE_SPOKE_SOURCES.map((c) => [c, "AaveSpoke"] as const),
   ...AAVE_HUB_SOURCES.map((c) => [c, "AaveHub"] as const),
 ];

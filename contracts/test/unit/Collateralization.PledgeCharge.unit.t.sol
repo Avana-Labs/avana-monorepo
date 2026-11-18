@@ -26,42 +26,6 @@ contract CollateralizationPledgeChargeUnitTest is CollateralizationFixture {
         _deployCollateralization();
     }
 
-    /// @notice In `pledge` and in `recredit` the call to the LPOracle's `poke()` comes before the call to the
-    /// RiskModule's `checkPledge`, so a first observation stored by the poke is in place before the check reads the
-    /// state; a poke that reverts reverts the whole pledge and nothing is recorded.
-    // TEST-163 verifies: REQ-VAULT-014, REQ-COLL-026, Q-199, Q-240
-    function test_TEST_163_pokeBeforeCheckPledge() public {
-        lpVault.mintPosition(KEY42, alice, MARKET_ID, 5_000_000_000);
-        vm.startPrank(adapter);
-        lock.acquire();
-        token.addValidProxy(aliceProxy);
-        vm.startStateDiffRecording();
-        coll.pledge(alice, aliceProxy, vt, KEY42, false);
-        _assertPokeFirst(vm.stopAndReturnStateDiff());
-        vm.stopPrank();
-        _supplyAndRelease(aliceProxy, 5_000_000_000);
-
-        lpVault.addUnits(KEY42, 1_000_000);
-        vm.startPrank(adapter);
-        lock.acquire();
-        vm.startStateDiffRecording();
-        coll.recredit(alice, aliceProxy, vt, KEY42, "", false);
-        _assertPokeFirst(vm.stopAndReturnStateDiff());
-        lock.release();
-        vm.stopPrank();
-
-        lpVault.mintPosition(KEY7, alice, MARKET_ID, 1_000_000_000);
-        oracle.setFail(true);
-        vm.startPrank(adapter);
-        lock.acquire();
-        vm.expectRevert(CollOracleMock.PokeFailed.selector);
-        coll.pledge(alice, aliceProxy, vt, KEY7, false);
-        lock.release();
-        vm.stopPrank();
-        assertEq(coll.recordIdOf(INTEGRATION, KEY7), 0, "nothing recorded");
-        assertEq(lpVault.ownerOf(KEY7), alice, "custody undone with the revert");
-    }
-
     /// @notice A second pledge: `checkPledge` receives the depositor, proxy, market, integration, key and units with
     /// the ledger's current counters (the account's one open record counted); the returned split of 7 USD into 4
     /// regular and 3 slice is booked as returned on the market and token counters. The RiskModule reading the

@@ -400,24 +400,6 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         assertEq(w[k + 5], uint160(routeFeeds[address(usdc)][3]), "standby served as primary");
     }
 
-    // TEST-250 verifies: REQ-PSTORE-009, REQ-PSTORE-013, REQ-CONFIG-047
-    function test_TEST_250_storeRechecksTheRegistryMarketsLpOracle() public {
-        (uint256 id,, RegistryLPOracleMock lpOracle) = _activeMarket();
-        lpOracle.setFailed(4);
-        _refuses(
-            abi.encodeCall(store.setCachedWindow, (1800)),
-            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 4)
-        );
-        _refuses(
-            abi.encodeCall(store.setConsistencyToleranceBps, (id, 60)),
-            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 4)
-        );
-        // The tightening runs: check 4 failed before it.
-        vm.prank(address(timelock));
-        store.tightenConsistencyToleranceBps(id, 40);
-        assertEq(store.getMarketParams(id).consistencyToleranceBps, 40);
-    }
-
     // TEST-138 verifies: REQ-PSTORE-004, REQ-PSTORE-012, REQ-CONFIG-046
     // Sources: 5.1 TEST-138 (listing order: the store's initial parameters before activation)
     /// @notice A listed market cannot be activated before the ParameterStore's listing writes

@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../src/oracle/ILPOracle.sol";
 import {FeedDef, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
@@ -233,17 +233,6 @@ contract ParameterStoreInvariantTest is ParameterStoreFixture, HandlerReach {
             if (actions[k] == selector) return _typed(selector, kinds[k], seed);
         }
         return abi.encodePacked(selector);
-    }
-
-    // TEST-225 verifies: REQ-PSTORE-009, REQ-PSTORE-013, REQ-CONFIG-051, INV-047
-    function invariant_TEST_225_servedConfigPassesCheckConfig() public view {
-        (bool ok, bytes memory config) =
-            address(store).staticcall(abi.encodeCall(store.getOracleConfig, (address(lpOracle))));
-        assertTrue(ok, "getOracleConfig reverted");
-        (bool done, bytes memory ret) =
-            address(lpOracle).staticcall(bytes.concat(ILPOracle.checkConfig.selector, config));
-        assertTrue(done, "checkConfig reverted");
-        assertEq(abi.decode(ret, (uint256)), 0, "served configuration fails checkConfig");
     }
 
     // TEST-225 verifies: REQ-CONFIG-050, REQ-CONFIG-052, REQ-PSTORE-031, REQ-PSTORE-005, REQ-RISK-044, INV-047

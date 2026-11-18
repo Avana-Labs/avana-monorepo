@@ -67,11 +67,12 @@ contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
         return v3Pool.getReserveAToken(address(usdc));
     }
 
-    /// @dev The oracle value of `units` vault-token units in USDC base units (USDC at its DebtOracle's $1.00).
+    /// @dev The oracle value of `units` vault-token units in USDC base units (USDC at its Chainlink feed's $1.00).
     function _valueUsdc(
         uint256 units
     ) internal view returns (uint256) {
-        return units * uint256(mkt[mA].oracle.latestAnswer()) / uint256(usdcOracle.latestAnswer());
+        (, int256 usdcPrice,,,) = usdcOracle.latestRoundData();
+        return units * uint256(mkt[mA].oracle.latestAnswer()) / uint256(usdcPrice);
     }
 
     function _credited(
