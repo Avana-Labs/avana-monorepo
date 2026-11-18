@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PositionFeesView} from "./types/PositionFeesView.sol";
+import {PositionFeesView} from "./types/LensTypes.sol";
 
 /// @title ILensFees
 /// @notice Uncollected fees of pledged positions, computed from the pool's fee growth.

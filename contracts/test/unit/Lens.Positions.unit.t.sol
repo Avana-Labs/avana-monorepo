@@ -4,9 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {AccountRiskView} from "../../src/lens/lens/types/AccountRiskView.sol";
-import {PledgePreviewView} from "../../src/lens/lens/types/PledgePreviewView.sol";
-import {WithdrawPreview} from "../../src/lens/lens/types/WithdrawPreview.sol";
+import {AccountRiskView, PledgePreviewView, WithdrawPreview} from "../../src/lens/lens/types/LensTypes.sol";
 import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";

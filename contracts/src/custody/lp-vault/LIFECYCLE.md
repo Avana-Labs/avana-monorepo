@@ -42,7 +42,7 @@ The Uniswap v4 LPVault runs the same steps through the v4 PositionManager ([Unis
 
 ## What the UI reads and calls
 
-- Lens: [`getRecords`](../../lens/lens/ILensAccount.sol#L29), [`checkRecordBacking`](../../lens/lens/ILensMarket.sol#L21) (custody and live liquidity per record); direct views [`validatePosition`](ILPVault.sol#L95), [`isInCustody`](ILPVault.sol#L23), [`depositorOf`](ILPVault.sol#L145), [`unitsOf`](ILPVault.sol#L157) (all revert `Locked` while the Lock is held).
+- Lens: [`getRecords`](../../lens/lens/ILensAccount.sol#L28), [`checkRecordBacking`](../../lens/lens/ILensMarket.sol#L20) (custody and live liquidity per record); direct views [`validatePosition`](ILPVault.sol#L95), [`isInCustody`](ILPVault.sol#L23), [`depositorOf`](ILPVault.sol#L145), [`unitsOf`](ILPVault.sol#L157) (all revert `Locked` while the Lock is held).
 - Events to index: [ILPVaultBase.sol](ILPVaultBase.sol): `PositionReceived`, `PositionReturned`, `UnitsUnwound`, `UnitsReleased`, `FeesCollected`, `StrayReceived`, `StrayReturned`, `MarketBound`.
 - User calls: none; the depositor approves the LPVault on the NFPM before `AaveAdapter.pledge`.
 

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PriceInput} from "../lens/lens/types/PriceInput.sol";
+import {PriceInput} from "../lens/lens/types/LensTypes.sol";
 
 /// @notice Oracle configuration of one market, read by the LPOracle from the ParameterStore.
 /// @dev `tokens[i]` configures the market's token i in pool order.

@@ -66,12 +66,12 @@ Common setup for flows 1 to 7 (Base, from spec 3.1 `DEP-029`, 3.2 `BOR-022`, 3.4
 
 Carol pledges an unstaked Slipstream NFT `key1` with `L = 10,000,000,000` (about 10,000 USDC + 10,000 USDT).
 
-1. App → [Lens](src/lens/lens/LIFECYCLE.md) [`getPriceState`](src/lens/lens/ILensLiquidation.sol#L15)`(3)` (Live), [`getCapHeadroom`](src/lens/lens/ILensMarket.sol#L33)`(3, Carol)` ($4,000,000 room, minimum $10), [`predictProxy`](src/lens/lens/ILensAccount.sol#L14)`(Carol, 3)`.
+1. App → [Lens](src/lens/lens/LIFECYCLE.md) [`getPriceState`](src/lens/lens/ILens.sol#L81)`(3)` (Live), [`getCapHeadroom`](src/lens/lens/ILensMarket.sol#L32)`(3, Carol)` ($4,000,000 room, minimum $10), [`predictProxy`](src/lens/lens/ILensAccount.sol#L13)`(Carol, 3)`.
 2. Carol approves the Slipstream LPVault on the NFPM, then → [AaveAdapter](src/policy/aave-adapter/LIFECYCLE.md) [`pledge`](src/policy/aave-adapter/IAaveAdapter.sol#L78)`(3, (integrationId, key1), now + 600)`.
 3. AaveAdapter → [ProxyManager](src/proxy/proxy-manager/LIFECYCLE.md) [`deployProxy`](src/proxy/proxy-manager/IProxyManager.sol#L32)`(Carol, S, 3)` → proxy `P`; → [VaultToken](src/vault-token/vault-token/LIFECYCLE.md) [`addValidProxy`](src/vault-token/vault-token/IVaultToken.sol#L50)`(P)`.
 4. AaveAdapter → [Collateralization](src/custody/collateralization/LIFECYCLE.md) [`pledge`](src/custody/collateralization/ICollateralization.sol#L17)`(Carol, P, VT, key1, false)` → [LPVault](src/custody/lp-vault/LIFECYCLE.md) [`receivePosition`](src/custody/lp-vault/ILPVault.sol#L72) (exact range, NFT into custody, 10,000,000,000 units) → [LPOracle](src/oracle/lp-oracle/LIFECYCLE.md) [`poke`](src/oracle/lp-oracle/ILPOracle.sol#L56) → [RiskModule](src/policy/risk-module/LIFECYCLE.md) [`checkPledge`](src/policy/risk-module/IRiskModule.sol#L31): value $20,000 ≥ $10, charge $20,000, pool share 2.05% ≤ 10%, record 1 of 16.
 5. AaveAdapter → VaultToken [`mint`](src/vault-token/vault-token/IVaultToken.sol#L24)`(P, 10,000,000,000)` → [PositionProxy](src/proxy/position-proxy/LIFECYCLE.md) [`execute`](src/proxy/position-proxy/IPositionProxy.sol#L25): `Spoke.supply`, `setUsingAsCollateral`.
-6. Events: `ProxyDeployed`, `UserProxyCreated`, `ProxyAdded`, `PositionReceived`, `CollateralPledged`, `CollateralSupplied`, `CollateralAdded`. Lens [`getAccount`](src/lens/lens/ILensAccount.sol#L20): collateral $20,000, CF-weighted $6,240.
+6. Events: `ProxyDeployed`, `UserProxyCreated`, `ProxyAdded`, `PositionReceived`, `CollateralPledged`, `CollateralSupplied`, `CollateralAdded`. Lens [`getAccount`](src/lens/lens/ILensAccount.sol#L19): collateral $20,000, CF-weighted $6,240.
 7. Failures: an $8 NFT reverts `BelowMinPledge(800,000,000, 1,000,000,000)`; a 17th record `TooManyRecords`; a gauge-staked NFT `NotPositionOwner`; a `[−10, 10]` range `RangeMismatch`. The NFT stays with Carol.
 
 ## 2. Borrow
@@ -96,7 +96,7 @@ Carol pledges an unstaked Slipstream NFT `key1` with `L = 10,000,000,000` (about
 
 Carol holds `key1` and a top-up `keyB` (2,500,000,000 units, $5,000): collateral $25,000, CF-weighted $7,800, debt 5,000 USDC, HF 1.5602.
 
-1. App → Lens [`getAccount`](src/lens/lens/ILensAccount.sol#L20) and [`getPriceState`](src/lens/lens/ILensLiquidation.sol#L15): removing `keyB` leaves HF 1.2481.
+1. App → Lens [`getAccount`](src/lens/lens/ILensAccount.sol#L19) and [`getPriceState`](src/lens/lens/ILens.sol#L81): removing `keyB` leaves HF 1.2481.
 2. Carol → AaveAdapter [`withdraw`](src/policy/aave-adapter/IAaveAdapter.sol#L113)`(3, (I, keyB), 2,500,000,000, now + 600, 1.20e18)`; `units` comes from Collateralization [`previewRelease`](src/custody/collateralization/ICollateralization.sol#L196).
 3. With debt: pause state None, Carol not frozen → RiskModule [`preWithdrawCheck`](src/policy/risk-module/IRiskModule.sol#L54) (sequencer Up, oracles Live, no breaker).
 4. PositionProxy [`execute`](src/proxy/position-proxy/IPositionProxy.sol#L25): `Spoke.withdraw(reserveId, 2,500,000,000, P)` → VaultToken [`burn`](src/vault-token/vault-token/IVaultToken.sol#L43)`(P, 2,500,000,000)`.
@@ -140,7 +140,7 @@ Uniswap v3 on Ethereum (Bob, USDC debt; spec 3.5 `LIQ-069`). Setup: Bob pledged 
 
 LPVaultSwap has one liquidation entry point, [`liquidate`](src/liquidation/lp-vault-swap/ILPVaultSwap.sol#L41), open to every address that is not frozen. The caller funds the repayment itself: LPVaultSwap pulls `debtToCover` from `msg.sender`, takes no flash loan and checks no keeper list. A caller without the debt asset borrows it through the [flash liquidation helper](src/periphery/flash-liquidator/LIFECYCLE.md), periphery outside the core, which is an ordinary caller of `liquidate`.
 
-1. A caller K1 calls [Lens](src/lens/lens/LIFECYCLE.md) [`previewLiquidation`](src/lens/lens/ILensLiquidation.sol#L41): repay 1,950 USDC, `keeperOut` 2,020.8 USDC.
+1. A caller K1 calls [Lens](src/lens/lens/LIFECYCLE.md) [`previewLiquidation`](src/lens/lens/ILens.sol#L107): repay 1,950 USDC, `keeperOut` 2,020.8 USDC.
 2. K1 → the public helper [`flashLiquidate`](src/periphery/flash-liquidator/IFlashLiquidator.sol#L15)`({params: {proxy: Q, marketId: m, debtReserveId: 2, debtToCover: 1,950e6, routeMode: PrimaryThenBackup, minPayout: 0, maxShortfall: 0, …}, flashAmount: 1,950e6, maxPremium: 975,000, maxTopUp: 0, minPayout: 69e6})`: the helper flash-borrows 1,950 USDC from the Aave V3 Pool (premium 5 bps = 0.975 USDC, within `maxFlashFeeBps` 10) and, inside the Pool's callback, calls `liquidate(params)`.
 3. [LPVaultSwap](src/liquidation/lp-vault-swap/LIFECYCLE.md) `liquidate`: deadline, caller not frozen, Lock, `marketId == Q.MARKET_ID()`, debt reserve enabled, HF < 1, Hub shares == assets, `poke()` on the market's LPOracle and the price rules for the market and the repaid USDC reserve (its DebtOracle must be Live); no pause state, breaker or keeper list is read. It pulls `Kf = 1,950` USDC from the helper and measures it by balance delta.
 4. Collateralization [`beginSeizure`](src/custody/collateralization/ICollateralization.sol#L79); [`Spoke.liquidationCall`](src/interfaces/external/aave/IAaveV4Spoke.sol#L110)`(collateral, debt, Q, 1,950e6, false)`: Aave repays the debt and sends 975 vault tokens (1,950 × 1.05 ÷ 2.10) to LPVaultSwap.
@@ -153,7 +153,7 @@ LPVaultSwap has one liquidation entry point, [`liquidate`](src/liquidation/lp-va
 Aerodrome Slipstream on Base (Carol, USDC debt; spec 3.5 `LIQ-089`). Setup: market 3 at $2.00 per vault token; Carol owes 20,000 USDC; the Base sequencer restarted at 10:00:00; Aave's bonus is 2%; the Base Pool charges 5 bps.
 
 1. At 10:20 Carol's account is at HF 0.9997; a caller's [`liquidate`](src/liquidation/lp-vault-swap/ILPVaultSwap.sol#L41) reverts `SequencerGrace` (0.9997 ≥ `graceHealthFactor` 0.95).
-2. At 11:00:02 the caller K2 calls Lens [`previewLiquidation`](src/lens/lens/ILensLiquidation.sol#L41): repay 2,000 USDC.
+2. At 11:00:02 the caller K2 calls Lens [`previewLiquidation`](src/lens/lens/ILens.sol#L107): repay 2,000 USDC.
 3. K2 → the public helper [`flashLiquidate`](src/periphery/flash-liquidator/IFlashLiquidator.sol#L15)`({params: {debtToCover: 2,000e6, minPayout: 0, maxShortfall: 0, …}, flashAmount: 2,000e6, maxPremium: 1,000,000, …})`: the helper flash-borrows 2,000 USDC from the Base Aave V3 Pool (premium 1 USDC, `1,000,000 × 10^4 ≤ 10 × 2,000,000,000`) and calls LPVaultSwap `liquidate`, which pulls `Kf = 2,000` USDC from the helper.
 4. Collateralization [`beginSeizure`](src/custody/collateralization/ICollateralization.sol#L79); [`Spoke.liquidationCall`](src/interfaces/external/aave/IAaveV4Spoke.sol#L110): Aave repays 2,000 USDC and sends 1,020 vault tokens (2,000 × 1.02 ÷ 2.00) to LPVaultSwap.
 5. [`AaveAdapter.burnSeized`](src/policy/aave-adapter/IAaveAdapter.sol#L51); [`Collateralization.settleSeizure`](src/custody/collateralization/ICollateralization.sol#L89) → [Slipstream LPVault](src/amm/slipstream/LIFECYCLE.md) [`unwind`](src/custody/lp-vault/ILPVault.sol#L116) (lock check on Slipstream's own `slot0()` layout) returns about 1,020 USDC + 1,020 USDT.
@@ -164,7 +164,7 @@ Aerodrome Slipstream on Base (Carol, USDC debt; spec 3.5 `LIQ-089`). Setup: mark
 
 Bob's account of flow 8, liquidated by any address E that already holds USDC, with no helper and no flash loan.
 
-1. E → Lens [`previewLiquidation`](src/lens/lens/ILensLiquidation.sol#L41)`(Q, 2, now + 120)`: repay 1,950 USDC, `routeMode = PrimaryThenBackup`.
+1. E → Lens [`previewLiquidation`](src/lens/lens/ILens.sol#L107)`(Q, 2, now + 120)`: repay 1,950 USDC, `routeMode = PrimaryThenBackup`.
 2. E approves LPVaultSwap for `debtToCover + maxShortfall` (1,955 USDC) → [`liquidate`](src/liquidation/lp-vault-swap/ILPVaultSwap.sol#L41)`({proxy: Q, marketId: m, debtReserveId: 2, debtToCover: 1,950e6, routeMode: PrimaryThenBackup, minAmounts: [], deadline: now + 120, minPayout: 2,019e6, maxShortfall: 5e6})`. The same entry point as flow 8; a frozen E reverts `AddressIsFrozen`. LPVaultSwap pulls `Kf = 1,950` USDC from E.
 3. Steps 4 to 6 of flow 8 run unchanged: 975 vault tokens seized and unwound, swaps.
 4. Shortfall rule: with `R = 2,040.30` no shortfall is pulled. Had the USDT leg returned 994 USDC (`R = 2,024.25`), LPVaultSwap would pull 1.774998 USDC from E to reach the floor 2,026.024998; Avana's fee is unchanged. Above `maxShortfall` it reverts `RecoveryBelowFloor`.
@@ -179,7 +179,7 @@ Repayment, debt-free exits, fee collection and eligible liquidations stay availa
 
 1. Avana's keeper → [RiskModule](src/policy/risk-module/LIFECYCLE.md) [`pokeBreakers`](src/policy/risk-module/IRiskModule.sol#L85)`(1)` every block: Avana's share of market 1's pool across all Spokes is 1,040 bps > 1,000, the pool's illustrative per-pool cap → [MarketRegistry](src/policy/market-registry/LIFECYCLE.md) [`recordBreach`](src/policy/market-registry/IMarketRegistry.sol#L301) at `t = 1,000`; event `GateBreached`.
 2. V → AaveAdapter [`borrow`](src/policy/aave-adapter/IAaveAdapter.sol#L87) reverts `BreakerTripped(1, POOL_SHARE)`; a pledge that raises pool exposure passes only as a rescue top-up. V can still repay, and LPVaultSwap never reads breakers.
-3. The share falls below the cap; with [`gateRecoverySeconds`](src/policy/parameter-store/IParameterStore.sol#L210) = 1,800 the gate reopens at 2,800. Lens [`getBreakerStatus`](src/lens/lens/ILensRisk.sol#L14) shows it as recovering until then.
+3. The share falls below the cap; with [`gateRecoverySeconds`](src/policy/parameter-store/IParameterStore.sol#L210) = 1,800 the gate reopens at 2,800. Lens [`getBreakerStatus`](src/lens/lens/ILensRisk.sol#L13) shows it as recovering until then.
 4. Aave records a 10,000 GHO deficit on the CDP Spoke's GHO reserve (= [`breakerDeficitMax`](src/policy/parameter-store/IParameterStore.sol#L204)): `pokeBreakers` latches `DEFICIT` (`BreakerLatched`); GHO borrows revert `DebtBreakerTripped`. Lens [`uncoveredDeficit`](src/lens/lens/ILensRisk.sol#L37) shows the amount.
 5. After the deficit is covered, the Emergency Guardian → [`resetDebtBreaker`](src/policy/market-registry/IMarketRegistry.sol#L327)`(S, r_GHO)` (`BreakerReset`); while the deficit remains it reverts `ConditionStillHolds`.
 6. Alerts only, with no on-chain trip: a 3% price drop in 2 hours, more than 20% of a market seized in 1 hour, 3 swap-route failures in 1 hour. Once routes are confirmed unable to settle at size, the guardian calls [`tripMarketBreaker`](src/policy/market-registry/IMarketRegistry.sol#L308).
@@ -187,7 +187,7 @@ Repayment, debt-free exits, fee collection and eligible liquidations stay availa
 ### 11b. Guardian pause
 
 1. A mint-path exploit is suspected. The Emergency Guardian → MarketRegistry [`pause`](src/policy/market-registry/IMarketRegistry.sol#L234)`(hub, MintPathSuspect)` (immediate). Events `PauseStateChanged`, `PauseReasonChanged`.
-2. App → Lens [`getApplicationState`](src/lens/lens/ILensLiquidation.sol#L29), [`getPauseReason`](src/lens/lens/ILensLiquidation.sol#L35): Paused, `MintPathSuspect`.
+2. App → Lens [`getApplicationState`](src/lens/lens/ILens.sol#L95), [`getPauseReason`](src/lens/lens/ILens.sol#L101): Paused, `MintPathSuspect`.
 3. AaveAdapter [`pledge`](src/policy/aave-adapter/IAaveAdapter.sol#L78), [`recredit`](src/policy/aave-adapter/IAaveAdapter.sol#L36), [`borrow`](src/policy/aave-adapter/IAaveAdapter.sol#L87) and [`repayWithCollateral`](src/policy/aave-adapter/IAaveAdapter.sol#L45) revert `ApplicationPaused`.
 4. Still open: [`repay`](src/policy/aave-adapter/IAaveAdapter.sol#L101) by anyone, [`collectFees`](src/policy/aave-adapter/IAaveAdapter.sol#L145), [`repayAllAndWithdraw`](src/policy/aave-adapter/IAaveAdapter.sol#L125), LPVaultSwap [`liquidate`](src/liquidation/lp-vault-swap/ILPVaultSwap.sol#L41).
 5. Once the mint path is cleared, the guardian moves the reason to `General` with [`pause`](src/policy/market-registry/IMarketRegistry.sol#L234)`(hub, General)`: rescue top-ups and repay with collateral reopen.
@@ -201,7 +201,7 @@ USDT/USD has an 86,400 s heartbeat, fresh for 88,200 s; `cachedWindow` 1 h; `gra
 2. RiskModule [`preBorrowCheck`](src/policy/risk-module/IRiskModule.sol#L45) refuses borrows and withdrawals with debt (`PriceNotLive`); LPVaultSwap refuses to seize the market (`StalePrice`); repay and debt-free withdrawal continue.
 3. After 1 h of Cached the market is Expired: [`latestAnswer`](src/oracle/lp-oracle/ILPOracle.sol#L24) serves 1 (10^-8 USD per vault token), so Aave counts the collateral as worthless while repay and exits keep working (`OutageExpiredLatched`). Operators follow playbook P-02 and may switch to the standby route with MarketRegistry [`useStandbyRoute`](src/policy/market-registry/IMarketRegistry.sol#L365).
 4. The feed publishes again; the next `poke` accepts it: `GraceStarted(recoveredAt, recoveredAt + 1,800, true)`.
-5. For 30 minutes LPVaultSwap [`liquidate`](src/liquidation/lp-vault-swap/ILPVaultSwap.sol#L41) seizes only accounts below HF 0.95 (`GraceHealthFactor` for an account at 0.97); then every account below 1.00. Lens [`getPriceState`](src/lens/lens/ILensLiquidation.sol#L15) shows the state and grace end throughout.
+5. For 30 minutes LPVaultSwap [`liquidate`](src/liquidation/lp-vault-swap/ILPVaultSwap.sol#L41) seizes only accounts below HF 0.95 (`GraceHealthFactor` for an account at 0.97); then every account below 1.00. Lens [`getPriceState`](src/lens/lens/ILens.sol#L81) shows the state and grace end throughout.
 6. A debt asset behaves the same through its [DebtOracle](src/oracle/debt-oracle/LIFECYCLE.md) [`poke`](src/oracle/debt-oracle/IDebtOracle.sol#L55), except that it serves the accepted price raised by `debtStressRiseBps` when Expired, so debt is never undervalued.
 
 ## Spec

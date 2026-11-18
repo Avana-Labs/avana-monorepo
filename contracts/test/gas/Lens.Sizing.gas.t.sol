@@ -3,10 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {CloseAccountView} from "../../src/lens/lens/types/CloseAccountView.sol";
-import {DeleverageSizing} from "../../src/lens/lens/types/DeleverageSizing.sol";
-import {HubAssetView} from "../../src/lens/lens/types/HubAssetView.sol";
-import {RemovalSizing} from "../../src/lens/lens/types/RemovalSizing.sol";
+import {CloseAccountView, DeleverageSizing, HubAssetView, RemovalSizing} from "../../src/lens/lens/types/LensTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensSizingGasTest

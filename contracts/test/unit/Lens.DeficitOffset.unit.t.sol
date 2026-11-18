@@ -4,10 +4,13 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
-import {HubAssetExposureView, SpokeDraw} from "../../src/lens/lens/types/HubAssetExposureView.sol";
-import {HubAssetView} from "../../src/lens/lens/types/HubAssetView.sol";
-import {SpokeKind} from "../../src/lens/lens/types/SpokeKind.sol";
-import {TailCoverageView} from "../../src/lens/lens/types/TailCoverageView.sol";
+import {
+    HubAssetExposureView,
+    HubAssetView,
+    SpokeDraw,
+    SpokeKind,
+    TailCoverageView
+} from "../../src/lens/lens/types/LensTypes.sol";
 import {CollHubSpokeConfig, ICollHubConfigurator} from "../utils/fixtures/CollateralizationFixture.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {LensFirstLossLayerMock} from "../utils/mocks/LensMocks.sol";

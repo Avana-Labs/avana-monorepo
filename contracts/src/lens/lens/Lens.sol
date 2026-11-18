@@ -12,36 +12,36 @@ import {ILensAccount} from "./ILensAccount.sol";
 import {ILensActions} from "./ILensActions.sol";
 import {ILensFees} from "./ILensFees.sol";
 import {ILensHubAssets} from "./ILensHubAssets.sol";
-import {ILensLiquidation} from "./ILensLiquidation.sol";
 import {ILensMarket} from "./ILensMarket.sol";
 import {ILensMarkets} from "./ILensMarkets.sol";
 import {ILensPositions} from "./ILensPositions.sol";
 import {ILensPreview} from "./ILensPreview.sol";
 import {ILensRisk} from "./ILensRisk.sol";
-import {ILensSizing} from "./ILensSizing.sol";
 import {ILensSpeed} from "./ILensSpeed.sol";
 import {LensBase} from "./LensBase.sol";
 import {LensConstants} from "./LensConstants.sol";
-import {AccountRiskView} from "./types/AccountRiskView.sol";
-import {AccountView} from "./types/AccountView.sol";
-import {ActionPreview} from "./types/ActionPreview.sol";
-import {BackingView} from "./types/BackingView.sol";
-import {BorrowSpeedView} from "./types/BorrowSpeedView.sol";
-import {CloseAccountView} from "./types/CloseAccountView.sol";
-import {DebtPriceView} from "./types/DebtPriceView.sol";
-import {DebtReserveView} from "./types/DebtReserveView.sol";
-import {DeleverageSizing} from "./types/DeleverageSizing.sol";
-import {HubAssetExposureView} from "./types/HubAssetExposureView.sol";
-import {HubAssetView} from "./types/HubAssetView.sol";
-import {LiquidationPreview} from "./types/LiquidationPreview.sol";
-import {MarketView} from "./types/MarketView.sol";
-import {PledgePreviewView} from "./types/PledgePreviewView.sol";
-import {PositionFeesView} from "./types/PositionFeesView.sol";
-import {RecordBackingView} from "./types/RecordBackingView.sol";
-import {RecordView} from "./types/RecordView.sol";
-import {RemovalSizing} from "./types/RemovalSizing.sol";
-import {TailCoverageView} from "./types/TailCoverageView.sol";
-import {WithdrawPreview} from "./types/WithdrawPreview.sol";
+import {
+    AccountRiskView,
+    AccountView,
+    ActionPreview,
+    BackingView,
+    BorrowSpeedView,
+    CloseAccountView,
+    DebtPriceView,
+    DebtReserveView,
+    DeleverageSizing,
+    HubAssetExposureView,
+    HubAssetView,
+    LiquidationPreview,
+    MarketView,
+    PledgePreviewView,
+    PositionFeesView,
+    RecordBackingView,
+    RecordView,
+    RemovalSizing,
+    TailCoverageView,
+    WithdrawPreview
+} from "./types/LensTypes.sol";
 
 /// @title Lens
 /// @notice Read-only periphery view entry point for one chain. No Avana contract calls it.
@@ -169,7 +169,7 @@ contract Lens is ILens {
         _forward(_MARKET_MODULE);
     }
 
-    /// @inheritdoc ILensLiquidation
+    /// @inheritdoc ILens
     function getPriceState(
         address
     ) external view override returns (PriceView memory priceView) {
@@ -177,7 +177,7 @@ contract Lens is ILens {
         _forward(_PRICE_MODULE);
     }
 
-    /// @inheritdoc ILensLiquidation
+    /// @inheritdoc ILens
     function getDebtPriceState(
         address,
         uint256
@@ -186,7 +186,7 @@ contract Lens is ILens {
         _forward(_PRICE_MODULE);
     }
 
-    /// @inheritdoc ILensLiquidation
+    /// @inheritdoc ILens
     function getApplicationState(
         address
     ) external view override returns (PauseState state) {
@@ -194,7 +194,7 @@ contract Lens is ILens {
         _forward(_PRICE_MODULE);
     }
 
-    /// @inheritdoc ILensLiquidation
+    /// @inheritdoc ILens
     function getPauseReason(
         address
     ) external view override returns (uint8 reason) {
@@ -202,7 +202,7 @@ contract Lens is ILens {
         _forward(_PRICE_MODULE);
     }
 
-    /// @inheritdoc ILensLiquidation
+    /// @inheritdoc ILens
     function previewLiquidation(
         address,
         uint256,
@@ -442,7 +442,7 @@ contract Lens is ILens {
         _forward(_POSITIONS_MODULE);
     }
 
-    /// @inheritdoc ILensSizing
+    /// @inheritdoc ILens
     function previewMaxWithdraw(
         address,
         uint256,
@@ -452,7 +452,7 @@ contract Lens is ILens {
         _forward(_POSITIONS_MODULE);
     }
 
-    /// @inheritdoc ILensSizing
+    /// @inheritdoc ILens
     function previewDeleverageTo(
         address,
         uint256,
@@ -464,7 +464,7 @@ contract Lens is ILens {
         _forward(_PRICE_MODULE);
     }
 
-    /// @inheritdoc ILensSizing
+    /// @inheritdoc ILens
     function previewCloseAccount(
         address,
         uint256,

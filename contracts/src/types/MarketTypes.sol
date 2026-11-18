@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DrawHeadroom} from "../lens/lens/types/DrawHeadroom.sol";
+import {DrawHeadroom} from "../lens/lens/types/LensTypes.sol";
 import {MarketStatus} from "../policy/market-registry/types/MarketRegistryTypes.sol";
 import {PriceState} from "./OracleTypes.sol";
 import {PositionShape} from "./PositionTypes.sol";

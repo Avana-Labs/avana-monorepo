@@ -44,7 +44,7 @@ Ethereum GHO instance on the Stable LP Hub (illustrative 400,000 GHO minimum; th
 
 ## What the UI reads and calls
 
-- Lens: [`getTailCoverage`](../../lens/lens/ILensRisk.sol#L31)`(asset)`, [`uncoveredDeficit`](../../lens/lens/ILensRisk.sol#L37)`(hub, asset)`.
+- Lens: [`getTailCoverage`](../../lens/lens/ILensRisk.sol#L30)`(asset)`, [`uncoveredDeficit`](../../lens/lens/ILensRisk.sol#L37)`(hub, asset)`.
 - Views: [`fundedBalance`](AvanaFirstLossReserve.sol#L184), [`isBelowMinimum`](AvanaFirstLossReserve.sol#L189), [`firstLossReserveMinimum`](IAvanaFirstLossReserve.sol#L64), [`fundedShares`](AvanaFirstLossReserve.sol#L194), [`getWithdrawal`](AvanaFirstLossReserve.sol#L199), [`allowedBorrowSpoke`](IAvanaFirstLossReserve.sol#L141).
 - Events to index: `ReserveFunded`, `DeficitCovered`, `ReserveBelowMinimum`, `WithdrawalRequested`, `WithdrawalCancelled`, `WithdrawalExecuted`, `BorrowSpokeAllowlistUpdated`, `FirstLossReserveMinimumUpdated`.
 - User calls: none; [`fund`](AvanaFirstLossReserve.sol#L76) is open to anyone but has no user flow.

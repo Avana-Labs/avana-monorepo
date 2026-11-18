@@ -5,9 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ActionPreview} from "../../src/lens/lens/types/ActionPreview.sol";
-import {MarketView} from "../../src/lens/lens/types/MarketView.sol";
-import {RemovalSizing} from "../../src/lens/lens/types/RemovalSizing.sol";
+import {ActionPreview, MarketView, RemovalSizing} from "../../src/lens/lens/types/LensTypes.sol";
 import {RiskModuleMath} from "../../src/policy/risk-module/RiskModuleMath.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 

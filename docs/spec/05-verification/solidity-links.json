@@ -599,7 +599,15 @@
     "ILens.PARAMETER_STORE": ["REQ-LENS-001"],
     "ILens.RISK_MODULE": ["REQ-LENS-001", "REQ-LENS-009", "REQ-LENS-016"],
     "ILens.LP_VAULT_SWAP": ["REQ-LENS-001"],
-    "ILens.PAYOUT_ESCROW": ["REQ-LENS-001", "REQ-LENS-027"]
+    "ILens.PAYOUT_ESCROW": ["REQ-LENS-001", "REQ-LENS-027"],
+    "ILens.getPriceState": ["REQ-LENS-015", "Q-247"],
+    "ILens.getDebtPriceState": ["REQ-LENS-030", "REQ-LENS-032", "Q-238", "Q-247", "Q-248"],
+    "ILens.getApplicationState": ["REQ-LENS-031", "Q-227"],
+    "ILens.getPauseReason": ["REQ-LENS-031", "Q-252"],
+    "ILens.previewLiquidation": ["REQ-LENS-016", "REQ-LENS-017", "REQ-LENS-028", "REQ-LENS-029", "REQ-LENS-032", "REQ-LENS-033", "Q-232", "Q-235", "Q-247", "Q-251", "Q-268", "Q-404"],
+    "ILens.previewMaxWithdraw": ["REQ-LENS-054"],
+    "ILens.previewDeleverageTo": ["REQ-LENS-055", "REQ-LENS-032"],
+    "ILens.previewCloseAccount": ["REQ-LENS-056"]
   },
   "contracts/src/lens/lens/ILensAaveSizing.sol": {
     "ILensAaveSizing": ["REQ-LENS-017", "REQ-LENS-029"]
@@ -636,13 +644,6 @@
   "contracts/src/lens/lens/ILensHubReads.sol": {
     "ILensHubReads": ["REQ-LENS-017", "REQ-LENS-035", "REQ-LENS-036", "REQ-LENS-052", "REQ-LENS-058", "REQ-LENS-059"]
   },
-  "contracts/src/lens/lens/ILensLiquidation.sol": {
-    "ILensLiquidation.getPriceState": ["REQ-LENS-015", "Q-247"],
-    "ILensLiquidation.getDebtPriceState": ["REQ-LENS-030", "REQ-LENS-032", "Q-238", "Q-247", "Q-248"],
-    "ILensLiquidation.getApplicationState": ["REQ-LENS-031", "Q-227"],
-    "ILensLiquidation.getPauseReason": ["REQ-LENS-031", "Q-252"],
-    "ILensLiquidation.previewLiquidation": ["REQ-LENS-016", "REQ-LENS-017", "REQ-LENS-028", "REQ-LENS-029", "REQ-LENS-032", "REQ-LENS-033", "Q-232", "Q-235", "Q-247", "Q-251", "Q-268", "Q-404"]
-  },
   "contracts/src/lens/lens/ILensMarket.sol": {
     "ILensMarket.checkBacking": ["REQ-LENS-012", "REQ-LENS-013", "INV-001", "INV-003"],
     "ILensMarket.checkRecordBacking": ["REQ-LENS-014", "REQ-LENS-023", "REQ-LENS-024", "INV-002", "Q-268"],
@@ -677,11 +678,6 @@
     "ILensRisk.getTailCoverage": ["REQ-LENS-034", "REQ-LENS-039", "SPEC-CAP-008", "Q-249"],
     "ILensRisk.uncoveredDeficit": ["REQ-LENS-042", "REQ-FLR-046"],
     "ILensRisk.getHubAssetExposure": ["REQ-LENS-043"]
-  },
-  "contracts/src/lens/lens/ILensSizing.sol": {
-    "ILensSizing.previewMaxWithdraw": ["REQ-LENS-054"],
-    "ILensSizing.previewDeleverageTo": ["REQ-LENS-055", "REQ-LENS-032"],
-    "ILensSizing.previewCloseAccount": ["REQ-LENS-056"]
   },
   "contracts/src/lens/lens/ILensSlipstreamFeeReads.sol": {
     "ILensSlipstreamFeeReads": ["REQ-LENS-050"]
@@ -761,16 +757,6 @@
     "Lens.PAYOUT_ESCROW": ["REQ-LENS-001"],
     "Lens._forward": ["REQ-LENS-001", "REQ-LENS-007"]
   },
-  "contracts/src/lens/lens/LensAccount.sol": {
-    "LensAccount": ["REQ-LENS-008", "REQ-LENS-009", "REQ-LENS-010", "REQ-LENS-011", "REQ-LENS-023", "REQ-LENS-024", "REQ-LENS-027", "REQ-LENS-040"],
-    "LensAccount.predictProxy": ["REQ-LENS-008", "REQ-LENS-006"],
-    "LensAccount.getAccount": ["REQ-LENS-009", "REQ-LENS-010", "REQ-LENS-037", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensAccount.getAccounts": ["REQ-LENS-040", "REQ-LENS-006"],
-    "LensAccount.getRecords": ["REQ-LENS-011", "REQ-LENS-023", "REQ-LENS-024", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensAccount.getEscrowClaimable": ["REQ-LENS-027", "REQ-LENS-006"],
-    "LensAccount._creditedAfterReconcile": ["REQ-LENS-011", "SPEC-BACK-011"],
-    "LensAccount._liveUnits": ["REQ-LENS-011", "REQ-LENS-014"]
-  },
   "contracts/src/lens/lens/LensAccountMath.sol": {
     "LensAccountMath": ["REQ-LENS-047", "REQ-LENS-049", "REQ-LENS-052", "REQ-LENS-053", "REQ-LENS-054", "REQ-LENS-056"],
     "LensAccountMath._cfAssets": ["REQ-LENS-047"],
@@ -779,16 +765,17 @@
     "LensAccountMath._restRay": ["REQ-LENS-052"]
   },
   "contracts/src/lens/lens/LensAccountModule.sol": {
-    "LensAccountModule": ["REQ-LENS-001", "REQ-LENS-006", "REQ-LENS-020", "REQ-LENS-008", "REQ-LENS-009", "REQ-LENS-010", "REQ-LENS-011", "REQ-LENS-027", "REQ-LENS-040", "REQ-LENS-056"],
-    "LensAccountModule.constructor": ["REQ-LENS-001", "REQ-LENS-002"]
-  },
-  "contracts/src/lens/lens/LensActions.sol": {
-    "LensActions": ["REQ-LENS-052", "REQ-LENS-053"],
-    "LensActions.previewBorrowAfter": ["REQ-LENS-052", "REQ-LENS-005", "REQ-LENS-006", "REQ-LENS-032"],
-    "LensActions.previewRepayAfter": ["REQ-LENS-052", "REQ-LENS-005", "REQ-LENS-006", "REQ-LENS-032"],
-    "LensActions.previewPledgeAfter": ["REQ-LENS-053", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensActions.previewWithdrawAfter": ["REQ-LENS-053", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensActions._debtAfterRepay": ["REQ-LENS-052"]
+    "LensAccountModule": ["REQ-LENS-001", "REQ-LENS-006", "REQ-LENS-020", "REQ-LENS-008", "REQ-LENS-009", "REQ-LENS-010", "REQ-LENS-011", "REQ-LENS-027", "REQ-LENS-040", "REQ-LENS-056", "REQ-LENS-023", "REQ-LENS-024", "REQ-LENS-036"],
+    "LensAccountModule.constructor": ["REQ-LENS-001", "REQ-LENS-002"],
+    "LensAccountModule.predictProxy": ["REQ-LENS-008", "REQ-LENS-006"],
+    "LensAccountModule.getAccount": ["REQ-LENS-009", "REQ-LENS-010", "REQ-LENS-037", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensAccountModule.getAccounts": ["REQ-LENS-040", "REQ-LENS-006"],
+    "LensAccountModule.getRecords": ["REQ-LENS-011", "REQ-LENS-023", "REQ-LENS-024", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensAccountModule.getEscrowClaimable": ["REQ-LENS-027", "REQ-LENS-006"],
+    "LensAccountModule._creditedAfterReconcile": ["REQ-LENS-011", "SPEC-BACK-011"],
+    "LensAccountModule._liveUnits": ["REQ-LENS-011", "REQ-LENS-014"],
+    "LensAccountModule.previewCloseAccount": ["REQ-LENS-056", "REQ-LENS-036", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensAccountModule._debtCloses": ["REQ-LENS-056", "REQ-LENS-036"]
   },
   "contracts/src/lens/lens/LensBase.sol": {
     "LensBase": ["REQ-LENS-001", "REQ-LENS-005", "REQ-LENS-006", "REQ-LENS-007", "REQ-LENS-021", "REQ-LENS-022", "REQ-LENS-040"],
@@ -819,11 +806,6 @@
     "LensBase._addHeadroom": ["REQ-LENS-019"],
     "LensBase._inputs": ["REQ-LENS-015"]
   },
-  "contracts/src/lens/lens/LensClose.sol": {
-    "LensClose": ["REQ-LENS-056", "REQ-LENS-036"],
-    "LensClose.previewCloseAccount": ["REQ-LENS-056", "REQ-LENS-036", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensClose._debtCloses": ["REQ-LENS-056", "REQ-LENS-036"]
-  },
   "contracts/src/lens/lens/LensConstants.sol": {
     "LensConstants": ["REQ-LENS-020", "REQ-LENS-023", "REQ-LENS-028", "REQ-LENS-035", "REQ-LENS-036", "REQ-LENS-044", "Q-210", "Q-268", "Q-269", "Q-398"]
   },
@@ -836,136 +818,107 @@
     "LensDeleverage._sizeAt": ["SPEC-LIQ-020", "SPEC-LIQ-004"],
     "LensDeleverage._healthAt": ["REQ-LENS-038", "REQ-LENS-055"]
   },
-  "contracts/src/lens/lens/LensFees.sol": {
-    "LensFees": ["REQ-LENS-050", "REQ-LENS-051"],
-    "LensFees.getPositionFees": ["REQ-LENS-050", "REQ-LENS-005", "REQ-LENS-006", "REQ-LENS-022"],
-    "LensFees.getAccountFees": ["REQ-LENS-051", "REQ-LENS-005", "REQ-LENS-006", "REQ-LENS-022"]
-  },
-  "contracts/src/lens/lens/LensHubAssets.sol": {
-    "LensHubAssets": ["REQ-LENS-058", "REQ-LENS-059"],
-    "LensHubAssets.getHubAsset": ["REQ-LENS-058", "REQ-LENS-059", "REQ-LENS-060", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensHubAssets._rates": ["REQ-LENS-058", "REQ-LENS-046"]
-  },
-  "contracts/src/lens/lens/LensLiquidation.sol": {
-    "LensLiquidation": ["REQ-LENS-016", "REQ-LENS-017", "REQ-LENS-028", "REQ-LENS-029", "REQ-LENS-032", "REQ-LENS-033", "Q-232", "Q-247", "Q-268", "Q-404"],
-    "LensLiquidation.constructor": ["REQ-LENS-017"],
-    "LensLiquidation.AAVE_SIZING": ["REQ-LENS-017"],
-    "LensLiquidation.previewLiquidation": ["REQ-LENS-016", "REQ-LENS-017", "REQ-LENS-028", "REQ-LENS-029", "REQ-LENS-032", "REQ-LENS-033", "REQ-LENS-005", "REQ-LENS-006", "REQ-LENS-007"],
-    "LensLiquidation._context": ["REQ-LENS-016", "REQ-LENS-032", "REQ-LENS-033"],
-    "LensLiquidation._accountGates": ["REQ-LENS-016", "SPEC-LIQ-001", "SPEC-LIQ-003"],
-    "LensLiquidation._priceGates": ["REQ-LENS-016", "REQ-SWAP-008", "REQ-SWAP-009", "Q-247"],
-    "LensLiquidation._stressValued": ["REQ-LENS-016", "REQ-LENS-030"],
-    "LensLiquidation._routes": ["REQ-LENS-016", "Q-379"],
-    "LensLiquidation._params": ["REQ-LENS-028", "Q-235", "Q-251", "Q-268", "Q-404"],
-    "LensLiquidation._expected": ["REQ-LENS-029", "SPEC-LIQ-004", "SPEC-LIQ-005", "SPEC-LIQ-008", "SPEC-LIQ-009", "SPEC-LIQ-010", "SPEC-LIQ-022", "Q-345", "Q-397"],
-    "LensLiquidation._unitValues": ["SPEC-LIQ-005"],
-    "LensLiquidation._unwoundValue": ["REQ-LENS-029", "SPEC-LIQ-018"]
-  },
   "contracts/src/lens/lens/LensLiquidationModule.sol": {
-    "LensLiquidationModule": ["REQ-LENS-001", "REQ-LENS-006", "REQ-LENS-020", "REQ-LENS-016", "REQ-LENS-017", "REQ-LENS-028", "REQ-LENS-029", "REQ-LENS-032", "REQ-LENS-033"],
-    "LensLiquidationModule.constructor": ["REQ-LENS-001", "REQ-LENS-002", "REQ-LENS-017"]
+    "LensLiquidationModule": ["REQ-LENS-001", "REQ-LENS-006", "REQ-LENS-020", "REQ-LENS-016", "REQ-LENS-017", "REQ-LENS-028", "REQ-LENS-029", "REQ-LENS-032", "REQ-LENS-033", "Q-232", "Q-247", "Q-268", "Q-404"],
+    "LensLiquidationModule.constructor": ["REQ-LENS-001", "REQ-LENS-002", "REQ-LENS-017"],
+    "LensLiquidationModule.AAVE_SIZING": ["REQ-LENS-017"],
+    "LensLiquidationModule.previewLiquidation": ["REQ-LENS-016", "REQ-LENS-017", "REQ-LENS-028", "REQ-LENS-029", "REQ-LENS-032", "REQ-LENS-033", "REQ-LENS-005", "REQ-LENS-006", "REQ-LENS-007"],
+    "LensLiquidationModule._context": ["REQ-LENS-016", "REQ-LENS-032", "REQ-LENS-033"],
+    "LensLiquidationModule._accountGates": ["REQ-LENS-016", "SPEC-LIQ-001", "SPEC-LIQ-003"],
+    "LensLiquidationModule._priceGates": ["REQ-LENS-016", "REQ-SWAP-008", "REQ-SWAP-009", "Q-247"],
+    "LensLiquidationModule._stressValued": ["REQ-LENS-016", "REQ-LENS-030"],
+    "LensLiquidationModule._routes": ["REQ-LENS-016", "Q-379"],
+    "LensLiquidationModule._params": ["REQ-LENS-028", "Q-235", "Q-251", "Q-268", "Q-404"],
+    "LensLiquidationModule._expected": ["REQ-LENS-029", "SPEC-LIQ-004", "SPEC-LIQ-005", "SPEC-LIQ-008", "SPEC-LIQ-009", "SPEC-LIQ-010", "SPEC-LIQ-022", "Q-345", "Q-397"],
+    "LensLiquidationModule._unitValues": ["SPEC-LIQ-005"],
+    "LensLiquidationModule._unwoundValue": ["REQ-LENS-029", "SPEC-LIQ-018"]
   },
   "contracts/src/lens/lens/LensLiquidationSizing.sol": {
     "LensLiquidationSizing": ["REQ-LENS-017", "REQ-LENS-029", "REQ-LENS-003", "Q-232", "Q-268"],
     "LensLiquidationSizing.size": ["REQ-LENS-017", "REQ-LENS-029"]
   },
-  "contracts/src/lens/lens/LensMarket.sol": {
-    "LensMarket": ["REQ-LENS-012", "REQ-LENS-013", "REQ-LENS-014", "REQ-LENS-018", "REQ-LENS-019", "REQ-LENS-023", "REQ-LENS-024", "REQ-LENS-026"],
-    "LensMarket.checkBacking": ["REQ-LENS-012", "REQ-LENS-013", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensMarket.checkRecordBacking": ["REQ-LENS-014", "REQ-LENS-023", "REQ-LENS-024", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensMarket.getPendingSettlement": ["REQ-LENS-026", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensMarket.getCapHeadroom": ["REQ-LENS-018", "REQ-LENS-019", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensMarket._spokeChecks": ["REQ-LENS-012", "REQ-LENS-013"],
-    "LensMarket._standardReserve": ["REQ-LENS-012", "REQ-LENS-013"],
-    "LensMarket._recordBacking": ["REQ-LENS-014"],
-    "LensMarket._poolShareBps": ["REQ-LENS-018", "SPEC-CAP-005"],
-    "LensMarket._drawHeadrooms": ["REQ-LENS-019"]
-  },
   "contracts/src/lens/lens/LensMarketModule.sol": {
-    "LensMarketModule": ["REQ-LENS-001", "REQ-LENS-006", "REQ-LENS-020", "REQ-LENS-012", "REQ-LENS-013", "REQ-LENS-014", "REQ-LENS-018", "REQ-LENS-019", "REQ-LENS-026"],
-    "LensMarketModule.constructor": ["REQ-LENS-001", "REQ-LENS-002"]
-  },
-  "contracts/src/lens/lens/LensMarkets.sol": {
-    "LensMarkets": ["REQ-LENS-045", "REQ-LENS-046", "REQ-LENS-057"],
-    "LensMarkets.getMarkets": ["REQ-LENS-045", "REQ-LENS-023", "REQ-LENS-024", "REQ-LENS-006"],
-    "LensMarkets.getMarket": ["REQ-LENS-045", "REQ-LENS-022", "REQ-LENS-006"],
-    "LensMarkets.getDebtReserve": ["REQ-LENS-046", "REQ-LENS-032", "REQ-LENS-006"],
-    "LensMarkets.getDebtReserves": ["REQ-LENS-046", "REQ-LENS-006"],
-    "LensMarkets._riskConfig": ["REQ-LENS-057"],
-    "LensMarkets._hubTotals": ["REQ-LENS-046"]
+    "LensMarketModule": ["REQ-LENS-001", "REQ-LENS-006", "REQ-LENS-020", "REQ-LENS-012", "REQ-LENS-013", "REQ-LENS-014", "REQ-LENS-018", "REQ-LENS-019", "REQ-LENS-026", "REQ-LENS-023", "REQ-LENS-024"],
+    "LensMarketModule.constructor": ["REQ-LENS-001", "REQ-LENS-002"],
+    "LensMarketModule.checkBacking": ["REQ-LENS-012", "REQ-LENS-013", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensMarketModule.checkRecordBacking": ["REQ-LENS-014", "REQ-LENS-023", "REQ-LENS-024", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensMarketModule.getPendingSettlement": ["REQ-LENS-026", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensMarketModule.getCapHeadroom": ["REQ-LENS-018", "REQ-LENS-019", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensMarketModule._spokeChecks": ["REQ-LENS-012", "REQ-LENS-013"],
+    "LensMarketModule._standardReserve": ["REQ-LENS-012", "REQ-LENS-013"],
+    "LensMarketModule._recordBacking": ["REQ-LENS-014"],
+    "LensMarketModule._poolShareBps": ["REQ-LENS-018", "SPEC-CAP-005"],
+    "LensMarketModule._drawHeadrooms": ["REQ-LENS-019"]
   },
   "contracts/src/lens/lens/LensMarketsModule.sol": {
     "LensMarketsModule": ["REQ-LENS-001", "REQ-LENS-006", "REQ-LENS-020", "REQ-LENS-045", "REQ-LENS-046", "REQ-LENS-050", "REQ-LENS-051", "REQ-LENS-057"],
-    "LensMarketsModule.constructor": ["REQ-LENS-001", "REQ-LENS-002"]
-  },
-  "contracts/src/lens/lens/LensPositions.sol": {
-    "LensPositions": ["REQ-LENS-047", "REQ-LENS-048", "REQ-LENS-049"],
-    "LensPositions.getAccountRisk": ["REQ-LENS-047", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensPositions.previewPledge": ["REQ-LENS-048", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensPositions.previewWithdraw": ["REQ-LENS-049", "REQ-LENS-005", "REQ-LENS-006", "SPEC-CF-005"]
+    "LensMarketsModule.constructor": ["REQ-LENS-001", "REQ-LENS-002"],
+    "LensMarketsModule.getPositionFees": ["REQ-LENS-050", "REQ-LENS-005", "REQ-LENS-006", "REQ-LENS-022"],
+    "LensMarketsModule.getAccountFees": ["REQ-LENS-051", "REQ-LENS-005", "REQ-LENS-006", "REQ-LENS-022"],
+    "LensMarketsModule.getMarkets": ["REQ-LENS-045", "REQ-LENS-023", "REQ-LENS-024", "REQ-LENS-006"],
+    "LensMarketsModule.getMarket": ["REQ-LENS-045", "REQ-LENS-022", "REQ-LENS-006"],
+    "LensMarketsModule.getDebtReserve": ["REQ-LENS-046", "REQ-LENS-032", "REQ-LENS-006"],
+    "LensMarketsModule.getDebtReserves": ["REQ-LENS-046", "REQ-LENS-006"],
+    "LensMarketsModule._riskConfig": ["REQ-LENS-057"],
+    "LensMarketsModule._hubTotals": ["REQ-LENS-046"]
   },
   "contracts/src/lens/lens/LensPositionsModule.sol": {
     "LensPositionsModule": ["REQ-LENS-001", "REQ-LENS-006", "REQ-LENS-020", "REQ-LENS-047", "REQ-LENS-048", "REQ-LENS-049", "REQ-LENS-052", "REQ-LENS-053", "REQ-LENS-054"],
-    "LensPositionsModule.constructor": ["REQ-LENS-001", "REQ-LENS-002"]
-  },
-  "contracts/src/lens/lens/LensPreview.sol": {
-    "LensPreview": ["REQ-LENS-035", "REQ-LENS-036", "REQ-LENS-038", "REQ-LENS-041", "REQ-LENS-044", "SPEC-CF-005", "SPEC-LIQ-020", "Q-268", "Q-269", "Q-398"],
-    "LensPreview.previewBorrowMax": ["REQ-LENS-035", "REQ-LENS-041", "REQ-LENS-006"],
-    "LensPreview.previewBorrowRecommended": ["REQ-LENS-044", "REQ-LENS-035", "REQ-LENS-006"],
-    "LensPreview.quoteRepayAll": ["REQ-LENS-036", "REQ-LENS-006"],
-    "LensPreview.previewRecredit": ["REQ-LENS-038", "SPEC-CAP-001", "REQ-RISK-066", "REQ-LENS-006"],
-    "LensPreview.previewRepayWithCollateral": ["REQ-LENS-038", "SPEC-LIQ-020", "REQ-LENS-006", "REQ-LENS-007"],
-    "LensPreview._targetHealthFactor": ["REQ-LENS-035", "Q-398"],
-    "LensPreview._capacity": ["REQ-LENS-035", "REQ-LENS-044"],
-    "LensPreview._borrowGate": ["REQ-LENS-035", "REQ-RISK-060", "REQ-RISK-061", "REQ-RISK-062", "REQ-RISK-082"],
-    "LensPreview._rescueExclusion": ["SPEC-CF-005", "Q-253"],
-    "LensPreview._rescueOnly": ["REQ-LENS-038", "REQ-RISK-066", "SPEC-CAP-005"]
+    "LensPositionsModule.constructor": ["REQ-LENS-001", "REQ-LENS-002"],
+    "LensPositionsModule.previewBorrowAfter": ["REQ-LENS-052", "REQ-LENS-005", "REQ-LENS-006", "REQ-LENS-032"],
+    "LensPositionsModule.previewRepayAfter": ["REQ-LENS-052", "REQ-LENS-005", "REQ-LENS-006", "REQ-LENS-032"],
+    "LensPositionsModule.previewPledgeAfter": ["REQ-LENS-053", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensPositionsModule.previewWithdrawAfter": ["REQ-LENS-053", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensPositionsModule._debtAfterRepay": ["REQ-LENS-052"],
+    "LensPositionsModule.getAccountRisk": ["REQ-LENS-047", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensPositionsModule.previewPledge": ["REQ-LENS-048", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensPositionsModule.previewWithdraw": ["REQ-LENS-049", "REQ-LENS-005", "REQ-LENS-006", "SPEC-CF-005"],
+    "LensPositionsModule.previewMaxWithdraw": ["REQ-LENS-054", "REQ-LENS-005", "REQ-LENS-006", "SPEC-CF-005"],
+    "LensPositionsModule._maxRemoval": ["REQ-LENS-054", "SPEC-CF-005"],
+    "LensPositionsModule._removalBound": ["REQ-LENS-054"]
   },
   "contracts/src/lens/lens/LensPreviewModule.sol": {
-    "LensPreviewModule": ["REQ-LENS-001", "REQ-LENS-006", "REQ-LENS-020", "REQ-LENS-035", "REQ-LENS-036", "REQ-LENS-038", "REQ-LENS-041", "REQ-LENS-044"],
-    "LensPreviewModule.constructor": ["REQ-LENS-001", "REQ-LENS-002"]
-  },
-  "contracts/src/lens/lens/LensPrice.sol": {
-    "LensPrice": ["REQ-LENS-007", "REQ-LENS-015", "REQ-LENS-030", "REQ-LENS-031", "REQ-LENS-032"],
-    "LensPrice.getPriceState": ["REQ-LENS-015", "REQ-LENS-007", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensPrice.getDebtPriceState": ["REQ-LENS-030", "REQ-LENS-032", "REQ-LENS-007", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensPrice.getApplicationState": ["REQ-LENS-031", "REQ-LENS-006"],
-    "LensPrice.getPauseReason": ["REQ-LENS-031", "REQ-LENS-006"],
-    "LensPrice._liquidationState": ["REQ-LENS-015", "REQ-SWAP-008", "REQ-ORACLE-090"]
+    "LensPreviewModule": ["REQ-LENS-001", "REQ-LENS-006", "REQ-LENS-020", "REQ-LENS-035", "REQ-LENS-036", "REQ-LENS-038", "REQ-LENS-041", "REQ-LENS-044", "SPEC-CF-005", "SPEC-LIQ-020", "Q-268", "Q-269", "Q-398"],
+    "LensPreviewModule.constructor": ["REQ-LENS-001", "REQ-LENS-002"],
+    "LensPreviewModule.previewBorrowMax": ["REQ-LENS-035", "REQ-LENS-041", "REQ-LENS-006"],
+    "LensPreviewModule.previewBorrowRecommended": ["REQ-LENS-044", "REQ-LENS-035", "REQ-LENS-006"],
+    "LensPreviewModule.quoteRepayAll": ["REQ-LENS-036", "REQ-LENS-006"],
+    "LensPreviewModule.previewRecredit": ["REQ-LENS-038", "SPEC-CAP-001", "REQ-RISK-066", "REQ-LENS-006"],
+    "LensPreviewModule.previewRepayWithCollateral": ["REQ-LENS-038", "SPEC-LIQ-020", "REQ-LENS-006", "REQ-LENS-007"],
+    "LensPreviewModule._targetHealthFactor": ["REQ-LENS-035", "Q-398"],
+    "LensPreviewModule._capacity": ["REQ-LENS-035", "REQ-LENS-044"],
+    "LensPreviewModule._borrowGate": ["REQ-LENS-035", "REQ-RISK-060", "REQ-RISK-061", "REQ-RISK-062", "REQ-RISK-082"],
+    "LensPreviewModule._rescueExclusion": ["SPEC-CF-005", "Q-253"],
+    "LensPreviewModule._rescueOnly": ["REQ-LENS-038", "REQ-RISK-066", "SPEC-CAP-005"]
   },
   "contracts/src/lens/lens/LensPriceModule.sol": {
-    "LensPriceModule": ["REQ-LENS-001", "REQ-LENS-006", "REQ-LENS-020", "REQ-LENS-015", "REQ-LENS-030", "REQ-LENS-031", "REQ-LENS-032", "REQ-LENS-055"],
-    "LensPriceModule.constructor": ["REQ-LENS-001", "REQ-LENS-002"]
-  },
-  "contracts/src/lens/lens/LensRemoval.sol": {
-    "LensRemoval": ["REQ-LENS-054"],
-    "LensRemoval.previewMaxWithdraw": ["REQ-LENS-054", "REQ-LENS-005", "REQ-LENS-006", "SPEC-CF-005"],
-    "LensRemoval._maxRemoval": ["REQ-LENS-054", "SPEC-CF-005"],
-    "LensRemoval._removalBound": ["REQ-LENS-054"]
-  },
-  "contracts/src/lens/lens/LensRisk.sol": {
-    "LensRisk": ["REQ-LENS-034", "REQ-LENS-037", "REQ-LENS-039", "REQ-LENS-042", "REQ-LENS-043", "REQ-FLR-046"],
-    "LensRisk.getBreakerStatus": ["REQ-LENS-037", "REQ-LENS-006"],
-    "LensRisk.getDebtBreakerStatus": ["REQ-LENS-037", "REQ-LENS-006"],
-    "LensRisk.isFrozenAddress": ["REQ-LENS-037", "REQ-LENS-006"],
-    "LensRisk.getTailCoverage": ["REQ-LENS-034", "REQ-LENS-039", "SPEC-CAP-008", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensRisk.uncoveredDeficit": ["REQ-LENS-042", "REQ-LENS-006"],
-    "LensRisk.getHubAssetExposure": ["REQ-LENS-043", "REQ-LENS-005", "REQ-LENS-006"],
-    "LensRisk._drawCaps": ["REQ-LENS-034"],
-    "LensRisk._tails": ["REQ-LENS-034", "SPEC-CAP-008"],
-    "LensRisk._deficit": ["REQ-LENS-042", "REQ-FLR-046"],
-    "LensRisk._offset": ["REQ-LENS-042", "REQ-FLR-046"],
-    "LensRisk._standsBehind": ["REQ-LENS-042", "REQ-FLR-046"],
-    "LensRisk._spokeDraws": ["REQ-LENS-043", "REQ-LENS-059"],
-    "LensRisk._slice": ["REQ-LENS-059", "REQ-HUB-015", "REQ-FLR-046"]
+    "LensPriceModule": ["REQ-LENS-001", "REQ-LENS-006", "REQ-LENS-020", "REQ-LENS-015", "REQ-LENS-030", "REQ-LENS-031", "REQ-LENS-032", "REQ-LENS-055", "REQ-LENS-007"],
+    "LensPriceModule.constructor": ["REQ-LENS-001", "REQ-LENS-002"],
+    "LensPriceModule.getPriceState": ["REQ-LENS-015", "REQ-LENS-007", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensPriceModule.getDebtPriceState": ["REQ-LENS-030", "REQ-LENS-032", "REQ-LENS-007", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensPriceModule.getApplicationState": ["REQ-LENS-031", "REQ-LENS-006"],
+    "LensPriceModule.getPauseReason": ["REQ-LENS-031", "REQ-LENS-006"],
+    "LensPriceModule._liquidationState": ["REQ-LENS-015", "REQ-SWAP-008", "REQ-ORACLE-090"],
+    "LensPriceModule.previewDeleverageTo": ["REQ-LENS-055", "REQ-LENS-005", "REQ-LENS-006", "REQ-LENS-032", "SPEC-LIQ-020"]
   },
   "contracts/src/lens/lens/LensRiskModule.sol": {
-    "LensRiskModule": ["REQ-LENS-001", "REQ-LENS-006", "REQ-LENS-020", "REQ-LENS-034", "REQ-LENS-037", "REQ-LENS-039", "REQ-LENS-042", "REQ-LENS-043", "REQ-LENS-058", "REQ-LENS-059", "REQ-LENS-060"],
-    "LensRiskModule.constructor": ["REQ-LENS-001", "REQ-LENS-002"]
-  },
-  "contracts/src/lens/lens/LensSizing.sol": {
-    "LensSizing": ["REQ-LENS-055"],
-    "LensSizing.previewDeleverageTo": ["REQ-LENS-055", "REQ-LENS-005", "REQ-LENS-006", "REQ-LENS-032", "SPEC-LIQ-020"]
+    "LensRiskModule": ["REQ-LENS-001", "REQ-LENS-006", "REQ-LENS-020", "REQ-LENS-034", "REQ-LENS-037", "REQ-LENS-039", "REQ-LENS-042", "REQ-LENS-043", "REQ-LENS-058", "REQ-LENS-059", "REQ-LENS-060", "REQ-FLR-046"],
+    "LensRiskModule.constructor": ["REQ-LENS-001", "REQ-LENS-002"],
+    "LensRiskModule.getBreakerStatus": ["REQ-LENS-037", "REQ-LENS-006"],
+    "LensRiskModule.getDebtBreakerStatus": ["REQ-LENS-037", "REQ-LENS-006"],
+    "LensRiskModule.isFrozenAddress": ["REQ-LENS-037", "REQ-LENS-006"],
+    "LensRiskModule.getTailCoverage": ["REQ-LENS-034", "REQ-LENS-039", "SPEC-CAP-008", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensRiskModule.uncoveredDeficit": ["REQ-LENS-042", "REQ-LENS-006"],
+    "LensRiskModule.getHubAssetExposure": ["REQ-LENS-043", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensRiskModule._drawCaps": ["REQ-LENS-034"],
+    "LensRiskModule._tails": ["REQ-LENS-034", "SPEC-CAP-008"],
+    "LensRiskModule._deficit": ["REQ-LENS-042", "REQ-FLR-046"],
+    "LensRiskModule._offset": ["REQ-LENS-042", "REQ-FLR-046"],
+    "LensRiskModule._standsBehind": ["REQ-LENS-042", "REQ-FLR-046"],
+    "LensRiskModule._spokeDraws": ["REQ-LENS-043", "REQ-LENS-059"],
+    "LensRiskModule._slice": ["REQ-LENS-059", "REQ-HUB-015", "REQ-FLR-046"],
+    "LensRiskModule.getHubAsset": ["REQ-LENS-058", "REQ-LENS-059", "REQ-LENS-060", "REQ-LENS-005", "REQ-LENS-006"],
+    "LensRiskModule._rates": ["REQ-LENS-058", "REQ-LENS-046"]
   },
   "contracts/src/lens/lens/LensSpeedModule.sol": {
     "LensSpeedModule": ["REQ-LENS-001", "REQ-LENS-006", "REQ-LENS-061", "REQ-RISK-097", "Q-411"],
@@ -973,86 +926,36 @@
     "LensSpeedModule.getBorrowSpeed": ["REQ-LENS-061", "REQ-LENS-006"],
     "LensSpeedModule.getPledgeSpeed": ["REQ-LENS-061", "REQ-LENS-006"]
   },
-  "contracts/src/lens/lens/types/AccountRiskView.sol": {
-    "AccountRiskView": ["REQ-LENS-047", "REQ-LENS-005"]
-  },
-  "contracts/src/lens/lens/types/AccountView.sol": {
-    "AccountView": ["REQ-LENS-009", "REQ-LENS-010", "REQ-LENS-037", "Q-241", "Q-242"]
-  },
-  "contracts/src/lens/lens/types/ActionPreview.sol": {
-    "ActionPreview": ["REQ-LENS-052", "REQ-LENS-053", "REQ-LENS-005"]
-  },
-  "contracts/src/lens/lens/types/BackingView.sol": {
-    "BackingView": ["REQ-LENS-012", "Q-378"]
-  },
-  "contracts/src/lens/lens/types/BorrowSpeedView.sol": {
-    "BorrowSpeedView": ["REQ-LENS-061", "REQ-RISK-097", "BOR-024", "Q-411"]
-  },
-  "contracts/src/lens/lens/types/CloseAccountView.sol": {
+  "contracts/src/lens/lens/types/LensTypes.sol": {
+    "AccountRiskView": ["REQ-LENS-047", "REQ-LENS-005"],
+    "AccountView": ["REQ-LENS-009", "REQ-LENS-010", "REQ-LENS-037", "Q-241", "Q-242"],
+    "ActionPreview": ["REQ-LENS-052", "REQ-LENS-053", "REQ-LENS-005"],
+    "BackingView": ["REQ-LENS-012", "Q-378"],
+    "BorrowSpeedView": ["REQ-LENS-061", "REQ-RISK-097", "BOR-024", "Q-411"],
     "DebtClose": ["REQ-LENS-056"],
     "RecordClose": ["REQ-LENS-056"],
-    "CloseAccountView": ["REQ-LENS-056", "REQ-LENS-005"]
-  },
-  "contracts/src/lens/lens/types/DebtPosition.sol": {
-    "DebtPosition": ["REQ-LENS-009", "REQ-LENS-030", "REQ-LENS-037", "Q-241"]
-  },
-  "contracts/src/lens/lens/types/DebtPriceView.sol": {
-    "DebtPriceView": ["REQ-LENS-030", "REQ-LENS-005", "Q-247", "Q-248"]
-  },
-  "contracts/src/lens/lens/types/DebtReserveView.sol": {
-    "DebtReserveView": ["REQ-LENS-046", "REQ-LENS-005"]
-  },
-  "contracts/src/lens/lens/types/DeleverageSizing.sol": {
-    "DeleverageSizing": ["REQ-LENS-055", "REQ-LENS-005"]
-  },
-  "contracts/src/lens/lens/types/DrawHeadroom.sol": {
-    "DrawHeadroom": ["REQ-LENS-019"]
-  },
-  "contracts/src/lens/lens/types/HubAssetExposureView.sol": {
+    "CloseAccountView": ["REQ-LENS-056", "REQ-LENS-005"],
+    "DebtPosition": ["REQ-LENS-009", "REQ-LENS-030", "REQ-LENS-037", "Q-241"],
+    "DebtPriceView": ["REQ-LENS-030", "REQ-LENS-005", "Q-247", "Q-248"],
+    "DebtReserveView": ["REQ-LENS-046", "REQ-LENS-005"],
+    "DeleverageSizing": ["REQ-LENS-055", "REQ-LENS-005"],
+    "DrawHeadroom": ["REQ-LENS-019"],
     "SpokeDraw": ["REQ-LENS-043", "REQ-LENS-059"],
-    "HubAssetExposureView": ["REQ-LENS-043", "REQ-LENS-042", "REQ-LENS-005", "REQ-CONFIG-081", "REQ-FLR-046"]
-  },
-  "contracts/src/lens/lens/types/HubAssetView.sol": {
-    "HubAssetView": ["REQ-LENS-058", "REQ-LENS-059", "REQ-LENS-005"]
-  },
-  "contracts/src/lens/lens/types/LiquidationPreview.sol": {
-    "LiquidationPreview": ["SPEC-SET-005", "SPEC-LIQ-019", "REQ-LENS-016", "REQ-LENS-017", "REQ-LENS-028", "REQ-LENS-029", "Q-232", "Q-247", "Q-268", "Q-345", "Q-379", "Q-404"]
-  },
-  "contracts/src/lens/lens/types/MarketPosition.sol": {
-    "MarketPosition": ["REQ-LENS-009", "REQ-LENS-037", "Q-241", "Q-253"]
-  },
-  "contracts/src/lens/lens/types/MarketView.sol": {
-    "MarketView": ["REQ-LENS-045", "REQ-LENS-057", "REQ-LENS-005"]
-  },
-  "contracts/src/lens/lens/types/PledgePreviewView.sol": {
-    "PledgePreviewView": ["REQ-LENS-048", "REQ-LENS-005"]
-  },
-  "contracts/src/lens/lens/types/PositionFeesView.sol": {
-    "PositionFeesView": ["REQ-LENS-050", "REQ-LENS-005"]
-  },
-  "contracts/src/lens/lens/types/PriceInput.sol": {
-    "PriceInput": ["REQ-LENS-015"]
-  },
-  "contracts/src/lens/lens/types/RecordBackingView.sol": {
-    "RecordBackingView": ["REQ-LENS-014", "Q-376"]
-  },
-  "contracts/src/lens/lens/types/RecordView.sol": {
-    "RecordView": ["REQ-LENS-011", "Q-376"]
-  },
-  "contracts/src/lens/lens/types/RemovalSizing.sol": {
+    "HubAssetExposureView": ["REQ-LENS-043", "REQ-LENS-042", "REQ-LENS-005", "REQ-CONFIG-081", "REQ-FLR-046"],
+    "HubAssetView": ["REQ-LENS-058", "REQ-LENS-059", "REQ-LENS-005"],
+    "LiquidationPreview": ["SPEC-SET-005", "SPEC-LIQ-019", "REQ-LENS-016", "REQ-LENS-017", "REQ-LENS-028", "REQ-LENS-029", "Q-232", "Q-247", "Q-268", "Q-345", "Q-379", "Q-404"],
+    "MarketPosition": ["REQ-LENS-009", "REQ-LENS-037", "Q-241", "Q-253"],
+    "MarketView": ["REQ-LENS-045", "REQ-LENS-057", "REQ-LENS-005"],
+    "PledgePreviewView": ["REQ-LENS-048", "REQ-LENS-005"],
+    "PositionFeesView": ["REQ-LENS-050", "REQ-LENS-005"],
+    "PriceInput": ["REQ-LENS-015"],
+    "RecordBackingView": ["REQ-LENS-014", "Q-376"],
+    "RecordView": ["REQ-LENS-011", "Q-376"],
     "RecordRemoval": ["REQ-LENS-054"],
-    "RemovalSizing": ["REQ-LENS-054", "REQ-LENS-005"]
-  },
-  "contracts/src/lens/lens/types/RouteStatus.sol": {
-    "RouteStatus": ["REQ-LENS-016", "Q-379"]
-  },
-  "contracts/src/lens/lens/types/SpokeKind.sol": {
-    "SpokeKind": ["REQ-LENS-059", "REQ-HUB-015", "REQ-FLR-046"]
-  },
-  "contracts/src/lens/lens/types/TailCoverageView.sol": {
-    "TailCoverageView": ["REQ-LENS-034", "SPEC-CAP-008", "REQ-FLR-046", "Q-249", "Q-378", "Q-410"]
-  },
-  "contracts/src/lens/lens/types/WithdrawPreview.sol": {
+    "RemovalSizing": ["REQ-LENS-054", "REQ-LENS-005"],
+    "RouteStatus": ["REQ-LENS-016", "Q-379"],
+    "SpokeKind": ["REQ-LENS-059", "REQ-HUB-015", "REQ-FLR-046"],
+    "TailCoverageView": ["REQ-LENS-034", "SPEC-CAP-008", "REQ-FLR-046", "Q-249", "Q-378", "Q-410"],
     "WithdrawPreview": ["REQ-LENS-049", "REQ-LENS-005"]
   },
   "contracts/src/liquidation/lp-vault-swap/ILPVaultSwap.sol": {

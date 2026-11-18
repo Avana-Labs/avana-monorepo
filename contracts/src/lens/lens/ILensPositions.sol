@@ -3,9 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AccountRiskView} from "./types/AccountRiskView.sol";
-import {PledgePreviewView} from "./types/PledgePreviewView.sol";
-import {WithdrawPreview} from "./types/WithdrawPreview.sol";
+import {AccountRiskView, PledgePreviewView, WithdrawPreview} from "./types/LensTypes.sol";
 
 /// @title ILensPositions
 /// @notice Account risk and the pledge and withdrawal previews of the Lens.

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
+import {LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {
     LiquidationParams,

@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DeleverageSizing} from "../../src/lens/lens/types/DeleverageSizing.sol";
-import {MarketView} from "../../src/lens/lens/types/MarketView.sol";
+import {DeleverageSizing, MarketView} from "../../src/lens/lens/types/LensTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";

@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AccountView} from "./types/AccountView.sol";
-import {RecordView} from "./types/RecordView.sol";
+import {AccountView, RecordView} from "./types/LensTypes.sol";
 
 /// @title ILensAccount
 /// @notice Account views of the Lens: proxy address, account state, records and escrowed payouts.

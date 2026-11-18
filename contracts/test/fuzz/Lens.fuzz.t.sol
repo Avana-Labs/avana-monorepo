@@ -5,11 +5,13 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
-import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
-import {RecordBackingView} from "../../src/lens/lens/types/RecordBackingView.sol";
-import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
-import {TailCoverageView} from "../../src/lens/lens/types/TailCoverageView.sol";
-import {WithdrawPreview} from "../../src/lens/lens/types/WithdrawPreview.sol";
+import {
+    LiquidationPreview,
+    RecordBackingView,
+    RecordView,
+    TailCoverageView,
+    WithdrawPreview
+} from "../../src/lens/lens/types/LensTypes.sol";
 import {LensProperties} from "../invariant/echidna/LensProperties.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";

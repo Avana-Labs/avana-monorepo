@@ -44,7 +44,7 @@ Setup (Ethereum market 1, USDC/USDT 0.01% pool, `tickSpacing = 1`, exact range `
 
 ## What the UI reads and calls
 
-- Lens: [`getRecords`](../../lens/lens/ILensAccount.sol#L29), [`checkRecordBacking`](../../lens/lens/ILensMarket.sol#L21); direct [`validatePosition`](../concentrated-liquidity/ClLPVaultCustody.sol#L41), [`tokenIdOf`](../concentrated-liquidity/ClLPVaultMarkets.sol#L94).
+- Lens: [`getRecords`](../../lens/lens/ILensAccount.sol#L28), [`checkRecordBacking`](../../lens/lens/ILensMarket.sol#L20); direct [`validatePosition`](../concentrated-liquidity/ClLPVaultCustody.sol#L41), [`tokenIdOf`](../concentrated-liquidity/ClLPVaultMarkets.sol#L94).
 - Events to index: LPVault `PositionReceived`, `PositionReturned`, `UnitsUnwound`, `UnitsReleased`, `FeesCollected` ([ILPVaultBase.sol](../../custody/lp-vault/ILPVaultBase.sol)); Uniswap's `DecreaseLiquidity` and `Collect`.
 - User calls: the depositor approves the LPVault on the NFPM, and adds liquidity with `NFPM.increaseLiquidity` before AaveAdapter `recredit`.
 

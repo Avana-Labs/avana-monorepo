@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DebtPriceView} from "../../src/lens/lens/types/DebtPriceView.sol";
-import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
+import {DebtPriceView, LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {DriftReason} from "../../src/types/MarketTypes.sol";

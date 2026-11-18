@@ -387,41 +387,41 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "bb1b2453833a09d9",
+      "fingerprint": "c07b8cd4ea496b9f",
       "check": "basic-arithmetic-underflow",
-      "file": "src/lens/lens/LensAccount.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "Checked arithmetic (solc 0.8.28) behind an explicit guard on the line before or in the same expression (offset < length, credited > supplied, limit > owed, assets > uncovered). Tests: Lens paging and headroom suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "cb4df2a13bf9b1db",
+      "fingerprint": "da64ea410b706a65",
       "check": "missing-assignment",
-      "file": "src/lens/lens/LensAccount.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "Rule false positive on a compound assignment: `reasons |= a.debts[i].breakerReasons` assigns (it ORs each indebted reserve's breaker reasons into the account's), and the result is stored in a.breakerReasons right after the loop (REQ-LENS-009). Semgrep's Solidity pattern does not treat `|=` as an assignment. Tests: Lens account views (getAccount breaker reasons).",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "2afb099f9f3522c8",
+      "fingerprint": "322da73298969244",
       "check": "basic-arithmetic-underflow",
-      "file": "src/lens/lens/LensMarket.sol",
+      "file": "src/lens/lens/LensMarketModule.sol",
       "reason": "Checked arithmetic (solc 0.8.28) behind an explicit guard on the line before or in the same expression (offset < length, credited > supplied, limit > owed, assets > uncovered). Tests: Lens paging and headroom suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "d447f7e5613b31d2",
+      "fingerprint": "ad155fc9eb3cbf01",
       "check": "basic-arithmetic-underflow",
-      "file": "src/lens/lens/LensPreview.sol",
+      "file": "src/lens/lens/LensPreviewModule.sol",
       "reason": "Checked arithmetic (solc 0.8.28) behind an explicit guard on the line before or in the same expression (offset < length, credited > supplied, limit > owed, assets > uncovered). Tests: Lens paging and headroom suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "de314ee05292b69b",
+      "fingerprint": "f9b1fcce8a809bf4",
       "check": "basic-arithmetic-underflow",
-      "file": "src/lens/lens/LensRisk.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "Checked arithmetic (solc 0.8.28) behind an explicit guard on the line before or in the same expression (offset < length, credited > supplied, limit > owed, assets > uncovered). Tests: Lens paging and headroom suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
@@ -483,9 +483,9 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "537c30a46c9d5246",
+      "fingerprint": "15ecd876e82f7370",
       "check": "basic-arithmetic-underflow",
-      "file": "src/lens/lens/LensMarkets.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "Checked arithmetic (solc 0.8.28) behind an explicit guard on the line before or in the same expression (offset < length, credited > supplied, limit > owed, assets > uncovered). Tests: Lens paging and headroom suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
@@ -531,33 +531,33 @@
       "review": "Lens round 2: new forwarded views, same entry-point pattern as 9cc0a5913e28b4b3"
     },
     {
-      "fingerprint": "35d1af0df93b6187",
+      "fingerprint": "50b1aa7b54690002",
       "check": "basic-arithmetic-underflow",
-      "file": "src/lens/lens/LensActions.sol",
+      "file": "src/lens/lens/LensPositionsModule.sol",
       "reason": "Checked arithmetic (solc 0.8.28) behind an explicit guard in the same expression (assets > amount, value > repaid + premium) or the bisection invariant lo < hi (lo starts at 0, hi at least 1, mid strictly between); an underflow would revert, never wrap. Tests: Lens.DeleverageTo, Lens.Actions (TEST-247).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: bb1b2453833a09d9 (Lens checked arithmetic behind a guard)"
     },
     {
-      "fingerprint": "f5249c450e95acf6",
+      "fingerprint": "1be46af045e8be94",
       "check": "basic-arithmetic-underflow",
-      "file": "src/lens/lens/LensSizing.sol",
+      "file": "src/lens/lens/LensPriceModule.sol",
       "reason": "Checked arithmetic (solc 0.8.28) behind an explicit guard in the same expression (assets > amount, value > repaid + premium) or the bisection invariant lo < hi (lo starts at 0, hi at least 1, mid strictly between); an underflow would revert, never wrap. Tests: Lens.DeleverageTo, Lens.Actions (TEST-247).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: bb1b2453833a09d9 (Lens checked arithmetic behind a guard)"
     },
     {
-      "fingerprint": "20bd09c2988519c3",
+      "fingerprint": "123a9e1eddf8f03d",
       "check": "basic-arithmetic-underflow",
-      "file": "src/lens/lens/LensSizing.sol",
+      "file": "src/lens/lens/LensPriceModule.sol",
       "reason": "Checked arithmetic (solc 0.8.28) behind an explicit guard in the same expression (assets > amount, value > repaid + premium) or the bisection invariant lo < hi (lo starts at 0, hi at least 1, mid strictly between); an underflow would revert, never wrap. Tests: Lens.DeleverageTo, Lens.Actions (TEST-247).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: bb1b2453833a09d9 (Lens checked arithmetic behind a guard)"
     },
     {
-      "fingerprint": "4a75e533d2b3aea4",
+      "fingerprint": "594b50f0c0e84c4e",
       "check": "basic-arithmetic-underflow",
-      "file": "src/lens/lens/LensSizing.sol",
+      "file": "src/lens/lens/LensPriceModule.sol",
       "reason": "Checked arithmetic (solc 0.8.28) behind an explicit guard in the same expression (assets > amount, value > repaid + premium) or the bisection invariant lo < hi (lo starts at 0, hi at least 1, mid strictly between); an underflow would revert, never wrap. Tests: Lens.DeleverageTo, Lens.Actions (TEST-247).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: bb1b2453833a09d9 (Lens checked arithmetic behind a guard)"

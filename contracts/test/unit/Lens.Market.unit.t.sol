@@ -8,8 +8,7 @@ import {Pending} from "../../src/custody/collateralization/types/Collateralizati
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
-import {BackingView} from "../../src/lens/lens/types/BackingView.sol";
-import {RecordBackingView} from "../../src/lens/lens/types/RecordBackingView.sol";
+import {BackingView, RecordBackingView} from "../../src/lens/lens/types/LensTypes.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {CapView} from "../../src/types/MarketTypes.sol";
 import {PendingView, PledgeCounters} from "../../src/types/PositionTypes.sol";

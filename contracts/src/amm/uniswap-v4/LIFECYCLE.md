@@ -48,7 +48,7 @@ Setup (Ethereum market 1, native ETH/USDC 0.05% hookless pool, `tickSpacing = 10
 
 ## What the UI reads and calls
 
-- Lens: [`getRecords`](../../lens/lens/ILensAccount.sol#L34), [`checkRecordBacking`](../../lens/lens/ILensMarket.sol#L21), [`getPositionFees`](../../lens/lens/ILensFees.sol#L14) (uncollected v4 fees, computed as the PoolManager would credit them). Direct views: [`validatePosition`](../concentrated-liquidity/ClLPVaultCustody.sol#L41), [`tokenIdOf`](../concentrated-liquidity/ClLPVaultMarkets.sol#L33), [`v4Market`](UniswapV4Integration.sol#L190).
+- Lens: [`getRecords`](../../lens/lens/ILensAccount.sol#L33), [`checkRecordBacking`](../../lens/lens/ILensMarket.sol#L20), [`getPositionFees`](../../lens/lens/ILensFees.sol#L14) (uncollected v4 fees, computed as the PoolManager would credit them). Direct views: [`validatePosition`](../concentrated-liquidity/ClLPVaultCustody.sol#L41), [`tokenIdOf`](../concentrated-liquidity/ClLPVaultMarkets.sol#L33), [`v4Market`](UniswapV4Integration.sol#L190).
 - Events to index: LPVault `MarketBound`, `PositionReceived`, `PositionReturned`, `UnitsUnwound`, `UnitsReleased`, `FeesCollected`, `StrayReceived`, `StrayReturned` ([ILPVaultBase.sol](../../custody/lp-vault/ILPVaultBase.sol)); the PoolManager's `ModifyLiquidity`.
 - User calls: the depositor mints through the PositionManager (with Permit2 approvals for ERC-20 legs), approves the LPVault on the PositionManager, and must not subscribe the position. A pledged v4 position cannot take more liquidity: the v4 PositionManager adds liquidity only for the NFT's owner or an approved address, and the LPVault owns it and approves no one, so more collateral means a new position (review finding V4-02, open).
 

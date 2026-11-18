@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {SlipstreamIntegration} from "../../src/amm/slipstream/SlipstreamIntegration.sol";
 import {ILens} from "../../src/lens/lens/ILens.sol";
-import {PositionFeesView} from "../../src/lens/lens/types/PositionFeesView.sol";
+import {PositionFeesView} from "../../src/lens/lens/types/LensTypes.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";

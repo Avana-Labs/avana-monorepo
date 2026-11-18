@@ -32,7 +32,7 @@ Protocol-specific steps: [Uniswap v3](uniswap-v3/LIFECYCLE.md), [Uniswap v4](uni
 
 ## What the UI reads and calls
 
-- Lens: [`getRecords`](../lens/lens/ILensAccount.sol#L29), [`checkRecordBacking`](../lens/lens/ILensMarket.sol#L21), [`getCapHeadroom`](../lens/lens/ILensMarket.sol#L33); direct [`validatePosition`](../custody/lp-vault/ILPVault.sol#L95) before a pledge.
+- Lens: [`getRecords`](../lens/lens/ILensAccount.sol#L28), [`checkRecordBacking`](../lens/lens/ILensMarket.sol#L20), [`getCapHeadroom`](../lens/lens/ILensMarket.sol#L32); direct [`validatePosition`](../custody/lp-vault/ILPVault.sol#L95) before a pledge.
 - Events to index: the LPVault's events ([ILPVaultBase.sol](../custody/lp-vault/ILPVaultBase.sol)).
 - User calls: none.
 

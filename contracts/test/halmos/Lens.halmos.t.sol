@@ -4,11 +4,11 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {LensBase} from "../../src/lens/lens/LensBase.sol";
-import {LensFees} from "../../src/lens/lens/LensFees.sol";
+import {LensMarketsModule} from "../../src/lens/lens/LensMarketsModule.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @notice Exposes the Lens's pure fee arithmetic to the symbolic checks.
-contract LensMathHalmosHarness is LensFees {
+contract LensMathHalmosHarness is LensMarketsModule {
     constructor() LensBase(_noCore()) {}
 
     function _noCore() private pure returns (address[9] memory core) {}

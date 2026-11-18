@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
-import {DebtReserveView} from "../../src/lens/lens/types/DebtReserveView.sol";
-import {MarketView} from "../../src/lens/lens/types/MarketView.sol";
+import {DebtReserveView, MarketView} from "../../src/lens/lens/types/LensTypes.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";

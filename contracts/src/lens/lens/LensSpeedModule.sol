@@ -10,7 +10,7 @@ import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {SpeedView} from "../../policy/risk-module/types/RiskModuleTypes.sol";
 import {ILensSpeed} from "./ILensSpeed.sol";
 import {LensBase} from "./LensBase.sol";
-import {BorrowSpeedView} from "./types/BorrowSpeedView.sol";
+import {BorrowSpeedView} from "./types/LensTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensSpeedModule

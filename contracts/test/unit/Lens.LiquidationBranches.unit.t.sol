@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {LensLiquidationModule} from "../../src/lens/lens/LensLiquidationModule.sol";
-import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
+import {LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensLiquidationBranchesUnitTest

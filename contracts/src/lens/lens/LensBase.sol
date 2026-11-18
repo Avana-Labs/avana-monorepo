@@ -22,8 +22,7 @@ import {Market} from "../../types/MarketTypes.sol";
 import {PriceState, TokenPriceView} from "../../types/OracleTypes.sol";
 import {ILensErrors} from "./ILensErrors.sol";
 import {LensConstants} from "./LensConstants.sol";
-import {DebtPriceView} from "./types/DebtPriceView.sol";
-import {PriceInput} from "./types/PriceInput.sol";
+import {DebtPriceView, PriceInput} from "./types/LensTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensBase

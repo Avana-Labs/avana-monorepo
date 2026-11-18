@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ActionPreview} from "./types/ActionPreview.sol";
+import {ActionPreview} from "./types/LensTypes.sol";
 
 /// @title ILensActions
 /// @notice An account's health factor and liquidation price before and after one borrow, repay, pledge or withdrawal.

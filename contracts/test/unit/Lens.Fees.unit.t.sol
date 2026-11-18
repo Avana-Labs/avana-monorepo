@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {FeeMode, IntegrationCapabilities} from "../../src/amm/types/AmmTypes.sol";
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
-import {PositionFeesView} from "../../src/lens/lens/types/PositionFeesView.sol";
+import {PositionFeesView} from "../../src/lens/lens/types/LensTypes.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {LensFeesV3Fixture, LensRecordsStub} from "../utils/fixtures/LensFeesFixture.sol";
 import {AaveAdapterLensMock} from "../utils/mocks/AaveAdapterLensMock.sol";

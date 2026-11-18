@@ -15,7 +15,7 @@ import {PriceStateView} from "../../types/OracleTypes.sol";
 import {ILensHubReads} from "./ILensHubReads.sol";
 import {ILensSpokeReads} from "./ILensSpokeReads.sol";
 import {LensAccountMath} from "./LensAccountMath.sol";
-import {PriceInput} from "./types/PriceInput.sol";
+import {PriceInput} from "./types/LensTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensDeleverage

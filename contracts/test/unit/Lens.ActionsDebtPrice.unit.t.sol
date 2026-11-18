@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ActionPreview} from "../../src/lens/lens/types/ActionPreview.sol";
-import {MarketView} from "../../src/lens/lens/types/MarketView.sol";
+import {ActionPreview, MarketView} from "../../src/lens/lens/types/LensTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 

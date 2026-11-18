@@ -1181,105 +1181,105 @@
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "88912ec098b35cea",
+      "fingerprint": "bc011a031651da7d",
       "check": "`decimals()` should be of type `uint8`",
-      "file": "src/lens/lens/LensRisk.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "The Hub's getAssetUnderlyingAndDecimals already returns uint8. Test: hubAssetExposureBoundAndPrice.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "70e5954afe4eae54",
+      "fingerprint": "6a4b91c9e6f3c955",
       "check": "Division by zero not prevented",
-      "file": "src/lens/lens/LensPreview.sol",
+      "file": "src/lens/lens/LensPreviewModule.sol",
       "reason": "The divisor cannot be zero: _borrowPreview returns (0, 0) when unitValue == 0, before either _capacity call; target is the target health factor (at least 1e18) or the non-zero RECOMMENDED_HEALTH_FACTOR constant. Tests: Lens.Preview, Lens.States (a zero answer).",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "2c9ede58b3cc3085",
+      "fingerprint": "22cc303c1a2db237",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensAccount.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "9fa4fc2288b7724b",
+      "fingerprint": "057e25c686ccc32a",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensAccount.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "66ef9f028ee98b8d",
+      "fingerprint": "3c22d39e1d798be4",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensLiquidation.sol",
+      "file": "src/lens/lens/LensLiquidationModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "83d870d4a56528f8",
+      "fingerprint": "55767b30a96a69ac",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensMarket.sol",
+      "file": "src/lens/lens/LensMarketModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "cf744b5d6f1048d5",
+      "fingerprint": "c83b22a04a0ce36e",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensMarket.sol",
+      "file": "src/lens/lens/LensMarketModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "f46da66703efd1c6",
+      "fingerprint": "0c9b349811200b40",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensMarket.sol",
+      "file": "src/lens/lens/LensMarketModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "c1314c9d2e275e8a",
+      "fingerprint": "b612f0192b4c0d2c",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensMarket.sol",
+      "file": "src/lens/lens/LensMarketModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "eddc354f9817e0d2",
+      "fingerprint": "15845f97b9911fd8",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensPrice.sol",
+      "file": "src/lens/lens/LensPriceModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "04414faa51f5414c",
+      "fingerprint": "416efd22a6120d72",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensPrice.sol",
+      "file": "src/lens/lens/LensPriceModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "bd69d92503419857",
+      "fingerprint": "7ff25058fc604eb2",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensRisk.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "dbe71d45cbf2c50b",
+      "fingerprint": "c5259ed38340628d",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensRisk.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
@@ -1301,41 +1301,41 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "0fc173a659deb356",
+      "fingerprint": "5de2fd4312e3dbb9",
       "check": "Use of deprecated chainlink function: `latestAnswer()`",
-      "file": "src/lens/lens/LensPreview.sol",
+      "file": "src/lens/lens/LensPreviewModule.sol",
       "reason": "latestAnswer() is the price-source interface Aave V4's AaveOracle reads (IAaveV4PriceFeed); LPOracle and DebtOracle serve their price through it, and the Lens must report exactly that served price (REQ-LENS-015, SPEC-LIQ-004). Tests: priceStateLive, debtPriceOracleExampleLiveThenCached.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "1bd5e633799bcf58",
+      "fingerprint": "2082eb06efd9a6a0",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensMarkets.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "ad165d59bda38105",
+      "fingerprint": "bda79d530715ce53",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensMarkets.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "627bda1182b8f3af",
+      "fingerprint": "da118c7dc3e59a52",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensPositions.sol",
+      "file": "src/lens/lens/LensPositionsModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "30311fccb661c2cd",
+      "fingerprint": "e8021b074a435365",
       "check": "`symbol()` is not a part of the ERC-20 standard",
-      "file": "src/lens/lens/LensMarkets.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "The vault token is Avana's own IERC20Metadata token (VaultToken), which implements name() and symbol(); the Lens reads them only for display (REQ-LENS-045). Test: marketIdentity.",
       "approval": "approved (Josue, 2026-11-16)",
       "review": "Lens (wave 1), new site"
@@ -1397,9 +1397,9 @@
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
     },
     {
-      "fingerprint": "3dfb59282aec3681",
+      "fingerprint": "8687a321fb2b4a56",
       "check": "Division by zero not prevented",
-      "file": "src/lens/lens/LensRemoval.sol",
+      "file": "src/lens/lens/LensPositionsModule.sol",
       "reason": "The divisor per is checked on the first line of the function (per == 0 returns 0). Tests: Lens.Preview, Lens.Actions (TEST-247).",
       "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new site; same reasoning as 70e5954afe4eae54"
@@ -1413,17 +1413,17 @@
       "review": "Lens round 2: the deadline growth moved from LensPreview (2be6bee5d509a011) to LensDeleverage"
     },
     {
-      "fingerprint": "c822afa69898294b",
+      "fingerprint": "9a942eaf97bec7c1",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/lens/lens/LensFees.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "uint128 of the fee growth in _owedAfterUpdate reproduces the position manager's own 0.7 arithmetic: tokensOwed is a uint128 that wraps (differences mod 2^256, the owed sum mod 2^128), so the view reports exactly what collect would pay (REQ-LENS-050, REQ-LENS-051). Test: Lens.FeesEdges (test_TEST_247_owedWrapsLikeTheManager).",
       "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new reasoning (intended wrap)"
     },
     {
-      "fingerprint": "2521704fea850089",
+      "fingerprint": "3e80f22b96ed0907",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/lens/lens/LensMarket.sol",
+      "file": "src/lens/lens/LensMarketModule.sol",
       "reason": "The loop index runs from 0 to the reserve's latest dynamic configuration key, itself a uint32, so uint32(key) never truncates. Test: checkBackingLiquidationFeeOnAnyKey.",
       "approval": "approved (Josue, 2026-11-13)",
       "review": "Re-key of b80ce58173f9e15d (same uint32(key) cast, line text moved)"
@@ -1437,49 +1437,49 @@
       "review": "Lens round 2: the deadline growth moved from LensPreview (f0b3243169ececd1) to LensDeleverage"
     },
     {
-      "fingerprint": "14c4a85d005bb56c",
+      "fingerprint": "f3e0323f4f663d12",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensActions.sol",
+      "file": "src/lens/lens/LensPositionsModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
     },
     {
-      "fingerprint": "b292bece4080a42d",
+      "fingerprint": "8b7a5fb853938fd8",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensClose.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
     },
     {
-      "fingerprint": "b0107e7e50fba5bc",
+      "fingerprint": "ec912d9693477858",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensFees.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
     },
     {
-      "fingerprint": "9039e4c2c0bb83ab",
+      "fingerprint": "8ea1500d14de2f7d",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensHubAssets.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
     },
     {
-      "fingerprint": "b5335162368cd7e1",
+      "fingerprint": "72bc156bc13693ae",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensRemoval.sol",
+      "file": "src/lens/lens/LensPositionsModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
     },
     {
-      "fingerprint": "7d4966b534ccd823",
+      "fingerprint": "18b788078201f2a5",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensSizing.sol",
+      "file": "src/lens/lens/LensPriceModule.sol",
       "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
       "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {TailCoverageView} from "../../src/lens/lens/types/TailCoverageView.sol";
+import {TailCoverageView} from "../../src/lens/lens/types/LensTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensGovernanceDriftFuzzTest

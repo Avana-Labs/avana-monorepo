@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
-import {DebtPriceView} from "../../src/lens/lens/types/DebtPriceView.sol";
+import {DebtPriceView} from "../../src/lens/lens/types/LensTypes.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {PriceState, PriceView} from "../../src/types/OracleTypes.sol";

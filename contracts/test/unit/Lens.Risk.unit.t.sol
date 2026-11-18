@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
-import {HubAssetExposureView} from "../../src/lens/lens/types/HubAssetExposureView.sol";
-import {TailCoverageView} from "../../src/lens/lens/types/TailCoverageView.sol";
+import {HubAssetExposureView, TailCoverageView} from "../../src/lens/lens/types/LensTypes.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../src/types/MarketTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";

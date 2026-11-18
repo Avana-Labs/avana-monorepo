@@ -40,7 +40,7 @@ Aerodrome Slipstream on Base (Carol, USDC debt, 3.6 `EMG-113`). Setup: Circle bl
 
 ## What the UI reads and calls
 
-- Lens: [`getEscrowClaimable`](../../lens/lens/ILensAccount.sol#L37)`(account, [USDC, …])`.
+- Lens: [`getEscrowClaimable`](../../lens/lens/ILensAccount.sol#L36)`(account, [USDC, …])`.
 - Events to index: [`RemainderEscrowed`](IPayoutEscrow.sol#L12), [`RemainderClaimed`](IPayoutEscrow.sol#L15).
 - User calls: [`claim`](PayoutEscrow.sol#L80) (the credited account only; the whole credit, or an amount up to it).
 

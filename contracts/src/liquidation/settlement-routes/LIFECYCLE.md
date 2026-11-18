@@ -43,7 +43,7 @@ Setup (Ethereum market `m`, Uniswap v3 USDC/USDT, USDC debt, Bob's liquidation o
 
 ## What the UI reads and calls
 
-- Lens: [`previewLiquidation`](../../lens/lens/ILensLiquidation.sol#L41) (`routeMode` is `BackupOnly` when a primary route is unusable); MarketRegistry [`getRoute`](../../policy/market-registry/IMarketRegistry.sol#L660).
+- Lens: [`previewLiquidation`](../../lens/lens/ILens.sol#L107) (`routeMode` is `BackupOnly` when a primary route is unusable); MarketRegistry [`getRoute`](../../policy/market-registry/IMarketRegistry.sol#L660).
 - Events to index: LPVaultSwap `RouteFailed`, `ResidueReturned`; MarketRegistry `RouteSet`, `RouteDisabled`, `RouteRestored`.
 - User calls: none; only LPVaultSwap calls `swap`.
 

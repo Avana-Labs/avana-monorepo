@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
-import {AccountView} from "../../src/lens/lens/types/AccountView.sol";
-import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
+import {AccountView, RecordView} from "../../src/lens/lens/types/LensTypes.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";

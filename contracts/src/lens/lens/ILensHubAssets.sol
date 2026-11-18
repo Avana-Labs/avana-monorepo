@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {HubAssetView} from "./types/HubAssetView.sol";
+import {HubAssetView} from "./types/LensTypes.sol";
 
 /// @title ILensHubAssets
 /// @notice One Hub asset's totals, liquidity, rates, USD price and allocation by Spoke.

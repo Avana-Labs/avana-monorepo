@@ -8,7 +8,7 @@ import {INonfungiblePositionManager} from "../../src/interfaces/external/uniswap
 import {IUniswapV3Pool} from "../../src/interfaces/external/uniswap/IUniswapV3Pool.sol";
 import {IUniswapV3SwapCallback} from "../../src/interfaces/external/uniswap/IUniswapV3SwapCallback.sol";
 import {ILens} from "../../src/lens/lens/ILens.sol";
-import {PositionFeesView} from "../../src/lens/lens/types/PositionFeesView.sol";
+import {PositionFeesView} from "../../src/lens/lens/types/LensTypes.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";

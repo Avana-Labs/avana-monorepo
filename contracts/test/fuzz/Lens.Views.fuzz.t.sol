@@ -5,10 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {DebtReserveView} from "../../src/lens/lens/types/DebtReserveView.sol";
-import {MarketView} from "../../src/lens/lens/types/MarketView.sol";
-import {RecordBackingView} from "../../src/lens/lens/types/RecordBackingView.sol";
-import {WithdrawPreview} from "../../src/lens/lens/types/WithdrawPreview.sol";
+import {DebtReserveView, MarketView, RecordBackingView, WithdrawPreview} from "../../src/lens/lens/types/LensTypes.sol";
 import {CapView} from "../../src/types/MarketTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";

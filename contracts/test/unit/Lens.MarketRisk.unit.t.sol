@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILensHubReads} from "../../src/lens/lens/ILensHubReads.sol";
-import {AccountRiskView} from "../../src/lens/lens/types/AccountRiskView.sol";
-import {MarketView} from "../../src/lens/lens/types/MarketView.sol";
+import {AccountRiskView, MarketView} from "../../src/lens/lens/types/LensTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 

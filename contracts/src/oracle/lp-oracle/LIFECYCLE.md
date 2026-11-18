@@ -79,7 +79,7 @@ The arithmetic of every step below is in [`LPPriceMath`](LPPriceMath.sol); the L
 
 ## What the UI reads and calls
 
-- Lens: [`getPriceState`](../../lens/lens/ILensLiquidation.sol#L15)`(marketId)`; the app shows the state, the served price and each leg's age against 88,200 s.
+- Lens: [`getPriceState`](../../lens/lens/ILens.sol#L81)`(marketId)`; the app shows the state, the served price and each leg's age against 88,200 s.
 - Events to index: `PriceStateChanged`, `PriceAccepted`, `FailureRecorded`, `FailureCleared`, `DisagreementRecorded`, `DisagreementCleared`, `OutageExpiredLatched`, `GraceStarted`, `QuoteChangeCapped`, `RouteChanged`, `TokenDecimalsMismatch`, `TokenDecimalsRestored` ([ILPOracleBase.sol](ILPOracleBase.sol)).
 - User calls: [`poke`](LPOracle.sol#L175) (anyone; Avana's keeper every heartbeat).
 

@@ -13,7 +13,7 @@ import {AmmConstants} from "../../types/AmmConstants.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {ILensHubReads} from "./ILensHubReads.sol";
 import {LensBase} from "./LensBase.sol";
-import {RecordRemoval} from "./types/RemovalSizing.sol";
+import {RecordRemoval} from "./types/LensTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensAccountMath

@@ -43,7 +43,7 @@ Setup (Base market 3, USDC/USDT, tick spacing 1 on the Gauges V3 generation (ind
 
 ## What the UI reads and calls
 
-- Lens: [`getRecords`](../../lens/lens/ILensAccount.sol#L29), [`checkRecordBacking`](../../lens/lens/ILensMarket.sol#L21); direct [`positionKeyOf`](SlipstreamIntegration.sol#L102), [`isStaked`](SlipstreamIntegration.sol#L111), [`generation`](SlipstreamIntegration.sol#L94), [`validatePosition`](../concentrated-liquidity/ClLPVaultCustody.sol#L41).
+- Lens: [`getRecords`](../../lens/lens/ILensAccount.sol#L28), [`checkRecordBacking`](../../lens/lens/ILensMarket.sol#L20); direct [`positionKeyOf`](SlipstreamIntegration.sol#L102), [`isStaked`](SlipstreamIntegration.sol#L111), [`generation`](SlipstreamIntegration.sol#L94), [`validatePosition`](../concentrated-liquidity/ClLPVaultCustody.sol#L41).
 - Events to index: LPVault events ([ILPVaultBase.sol](../../custody/lp-vault/ILPVaultBase.sol)); Slipstream NPM `DecreaseLiquidity` and `Collect`.
 - User calls: the depositor unstakes the NFT from the gauge and approves the LPVault on the NPM of its generation before AaveAdapter `pledge`.
 

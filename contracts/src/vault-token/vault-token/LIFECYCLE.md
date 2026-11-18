@@ -28,7 +28,7 @@ Setup (Base market 3: vault token `VT` with 6 decimals, $2.00 per whole token, f
 
 ## What the UI reads and calls
 
-- Lens: [`getAccount`](../../lens/lens/ILensAccount.sol#L20) (collateral in vault tokens and USD), [`checkBacking`](../../lens/lens/ILensMarket.sol#L15) (supply against credited plus pending).
+- Lens: [`getAccount`](../../lens/lens/ILensAccount.sol#L19) (collateral in vault tokens and USD), [`checkBacking`](../../lens/lens/ILensMarket.sol#L14) (supply against credited plus pending).
 - Events to index: ERC-20 `Transfer` and `Approval`, [`ProxyAdded`](IVaultToken.sol#L12).
 - User calls: none.
 

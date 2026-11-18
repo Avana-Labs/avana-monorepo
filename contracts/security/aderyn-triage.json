@@ -1871,9 +1871,9 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "4d7b8b1e8e561347",
+      "fingerprint": "6c3dd4dac8c84f77",
       "check": "require-revert-in-loop",
-      "file": "src/lens/lens/LensAccount.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "getAccounts loops over the caller's own market list and an unlisted market ends the whole call with UnknownMarket (REQ-LENS-022, REQ-LENS-040); no partial answer is meaningful. Test: getAccountsUnknownMarketReverts.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
@@ -2209,9 +2209,9 @@
       "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
     },
     {
-      "fingerprint": "094328c473cc36ad",
+      "fingerprint": "24cbae04044a29c0",
       "check": "require-revert-in-loop",
-      "file": "src/lens/lens/LensSizing.sol",
+      "file": "src/lens/lens/LensPriceModule.sol",
       "reason": "The bisection loops of previewDeleverageTo (at most 2 x 128 steps) call the pure SettlementMath sizing, which reverts only for decimals above 36 (InvalidDecimals; no listed market has them) or an arithmetic overflow; zero prices return before it. Either one ends the whole preview, which has no meaningful partial answer (REQ-LENS-055). Tests: Lens.DeleverageTo (TEST-247).",
       "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new reasoning"

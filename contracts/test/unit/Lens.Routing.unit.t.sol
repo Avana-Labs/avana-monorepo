@@ -3,12 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ILens} from "../../src/lens/lens/ILens.sol";
 import {ILensActions} from "../../src/lens/lens/ILensActions.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {ILensFees} from "../../src/lens/lens/ILensFees.sol";
 import {ILensHubAssets} from "../../src/lens/lens/ILensHubAssets.sol";
 import {ILensMarkets} from "../../src/lens/lens/ILensMarkets.sol";
-import {ILensSizing} from "../../src/lens/lens/ILensSizing.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensRoutingUnitTest
@@ -38,10 +38,10 @@ contract LensRoutingUnitTest is LensFixture {
         (c[2], m[2]) =
         (abi.encodeCall(ILensActions.previewRepayAfter, (alice, MARKET_ID, debtReserveId, 1e18)), POSITIONS);
         (c[3], m[3]) = (abi.encodeCall(ILensActions.previewWithdrawAfter, (alice, MARKET_ID, _key(1))), POSITIONS);
-        (c[4], m[4]) = (abi.encodeCall(ILensSizing.previewMaxWithdraw, (alice, MARKET_ID, 1.2e18)), POSITIONS);
+        (c[4], m[4]) = (abi.encodeCall(ILens.previewMaxWithdraw, (alice, MARKET_ID, 1.2e18)), POSITIONS);
         (c[5], m[5]) =
-        (abi.encodeCall(ILensSizing.previewDeleverageTo, (alice, MARKET_ID, _key(1), debtReserveId, 3e18)), PRICE);
-        (c[6], m[6]) = (abi.encodeCall(ILensSizing.previewCloseAccount, (alice, MARKET_ID, T0 + 600)), ACCOUNT);
+        (abi.encodeCall(ILens.previewDeleverageTo, (alice, MARKET_ID, _key(1), debtReserveId, 3e18)), PRICE);
+        (c[6], m[6]) = (abi.encodeCall(ILens.previewCloseAccount, (alice, MARKET_ID, T0 + 600)), ACCOUNT);
         (c[7], m[7]) = (abi.encodeCall(ILensHubAssets.getHubAsset, (aave.hub, ghoAssetId)), RISK);
         (c[8], m[8]) = (abi.encodeCall(ILensMarkets.getMarket, (MARKET_ID)), MARKETS);
         (c[9], m[9]) = (abi.encodeCall(ILensHubAssets.getHubAsset, (aave.hub, vtAssetId)), RISK);

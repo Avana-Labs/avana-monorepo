@@ -3168,89 +3168,89 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "6275ab8984a0a58c",
+      "fingerprint": "7e58b1772c24df97",
       "check": "uninitialized-local",
-      "file": "src/lens/lens/LensPreview.sol",
+      "file": "src/lens/lens/LensPreviewModule.sol",
       "reason": "A memory struct (Borrow b, Repay r) declared and filled field by field on the next lines; Solidity zero-initialises memory. Tests: Lens.Preview.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "2e0e9d211bf0ef81",
+      "fingerprint": "7dfa0406a76b4f0f",
       "check": "uninitialized-local",
-      "file": "src/lens/lens/LensPreview.sol",
+      "file": "src/lens/lens/LensPreviewModule.sol",
       "reason": "A memory struct (Borrow b, Repay r) declared and filled field by field on the next lines; Solidity zero-initialises memory. Tests: Lens.Preview.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "960bf8e642a02cb5",
+      "fingerprint": "486be95adff9acbb",
       "check": "unused-return",
-      "file": "src/lens/lens/LensAccount.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "bd02b80f1abc9a1a",
+      "fingerprint": "9442b1f3a230e672",
       "check": "unused-return",
-      "file": "src/lens/lens/LensAccount.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "389741b2fee5df1a",
+      "fingerprint": "720d67a33d3c32ee",
       "check": "unused-return",
-      "file": "src/lens/lens/LensLiquidation.sol",
+      "file": "src/lens/lens/LensLiquidationModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "ead97040b80baef9",
+      "fingerprint": "034bd65ff5affb34",
       "check": "unused-return",
-      "file": "src/lens/lens/LensPreview.sol",
+      "file": "src/lens/lens/LensPreviewModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "deec7e712f5f7ecf",
+      "fingerprint": "dfc4d7a6e595a657",
       "check": "unused-return",
-      "file": "src/lens/lens/LensLiquidation.sol",
+      "file": "src/lens/lens/LensLiquidationModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "072f3f808c0b858d",
+      "fingerprint": "197a7f42e5899898",
       "check": "unused-return",
-      "file": "src/lens/lens/LensMarket.sol",
+      "file": "src/lens/lens/LensMarketModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "a4a8c1c5a9dc9bbb",
+      "fingerprint": "c622beecd36ebf0c",
       "check": "unused-return",
-      "file": "src/lens/lens/LensRisk.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "f3cf28580e824931",
+      "fingerprint": "854b17b67a84cd4e",
       "check": "unused-return",
-      "file": "src/lens/lens/LensLiquidation.sol",
+      "file": "src/lens/lens/LensLiquidationModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "4d4db22abe9656af",
+      "fingerprint": "f7cc38b53c14ef07",
       "check": "unused-return",
-      "file": "src/lens/lens/LensLiquidation.sol",
+      "file": "src/lens/lens/LensLiquidationModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
@@ -3264,33 +3264,33 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "34e8ba59dea00592",
+      "fingerprint": "717633777bc1e9e1",
       "check": "unused-return",
-      "file": "src/lens/lens/LensAccount.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "bc95ba34754a5993",
+      "fingerprint": "2c1589198b8edb68",
       "check": "unused-return",
-      "file": "src/lens/lens/LensPreview.sol",
+      "file": "src/lens/lens/LensPreviewModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "44fdcf3fc3bf6505",
+      "fingerprint": "4593221bfa9d2972",
       "check": "unused-return",
-      "file": "src/lens/lens/LensAccount.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "2d9cf819582955cd",
+      "fingerprint": "71ec44a2d82aa8e3",
       "check": "unused-return",
-      "file": "src/lens/lens/LensLiquidation.sol",
+      "file": "src/lens/lens/LensLiquidationModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
@@ -3304,25 +3304,25 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "080f91d3d4ea61c0",
+      "fingerprint": "0e9a4efcfb4a930e",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensLiquidation.sol",
+      "file": "src/lens/lens/LensLiquidationModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "1075ef059891bc4b",
+      "fingerprint": "f35cf519cd98260a",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensMarket.sol",
+      "file": "src/lens/lens/LensMarketModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "26cc14e8bc234095",
+      "fingerprint": "a9f19f52222a5716",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensAccount.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
@@ -3336,41 +3336,41 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "b82974b92fa95e32",
+      "fingerprint": "29d6d3a6a8fc647f",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensAccount.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "ec4fd080e0ea3de4",
+      "fingerprint": "ddf73240ea3495ea",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensRisk.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "45a9907df465071a",
+      "fingerprint": "9bc2fe72eab92f59",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensMarket.sol",
+      "file": "src/lens/lens/LensMarketModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "7f6da610e6644a93",
+      "fingerprint": "3d5508e957919075",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensRisk.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "65693254d4b90926",
+      "fingerprint": "70dca795d85bfd1f",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensPreview.sol",
+      "file": "src/lens/lens/LensPreviewModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
@@ -3384,17 +3384,17 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "24965db86b642b12",
+      "fingerprint": "7f37727fdc25b1ae",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensAccount.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "ff1203d6bb0298d4",
+      "fingerprint": "f3ef6d97756ad880",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensRisk.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
@@ -3408,41 +3408,41 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "9c4409400786d195",
+      "fingerprint": "27f5d963d75c36c6",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensRisk.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "90a010d297f51faa",
+      "fingerprint": "ec4240543d290191",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensLiquidation.sol",
+      "file": "src/lens/lens/LensLiquidationModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "d1e675d9423560e8",
+      "fingerprint": "87b1733a5f40505f",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensMarket.sol",
+      "file": "src/lens/lens/LensMarketModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "31d0242c3c304803",
+      "fingerprint": "9f3b0beb6f3eee96",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensAccount.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "1c4feae1b7271a54",
+      "fingerprint": "65b346f73bad0b71",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensMarket.sol",
+      "file": "src/lens/lens/LensMarketModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
@@ -3456,43 +3456,43 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "57fc67e0a20b08e6",
+      "fingerprint": "73916e885c1cb9cd",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensMarket.sol",
+      "file": "src/lens/lens/LensMarketModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "c9b34a96d1ac8e64",
+      "fingerprint": "eb3153b4e0f63ae0",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensRisk.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "a721a1053333f4e5",
+      "fingerprint": "009f3a875219f8b2",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensAccount.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "d67b69bfa0ea6f47",
+      "fingerprint": "62f3d3ee5c8314e5",
       "check": "timestamp",
-      "file": "src/lens/lens/LensClose.sol",
-      "function": "LensClose.previewCloseAccount(address,uint256,uint256)",
+      "file": "src/lens/lens/LensAccountModule.sol",
+      "function": "LensAccountModule.previewCloseAccount(address,uint256,uint256)",
       "reason": "No time comparison: Slither taints the whole result struct once one field is set to block.timestamp (the report's blockNumber/timestamp stamp, REQ-LENS-005) and follows that taint into values read through it; the flagged comparisons are the record loop index (i < rs.length) and a record's units (rs[i].units > 0) (REQ-LENS-056). A view, no state. Covered by TEST-247 (Lens.SizingGates: closeRecordsMatchGetRecords; Lens.CloseAccount.fuzz: closingCallsEmptyTheAccount).",
       "approval": "approved (Josue, 2026-11-13, by pattern)",
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
     },
     {
-      "fingerprint": "1ea44503ddc0766e",
+      "fingerprint": "a1666f79119c5918",
       "check": "timestamp",
-      "file": "src/lens/lens/LensClose.sol",
-      "function": "LensClose._debtCloses(Market,address,uint256)",
+      "file": "src/lens/lens/LensAccountModule.sol",
+      "function": "LensAccountModule._debtCloses(Market,address,uint256)",
       "reason": "No time comparison: totals[i] > 0 tests the account's debt on a reserve (Spoke.getUserTotalDebt); Slither links it to the deadline growth (_growth, REQ-LENS-036) computed later in the same function. A view, no state. Covered by TEST-247 (Lens.SizingGates: closeQuotesGrowWithTheDeadline; Lens.CloseAccount.fuzz: closingCallsEmptyTheAccount).",
       "approval": "approved (Josue, 2026-11-13, by pattern)",
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
@@ -3507,91 +3507,91 @@
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
     },
     {
-      "fingerprint": "d29bb1217638c558",
+      "fingerprint": "8015afbdb058afa2",
       "check": "timestamp",
-      "file": "src/lens/lens/LensLiquidation.sol",
-      "function": "LensLiquidation._priceGates(LiquidationPreview,LensLiquidation.Ctx)",
+      "file": "src/lens/lens/LensLiquidationModule.sol",
+      "function": "LensLiquidationModule._priceGates(LiquidationPreview,LensLiquidationModule.Ctx)",
       "reason": "Specified timestamps: pricesUsable combines the input and debt-price liquidation freshness (age checks, REQ-LENS-016, REQ-SWAP-008, REQ-SWAP-009) and belowGraceHealthFactor the LPOracle's grace flag with a health-factor comparison; it mirrors the gates LPVaultSwap applies. A view, no state. Covered by TEST-069 (Lens.Liquidation: pricesUsableWhenFresh, staleInputBlocks, staleDebtPriceBlocksOnlyItsReserve, graceReported).",
       "approval": "approved (Josue, 2026-11-13, by pattern)",
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
     },
     {
-      "fingerprint": "cd309fdde74b5278",
+      "fingerprint": "40029a807331aff4",
       "check": "timestamp",
-      "file": "src/lens/lens/LensLiquidation.sol",
-      "function": "LensLiquidation._stressValued(address,address,uint256)",
+      "file": "src/lens/lens/LensLiquidationModule.sol",
+      "function": "LensLiquidationModule._stressValued(address,address,uint256)",
       "reason": "No time comparison: ids[i] == debtReserveId compares reserve ids and getUserTotalDebt(...) == 0 the account's debt; Slither links them to the timestamp fields of the DebtOracle reads (lastAcceptedPrice) in the same loop (REQ-LENS-016, REQ-LENS-030). A view, no state. Covered by TEST-069 (Lens.Liquidation: stressValuedOtherReserveNeverBlocks).",
       "approval": "approved (Josue, 2026-11-13, by pattern)",
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
     },
     {
-      "fingerprint": "5150ec60470fc5a1",
+      "fingerprint": "1ebc5f6eb7db097e",
       "check": "timestamp",
-      "file": "src/lens/lens/LensPositions.sol",
-      "function": "LensPositions._withdrawGate(Market,uint256,address,uint256,uint256,uint256)",
+      "file": "src/lens/lens/LensPositionsModule.sol",
+      "function": "LensPositionsModule._withdrawGate(Market,uint256,address,uint256,uint256,uint256)",
       "reason": "No time comparison: the gate is the RiskModule's withdraw-with-debt flag, the pause state and the rescue-excluded health factor against max(1e18, hardHealthFloor) (REQ-LENS-049); none is derived from block.timestamp. A view, no state. Covered by TEST-247 (Lens.Positions: withdrawGates, withdrawExampleAtTheBoundary).",
       "approval": "approved (Josue, 2026-11-13, by pattern)",
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
     },
     {
-      "fingerprint": "e0c2f83f04dbc789",
+      "fingerprint": "bb70c8481504601f",
       "check": "timestamp",
-      "file": "src/lens/lens/LensPositions.sol",
-      "function": "LensPositions.getAccountRisk(address,uint256)",
+      "file": "src/lens/lens/LensPositionsModule.sol",
+      "function": "LensPositionsModule.getAccountRisk(address,uint256)",
       "reason": "No time comparison: Slither taints the whole result struct once one field is set to block.timestamp (the report's blockNumber/timestamp stamp, REQ-LENS-005) and follows that taint into values read through it; the flagged comparisons are the reserve loop index, the account's debt (totalDebtValueRay == 0) and its weighted collateral (cfAssets == 0) (REQ-LENS-047). A view, no state. Covered by TEST-247 (Lens.Positions: liquidationPriceZeroWithoutDebtAndMaxWithoutCollateral, borrowRatesIncludeRiskPremium).",
       "approval": "approved (Josue, 2026-11-13, by pattern)",
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
     },
     {
-      "fingerprint": "642a3db6f4a2d5bf",
+      "fingerprint": "71c7c0933380566e",
       "check": "timestamp",
-      "file": "src/lens/lens/LensPositions.sol",
-      "function": "LensPositions.previewWithdraw(address,uint256,bytes32,uint256)",
+      "file": "src/lens/lens/LensPositionsModule.sol",
+      "function": "LensPositionsModule.previewWithdraw(address,uint256,bytes32,uint256)",
       "reason": "No time comparison: Slither taints the whole result struct once one field is set to block.timestamp (the report's blockNumber/timestamp stamp, REQ-LENS-005) and follows that taint into values read through it; the flagged comparison !own || v.units > limit compares record ownership and units (REQ-LENS-049). A view, no state. Covered by TEST-247 (Lens.Positions: withdrawOtherRecordOrNoRecord, withdrawExampleAtTheBoundary).",
       "approval": "approved (Josue, 2026-11-13, by pattern)",
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
     },
     {
-      "fingerprint": "d229143c2dc2ac5e",
+      "fingerprint": "ec9cf0d8abd2adba",
       "check": "timestamp",
-      "file": "src/lens/lens/LensPreview.sol",
-      "function": "LensPreview._borrowPreview(address,uint256,uint256,uint256)",
+      "file": "src/lens/lens/LensPreviewModule.sol",
+      "function": "LensPreviewModule._borrowPreview(address,uint256,uint256,uint256)",
       "reason": "Specified timestamp: the maximum borrow uses the target health factor grown by the interest until the caller's deadline, max(0, deadline - now) (REQ-LENS-035, Q-398); the flagged comparison recommended > maximum caps one amount by the other. A view, no state; drift of seconds changes the growth by seconds of interest. Covered by TEST-247 (Lens.Preview: borrowMaxRateGrowsTarget, borrowMaxHardFloor).",
       "approval": "approved (Josue, 2026-11-13, by pattern)",
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
     },
     {
-      "fingerprint": "fb331e39fb904ec4",
+      "fingerprint": "a67aa824acbe3250",
       "check": "timestamp",
-      "file": "src/lens/lens/LensPreview.sol",
-      "function": "LensPreview._capacity(LensPreview.Borrow,uint256)",
+      "file": "src/lens/lens/LensPreviewModule.sol",
+      "function": "LensPreviewModule._capacity(LensPreviewModule.Borrow,uint256)",
       "reason": "Specified timestamp, through the target: maxDebt <= debtValue and amount > headroom compare debt values and the draw-cap headroom, where the target health factor carries the deadline growth of REQ-LENS-035 (REQ-LENS-044). Pure, no state. Covered by TEST-247 (Lens.Preview: borrowMaxRateGrowsTarget, borrowMaxCappedByDrawHeadroom).",
       "approval": "approved (Josue, 2026-11-13, by pattern)",
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
     },
     {
-      "fingerprint": "963d952ccd22f696",
+      "fingerprint": "d8738536e189559f",
       "check": "incorrect-equality",
-      "file": "src/lens/lens/LensLiquidation.sol",
-      "function": "LensLiquidation._stressValued(address,address,uint256)",
+      "file": "src/lens/lens/LensLiquidationModule.sol",
+      "function": "LensLiquidationModule._stressValued(address,address,uint256)",
       "reason": "Exact comparisons on a reserve id (ids[i] == debtReserveId) and on a debt of zero (getUserTotalDebt(...) == 0), which only skip reserves the account owes nothing on; not a balance a donation can steer to a refusal, and the result is a reported flag of a view (REQ-LENS-016). Covered by TEST-069 (Lens.Liquidation: stressValuedOtherReserveNeverBlocks).",
       "approval": "approved (Josue, 2026-11-13, by pattern)",
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
     },
     {
-      "fingerprint": "77fc07dbbd50f669",
+      "fingerprint": "031f11e986c7ef76",
       "check": "incorrect-equality",
-      "file": "src/lens/lens/LensMarket.sol",
-      "function": "LensMarket.checkBacking(address)",
+      "file": "src/lens/lens/LensMarketModule.sol",
+      "function": "LensMarketModule.checkBacking(address)",
       "reason": "The exact equalities are the specified backing checks the view reports as flags: supplyEqualsCredited (totalSupply == totalCredited + pendingUnits), sharesEqualAssets (addedShares == addedAssets) and noDrawnShares (drawnShares == 0) (REQ-LENS-012, REQ-LENS-013); a view that reports, never gates a state change. Covered by TEST-247 (Lens.Market: checkBackingRawValues, checkBackingHealthyFlags, checkBackingStrandedDonation).",
       "approval": "approved (Josue, 2026-11-13, by pattern)",
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
     },
     {
-      "fingerprint": "03014b6b72ff2b15",
+      "fingerprint": "cbcb486614e86524",
       "check": "incorrect-equality",
-      "file": "src/lens/lens/LensPositions.sol",
-      "function": "LensPositions.getAccountRisk(address,uint256)",
+      "file": "src/lens/lens/LensPositionsModule.sol",
+      "function": "LensPositionsModule.getAccountRisk(address,uint256)",
       "reason": "totalDebtValueRay == 0 returns the report early for an account without debt and cfAssets == 0 reports the liquidation price as type(uint256).max instead of dividing by zero (REQ-LENS-047); a view, no state. Covered by TEST-247 (Lens.Positions: liquidationPriceZeroWithoutDebtAndMaxWithoutCollateral).",
       "approval": "approved (Josue, 2026-11-13, by pattern)",
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: Slither 0.11.6 reports these Lens sites once src/amm/concentrated-liquidity/ClUnitMath.sol is part of the src build (base 2115cf4 with only that file added: 20 Lens timestamp/incorrect-equality results instead of 2); the same Lens code on wave1/contracts is not reported"
@@ -3615,19 +3615,19 @@
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: first reported on 2bfa529, the merge that added src/amm/concentrated-liquidity/ClTickMath.sol; LensAccountMath and LensRemoval did not change (the same effect as the approved entries reported once ClUnitMath.sol joined the build, e.g. 03014b6b72ff2b15)."
     },
     {
-      "fingerprint": "d7f8a0e3ef66ab61",
+      "fingerprint": "821051bebaaa4d40",
       "check": "incorrect-equality",
-      "file": "src/lens/lens/LensRemoval.sol",
-      "function": "LensRemoval._maxRemoval(Market,address,uint256,uint256)",
+      "file": "src/lens/lens/LensPositionsModule.sol",
+      "function": "LensPositionsModule._maxRemoval(Market,address,uint256,uint256)",
       "reason": "per == 0 || assets == 0 returns a removal of 0 when nothing is counted (no price, no collateral factor or no enabled collateral) instead of dividing by zero (REQ-LENS-054); a view, no state. Covered by TEST-247 (Lens.InverseSizing: closeAccountWithoutDebtOrPriceOrAccount; Lens.ActionsEdge: removalAndWithdrawAfterAgreeOnTheBestRecord).",
       "approval": "pending review (approved pattern)",
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: first reported on 2bfa529, the merge that added src/amm/concentrated-liquidity/ClTickMath.sol; LensAccountMath and LensRemoval did not change (the same effect as the approved entries reported once ClUnitMath.sol joined the build, e.g. 03014b6b72ff2b15)."
     },
     {
-      "fingerprint": "3ebbabdb1e4eca03",
+      "fingerprint": "fdecb3402b274740",
       "check": "incorrect-equality",
-      "file": "src/lens/lens/LensRemoval.sol",
-      "function": "LensRemoval._removalBound(uint256,uint256,uint256,uint256)",
+      "file": "src/lens/lens/LensPositionsModule.sol",
+      "function": "LensPositionsModule._removalBound(uint256,uint256,uint256,uint256)",
       "reason": "per == 0 returns 0 before the division by per (REQ-LENS-054, MATH-AR-76); a pure helper of views, no state. Covered by TEST-247 (Lens.ActionsConfig fuzz: removalSubtractsTheRescueExclusion).",
       "approval": "pending review (approved pattern)",
       "review": "New Slither result on unchanged Lens code, not a re-fingerprint: first reported on 2bfa529, the merge that added src/amm/concentrated-liquidity/ClTickMath.sol; LensAccountMath and LensRemoval did not change (the same effect as the approved entries reported once ClUnitMath.sol joined the build, e.g. 03014b6b72ff2b15)."
@@ -3833,65 +3833,65 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "f6c617c96508e865",
+      "fingerprint": "4775ce059be4496f",
       "check": "unused-return",
-      "file": "src/lens/lens/LensMarkets.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "aabdde97f9da3c57",
+      "fingerprint": "4b49131e6b2ebeaf",
       "check": "unused-return",
-      "file": "src/lens/lens/LensMarkets.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "e84c2418ada66716",
+      "fingerprint": "ccb7fab058a4b19f",
       "check": "unused-return",
-      "file": "src/lens/lens/LensMarkets.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "1fdcf1ee8898aadd",
+      "fingerprint": "169d921ced3dd1ad",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensMarkets.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "c201ca759d72c6be",
+      "fingerprint": "9c2e5b017f911e9d",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensMarkets.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "5cfdc9ebf835fb6a",
+      "fingerprint": "b51d0b90dc9e702c",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensMarkets.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "28813f6c09813d78",
+      "fingerprint": "3fb7ce3b169ac81f",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensMarkets.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "caa8cc324815c182",
+      "fingerprint": "40dba61cf98a4186",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensPositions.sol",
+      "file": "src/lens/lens/LensPositionsModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
@@ -3905,17 +3905,17 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "ea0eeb1f61713192",
+      "fingerprint": "ae1d9a01f71faf6d",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensMarkets.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "378216c08acc2671",
+      "fingerprint": "b8ed39a7264a0d5b",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensMarkets.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
@@ -4154,9 +4154,9 @@
       "review": "Lens round 2: new forwarded views, same entry-point pattern as 6c8cb1c3d2e5fac6"
     },
     {
-      "fingerprint": "93065b0c2e8a0b6c",
+      "fingerprint": "0d555ae584264cca",
       "check": "uninitialized-local",
-      "file": "src/lens/lens/LensSizing.sol",
+      "file": "src/lens/lens/LensPriceModule.sol",
       "reason": "A memory struct (Borrow b, Repay r) declared and filled field by field on the next lines; Solidity zero-initialises memory. Tests: Lens.Preview.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site (Repay r of previewDeleverageTo); same reasoning as 6275ab8984a0a58c"
@@ -4170,33 +4170,33 @@
       "review": "Pattern: b0d2a9f117831fc3 (approved Josue 2026-11-11); SecondSource source of poolTwapPrice, poolRef and twapWindow written on the next line"
     },
     {
-      "fingerprint": "4417b183f5ac1036",
+      "fingerprint": "6cd5c1e481060f32",
       "check": "unused-return",
-      "file": "src/lens/lens/LensClose.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as 960bf8e642a02cb5 (Lens unused-return pattern)"
     },
     {
-      "fingerprint": "708f518260d6f69b",
+      "fingerprint": "d9155c0419d9bb75",
       "check": "unused-return",
-      "file": "src/lens/lens/LensActions.sol",
+      "file": "src/lens/lens/LensPositionsModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as 960bf8e642a02cb5 (Lens unused-return pattern)"
     },
     {
-      "fingerprint": "8eda7d6a83ff2f3d",
+      "fingerprint": "2540bc173cfc1368",
       "check": "unused-return",
-      "file": "src/lens/lens/LensRisk.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as 960bf8e642a02cb5 (Lens unused-return pattern)"
     },
     {
-      "fingerprint": "87f0fd1900a3f1e2",
+      "fingerprint": "9c3b39f58cd979ed",
       "check": "unused-return",
-      "file": "src/lens/lens/LensFees.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as 960bf8e642a02cb5 (Lens unused-return pattern)"
@@ -4210,9 +4210,9 @@
       "review": "Lens round 2, new site; same reasoning as 960bf8e642a02cb5 (Lens unused-return pattern)"
     },
     {
-      "fingerprint": "9057b96e220dcefb",
+      "fingerprint": "0bfdbb0a8dd14790",
       "check": "unused-return",
-      "file": "src/lens/lens/LensFees.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as 960bf8e642a02cb5 (Lens unused-return pattern)"
@@ -4226,97 +4226,97 @@
       "review": "Lens round 2, new site; same reasoning as 960bf8e642a02cb5 (Lens unused-return pattern)"
     },
     {
-      "fingerprint": "facacf56f0b24b5a",
+      "fingerprint": "ce56bd72b4c4373e",
       "check": "unused-return",
-      "file": "src/lens/lens/LensRemoval.sol",
+      "file": "src/lens/lens/LensPositionsModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as 960bf8e642a02cb5 (Lens unused-return pattern)"
     },
     {
-      "fingerprint": "7105c32b44b6817e",
+      "fingerprint": "fd712ccf299f0f6d",
       "check": "unused-return",
-      "file": "src/lens/lens/LensRisk.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as 960bf8e642a02cb5 (Lens unused-return pattern)"
     },
     {
-      "fingerprint": "40c80791c6906a21",
+      "fingerprint": "33d1a437b083e036",
       "check": "unused-return",
-      "file": "src/lens/lens/LensFees.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as 960bf8e642a02cb5 (Lens unused-return pattern)"
     },
     {
-      "fingerprint": "7c967f7d5b76abdb",
+      "fingerprint": "7b8f986892cea5a5",
       "check": "unused-return",
-      "file": "src/lens/lens/LensHubAssets.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as 960bf8e642a02cb5 (Lens unused-return pattern)"
     },
     {
-      "fingerprint": "edae72539ea46ad6",
+      "fingerprint": "51ec059c15fea79b",
       "check": "unused-return",
-      "file": "src/lens/lens/LensFees.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "Only the fields the view reports are read from fixed external layouts (breaker reopening times, collateral/borrowing flags, accepted-price time, route address, composition exactness, the Adapter binding's reserve). Tests: Lens.Account, Lens.Liquidation, Lens.Preview unit suites.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as 960bf8e642a02cb5 (Lens unused-return pattern)"
     },
     {
-      "fingerprint": "6a0f455ecdfb4a3f",
+      "fingerprint": "ec5b3c1464dba47d",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensMarkets.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as d419929b263e90f5 (Lens calls-loop pattern)"
     },
     {
-      "fingerprint": "d9d4fd10234da6eb",
+      "fingerprint": "4c593951d0fe9013",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensRisk.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as d419929b263e90f5 (Lens calls-loop pattern)"
     },
     {
-      "fingerprint": "513f8d425319601f",
+      "fingerprint": "1fd8304bdb09a734",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensRisk.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as d419929b263e90f5 (Lens calls-loop pattern)"
     },
     {
-      "fingerprint": "94c82a857e145ed7",
+      "fingerprint": "553394d7b5fadd2a",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensFees.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as d419929b263e90f5 (Lens calls-loop pattern)"
     },
     {
-      "fingerprint": "aa97bc5465bbaead",
+      "fingerprint": "c9425cb0896f2851",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensClose.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as d419929b263e90f5 (Lens calls-loop pattern)"
     },
     {
-      "fingerprint": "5c100448b934cf32",
+      "fingerprint": "29f3f214ed778711",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensHubAssets.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as d419929b263e90f5 (Lens calls-loop pattern)"
     },
     {
-      "fingerprint": "859b05ae56674b1e",
+      "fingerprint": "9cfaa65e1cd6c3af",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensFees.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as d419929b263e90f5 (Lens calls-loop pattern)"
@@ -4330,9 +4330,9 @@
       "review": "Lens round 2, new site; same reasoning as d419929b263e90f5 (Lens calls-loop pattern)"
     },
     {
-      "fingerprint": "c9d0ea3c0464560b",
+      "fingerprint": "b00fee48f448bb4d",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensFees.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as d419929b263e90f5 (Lens calls-loop pattern)"
@@ -4346,9 +4346,9 @@
       "review": "Lens round 2, new site; same reasoning as d419929b263e90f5 (Lens calls-loop pattern)"
     },
     {
-      "fingerprint": "55b955c482660dcc",
+      "fingerprint": "645ef7c8480f89ce",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensClose.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "View calls in loops bounded by governance listings (Spokes, enabled debt reserves, markets, pool tokens, the Spokes on a Hub asset, the reserve's dynamic keys), one page of at most LENS_MAX_PAGE records, the 16 records of an account-market or the caller's own arrays (REQ-LENS-010, REQ-LENS-013, REQ-LENS-020); every callee is a view. Tests: Lens.gas (fullRecordPageFitsTheBlock, sixteenRecordReconcileWalkFitsTheBlock), Lens.States.",
       "approval": "pending review (approved pattern)",
       "review": "Lens round 2, new site; same reasoning as d419929b263e90f5 (Lens calls-loop pattern)"
@@ -4370,9 +4370,9 @@
       "review": "Pattern: the ERC-7201 assembly entries (MarketRegistryStorage 15ff415436474f66, approved)"
     },
     {
-      "fingerprint": "fc74b907193a70ec",
+      "fingerprint": "3c585fd7d52ccaaa",
       "check": "assembly",
-      "file": "src/lens/lens/LensRisk.sol",
+      "file": "src/lens/lens/LensRiskModule.sol",
       "reason": "LensRisk._standsBehind: one STATICCALL of FIRST_LOSS_LAYER() on a Spoke the Hub lists for the asset, with 4 bytes of calldata at the free-memory pointer (not advanced) and at most 32 bytes of return data copied back there; it counts only when the call succeeded with exactly 32 bytes equal to the layer, so a Spoke without the getter, a revert, another length or a dirty word is no match (REQ-LENS-042, REQ-FLR-046). Memory-safe, a view, no state. Test: Lens.DeficitOffset (test_TEST_247_malformedOrOtherLayerIsNoOffset).",
       "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2 (DAO deficit offset), new assembly site"
@@ -4973,16 +4973,16 @@
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
-      "fingerprint": "ec25daaf632c78bf",
+      "fingerprint": "c9aaad5851a64e8a",
       "check": "calls-loop",
-      "file": "src/lens/lens/LensFees.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "View calls in the Lens's loop over at most 16 records of one account-market (REQ-LENS-020).",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
-      "fingerprint": "6545848fa7c29a85",
+      "fingerprint": "3d76407a34b67097",
       "check": "unused-return",
-      "file": "src/lens/lens/LensFees.sol",
+      "file": "src/lens/lens/LensMarketsModule.sol",
       "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },

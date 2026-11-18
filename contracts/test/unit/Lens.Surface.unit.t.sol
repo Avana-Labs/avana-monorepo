@@ -6,7 +6,6 @@ pragma solidity 0.8.28;
 import {ILens} from "../../src/lens/lens/ILens.sol";
 import {ILensAccount} from "../../src/lens/lens/ILensAccount.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
-import {ILensLiquidation} from "../../src/lens/lens/ILensLiquidation.sol";
 import {ILensMarket} from "../../src/lens/lens/ILensMarket.sol";
 import {ILensMarkets} from "../../src/lens/lens/ILensMarkets.sol";
 import {ILensPositions} from "../../src/lens/lens/ILensPositions.sol";
@@ -168,11 +167,11 @@ contract LensSurfaceUnitTest is LensFixture {
         _same(abi.encodeCall(ILensMarket.checkRecordBacking, (vt, 0, 200)), modules[1]);
         _same(abi.encodeCall(ILensMarket.getCapHeadroom, (vt, alice)), modules[1]);
         _same(abi.encodeCall(ILensMarket.getPendingSettlement, (vt)), modules[1]);
-        _same(abi.encodeCall(ILensLiquidation.getPriceState, (vt)), modules[2]);
-        _same(abi.encodeCall(ILensLiquidation.getDebtPriceState, (aave.cdpSpoke, usdcReserveId)), modules[2]);
-        _same(abi.encodeCall(ILensLiquidation.getApplicationState, (aave.hub)), modules[2]);
-        _same(abi.encodeCall(ILensLiquidation.getPauseReason, (aave.hub)), modules[2]);
-        _same(abi.encodeCall(ILensLiquidation.previewLiquidation, (aliceProxy, debtReserveId, T0)), modules[3]);
+        _same(abi.encodeCall(ILens.getPriceState, (vt)), modules[2]);
+        _same(abi.encodeCall(ILens.getDebtPriceState, (aave.cdpSpoke, usdcReserveId)), modules[2]);
+        _same(abi.encodeCall(ILens.getApplicationState, (aave.hub)), modules[2]);
+        _same(abi.encodeCall(ILens.getPauseReason, (aave.hub)), modules[2]);
+        _same(abi.encodeCall(ILens.previewLiquidation, (aliceProxy, debtReserveId, T0)), modules[3]);
         _same(abi.encodeCall(ILensRisk.getBreakerStatus, (MARKET_ID)), modules[4]);
         _same(abi.encodeCall(ILensRisk.isFrozenAddress, (alice)), modules[4]);
         _same(abi.encodeCall(ILensRisk.uncoveredDeficit, (aave.hub, address(debt))), modules[4]);
@@ -189,8 +188,8 @@ contract LensSurfaceUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-007, REQ-LENS-022, REQ-LENS-032, REQ-LENS-033
     function test_TEST_247_entryPointReturnsModuleRevertData() public view {
-        _sameRevert(abi.encodeCall(ILensLiquidation.previewLiquidation, (bobProxy, debtReserveId, T0)), modules[3]);
-        _sameRevert(abi.encodeCall(ILensLiquidation.getDebtPriceState, (aave.cdpSpoke, 77)), modules[2]);
+        _sameRevert(abi.encodeCall(ILens.previewLiquidation, (bobProxy, debtReserveId, T0)), modules[3]);
+        _sameRevert(abi.encodeCall(ILens.getDebtPriceState, (aave.cdpSpoke, 77)), modules[2]);
         _sameRevert(abi.encodeCall(ILensAccount.getAccount, (alice, 99)), modules[0]);
         _sameRevert(abi.encodeCall(ILensMarket.checkRecordBacking, (vt, 0, 201)), modules[1]);
         _sameRevert(abi.encodeCall(ILensRisk.getTailCoverage, (aave.hub, address(usdt))), modules[4]);
@@ -249,8 +248,7 @@ contract LensSurfaceUnitTest is LensFixture {
         (bool ok, bytes memory ret) = modules[0].staticcall(abi.encodeCall(ILensAccount.getAccount, (alice, MARKET_ID)));
         assertFalse(ok, "account module");
         assertEq(bytes4(ret), ILensErrors.Locked.selector, "Locked()");
-        (ok, ret) =
-            modules[3].staticcall(abi.encodeCall(ILensLiquidation.previewLiquidation, (aliceProxy, debtReserveId, T0)));
+        (ok, ret) = modules[3].staticcall(abi.encodeCall(ILens.previewLiquidation, (aliceProxy, debtReserveId, T0)));
         assertFalse(ok, "liquidation module");
         assertEq(bytes4(ret), ILensErrors.Locked.selector, "Locked()");
         vm.prank(lpVaultSwap);
@@ -318,11 +316,11 @@ contract LensSurfaceUnitTest is LensFixture {
         c[6] = abi.encodeCall(ILensMarket.checkRecordBacking, (vt, 0, 10));
         c[7] = abi.encodeCall(ILensMarket.getPendingSettlement, (vt));
         c[8] = abi.encodeCall(ILensMarket.getCapHeadroom, (vt, alice));
-        c[9] = abi.encodeCall(ILensLiquidation.getPriceState, (vt));
-        c[10] = abi.encodeCall(ILensLiquidation.getDebtPriceState, (aave.cdpSpoke, debtReserveId));
-        c[11] = abi.encodeCall(ILensLiquidation.getApplicationState, (aave.hub));
-        c[12] = abi.encodeCall(ILensLiquidation.getPauseReason, (aave.hub));
-        c[13] = abi.encodeCall(ILensLiquidation.previewLiquidation, (aliceProxy, debtReserveId, T0));
+        c[9] = abi.encodeCall(ILens.getPriceState, (vt));
+        c[10] = abi.encodeCall(ILens.getDebtPriceState, (aave.cdpSpoke, debtReserveId));
+        c[11] = abi.encodeCall(ILens.getApplicationState, (aave.hub));
+        c[12] = abi.encodeCall(ILens.getPauseReason, (aave.hub));
+        c[13] = abi.encodeCall(ILens.previewLiquidation, (aliceProxy, debtReserveId, T0));
         c[14] = abi.encodeCall(ILensRisk.getBreakerStatus, (MARKET_ID));
         c[15] = abi.encodeCall(ILensRisk.getDebtBreakerStatus, (aave.cdpSpoke, debtReserveId));
         c[16] = abi.encodeCall(ILensRisk.isFrozenAddress, (alice));

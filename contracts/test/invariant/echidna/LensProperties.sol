@@ -3,15 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ILens} from "../../../src/lens/lens/ILens.sol";
 import {ILensAccount} from "../../../src/lens/lens/ILensAccount.sol";
 import {ILensActions} from "../../../src/lens/lens/ILensActions.sol";
 import {ILensFees} from "../../../src/lens/lens/ILensFees.sol";
 import {ILensHubAssets} from "../../../src/lens/lens/ILensHubAssets.sol";
-import {ILensLiquidation} from "../../../src/lens/lens/ILensLiquidation.sol";
 import {ILensMarket} from "../../../src/lens/lens/ILensMarket.sol";
 import {ILensPreview} from "../../../src/lens/lens/ILensPreview.sol";
 import {ILensRisk} from "../../../src/lens/lens/ILensRisk.sol";
-import {ILensSizing} from "../../../src/lens/lens/ILensSizing.sol";
 import {ILensSpeed} from "../../../src/lens/lens/ILensSpeed.sol";
 import {Lens} from "../../../src/lens/lens/Lens.sol";
 import {LensConstants} from "../../../src/lens/lens/LensConstants.sol";
@@ -124,9 +123,9 @@ contract LensProperties {
         } else if (which % 6 == 1) {
             (data, expected) = (abi.encodeCall(ILensMarket.checkBacking, (address(uint160(x)))), 1);
         } else if (which % 6 == 2) {
-            (data, expected) = (abi.encodeCall(ILensLiquidation.getPriceState, (address(uint160(x)))), 2);
+            (data, expected) = (abi.encodeCall(ILens.getPriceState, (address(uint160(x)))), 2);
         } else if (which % 6 == 3) {
-            (data, expected) = (abi.encodeCall(ILensLiquidation.previewLiquidation, (address(uint160(x)), x, x)), 3);
+            (data, expected) = (abi.encodeCall(ILens.previewLiquidation, (address(uint160(x)), x, x)), 3);
         } else if (which % 6 == 4) {
             (data, expected) = (abi.encodeCall(ILensRisk.getBreakerStatus, (x)), 4);
         } else {
@@ -157,11 +156,11 @@ contract LensProperties {
         } else if (w == 1) {
             (data, expected) = (abi.encodeCall(ILensActions.previewBorrowAfter, (a, x, x, x)), 7);
         } else if (w == 2) {
-            (data, expected) = (abi.encodeCall(ILensSizing.previewMaxWithdraw, (a, x, x)), 7);
+            (data, expected) = (abi.encodeCall(ILens.previewMaxWithdraw, (a, x, x)), 7);
         } else if (w == 3) {
-            (data, expected) = (abi.encodeCall(ILensSizing.previewDeleverageTo, (a, x, bytes32(x), x, x)), 2);
+            (data, expected) = (abi.encodeCall(ILens.previewDeleverageTo, (a, x, bytes32(x), x, x)), 2);
         } else if (w == 4) {
-            (data, expected) = (abi.encodeCall(ILensSizing.previewCloseAccount, (a, x, x)), 0);
+            (data, expected) = (abi.encodeCall(ILens.previewCloseAccount, (a, x, x)), 0);
         } else if (w == 5) {
             (data, expected) = (abi.encodeCall(ILensHubAssets.getHubAsset, (a, x)), 4);
         } else if (w == 6) {

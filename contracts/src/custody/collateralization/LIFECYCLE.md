@@ -51,7 +51,7 @@ Setup (Base market 3, from 3.1 `DEP-029` and 3.4 `WDR-045`): one whole vault tok
 
 ## What the UI reads and calls
 
-- Lens: [`getRecords`](../../lens/lens/ILensAccount.sol#L29), [`getAccount`](../../lens/lens/ILensAccount.sol#L20), [`checkBacking`](../../lens/lens/ILensMarket.sol#L15), [`checkRecordBacking`](../../lens/lens/ILensMarket.sol#L21), [`getPendingSettlement`](../../lens/lens/ILensMarket.sol#L28), [`getCapHeadroom`](../../lens/lens/ILensMarket.sol#L33); direct views [`previewRelease`](CollateralizationViews.sol#L129) (the `units` argument of `withdraw`), [`previewRecredit`](CollateralizationViews.sol#L139), [`getAccountRecords`](CollateralizationViews.sol#L40), [`getPending`](CollateralizationViews.sol#L85).
+- Lens: [`getRecords`](../../lens/lens/ILensAccount.sol#L28), [`getAccount`](../../lens/lens/ILensAccount.sol#L19), [`checkBacking`](../../lens/lens/ILensMarket.sol#L14), [`checkRecordBacking`](../../lens/lens/ILensMarket.sol#L20), [`getPendingSettlement`](../../lens/lens/ILensMarket.sol#L27), [`getCapHeadroom`](../../lens/lens/ILensMarket.sol#L32); direct views [`previewRelease`](CollateralizationViews.sol#L129) (the `units` argument of `withdraw`), [`previewRecredit`](CollateralizationViews.sol#L139), [`getAccountRecords`](CollateralizationViews.sol#L40), [`getPending`](CollateralizationViews.sol#L85).
 - Events to index: [ICollateralizationBase.sol](ICollateralizationBase.sol): `CollateralPledged`, `CollateralReleased`, `RecordReduced`, `RecordRecredited`, `RecordDebited`, `SeizureSettled`, `SeizureReconciled`, `PendingSettled`, `CounterSaturated`.
 - User calls: none directly; users reach it through the AaveAdapter (`pledge`, `withdraw`, `removeLiquidity`, `recredit`, `collectFees`, `releaseZeroCredit`).
 

@@ -169,7 +169,7 @@ Callers import `I<Name>` for calls and selectors, and `I<Name>Base` for events a
 | RiskModule | `IRiskModule`, `IRiskModuleErrors`; one logic interface per logic contract |
 | PositionProxy | `IPositionProxy` |
 | AvanaTimelock | `IAvanaTimelock` |
-| Lens | `ILensAccount`, `ILensMarket`, `ILensLiquidation`, `ILensPreview`, `ILensRisk`; the dependency getters are declared on `ILens` |
+| Lens | `ILensAccount`, `ILensMarket`, `ILens`, `ILensPreview`, `ILensRisk`; the dependency getters are declared on `ILens` |
 | LPOracle | `ILPOracle`, `ILPOracleBase`, `ILPOracleLogic`; `ILPOracleCL` for the concentrated-liquidity implementation |
 | DebtOracle | `IDebtOracle` |
 

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LensClPosition, LensV3Tick} from "./types/LensClReads.sol";
+import {LensClPosition, LensV3Tick} from "./types/LensTypes.sol";
 
 /// @title ILensV3FeeReads
 /// @notice Uniswap v3 pool and NonfungiblePositionManager views used by the Lens fee reader.

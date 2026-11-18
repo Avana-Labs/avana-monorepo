@@ -44,7 +44,7 @@ Setup (Ethereum market 1, Uniswap v3 USDC/USDT; proposed defaults from 1.5, fina
 
 ## What the UI reads and calls
 
-- Lens: [`getCapHeadroom`](../../lens/lens/ILensMarket.sol#L33) (caps and `minPledgeUsd`), [`getPriceState`](../../lens/lens/ILensLiquidation.sol#L15) (feed ages against these limits), [`previewBorrowMax`](../../lens/lens/ILensPreview.sol#L12) (uses `hardHealthFloor`).
+- Lens: [`getCapHeadroom`](../../lens/lens/ILensMarket.sol#L32) (caps and `minPledgeUsd`), [`getPriceState`](../../lens/lens/ILens.sol#L81) (feed ages against these limits), [`previewBorrowMax`](../../lens/lens/ILensPreview.sol#L12) (uses `hardHealthFloor`).
 - Events to index: `ParameterSet`, `ParameterTightened`, `ParameterLoosened`, `CapTightened`, `CapLoosened`, `MinPledgeUsdSet`, `MarketSpeedLimitsSet`, `DebtSpeedLimitSet`, `FeedConfigured`, `SecondSourceSwitched` ([IParameterStoreBase.sol](IParameterStoreBase.sol)).
 - User calls: none.
 

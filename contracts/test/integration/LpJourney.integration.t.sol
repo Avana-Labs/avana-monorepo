@@ -4,9 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {INonfungiblePositionManager} from "../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
-import {AccountView} from "../../src/lens/lens/types/AccountView.sol";
-import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
-import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
+import {AccountView, LiquidationPreview, RecordView} from "../../src/lens/lens/types/LensTypes.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";

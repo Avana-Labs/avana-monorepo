@@ -6,9 +6,7 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {ILensHubReads} from "../../src/lens/lens/ILensHubReads.sol";
-import {HubAssetExposureView, SpokeDraw} from "../../src/lens/lens/types/HubAssetExposureView.sol";
-import {HubAssetView} from "../../src/lens/lens/types/HubAssetView.sol";
-import {SpokeKind} from "../../src/lens/lens/types/SpokeKind.sol";
+import {HubAssetExposureView, HubAssetView, SpokeDraw, SpokeKind} from "../../src/lens/lens/types/LensTypes.sol";
 import {CollHubSpokeConfig, ICollHubConfigurator} from "../utils/fixtures/CollateralizationFixture.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 

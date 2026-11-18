@@ -55,7 +55,7 @@ Setup (Base market 3, from 3.1 `DEP-029` and 3.2 `BOR-022`): $2.00 per whole vau
 ## What the UI reads and calls
 
 - Speed views: [`getBorrowSpeed`](RiskModule.sol#L341), [`getPledgeSpeed`](RiskModule.sol#L358); the Lens module [`LensSpeedModule.getBorrowSpeed`](../../lens/lens/LensSpeedModule.sol#L25) turns them into "available to borrow now" in the asset and the time more frees up.
-- Lens: [`getBreakerStatus`](../../lens/lens/ILensRisk.sol#L14), [`getDebtBreakerStatus`](../../lens/lens/ILensRisk.sol#L19), [`getCapHeadroom`](../../lens/lens/ILensMarket.sol#L33), [`previewBorrowRecommended`](../../lens/lens/ILensPreview.sol#L22), [`previewRecredit`](../../lens/lens/ILensPreview.sol#L42); direct views [`previewPledge`](RiskModule.sol#L230), [`usdToRestore`](RiskModule.sol#L275), [`getAccountGateStatus`](RiskModule.sol#L250).
+- Lens: [`getBreakerStatus`](../../lens/lens/ILensRisk.sol#L13), [`getDebtBreakerStatus`](../../lens/lens/ILensRisk.sol#L18), [`getCapHeadroom`](../../lens/lens/ILensMarket.sol#L32), [`previewBorrowRecommended`](../../lens/lens/ILensPreview.sol#L22), [`previewRecredit`](../../lens/lens/ILensPreview.sol#L42); direct views [`previewPledge`](RiskModule.sol#L230), [`usdToRestore`](RiskModule.sol#L275), [`getAccountGateStatus`](RiskModule.sol#L250).
 - Events to index: [`BreakersPoked`](IRiskModule.sol#L25), [`ConfigDriftDetected`](IRiskModule.sol#L22).
 - User calls: none; `pokeBreakers` and `pokeConfig` are open to anyone and run by Avana's keeper.
 

@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DebtReserveView} from "./types/DebtReserveView.sol";
-import {MarketView} from "./types/MarketView.sol";
+import {DebtReserveView, MarketView} from "./types/LensTypes.sol";
 
 /// @title ILensMarkets
 /// @notice Market list and debt-reserve views of the Lens: identity, prices, supply, limits, rates and the rate curve.

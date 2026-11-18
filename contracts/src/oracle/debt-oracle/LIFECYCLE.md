@@ -42,7 +42,7 @@ Setup (Base, `r_USDC` on the "Aerodrome Slipstream Stable" CDP Spoke, from 3.2 `
 
 ## What the UI reads and calls
 
-- Lens: [`getDebtPriceState`](../../lens/lens/ILensLiquidation.sol#L21)`(spoke, debtReserveId)`; direct [`getPriceState`](IDebtOracle.sol#L42).
+- Lens: [`getDebtPriceState`](../../lens/lens/ILens.sol#L87)`(spoke, debtReserveId)`; direct [`getPriceState`](IDebtOracle.sol#L42).
 - Events to index: `DebtPriceStateChanged`, `DebtPriceAccepted`, `DebtFailureRecorded`, `DebtFailureCleared`, `DebtDisagreementRecorded`, `DebtOutageExpiredLatched`, `DebtGraceStarted` ([IDebtOracleEvents.sol](IDebtOracleEvents.sol)).
 - User calls: [`poke`](IDebtOracle.sol#L55) (anyone).
 

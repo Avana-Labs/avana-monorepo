@@ -7,7 +7,6 @@ import {ILens} from "../../src/lens/lens/ILens.sol";
 import {ILensActions} from "../../src/lens/lens/ILensActions.sol";
 import {ILensFees} from "../../src/lens/lens/ILensFees.sol";
 import {ILensHubAssets} from "../../src/lens/lens/ILensHubAssets.sol";
-import {ILensSizing} from "../../src/lens/lens/ILensSizing.sol";
 import {ILensSpeed} from "../../src/lens/lens/ILensSpeed.sol";
 import {Lens} from "../../src/lens/lens/Lens.sol";
 import {LensModuleStub, LensProperties} from "../invariant/echidna/LensProperties.sol";
@@ -58,9 +57,9 @@ contract LensRoutingStubsUnitTest is Test {
     // TEST-247 verifies: REQ-LENS-001, REQ-LENS-054, REQ-LENS-055, REQ-LENS-056, REQ-LENS-058
     function test_TEST_247_sizingAndHubAssetReachTheirModules() public view {
         address w = address(0xB0B);
-        _route(abi.encodeCall(ILensSizing.previewMaxWithdraw, (w, 4, 1.2e18)), 7);
-        _route(abi.encodeCall(ILensSizing.previewDeleverageTo, (w, 4, bytes32(uint256(1)), 2, 1.5e18)), 2);
-        _route(abi.encodeCall(ILensSizing.previewCloseAccount, (w, 4, 1_800_000_000)), 0);
+        _route(abi.encodeCall(ILens.previewMaxWithdraw, (w, 4, 1.2e18)), 7);
+        _route(abi.encodeCall(ILens.previewDeleverageTo, (w, 4, bytes32(uint256(1)), 2, 1.5e18)), 2);
+        _route(abi.encodeCall(ILens.previewCloseAccount, (w, 4, 1_800_000_000)), 0);
         _route(abi.encodeCall(ILensHubAssets.getHubAsset, (address(0x4B), 3)), 4);
     }
 
