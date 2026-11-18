@@ -5,7 +5,7 @@
   "namespaces": {
     "erc7201:avana.storage.RiskModule.speed": {
       "baseSlot": "0x1858dc028745fe2a4f37a8a31dd3ca321a1f7863f165bffa26e588c97f1ff200",
-      "declaredIn": "src/policy/risk-module/RiskModuleSpeed.sol",
+      "declaredIn": "src/policy/risk-module/RiskModule.sol",
       "fields": [
         {
           "path": "marketBorrow",

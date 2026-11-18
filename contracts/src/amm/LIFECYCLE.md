@@ -2,7 +2,7 @@ Function links point to the interface that declares each function.
 
 # AMM integration lifecycle
 
-`ILPVault` and `ILPVault` are the AMM-neutral surface every LPVault implements, so Collateralization, the LPOracle, the RiskModule and the Lens handle a Uniswap v3 NFT, a Uniswap v4 PositionManager NFT, a Slipstream NFT or a fungible LP share the same way: a position is `(integrationId, positionKey)` and every amount is an array in the market's token order.
+`ILPVault` is the AMM-neutral surface every LPVault implements, so Collateralization, the LPOracle, the RiskModule and the Lens handle a Uniswap v3 NFT, a Uniswap v4 PositionManager NFT, a Slipstream NFT or a fungible LP share the same way: a position is `(integrationId, positionKey)` and every amount is an array in the market's token order.
 
 ```mermaid
 flowchart LR
