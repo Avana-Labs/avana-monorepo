@@ -211,12 +211,7 @@ jobs:
             forge-build-${{ runner.os }}-
 
       - name: Build
-        # A pull request builds src/ and script/ here with the real settings: the size check reads src/ only, and the
-        # test-build job compiles the tests alongside. A manual run builds everything.
-        env:
-          EVENT: ${{ github.event_name }}
-        run: |
-          if [ "$EVENT" = pull_request ]; then forge build src script --sizes; else forge build --sizes; fi
+        run: forge build --sizes
 
       - name: Restore the base branch's contract sizes
         if: github.event_name == 'pull_request'
@@ -274,61 +269,8 @@ jobs:
             contracts/cache
           retention-days: 7
 
-  test-build:
-    # Pull requests only: compiles src/ and test/ with the lite profile (optimizer off outside foundry.toml's
-    # compilation restrictions, out-lite/, cache-lite/) while the build job checks sizes with the real settings, so
-    # the tests start without waiting for the optimized build. Gas snapshots keep the real settings (gas job).
-    name: test build (lite profile)
-    needs: changes
-    if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.tests == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    env:
-      FOUNDRY_PROFILE: lite
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
-
-      - name: Read the pinned Foundry version
-        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
-
-      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
-        with:
-          version: ${{ env.FOUNDRY_VERSION }}
-
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: contracts/dependencies
-          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
-
-      - run: forge soldeer install
-
-      - name: Restore the last lite build (out-lite, cache-lite)
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: |
-            contracts/out-lite
-            contracts/cache-lite
-          key: forge-lite-${{ runner.os }}-${{ hashFiles('contracts/.foundry-version', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/remappings.txt', 'contracts/src/**/*.sol', 'contracts/test/**/*.sol', 'contracts/script/**/*.sol') }}
-          restore-keys: |
-            forge-lite-${{ runner.os }}-
-
-      - name: Build (lite profile)
-        run: forge build
-
-      - name: Upload the lite build
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: forge-out-lite
-          path: |
-            contracts/out-lite
-            contracts/cache-lite
-          retention-days: 7
-
   test:
-    # A pull request runs the shards on the lite build (test-build job); a manual run on the build job's optimized
-    # build at the ci profile. The suite is split into shards that run side by side (3 in the fast suite, 10 in the full and long ones): every
+    # The suite is split into shards that run side by side (3 in the fast suite, 10 in the full and long ones): every
     # test file (fork and differential excluded) is assigned by its measured run time (script/test-shard.sh,
     # script/test-shard.py, script/test-timings.json), so the shards take about equal time and each unit runs in
     # exactly one shard. A file of test/invariant/ is one unit: Foundry runs all invariants of a test contract in one
@@ -337,8 +279,8 @@ jobs:
     # job's compiled output. In a long run the deep invariant job runs every file of test/invariant/, so the shards
     # leave them out (TEST_SHARD_SKIP_INVARIANT).
     name: tests (ci profile, shard ${{ matrix.shard }}/${{ (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && 10 || 3 }})
-    needs: [changes, build, test-build]
-    if: ${{ !cancelled() && needs.changes.outputs.tests == 'true' && !inputs.only && needs.build.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.test-build.result) }}
+    needs: [changes, build]
+    if: ${{ needs.changes.outputs.tests == 'true' && !inputs.only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
@@ -346,7 +288,7 @@ jobs:
       matrix:
         shard: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && '[1,2,3,4,5,6,7,8,9,10]' || '[1,2,3]') }}
     env:
-      FOUNDRY_PROFILE: ${{ github.event_name == 'pull_request' && 'lite' || 'ci' }}
+      FOUNDRY_PROFILE: ci
       SHARDS: ${{ (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && 10 || 3 }}
       # The fast suite: fuzz 1,000 runs (the default profile's) and invariants 64 runs at depth 64.
       FAST: ${{ (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && '0' || '1' }}
@@ -380,13 +322,6 @@ jobs:
           name: forge-out
           path: contracts
 
-      - name: Reuse the lite build (pull requests)
-        if: github.event_name == 'pull_request'
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: forge-out-lite
-          path: contracts
-
       - name: Unit, fuzz, integration, hostile and invariant suites, shard ${{ matrix.shard }} (fast suite fuzz 1,000 and invariants 64 x 64; full suite fuzz 10,000 and invariants 1,000 x 100; long suite leaves invariants to the deep job; TEST-007)
         # A fresh seed per run widens coverage over time; the seed is printed for reproduction. The fast suite runs the
         # fuzz and invariant suites as a short check; the full suite runs them at the ci profile. A long run leaves
@@ -396,8 +331,7 @@ jobs:
           SEED=$(printf '0x%x' "$(( $(date +%s) + ${{ matrix.shard }} ))")
           echo "fuzz seed: $SEED"
           if [ "$FAST" = 1 ]; then
-            # The ci profile's reject limit, which the lite profile of a pull request does not carry.
-            export FOUNDRY_FUZZ_RUNS=1000 FOUNDRY_FUZZ_MAX_TEST_REJECTS=1000000 FOUNDRY_INVARIANT_RUNS=64 FOUNDRY_INVARIANT_DEPTH=64
+            export FOUNDRY_FUZZ_RUNS=1000 FOUNDRY_INVARIANT_RUNS=64 FOUNDRY_INVARIANT_DEPTH=64
             echo "fast suite: fuzz 1,000 runs, invariant suites 64 runs at depth 64"
           fi
           if [ "$TEST_SHARD_SKIP_INVARIANT" = 1 ]; then
@@ -1326,7 +1260,7 @@ jobs:
     # fork test skipped) fails the gate, as a failed one does. No branch rule requires this check.
     name: gate
     if: always()
-    needs: [changes, scripts, build, test-build, plan, test, hotfix-plan, hotfix, gas, abis, invariant, fork, differential, smtchecker, certora, coverage, fast-security]
+    needs: [changes, scripts, build, plan, test, hotfix-plan, hotfix, gas, abis, invariant, fork, differential, smtchecker, certora, coverage, fast-security]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -1339,20 +1273,18 @@ jobs:
           TESTS: ${{ needs.changes.outputs.tests == 'true' && !inputs.only }}
           FULL: ${{ github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only }}
           LONG: ${{ github.event_name == 'workflow_dispatch' && inputs.suite == 'long' }}
-          PR: ${{ github.event_name == 'pull_request' }}
           HOTFIX: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix') }}
           CERTORA: ${{ vars.CERTORA_ENABLED == 'true' }}
           # A manual run with `only` runs just those long-check targets; every skipped job is not selected.
           ONLY: ${{ inputs.only != '' && inputs.only != null }}
         run: |
           args=(--argjson build "$BUILD" --argjson tests "$TESTS" --argjson full "$FULL" --argjson longrun "$LONG"
-            --argjson hotfix "$HOTFIX" --argjson pr "$PR" --argjson certora "$CERTORA" --argjson only "$ONLY"
+            --argjson hotfix "$HOTFIX" --argjson certora "$CERTORA" --argjson only "$ONLY"
             --argjson long '["plan","invariant","fork","differential","smtchecker","certora"]')
           defs='def due($k):
               if $k == "changes" or $k == "scripts" then true
               elif $k == "build" then $build
               elif $k == "test" or $k == "gas" or $k == "abis" then $tests
-              elif $k == "test-build" then $tests and $pr
               elif $k == "coverage" or $k == "fast-security" then $full
               elif $k == "certora" then ($longrun or $only) and $certora
               elif ($long | index($k)) != null then ($longrun or $only)
