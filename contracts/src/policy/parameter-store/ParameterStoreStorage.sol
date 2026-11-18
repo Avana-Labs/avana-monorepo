@@ -27,7 +27,7 @@ abstract contract ParameterStoreStorage is IParameterStoreBase {
         mapping(address feed => FeedDef) feeds;
         mapping(bytes32 slotKey => uint256) routeDepth;
         mapping(address asset => uint256) floorRoundingAllowance;
-        mapping(address hub => mapping(address asset => uint256)) breakerDeficitMax;
+        mapping(address hub => mapping(address asset => uint256)) deficitMax;
         mapping(address asset => uint16) debtStressRiseBps;
         mapping(address spoke => uint256) targetHealthFactor;
         mapping(address spoke => uint16) minLiquidationBonus;
@@ -55,8 +55,6 @@ abstract contract ParameterStoreStorage is IParameterStoreBase {
     uint16 internal constant FEE_SHARE_MAX_BPS = 5000;
     uint16 internal constant FLASH_FEE_MAX_BPS = 100;
     uint16 internal constant SHORTFALL_MAX_BPS = 5000;
-    uint64 internal constant GATE_RECOVERY_MIN = 600;
-    uint64 internal constant GATE_RECOVERY_MAX = 7200;
     uint16 internal constant STRESS_RISE_MIN_BPS = 100;
     uint16 internal constant STRESS_RISE_MAX_BPS = 5000;
     uint256 internal constant USD_CAP_MAX = type(uint128).max;

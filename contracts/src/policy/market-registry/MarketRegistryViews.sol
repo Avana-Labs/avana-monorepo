@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DriftReason, Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {DriftReason, Market} from "../../types/MarketTypes.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryDriftLogic} from "./IMarketRegistryDriftLogic.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
@@ -224,67 +224,6 @@ abstract contract MarketRegistryViews is MarketRegistryStorage, IMarketRegistry 
         uint32 integrationId
     ) external view override returns (address[] memory contracts) {
         contracts = _s().integrationContracts[integrationId];
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function pauseState(
-        address hub
-    ) external view override returns (PauseState state) {
-        state = _s().pauseState[hub];
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function pauseReason(
-        address hub
-    ) external view override returns (PauseReason reason) {
-        reason = _s().pauseReason[hub];
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function isFrozenAddress(
-        address account
-    ) external view override returns (bool frozen) {
-        frozen = _s().frozen[account];
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function freezesInWindow(
-        address caller
-    ) external view override returns (uint256 count) {
-        // Block timestamps and chain identifiers fit 64 bits.
-        // forge-lint: disable-next-line(unsafe-typecast)
-        count = _freezesInWindow(caller, uint64(block.timestamp / 3600));
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function MAX_ADDRESS_FREEZES_PER_DAY() external pure override returns (uint256 limit) {
-        limit = _MAX_FREEZES_PER_DAY;
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function marketBreaker(
-        uint256 marketId
-    ) external view override returns (uint32 latchedReasons, uint64 lastBreach) {
-        bytes32 key = bytes32(marketId);
-        latchedReasons = _s().latched[key];
-        lastBreach = _s().lastBreachAt[key];
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function debtBreaker(
-        address spoke,
-        uint256 debtReserveId
-    ) external view override returns (uint32 latchedReasons, uint64 lastBreach) {
-        bytes32 key = _debtKey(spoke, debtReserveId);
-        latchedReasons = _s().latched[key];
-        lastBreach = _s().lastBreachAt[key];
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function lastBreachAt(
-        bytes32 key
-    ) external view override returns (uint64 at) {
-        at = _s().lastBreachAt[key];
     }
 
     /// @inheritdoc IMarketRegistry

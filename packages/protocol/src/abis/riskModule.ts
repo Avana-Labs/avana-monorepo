@@ -415,11 +415,6 @@ export const riskModuleAbi = [
                 "name": "breakerReasons",
                 "type": "uint32",
                 "internalType": "uint32"
-              },
-              {
-                "name": "breakerLatchedUntil",
-                "type": "uint64",
-                "internalType": "uint64"
               }
             ]
           },
@@ -464,11 +459,6 @@ export const riskModuleAbi = [
             "internalType": "bool"
           },
           {
-            "name": "pauseState",
-            "type": "uint8",
-            "internalType": "enum PauseState"
-          },
-          {
             "name": "healthFactor",
             "type": "uint256",
             "internalType": "uint256"
@@ -484,11 +474,6 @@ export const riskModuleAbi = [
             "internalType": "bool"
           },
           {
-            "name": "pauseReason",
-            "type": "uint8",
-            "internalType": "enum PauseReason"
-          },
-          {
             "name": "healthFactorExcludingRescue",
             "type": "uint256",
             "internalType": "uint256"
@@ -499,7 +484,7 @@ export const riskModuleAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "debtBreakerReasons",
+            "name": "breakerDebtReasons",
             "type": "uint32",
             "internalType": "uint32"
           },
@@ -621,11 +606,6 @@ export const riskModuleAbi = [
         "name": "reasons",
         "type": "uint32",
         "internalType": "uint32"
-      },
-      {
-        "name": "reopensAt",
-        "type": "uint64",
-        "internalType": "uint64"
       }
     ],
     "stateMutability": "view"
@@ -650,11 +630,6 @@ export const riskModuleAbi = [
         "name": "reasons",
         "type": "uint32",
         "internalType": "uint32"
-      },
-      {
-        "name": "reopensAt",
-        "type": "uint64",
-        "internalType": "uint64"
       }
     ],
     "stateMutability": "view"
@@ -792,68 +767,6 @@ export const riskModuleAbi = [
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "liveBreakerReasons",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "reasons",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "liveDebtBreakerReasons",
-    "inputs": [
-      {
-        "name": "spoke",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "reasons",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "pokeBreakers",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "reasons",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -1041,25 +954,6 @@ export const riskModuleAbi = [
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "event",
-    "name": "BreakersPoked",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "reasons",
-        "type": "uint32",
-        "indexed": false,
-        "internalType": "uint32"
-      }
-    ],
-    "anonymous": false
   },
   {
     "type": "event",

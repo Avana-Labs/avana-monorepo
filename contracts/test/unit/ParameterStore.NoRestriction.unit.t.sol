@@ -20,9 +20,8 @@ contract ParameterStoreNoRestrictionUnitTest is ParameterStoreFixture {
     /// pause, per-function pause, market freeze, pool-broken flag, keeper suspension, route quarantine, incident clock or
     /// tolerance override selector.
     function test_TEST_168_noRestrictionSelectorInTheStoreOrItsLogics() public {
-        string[15] memory absent = [
+        string[13] memory absent = [
             "pause()",
-            "unpause()",
             "paused()",
             "pauseFunction(bytes4)",
             "pauseMarket(uint256)",
@@ -34,8 +33,7 @@ contract ParameterStoreNoRestrictionUnitTest is ParameterStoreFixture {
             "quarantineRoute(uint256)",
             "startIncident(uint256)",
             "incidentStartedAt(uint256)",
-            "setToleranceOverride(uint256,uint256)",
-            "pauseState(address)"
+            "setToleranceOverride(uint256,uint256)"
         ];
         address impl = address(uint160(uint256(vm.load(address(store), IMPLEMENTATION_SLOT))));
         assertTrue(impl.code.length > 0, "implementation read from the proxy");

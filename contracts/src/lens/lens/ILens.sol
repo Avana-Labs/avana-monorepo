@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PauseState} from "../../types/MarketTypes.sol";
 import {PriceView} from "../../types/OracleTypes.sol";
 import {ILensAccount} from "./ILensAccount.sol";
 import {ILensActions} from "./ILensActions.sol";
@@ -72,19 +71,6 @@ interface ILens is
         address spoke,
         uint256 debtReserveId
     ) external view returns (DebtPriceView memory priceView);
-
-    /// @notice Returns a Hub's pause state held by the MarketRegistry.
-    /// @dev Liquidation, pending settlement, repay, fee collection and debt-free withdrawal are open in every state.
-    /// @return state `None`, `Frozen` or `Paused`.
-    function getApplicationState(
-        address hub
-    ) external view returns (PauseState state);
-
-    /// @notice Returns a Hub's pause reason.
-    /// @return reason `PauseReason` ordinal.
-    function getPauseReason(
-        address hub
-    ) external view returns (uint8 reason);
 
     /// @notice Returns the liquidation gates, Aave's sizing, ready-to-send `LiquidationParams` and expected amounts.
     /// @dev Advisory only; LPVaultSwap recomputes every check on execution.

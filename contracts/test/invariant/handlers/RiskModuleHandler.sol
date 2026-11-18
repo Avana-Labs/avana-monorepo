@@ -11,9 +11,9 @@ import {RiskLPOracleMock, RiskSpokeMock, RiskSwapMock, RiskTokenMock} from "../.
 import {Test} from "forge-std/Test.sol";
 
 /// @title RiskModuleHandler
-/// @notice Random sequences of Aave, oracle, issuer and keeper changes, time steps, breaker pokes, guardian resets and
-/// borrow-side pre-checks against the real RiskModule and MarketRegistry. Every pre-check that passes is compared with
-/// an independent reading of the gates of 2.7; a pass while a gate is closed is a violation.
+/// @notice Random sequences of Aave, oracle, issuer and keeper changes, time steps and borrow-side pre-checks against
+/// the real RiskModule and MarketRegistry. Every pre-check that passes is compared with an independent reading of the
+/// gates of 2.7; a pass while a gate is closed is a violation.
 /// @dev Steered: three pre-checks in four first open every gate the handler controls, and half of those then close
 /// exactly one, chosen by the seed, so each gate is tested alone at its boundary; the fourth runs on whatever state the
 /// sequence left. A pre-check refused with every modelled gate open is counted (`refusedWhileClear`). The tokens and
@@ -33,7 +33,6 @@ contract RiskModuleHandler is Test {
         RiskSwapMock swap;
         RiskTokenMock usdt;
         address proxy;
-        address guardian;
         uint256 marketId;
         uint256 vtReserve;
         uint256 debtReserve;
@@ -53,7 +52,6 @@ contract RiskModuleHandler is Test {
     uint64 internal _reportAt;
 
     uint256 public violations;
-    uint256 public latchShrinks;
     uint256 public borrowsWithoutKeeper;
     uint256 public borrows;
     uint256 public withdrawals;
@@ -125,18 +123,6 @@ contract RiskModuleHandler is Test {
         vm.warp(block.timestamp + (dt % 50_000));
     }
 
-    function poke() external {
-        (uint32 before,) = w.registry.marketBreaker(w.marketId);
-        try w.rm.pokeBreakers(w.marketId) {} catch {}
-        (uint32 afterPoke,) = w.registry.marketBreaker(w.marketId);
-        if (afterPoke & before != before) ++latchShrinks;
-    }
-
-    function reset() external {
-        vm.prank(w.guardian);
-        try w.registry.resetMarketBreaker(w.marketId) {} catch {}
-    }
-
     function borrow(
         uint256 seed
     ) external {
@@ -181,8 +167,8 @@ contract RiskModuleHandler is Test {
     }
 
     /// @dev Opens every gate the handler controls: Live price with borrowing allowed, fresh feeds, no Aave pause,
-    /// freeze or drift, no issuer pause, one active keeper, the breaker reset by the guardian and its 1,800 s cooldown
-    /// passed. Offboarding cannot be undone, so a borrow after it stays closed.
+    /// freeze or drift, no issuer pause and one active keeper. Offboarding cannot be undone, so a borrow after it stays
+    /// closed.
     function _open() internal {
         w.oracle.setState(PriceState.Live, 0, true);
         (_vtPaused, _debtPaused, _frozen, _drift) = (false, false, false, false);
@@ -190,10 +176,6 @@ contract RiskModuleHandler is Test {
         _issuer = false;
         w.usdt.setPaused(false, false);
         if (w.swap.activeKeeperCount() == 0) w.swap.setKeepers(1);
-        vm.prank(w.guardian);
-        try w.registry.resetMarketBreaker(w.marketId) {} catch {}
-        (, uint64 lastBreach) = w.registry.marketBreaker(w.marketId);
-        if (lastBreach != 0 && block.timestamp < uint256(lastBreach) + 1800) vm.warp(uint256(lastBreach) + 1800);
         _reportAt = uint64(block.timestamp);
         _report();
     }
@@ -231,11 +213,7 @@ contract RiskModuleHandler is Test {
         if (block.timestamp - _reportAt > w.feedAge) return false;
         if (_vtPaused || _debtPaused || _drift || _issuer) return false;
         if (isBorrow && (_frozen || _offboarding)) return false;
-        if (w.swap.activeKeeperCount() == 0) return false;
-        (uint32 latched, uint64 lastBreach) = w.registry.marketBreaker(w.marketId);
-        if (latched != 0) return false;
-        if (lastBreach != 0 && block.timestamp < uint256(lastBreach) + 1800) return false;
-        return true;
+        return w.swap.activeKeeperCount() != 0;
     }
 
     function _config() internal {

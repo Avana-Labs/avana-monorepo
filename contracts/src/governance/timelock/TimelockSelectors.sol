@@ -45,18 +45,14 @@ library TimelockSelectors {
             || selector == IMarketRegistryRoutes.restoreRoute.selector
             || selector == IMarketRegistry.setMarketOffboarding.selector
             || selector == IMarketRegistry.activateMarket.selector
-            || selector == IMarketRegistry.cancelRegistration.selector || selector == IMarketRegistry.freeze.selector
-            || selector == IMarketRegistry.pause.selector || selector == IMarketRegistry.freezeAddress.selector
-            || selector == IMarketRegistry.tripMarketBreaker.selector
-            || selector == IMarketRegistry.tripDebtBreaker.selector || selector == ILPVaultSwap.removeKeeper.selector;
+            || selector == IMarketRegistry.cancelRegistration.selector || selector == ILPVaultSwap.removeKeeper.selector;
     }
 
     /// @notice Whether `selector` is in the DAO-only cancel set.
     function isDaoCancelSelector(
         bytes4 selector
     ) internal pure returns (bool) {
-        return selector == IMarketRegistryRoutes.restoreRoute.selector
-            || selector == IMarketRegistry.unfreezeAddress.selector || selector == ILPVaultSwap.addKeeper.selector;
+        return selector == IMarketRegistryRoutes.restoreRoute.selector || selector == ILPVaultSwap.addKeeper.selector;
     }
 
     /// @notice Owner of a short-eligible or DAO-only selector: 1 ParameterStore, 2 MarketRegistry, 3 LPVaultSwap,
@@ -84,9 +80,7 @@ library TimelockSelectors {
             || s == IParameterStoreTighten.tightenTopUpSliceUsd.selector
             || s == IParameterStoreTighten.tightenTokenUsdCap.selector
             || s == IParameterStoreTighten.tightenMinPledgeUsd.selector
-            || s == IParameterStore.tightenBreakerDeficitMax.selector
-            || s == IParameterStore.tightenGateRecoverySeconds.selector
-            || s == IParameterStore.tightenMaxShortfallBps.selector
+            || s == IParameterStore.tightenDeficitMax.selector || s == IParameterStore.tightenMaxShortfallBps.selector
             || s == IParameterStore.tightenDebtStressRiseBps.selector
             || s == IParameterStore.tightenMaxFlashFeeBps.selector
             || s == IParameterStore.tightenMarketSpeedLimits.selector

@@ -194,7 +194,8 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
     }
 
     /// @notice An Aave pause of the vault-token reserve, then of the debt reserve, blocks the liquidation with Aave's
-    /// `ReservePaused`; no LPVaultSwap path overrides it, and the account liquidates in the first call after unpause.
+    /// `ReservePaused`; no LPVaultSwap path overrides it, and the account liquidates in the first call after the pause
+    /// lifts.
     // TEST-169 verifies: REQ-SWAP-119; shared: TEST-169's Aave reserve pause run locally against LPVaultSwap, blocked until the unpause
     function test_TEST_169_aavePauseBlocksUntilUnpause() public {
         uint256[2] memory reserves = [vtReserveId, usdcReserveId];
@@ -209,7 +210,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
             ILVSSpokePause(aave.spokeConfigurator).updatePaused(aave.cdpSpoke, reserves[i], false);
         }
         LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, 1950e6));
-        assertGt(r.unitsSeized, 0, "liquidated after the unpause");
+        assertGt(r.unitsSeized, 0, "liquidated after the pause lifts");
     }
 
     /// @notice LPVaultSwap has no flash-source setter: the registry's `setFlashSource` is the only way to change the
@@ -227,22 +228,6 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
             assertFalse(ok, "no flash-source selector");
         }
         assertEq(registry.flashSource(), address(flashSource), "the registry names the source");
-    }
-
-    /// @notice No pause-state read: with the registry answering nothing for `pauseState()` and `pauseReason()` (the
-    /// stand-in has neither, so any call would revert), `liquidate` and `settlePending` complete and make no such call:
-    /// liquidation and pending settlement are open in None, Frozen and Paused alike.
-    // TEST-162 verifies: REQ-SWAP-065, REQ-ACCESS-068, INV-043, INV-045
-    // TEST-192 verifies: REQ-ACCESS-068, INV-045
-    function test_TEST_162_liquidationAndPendingReadNoPauseState() public {
-        vm.expectCall(address(registry), abi.encodeWithSignature("pauseState()"), 0);
-        vm.expectCall(address(registry), abi.encodeWithSignature("pauseReason()"), 0);
-        _seizeAndKeep(proxy, 1000e6);
-        LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, 500e6));
-        assertGt(r.unitsSeized, 0, "liquidated");
-        vm.prank(makeAddr("anyone"));
-        lvs.settlePending(MARKET_ID, usdcReserveId);
-        assertEq(coll.getPending(address(vt)).units, 0, "pending settled");
     }
 
     /// @notice The caller-funded sequence for the GHO reserve (the USDC reserve is the other tests of this file):

@@ -8,12 +8,10 @@ import {AvanaTimelock} from "../../../src/governance/timelock/AvanaTimelock.sol"
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {IAaveAdapterBase} from "../../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreTighten} from "../../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
 import {PledgeCounters, PositionRef} from "../../../src/types/PositionTypes.sol";
 import {ClTestToken} from "../../utils/fixtures/ClPoolFixture.sol";
 import {FullStackLPVaultMock} from "../../utils/mocks/FullStackLPVaultMock.sol";
@@ -50,19 +48,17 @@ struct FullStackWorld {
 
 /// @title FullStackHandler
 /// @notice Actor handler of the full-stack invariants: three wallets pledge into two markets, borrow GHO and USDC,
-/// repay (their own debt or a third party's), withdraw debt-free; the Emergency Guardian moves the Hub through every
-/// pause state and reason on the real MarketRegistry; token prices move inside the USD band; LPVaultSwap liquidates any
-/// account below HF 1; the Aave DAO cuts the CDP Spoke's draw cap below its drawn amount and anyone syncs it into the
-/// registry's credit line; the timelock tightens a cap at the short delay and upgrades the AaveAdapter to a second
-/// reviewed implementation at the normal delay; time passes with every feed republished.
+/// repay (their own debt or a third party's), withdraw debt-free; token prices move inside the USD band; LPVaultSwap
+/// liquidates any account below HF 1; the Aave DAO cuts the CDP Spoke's draw cap below its drawn amount and anyone
+/// syncs it into the registry's credit line; the timelock tightens a cap at the short delay and upgrades the
+/// AaveAdapter to a second reviewed implementation at the normal delay; time passes with every feed republished.
 /// @dev Each failed expectation increments a counter the invariants read: an exit (repay, debt-free withdrawal,
-/// liquidation) that reverts for a pause, freeze or breaker; a borrow or no-debt pledge that succeeds while the Hub's
-/// state forbids it; a borrow that leaves the Spoke's owed amount above its draw cap; a pledge worth less than
-/// `minPledgeUsd` at the served price; a timelock operation that executed before its required delay.
+/// liquidation) that reverts for a breaker; a borrow that leaves the Spoke's owed amount above its draw cap; a pledge
+/// worth less than `minPledgeUsd` at the served price; a timelock operation that executed before its required delay.
 contract FullStackHandler is CommonBase, StdUtils {
     /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
-    /// campaign's success count, so the metrics show the calls that did real work. An exit refused for a pause, a
-    /// freeze or a breaker does not revert, so its `exitBlocked` count stands.
+    /// campaign's success count, so the metrics show the calls that did real work. An exit refused for a breaker does
+    /// not revert, so its `exitBlocked` count stands.
     error Skipped();
 
     /// @dev The Hub rounds both share conversions of a draw up (`toDrawnSharesUp`, then `toDrawnAssetsUp` in
@@ -85,7 +81,6 @@ contract FullStackHandler is CommonBase, StdUtils {
     address[] public proxies;
 
     uint256 public exitBlocked;
-    uint256 public gateViolations;
     uint256 public drawCapViolations;
     uint256 public minPledgeViolations;
     uint256 public capViolations;
@@ -95,7 +90,6 @@ contract FullStackHandler is CommonBase, StdUtils {
     uint256 public repays;
     uint256 public withdrawals;
     uint256 public liquidations;
-    uint256 public pauses;
     uint256 public upgrades;
 
     constructor(
@@ -150,23 +144,16 @@ contract FullStackHandler is CommonBase, StdUtils {
         uint128 units = uint128(bound(unitsSeed, 1e6, 50_000e6));
         bytes32 key = keccak256(abi.encode("full-stack position", ++keyNonce));
         w.lpVault.mintPosition(key, wallet, market, units);
-        address proxy = w.adapter.proxyOf(wallet, market);
-        bool indebted = proxy != address(0) && _indebted(proxy);
-        PauseState state = w.registry.pauseState(w.hub);
         uint256 value = uint256(units) * uint256(_price(i)) / 1e6;
         vm.prank(wallet);
         (bool ok,) = address(w.adapter)
             .call(abi.encodeCall(w.adapter.pledge, (market, PositionRef(w.integrationId, key), block.timestamp + 600)));
         if (!ok) revert Skipped();
         ++pledges;
-        if (state == PauseState.Frozen && !indebted) ++gateViolations;
-        if (state == PauseState.Paused && w.registry.pauseReason(w.hub) == PauseReason.MintPathSuspect) {
-            ++gateViolations;
-        }
         if (value < w.store.minPledgeUsd(market)) ++minPledgeViolations;
         _checkCaps(i, wallet);
         openKeys[wallet][market].push(key);
-        proxy = w.adapter.proxyOf(wallet, market);
+        address proxy = w.adapter.proxyOf(wallet, market);
         if (proxyWallet[proxy] == address(0)) {
             proxies.push(proxy);
             proxyWallet[proxy] = wallet;
@@ -187,12 +174,10 @@ contract FullStackHandler is CommonBase, StdUtils {
         uint256 r = reserveSeed % 2;
         // $1 to $3,000 of the asset ($1.00 each); a borrow beyond the account's room is refused by Aave or the RiskModule.
         uint256 amount = bound(shareSeed, 1, 3000) * 10 ** w.debtAssets[r].decimals();
-        PauseState state = w.registry.pauseState(w.hub);
         // The Spoke's owed amount (drawn + premium) and deficit on the asset in this block, before the draw.
         (uint256 owedBefore, uint256 deficit) = _spokeOwed(r);
         if (!_borrowAs(wallet, market, proxy, r, amount)) revert Skipped();
         ++borrows;
-        if (state != PauseState.None) ++gateViolations;
         _checkDrawGate(r, amount, owedBefore, deficit);
     }
 
@@ -313,22 +298,6 @@ contract FullStackHandler is CommonBase, StdUtils {
             return;
         }
         revert Skipped();
-    }
-
-    /// @notice The Emergency Guardian sets the Hub's state: None, Frozen, Paused(General) or Paused(MintPathSuspect).
-    function setPause(
-        uint256 seed
-    ) external {
-        uint256 target = seed % 4;
-        PauseState s = w.registry.pauseState(w.hub);
-        vm.startPrank(w.guardian);
-        if (s == PauseState.Frozen) w.registry.unfreeze(w.hub);
-        if (s == PauseState.Paused) w.registry.unpause(w.hub);
-        if (target == 1) w.registry.freeze(w.hub);
-        if (target == 2) w.registry.pause(w.hub, PauseReason.General);
-        if (target == 3) w.registry.pause(w.hub, PauseReason.MintPathSuspect);
-        vm.stopPrank();
-        ++pauses;
     }
 
     /// @notice Both pool tokens move to one price in [$0.93, $1.00] on every route (inside the USD band, pool ratio 1).
@@ -541,16 +510,15 @@ contract FullStackHandler is CommonBase, StdUtils {
         return ok && ret.length == 32 ? abi.decode(ret, (int256)) : int256(0);
     }
 
-    /// @dev An exit never fails for a pause, a freeze or a breaker: counts a failed exit's error when it is one.
+    /// @dev An exit never fails for a breaker: counts a failed exit's error when it is one.
     /// @return blocked Whether `ret` is such an error.
     function _exit(
         bytes memory ret
     ) internal returns (bool blocked) {
         if (ret.length < 4) return false;
         bytes4 sel = bytes4(ret);
-        blocked = sel == IAaveAdapterBase.ApplicationFrozen.selector
-            || sel == IAaveAdapterBase.ApplicationPaused.selector || sel == IAaveAdapterBase.AddressIsFrozen.selector
-            || sel == IRiskModuleErrors.BreakerTripped.selector || sel == IRiskModuleErrors.DebtBreakerTripped.selector;
+        blocked =
+            sel == IRiskModuleErrors.BreakerTripped.selector || sel == IRiskModuleErrors.DebtBreakerTripped.selector;
         if (blocked) ++exitBlocked;
     }
 }

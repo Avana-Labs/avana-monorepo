@@ -111,35 +111,10 @@ contract ProxyReentrantTarget {
     }
 }
 
-/// @title FreezeRegistryMock
-/// @notice The MarketRegistry's address freeze only: `isFrozenAddress` reads a set the test writes, counts its reads,
-/// and can be told to revert.
-contract FreezeRegistryMock {
-    error RegistryDown();
-
-    mapping(address => bool) public frozen;
-    bool public down;
-
-    function setFrozen(
-        address account,
-        bool value
-    ) external {
-        frozen[account] = value;
-    }
-
-    function setDown(
-        bool value
-    ) external {
-        down = value;
-    }
-
-    function isFrozenAddress(
-        address account
-    ) external view returns (bool) {
-        if (down) revert RegistryDown();
-        return frozen[account];
-    }
-}
+/// @title StubRegistryMock
+/// @notice A MarketRegistry address with code for the ProxyManager's `MARKET_REGISTRY` immutable; the ProxyManager
+/// reads nothing from it.
+contract StubRegistryMock {}
 
 /// @title ProxyTestToken
 /// @notice Plain 18-decimal ERC-20 with an open mint, for the vault-token and debt-asset calls a proxy makes.

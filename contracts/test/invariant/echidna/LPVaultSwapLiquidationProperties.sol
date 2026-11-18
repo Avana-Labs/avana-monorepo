@@ -145,7 +145,6 @@ contract LiqWorld {
     mapping(address proxy => uint256 units) public units;
     mapping(address proxy => uint256 amount) public debt;
     mapping(address proxy => address wallet) public walletOf;
-    mapping(address account => bool frozen) public isFrozenAddress;
     /// @notice Lock: the one member that takes it here (the harness, at LPVaultSwap's address) and its holder.
     address public LP_VAULT_SWAP;
     address public holder;
@@ -182,13 +181,6 @@ contract LiqWorld {
         uint256 p
     ) external {
         px = p;
-    }
-
-    function setFrozen(
-        address account,
-        bool frozen
-    ) external {
-        isFrozenAddress[account] = frozen;
     }
 
     // ─── Prices ───
@@ -535,7 +527,7 @@ contract LiqActor {
 /// Between transactions: every completed liquidation conserved the settlement asset (INV-035) and matched the measured
 /// balance changes; LPVaultSwap holds no token and no allowance (INV-021, INV-037); the escrow's credits sum to its
 /// totals within its balance (INV-061); the caller's net gain never exceeded the keeper reward or the oracle gain, and a
-/// frozen caller never completed one (INV-030); the Spoke's debt and supply match what LPVaultSwap measured
+/// refused liquidation moved nothing (INV-030); the Spoke's debt and supply match what LPVaultSwap measured
 /// (INV-014); a liquidation the Spoke capped left the account at HF ≥ 1 or debt-free; the Lock is free.
 /// @dev The LPVaultSwap router with its three logic contracts, the real Lock, the PayoutEscrow and the stand-ins exceed
 /// the 49,152-byte initcode limit, so this harness takes the router's place: `fallback` forwards `liquidate` calldata
@@ -551,7 +543,6 @@ contract LPVaultSwapLiquidationProperties {
     uint256 internal constant BAD_CONSERVATION = 1;
     uint256 internal constant BAD_MEASURE = 2;
     uint256 internal constant BAD_GAIN = 4;
-    uint256 internal constant BAD_FROZEN = 8;
     uint256 internal constant BAD_SPOKE = 16;
     uint256 internal constant BAD_RESTORE = 32;
     uint256 internal constant BAD_REVERT = 64;
@@ -566,7 +557,7 @@ contract LPVaultSwapLiquidationProperties {
     LiqRoute internal BACKUP;
     LiqEscrow internal ESCROW;
     address internal LOGIC;
-    /// @dev The borrower wallets 0–2, then the fee recipient, the keeper, the second keeper and the frozen caller.
+    /// @dev The borrower wallets 0–2, then the fee recipient, the keeper, the second keeper and a third caller.
     LiqActor[7] internal actors;
 
     /// @notice Debt the harness booked per account: opened debt less every `debtRepaid` LPVaultSwap measured, and 0
@@ -574,9 +565,9 @@ contract LPVaultSwapLiquidationProperties {
     uint256[3] public booked;
     /// @notice Bit set of broken properties (the `BAD_` constants); never reset.
     uint256 public violations;
-    /// @notice Liquidation calls: 0 tried, 1 completed, 2 with no liquidatable account (none attempted), 3 refused as
-    /// expected (a frozen caller). One array, one getter (initcode size).
-    uint256[4] public counts;
+    /// @notice Liquidation calls: 0 tried, 1 completed, 2 with no liquidatable account (none attempted). One array, one
+    /// getter (initcode size).
+    uint256[3] public counts;
     bytes4 public lastFailure;
 
     constructor() {
@@ -590,7 +581,6 @@ contract LPVaultSwapLiquidationProperties {
             actors[a] = new LiqActor();
         }
         W.init(USDC, XT, VT, address(PRIMARY), address(BACKUP), address(actors[3]));
-        W.setFrozen(address(actors[6]), true);
         ESCROW = new LiqEscrow(address(this), W);
         LOGIC = address(
             new LPVaultSwapLiquidationLogic(
@@ -794,7 +784,7 @@ contract LPVaultSwapLiquidationProperties {
     /// @notice A liquidation of account `who` (or the first liquidatable one) by a keeper. `plan` bits 0–1: debt to
     /// cover (a quarter, half, all or twice the debt); bits 2–4: routes and recipients (primary at 20 or 100 bps,
     /// a dead primary with the backup at 50 bps, backup only at 80 bps, a blocked borrower wallet and fee recipient,
-    /// both routes at 220 bps with a shortfall top-up, the frozen caller, a second keeper at 0 bps).
+    /// both routes at 220 bps with a shortfall top-up, a third caller, a second keeper at 0 bps).
     function liquidate(
         uint8 who,
         uint8 plan
@@ -814,8 +804,7 @@ contract LPVaultSwapLiquidationProperties {
         USDC.setBlocked(address(actors[3]), false);
 
         if (!ok) {
-            if (run.frozen) ++counts[3];
-            else if (ret.length >= 4) lastFailure = bytes4(ret);
+            if (ret.length >= 4) lastFailure = bytes4(ret);
             // A refused liquidation moves nothing.
             bool moved = s1.keeper != s0.keeper || s1.world != s0.world || s1.units != s0.units || s1.debt != s0.debt
                 || s1.supply != s0.supply || s1.escrowTotal != s0.escrowTotal;
@@ -823,14 +812,12 @@ contract LPVaultSwapLiquidationProperties {
             return;
         }
         ++counts[1];
-        _ensure(BAD_FROZEN, !run.frozen);
         _checkResult(abi.decode(ret, (LiquidationResult)), s0, s1, i, run.lp);
     }
 
     /// @dev One liquidation's caller and parameters.
     struct Run {
         LiqActor k;
-        bool frozen;
         LiquidationParams lp;
     }
 
@@ -844,7 +831,6 @@ contract LPVaultSwapLiquidationProperties {
         uint256 r = (plan >> 2) & 7;
         (RouteMode mode, uint256 shortfallBps, bool blockRecipients) = _routes(r);
         run.k = r == 6 ? actors[6] : (r == 7 ? actors[5] : actors[4]);
-        run.frozen = r == 6;
         LiquidationParams memory lp = run.lp;
         (lp.proxy, lp.marketId, lp.debtReserveId) = (_proxy(i), MARKET, DEBT_RESERVE);
         lp.debtToCover = c == 0 ? d / 4 + 1 : (c == 1 ? d / 2 + 1 : (c == 2 ? d : 2 * d));
@@ -946,9 +932,9 @@ contract LPVaultSwapLiquidationProperties {
         return violations & BAD_GAIN == 0;
     }
 
-    /// @notice INV-030: a frozen caller never completed a liquidation; a refused one moved nothing.
+    /// @notice INV-030: a refused liquidation moved nothing.
     function property_refusalsMoveNothing() external view returns (bool) {
-        return violations & (BAD_FROZEN | BAD_REVERT) == 0;
+        return violations & BAD_REVERT == 0;
     }
 
     /// @notice INV-014: the Spoke's debt and supply follow what LPVaultSwap measured; each account's debt is its

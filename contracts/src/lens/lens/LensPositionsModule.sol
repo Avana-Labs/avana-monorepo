@@ -9,7 +9,7 @@ import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
-import {AccountGateStatus, Market, PauseState} from "../../types/MarketTypes.sol";
+import {AccountGateStatus, Market} from "../../types/MarketTypes.sol";
 import {ILensActions} from "./ILensActions.sol";
 import {ILensHubReads} from "./ILensHubReads.sol";
 import {ILensPositions} from "./ILensPositions.sol";
@@ -50,7 +50,7 @@ contract LensPositionsModule is ILensPositions, ILensActions, LensAccountMath {
             }
         } else {
             if (v.target < WAD_) v.target = WAD_;
-            if (_withdrawWithDebtOpen(wallet, v.proxy)) v.maxUnits = _maxRemoval(m, v.proxy, v.target, debtRay);
+            if (_withdrawWithDebtOpen(v.proxy)) v.maxUnits = _maxRemoval(m, v.proxy, v.target, debtRay);
         }
         uint256 best = 0;
         for (uint256 i = 0; i < v.records.length; ++i) {
@@ -60,13 +60,11 @@ contract LensPositionsModule is ILensPositions, ILensActions, LensAccountMath {
         }
     }
 
-    /// @dev The AaveAdapter's withdraw-with-debt gates: RiskModule allows it, Hub not `Paused`, wallet not frozen.
+    /// @dev The AaveAdapter's withdraw-with-debt gate: the RiskModule allows it.
     function _withdrawWithDebtOpen(
-        address wallet,
         address proxy
     ) internal view returns (bool) {
-        AccountGateStatus memory st = IRiskModule(_RISK_MODULE).getAccountGateStatus(proxy);
-        return st.withdrawWithDebtAllowed && st.pauseState != PauseState.Paused && !_registry().isFrozenAddress(wallet);
+        return IRiskModule(_RISK_MODULE).getAccountGateStatus(proxy).withdrawWithDebtAllowed;
     }
 
     /// @dev Largest `u ≤ assets` with `W − E − ⌈u × v × CF / 10⁴⌉ ≥ need`, at the reserve's latest collateral factor.
@@ -191,8 +189,7 @@ contract LensPositionsModule is ILensPositions, ILensActions, LensAccountMath {
     ) internal view returns (bool) {
         AccountGateStatus memory st = IRiskModule(_RISK_MODULE).getAccountGateStatus(proxy);
         uint256 e = _rescueAt(m, proxy, cf);
-        return st.withdrawWithDebtAllowed && st.pauseState != PauseState.Paused
-            && _hf(left - Math.min(left, e), debtRay) >= WAD_;
+        return st.withdrawWithDebtAllowed && _hf(left - Math.min(left, e), debtRay) >= WAD_;
     }
     // forge-lint: disable-end(calls-loop)
 

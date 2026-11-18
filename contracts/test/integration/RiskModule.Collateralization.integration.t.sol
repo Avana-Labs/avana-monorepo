@@ -144,10 +144,6 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
         address registryAddress = address(registry);
         vm.revertToState(dryRun);
         _deployLedgerRegistryAndRisk(registryAddress);
-        vm.startPrank(address(timelock));
-        registry.grantRole(PAUSE_GUARDIAN, emergencyGuardian);
-        registry.grantRole(FREEZE_GUARDIAN, emergencyGuardian);
-        vm.stopPrank();
     }
 
     /// @dev The VaultTokenFactory (naming `marketRegistry_`), the real Collateralization, the MarketRegistry and the
@@ -160,9 +156,9 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
         factory = new VaultTokenFactory(
             address(adapter), address(lpVaultSwap), predictedLedger, address(timelock), marketRegistry_
         );
-        // After the ledger (nonce n + 1): registry logics (6), registry implementation and proxy, risk logics (6),
+        // After the ledger (nonce n + 1): registry logics (5), registry implementation and proxy, risk logics (6),
         // risk implementation and proxy.
-        address predictedRisk = vm.computeCreateAddress(address(this), n + 17);
+        address predictedRisk = vm.computeCreateAddress(address(this), n + 16);
         ledger = ICollateralization(
             deployCode(
                 "Collateralization.sol:Collateralization",

@@ -82,10 +82,8 @@ struct MarketGateStatus {
     // Some pool token other than the debt asset has no usable swap route.
     bool noSettlementPath;
     bool liquidationHalted;
-    // Bitmap of tripped BreakerReasons of the market (condition and latched).
+    // Bitmap of the BreakerReasons of the market that hold now.
     uint32 breakerReasons;
-    // End of the market's latched breaker; 0 or past when none.
-    uint64 breakerLatchedUntil;
 }
 
 /// @notice Every borrow-side gate outcome for one account on one CDP Spoke, returned without reverting.
@@ -108,23 +106,20 @@ struct AccountGateStatus {
     // Market of the first drift failure (0 for Spoke-wide and debt-reserve reasons).
     uint256 driftMarketId;
     DriftReason driftReason;
-    // LPVaultSwap.activeKeeperCount() == 0 (no approved keeper that is not frozen).
+    // LPVaultSwap.activeKeeperCount() == 0 (no registered keeper).
     bool noApprovedKeeper;
-    PauseState pauseState;
     // Current health factor, WAD.
     uint256 healthFactor;
     // True when every preBorrowCheck check that does not depend on the reserve borrowed passes now.
     bool borrowAllowed;
     // True when preWithdrawCheck would pass now, every held debt reserve's debt breaker included.
     bool withdrawWithDebtAllowed;
-    // MarketRegistry pause reason (None unless Paused).
-    PauseReason pauseReason;
     // Health factor with rescue units valued at zero, WAD.
     uint256 healthFactorExcludingRescue;
-    // First debt reserve of the account whose debt breaker is tripped.
+    // First debt reserve of the account with a debt breaker condition holding.
     uint256 breakerDebtReserveId;
-    // Bitmap of tripped BreakerReasons of that debt reserve.
-    uint32 debtBreakerReasons;
+    // Bitmap of the BreakerReasons of that debt reserve that hold now.
+    uint32 breakerDebtReasons;
     bool statusUnavailable;
 }
 
@@ -184,22 +179,6 @@ enum DriftReason {
     LiquidationConfigChanged,
     // The home Hub reports the CDP Spoke inactive or halted, or an Avana reserve of it is paused.
     SpokeHalted
-}
-
-/// @notice Why the application is Paused, held by the MarketRegistry beside `PauseState`.
-/// @dev `None` exactly when the state is not Paused; ordinal values are fixed.
-enum PauseReason {
-    None,
-    General,
-    MintPathSuspect
-}
-
-/// @notice Avana's application pause state, held by the MarketRegistry and read by the AaveAdapter and the Lens.
-/// @dev Repay, liquidation and debt-free withdrawal never depend on it. Ordinal values are fixed.
-enum PauseState {
-    None,
-    Frozen,
-    Paused
 }
 
 /// @notice Constructor bindings of one market's vault token.

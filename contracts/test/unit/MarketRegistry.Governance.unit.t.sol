@@ -5,12 +5,10 @@ pragma solidity 0.8.28;
 
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
-import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {
     MarketRegistryImmutables,
     MarketRegistryLogics
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {PauseReason} from "../../src/types/MarketTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryTokenMock} from "../utils/mocks/MarketRegistryMocks.sol";
 
@@ -68,26 +66,9 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
         assertFalse(registry.isApprovedSpokeCodeHash(keccak256("cancelled")));
     }
 
-    // TEST-063 verifies: REQ-MREG-004, REQ-MREG-022, Q-263
-    // The timelock's own stops and lifts run through the same path: a freeze, an unfreeze of an address and an unpause
-    // as one batch.
-    function test_TEST_063_stopsAndLiftsAsOneBatch() public {
-        vm.prank(emergencyGuardian);
-        registry.pause(address(hub), PauseReason.General);
-        vm.prank(emergencyGuardian);
-        registry.freezeAddress(bob);
-        Call[] memory calls = _two(
-            Call(address(registry), abi.encodeCall(registry.unpause, (address(hub)))),
-            Call(address(registry), abi.encodeCall(registry.unfreezeAddress, (bob)))
-        );
-        _run(calls, keccak256("lift"));
-        assertEq(uint8(registry.pauseState(address(hub))), 0);
-        assertFalse(registry.isFrozenAddress(bob));
-    }
-
     /// @dev A digest of the registry's records across every family of views.
     function _digest() internal view returns (bytes32) {
-        return keccak256(abi.encode(_recordsDigest(), _slotsDigest(), _stopsDigest(), _windDownDigest()));
+        return keccak256(abi.encode(_recordsDigest(), _slotsDigest(), _windDownDigest()));
     }
 
     function _recordsDigest() internal view returns (bytes32) {
@@ -109,19 +90,6 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
         return keccak256(abi.encode(r0, u0, r1, u1, sum, required, funded));
     }
 
-    function _stopsDigest() internal view returns (bytes32) {
-        (uint32 ml, uint64 mt) = registry.marketBreaker(marketId);
-        (uint32 dl, uint64 dt) = registry.debtBreaker(address(spoke), GHO_RESERVE);
-        bytes memory a = abi.encode(ml, mt, dl, dt);
-        bytes memory b = abi.encode(
-            registry.pauseState(address(hub)),
-            registry.pauseReason(address(hub)),
-            registry.isFrozenAddress(bob),
-            registry.freezesInWindow(emergencyGuardian)
-        );
-        return keccak256(abi.encode(a, b));
-    }
-
     function _windDownDigest() internal view returns (bytes32) {
         bytes memory a = abi.encode(
             registry.getToken(address(usdc)).alternateRoute,
@@ -138,16 +106,9 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
         return keccak256(abi.encode(a, b));
     }
 
-    /// @dev Fills every family of records: pause and reason, a frozen address, latches and breach times, a disabled
-    /// route, an approved Spoke code hash, an offboarding market with one ramp step.
+    /// @dev Fills every family of records: a disabled route, an approved Spoke code hash, an offboarding market with
+    /// one ramp step.
     function _fill() internal {
-        vm.startPrank(emergencyGuardian);
-        registry.pause(address(hub), PauseReason.MintPathSuspect);
-        registry.freezeAddress(bob);
-        registry.tripDebtBreaker(address(spoke), GHO_RESERVE);
-        vm.stopPrank();
-        vm.prank(address(rm));
-        registry.recordBreach(bytes32(marketId), BreakerReasons.ISSUER | BreakerReasons.ORACLE);
         vm.startPrank(address(timelock));
         registry.disableRoute(marketId, address(usdt), address(gho), 1);
         registry.approveSpokeCodeHash(keccak256("fill"));
@@ -169,7 +130,7 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
         assertEq(_required(calls), NORMAL_DELAY);
         _run(calls, keccak256("upgrade"));
         assertEq(address(uint160(uint256(vm.load(address(registry), IMPLEMENTATION_SLOT)))), address(next));
-        // The digest reads the clock (freeze window, lock end); compare at the same time as before the upgrade.
+        // The digest reads the clock (lock end); compare at the same time as before the upgrade.
         vm.warp(block.timestamp - NORMAL_DELAY);
         assertEq(_digest(), before, "a record changed across the upgrade");
         // Offboarded with a 7,500 bps reserve: the published target 3,750 survives the upgrade and the market closes.
@@ -224,8 +185,8 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
         registry.upgradeToAndCall(address(next), "");
         assertEq(_digest(), before);
         // The registry's writes now run through the new logic contracts.
-        vm.prank(emergencyGuardian);
-        registry.freeze(address(hub));
-        assertEq(uint8(registry.pauseState(address(hub))), 1);
+        vm.prank(address(timelock));
+        registry.approveSpokeCodeHash(keccak256("fresh"));
+        assertTrue(registry.isApprovedSpokeCodeHash(keccak256("fresh")));
     }
 }

@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {FlashLiquidator} from "../../src/periphery/flash-liquidator/FlashLiquidator.sol";
 import {FlashLiquidationRequest, IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {IOperatorFlashLiquidator} from "../../src/periphery/flash-liquidator/IOperatorFlashLiquidator.sol";
@@ -402,26 +401,6 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
         vm.prank(victim);
         uint256 payout = helper.flashLiquidate(_exampleRequest());
         assertEq(usdcToken.balanceOf(victim), 10_000e6 + payout, "a caller is paid only itself");
-    }
-
-    /// @notice LPVaultSwap checks the freeze on the helper, not on its caller: a frozen Z liquidates through the
-    /// public helper and is paid, while its direct call reverts.
-    // TEST-289 verifies: REQ-HELPER-006, REQ-HELPER-010, REQ-SWAP-105, Q-242
-    // Sources: 2.11 REQ-SWAP-105 example
-    function test_TEST_289_frozenAddressSettlesThroughPublicHelper() public {
-        address z = makeAddr("Z");
-        lvs.setFrozen(z, true);
-        LiquidationParams memory p = _params(1950e6);
-        vm.prank(z);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.AddressIsFrozen.selector, z));
-        lvs.liquidate(p);
-        vm.prank(z);
-        uint256 payout = helper.flashLiquidate(_exampleRequest());
-        assertEq(payout, EXAMPLE_PAYOUT);
-        assertEq(usdcToken.balanceOf(z), EXAMPLE_PAYOUT);
-        lvs.setFrozen(address(helper), true);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.AddressIsFrozen.selector, address(helper)));
-        _liquidate(_exampleRequest());
     }
 
     /// @notice A market token that refuses the helper: LPVaultSwap escrows the residue credited to the helper, the

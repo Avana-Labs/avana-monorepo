@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
@@ -82,19 +83,21 @@ contract AaveAdapterDebtMarkFuzzTest is AaveAdapterRiskFixture {
 
     // TEST-237 verifies: REQ-ADAPTER-078, REQ-ADAPTER-089, REQ-RISK-070, SPEC-PROXY-001
     /// @notice In a removal that leaves debt the reviewed RiskModule's checks run in order: the pre-check's gates
-    /// (a latched breaker) before anything else, then the remaining-record minimum, then the health check; each is
+    /// (a pool-depth breaker) before anything else, then the remaining-record minimum, then the health check; each is
     /// reached by clearing the one before.
     function test_TEST_237_removalCheckOrder() public {
         _borrowAs(alice, MARKET_ID, debtReserveId, 10_000e18);
         rstore.setMinPledge(MARKET_ID, 18_000e8);
-        registry.setLatched(bytes32(MARKET_ID), 512, 0);
+        riskVault.setDepth(0, false);
         uint256 d = _deadline();
         uint256[] memory mins = _mins();
         // Removing 2,000 tokens leaves $16,000 worth (below the $18,000 minimum) and hf 12,800 / 10,000 = 1.28.
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, MARKET_ID, uint32(512)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, MARKET_ID, BreakerReasons.POOL_DEPTH)
+        );
         vm.prank(alice);
         adapterC.removeLiquidity(MARKET_ID, _ref(k1), 2_000_000_000, mins, d, 2e18);
-        registry.setLatched(bytes32(MARKET_ID), 0, 0);
+        riskVault.setDepth(2e13, true);
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.RecordBelowMinPledge.selector, 16_000e8, 18_000e8));
         vm.prank(alice);
         adapterC.removeLiquidity(MARKET_ID, _ref(k1), 2_000_000_000, mins, d, 2e18);

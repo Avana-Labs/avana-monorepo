@@ -6,12 +6,6 @@ pragma solidity 0.8.28;
 /// @title IAaveAdapterBase
 /// @notice Errors and events of AaveAdapter, shared with its contracts.
 interface IAaveAdapterBase {
-    /// @notice A pledge or re-credit by an account with no debt, or a borrow, while the market's home Hub is Frozen.
-    error ApplicationFrozen();
-
-    /// @notice Action blocked by the pause state of the market's Hub or the debt reserve's funding Hub.
-    error ApplicationPaused();
-
     /// @notice `block.timestamp > deadline`.
     error DeadlineExpired(uint256 deadline);
 
@@ -66,9 +60,6 @@ interface IAaveAdapterBase {
 
     /// @notice `initialize` was called with a zero timelock.
     error ZeroAddress();
-
-    /// @notice A frozen address tried new activity, as caller or as a borrow receiver.
-    error AddressIsFrozen(address account);
 
     /// @notice `repayWithCollateral` named a debt reserve in which the account owes nothing.
     error NothingToRepay(uint256 debtReserveId);

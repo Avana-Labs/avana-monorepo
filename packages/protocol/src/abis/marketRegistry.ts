@@ -83,19 +83,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "MAX_ADDRESS_FREEZES_PER_DAY",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "limit",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "MAX_MARKET_COUNT",
     "inputs": [],
     "outputs": [
@@ -268,35 +255,6 @@ export const marketRegistryAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "debtBreaker",
-    "inputs": [
-      {
-        "name": "spoke",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "latchedReasons",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "lastBreach",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -522,58 +480,6 @@ export const marketRegistryAbi = [
         "name": "source",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "freeze",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "freezeAddress",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "freezeAll",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "freezesInWindow",
-    "inputs": [
-      {
-        "name": "caller",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "count",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -1187,25 +1093,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "isFrozenAddress",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "frozen",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "isRecordedHub",
     "inputs": [
       {
@@ -1219,25 +1106,6 @@ export const marketRegistryAbi = [
         "name": "recorded",
         "type": "bool",
         "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "lastBreachAt",
-    "inputs": [
-      {
-        "name": "key",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "at",
-        "type": "uint64",
-        "internalType": "uint64"
       }
     ],
     "stateMutability": "view"
@@ -1382,30 +1250,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "marketBreaker",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "latchedReasons",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "lastBreach",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "marketCount",
     "inputs": [],
     "outputs": [
@@ -1543,93 +1387,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "pause",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "reason",
-        "type": "uint8",
-        "internalType": "enum PauseReason"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "pauseAll",
-    "inputs": [
-      {
-        "name": "reason",
-        "type": "uint8",
-        "internalType": "enum PauseReason"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "pauseReason",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "reason",
-        "type": "uint8",
-        "internalType": "enum PauseReason"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "pauseState",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "state",
-        "type": "uint8",
-        "internalType": "enum PauseState"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "recordBreach",
-    "inputs": [
-      {
-        "name": "key",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "reasons",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "recordHub",
     "inputs": [
       {
@@ -1718,37 +1475,6 @@ export const marketRegistryAbi = [
         "name": "callerConfirmation",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "resetDebtBreaker",
-    "inputs": [
-      {
-        "name": "spoke",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "resetMarketBreaker",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -2002,76 +1728,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "tripDebtBreaker",
-    "inputs": [
-      {
-        "name": "spoke",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "tripMarketBreaker",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "unfreeze",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "unfreezeAddress",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "unpause",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "windDownState",
     "inputs": [
       {
@@ -2113,38 +1769,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "event",
-    "name": "AddressFrozen",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "caller",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "AddressUnfrozen",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "AvanaFirstLossReserveSet",
     "inputs": [
       {
@@ -2163,56 +1787,6 @@ export const marketRegistryAbi = [
         "name": "firstLossReserve",
         "type": "address",
         "indexed": false,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "BreakerLatched",
-    "inputs": [
-      {
-        "name": "scope",
-        "type": "uint8",
-        "indexed": true,
-        "internalType": "enum BreakerScope"
-      },
-      {
-        "name": "key",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "reasons",
-        "type": "uint32",
-        "indexed": false,
-        "internalType": "uint32"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "BreakerReset",
-    "inputs": [
-      {
-        "name": "scope",
-        "type": "uint8",
-        "indexed": true,
-        "internalType": "enum BreakerScope"
-      },
-      {
-        "name": "key",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "caller",
-        "type": "address",
-        "indexed": true,
         "internalType": "address"
       }
     ],
@@ -2301,31 +1875,6 @@ export const marketRegistryAbi = [
         "type": "address",
         "indexed": true,
         "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "GateBreached",
-    "inputs": [
-      {
-        "name": "key",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "reasons",
-        "type": "uint32",
-        "indexed": false,
-        "internalType": "uint32"
-      },
-      {
-        "name": "at",
-        "type": "uint64",
-        "indexed": false,
-        "internalType": "uint64"
       }
     ],
     "anonymous": false
@@ -2557,68 +2106,6 @@ export const marketRegistryAbi = [
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "PauseReasonChanged",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "previous",
-        "type": "uint8",
-        "indexed": false,
-        "internalType": "enum PauseReason"
-      },
-      {
-        "name": "current",
-        "type": "uint8",
-        "indexed": false,
-        "internalType": "enum PauseReason"
-      },
-      {
-        "name": "caller",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "PauseStateChanged",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "previous",
-        "type": "uint8",
-        "indexed": true,
-        "internalType": "enum PauseState"
-      },
-      {
-        "name": "current",
-        "type": "uint8",
-        "indexed": true,
-        "internalType": "enum PauseState"
-      },
-      {
-        "name": "caller",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -2979,28 +2466,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "error",
-    "name": "AddressAlreadyFrozen",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "AddressNotFrozen",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "AdminRoleOnlyTimelock",
     "inputs": [
       {
@@ -3014,16 +2479,6 @@ export const marketRegistryAbi = [
         "internalType": "address"
       }
     ]
-  },
-  {
-    "type": "error",
-    "name": "AlreadyFrozen",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "AlreadyPaused",
-    "inputs": []
   },
   {
     "type": "error",
@@ -3043,27 +2498,6 @@ export const marketRegistryAbi = [
         "name": "firstLossReserve",
         "type": "address",
         "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "CannotUnfreezeWhilePaused",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "ConditionStillHolds",
-    "inputs": [
-      {
-        "name": "key",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "reasons",
-        "type": "uint32",
-        "internalType": "uint32"
       }
     ]
   },
@@ -3132,17 +2566,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "error",
-    "name": "FreezeLimitReached",
-    "inputs": [
-      {
-        "name": "caller",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "InvalidAvanaFirstLossReserve",
     "inputs": [
       {
@@ -3184,11 +2607,6 @@ export const marketRegistryAbi = [
         "internalType": "uint32"
       }
     ]
-  },
-  {
-    "type": "error",
-    "name": "InvalidPauseReason",
-    "inputs": []
   },
   {
     "type": "error",
@@ -3306,27 +2724,7 @@ export const marketRegistryAbi = [
   },
   {
     "type": "error",
-    "name": "NotFrozen",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotPaused",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "NotPreviouslyApproved",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotRiskModule",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NothingToReset",
     "inputs": []
   },
   {
@@ -3337,17 +2735,6 @@ export const marketRegistryAbi = [
         "name": "notBefore",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "ProtectedAddress",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
       }
     ]
   },

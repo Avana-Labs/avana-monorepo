@@ -14,13 +14,12 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {Test} from "forge-std/Test.sol";
 
 /// @title LPVaultSwapKeepersInvariantTest
-/// @notice The committed-operator registry under random sequences of timelock adds and removes, MarketRegistry
-/// freezes and outsider calls, on the real LPVaultSwap behind its proxy (2.11 REQ-SWAP-032 to REQ-SWAP-038; 2.15
-/// REQ-ACCESS-011, REQ-ACCESS-053, REQ-ACCESS-054, REQ-ACCESS-100, REQ-ACCESS-121, SPEC-GOV-008). After every call:
-/// every outcome matched the spec's model (success or the exact error); the registry holds between 1 and 32 entries
-/// with at least `keeperFloor` active; `getKeepers()` lists each registered keeper exactly once and nothing else;
-/// `activeKeeperCount()` is the unfrozen part of that list; no outsider changed it; only the timelock holds the admin
-/// roles.
+/// @notice The committed-operator registry under random sequences of timelock adds and removes and outsider calls,
+/// on the real LPVaultSwap behind its proxy (2.11 REQ-SWAP-032 to REQ-SWAP-038; 2.15 REQ-ACCESS-011, REQ-ACCESS-053,
+/// REQ-ACCESS-054, REQ-ACCESS-100, REQ-ACCESS-121, SPEC-GOV-008). After every call: every outcome matched the spec's
+/// model (success or the exact error); the registry holds between 1 and 32 entries with at least `keeperFloor`
+/// active; `getKeepers()` lists each registered keeper exactly once and nothing else; `activeKeeperCount()` is the
+/// length of that list; no outsider changed it; only the timelock holds the admin roles.
 /// forge-config: default.invariant.runs = 64
 /// forge-config: default.invariant.depth = 64
 /// forge-config: invariant.invariant.runs = 2000
@@ -54,7 +53,7 @@ contract LPVaultSwapKeepersInvariantTest is Test, HandlerReach {
         lvs = ILPVaultSwap(
             address(new ERC1967Proxy(implementation, abi.encodeCall(LPVaultSwap.initialize, (timelock, keepers))))
         );
-        handler = new LPVaultSwapKeeperHandler(lvs, registry, timelock, first);
+        handler = new LPVaultSwapKeeperHandler(lvs, timelock, first);
         targetContract(address(handler));
     }
 
@@ -70,13 +69,12 @@ contract LPVaultSwapKeepersInvariantTest is Test, HandlerReach {
         Reach memory r =
             _replayLanded(address(handler), actions, LPVaultSwapKeeperHandler.Skipped.selector, 32, 50, 0, own, true);
         // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
-        uint256[] memory floors = new uint256[](4);
-        bool[] memory check = new bool[](4);
+        uint256[] memory floors = new uint256[](3);
+        bool[] memory check = new bool[](3);
         floors[0] = 65; // add
-        floors[1] = 35; // freeze
-        floors[2] = 80; // outsider
-        check[2] = true; // outsider
-        floors[3] = 10; // remove
+        floors[1] = 80; // outsider
+        check[1] = true; // outsider
+        floors[2] = 10; // remove
         _check(r, names, new string[](0), floors, new uint256[](0), check);
     }
 
@@ -90,21 +88,17 @@ contract LPVaultSwapKeepersInvariantTest is Test, HandlerReach {
         pure
         returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
     {
-        (actions, names, kinds) = (new bytes4[](4), new string[](4), new int16[][](4));
+        (actions, names, kinds) = (new bytes4[](3), new string[](3), new int16[][](3));
         (actions[0], names[0]) = (LPVaultSwapKeeperHandler.add.selector, "add");
         kinds[0] = new int16[](1);
         kinds[0][0] = 256;
-        (actions[1], names[1]) = (LPVaultSwapKeeperHandler.freeze.selector, "freeze");
+        (actions[1], names[1]) = (LPVaultSwapKeeperHandler.outsider.selector, "outsider");
         kinds[1] = new int16[](2);
         kinds[1][0] = 256;
-        kinds[1][1] = 1;
-        (actions[2], names[2]) = (LPVaultSwapKeeperHandler.outsider.selector, "outsider");
-        kinds[2] = new int16[](2);
+        kinds[1][1] = 160;
+        (actions[2], names[2]) = (LPVaultSwapKeeperHandler.remove.selector, "remove");
+        kinds[2] = new int16[](1);
         kinds[2][0] = 256;
-        kinds[2][1] = 160;
-        (actions[3], names[3]) = (LPVaultSwapKeeperHandler.remove.selector, "remove");
-        kinds[3] = new int16[](1);
-        kinds[3][0] = 256;
     }
 
     function _calldata(
@@ -131,7 +125,7 @@ contract LPVaultSwapKeepersInvariantTest is Test, HandlerReach {
         assertLe(n, 32, "registry above MAX_KEEPERS");
         assertGe(lvs.activeKeeperCount(), 1, "active count below keeperFloor");
         assertEq(n, handler.modelCount(), "count matches the model");
-        assertEq(lvs.activeKeeperCount(), handler.modelActive(), "active count is the unfrozen registered set");
+        assertEq(lvs.activeKeeperCount(), n, "active count is the registered count");
     }
 
     // TEST-098 verifies: REQ-SWAP-034, REQ-ACCESS-011

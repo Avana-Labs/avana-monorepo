@@ -40,31 +40,30 @@ contract ParameterStoreInvariantTest is ParameterStoreFixture, HandlerReach {
         (own[0], own[1]) = (address(handler), address(this));
         Reach memory r = _replayLanded(address(handler), actions, bytes4(0), 32, 50, 0, own, true);
         // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
-        uint256[] memory floors = new uint256[](20);
-        bool[] memory check = new bool[](20);
-        floors[0] = 35; // gateRecovery
-        floors[1] = 35; // loosenMarketCap
-        floors[2] = 80; // loosenPledge
-        floors[3] = 30; // loosenSlice
-        floors[4] = 40; // loosenSlippage
-        floors[5] = 40; // loosenTokenCap
-        floors[6] = 75; // setBorrowAge
-        floors[7] = 55; // setFlashFee
-        floors[8] = 35; // setSlippageFloor
-        floors[9] = 40; // shortfall
-        floors[10] = 80; // stewardLoosens
-        check[10] = true; // stewardLoosens
-        floors[11] = 80; // strangerCalls
-        check[11] = true; // strangerCalls
-        floors[12] = 70; // tightenBorrowAge
-        floors[13] = 55; // tightenFlashFee
-        floors[14] = 80; // tightenMarketCap
-        floors[15] = 80; // tightenPledge
-        floors[16] = 80; // tightenSlice
-        floors[17] = 40; // tightenSlippage
-        floors[18] = 80; // tightenTokenCap
-        floors[19] = 80; // warp
-        check[19] = true; // warp
+        uint256[] memory floors = new uint256[](19);
+        bool[] memory check = new bool[](19);
+        floors[0] = 35; // loosenMarketCap
+        floors[1] = 80; // loosenPledge
+        floors[2] = 30; // loosenSlice
+        floors[3] = 25; // loosenSlippage
+        floors[4] = 30; // loosenTokenCap
+        floors[5] = 75; // setBorrowAge
+        floors[6] = 55; // setFlashFee
+        floors[7] = 35; // setSlippageFloor
+        floors[8] = 40; // shortfall
+        floors[9] = 80; // stewardLoosens
+        check[9] = true; // stewardLoosens
+        floors[10] = 80; // strangerCalls
+        check[10] = true; // strangerCalls
+        floors[11] = 70; // tightenBorrowAge
+        floors[12] = 55; // tightenFlashFee
+        floors[13] = 80; // tightenMarketCap
+        floors[14] = 80; // tightenPledge
+        floors[15] = 80; // tightenSlice
+        floors[16] = 40; // tightenSlippage
+        floors[17] = 80; // tightenTokenCap
+        floors[18] = 80; // warp
+        check[18] = true; // warp
         _check(r, names, new string[](0), floors, new uint256[](0), check);
     }
 
@@ -78,80 +77,75 @@ contract ParameterStoreInvariantTest is ParameterStoreFixture, HandlerReach {
         pure
         returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
     {
-        (actions, names, kinds) = (new bytes4[](20), new string[](20), new int16[][](20));
-        (actions[0], names[0]) = (ParameterStoreHandler.gateRecovery.selector, "gateRecovery");
-        kinds[0] = new int16[](3);
-        kinds[0][0] = 64;
-        kinds[0][1] = 1;
-        kinds[0][2] = 1;
-        (actions[1], names[1]) = (ParameterStoreHandler.loosenMarketCap.selector, "loosenMarketCap");
+        (actions, names, kinds) = (new bytes4[](19), new string[](19), new int16[][](19));
+        (actions[0], names[0]) = (ParameterStoreHandler.loosenMarketCap.selector, "loosenMarketCap");
+        kinds[0] = new int16[](1);
+        kinds[0][0] = 256;
+        (actions[1], names[1]) = (ParameterStoreHandler.loosenPledge.selector, "loosenPledge");
         kinds[1] = new int16[](1);
         kinds[1][0] = 256;
-        (actions[2], names[2]) = (ParameterStoreHandler.loosenPledge.selector, "loosenPledge");
+        (actions[2], names[2]) = (ParameterStoreHandler.loosenSlice.selector, "loosenSlice");
         kinds[2] = new int16[](1);
         kinds[2][0] = 256;
-        (actions[3], names[3]) = (ParameterStoreHandler.loosenSlice.selector, "loosenSlice");
+        (actions[3], names[3]) = (ParameterStoreHandler.loosenSlippage.selector, "loosenSlippage");
         kinds[3] = new int16[](1);
-        kinds[3][0] = 256;
-        (actions[4], names[4]) = (ParameterStoreHandler.loosenSlippage.selector, "loosenSlippage");
+        kinds[3][0] = 16;
+        (actions[4], names[4]) = (ParameterStoreHandler.loosenTokenCap.selector, "loosenTokenCap");
         kinds[4] = new int16[](1);
-        kinds[4][0] = 16;
-        (actions[5], names[5]) = (ParameterStoreHandler.loosenTokenCap.selector, "loosenTokenCap");
+        kinds[4][0] = 256;
+        (actions[5], names[5]) = (ParameterStoreHandler.setBorrowAge.selector, "setBorrowAge");
         kinds[5] = new int16[](1);
-        kinds[5][0] = 256;
-        (actions[6], names[6]) = (ParameterStoreHandler.setBorrowAge.selector, "setBorrowAge");
+        kinds[5][0] = 32;
+        (actions[6], names[6]) = (ParameterStoreHandler.setFlashFee.selector, "setFlashFee");
         kinds[6] = new int16[](1);
-        kinds[6][0] = 32;
-        (actions[7], names[7]) = (ParameterStoreHandler.setFlashFee.selector, "setFlashFee");
+        kinds[6][0] = 16;
+        (actions[7], names[7]) = (ParameterStoreHandler.setSlippageFloor.selector, "setSlippageFloor");
         kinds[7] = new int16[](1);
         kinds[7][0] = 16;
-        (actions[8], names[8]) = (ParameterStoreHandler.setSlippageFloor.selector, "setSlippageFloor");
-        kinds[8] = new int16[](1);
+        (actions[8], names[8]) = (ParameterStoreHandler.shortfall.selector, "shortfall");
+        kinds[8] = new int16[](3);
         kinds[8][0] = 16;
-        (actions[9], names[9]) = (ParameterStoreHandler.shortfall.selector, "shortfall");
-        kinds[9] = new int16[](3);
-        kinds[9][0] = 16;
-        kinds[9][1] = 1;
-        kinds[9][2] = 1;
-        (actions[10], names[10]) = (ParameterStoreHandler.stewardLoosens.selector, "stewardLoosens");
+        kinds[8][1] = 1;
+        kinds[8][2] = 1;
+        (actions[9], names[9]) = (ParameterStoreHandler.stewardLoosens.selector, "stewardLoosens");
+        kinds[9] = new int16[](2);
+        kinds[9][0] = 256;
+        kinds[9][1] = 8;
+        (actions[10], names[10]) = (ParameterStoreHandler.strangerCalls.selector, "strangerCalls");
         kinds[10] = new int16[](2);
         kinds[10][0] = 256;
-        kinds[10][1] = 8;
-        (actions[11], names[11]) = (ParameterStoreHandler.strangerCalls.selector, "strangerCalls");
+        kinds[10][1] = 256;
+        (actions[11], names[11]) = (ParameterStoreHandler.tightenBorrowAge.selector, "tightenBorrowAge");
         kinds[11] = new int16[](2);
-        kinds[11][0] = 256;
-        kinds[11][1] = 256;
-        (actions[12], names[12]) = (ParameterStoreHandler.tightenBorrowAge.selector, "tightenBorrowAge");
+        kinds[11][0] = 32;
+        kinds[11][1] = 1;
+        (actions[12], names[12]) = (ParameterStoreHandler.tightenFlashFee.selector, "tightenFlashFee");
         kinds[12] = new int16[](2);
-        kinds[12][0] = 32;
+        kinds[12][0] = 16;
         kinds[12][1] = 1;
-        (actions[13], names[13]) = (ParameterStoreHandler.tightenFlashFee.selector, "tightenFlashFee");
+        (actions[13], names[13]) = (ParameterStoreHandler.tightenMarketCap.selector, "tightenMarketCap");
         kinds[13] = new int16[](2);
-        kinds[13][0] = 16;
+        kinds[13][0] = 256;
         kinds[13][1] = 1;
-        (actions[14], names[14]) = (ParameterStoreHandler.tightenMarketCap.selector, "tightenMarketCap");
+        (actions[14], names[14]) = (ParameterStoreHandler.tightenPledge.selector, "tightenPledge");
         kinds[14] = new int16[](2);
         kinds[14][0] = 256;
         kinds[14][1] = 1;
-        (actions[15], names[15]) = (ParameterStoreHandler.tightenPledge.selector, "tightenPledge");
+        (actions[15], names[15]) = (ParameterStoreHandler.tightenSlice.selector, "tightenSlice");
         kinds[15] = new int16[](2);
         kinds[15][0] = 256;
         kinds[15][1] = 1;
-        (actions[16], names[16]) = (ParameterStoreHandler.tightenSlice.selector, "tightenSlice");
+        (actions[16], names[16]) = (ParameterStoreHandler.tightenSlippage.selector, "tightenSlippage");
         kinds[16] = new int16[](2);
-        kinds[16][0] = 256;
+        kinds[16][0] = 16;
         kinds[16][1] = 1;
-        (actions[17], names[17]) = (ParameterStoreHandler.tightenSlippage.selector, "tightenSlippage");
+        (actions[17], names[17]) = (ParameterStoreHandler.tightenTokenCap.selector, "tightenTokenCap");
         kinds[17] = new int16[](2);
-        kinds[17][0] = 16;
+        kinds[17][0] = 256;
         kinds[17][1] = 1;
-        (actions[18], names[18]) = (ParameterStoreHandler.tightenTokenCap.selector, "tightenTokenCap");
-        kinds[18] = new int16[](2);
+        (actions[18], names[18]) = (ParameterStoreHandler.warp.selector, "warp");
+        kinds[18] = new int16[](1);
         kinds[18][0] = 256;
-        kinds[18][1] = 1;
-        (actions[19], names[19]) = (ParameterStoreHandler.warp.selector, "warp");
-        kinds[19] = new int16[](1);
-        kinds[19][0] = 256;
     }
 
     function _calldata(
@@ -182,8 +176,6 @@ contract ParameterStoreInvariantTest is ParameterStoreFixture, HandlerReach {
     // TEST-225 verifies: REQ-CONFIG-050, REQ-CONFIG-052, REQ-PSTORE-024, REQ-PSTORE-030, REQ-PSTORE-018, REQ-RISK-042
     function invariant_TEST_225_chainValuesInBounds() public view {
         assertLe(store.maxFlashFeeBps(), 100);
-        assertGe(store.gateRecoverySeconds(), 600);
-        assertLe(store.gateRecoverySeconds(), 7200);
         assertLe(store.maxShortfallBps(), 5000);
         assertLe(store.avanaFeeShareBps(), 5000);
     }

@@ -107,10 +107,6 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         assertEq(rec.firstLossReserve, address(usdcCoverage));
         (uint256 sum,,) = registry.drawCapCoverage(address(hub), address(usdc));
         assertEq(sum, 500_000, "the Spoke's draw cap is covered");
-        // The DebtOracle and the First-Loss Reserve are now protected from the address freeze.
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, address(usdcOracle)));
-        registry.freezeAddress(address(usdcOracle));
     }
 
     // TEST-185 verifies: REQ-MREG-006, REQ-MREG-008, REQ-MREG-027, REQ-CONFIG-017
@@ -293,8 +289,6 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         );
         registry.removeDebtReserve(address(spoke), USDC_RESERVE);
         hub.setOwed(USDC_ASSET, address(spoke), 0, 0);
-        vm.prank(emergencyGuardian);
-        registry.tripDebtBreaker(address(spoke), USDC_RESERVE);
         vm.expectEmit(address(registry));
         emit IMarketRegistryBase.DebtReserveRemoved(address(spoke), USDC_RESERVE);
         vm.prank(address(timelock));
@@ -303,8 +297,6 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         uint256[] memory ids = registry.getDebtReserveIds(address(spoke));
         assertEq(ids.length, 1);
         assertEq(ids[0], GHO_RESERVE);
-        (uint32 latched,) = registry.debtBreaker(address(spoke), USDC_RESERVE);
-        assertEq(latched, 0);
         (uint256 sum,,) = registry.drawCapCoverage(address(hub), address(usdc));
         assertEq(sum, 0, "the removed reserve's Spoke no longer counts");
     }

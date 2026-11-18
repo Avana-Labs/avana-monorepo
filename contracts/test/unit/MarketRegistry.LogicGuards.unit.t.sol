@@ -12,18 +12,17 @@ import {MarketRegistryActivationLogic} from "../../src/policy/market-registry/Ma
 import {MarketRegistryHubsLogic} from "../../src/policy/market-registry/MarketRegistryHubsLogic.sol";
 import {MarketRegistryListingLogic} from "../../src/policy/market-registry/MarketRegistryListingLogic.sol";
 import {MarketRegistryRoutesLogic} from "../../src/policy/market-registry/MarketRegistryRoutesLogic.sol";
-import {MarketRegistrySafetyLogic} from "../../src/policy/market-registry/MarketRegistrySafetyLogic.sol";
 import {MarketRegistryWindDownLogic} from "../../src/policy/market-registry/MarketRegistryWindDownLogic.sol";
 import {
     MarketRegistryImmutables,
     MarketRegistryLogics,
     RiskTier
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {DriftReason, PauseReason} from "../../src/types/MarketTypes.sol";
+import {DriftReason} from "../../src/types/MarketTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
-/// @notice The six logic contracts behind the MarketRegistry: every body refuses a direct call (it runs only by
+/// @notice The five logic contracts behind the MarketRegistry: every body refuses a direct call (it runs only by
 /// delegatecall from the registry), each reports its kind and the hash of the implementation immutables, every
 /// zero immutable is refused at construction, and the registry's constructor accepts only the right logic in each slot.
 contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
@@ -40,7 +39,7 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
     function _bodies() internal view returns (Body[] memory b) {
         address[] memory one = new address[](1);
         one[0] = address(gho);
-        b = new Body[](31);
+        b = new Body[](20);
         uint256 k = 0;
         // Hubs logic.
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.recordHub, (alice, RiskTier.Stable)));
@@ -79,19 +78,6 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
         );
         b[k++] = Body(logics.routes, abi.encodeCall(MarketRegistryRoutesLogic.recordIntegrationContracts, (V3, one)));
         b[k++] = Body(logics.routes, abi.encodeCall(MarketRegistryRoutesLogic.finalizeIntegrationContracts, (V3)));
-        // Safety logic.
-        b[k++] = Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.freeze, (address(hub))));
-        b[k++] = Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.freezeAll, ()));
-        b[k++] =
-            Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.pause, (address(hub), PauseReason.General)));
-        b[k++] = Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.pauseAll, (PauseReason.General)));
-        b[k++] = Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.unfreeze, (address(hub))));
-        b[k++] = Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.unpause, (address(hub))));
-        b[k++] = Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.freezeAddress, (bob)));
-        b[k++] = Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.unfreezeAddress, (bob)));
-        b[k++] = Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.recordBreach, (bytes32(uint256(1)), 8)));
-        b[k++] = Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.tripMarketBreaker, (1)));
-        b[k++] = Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.tripDebtBreaker, (address(spoke), 0)));
         // Wind-down logic.
         b[k++] = Body(logics.windDown, abi.encodeCall(MarketRegistryWindDownLogic.closeMarket, (1)));
         assert(k == b.length);
@@ -115,13 +101,9 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
     }
 
     // TEST-168 verifies: REQ-CONFIG-001, REQ-CONFIG-005
-    // The remaining bodies (resets and the settlement reserve) refuse a direct call the same way.
-    function test_TEST_168_resetAndSettlementBodiesRefuseDirectCalls() public {
+    // The remaining body (the settlement reserve) refuses a direct call the same way.
+    function test_TEST_168_settlementBodyRefusesADirectCall() public {
         bytes memory unauthorized = abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, address(this));
-        vm.expectRevert(unauthorized);
-        MarketRegistrySafetyLogic(logics.safety).resetMarketBreaker(1);
-        vm.expectRevert(unauthorized);
-        MarketRegistrySafetyLogic(logics.safety).resetDebtBreaker(address(spoke), 0);
         vm.expectRevert(unauthorized);
         MarketRegistryWindDownLogic(logics.windDown).setSettlementReserve(1, 0);
     }
@@ -130,17 +112,15 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
     // Each logic contract reports its own kind and the hash of the immutables it was built with, the registry's.
     function test_TEST_168_logicConfigOfEachContract() public view {
         bytes32 h = keccak256(abi.encode(im));
-        address[6] memory l =
-            [logics.hubs, logics.listing, logics.activation, logics.routes, logics.safety, logics.windDown];
-        string[6] memory kinds = [
+        address[5] memory l = [logics.hubs, logics.listing, logics.activation, logics.routes, logics.windDown];
+        string[5] memory kinds = [
             "MarketRegistryHubsLogic",
             "MarketRegistryListingLogic",
             "MarketRegistryActivationLogic",
             "MarketRegistryRoutesLogic",
-            "MarketRegistrySafetyLogic",
             "MarketRegistryWindDownLogic"
         ];
-        for (uint256 i = 0; i < 6; ++i) {
+        for (uint256 i = 0; i < 5; ++i) {
             (bytes32 kind, bytes32 hash) = IMarketRegistryLogic(l[i]).logicConfig();
             assertEq(kind, keccak256(bytes(kinds[i])));
             assertEq(hash, h);
@@ -148,19 +128,18 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
     }
 
     // TEST-168 verifies: REQ-CONFIG-005, REQ-CONFIG-002
-    // Every one of the six slots refuses a logic of another kind: the registry cannot be built with a body in the wrong
-    // place.
+    // Every one of the five slots refuses a logic of another kind: the registry cannot be built with a body in the
+    // wrong place.
     function test_TEST_168_eachSlotRefusesAnotherKind() public {
-        for (uint256 slot = 0; slot < 6; ++slot) {
+        for (uint256 slot = 0; slot < 5; ++slot) {
             MarketRegistryLogics memory l = logics;
             // Put the next slot's logic into this slot.
-            address wrong = _slot(logics, (slot + 1) % 6);
+            address wrong = _slot(logics, (slot + 1) % 5);
             if (slot == 0) l.hubs = wrong;
             if (slot == 1) l.listing = wrong;
             if (slot == 2) l.activation = wrong;
             if (slot == 3) l.routes = wrong;
-            if (slot == 4) l.safety = wrong;
-            if (slot == 5) l.windDown = wrong;
+            if (slot == 4) l.windDown = wrong;
             vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("logic")));
             new MarketRegistry(im, l);
         }
@@ -174,7 +153,6 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
         if (i == 1) return l.listing;
         if (i == 2) return l.activation;
         if (i == 3) return l.routes;
-        if (i == 4) return l.safety;
         return l.windDown;
     }
 
@@ -184,14 +162,13 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
         MarketRegistryImmutables memory other = im;
         other.payoutEscrow = makeAddr("otherEscrow");
         MarketRegistryLogics memory foreign = _deployLogics(other);
-        for (uint256 slot = 0; slot < 6; ++slot) {
+        for (uint256 slot = 0; slot < 5; ++slot) {
             MarketRegistryLogics memory l = logics;
             if (slot == 0) l.hubs = foreign.hubs;
             if (slot == 1) l.listing = foreign.listing;
             if (slot == 2) l.activation = foreign.activation;
             if (slot == 3) l.routes = foreign.routes;
-            if (slot == 4) l.safety = foreign.safety;
-            if (slot == 5) l.windDown = foreign.windDown;
+            if (slot == 4) l.windDown = foreign.windDown;
             vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("logic")));
             new MarketRegistry(im, l);
         }
@@ -235,8 +212,6 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
             vm.expectRevert(err);
             new MarketRegistryRoutesLogic(x);
             vm.expectRevert(err);
-            new MarketRegistrySafetyLogic(x);
-            vm.expectRevert(err);
             new MarketRegistryWindDownLogic(x);
             vm.expectRevert(err);
             new MarketRegistry(x, logics);
@@ -268,20 +243,14 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
     }
 
     // TEST-168 verifies: REQ-CONFIG-001, REQ-CONFIG-002
-    // Calling the registry implementation itself (not the proxy) cannot change anything: it holds no roles, its
-    // initializer is disabled, and its permissionless writes find no market in its own storage.
+    // Calling the registry implementation itself (not the proxy) cannot change anything: its initializer is disabled
+    // and its permissionless write finds no market in its own storage.
     function test_TEST_168_implementationContractIsInert() public {
         MarketRegistry impl = new MarketRegistry(im, logics);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         impl.initialize(address(timelock));
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.MarketNotOffboarding.selector, 1));
         impl.closeMarket(1);
-        vm.prank(address(rm));
-        impl.recordBreach(bytes32(uint256(1)), 8);
-        (uint32 latched,) = impl.marketBreaker(1);
-        assertEq(latched, 8, "only the implementation's own storage is written");
-        (latched,) = registry.marketBreaker(1);
-        assertEq(latched, 0, "the proxy's storage is untouched");
     }
 
     // TEST-204 verifies: REQ-CONFIG-076, INV-093

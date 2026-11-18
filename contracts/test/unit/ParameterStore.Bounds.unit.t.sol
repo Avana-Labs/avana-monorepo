@@ -260,21 +260,6 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         assertEq(store.maxShortfallBps(), 0);
     }
 
-    // ─── gateRecoverySeconds: [600, 7,200] ───
-
-    // TEST-064 verifies: REQ-PSTORE-030, REQ-CONFIG-050, REQ-ACCESS-167, REQ-ACCESS-137, REQ-ACCESS-165
-    function test_TEST_064_gateRecoveryAtBothEnds() public {
-        _accepts(abi.encodeCall(store.tightenGateRecoverySeconds, (7200)));
-        assertEq(store.gateRecoverySeconds(), 7200);
-        _refuses(abi.encodeCall(store.tightenGateRecoverySeconds, (7201)), oob);
-        _accepts(abi.encodeCall(store.loosenGateRecoverySeconds, (600)));
-        assertEq(store.gateRecoverySeconds(), 600);
-        _refuses(abi.encodeCall(store.loosenGateRecoverySeconds, (599)), oob);
-        _refuses(abi.encodeCall(store.loosenGateRecoverySeconds, (0)), oob);
-        _refuses(abi.encodeCall(store.tightenGateRecoverySeconds, (7201)), oob);
-        assertEq(store.gateRecoverySeconds(), 600);
-    }
-
     // ─── debtStressRiseBps: [100, 5,000] once written ───
 
     // TEST-230 verifies: REQ-PSTORE-020, REQ-CONFIG-050
@@ -473,7 +458,6 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
     function test_TEST_064_notStricterBeforeBounds() public {
         // A value both not stricter and out of bounds reports NotStricter: direction first, then bounds.
         _refuses(abi.encodeCall(store.tightenMinPledgeUsd, (M, 0)), notStricter);
-        _refuses(abi.encodeCall(store.tightenGateRecoverySeconds, (0)), notStricter);
         _refuses(abi.encodeCall(store.tightenDebtStressRiseBps, (usdc, 0)), notStricter);
         _refuses(abi.encodeCall(store.tightenMarketUsdCap, (M, USD_MAX + 1)), notStricter);
         _refuses(abi.encodeCall(store.tightenSlippageAllowanceBps, (M, 100)), notStricter);
@@ -483,7 +467,6 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
     // TEST-225 verifies: REQ-CONFIG-051, REQ-CONFIG-067, REQ-PSTORE-017
     function test_TEST_225_notLooserBeforeBoundsAndStep() public {
         _refuses(abi.encodeCall(store.loosenMaxShortfallBps, (0)), notLooser);
-        _refuses(abi.encodeCall(store.loosenGateRecoverySeconds, (7201)), notLooser);
         _refuses(abi.encodeCall(store.loosenMarketUsdCap, (M, 0)), notLooser);
         _refuses(abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 0)), notLooser);
         _refuses(abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 0)), notLooser);

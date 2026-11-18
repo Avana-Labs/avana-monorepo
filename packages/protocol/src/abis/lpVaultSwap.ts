@@ -1008,17 +1008,6 @@ export const lpVaultSwapAbi = [
   },
   {
     "type": "error",
-    "name": "AddressIsFrozen",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "AdminRoleOnlyTimelock",
     "inputs": [
       {

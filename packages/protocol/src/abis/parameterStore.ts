@@ -134,30 +134,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "breakerDeficitMax",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "coverageRatioBps",
     "inputs": [],
     "outputs": [
@@ -262,6 +238,30 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
+    "name": "deficitMax",
+    "inputs": [
+      {
+        "name": "hub",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "asset",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "value",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "feeRecipient",
     "inputs": [],
     "outputs": [
@@ -288,19 +288,6 @@ export const parameterStoreAbi = [
         "name": "value",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "gateRecoverySeconds",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint64",
-        "internalType": "uint64"
       }
     ],
     "stateMutability": "view"
@@ -532,11 +519,6 @@ export const parameterStoreAbi = [
             "internalType": "address"
           },
           {
-            "name": "gateRecoverySeconds",
-            "type": "uint64",
-            "internalType": "uint64"
-          },
-          {
             "name": "maxShortfallBps",
             "type": "uint16",
             "internalType": "uint16"
@@ -616,29 +598,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "loosenBreakerDeficitMax",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "loosenDebtSpeedLimit",
     "inputs": [
       {
@@ -702,8 +661,13 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "loosenFloorRoundingAllowance",
+    "name": "loosenDeficitMax",
     "inputs": [
+      {
+        "name": "hub",
+        "type": "address",
+        "internalType": "address"
+      },
       {
         "name": "asset",
         "type": "address",
@@ -720,12 +684,17 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "loosenGateRecoverySeconds",
+    "name": "loosenFloorRoundingAllowance",
     "inputs": [
       {
+        "name": "asset",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
         "name": "value",
-        "type": "uint64",
-        "internalType": "uint64"
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -1586,29 +1555,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "tightenBreakerDeficitMax",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "tightenDebtSpeedLimit",
     "inputs": [
       {
@@ -1672,8 +1618,13 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "tightenFloorRoundingAllowance",
+    "name": "tightenDeficitMax",
     "inputs": [
+      {
+        "name": "hub",
+        "type": "address",
+        "internalType": "address"
+      },
       {
         "name": "asset",
         "type": "address",
@@ -1690,12 +1641,17 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "tightenGateRecoverySeconds",
+    "name": "tightenFloorRoundingAllowance",
     "inputs": [
       {
+        "name": "asset",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
         "name": "value",
-        "type": "uint64",
-        "internalType": "uint64"
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],

@@ -7,7 +7,7 @@ import {ICollateralization} from "../../custody/collateralization/ICollateraliza
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {DeleverageRequest} from "../../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {PositionRef} from "../../types/PositionTypes.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
@@ -49,7 +49,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         (address proxy, AdapterAccount memory account) = _accountOf(msg.sender, marketId);
         _checkIntegration(marketId, account.vaultToken, position.integrationId);
         bool debtFree = _borrowCount(account.spoke, proxy) == 0;
-        if (!debtFree) _withDebtGates(account.vaultToken, proxy);
+        if (!debtFree) IRiskModule(_RISK_MODULE).preWithdrawCheck(proxy);
         uint256 hf;
         (amounts, hf) = _reduce(proxy, account, position.positionKey, units, minAmounts, debtFree, minHealthFactor);
         emit CollateralReduced(
@@ -95,9 +95,8 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         (address proxy, AdapterAccount memory account) = _accountOf(msg.sender, marketId);
         Market memory m = IMarketRegistry(_MARKET_REGISTRY).getMarket(marketId);
         if (position.integrationId != m.integrationId) revert IntegrationMismatch(marketId, position.integrationId);
-        bool requireRescue = _mintGate(m.hub, account.spoke, proxy);
         uint128 rescueUnits;
-        (added, rescueUnits) = _credit(proxy, account, position.positionKey, topUp, requireRescue);
+        (added, rescueUnits) = _credit(proxy, account, position.positionKey, topUp);
         uint256 recordId =
             ICollateralization(_COLLATERALIZATION).recordIdOf(position.integrationId, position.positionKey);
         emit CollateralRecredited(
@@ -110,29 +109,16 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         address proxy,
         AdapterAccount memory account,
         bytes32 positionKey,
-        bytes calldata topUp,
-        bool requireRescue
+        bytes calldata topUp
     ) private returns (uint128 added, uint128 rescueUnits) {
         uint256 reserveId = _reserveIdOf(account.vaultToken);
         int256 gapBefore = _gap(account.vaultToken);
         (added, rescueUnits) = ICollateralization(_COLLATERALIZATION)
-            .recredit(msg.sender, proxy, account.vaultToken, positionKey, topUp, requireRescue);
+            .recredit(msg.sender, proxy, account.vaultToken, positionKey, topUp, false);
         if (added == 0) revert ZeroAmount();
         IVaultToken(account.vaultToken).mint(proxy, added);
         _supply(proxy, account.spoke, account.vaultToken, reserveId, account.marketId, added);
         _checkGap(account.vaultToken, gapBefore);
-    }
-
-    /// @dev Requires a rescue top-up under `Paused(General)` or for a frozen caller.
-    function _mintGate(
-        address hub,
-        address spoke,
-        address proxy
-    ) private view returns (bool requireRescue) {
-        (PauseState state, PauseReason reason) = _pauseOf(hub);
-        if (state == PauseState.Paused && reason == PauseReason.MintPathSuspect) revert ApplicationPaused();
-        if (state == PauseState.Frozen && _borrowCount(spoke, proxy) == 0) revert ApplicationFrozen();
-        requireRescue = state == PauseState.Paused || _isFrozen(msg.sender);
     }
 
     /// @dev Values a repay with collateral reads before calling LPVaultSwap; `healthFactor` is filled in afterwards.
@@ -209,8 +195,6 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         AdapterAccount memory account;
         (b.proxy, account) = _accountOf(msg.sender, p.marketId);
         (b.spoke, b.vaultToken) = (account.spoke, account.vaultToken);
-        (PauseState state, PauseReason reason) = _pauseOf(IVaultToken(b.vaultToken).hub());
-        if (state == PauseState.Paused && reason == PauseReason.MintPathSuspect) revert ApplicationPaused();
         _checkIntegration(p.marketId, b.vaultToken, p.position.integrationId);
         if (!IMarketRegistry(_MARKET_REGISTRY).isApprovedDebtReserve(b.spoke, p.debtReserveId)) {
             revert UnknownDebtReserve(b.spoke, p.debtReserveId);

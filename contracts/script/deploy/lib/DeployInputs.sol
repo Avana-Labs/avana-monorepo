@@ -257,7 +257,6 @@ abstract contract DeployInputs is Script {
         g.maxFlashFeeBps = uint16(vm.parseJsonUint(json, string.concat(p, ".maxFlashFeeBps")));
         g.avanaFeeShareBps = uint16(vm.parseJsonUint(json, string.concat(p, ".avanaFeeShareBps")));
         g.feeRecipient = _addr(json, string.concat(p, ".feeRecipient"));
-        g.gateRecoverySeconds = uint64(vm.parseJsonUint(json, string.concat(p, ".gateRecoverySeconds")));
         g.maxShortfallBps = uint16(vm.parseJsonUint(json, string.concat(p, ".maxShortfallBps")));
     }
 

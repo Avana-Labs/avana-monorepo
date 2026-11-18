@@ -207,23 +207,21 @@ contract RiskModuleDriftUnitTest is RiskModuleFixture {
 
     // TEST-268 verifies: REQ-RISK-090, REQ-RISK-078, SPEC-BRK-008
     // Sources: 2.7 REQ-RISK-090 example (receiveSharesEnabled turned on)
-    function test_TEST_268_pokeConfigEmitsAndLatches() public {
+    function test_TEST_268_pokeConfigEmitsAndDriftHoldsLive() public {
+        _debt(1.5e18, 1000);
         assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(DriftReason.None));
         _vtConfig(true, false, false);
         vm.expectEmit(address(riskModule));
         emit IRiskModule.ConfigDriftDetected(address(spoke), DriftReason.ReceiveSharesOn);
         assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(DriftReason.ReceiveSharesOn));
-        (uint32 latched,) = registry.marketBreaker(mid);
-        assertEq(latched, BreakerReasons.CONFIG_DRIFT);
-        // The setting restored, borrowing stays closed until an authorized reset.
-        _vtConfig(false, false, false);
-        _debt(1.5e18, 1000);
+        assertEq(riskModule.getBreakerStatus(mid), BreakerReasons.CONFIG_DRIFT);
         vm.expectRevert(
-            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.CONFIG_DRIFT)
+            abi.encodeWithSelector(IRiskModuleErrors.ConfigDrift.selector, mid, DriftReason.ReceiveSharesOn)
         );
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        vm.prank(emergencyGuardian);
-        registry.resetMarketBreaker(mid);
+        // The setting restored, the borrow passes in the same block, with no reset.
+        _vtConfig(false, false, false);
+        assertEq(riskModule.getBreakerStatus(mid), 0);
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.UnknownSpoke.selector, address(this)));
         riskModule.pokeConfig(address(this));
@@ -317,10 +315,8 @@ contract RiskModuleDriftUnitTest is RiskModuleFixture {
         vm.expectEmit(address(riskModule));
         emit IRiskModule.ConfigDriftDetected(address(spoke), DriftReason.SpokeImplementation);
         assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(DriftReason.SpokeImplementation));
-        (uint32 latched,) = registry.marketBreaker(mid);
-        assertEq(latched, BreakerReasons.CONFIG_DRIFT);
-        // The breaker poke sees the same drift as a live reason.
-        assertEq(riskModule.liveBreakerReasons(mid), BreakerReasons.CONFIG_DRIFT);
+        // The market breaker reads the same drift as a live reason.
+        assertEq(riskModule.getBreakerStatus(mid), BreakerReasons.CONFIG_DRIFT);
     }
 
     // TEST-268 verifies: REQ-RISK-090, REQ-RISK-078, SPEC-BRK-008
@@ -335,16 +331,12 @@ contract RiskModuleDriftUnitTest is RiskModuleFixture {
         riskModule.checkAaveConfig(address(spoke), ids);
         // The poke checks only Active and Offboarding markets, so it finds no drift.
         assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(DriftReason.None));
-        (uint32 latched,) = registry.marketBreaker(registered);
-        assertEq(latched, 0);
-        // A drift on the Offboarding market latches it, and only it.
+        assertEq(riskModule.getBreakerStatus(mid), 0);
+        // A drift on the Offboarding market is found, and holds its breaker.
         vm.prank(address(timelock));
         registry.setMarketOffboarding(mid);
         _vtConfig(true, false, false);
         assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(DriftReason.ReceiveSharesOn));
-        (latched,) = registry.marketBreaker(mid);
-        assertEq(latched, BreakerReasons.CONFIG_DRIFT);
-        (latched,) = registry.marketBreaker(registered);
-        assertEq(latched, 0);
+        assertEq(riskModule.getBreakerStatus(mid), BreakerReasons.CONFIG_DRIFT);
     }
 }

@@ -133,17 +133,6 @@ export const proxyManagerAbi = [
   },
   {
     "type": "error",
-    "name": "AddressIsFrozen",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "OnlyAdapter",
     "inputs": []
   },

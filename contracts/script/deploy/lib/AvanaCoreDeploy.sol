@@ -109,21 +109,20 @@ abstract contract AvanaCoreDeploy is DeployBase {
         im.flashLiquidator = p.flashLiquidator;
         im.standardSpokeImplementation = c.aave.standardSpokeImplementation;
         im.maxMarketCount = c.maxMarketCount;
-        string[6] memory names = [
+        string[5] memory names = [
             "MarketRegistryHubsLogic",
             "MarketRegistryListingLogic",
             "MarketRegistryActivationLogic",
             "MarketRegistryRoutesLogic",
-            "MarketRegistrySafetyLogic",
             "MarketRegistryWindDownLogic"
         ];
-        d.logics = new address[](6);
-        for (uint256 i = 0; i < 6; ++i) {
+        d.logics = new address[](5);
+        for (uint256 i = 0; i < 5; ++i) {
             d.logics[i] =
                 _deploy(names[i], bytes.concat(_artifact(string.concat(names[i], ".sol"), names[i]), abi.encode(im)));
         }
-        // MarketRegistryLogics{hubs, listing, activation, routes, safety, windDown} has the order of `names`.
-        bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2], d.logics[3], d.logics[4], d.logics[5]);
+        // MarketRegistryLogics{hubs, listing, activation, routes, windDown} has the order of `names`.
+        bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2], d.logics[3], d.logics[4]);
         d.implementation = _deploy(
             "MarketRegistryImplementation",
             bytes.concat(_artifact("MarketRegistry.sol", "MarketRegistry"), abi.encode(im), logics)

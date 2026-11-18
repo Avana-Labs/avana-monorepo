@@ -246,10 +246,8 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
             l.marketCount = marketId;
             l.marketsOfSpoke[def.spoke].push(marketId);
         } else {
-            // A relisted market starts clean: a new route epoch hides old routes; breaker state is cleared.
+            // A relisted market starts clean: a new route epoch hides old routes.
             l.routeEpoch[marketId] += 1;
-            delete l.latched[bytes32(marketId)];
-            _clearBreachTimes(l, bytes32(marketId));
         }
         try IRiskModule(_RISK_MODULE).checkAaveConfig(def.spoke, new uint256[](0)) {}
         catch {

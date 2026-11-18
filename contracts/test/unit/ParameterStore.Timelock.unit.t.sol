@@ -19,11 +19,10 @@ contract ParameterStoreTimelockUnitTest is ParameterStoreFixture {
 
     // TEST-063 verifies: REQ-PSTORE-002, REQ-CONFIG-051, REQ-CONFIG-053, REQ-ACCESS-155
     function test_TEST_063_tightenSelectorsTakeTheShortDelay() public {
-        bytes[6] memory data = [
+        bytes[5] memory data = [
             abi.encodeCall(IParameterStoreTighten.tightenMarketUsdCap, (M, 4_000_000e8)),
             abi.encodeCall(IParameterStoreTighten.tightenSlippageAllowanceBps, (M, 40)),
             abi.encodeCall(IParameterStoreTighten.tightenMinPledgeUsd, (M, 20e8)),
-            abi.encodeCall(IParameterStore.tightenGateRecoverySeconds, (3600)),
             abi.encodeCall(IParameterStore.tightenMaxShortfallBps, (50)),
             abi.encodeCall(IParameterStore.tightenMaxFlashFeeBps, (0))
         ];

@@ -125,7 +125,6 @@
       "maxFlashFeeBps": 10,
       "avanaFeeShareBps": 2000,
       "feeRecipient": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
-      "gateRecoverySeconds": 1800,
       "maxShortfallBps": 1000
     }
   },

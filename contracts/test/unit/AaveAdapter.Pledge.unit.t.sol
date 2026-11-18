@@ -11,7 +11,6 @@ import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.s
 import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {IProxyManager} from "../../src/proxy/proxy-manager/IProxyManager.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {PositionRef} from "../../src/types/PositionTypes.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
@@ -19,8 +18,8 @@ import {Vm} from "forge-std/Vm.sol";
 
 /// @title AaveAdapterPledgeUnitTest
 /// @notice `pledge` on the real Aave V4 Spoke, Collateralization, vault token, ProxyManager and PositionProxy: the
-/// order of its checks, the proxy creation and binding, the empty-account rule at creation, the pause and freeze gates
-/// with the rescue flag, the exact mint and supply, and the backing gap.
+/// order of its checks, the proxy creation and binding, the empty-account rule at creation, the rescue flag, the exact
+/// mint and supply, and the backing gap.
 /// forge-config: default.isolate = false
 contract AaveAdapterPledgeUnitTest is AaveAdapterFixture {
     // ─── Happy path, binding and mint ───
@@ -218,26 +217,6 @@ contract AaveAdapterPledgeUnitTest is AaveAdapterFixture {
         adapterC.pledge(MARKET_ID, _ref(key), d);
     }
 
-    // TEST-012 verifies: REQ-ADAPTER-073, REQ-ADAPTER-083, REQ-ADAPTER-046
-    /// @notice `Paused(MintPathSuspect)` refuses a pledge of a new account and a top-up alike.
-    function test_TEST_012_mintPathSuspectRefusesEveryPledge() public {
-        (, address proxy) = _pledgeAs(alice, MARKET_ID, UNITS);
-        _borrowAs(alice, MARKET_ID, debtReserveId, 1000e18);
-        _pause(PauseState.Paused, PauseReason.MintPathSuspect);
-        bytes32 key = _newKey();
-        lpVault.mintPosition(key, alice, MARKET_ID, UNITS);
-        uint256 d = _deadline();
-        vm.expectRevert(IAaveAdapterBase.ApplicationPaused.selector);
-        vm.prank(alice);
-        adapterC.pledge(MARKET_ID, _ref(key), d);
-        bytes32 key2 = _newKey();
-        lpVault.mintPosition(key2, bob, MARKET_ID, UNITS);
-        vm.expectRevert(IAaveAdapterBase.ApplicationPaused.selector);
-        vm.prank(bob);
-        adapterC.pledge(MARKET_ID, _ref(key2), d);
-        assertEq(_sharesOf(proxy, vtReserveId), UNITS, "nothing added");
-    }
-
     // TEST-012 verifies: REQ-ADAPTER-077, REQ-ADAPTER-065
     function test_TEST_012_unapprovedSpoke() public {
         registry.setSpoke(
@@ -264,11 +243,10 @@ contract AaveAdapterPledgeUnitTest is AaveAdapterFixture {
     }
 
     // TEST-012 verifies: REQ-ADAPTER-065
-    /// @notice When several checks fail the first in the order of REQ-ADAPTER-065 wins: deadline, market, pause
-    /// reason, Spoke, integration.
+    /// @notice When several checks fail the first in the order of REQ-ADAPTER-065 wins: deadline, market, Spoke,
+    /// integration.
     function test_TEST_012_checkOrder() public {
         bytes32 key = _newKey();
-        _pause(PauseState.Paused, PauseReason.MintPathSuspect);
         registry.setSpoke(
             aave.cdpSpoke, SpokeDef(false, aave.hub, INTEGRATION, RiskTier.Stable, address(0), address(0))
         );
@@ -280,92 +258,15 @@ contract AaveAdapterPledgeUnitTest is AaveAdapterFixture {
         vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnknownMarket.selector, 77));
         vm.prank(alice);
         adapterC.pledge(77, PositionRef(9, key), d);
-        vm.expectRevert(IAaveAdapterBase.ApplicationPaused.selector);
-        vm.prank(alice);
-        adapterC.pledge(MARKET_ID, PositionRef(9, key), d);
-        _pause(PauseState.None, PauseReason.None);
         vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnknownSpoke.selector, aave.cdpSpoke));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, PositionRef(9, key), d);
     }
 
-    // ─── Pause state and freeze ───
-
-    // TEST-012 verifies: REQ-ADAPTER-045, REQ-ADAPTER-072, REQ-ADAPTER-065, INV-026
-    /// @notice Under Frozen a new account's pledge reverts `ApplicationFrozen` (the proxy it deployed is undone with
-    /// it) while an indebted account's top-up passes.
-    function test_TEST_012_frozenRefusesNewAccountOnly() public {
-        (, address proxy) = _pledgeAs(alice, MARKET_ID, UNITS);
-        _borrowAs(alice, MARKET_ID, debtReserveId, 1000e18);
-        (, address carolProxy) = _pledgeAs(carol, MARKET_B, UNITS);
-        _pause(PauseState.Frozen, PauseReason.None);
-        bytes32 key = _newKey();
-        lpVault.mintPosition(key, bob, MARKET_ID, UNITS);
-        uint256 d = _deadline();
-        vm.expectRevert(IAaveAdapterBase.ApplicationFrozen.selector);
-        vm.prank(bob);
-        adapterC.pledge(MARKET_ID, _ref(key), d);
-        assertEq(adapterC.proxyOf(bob, MARKET_ID), address(0), "no binding left");
-        // A debt-free existing account is a new account for this rule.
-        bytes32 keyC = _newKey();
-        lpVault.mintPosition(keyC, carol, MARKET_B, UNITS);
-        vm.expectRevert(IAaveAdapterBase.ApplicationFrozen.selector);
-        vm.prank(carol);
-        adapterC.pledge(MARKET_B, _ref(keyC), d);
-        assertTrue(carolProxy != address(0), "carol proxy");
-        // The indebted account tops up.
-        bytes32 key2 = _newKey();
-        lpVault.mintPosition(key2, alice, MARKET_ID, UNITS);
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.pledge, (alice, proxy, vt, key2, false)));
-        vm.prank(alice);
-        adapterC.pledge(MARKET_ID, _ref(key2), d);
-        assertEq(_sharesOf(proxy, vtReserveId), 2 * UNITS, "top-up supplied");
-    }
-
-    // TEST-235 verifies: REQ-ADAPTER-083, REQ-ADAPTER-088, REQ-ADAPTER-046, REQ-RISK-066, REQ-RISK-047
-    /// @notice Under `Paused(General)` every pledge asks Collateralization (and so the RiskModule) for a rescue top-up.
-    function test_TEST_235_pausedGeneralRequiresRescue() public {
-        (, address proxy) = _pledgeAs(alice, MARKET_ID, UNITS);
-        _borrowAs(alice, MARKET_ID, debtReserveId, 1000e18);
-        _pause(PauseState.Paused, PauseReason.General);
-        bytes32 key = _newKey();
-        lpVault.mintPosition(key, alice, MARKET_ID, UNITS);
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.pledge, (alice, proxy, vt, key, true)));
-        vm.prank(alice);
-        adapterC.pledge(MARKET_ID, _ref(key), _deadline());
-        // The RiskModule refusing the rescue reverts the whole pledge, custody included.
-        riskModule.setRefuse(true);
-        bytes32 key2 = _newKey();
-        lpVault.mintPosition(key2, alice, MARKET_ID, UNITS);
-        uint256 d = _deadline();
-        vm.expectRevert();
-        vm.prank(alice);
-        adapterC.pledge(MARKET_ID, _ref(key2), d);
-        assertEq(lpVault.ownerOf(key2), alice, "custody undone");
-    }
-
-    // TEST-229 verifies: REQ-ADAPTER-082, REQ-ADAPTER-083, REQ-PROXY-099, INV-024
-    /// @notice A frozen wallet with an account can only add a rescue top-up; a frozen wallet without one cannot open
-    /// an account (the ProxyManager refuses its proxy).
-    function test_TEST_229_frozenWalletRescueOnly() public {
-        (, address proxy) = _pledgeAs(alice, MARKET_ID, UNITS);
-        registry.setFrozen(alice, true);
-        registry.setFrozen(bob, true);
-        bytes32 key = _newKey();
-        lpVault.mintPosition(key, alice, MARKET_ID, UNITS);
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.pledge, (alice, proxy, vt, key, true)));
-        vm.prank(alice);
-        adapterC.pledge(MARKET_ID, _ref(key), _deadline());
-        bytes32 keyB = _newKey();
-        lpVault.mintPosition(keyB, bob, MARKET_ID, UNITS);
-        uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IProxyManager.AddressIsFrozen.selector, bob));
-        vm.prank(bob);
-        adapterC.pledge(MARKET_ID, _ref(keyB), d);
-    }
+    // ─── Rescue flag ───
 
     // TEST-012 verifies: REQ-ADAPTER-044, REQ-ADAPTER-083
-    /// @notice With no pause and no freeze the rescue flag is false.
+    /// @notice The Adapter never asks Collateralization for a rescue top-up: the flag is false.
     function test_TEST_012_noneAsksNoRescue() public {
         bytes32 key = _newKey();
         lpVault.mintPosition(key, alice, MARKET_ID, UNITS);
@@ -373,14 +274,6 @@ contract AaveAdapterPledgeUnitTest is AaveAdapterFixture {
         vm.expectCall(address(coll), abi.encodeCall(ICollateralization.pledge, (alice, predicted, vt, key, false)));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key), _deadline());
-    }
-
-    // TEST-012 verifies: REQ-ADAPTER-044, REQ-ADAPTER-098
-    /// @notice A pause of another Hub leaves this market's pledges open.
-    function test_TEST_012_otherHubPauseIgnored() public {
-        registry.setPause(makeAddr("otherHub"), PauseState.Paused, PauseReason.MintPathSuspect);
-        _pledgeAs(alice, MARKET_ID, UNITS);
-        assertEq(token.totalSupply(), UNITS, "pledged");
     }
 
     // ─── Empty account at creation (REQ-ADAPTER-103) ───

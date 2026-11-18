@@ -5,13 +5,12 @@ pragma solidity 0.8.28;
 
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
-import {PauseReason} from "../../src/types/MarketTypes.sol";
 import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @title RiskModuleNoRestrictionUnitTest
-/// @notice The RiskModule holds no restriction of its own (the only pause state is the MarketRegistry's), and the
-/// minimum pledge value is exact at its boundary, on the real MarketRegistry.
+/// @notice The RiskModule holds no restriction of its own, and the minimum pledge value is exact at its boundary, on
+/// the real MarketRegistry.
 contract RiskModuleNoRestrictionUnitTest is RiskModuleFixture {
     bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
@@ -22,12 +21,10 @@ contract RiskModuleNoRestrictionUnitTest is RiskModuleFixture {
     // TEST-168 verifies: REQ-RISK-035, REQ-RISK-037, Q-226, Q-227
     // Sources: 5.1 TEST-168 (pause location: the RiskModule holds no restriction storage or selector)
     /// @notice Neither the RiskModule proxy nor its implementation answers any pause, per-function pause, market
-    /// freeze, pool-broken flag, keeper suspension, quarantine, incident clock or tolerance override selector; a
-    /// freeze and a pause of the Hub, which live in the MarketRegistry, leave the RiskModule's borrow check unchanged.
+    /// freeze, pool-broken flag, keeper suspension, quarantine, incident clock or tolerance override selector.
     function test_TEST_168_noRestrictionSelectorOrState() public {
-        string[14] memory absent = [
+        string[12] memory absent = [
             "pause()",
-            "unpause()",
             "paused()",
             "pauseFunction(bytes4)",
             "pauseMarket(uint256)",
@@ -38,8 +35,7 @@ contract RiskModuleNoRestrictionUnitTest is RiskModuleFixture {
             "quarantineRoute(uint256)",
             "startIncident(uint256)",
             "incidentStartedAt(uint256)",
-            "setToleranceOverride(uint256,uint256)",
-            "pauseState(address)"
+            "setToleranceOverride(uint256,uint256)"
         ];
         address impl = address(uint160(uint256(vm.load(address(riskModule), IMPLEMENTATION_SLOT))));
         assertTrue(impl.code.length > 0, "implementation read from the proxy");
@@ -50,14 +46,6 @@ contract RiskModuleNoRestrictionUnitTest is RiskModuleFixture {
                 assertFalse(ok, absent[i]);
             }
         }
-        _debt(1.5e18, 1000);
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        vm.prank(emergencyGuardian);
-        registry.freeze(address(hub));
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        vm.prank(emergencyGuardian);
-        registry.pause(address(hub), PauseReason.General);
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
     }
 
     // TEST-072 verifies: REQ-RISK-057, SPEC-CAP-001, REQ-RISK-013

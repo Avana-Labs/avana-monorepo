@@ -34,7 +34,7 @@ interface IFlashLiquidator {
         address token
     ) external returns (uint256 amount);
 
-    /// @notice What the Pool can lend of `asset` now; 0 unless the reserve is active, unpaused and flash-enabled.
+    /// @notice What the Pool can lend of `asset` now; 0 unless the reserve is active, not paused and flash-enabled.
     function maxFlashLoan(
         address asset
     ) external view returns (uint256 available);

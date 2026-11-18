@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
-import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
-import {MarketDef, PauseReason} from "../../src/types/MarketTypes.sol";
+import {MarketDef} from "../../src/types/MarketTypes.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryLPOracleMock, RegistryLPVaultMock} from "../utils/mocks/MarketRegistryMocks.sol";
@@ -28,7 +27,7 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
     ) internal view returns (bool) {
         address impl = address(uint160(uint256(vm.load(address(registry), IMPLEMENTATION_SLOT))));
         return target == impl || target == logics.hubs || target == logics.listing || target == logics.activation
-            || target == logics.routes || target == logics.safety || target == logics.windDown;
+            || target == logics.routes || target == logics.windDown;
     }
 
     /// @dev Checks every access made from the registry's context: a CALL only to the LPVault's bindMarket, a
@@ -59,8 +58,7 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
     // TEST-168 verifies: REQ-CONFIG-003, REQ-CONFIG-004, REQ-MREG-028, Q-067, Q-104, Q-124, Q-248
     // Sources: 5.1 TEST-168
     // Every kind of write in one recorded sequence: listing (one bindMarket), routes, activation, the debt-reserve
-    // record, the pause state, the address freeze, breakers, offboarding, the
-    // wind-down and the close.
+    // record, offboarding, the wind-down and the close.
     function test_TEST_168_onlyBindMarketChangesAnotherContract() public {
         vm.startStateDiffRecording();
         (uint256 id, address vt,) = _listMarket();
@@ -69,20 +67,6 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
         registry.activateMarket(id);
         registry.setSettlementReserve(id, GHO_RESERVE);
         registry.disableRoute(id, address(usdc), address(gho), 1);
-        vm.stopPrank();
-        vm.startPrank(emergencyGuardian);
-        registry.pause(address(hub), PauseReason.General);
-        registry.unpause(address(hub));
-        registry.freeze(address(hub));
-        registry.freezeAddress(bob);
-        registry.tripMarketBreaker(id);
-        registry.tripDebtBreaker(address(spoke), GHO_RESERVE);
-        vm.stopPrank();
-        vm.prank(address(rm));
-        registry.recordBreach(bytes32(id), BreakerReasons.ORACLE | BreakerReasons.ISSUER);
-        vm.startPrank(address(timelock));
-        registry.unfreezeAddress(bob);
-        registry.resetMarketBreaker(id);
         registry.setMarketOffboarding(id);
         vm.stopPrank();
         vm.warp(block.timestamp + 6 days);
@@ -111,7 +95,7 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
         (bool ok,) = address(registry).call{value: 1}("");
         assertFalse(ok, "ETH accepted");
         vm.prank(alice);
-        (ok,) = address(registry).call{value: 1}(abi.encodeWithSignature("freeze(address)", address(hub)));
+        (ok,) = address(registry).call{value: 1}(abi.encodeWithSignature("closeMarket(uint256)", uint256(1)));
         assertFalse(ok, "a payable path exists");
         bytes memory onNft =
             abi.encodeWithSignature("onERC721Received(address,address,uint256,bytes)", alice, alice, 1, "");

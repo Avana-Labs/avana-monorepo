@@ -99,7 +99,6 @@ abstract contract ParameterStoreFixture is TimelockFixture {
         g.maxFlashFeeBps = 10;
         g.avanaFeeShareBps = 2000;
         g.feeRecipient = feeRecipient;
-        g.gateRecoverySeconds = 1800;
         g.maxShortfallBps = 1000;
     }
 

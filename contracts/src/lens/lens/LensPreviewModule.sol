@@ -13,7 +13,7 @@ import {BreakerReasons} from "../../policy/market-registry/types/Breaker.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {RiskModuleMath} from "../../policy/risk-module/RiskModuleMath.sol";
-import {Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {ILensPreview} from "./ILensPreview.sol";
 import {LensBase} from "./LensBase.sol";
 import {LensConstants} from "./LensConstants.sol";
@@ -93,8 +93,7 @@ contract LensPreviewModule is LensDeleverage, ILensPreview {
         uint256 accepted = uint256(ILPOracle(m.lpOracle).latestAnswer());
         uint256 floor = _store().stressFloorUsd(marketId);
         usdCharge = Math.mulDiv(added, accepted > floor ? accepted : floor, 10 ** m.decimals, Math.Rounding.Ceil);
-        address depositor = coll.getRecord(coll.recordIdOf(m.integrationId, positionKey)).depositor;
-        rescueOnly = _rescueOnly(marketId, m, depositor, usdCharge);
+        rescueOnly = _rescueOnly(marketId, usdCharge);
     }
 
     /// @inheritdoc ILensPreview
@@ -139,7 +138,7 @@ contract LensPreviewModule is LensDeleverage, ILensPreview {
         b.def = _debtReserve(b.m.spoke, debtReserveId);
         bool deployed;
         (b.proxy, deployed) = _proxy(wallet, marketId, b.m.spoke);
-        if (!deployed || !_borrowGate(b, wallet)) return (0, 0);
+        if (!deployed || !_borrowGate(b)) return (0, 0);
         IAaveV4Spoke.UserAccountData memory a = IAaveV4Spoke(b.m.spoke).getUserAccountData(b.proxy);
         uint256 e = _rescueExclusion(b);
         uint256 w = Math.mulDiv(a.avgCollateralFactor, a.totalCollateralValue, WAD_);
@@ -177,14 +176,10 @@ contract LensPreviewModule is LensDeleverage, ILensPreview {
         if (amount > b.headroom) amount = b.headroom;
     }
 
-    /// @dev The AaveAdapter's borrow gates: both Hubs in None, wallet not frozen, `checkBorrowGate` passes.
+    /// @dev The AaveAdapter's borrow gate: `checkBorrowGate` passes.
     function _borrowGate(
-        Borrow memory b,
-        address wallet
+        Borrow memory b
     ) internal view returns (bool open) {
-        if (_registry().pauseState(b.m.hub) != PauseState.None) return false;
-        if (_registry().pauseState(b.def.fundingHub) != PauseState.None) return false;
-        if (_registry().isFrozenAddress(wallet)) return false;
         try IRiskModule(_RISK_MODULE).checkBorrowGate(b.proxy, b.def.reserveId) {
             open = true;
         } catch {}
@@ -220,18 +215,11 @@ contract LensPreviewModule is LensDeleverage, ILensPreview {
     /// @dev Whether a regular top-up would be refused, so the re-credit books only as a rescue top-up.
     function _rescueOnly(
         uint256 marketId,
-        Market memory m,
-        address depositor,
         uint256 usdCharge
     ) internal view returns (bool) {
-        if (_registry().pauseState(m.hub) == PauseState.Paused && _registry().pauseReason(m.hub) == PauseReason.General)
-        {
-            return true;
-        }
-        if (_registry().isFrozenAddress(depositor) || usdCharge < _store().minPledgeUsd(marketId)) return true;
-        // forge-lint: disable-next-line(unused-return)
-        (uint32 reasons,) = IRiskModule(_RISK_MODULE).getBreakerStatus(marketId);
-        return reasons & ~(BreakerReasons.ORACLE | BreakerReasons.CONFIG_DRIFT) != 0;
+        if (usdCharge < _store().minPledgeUsd(marketId)) return true;
+        // `CONFIG_DRIFT` never stops a top-up.
+        return IRiskModule(_RISK_MODULE).getBreakerStatus(marketId) & ~BreakerReasons.CONFIG_DRIFT != 0;
     }
     // forge-lint: disable-end(calls-loop)
 

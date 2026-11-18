@@ -5,7 +5,6 @@ pragma solidity 0.8.28;
 
 import {AaveAdapterExitLogic} from "../../../src/policy/aave-adapter/AaveAdapterExitLogic.sol";
 import {AdapterAccount} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
-import {PauseState} from "../../../src/types/MarketTypes.sol";
 import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {AaveAdapterPathHarness} from "./AaveAdapterPathStandIns.sol";
 
@@ -15,10 +14,9 @@ import {AaveAdapterPathHarness} from "./AaveAdapterPathStandIns.sol";
 /// storage, with the real `Lock` and real `PositionProxy`s, over `BorWorld`. Accounts are seeded with records and
 /// debt at HF 1.3–2.0 or debt-free (the pledge and borrow steps are `AaveAdapterBorrowProperties`'); wallets withdraw
 /// part or all of a record, or half of what is free at the requirement; prices fall below the requirement, interest
-/// accrues, debt is cleared, the pause state and the freeze change. Between transactions: no withdrawal with debt left
-/// HF below `max(1, hard floor, minHealthFactor)`, so no collateral leaves an account below the requirement (INV-025);
-/// no withdrawal with debt completed under a pause or for a frozen wallet (INV-024); every debt-free withdrawal within
-/// the record completed, in every pause state (INV-081); supplied units equal credited units and the vault token's
+/// accrues, debt is cleared. Between transactions: no withdrawal with debt left HF below `max(1, hard floor,
+/// minHealthFactor)`, so no collateral leaves an account below the requirement (INV-025); every debt-free withdrawal
+/// within the record completed (INV-081); supplied units equal credited units and the vault token's
 /// supply (INV-003, INV-008); the Adapter and the proxies hold no token and no allowance (INV-021); the Lock is free.
 /// @dev See `AaveAdapterPathHarness` and `AaveAdapterBorrowProperties` for the stand-ins and why the harness takes the
 /// router's place. `tried` and `done` count calls per entry point: 0 `seedPosition`, 1 `withdrawLp`.
@@ -114,21 +112,18 @@ contract AaveAdapterWithdrawProperties is AaveAdapterPathHarness {
         bool hadDebt = W.debt(p) != 0;
         uint256 units = _withdrawUnits(p, c, _required(m), frac);
         if (units == 0) return;
-        bool gated = W.state() == PauseState.Paused || W.isFrozenAddress(address(_wallet(i)));
         bool ok = _call(
             _wallet(i),
             abi.encodeCall(
                 AaveAdapterExitLogic.withdraw, (MARKET, PositionRef(INTEGRATION, key), units, block.timestamp, m)
             )
         );
-        // INV-081: a debt-free withdrawal within the record completes in every pause state and for a frozen wallet.
+        // INV-081: a debt-free withdrawal within the record completes.
         _ensure(BAD_EXIT, ok || hadDebt);
         if (!ok) return;
         ++done[1];
         credited[i] -= units;
         if (hadDebt) {
-            // INV-024: a withdrawal that leaves debt needs no pause and an unfrozen wallet.
-            _ensure(BAD_GATE, !gated);
             // INV-025: no collateral leaves an account with debt below the requirement.
             _ensure(BAD_HEALTH, W.healthFactor(p) >= _required(m));
         }
@@ -156,11 +151,6 @@ contract AaveAdapterWithdrawProperties is AaveAdapterPathHarness {
     }
 
     // ─── Properties ───
-
-    /// @notice INV-024: no withdrawal that left debt completed under a pause or for a frozen wallet.
-    function property_withdrawalWithDebtGatedByStops() external view returns (bool) {
-        return violations & BAD_GATE == 0;
-    }
 
     /// @notice INV-081: every debt-free withdrawal within its record completed.
     function property_debtFreeWithdrawalAlwaysOpen() external view returns (bool) {

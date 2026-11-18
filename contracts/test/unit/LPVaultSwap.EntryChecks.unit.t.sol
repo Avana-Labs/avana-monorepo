@@ -15,9 +15,8 @@ import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapEntryChecksUnitTest
 /// @notice The entry checks of `liquidate` (2.11 REQ-SWAP-004 to REQ-SWAP-007, REQ-SWAP-074, REQ-SWAP-087, REQ-SWAP-105):
-/// the deadline as the first check, the caller freeze, the Lock, the amounts, the market and its vault token's
-/// immutables, the proxy, the debt reserve, the health factor and the Hub share check, each with its error and each
-/// leaving no state change.
+/// the deadline as the first check, the Lock, the amounts, the market and its vault token's immutables, the proxy, the
+/// debt reserve, the health factor and the Hub share check, each with its error and each leaving no state change.
 /// forge-config: default.isolate = false
 contract LPVaultSwapEntryChecksUnitTest is LPVaultSwapUnitBase {
     address internal proxy;
@@ -27,38 +26,22 @@ contract LPVaultSwapEntryChecksUnitTest is LPVaultSwapUnitBase {
         (proxy,) = _bobAccount();
     }
 
-    /// @notice `DeadlineExpired(deadline)` is the first check: a frozen caller, a held Lock and a zero amount all
-    /// lose to it, and nothing is read or moved.
+    /// @notice `DeadlineExpired(deadline)` is the first check: a held Lock and a zero amount lose to it, and nothing
+    /// is read or moved.
     // TEST-176 verifies: REQ-SWAP-074, REQ-SWAP-078, Q-216
     function test_TEST_176_deadlineFirstCheck() public {
         LiquidationParams memory p = _params(proxy, 0);
         p.deadline = block.timestamp - 1;
-        registry.setFrozen(keeper, true);
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DeadlineExpired.selector, p.deadline));
         lvs.liquidate(p);
         // The last valid second is the deadline itself.
-        registry.setFrozen(keeper, false);
         p = _params(proxy, 1950e6);
         p.deadline = block.timestamp;
         _fund(usdc, keeper, 1950e6);
         vm.prank(keeper);
         lvs.liquidate(p);
         assertFalse(ILock(address(lock)).isLocked(), "lock released");
-    }
-
-    /// @notice `AddressIsFrozen(msg.sender)` right after the deadline; the proxy and the borrower's wallet are never
-    /// checked, so a frozen borrower is liquidated like any other.
-    // TEST-229 verifies: REQ-SWAP-105, REQ-SWAP-109, Q-242
-    function test_TEST_229_frozenCallerRefusedFrozenBorrowerLiquidated() public {
-        registry.setFrozen(keeper, true);
-        _expectLiquidateRevert(
-            keeper, _params(proxy, 1950e6), abi.encodeWithSelector(ILPVaultSwapBase.AddressIsFrozen.selector, keeper)
-        );
-        registry.setFrozen(bob, true);
-        registry.setFrozen(proxy, true);
-        _liquidateAs(carol, _params(proxy, 1950e6));
-        assertLt(_debtOf(proxy, usdcReserveId), 18_000e6, "frozen borrower liquidated");
     }
 
     /// @notice REQ-SWAP-005: `InvalidAmount` for `debtToCover == 0`, `debtToCover` or `maxShortfall` above

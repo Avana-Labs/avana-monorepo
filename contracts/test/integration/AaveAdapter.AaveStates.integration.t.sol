@@ -3,15 +3,17 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {RiskStatus} from "../../src/amm/types/AmmTypes.sol";
 import {AvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {INonfungiblePositionManager} from "../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
 import {LiquidationPreview, TailCoverageView} from "../../src/lens/lens/types/LensTypes.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {FlashLiquidationRequest, IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
+import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -194,7 +196,7 @@ contract AaveAdapterAaveStatesIntegrationTest is RealStackFlows {
     /// revert in the RiskModule with `AaveReservePaused(reserveId)` and a liquidation in the market is blocked, still so
     /// three days later (no Avana timer or expiry). Then the USDC debt reserve is paused instead: a borrow reverts
     /// `DebtReservePaused(reserveId)` and a USDC repay is refused by Aave's own `ReservePaused()`, never by Avana. After
-    /// the unpause every flow works again with no Avana action.
+    /// the pause lifts every flow works again with no Avana action.
     function test_TEST_169_aaveReservePauseStopsOnlyWhatAaveStops() public {
         (address pA,) = _account(alice, UNITS, 2000e6);
         (bytes32 kA2,) = _pledgeAs(alice, mA, 2000e6);
@@ -245,7 +247,7 @@ contract AaveAdapterAaveStatesIntegrationTest is RealStackFlows {
         _cfg().updatePaused(aave.cdpSpoke, usdcReserveId, false);
         _repayVia(carol, alice, mA, usdcReserveId, 100e6, false);
         _borrowAs(alice, mA, ghoReserveId, 1e18);
-        assertEq(_debtOf(pA, ghoReserveId), 1e18, "borrowing reopened by the DAO unpause alone");
+        assertEq(_debtOf(pA, ghoReserveId), 1e18, "borrowing reopened by the DAO lifting the pause alone");
         LiquidationResult memory r = _liquidateAs(keeper, _liqParams(pB, mA, usdcReserveId, X));
         assertEq(r.debtRepaid, X, "liquidation reopened");
     }
@@ -256,9 +258,8 @@ contract AaveAdapterAaveStatesIntegrationTest is RealStackFlows {
     /// vault-token reserve: a borrow against it reverts `ReserveFrozen`, while a liquidation in that market, a
     /// third-party repay, fee collection (real Uniswap fees) and a debt-free withdrawal all succeed.
     function test_TEST_035_aaveFreezeContainsOneMarketAndLeavesItsExitsOpen() public {
-        string[8] memory absent = [
+        string[7] memory absent = [
             "pause()",
-            "unpause()",
             "freeze(address)",
             "pauseMarket(uint256)",
             "freezeMarket(uint256)",
@@ -293,13 +294,13 @@ contract AaveAdapterAaveStatesIntegrationTest is RealStackFlows {
 
     // TEST-235 verifies: REQ-RISK-047
     // Sources: 2.7 REQ-RISK-047 (a failed pledge check reverts the whole pledge, custody included)
-    /// @notice Under Paused(General), an account at HF 1.05 tops up: a charge within the restore amount (about $950)
-    /// passes as a rescue; one above it reverts `NotRescueTopUp` inside Collateralization's `checkPledge` call, and the
-    /// whole pledge unwinds: the NFT stays with the wallet, no record opens, nothing is credited and no vault token is
-    /// minted or supplied.
+    /// @notice While the market's pool-depth breaker holds (the LPVault reports no depth), an account at HF 1.05 tops
+    /// up: a charge within the restore amount (about $950) passes as a rescue; one above it reverts `BreakerTripped`
+    /// inside Collateralization's `checkPledge` call, and the whole pledge unwinds: the NFT stays with the wallet, no
+    /// record opens, nothing is credited and no vault token is minted or supplied.
     function test_TEST_235_refusedTopUpMovesNothing() public {
         (address pA,) = _account(alice, UNITS, 5714e6);
-        _setPause(PauseState.Paused, PauseReason.General);
+        vm.mockCall(integration, abi.encodeWithSelector(ILPVault.riskStatus.selector), abi.encode(RiskStatus(0, false)));
         _pledgeAs(alice, mA, 400e6);
         uint256 records = lens.getRecords(pA, 0, 16).length;
         uint256 credited = coll.getAccountCredited(pA, vt);
@@ -307,7 +308,9 @@ contract AaveAdapterAaveStatesIntegrationTest is RealStackFlows {
         uint256 supplied = _sharesOf(pA, mkt[mA].reserveId);
         bytes32 k = _mintPosition(alice, mA, 2000e6);
         uint256 d = _deadline();
-        vm.expectPartialRevert(IRiskModuleErrors.NotRescueTopUp.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mA, BreakerReasons.POOL_DEPTH)
+        );
         vm.prank(alice);
         adapterC.pledge(mA, _ref(k), d);
         assertEq(_ownerOf(k), alice, "the NFT never left the wallet");

@@ -5,7 +5,6 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {AccountView, BackingView, LiquidationPreview, RecordView} from "../../src/lens/lens/types/LensTypes.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {PendingView} from "../../src/types/PositionTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
@@ -13,10 +12,9 @@ import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 /// @notice One borrower's journey on the real Aave V4 Spoke and Collateralization with the Lens asserted at every step
 /// against what the chain then holds: pledge, borrow, partial repay, a third party's donation and its re-credit
 /// preview, a price drop, a partial seizure sized by the Lens and executed by Aave's own `liquidationCall` (the Lens's
-/// sizing against Aave's formula), reconciliation into pending settlement, repay all and the full withdrawal; the
-/// frozen-wallet and pause variants keep the views answering. The seizure calls the Spoke as the LPVaultSwap address
-/// directly, so this file checks the Lens against Aave (TEST-247); the journey through the real LPVaultSwap is
-/// TEST-223 in `LpJourney.integration.t.sol`.
+/// sizing against Aave's formula), reconciliation into pending settlement, repay all and the full withdrawal. The
+/// seizure calls the Spoke as the LPVaultSwap address directly, so this file checks the Lens against Aave (TEST-247);
+/// the journey through the real LPVaultSwap is TEST-223 in `LpJourney.integration.t.sol`.
 /// forge-config: default.isolate = false
 contract LensJourneyIntegrationTest is LensFixture {
     function setUp() public {
@@ -81,27 +79,6 @@ contract LensJourneyIntegrationTest is LensFixture {
         assertTrue(b.supplyEqualsCredited, "supply = credited + pending");
         assertEq(lens.getRecords(aliceProxy, 0, 16).length, 0, "no record left");
         assertEq(lens.getAccount(alice, MARKET_ID).markets[0].credited, 0, "nothing credited");
-    }
-
-    // TEST-247 verifies: REQ-LENS-009, REQ-LENS-031, REQ-LENS-037, REQ-LENS-038, Q-242, Q-252
-    function test_TEST_247_frozenAndPausedVariantsKeepViewsOpen() public {
-        _open(alice, aliceProxy, 1, 20_000e6);
-        _borrow(aliceProxy, 10_000e18);
-        vault.addUnits(_key(1), 1000e6);
-        reg.setFrozen(alice, true);
-        assertTrue(lens.getAccount(alice, MARKET_ID).walletFrozen, "frozen wallet shown");
-        (,, bool rescueOnly) = lens.previewRecredit(MARKET_ID, _key(1));
-        assertTrue(rescueOnly, "a frozen depositor re-credits only as a rescue top-up");
-        assertGt(lens.quoteRepayAll(alice, MARKET_ID, debtReserveId, block.timestamp), 0, "repay stays open");
-        reg.setFrozen(alice, false);
-        reg.setPause(aave.hub, PauseState.Paused, PauseReason.MintPathSuspect);
-        assertEq(lens.getPauseReason(aave.hub), 2, "MintPathSuspect");
-        (uint256 x,,) = lens.previewRepayWithCollateral(alice, MARKET_ID, _key(1), 100e6, debtReserveId);
-        assertEq(x, 0, "repay with collateral closed while Paused");
-        assertTrue(lens.previewLiquidation(aliceProxy, debtReserveId, block.timestamp).pricesUsable, "liquidation open");
-        // The RiskModule reports the Hub's pause in the account's gate status.
-        rm.setGate(aliceProxy, true, false, PauseState.Paused);
-        assertEq(lens.previewBorrowMax(alice, MARKET_ID, debtReserveId, block.timestamp), 0, "borrowing closed");
     }
 
     function _repay(

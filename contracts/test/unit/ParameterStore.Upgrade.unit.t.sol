@@ -112,11 +112,9 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
     function test_TEST_062_onlyTheAdminUpgrades() public {
         ParameterStore next = new ParameterStore(address(timelock), address(registry), BLOCK_TIME, logics);
         address safe = makeAddr("jointConfigurationSafe");
-        vm.startPrank(address(timelock));
+        vm.prank(address(timelock));
         store.grantRole(AvanaRoles.APPLICATION_RISK_STEWARD, safe);
-        store.grantRole(AvanaRoles.APPLICATION_PAUSE_GUARDIAN, emergencyGuardian);
-        vm.stopPrank();
-        address[3] memory callers = [safe, emergencyGuardian, governanceMultisig];
+        address[2] memory callers = [safe, governanceMultisig];
         for (uint256 i = 0; i < callers.length; ++i) {
             vm.prank(callers[i]);
             vm.expectRevert(
@@ -187,14 +185,13 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
     // TEST-063 verifies: REQ-PSTORE-016, REQ-PSTORE-002, REQ-CONFIG-053
     function test_TEST_063_deficitTighteningAtTheShortDelay() public {
         _tl();
-        store.loosenBreakerDeficitMax(address(hub), gho, 10_000e18);
-        Call[] memory c =
-            _one(address(store), abi.encodeCall(store.tightenBreakerDeficitMax, (address(hub), gho, 5000e18)));
+        store.loosenDeficitMax(address(hub), gho, 10_000e18);
+        Call[] memory c = _one(address(store), abi.encodeCall(store.tightenDeficitMax, (address(hub), gho, 5000e18)));
         assertEq(_required(c), SHORT_DELAY);
         _run(c, bytes32("deficit"));
-        assertEq(store.breakerDeficitMax(address(hub), gho), 5000e18);
+        assertEq(store.deficitMax(address(hub), gho), 5000e18);
         Call[] memory back =
-            _one(address(store), abi.encodeCall(store.loosenBreakerDeficitMax, (address(hub), gho, 10_000e18)));
+            _one(address(store), abi.encodeCall(store.loosenDeficitMax, (address(hub), gho, 10_000e18)));
         assertEq(_required(back), NORMAL_DELAY);
     }
 }

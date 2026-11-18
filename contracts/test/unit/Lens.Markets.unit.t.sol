@@ -8,7 +8,6 @@ import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {DebtReserveView, MarketView} from "../../src/lens/lens/types/LensTypes.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -64,7 +63,6 @@ contract LensMarketsUnitTest is LensFixture {
         assertEq(v.marketHeadroomUsd, 1_000_000e8 - 20_000e8, "market cap minus the booked charge");
         assertEq(v.sliceHeadroomUsd, 100_000e8, "slice");
         assertEq(v.addHeadroom, 5_500_000e6 - 10_000e6, "Aave add cap headroom");
-        assertEq(uint8(v.pauseState), uint8(PauseState.None), "open");
         assertEq(v.breakerReasons, 0, "no breaker");
     }
 
@@ -138,7 +136,7 @@ contract LensMarketsUnitTest is LensFixture {
     function test_TEST_247_debtReserveCapsAndFlags() public {
         _borrowUsdc(aliceProxy, 300e6);
         _setReservePaused(usdcReserveId, true);
-        rm.setDebtBreaker(aave.cdpSpoke, usdcReserveId, 32, type(uint64).max);
+        rm.setDebtBreaker(aave.cdpSpoke, usdcReserveId, 32);
         DebtReserveView memory v = lens.getDebtReserve(aave.cdpSpoke, usdcReserveId);
         assertEq(v.asset, address(usdc), "USDC");
         assertFalse(v.fixedPrice, "DebtOracle");
@@ -149,7 +147,6 @@ contract LensMarketsUnitTest is LensFixture {
         assertTrue(v.borrowable, "borrowable");
         assertFalse(v.frozen, "not frozen");
         assertEq(v.breakerReasons, 32, "DEFICIT");
-        assertEq(uint8(v.pauseState), uint8(PauseState.None), "the funding Hub's pause state");
     }
 
     // TEST-247 verifies: REQ-LENS-046

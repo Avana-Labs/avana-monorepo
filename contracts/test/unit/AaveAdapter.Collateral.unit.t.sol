@@ -9,7 +9,6 @@ import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {PositionRef} from "../../src/types/PositionTypes.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
@@ -17,8 +16,7 @@ import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 /// @title AaveAdapterCollateralUnitTest
 /// @notice `removeLiquidity` and `recredit` on the real Aave V4 Spoke and Collateralization: partial removal keeps the
 /// position in custody and pays the n token amounts to the depositor of record, with the with-debt gates only when debt
-/// remains; re-credit mints and supplies exactly the units Collateralization adds, under the pledge's pause and rescue
-/// rules; both keep the backing gap.
+/// remains; re-credit mints and supplies exactly the units Collateralization adds; both keep the backing gap.
 /// forge-config: default.isolate = false
 contract AaveAdapterCollateralUnitTest is AaveAdapterFixture {
     bytes32 internal k1;
@@ -86,10 +84,8 @@ contract AaveAdapterCollateralUnitTest is AaveAdapterFixture {
     }
 
     // TEST-237 verifies: REQ-ADAPTER-078, REQ-ADAPTER-086, REQ-ADAPTER-047, REQ-ACCESS-068
-    /// @notice A debt-free removal reads no MarketRegistry, pause, freeze or RiskModule: it passes with all broken.
+    /// @notice A debt-free removal reads no MarketRegistry or RiskModule: it passes with both broken.
     function test_TEST_237_debtFreeRemovalIgnoresStops() public {
-        registry.setFrozen(alice, true);
-        _pause(PauseState.Paused, PauseReason.MintPathSuspect);
         registry.setBroken(true);
         risk.setBroken(true);
         vm.expectCall(address(registry), "", 0);
@@ -99,18 +95,9 @@ contract AaveAdapterCollateralUnitTest is AaveAdapterFixture {
     }
 
     // TEST-237 verifies: REQ-ADAPTER-078, REQ-ADAPTER-046, REQ-ADAPTER-073, REQ-ADAPTER-082, REQ-ADAPTER-087, REQ-RISK-070, SPEC-PROXY-001
-    /// @notice With debt: Paused (either reason) refuses, a frozen caller is refused, and otherwise
-    /// `preWithdrawCheck`, `checkRemainingRecord(market, remaining)` and `postHealthCheck` run.
+    /// @notice With debt, `preWithdrawCheck`, `checkRemainingRecord(market, remaining)` and `postHealthCheck` run.
     function test_TEST_237_withDebtGates() public {
         _borrowAs(alice, MARKET_ID, debtReserveId, 1000e18);
-        _pause(PauseState.Paused, PauseReason.General);
-        _expectRemoveRevert(abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector), 1_000_000_000);
-        _pause(PauseState.Paused, PauseReason.MintPathSuspect);
-        _expectRemoveRevert(abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector), 1_000_000_000);
-        _pause(PauseState.Frozen, PauseReason.None);
-        registry.setFrozen(alice, true);
-        _expectRemoveRevert(abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, alice), 1_000_000_000);
-        registry.setFrozen(alice, false);
         vm.expectCall(address(risk), abi.encodeCall(IRiskModule.preWithdrawCheck, (p)), 1);
         vm.expectCall(
             address(risk), abi.encodeCall(IRiskModule.checkRemainingRecord, (MARKET_ID, UNITS - 1_000_000_000)), 1
@@ -246,43 +233,6 @@ contract AaveAdapterCollateralUnitTest is AaveAdapterFixture {
         vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.DeadlineExpired.selector, past));
         vm.prank(alice);
         adapterC.recredit(MARKET_ID, _ref(k1), "", past);
-    }
-
-    // TEST-235 verifies: REQ-ADAPTER-079, REQ-ADAPTER-083, REQ-ADAPTER-045, REQ-ADAPTER-046, REQ-ADAPTER-072, REQ-ADAPTER-073, REQ-ACCESS-079
-    /// @notice A re-credit follows the pledge's pause rules: `MintPathSuspect` refuses, Frozen refuses a debt-free
-    /// account and admits an indebted one without rescue, `Paused(General)` and a frozen caller ask for a rescue.
-    function test_TEST_235_recreditPauseRules() public {
-        lpVault.addUnits(k1, 1_000_000_000);
-        uint256 d = _deadline();
-        _pause(PauseState.Paused, PauseReason.MintPathSuspect);
-        vm.expectRevert(IAaveAdapterBase.ApplicationPaused.selector);
-        vm.prank(alice);
-        adapterC.recredit(MARKET_ID, _ref(k1), "", d);
-        _pause(PauseState.Frozen, PauseReason.None);
-        vm.expectRevert(IAaveAdapterBase.ApplicationFrozen.selector);
-        vm.prank(alice);
-        adapterC.recredit(MARKET_ID, _ref(k1), "", d);
-        _pause(PauseState.None, PauseReason.None);
-        _borrowAs(alice, MARKET_ID, debtReserveId, 100e18);
-        _pause(PauseState.Paused, PauseReason.General);
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.recredit, (alice, p, vt, k1, "", true)), 1);
-        vm.prank(alice);
-        adapterC.recredit(MARKET_ID, _ref(k1), "", d);
-        lpVault.addUnits(k1, 1_000_000_000);
-        _pause(PauseState.Frozen, PauseReason.None);
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.recredit, (alice, p, vt, k1, "", false)), 1);
-        vm.prank(alice);
-        adapterC.recredit(MARKET_ID, _ref(k1), "", d);
-    }
-
-    // TEST-229 verifies: REQ-ADAPTER-082, REQ-ADAPTER-083
-    /// @notice A frozen depositor's re-credit is a rescue top-up.
-    function test_TEST_229_frozenRecreditIsRescue() public {
-        lpVault.addUnits(k1, 1_000_000_000);
-        registry.setFrozen(alice, true);
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.recredit, (alice, p, vt, k1, "", true)), 1);
-        vm.prank(alice);
-        adapterC.recredit(MARKET_ID, _ref(k1), "", _deadline());
     }
 
     // TEST-241 verifies: REQ-ADAPTER-005, REQ-ADAPTER-069, REQ-ADAPTER-075

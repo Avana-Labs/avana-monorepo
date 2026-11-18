@@ -46,7 +46,7 @@ interface IRiskSpokeConfigurator {
 /// the real Lock. The Adapter is upgraded in place to an implementation built with that RiskModule and with the
 /// ParameterStore stand-in below.
 /// @dev Stand-ins, each named: the MarketRegistry (`AdapterRegistryMock`, which carries the views the RiskModule reads:
-/// market and debt-reserve records consistent with the Spoke, approved implementation, routes, breaker latches), the
+/// market and debt-reserve records consistent with the Spoke, approved implementation, routes, issuer probes), the
 /// ParameterStore (`RiskStoreMock`: token collateral factors 8,000, pool risk factor 10,000, so the expected collateral
 /// factor equals the Spoke's 8,000; liquidation expectations equal to the Spoke's), each market's LPOracle
 /// (`RiskLPOracleMock`, made the AaveOracle source of its vault-token reserve so the drift check's price-source rule

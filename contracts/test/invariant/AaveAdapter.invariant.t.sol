@@ -14,7 +14,7 @@ import {HandlerReach} from "./handlers/HandlerReach.sol";
 /// @title AaveAdapterInvariantTest
 /// @notice AaveAdapter invariants on the real local Aave V4, Collateralization, vault tokens, ProxyManager and
 /// PositionProxies under random sequences of pledges, borrows, repays (own and third-party), withdrawals, partial
-/// removals, re-credits, repays with collateral, fee collection, price moves, pause-state and freeze changes, honest
+/// removals, re-credits, repays with collateral, fee collection, price moves, honest
 /// liquidations and time. After every call: vault-token supply equals the units the Adapter minted minus those burned
 /// and equals Collateralization's credited plus pending units, each call moving both by the same amount; each proxy's
 /// stored nonce equals its completed borrows; repay, debt-free withdrawal and fee collection never failed; every
@@ -59,7 +59,7 @@ contract AaveAdapterInvariantTest is AaveAdapterFixture, HandlerReach {
 
     /// @dev The fuzzed actions (`pledge` twice, so positions accumulate; `seedAccounts` is set-up only).
     function _actions() internal pure returns (bytes4[] memory actions) {
-        actions = new bytes4[](13);
+        actions = new bytes4[](12);
         actions[0] = AaveAdapterHandler.pledge.selector;
         actions[1] = AaveAdapterHandler.borrow.selector;
         actions[2] = AaveAdapterHandler.repay.selector;
@@ -69,27 +69,26 @@ contract AaveAdapterInvariantTest is AaveAdapterFixture, HandlerReach {
         actions[6] = AaveAdapterHandler.repayWithCollateral.selector;
         actions[7] = AaveAdapterHandler.collectFees.selector;
         actions[8] = AaveAdapterHandler.setPrice.selector;
-        actions[9] = AaveAdapterHandler.setPause.selector;
-        actions[10] = AaveAdapterHandler.liquidate.selector;
-        actions[11] = AaveAdapterHandler.warp.selector;
-        actions[12] = AaveAdapterHandler.pledge.selector;
+        actions[9] = AaveAdapterHandler.liquidate.selector;
+        actions[10] = AaveAdapterHandler.warp.selector;
+        actions[11] = AaveAdapterHandler.pledge.selector;
     }
 
     // TEST-082 verifies: TEST-007
     /// @notice The handler does real work: over 32 fixed-seed runs of 50 calls from this suite's set-up state, each
-    /// action succeeds in at least its floor share of calls (borrow 15 %: half its modes are refused by design and the
-    /// Hub is stopped half the time; the others 25 %), and a liquidation, a repay with collateral and a debt-free
+    /// action succeeds in at least its floor share of calls (borrow 15 %: half its modes are refused by design; the
+    /// others 25 %), and a liquidation, a repay with collateral and a debt-free
     /// withdrawal are each reached in at least 75 % of the runs.
     function test_TEST_082_handlerReach() public {
-        string[] memory names = new string[](13);
+        string[] memory names = new string[](12);
         (names[0], names[1], names[2], names[3], names[4]) =
         ("pledge", "borrow", "repay", "withdraw", "removeLiquidity");
         (names[5], names[6], names[7], names[8], names[9]) =
-        ("recredit", "repayWithCollateral", "collectFees", "setPrice", "setPause");
-        (names[10], names[11], names[12]) = ("liquidate", "warp", "pledge (2)");
+        ("recredit", "repayWithCollateral", "collectFees", "setPrice", "liquidate");
+        (names[10], names[11]) = ("warp", "pledge (2)");
         string[] memory targets = new string[](3);
         (targets[0], targets[1], targets[2]) = ("liquidation", "repay with collateral", "withdrawal");
-        uint256[] memory minOk = _floors(13, 25);
+        uint256[] memory minOk = _floors(12, 25);
         minOk[1] = 15;
         Reach memory r = _replay(address(handler), _actions(), AaveAdapterHandler.Skipped.selector, 32, 50, 3);
         _check(r, names, targets, minOk, _floors(3, 75));

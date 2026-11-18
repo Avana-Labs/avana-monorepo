@@ -5,7 +5,6 @@ pragma solidity 0.8.28;
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
 import {IPayoutEscrow} from "../../src/liquidation/payout-escrow/IPayoutEscrow.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";
@@ -17,12 +16,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// (`RealStackFlows`: every Avana contract and every Aave V4 contract the real one, the Uniswap v3 LPVault on the real
 /// NonfungiblePositionManager, real pools and `DexPathRoute`s, the real FlashLiquidator): three borrowers with GHO and
 /// USDC debt act through the Adapter while keepers, unregistered callers and the public helper liquidate through
-/// LPVaultSwap, an attacker calls the Spoke directly, the guardians move the pause state and freeze wallets on the real
-/// MarketRegistry, and the environment moves USDT's price (feeds and market pool, so the vault price), the feed clock
-/// and the primary route's rate. After every call: every
-/// completed liquidation kept its settlement postconditions; every account the Lens reported liquidatable with its
-/// gates open was liquidated; no exit was refused while its own checks passed, and none by a stop; borrows and repay
-/// with collateral respected the pause state; supply stayed backed; LPVaultSwap, the Adapter and the helper hold
+/// LPVaultSwap, an attacker calls the Spoke directly, and the environment moves USDT's price (feeds and market pool, so
+/// the vault price), the feed clock and the primary route's rate. After every call: every completed liquidation kept
+/// its settlement postconditions; every account the Lens reported liquidatable with its gates open was liquidated; no
+/// exit was refused while its own checks passed, and none by a breaker; repay with collateral never lowered the health
+/// factor of an account left with debt; supply stayed backed; LPVaultSwap, the Adapter and the helper hold
 /// nothing; the Lock is free; and the Lens's account view equals the Spoke.
 /// @dev The suite is the handler's `IIntegrationWorld`. USDT's price stays in $0.82 to $1.02, inside the market's USD
 /// band (the geometric mean of the two token prices at least $0.90), so a price move lowers the vault price by at most
@@ -56,7 +54,6 @@ contract IntegrationInvariantTest is RealStackFlows, HandlerReach, IIntegrationW
                 helper: flashLiquidator,
                 lens: lens,
                 world: this,
-                reg: registry,
                 v3Pool: v3Pool,
                 usdc: usdc,
                 usdt: usdt,
@@ -116,18 +113,18 @@ contract IntegrationInvariantTest is RealStackFlows, HandlerReach, IIntegrationW
     /// the reach. The handler's actions return when there is nothing to do rather than revert, so per-action success is
     /// not measured here (floors 0).
     function test_TEST_082_handlerReach() public {
-        string[] memory names = new string[](14);
+        string[] memory names = new string[](12);
         (names[0], names[1], names[2], names[3], names[4]) =
         ("pledge", "borrow", "repay", "withdrawDebtFree", "repayAllAndWithdraw");
-        (names[5], names[6], names[7], names[8], names[9]) =
-        ("repayWithCollateral", "liquidate", "settlePending", "directLiquidation", "setPause");
-        (names[10], names[11], names[12], names[13]) = ("freeze", "movePrice", "moveRoutes", "warp");
+        (names[5], names[6], names[7], names[8]) =
+        ("repayWithCollateral", "liquidate", "settlePending", "directLiquidation");
+        (names[9], names[10], names[11]) = ("movePrice", "moveRoutes", "warp");
         string[] memory targets = new string[](2);
         (targets[0], targets[1]) = ("direct liquidation", "helper liquidation");
         uint256[] memory minReach = new uint256[](2);
         (minReach[0], minReach[1]) = (50, 40);
         Reach memory r = _replay(address(handler), _actions(), bytes4(0), 16, 24, 2);
-        _check(r, names, targets, _floors(14, 0), minReach);
+        _check(r, names, targets, _floors(12, 0), minReach);
     }
 
     function _reached() internal view override returns (bool[] memory hit) {
@@ -138,7 +135,7 @@ contract IntegrationInvariantTest is RealStackFlows, HandlerReach, IIntegrationW
 
     /// @dev The fuzzed actions (`seedKey` is set-up only).
     function _actions() internal pure returns (bytes4[] memory a) {
-        a = new bytes4[](14);
+        a = new bytes4[](12);
         (a[0], a[1], a[2], a[3], a[4]) =
         (
             IntegrationHandler.pledge.selector,
@@ -147,25 +144,23 @@ contract IntegrationInvariantTest is RealStackFlows, HandlerReach, IIntegrationW
             IntegrationHandler.withdrawDebtFree.selector,
             IntegrationHandler.repayAllAndWithdraw.selector
         );
-        (a[5], a[6], a[7], a[8], a[9]) =
+        (a[5], a[6], a[7], a[8]) =
         (
             IntegrationHandler.repayWithCollateral.selector,
             IntegrationHandler.liquidate.selector,
             IntegrationHandler.settlePending.selector,
-            IntegrationHandler.directLiquidation.selector,
-            IntegrationHandler.setPause.selector
+            IntegrationHandler.directLiquidation.selector
         );
-        (a[10], a[11], a[12], a[13]) =
+        (a[9], a[10], a[11]) =
         (
-            IntegrationHandler.freeze.selector,
             IntegrationHandler.movePrice.selector,
             IntegrationHandler.moveRoutes.selector,
             IntegrationHandler.warp.selector
         );
     }
 
-    /// @dev Five words, with the `bool` parameters of `borrow`, `repay`, `repayWithCollateral`, `liquidate`, `freeze`
-    /// and `settlePending` reduced to 0 or 1.
+    /// @dev Five words, with the `bool` parameters of `borrow`, `repay`, `repayWithCollateral`, `liquidate` and
+    /// `settlePending` reduced to 0 or 1.
     function _calldata(
         bytes4 selector,
         uint256 seed
@@ -175,7 +170,6 @@ contract IntegrationInvariantTest is RealStackFlows, HandlerReach, IIntegrationW
         else if (selector == IntegrationHandler.repay.selector) mask = 1 << 3;
         else if (selector == IntegrationHandler.repayWithCollateral.selector) mask = 1 << 3;
         else if (selector == IntegrationHandler.liquidate.selector) mask = (1 << 2) | (1 << 3) | (1 << 4);
-        else if (selector == IntegrationHandler.freeze.selector) mask = 1 << 1;
         else if (selector == IntegrationHandler.settlePending.selector) mask = 1 << 1;
         uint256[5] memory w;
         for (uint256 i = 0; i < 5; ++i) {
@@ -211,29 +205,6 @@ contract IntegrationInvariantTest is RealStackFlows, HandlerReach, IIntegrationW
         return _mintPosition(wallet, mA, units);
     }
 
-    /// @notice The Emergency Guardian moves the Hub to `state` for `reason`.
-    function setPause(
-        PauseState state,
-        PauseReason reason
-    ) external {
-        _setPause(state, reason);
-    }
-
-    /// @notice The Emergency Guardian freezes `wallet` (within its daily limit), or the timelock unfreezes it.
-    function freezeWallet(
-        address wallet,
-        bool on
-    ) external {
-        bool frozen = registry.isFrozenAddress(wallet);
-        if (on && !frozen) {
-            vm.prank(emergencyGuardian);
-            try registry.freezeAddress(wallet) {} catch {}
-        } else if (!on && frozen) {
-            vm.prank(address(timelock));
-            registry.unfreezeAddress(wallet);
-        }
-    }
-
     /// @notice USDT at `price8` on every feed and in the market pool, the TWAP window waited, every oracle poked.
     function moveUsdt(
         uint256 price8
@@ -260,28 +231,17 @@ contract IntegrationInvariantTest is RealStackFlows, HandlerReach, IIntegrationW
     }
 
     /// @dev USDT back at $1.00 (the TWAP window waited), then `wallet` borrows 97 % of the Lens's `previewBorrowMax` of
-    /// `reserveId` through the Adapter (HF about 1.04). A Hub pause or freeze and a wallet freeze are lifted for that
-    /// borrow by the guardian and the timelock and put back right after it, so the steering does not depend on them.
+    /// `reserveId` through the Adapter (HF about 1.04).
     function _borrowNearMax(
         address wallet,
         address proxy,
         uint256 reserveId
     ) internal {
-        (PauseState state, PauseReason reason) = (registry.pauseState(aave.hub), registry.pauseReason(aave.hub));
-        bool frozen = registry.isFrozenAddress(wallet);
-        if (state != PauseState.None) _setPause(PauseState.None, PauseReason.None);
-        vm.startPrank(address(timelock));
-        if (frozen) registry.unfreezeAddress(wallet);
-        vm.stopPrank();
         moveUsdt(1e8);
         uint256 amount = lens.previewBorrowMax(wallet, mA, reserveId, _deadline()) * 97 / 100;
         uint256 nonce = adapterC.borrowNonce(proxy);
         vm.prank(wallet);
         try adapterC.borrow(mA, reserveId, amount, wallet, _deadline(), 0, nonce) {} catch {}
-        vm.startPrank(address(timelock));
-        if (frozen) registry.freezeAddress(wallet);
-        vm.stopPrank();
-        if (state != PauseState.None) _setPause(state, reason);
     }
 
     /// @notice The primary USDT -> USDC route pool swapped to `rateBps` / 10,000 of the feeds' rate.
@@ -312,13 +272,13 @@ contract IntegrationInvariantTest is RealStackFlows, HandlerReach, IIntegrationW
 
     // TEST-193 verifies: REQ-ADAPTER-047, REQ-ADAPTER-071, REQ-ADAPTER-086, REQ-PROXY-032, REQ-PROXY-035, INV-043, INV-045, INV-067, INV-081
     function invariant_TEST_193_exitsNeverRefused() public view {
-        assertEq(handler.exitBlockedByStop(), 0, "an exit refused by a pause, freeze or breaker");
+        assertEq(handler.exitBlockedByStop(), 0, "an exit refused by a breaker");
         assertEq(handler.exitFailures(), 0, "an exit refused while its own checks passed");
     }
 
     // TEST-193 verifies: REQ-ADAPTER-045, REQ-ADAPTER-046, REQ-ADAPTER-072, REQ-ADAPTER-073, REQ-ADAPTER-080, REQ-ADAPTER-082, SPEC-PROXY-009
-    function invariant_TEST_193_newActivityFollowsThePauseState() public view {
-        assertEq(handler.gateBreaks(), 0, "a borrow or repay with collateral passed a closed gate");
+    function invariant_TEST_193_repayWithCollateralNeverLowersHealth() public view {
+        assertEq(handler.gateBreaks(), 0, "a repay with collateral lowered the health factor");
     }
 
     // TEST-215 verifies: INV-001, INV-021, INV-080, REQ-SWAP-042, REQ-SWAP-084, ATTACK-002
@@ -348,13 +308,12 @@ contract IntegrationInvariantTest is RealStackFlows, HandlerReach, IIntegrationW
     }
 
     /// @notice A fixed sequence: a price fall (USDT to $0.82: HF about 0.95), liquidations by the keeper (direct, GHO)
-    /// and through the helper (USDC), the borrower's repay and debt-free exit under Paused(MintPathSuspect).
+    /// and through the helper (USDC), the borrower's repay and debt-free exit.
     // TEST-215 verifies: INV-001, INV-021, INV-080
     function test_TEST_215_handlerSequenceSettles() public {
         handler.movePrice(82_000_000);
         handler.liquidate(1, 0, true, false, false);
         handler.liquidate(0, 1, false, true, true);
-        handler.setPause(3);
         handler.repay(0, 0, 3, false);
         handler.withdrawDebtFree(0, 0);
         assertGe(handler.liquidations(), 2, "both liquidations settled");

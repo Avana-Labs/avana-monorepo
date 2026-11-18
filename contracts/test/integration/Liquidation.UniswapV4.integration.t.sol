@@ -7,7 +7,6 @@ import {LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {ClTestToken} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackUniswapV4Journeys} from "../utils/fixtures/RealStackUniswapV4Journeys.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -17,9 +16,9 @@ import {Vm} from "forge-std/Vm.sol";
 /// @notice Caller-funded liquidation of accounts on a Uniswap v4 market, opened through the real AaveAdapter and
 /// settled by the real LPVaultSwap on the real stack: the Lens's `previewLiquidation` parameters executed unchanged for
 /// a USDC and a GHO debt (`TEST-205`) with every settlement identity of `TEST-047`, the Adapter's seized-unit burn and
-/// its event (`TEST-208`), a caller's raised `minPayout`, settlement under every pause state and the borrower's own
-/// freeze (`TEST-047`), and the borrower's exits after a liquidation while Paused (`TEST-193`). The seized units are
-/// removed through the real Uniswap v4 LPVault: the principal to LPVaultSwap and the fees to the depositor.
+/// its event (`TEST-208`), a caller's raised `minPayout`, and the borrower's exits after a liquidation (`TEST-193`).
+/// The seized units are removed through the real Uniswap v4 LPVault: the principal to LPVaultSwap and the fees to the
+/// depositor.
 /// @dev Each account: a $20,000 USDC/USDT v4 position against 5,880 of debt (HF 1.020); USDT then falls to $0.93.
 /// forge-config: default.isolate = false
 contract LiquidationUniswapV4IntegrationTest is RealStackUniswapV4Journeys {
@@ -125,36 +124,14 @@ contract LiquidationUniswapV4IntegrationTest is RealStackUniswapV4Journeys {
         assertGe(r.keeperOut, raised.minPayout, "the raised minimum held");
     }
 
-    // TEST-047 verifies: REQ-SWAP-003, REQ-ADAPTER-070, REQ-ADAPTER-086, INV-045, INV-046
-    function test_TEST_047_v4SucceedsInEveryPauseState() public {
-        address[3] memory wallets = [bob, alice, carol];
-        address[3] memory proxies;
-        for (uint256 i = 0; i < 3; ++i) {
-            (proxies[i],) = _stableAccount(wallets[i], v4UsdcReserveS, DEBT_USDC);
-        }
-        _depegUsdt4(93_000_000);
-        PauseState[3] memory states = [PauseState.Frozen, PauseState.Paused, PauseState.Paused];
-        PauseReason[3] memory reasons = [PauseReason.None, PauseReason.General, PauseReason.MintPathSuspect];
-        for (uint256 i = 0; i < 3; ++i) {
-            _setPause(states[i], reasons[i]);
-            _freezeWallet(wallets[i]);
-            LiquidationResult memory r = _liquidateOn(v4SpokeS, keeper, _params(proxies[i], v4UsdcReserveS, 800e6));
-            assertGt(r.unitsSeized, 0, "settles under the pause and the borrower's freeze");
-            _checkSettlement4(r, 800e6, usdc, vtS);
-            _setPause(PauseState.None, PauseReason.None);
-        }
-        _assertBacked(vtS);
-    }
-
     // TEST-193 verifies: REQ-ADAPTER-047, REQ-ADAPTER-071, REQ-PROXY-032, REQ-PROXY-035, INV-045, INV-067
-    function test_TEST_193_v4ExitsAfterLiquidationWhilePaused() public {
+    function test_TEST_193_v4ExitsAfterLiquidation() public {
         (address proxy, bytes32 key) = _stableAccount(bob, v4UsdcReserveS, DEBT_USDC);
         _depegUsdt4(93_000_000);
-        _setPause(PauseState.Paused, PauseReason.General);
         _liquidateOn(v4SpokeS, keeper, _params(proxy, v4UsdcReserveS, 800e6));
         uint256 owed = _debtOn(v4SpokeS, proxy, v4UsdcReserveS);
         _repayOn(bob, bob, mS, v4UsdcReserveS, owed + 1e6, true);
-        assertEq(_debtOn(v4SpokeS, proxy, v4UsdcReserveS), 0, "repaid while Paused");
+        assertEq(_debtOn(v4SpokeS, proxy, v4UsdcReserveS), 0, "repaid");
         uint256 left = _credited4(key);
         vm.prank(bob);
         adapterC.withdraw(mS, _ref4(key), left, _deadline(), 0);

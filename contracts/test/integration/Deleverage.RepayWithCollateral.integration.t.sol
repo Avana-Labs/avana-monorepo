@@ -8,7 +8,6 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -165,28 +164,6 @@ contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
         adapterC.repayWithCollateral(p);
         assertEq(_debtOf(proxy, usdcReserveId), debtBefore, "nothing repaid");
         assertFalse(lock.isLocked(), "Lock free");
-    }
-
-    /// @notice Paused(MintPathSuspect) refuses it; Paused(General) and a frozen wallet are served, since it only lowers
-    /// debt and never lowers the health factor (REQ-ADAPTER-082, Q-356). The Emergency Guardian sets each state.
-    // TEST-239 verifies: REQ-ADAPTER-080, REQ-ADAPTER-082, REQ-LENS-038, Q-347, Q-356
-    function test_TEST_239_pauseAndFreeze() public {
-        _setPause(PauseState.Paused, PauseReason.MintPathSuspect);
-        RepayWithCollateralParams memory p = _rwc(500e6, usdcReserveId);
-        (uint256 pvRepaid,,) = lens.previewRepayWithCollateral(bob, mA, key, 500e6, usdcReserveId);
-        assertEq(pvRepaid, 0, "the Lens shows it closed under Paused(MintPathSuspect)");
-        vm.expectRevert(IAaveAdapterBase.ApplicationPaused.selector);
-        vm.prank(bob);
-        adapterC.repayWithCollateral(p);
-        _setPause(PauseState.Paused, PauseReason.General);
-        _freezeWallet(bob);
-        (pvRepaid,,) = lens.previewRepayWithCollateral(bob, mA, key, 500e6, usdcReserveId);
-        uint256 hfBefore = _hf(proxy);
-        vm.prank(bob);
-        (uint256 repaid,) = adapterC.repayWithCollateral(p);
-        assertGt(repaid, 0, "served under Paused(General) for a frozen wallet");
-        assertEq(pvRepaid, repaid, "the Lens preview agrees with the execution");
-        assertGe(_hf(proxy), hfBefore, "health factor not lowered");
     }
 
     /// @notice A GHO-debt account deleverages with both legs swapped into GHO.

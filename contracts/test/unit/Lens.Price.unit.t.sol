@@ -6,13 +6,12 @@ pragma solidity 0.8.28;
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {DebtPriceView} from "../../src/lens/lens/types/LensTypes.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {PriceState, PriceView} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensPriceUnitTest
-/// @notice `getPriceState`, `getDebtPriceState`, `getApplicationState` and `getPauseReason`: every price state
-/// reported next to the served and accepted prices, never a revert because of a state.
+/// @notice `getPriceState` and `getDebtPriceState`: every price state reported next to the served and accepted prices,
+/// never a revert because of a state.
 /// forge-config: default.isolate = false
 contract LensPriceUnitTest is LensFixture {
     function setUp() public {
@@ -95,38 +94,5 @@ contract LensPriceUnitTest is LensFixture {
         DebtPriceView memory v = lens.getDebtPriceState(aave.cdpSpoke, usdcReserveId);
         assertEq(v.source, address(debtPrice), "a different source is reported as found");
         assertEq(uint8(v.state), uint8(PriceState.Live), "state from the recorded DebtOracle");
-    }
-
-    // ─── pause state and reason ───
-
-    // TEST-162 verifies: REQ-LENS-031, Q-227, Q-252
-    function test_TEST_162_applicationStateAndReason() public {
-        assertEq(uint8(lens.getApplicationState(aave.hub)), uint8(PauseState.None), "None");
-        assertEq(lens.getPauseReason(aave.hub), 0, "no reason");
-        reg.setPause(aave.hub, PauseState.Frozen, PauseReason.None);
-        assertEq(uint8(lens.getApplicationState(aave.hub)), uint8(PauseState.Frozen), "Frozen");
-        reg.setPause(aave.hub, PauseState.Paused, PauseReason.General);
-        assertEq(uint8(lens.getApplicationState(aave.hub)), uint8(PauseState.Paused), "Paused");
-        assertEq(lens.getPauseReason(aave.hub), 1, "General");
-        reg.setPause(aave.hub, PauseState.Paused, PauseReason.MintPathSuspect);
-        assertEq(lens.getPauseReason(aave.hub), 2, "MintPathSuspect");
-    }
-
-    // TEST-162 verifies: REQ-LENS-031
-    function test_TEST_162_pauseStatePerHub() public {
-        address hub2 = makeAddr("hub2");
-        reg.setPause(hub2, PauseState.Paused, PauseReason.General);
-        assertEq(uint8(lens.getApplicationState(aave.hub)), uint8(PauseState.None), "the first Hub is open");
-        assertEq(uint8(lens.getApplicationState(hub2)), uint8(PauseState.Paused), "the second is paused");
-    }
-
-    // TEST-162 verifies: REQ-LENS-031, REQ-LENS-016
-    function test_TEST_162_pauseNeverBlocksTheViews() public {
-        _open(alice, aliceProxy, 1, 10_000e6);
-        reg.setPause(aave.hub, PauseState.Paused, PauseReason.MintPathSuspect);
-        lens.getAccount(alice, MARKET_ID);
-        lens.checkBacking(vt);
-        lens.getPriceState(vt);
-        assertTrue(lens.previewLiquidation(aliceProxy, debtReserveId, T0).pricesUsable, "liquidation open");
     }
 }

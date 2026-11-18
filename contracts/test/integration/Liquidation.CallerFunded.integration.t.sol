@@ -13,7 +13,6 @@ import {
 } from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -22,7 +21,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// @notice Caller-funded liquidation of an account the borrower opened through the real AaveAdapter, settled by the
 /// real LPVaultSwap on the real stack (`RealStackFlows`): the Adapter's `burnSeized`, Collateralization's seizure, the
 /// real Uniswap v3 LPVault's unwind through the NonfungiblePositionManager, the real `DexPathRoute`s into the debt
-/// asset and the waterfall, for each debt reserve, in both route modes and in every pause state.
+/// asset and the waterfall, for each debt reserve and in both route modes.
 /// @dev Bob's account: 10,000 vault tokens ($20,000 at $2.00, CF 30 %) against 5,880 of debt, HF 1.020; USDT then
 /// falls to $0.93 (`_depegUsdt`), the vault token to $1.9287 and HF to 0.984. Aave closes at most the debt that
 /// restores its 1.10 target (about 862, the Lens's `params.debtToCover`); a repayment of `D` within it is pulled whole
@@ -161,26 +160,6 @@ contract LiquidationCallerFundedIntegrationTest is RealStackFlows {
         assertEq(gho.balanceOf(keeper), r.keeperOut, "keeperOut in GHO");
     }
 
-    // TEST-047 verifies: REQ-SWAP-003, REQ-ADAPTER-070, REQ-ADAPTER-086, INV-045, INV-046, Q-404
-    function test_TEST_047_succeedsInEveryPauseStateThroughRealAdapter() public {
-        address[3] memory wallets = [bob, alice, carol];
-        address[3] memory proxies;
-        for (uint256 i = 0; i < 3; ++i) {
-            (proxies[i],) = _account(wallets[i], usdcReserveId);
-        }
-        _depegUsdt(93_000_000);
-        PauseState[3] memory states = [PauseState.Frozen, PauseState.Paused, PauseState.Paused];
-        PauseReason[3] memory reasons = [PauseReason.None, PauseReason.General, PauseReason.MintPathSuspect];
-        for (uint256 i = 0; i < 3; ++i) {
-            _setPause(states[i], reasons[i]);
-            _freezeWallet(wallets[i]);
-            LiquidationResult memory r = _liquidateAs(keeper, _liqParams(proxies[i], mA, usdcReserveId, X));
-            assertGt(r.unitsSeized, 0, "settles under the pause and the borrower's freeze");
-            _checkSettlement(r, X, _value(r.unitsSeized, usdcReserveId), usdc);
-            _setPause(PauseState.None, PauseReason.None);
-        }
-    }
-
     /// @notice A primary route that cannot meet its per-leg minimum fails over to the backup in `PrimaryThenBackup`;
     /// `BackupOnly` never calls the primary. The primary's pool is moved 10 % below the USDT feed by a real swap.
     // TEST-174 verifies: REQ-SWAP-022, REQ-SWAP-025, REQ-SWAP-001, SPEC-LIQ-018
@@ -236,16 +215,15 @@ contract LiquidationCallerFundedIntegrationTest is RealStackFlows {
         assertFalse(lock.isLocked(), "Lock free");
     }
 
-    /// @notice A liquidation while Paused, then the borrower's own exits through the real Adapter: repay of the
-    /// remainder, withdrawal of the remaining units and the NFT back to the wallet.
+    /// @notice A liquidation, then the borrower's own exits through the real Adapter: repay of the remainder,
+    /// withdrawal of the remaining units and the NFT back to the wallet.
     // TEST-193 verifies: REQ-ADAPTER-047, REQ-ADAPTER-071, REQ-PROXY-032, REQ-PROXY-035, INV-045, INV-067
-    function test_TEST_193_exitsAfterLiquidationWhilePaused() public {
+    function test_TEST_193_exitsAfterLiquidation() public {
         (address proxy, bytes32 key) = _bobAccount();
-        _setPause(PauseState.Paused, PauseReason.General);
         _liquidateAs(keeper, _liqParams(proxy, mA, usdcReserveId, X));
         uint256 owed = _debtOf(proxy, usdcReserveId);
         _repayVia(bob, bob, mA, usdcReserveId, owed, true);
-        assertEq(_debtOf(proxy, usdcReserveId), 0, "repaid while Paused");
+        assertEq(_debtOf(proxy, usdcReserveId), 0, "repaid");
         uint256 left = coll.getRecord(coll.recordIdOf(V3, key)).credited;
         _withdrawVia(bob, mA, key, left);
         assertEq(IERC20(address(nfpm)).balanceOf(bob), 1, "the NFT returned to its depositor");

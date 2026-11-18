@@ -12,7 +12,6 @@ import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.s
 import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {IProxyManager} from "../../src/proxy/proxy-manager/IProxyManager.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {AdapterRiskModuleMock} from "../utils/mocks/AaveAdapterMocks.sol";
@@ -148,11 +147,10 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
     // TEST-195 verifies: REQ-ADAPTER-042, REQ-ADAPTER-003, REQ-ADAPTER-047, REQ-ACCESS-148, REQ-PROXY-035, INV-045, ATTACK-122, REQ-ACCESS-083
     // Sources: 5.1 TEST-195, Q-228
     /// @notice The governance multisig schedules an upgrade to a hostile implementation at the normal delay; the
-    /// Emergency Guardian pauses the Hub at once; the borrower repays both reserves and withdraws all three positions
-    /// while Paused and well inside the delay, in five calls; then a canceller cancels the operation.
+    /// borrower repays both reserves and withdraws all three positions well inside the delay, in five calls; then a
+    /// canceller cancels the operation.
     function test_TEST_195_exitInsideDelayThenCancel() public {
         bytes32 id = _schedule(bytes32("hostile"));
-        registry.setPause(aave.hub, PauseState.Paused, PauseReason.General);
         uint256 readyAt = tl.getTimestamp(id);
         vm.warp(block.timestamp + 2 hours);
         uint256 calls = _exitEverything();
@@ -439,8 +437,9 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
     }
 
     // TEST-243 verifies: REQ-ADAPTER-047, REQ-ADAPTER-086, REQ-ACCESS-068, INV-067, ATTACK-035
-    /// @notice A registry that reverts on every call: pledges, borrows and with-debt exits fail closed; repay, fee
-    /// collection, `repayAllAndWithdraw`, debt-free withdrawal and the debt mark complete.
+    /// @notice A registry that reverts on every call: pledges and borrows fail closed; repay, fee collection,
+    /// `repayAllAndWithdraw`, debt-free withdrawal and the debt mark complete. A with-debt exit reads no registry in the
+    /// Adapter; its gate is the RiskModule's `preWithdrawCheck`.
     function test_TEST_243_revertingRegistry() public {
         registry.setBroken(true);
         uint256 d = _deadline();
@@ -452,9 +451,6 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
         vm.expectRevert();
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1e18, alice, d, 0, 2);
-        vm.expectRevert();
-        vm.prank(alice);
-        adapterC.withdraw(MARKET_ID, _ref(kA2), UNITS / 2, d, 0);
         lpVault.accrueFees(kA1, 10);
         vm.prank(alice);
         adapterC.collectFees(MARKET_ID, _ref(kA1), d);

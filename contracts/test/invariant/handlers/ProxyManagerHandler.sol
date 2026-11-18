@@ -5,14 +5,14 @@ pragma solidity 0.8.28;
 
 import {IPositionProxy} from "../../../src/proxy/position-proxy/IPositionProxy.sol";
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
-import {FreezeRegistryMock, ProxyCallTarget} from "../../utils/mocks/ProxyMocks.sol";
+import {ProxyCallTarget} from "../../utils/mocks/ProxyMocks.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 
 /// @title ProxyManagerHandler
-/// @notice Actor handler of the TEST-089 suite over 12 triples (3 wallets, 2 Spokes, 2 markets): the Adapter deploys
-/// (frozen or not), strangers try to deploy and to drive proxies, the Adapter drives proxies, guardians freeze and
-/// unfreeze wallets. Ghosts record every outcome that breaks a rule, so the invariants only read counters.
+/// @notice Actor handler of the TEST-089 suite over 12 triples (3 wallets, 2 Spokes, 2 markets): the Adapter deploys,
+/// strangers try to deploy and to drive proxies, the Adapter drives proxies. Ghosts record every outcome that breaks a
+/// rule, so the invariants only read counters.
 contract ProxyManagerHandler is CommonBase, StdUtils {
     /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
     /// campaign's success count, so the metrics show the calls that did real work.
@@ -23,7 +23,6 @@ contract ProxyManagerHandler is CommonBase, StdUtils {
     address public constant SPOKE_2 = address(0x5B0CE2);
 
     ProxyManager public immutable MANAGER;
-    FreezeRegistryMock public immutable REGISTRY;
     ProxyCallTarget public immutable TARGET;
     address public immutable ADAPTER;
 
@@ -31,18 +30,15 @@ contract ProxyManagerHandler is CommonBase, StdUtils {
     uint256 public deployments;
     uint256 public deployedAtWrongAddress;
     uint256 public secondDeploySucceeded;
-    uint256 public frozenDeploySucceeded;
     uint256 public strangerDeploySucceeded;
     uint256 public strangerExecuteSucceeded;
     uint256 public adapterExecuteFailed;
 
     constructor(
         ProxyManager manager,
-        FreezeRegistryMock registry,
         address adapter
     ) {
         MANAGER = manager;
-        REGISTRY = registry;
         ADAPTER = adapter;
         TARGET = new ProxyCallTarget();
     }
@@ -61,11 +57,9 @@ contract ProxyManagerHandler is CommonBase, StdUtils {
         uint256 i = index % TRIPLES;
         (address w, address s, uint256 m) = triple(i);
         address predicted = MANAGER.predictProxy(w, s, m);
-        bool frozen = REGISTRY.frozen(w);
         vm.prank(ADAPTER);
         try MANAGER.deployProxy(w, s, m) returns (address p) {
             if (deployed[i]) ++secondDeploySucceeded;
-            if (frozen) ++frozenDeploySucceeded;
             if (p != predicted) ++deployedAtWrongAddress;
             deployed[i] = true;
             ++deployments;
@@ -118,13 +112,5 @@ contract ProxyManagerHandler is CommonBase, StdUtils {
         } catch {
             ++adapterExecuteFailed;
         }
-    }
-
-    function setFrozen(
-        uint256 walletIndex,
-        bool frozen
-    ) external {
-        (address w,,) = triple(walletIndex % 3);
-        REGISTRY.setFrozen(w, frozen);
     }
 }

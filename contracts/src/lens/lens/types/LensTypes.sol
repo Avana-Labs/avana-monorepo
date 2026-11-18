@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {LiquidationParams} from "../../../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {MarketStatus} from "../../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {SpeedView} from "../../../policy/risk-module/types/RiskModuleTypes.sol";
-import {AccountGateStatus, PauseState} from "../../../types/MarketTypes.sol";
+import {AccountGateStatus} from "../../../types/MarketTypes.sol";
 import {PriceState} from "../../../types/OracleTypes.sol";
 import {PledgePreview} from "../../../types/PositionTypes.sol";
 
@@ -40,7 +40,6 @@ struct AccountView {
     uint256 activeCollateralCount;
     uint256 borrowCount;
     AccountGateStatus gateStatus;
-    bool walletFrozen;
     uint32 breakerReasons;
     DebtPosition[] debts;
     MarketPosition[] markets;
@@ -196,7 +195,6 @@ struct DebtReserveView {
     bool frozen;
     bool borrowable;
     uint32 breakerReasons;
-    PauseState pauseState;
 }
 
 /// @notice The smallest repay with collateral of one record that brings an account to a target health factor.
@@ -368,7 +366,6 @@ struct LiquidationPreview {
     uint256 activeKeeperCount;
     bool vaultTokenReservePaused;
     bool debtReservePaused;
-    PauseState pauseState;
     uint256 slippageBps;
     uint256 minOutPerWholeToken;
     LiquidationParams params;
@@ -433,7 +430,6 @@ struct MarketView {
     uint256 marketHeadroomUsd;
     uint256 sliceHeadroomUsd;
     uint256 addHeadroom;
-    PauseState pauseState;
     uint32 breakerReasons;
     uint256 collateralRiskBps;
     uint256 liquidationFeeBps;

@@ -9,9 +9,9 @@ import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 
 /// @title VaultTokenHostileRegistryUnitTest
 /// @notice A hostile MarketRegistry against the real vault token and Collateralization (5.1 TEST-133, vault-token and
-/// Collateralization part): remapping the market to an attacker pool, Spoke, Hub, vault token and LPOracle, and
-/// reporting `Paused`, changes none of the vault token's fixed bindings, no Collateralization record or total, and
-/// mints nothing; the registry cannot mint or move vault tokens itself.
+/// Collateralization part): remapping the market to an attacker pool, Spoke, Hub, vault token and LPOracle changes
+/// none of the vault token's fixed bindings, no Collateralization record or total, and mints nothing; the registry
+/// cannot mint or move vault tokens itself.
 /// forge-config: default.isolate = false
 contract VaultTokenHostileRegistryUnitTest is LPVaultSwapUnitBase {
     // TEST-133 verifies: REQ-VTOKEN-001, REQ-VTOKEN-003, REQ-COLL-002, Q-226
@@ -31,7 +31,6 @@ contract VaultTokenHostileRegistryUnitTest is LPVaultSwapUnitBase {
         m.lpOracle = makeAddr("attackerOracle");
         m.integration = makeAddr("attackerLPVault");
         registry.setMarket(MARKET_ID, m);
-        registry.setPause(2, 1);
 
         assertEq(vt.spoke(), aave.cdpSpoke, "Spoke binding");
         assertEq(vt.hub(), aave.hub, "Hub binding");

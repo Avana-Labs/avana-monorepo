@@ -7,7 +7,6 @@ import {INonfungiblePositionManager} from "../../src/interfaces/external/uniswap
 import {AccountView, LiquidationPreview, RecordView} from "../../src/lens/lens/types/LensTypes.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -17,8 +16,8 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 /// real AaveAdapter, PositionProxy, Collateralization, Uniswap v3 LPVault on the NonfungiblePositionManager,
 /// LPVaultSwap and Lens, with the Lens asserted at every step against what the chain then holds: deposit → borrow →
 /// collect fees → partial repay → top-up → borrow to the limit → price drop → partial liquidation sized by the Lens →
-/// `repayAllAndWithdraw` → NFTs returned. Variants: a frozen address, both pause reasons, partial removal with and
-/// without debt, and a re-credit after a third party adds liquidity to the custodied NFT.
+/// `repayAllAndWithdraw` → NFTs returned. Variants: partial removal with and without debt, and a re-credit after a
+/// third party adds liquidity to the custodied NFT.
 /// @dev Vault tokens are $2.00 at $1 tokens (CF 30 %). Fees are real: swaps through the market's own pool, out and
 /// back to its price in one block (the TWAP is unmoved), accrue Uniswap fees to the NFT, and `collectFees` pays the
 /// wallet exactly what the position manager owed. The price drop stays inside the $0.90–$1.02 USD band: both tokens
@@ -254,50 +253,6 @@ contract LpJourneyIntegrationTest is RealStackFlows {
         assertEq(lens.getRecords(proxy, 0, 16).length, 0, "Lens: no record left");
         assertEq(_lensMatchesChain(alice).markets[0].credited, 0, "nothing credited");
         assertFalse(lock.isLocked(), "Lock free");
-    }
-
-    // TEST-223 verifies: REQ-ADAPTER-082, REQ-ADAPTER-086, REQ-LENS-009, Q-242, Q-252
-    function test_TEST_223_frozenAddress() public {
-        // $20,000 at CF 30 % against 5,714 USDC: HF 1.05 < the 1.10 target, so a top-up up to the restore amount
-        // (about $950 of collateral) is a rescue.
-        (address proxy, bytes32 key) = _usdcAccount(alice, UNITS, 5714e6);
-        _freezeWallet(alice);
-        assertTrue(lens.getAccount(alice, mA).walletFrozen, "Lens: frozen wallet shown");
-        uint256 nonce = adapterC.borrowNonce(proxy);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, alice));
-        vm.prank(alice);
-        adapterC.borrow(mA, usdcReserveId, 1e6, alice, _deadline(), 0, nonce);
-        // A rescue top-up of an indebted account stays open ($800, within the restore amount).
-        _pledgeAs(alice, mA, 400e6);
-        // Exits stay open: repay, then a debt-free withdrawal.
-        _repayVia(alice, alice, mA, usdcReserveId, _debtOf(proxy, usdcReserveId), true);
-        _withdrawVia(alice, mA, key, _credited(key));
-        assertEq(_ownerOf(key), alice, "NFT returned while frozen");
-        _lensMatchesChain(alice);
-    }
-
-    // TEST-223 verifies: REQ-ADAPTER-045, REQ-ADAPTER-046, REQ-ADAPTER-083, REQ-LENS-031, Q-252
-    function test_TEST_223_pausedGeneralRescueAndMintPathSuspectExits() public {
-        (address proxy, bytes32 key) = _usdcAccount(alice, UNITS, 5714e6);
-        _setPause(PauseState.Paused, PauseReason.General);
-        assertEq(uint8(lens.getApplicationState(aave.hub)), uint8(PauseState.Paused), "Lens: Paused");
-        assertEq(lens.getPauseReason(aave.hub), uint8(PauseReason.General), "Lens: General");
-        uint256 nonce = adapterC.borrowNonce(proxy);
-        vm.expectRevert(IAaveAdapterBase.ApplicationPaused.selector);
-        vm.prank(alice);
-        adapterC.borrow(mA, usdcReserveId, 1e6, alice, _deadline(), 0, nonce);
-        _pledgeAs(alice, mA, 400e6);
-        assertEq(lens.getRecords(proxy, 0, 16).length, 2, "rescue top-up taken under General");
-
-        _setPause(PauseState.Paused, PauseReason.MintPathSuspect);
-        bytes32 k3 = _mintPosition(alice, mA, 1000e6);
-        vm.expectRevert(IAaveAdapterBase.ApplicationPaused.selector);
-        vm.prank(alice);
-        adapterC.pledge(mA, _ref(k3), _deadline());
-        _repayVia(alice, alice, mA, usdcReserveId, _debtOf(proxy, usdcReserveId), true);
-        _withdrawVia(alice, mA, key, _credited(key));
-        assertEq(_ownerOf(key), alice, "exit open under MintPathSuspect");
-        _lensMatchesChain(alice);
     }
 
     // TEST-223 verifies: REQ-ADAPTER-045, REQ-ADAPTER-086, Q-254

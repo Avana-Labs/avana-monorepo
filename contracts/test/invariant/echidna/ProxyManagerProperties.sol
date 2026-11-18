@@ -7,14 +7,14 @@ import {IPositionProxy} from "../../../src/proxy/position-proxy/IPositionProxy.s
 import {PositionProxy} from "../../../src/proxy/position-proxy/PositionProxy.sol";
 import {IProxyManager} from "../../../src/proxy/proxy-manager/IProxyManager.sol";
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
-import {FreezeRegistryMock, ProxyCaller} from "../../utils/mocks/ProxyMocks.sol";
+import {ProxyCaller, StubRegistryMock} from "../../utils/mocks/ProxyMocks.sol";
 
 /// @title ProxyManagerProperties
 /// @notice Echidna and Medusa properties of the ProxyManager (2.5) over 12 triples (3 wallets, 2 Spokes, 2 markets).
 /// Between transactions: a triple has code at `predictProxy` exactly when it was deployed, that code is the
 /// PositionProxy bound to the triple and the Adapter, and the immutables never change. Inside one transaction: the
-/// Adapter (this harness) deploys a fresh triple of a wallet not frozen at `predictProxy`, a second deployment reverts
-/// `ProxyExists`, a frozen wallet reverts `AddressIsFrozen`, and any other caller reverts `OnlyAdapter`.
+/// Adapter (this harness) deploys a fresh triple at `predictProxy`, a second deployment reverts `ProxyExists`, and any
+/// other caller reverts `OnlyAdapter`.
 /// @dev `deploy` and `outsiderDeploy` are assertion entry points; the triple is chosen by arithmetic on the index, so
 /// branching stays finite for hevm.
 contract ProxyManagerProperties {
@@ -22,7 +22,7 @@ contract ProxyManagerProperties {
     address internal constant SPOKE_1 = address(0x5B0CE1);
     address internal constant SPOKE_2 = address(0x5B0CE2);
 
-    FreezeRegistryMock internal immutable REGISTRY;
+    StubRegistryMock internal immutable REGISTRY;
     ProxyManager internal immutable MANAGER;
     ProxyCaller internal immutable OUTSIDER;
     bytes32 internal immutable CREATION_CODE_HASH;
@@ -33,7 +33,7 @@ contract ProxyManagerProperties {
     uint256 public sequences;
 
     constructor() {
-        REGISTRY = new FreezeRegistryMock();
+        REGISTRY = new StubRegistryMock();
         MANAGER = new ProxyManager(address(this), address(REGISTRY));
         OUTSIDER = new ProxyCaller();
         CREATION_CODE_HASH = keccak256(type(PositionProxy).creationCode);
@@ -58,33 +58,22 @@ contract ProxyManagerProperties {
 
     // ─── Assertion entry points (inside one transaction) ───
 
-    /// @notice The Adapter deploys triple `i`; the outcome is a proxy at `predictProxy`, `ProxyExists` or
-    /// `AddressIsFrozen`, in that order of checks.
+    /// @notice The Adapter deploys triple `i`; the outcome is a proxy at `predictProxy` for a fresh triple and
+    /// `ProxyExists` for a deployed one.
     function deploy(
-        uint8 index,
-        bool frozen
+        uint8 index
     ) external {
         uint256 i = index % TRIPLES;
         (address w, address s, uint256 m) = _triple(i);
         address predicted = MANAGER.predictProxy(w, s, m);
-        REGISTRY.setFrozen(w, frozen);
         try MANAGER.deployProxy(w, s, m) returns (address p) {
-            assert(!deployed[i] && !frozen);
+            assert(!deployed[i]);
             assert(p == predicted && _bound(p, w, s, m));
             deployed[i] = true;
         } catch (bytes memory reason) {
-            if (deployed[i]) {
-                assert(
-                    keccak256(reason) == keccak256(abi.encodeWithSelector(IProxyManager.ProxyExists.selector, w, s, m))
-                );
-            } else {
-                assert(frozen);
-                assert(
-                    keccak256(reason) == keccak256(abi.encodeWithSelector(IProxyManager.AddressIsFrozen.selector, w))
-                );
-            }
+            assert(deployed[i]);
+            assert(keccak256(reason) == keccak256(abi.encodeWithSelector(IProxyManager.ProxyExists.selector, w, s, m)));
         }
-        REGISTRY.setFrozen(w, false);
         ++sequences;
     }
 

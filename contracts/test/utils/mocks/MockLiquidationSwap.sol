@@ -14,17 +14,16 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 /// @title MockLiquidationSwap
 /// @notice LPVaultSwap's `liquidate` as the flash liquidation helper sees it (a stand-in for LPVaultSwap in these
-/// tests), following `ILPVaultSwap` and the 2.11 settlement rules that bind a caller: `DeadlineExpired` first,
-/// then `AddressIsFrozen(msg.sender)`; acquires the real Lock; pulls `X = debtToCover` from `msg.sender` with
-/// `transferFrom` and measures `Kf` (`FundingMismatch` unless `0 < Kf ≤ X`); lets the Spoke take `D ≤ Kf`; mints the
-/// recovery `R` of the debt asset (the unwind and the swap routes); applies the `SPEC-LIQ-019` floor top-up: with the
-/// test's recovery floor `minRec`, `shortfall = max(0, minRec − R)`, `RecoveryBelowFloor` above `maxShortfall`, else
-/// exactly `shortfall` pulled from `msg.sender` with `transferFrom`; pays Avana's fee `A` to `feeRecipient` and each
-/// route residue or dust leg to `msg.sender` by the gas-limited delivery of `REQ-SWAP-076`, which deposits a refused
-/// payout in the real PayoutEscrow credited to its recipient; pays `keeperOut = Kf + R + shortfall − D − A` to
-/// `msg.sender` with a
-/// plain transfer, so a refused `keeperOut` reverts the call (`REQ-SWAP-026`); applies `PayoutTooLow(keeperOut,
-/// minPayout)`. Records every call. A hook can call any target while the Lock is held (a reentrant token or route).
+/// tests), following `ILPVaultSwap` and the 2.11 settlement rules that bind a caller: `DeadlineExpired` first; acquires
+/// the real Lock; pulls `X = debtToCover` from `msg.sender` with `transferFrom` and measures `Kf` (`FundingMismatch`
+/// unless `0 < Kf ≤ X`); lets the Spoke take `D ≤ Kf`; mints the recovery `R` of the debt asset (the unwind and the
+/// swap routes); applies the `SPEC-LIQ-019` floor top-up: with the test's recovery floor `minRec`, `shortfall = max(0,
+/// minRec − R)`, `RecoveryBelowFloor` above `maxShortfall`, else exactly `shortfall` pulled from `msg.sender` with
+/// `transferFrom`; pays Avana's fee `A` to `feeRecipient` and each route residue or dust leg to `msg.sender` by the
+/// gas-limited delivery of `REQ-SWAP-076`, which deposits a refused payout in the real PayoutEscrow credited to its
+/// recipient; pays `keeperOut = Kf + R + shortfall − D − A` to `msg.sender` with a plain transfer, so a refused
+/// `keeperOut` reverts the call (`REQ-SWAP-026`); applies `PayoutTooLow(keeperOut, minPayout)`. Records every call. A
+/// hook can call any target while the Lock is held (a reentrant token or route).
 /// @dev The outcome `(D, R, A)` and the residues are set by the test before the call.
 contract MockLiquidationSwap {
     using SafeERC20 for IERC20;
@@ -45,7 +44,6 @@ contract MockLiquidationSwap {
     uint256 public minRecovery;
     PayoutToken[] internal _residueTokens;
     uint256[] internal _residueAmounts;
-    mapping(address account => bool isFrozen) public frozen;
     address public hookTarget;
     bytes public hookData;
 
@@ -107,13 +105,6 @@ contract MockLiquidationSwap {
         _residueAmounts.push(amount);
     }
 
-    function setFrozen(
-        address account,
-        bool isFrozen
-    ) external {
-        frozen[account] = isFrozen;
-    }
-
     function setHook(
         address target,
         bytes calldata data
@@ -126,7 +117,6 @@ contract MockLiquidationSwap {
         LiquidationParams calldata params
     ) external returns (LiquidationResult memory result) {
         if (block.timestamp > params.deadline) revert ILPVaultSwapBase.DeadlineExpired(params.deadline);
-        if (frozen[msg.sender]) revert ILPVaultSwapBase.AddressIsFrozen(msg.sender);
         lock.acquire();
         ++calls;
         lastCaller = msg.sender;

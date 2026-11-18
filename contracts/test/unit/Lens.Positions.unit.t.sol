@@ -5,7 +5,6 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {AccountRiskView, PledgePreviewView, WithdrawPreview} from "../../src/lens/lens/types/LensTypes.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
@@ -119,13 +118,11 @@ contract LensPositionsUnitTest is LensFixture {
     }
 
     // TEST-247 verifies: REQ-LENS-049
-    function test_TEST_247_withdrawWholeRecordWithoutDebt() public {
+    function test_TEST_247_withdrawWholeRecordWithoutDebt() public view {
         WithdrawPreview memory v = lens.previewWithdraw(alice, MARKET_ID, _key(1), 0);
         assertEq(v.units, 10_000e6, "units 0 means the whole record");
         assertEq(v.healthFactorAfter, type(uint256).max, "no debt");
         assertTrue(v.allowed, "a debt-free withdrawal is open");
-        reg.setPause(aave.hub, PauseState.Paused, PauseReason.MintPathSuspect);
-        assertTrue(lens.previewWithdraw(alice, MARKET_ID, _key(1), 0).allowed, "in every pause state");
     }
 
     // TEST-247 verifies: REQ-LENS-049, SPEC-BACK-011
@@ -143,12 +140,10 @@ contract LensPositionsUnitTest is LensFixture {
     function test_TEST_247_withdrawGates() public {
         _borrow(aliceProxy, 4000e18);
         assertTrue(_allowed(1000e6), "HF stays high");
-        rm.setGate(aliceProxy, false, false, PauseState.None);
+        rm.setGate(aliceProxy, false, false);
         assertFalse(_allowed(1000e6), "withdraw-with-debt gate closed");
-        rm.setGate(aliceProxy, true, false, PauseState.Paused);
-        assertFalse(_allowed(1000e6), "Paused");
-        rm.setGate(aliceProxy, true, false, PauseState.None);
-        assertTrue(_allowed(1000e6), "gates open again");
+        rm.setGate(aliceProxy, true, false);
+        assertTrue(_allowed(1000e6), "gate open again");
     }
 
     // TEST-247 verifies: REQ-LENS-049, SPEC-CF-005, Q-253

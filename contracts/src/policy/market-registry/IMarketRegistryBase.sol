@@ -3,9 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PauseReason, PauseState} from "../../types/MarketTypes.sol";
-import {BreakerScope} from "./types/Breaker.sol";
-
 /// @title IMarketRegistryBase
 /// @notice Errors and events of the MarketRegistry, shared with its logic contracts.
 interface IMarketRegistryBase {
@@ -45,46 +42,8 @@ interface IMarketRegistryBase {
 
     error InvalidDebtReserve(bytes32 check);
 
-    /// @notice `freeze()` while Frozen.
-    error AlreadyFrozen();
-
-    /// @notice `freeze()` while Paused.
-    error AlreadyPaused();
-
-    /// @notice `unfreeze()` while None.
-    error NotFrozen();
-
-    /// @notice `unpause()` while not Paused.
-    error NotPaused();
-
-    /// @notice `unfreeze()` while Paused.
-    error CannotUnfreezeWhilePaused();
-
-    /// @notice The caller holds neither the required guardian role nor `APPLICATION_ADMIN`.
+    /// @notice A logic contract body was called directly instead of by delegatecall.
     error Unauthorized(address caller);
-
-    /// @notice `pause(None)`, or `pause(reason)` with the current reason while Paused.
-    error InvalidPauseReason();
-
-    /// @notice `freezeAddress` on an address of the protected set.
-    error ProtectedAddress(address account);
-
-    /// @notice `freezeAddress` on a frozen address.
-    error AddressAlreadyFrozen(address account);
-
-    /// @notice `unfreezeAddress` on an address that is not frozen.
-    error AddressNotFrozen(address account);
-
-    /// @notice The caller reached `MAX_ADDRESS_FREEZES_PER_DAY` freezes in the current window.
-    error FreezeLimitReached(address caller);
-
-    /// @notice A breaker reset while no reason is latched.
-    error NothingToReset();
-
-    /// @notice A breaker reset while a latched security condition still holds.
-    error ConditionStillHolds(bytes32 key, uint32 reasons);
-
-    error NotRiskModule();
 
     /// @notice Liquidation of this (market, debt reserve) pair would have no usable swap route or flash source.
     error LivenessBound(address spoke, uint256 marketId, uint256 debtReserveId);
@@ -164,25 +123,4 @@ interface IMarketRegistryBase {
     /// @notice Emitted by `restoreRoute`.
     /// @param kind 0 primary, 1 backup.
     event RouteRestored(uint256 indexed marketId, address token, address debtAsset, uint8 kind, address route);
-
-    /// @notice A Hub's pause state changed.
-    event PauseStateChanged(
-        address indexed hub, PauseState indexed previous, PauseState indexed current, address caller
-    );
-
-    event PauseReasonChanged(address indexed hub, PauseReason previous, PauseReason current, address indexed caller);
-
-    event AddressFrozen(address indexed account, address indexed caller);
-
-    event AddressUnfrozen(address indexed account);
-
-    /// @notice A security freeze latched by `recordBreach` or a manual trip.
-    /// @param reasons Latched reason bits after the call.
-    event BreakerLatched(BreakerScope indexed scope, bytes32 indexed key, uint32 reasons);
-
-    /// @notice `recordBreach` saw a temporary gate (`ORACLE`, `POOL_DEPTH`) breached.
-    /// @param at New `lastBreachAt(key)`, seconds.
-    event GateBreached(bytes32 indexed key, uint32 reasons, uint64 at);
-
-    event BreakerReset(BreakerScope indexed scope, bytes32 indexed key, address indexed caller);
 }

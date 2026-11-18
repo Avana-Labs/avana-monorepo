@@ -190,30 +190,18 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         emit ParameterTightened("debtStressRiseBps", _a(asset), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStore.tightenGateRecoverySeconds`.
-    function tightenGateRecoverySeconds(
-        uint64 value
-    ) external {
-        _onlyDelegated();
-        uint64 old = _s().g.gateRecoverySeconds;
-        if (value <= old) revert NotStricter();
-        if (value > GATE_RECOVERY_MAX) revert OutOfBounds();
-        _s().g.gateRecoverySeconds = value;
-        emit ParameterTightened("gateRecoverySeconds", bytes32(0), old, value, msg.sender);
-    }
-
-    /// @notice Body of `IParameterStore.tightenBreakerDeficitMax`.
-    function tightenBreakerDeficitMax(
+    /// @notice Body of `IParameterStore.tightenDeficitMax`.
+    function tightenDeficitMax(
         address hub,
         address asset,
         uint256 value
     ) external {
         _onlyDelegated();
         _requireHub(hub);
-        uint256 old = _s().breakerDeficitMax[hub][asset];
+        uint256 old = _s().deficitMax[hub][asset];
         if (value >= old) revert NotStricter();
-        _s().breakerDeficitMax[hub][asset] = value;
-        emit ParameterTightened("breakerDeficitMax", _pair(hub, asset), old, value, msg.sender);
+        _s().deficitMax[hub][asset] = value;
+        emit ParameterTightened("deficitMax", _pair(hub, asset), old, value, msg.sender);
     }
 
     /// @notice Body of `IParameterStore.tightenMaxFlashFeeBps`.

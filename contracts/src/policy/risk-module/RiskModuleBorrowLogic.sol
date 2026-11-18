@@ -162,22 +162,19 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
         }
     }
 
-    /// @dev The market breaker, and the debt breaker of the borrowed reserve or, on a withdrawal, every one held.
+    /// @dev The live market breaker conditions, and the live debt breaker conditions of the borrowed reserve or, on a
+    /// withdrawal, of every one held: each reverts while its condition holds and passes once it clears.
     function _breakers(
         Scope memory s,
         bool borrow
     ) internal view {
         IRiskModuleBreakerLogic b = IRiskModuleBreakerLogic(_BREAKER);
-        // Any reason blocks the borrow, so the reopening time is not used.
-        // forge-lint: disable-next-line(unused-return)
-        (uint32 reasons,) = b.marketBreaker(s.marketId);
+        uint32 reasons = b.marketConditions(s.marketId);
         if (reasons != 0) revert BreakerTripped(s.marketId, reasons);
         for (uint256 i = 0; i < s.debt.length; ++i) {
             uint256 r = s.debt[i];
             if (borrow && r != s.borrowed) continue;
-            // Any reason blocks the borrow, so the reopening time is not used.
-            // forge-lint: disable-next-line(unused-return)
-            (reasons,) = b.debtBreaker(s.spoke, r);
+            reasons = b.debtConditions(s.spoke, r);
             // forge-lint: disable-next-line(require-revert-in-loop)
             if (reasons != 0) revert DebtBreakerTripped(s.spoke, r, reasons);
         }

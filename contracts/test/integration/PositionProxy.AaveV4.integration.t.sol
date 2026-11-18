@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ProxyManager} from "../../src/proxy/proxy-manager/ProxyManager.sol";
 import {AaveV4Fixture} from "../utils/fixtures/AaveV4Fixture.sol";
-import {FreezeRegistryMock, ProxyTestToken} from "../utils/mocks/ProxyMocks.sol";
+import {ProxyTestToken, StubRegistryMock} from "../utils/mocks/ProxyMocks.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
@@ -78,13 +78,13 @@ contract PositionProxyAaveV4IntegrationTest is AaveV4Fixture {
     uint256 internal constant MARKET = 3;
 
     address internal adapter = makeAddr("AaveAdapter");
-    FreezeRegistryMock internal registry;
+    StubRegistryMock internal registry;
     ProxyManager internal manager;
     address internal proxy;
 
     function setUp() public {
         _deployAaveV4();
-        registry = new FreezeRegistryMock();
+        registry = new StubRegistryMock();
         manager = new ProxyManager(adapter, address(registry));
         vm.prank(adapter);
         proxy = manager.deployProxy(carol, aave.cdpSpoke, MARKET);

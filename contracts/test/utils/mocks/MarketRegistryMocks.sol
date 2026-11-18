@@ -133,14 +133,12 @@ contract RegistryParameterStoreMock {
 }
 
 /// @title RegistryRiskModuleMock
-/// @notice The RiskModule calls of the MarketRegistry: the drift check (reverting on demand), the Hub-share check, the
-/// expected collateral factor and the live security reasons.
+/// @notice The RiskModule calls of the MarketRegistry: the drift check (reverting on demand), the Hub-share check and
+/// the expected collateral factor.
 contract RegistryRiskModuleMock {
     bool public driftReverts;
     bool public sharesEqual = true;
     uint256 public cfLp = 8000;
-    mapping(uint256 => uint32) public liveBreakerReasons;
-    mapping(bytes32 => uint32) internal _liveDebt;
     uint256 public driftChecks;
     uint256 public driftMarket;
 
@@ -169,28 +167,6 @@ contract RegistryRiskModuleMock {
         uint256 cf
     ) external {
         cfLp = cf;
-    }
-
-    function setLive(
-        uint256 marketId,
-        uint32 reasons
-    ) external {
-        liveBreakerReasons[marketId] = reasons;
-    }
-
-    function setLiveDebt(
-        address spoke,
-        uint256 id,
-        uint32 reasons
-    ) external {
-        _liveDebt[keccak256(abi.encode(spoke, id))] = reasons;
-    }
-
-    function liveDebtBreakerReasons(
-        address spoke,
-        uint256 id
-    ) external view returns (uint32) {
-        return _liveDebt[keccak256(abi.encode(spoke, id))];
     }
 
     function checkAaveConfig(
@@ -650,17 +626,8 @@ contract RegistryRouteMock {
 }
 
 /// @title RegistryAdapterMock
-/// @notice The AaveAdapter's proxy registry, read by the address freeze.
-contract RegistryAdapterMock {
-    mapping(address => address) public walletOf;
-
-    function setWallet(
-        address proxy,
-        address wallet
-    ) external {
-        walletOf[proxy] = wallet;
-    }
-}
+/// @notice The AaveAdapter address the MarketRegistry and the VaultTokenFactory are deployed with.
+contract RegistryAdapterMock {}
 
 /// @title RegistryCollateralizationMock
 /// @notice Collateralization as the VaultTokenFactory (its Lock, factory, Adapter and LPVaultSwap) and the

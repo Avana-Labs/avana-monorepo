@@ -78,7 +78,7 @@ contract FlashLiquidatorGhoPoolUnitTest is FlashLiquidatorFixture {
         assertEq(aavePool.flashLoanCalls(), 2);
     }
 
-    /// @notice GHO quotes are the Pool's: its idle GHO while the reserve is active, unpaused and flash-enabled, else
+    /// @notice GHO quotes are the Pool's: its idle GHO while the reserve is active, not paused and flash-enabled, else
     /// 0, and the ceiling premium, 0 once the helper holds `FLASH_BORROWER`. A loan above the quote reverts before the
     /// Pool is called.
     // TEST-292 verifies: REQ-HELPER-009, REQ-HELPER-015, REQ-HELPER-003, REQ-FLASH-010

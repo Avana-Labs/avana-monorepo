@@ -6,13 +6,12 @@ pragma solidity 0.8.28;
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {BreakerReasons} from "../../../src/policy/market-registry/types/Breaker.sol";
 import {MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {PriceState} from "../../../src/types/OracleTypes.sol";
 import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {AdapterRegistryMock} from "../../utils/mocks/AaveAdapterMocks.sol";
 import {CollLPVaultMock, CollPoolToken} from "../../utils/mocks/CollateralizationMocks.sol";
-import {RiskDebtOracleMock, RiskLPOracleMock} from "../../utils/mocks/RiskModuleMocks.sol";
+import {RiskDebtOracleMock, RiskLPOracleMock, RiskLPVaultMock} from "../../utils/mocks/RiskModuleMocks.sol";
 import {Test} from "forge-std/Test.sol";
 
 interface IRiskHandlerConfigurator {
@@ -53,10 +52,10 @@ struct RiskWorld {
 
 /// @title AaveAdapterRiskHandler
 /// @notice Random changes of everything the reviewed RiskModule reads (the market's price state, its feed ages, the
-/// USDC DebtOracle, a latched breaker, `Offboarding`, an Aave freeze of the vault-token reserve, a drift the DAO
-/// introduces), interleaved with borrows, withdrawals that leave debt and exits through the Adapter. The handler keeps
-/// its own copy of each condition; a borrow or a withdrawal with debt that completes while a condition refusing it
-/// holds is counted in `uncheckedSuccesses`, and an exit that reverts in `exitFailures`.
+/// USDC DebtOracle, a live breaker condition (no pool depth), `Offboarding`, an Aave freeze of the vault-token reserve,
+/// a drift the DAO introduces), interleaved with borrows, withdrawals that leave debt and exits through the Adapter.
+/// The handler keeps its own copy of each condition; a borrow or a withdrawal with debt that completes while a
+/// condition refusing it holds is counted in `uncheckedSuccesses`, and an exit that reverts in `exitFailures`.
 contract AaveAdapterRiskHandler is Test {
     RiskWorld internal w;
     address[3] internal wallets;
@@ -66,7 +65,7 @@ contract AaveAdapterRiskHandler is Test {
     uint64 public reportedAt;
     uint64 public debtServedAt;
     bool public debtLive = true;
-    bool public breakerLatched;
+    bool public breakerHeld;
     bool public offboarding;
     bool public reserveFrozen;
     bool public drift;
@@ -134,11 +133,12 @@ contract AaveAdapterRiskHandler is Test {
         w.usdcOracle.setReport(live ? PriceState.Live : PriceState.Expired, debtServedAt, true);
     }
 
+    /// @notice Holds or clears the market's pool-depth breaker: the LPVault reports no depth, or its default depth.
     function setBreaker(
         bool on
     ) external {
-        breakerLatched = on;
-        w.registry.setLatched(bytes32(w.market), on ? BreakerReasons.MANUAL : 0, 0);
+        breakerHeld = on;
+        RiskLPVaultMock(w.registry.getMarket(w.market).integration).setDepth(on ? 0 : 2e13, !on);
     }
 
     function setOffboarding(
@@ -256,6 +256,6 @@ contract AaveAdapterRiskHandler is Test {
         bool priceOk = priceState == PriceState.Live && priceBorrowAllowed && reportedAt <= block.timestamp
             && block.timestamp - reportedAt <= w.feedAge;
         bool debtOk = debtLive && debtServedAt <= block.timestamp && block.timestamp - debtServedAt <= 88_200;
-        return priceOk && debtOk && !breakerLatched && !drift;
+        return priceOk && debtOk && !breakerHeld && !drift;
     }
 }

@@ -94,7 +94,7 @@ contract MockAToken {
 
 /// @title MockAaveV3Pool
 /// @notice The Aave V3.4 Pool `flashLoan` path as `FlashLoanLogic.executeFlashLoan` and `ValidationLogic` run it:
-/// equal array lengths, per asset an active, unpaused, flash-enabled reserve (a frozen reserve still lends) whose
+/// equal array lengths, per asset an active, not paused, flash-enabled reserve (a frozen reserve still lends) whose
 /// aToken `totalSupply() >= amount`, the premium 0 for an ACLManager `FLASH_BORROWER` and otherwise
 /// `percentMul(amount, FLASHLOAN_PREMIUM_TOTAL) = ⌊(amount × FLASHLOAN_PREMIUM_TOTAL + 5,000) / 10⁴⌋` (half-up, never
 /// above the source's ceiling quote), the virtual underlying balance lowered by `amount` with checked arithmetic

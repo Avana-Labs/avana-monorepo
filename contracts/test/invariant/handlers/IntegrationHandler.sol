@@ -12,11 +12,8 @@ import {LiquidationResult, RouteMode} from "../../../src/liquidation/lp-vault-sw
 import {IPayoutEscrow} from "../../../src/liquidation/payout-escrow/IPayoutEscrow.sol";
 import {FlashLiquidationRequest, IFlashLiquidator} from "../../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {IAaveAdapterBase} from "../../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
-import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
 import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {ClTestToken} from "../../utils/fixtures/ClPoolFixture.sol";
 import {MockAaveV3Pool} from "../../utils/mocks/AaveV3PoolMocks.sol";
@@ -26,23 +23,13 @@ import {CommonBase} from "forge-std/Base.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 
-/// @notice What the suite does for the handler on the real stack: positions on the real NonfungiblePositionManager,
-/// the guardians' calls on the real MarketRegistry, and price, route and time moves through the feeds and real pools.
+/// @notice What the suite does for the handler on the real stack: positions on the real NonfungiblePositionManager, and
+/// price, route and time moves through the feeds and real pools.
 interface IIntegrationWorld {
     function mintPosition(
         address wallet,
         uint128 units
     ) external returns (bytes32 key);
-
-    function setPause(
-        PauseState state,
-        PauseReason reason
-    ) external;
-
-    function freezeWallet(
-        address wallet,
-        bool on
-    ) external;
 
     function moveUsdt(
         uint256 price8
@@ -68,9 +55,8 @@ interface IIntegrationWorld {
 /// borrowers (pledge, borrow GHO and USDC, repay by any payer, debt-free withdrawal, `repayAllAndWithdraw`, repay with
 /// collateral) through the AaveAdapter; liquidators (Avana's keeper, unregistered addresses and the public flash
 /// liquidation helper, both route modes) and `settlePending` through LPVaultSwap; an attacker's direct
-/// `liquidationCall`; the guardians (pause state and reason, address freeze); and the environment (vault price, feed
-/// time, route rates), the guardians' and the environment's through the suite (`IIntegrationWorld`). Ghosts record every
-/// rule an action must keep, so the suite asserts them after every call.
+/// `liquidationCall`; and the environment (vault price, feed time, route rates) through the suite
+/// (`IIntegrationWorld`). Ghosts record every rule an action must keep, so the suite asserts them after every call.
 /// @dev Liveness (TEST-100, fail_on_revert for the live actions): an account the Lens reports liquidatable with every
 /// gate open must settle with the Lens's own parameters; exits must settle whenever their own checks pass. Their
 /// failures are counted, not swallowed.
@@ -81,7 +67,6 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         address helper;
         ILens lens;
         IIntegrationWorld world;
-        MarketRegistry reg;
         MockAaveV3Pool v3Pool;
         ClTestToken usdc;
         ClTestToken usdt;
@@ -169,21 +154,8 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         uint256 reserveId = gho ? env.ghoReserveId : env.usdcReserveId;
         amount = bound(amount, 1, 3000) * (gho ? 1e18 : 1e6);
         uint256 nonce = env.adapter.borrowNonce(proxy);
-        PauseState state = env.reg.pauseState(env.hub);
-        bool frozen = env.reg.isFrozenAddress(wallet);
         vm.prank(wallet);
-        try env.adapter.borrow(env.marketId, reserveId, amount, wallet, block.timestamp, 0, nonce) {
-            // REQ-ADAPTER-072/073/082: no borrow in Frozen or Paused, none by a frozen wallet.
-            if (state != PauseState.None || frozen) ++gateBreaks;
-        } catch (bytes memory err) {
-            bytes4 s = bytes4(err);
-            if (state == PauseState.Frozen && !frozen && s != IAaveAdapterBase.ApplicationFrozen.selector) {
-                ++gateBreaks;
-            }
-            if (state == PauseState.Paused && !frozen && s != IAaveAdapterBase.ApplicationPaused.selector) {
-                ++gateBreaks;
-            }
-        }
+        try env.adapter.borrow(env.marketId, reserveId, amount, wallet, block.timestamp, 0, nonce) {} catch {}
     }
 
     /// @notice Any payer repays part or all of one debt reserve; never refused by a stop (INV-043, INV-081).
@@ -273,7 +245,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         _fundApprove(env.usdc, wallet, 0);
     }
 
-    /// @notice Repay with collateral: refused under MintPathSuspect, never lowers the health factor otherwise.
+    /// @notice Repay with collateral: never lowers the health factor while debt remains.
     function repayWithCollateral(
         uint256 w,
         uint256 k,
@@ -300,12 +272,9 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
             deadline: block.timestamp,
             minHealthFactor: 0
         });
-        bool suspect = env.reg.pauseState(env.hub) == PauseState.Paused
-            && env.reg.pauseReason(env.hub) == PauseReason.MintPathSuspect;
         uint256 hfBefore = IAaveV4Spoke(env.spoke).getUserAccountData(proxy).healthFactor;
         vm.prank(wallet);
         try env.adapter.repayWithCollateral(p) {
-            if (suspect) ++gateBreaks;
             uint256 hfAfter = IAaveV4Spoke(env.spoke).getUserAccountData(proxy).healthFactor;
             if (_anyDebt(proxy) && hfAfter < hfBefore) ++gateBreaks;
         } catch {}
@@ -517,23 +486,7 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         if (ClTestToken(env.vt).balanceOf(env.attacker) != 0) ++directSeizures;
     }
 
-    // ─── Guardians and environment ───
-
-    function setPause(
-        uint256 seed
-    ) external {
-        uint256 i = seed % 4;
-        PauseState s = i == 0 ? PauseState.None : i == 1 ? PauseState.Frozen : PauseState.Paused;
-        PauseReason r = i == 2 ? PauseReason.General : i == 3 ? PauseReason.MintPathSuspect : PauseReason.None;
-        env.world.setPause(s, r);
-    }
-
-    function freeze(
-        uint256 w,
-        bool on
-    ) external {
-        env.world.freezeWallet(env.wallets[w % env.wallets.length], on);
-    }
+    // ─── Environment ───
 
     /// @notice USDT at $0.82 to $1.02 (the vault token about -9.4 % to +1.0 %), the market pool at the new rate.
     function movePrice(
@@ -579,16 +532,14 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
         asset.approve(address(env.adapter), amount);
     }
 
-    /// @dev An exit refused: by a stop (INV-081) it is a stop violation; any refusal is an exit failure.
+    /// @dev An exit refused: by a breaker (INV-081) it is a stop violation; any refusal is an exit failure.
     function _exitFailed(
         bytes memory err
     ) internal {
         bytes4 s = bytes4(err);
-        if (
-            s == IAaveAdapterBase.ApplicationFrozen.selector || s == IAaveAdapterBase.ApplicationPaused.selector
-                || s == IAaveAdapterBase.AddressIsFrozen.selector || s == IRiskModuleErrors.BreakerTripped.selector
-                || s == IRiskModuleErrors.DebtBreakerTripped.selector
-        ) ++exitBlockedByStop;
+        if (s == IRiskModuleErrors.BreakerTripped.selector || s == IRiskModuleErrors.DebtBreakerTripped.selector) {
+            ++exitBlockedByStop;
+        }
         ++exitFailures;
         lastFailure = err;
     }

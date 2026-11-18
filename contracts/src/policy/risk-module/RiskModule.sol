@@ -4,10 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
-import {AccountGateStatus, DriftReason, Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {AccountGateStatus, DriftReason} from "../../types/MarketTypes.sol";
 import {PledgeCounters, PledgePreview} from "../../types/PositionTypes.sol";
 import {BreakerReasons} from "../market-registry/types/Breaker.sol";
-import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "./IRiskModule.sol";
 import {IRiskModuleBorrowLogic} from "./IRiskModuleBorrowLogic.sol";
 import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
@@ -29,7 +28,7 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title RiskModule
-/// @notice Avana's risk checks on one chain: pledge, borrow-side, speed-limit, drift and breaker checks.
+/// @notice Avana's risk checks on one chain: pledge, borrow-side, speed-limit, drift and live breaker checks.
 /// @dev UUPS proxy; only the timelock can upgrade it. Check bodies run in six stateless logic contracts.
 contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase, IRiskModule {
     /// @custom:storage-location erc7201:avana.storage.RiskModule.speed
@@ -203,43 +202,10 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
         address spoke
     ) external override returns (DriftReason reason) {
         if (!_registry().getSpoke(spoke).approved) revert UnknownSpoke(spoke);
-        // The breach is recorded on every market of the Spoke, so the market the reason was found on is not used.
+        // The drift holds every market of the Spoke, so the market the reason was found on is not used.
         // forge-lint: disable-next-line(unused-return)
         (, reason) = IRiskModuleDriftLogic(_DRIFT_LOGIC).spokeDrift(spoke);
-        if (reason == DriftReason.None) return reason;
-        emit ConfigDriftDetected(spoke, reason);
-        uint256[] memory ids = _registry().marketsOfSpoke(spoke);
-        for (uint256 i = 0; i < ids.length; ++i) {
-            MarketStatus status = _market(ids[i]).status;
-            if (status != MarketStatus.Active && status != MarketStatus.Offboarding) continue;
-            // Bounded by the Spoke's markets.
-            // forge-lint: disable-next-line(calls-loop)
-            _registry().recordBreach(bytes32(ids[i]), BreakerReasons.CONFIG_DRIFT);
-        }
-    }
-
-    /// @inheritdoc IRiskModule
-    function pokeBreakers(
-        uint256 marketId
-    ) external override returns (uint32 reasons) {
-        Market memory m = _market(marketId);
-        IRiskModuleBreakerLogic b = IRiskModuleBreakerLogic(_BREAKER_LOGIC);
-        uint32 live = b.marketConditions(marketId);
-        if (live != 0) _registry().recordBreach(bytes32(marketId), live);
-        reasons = live;
-        uint256[] memory ids = _registry().getDebtReserveIds(m.spoke);
-        for (uint256 i = 0; i < ids.length; ++i) {
-            // Bounded by the Spoke's listed debt reserves.
-            // forge-lint: disable-next-line(calls-loop)
-            uint32 d = b.debtConditions(m.spoke, ids[i]);
-            if (d == 0) continue;
-            // forge-lint: disable-next-line(calls-loop)
-            _registry().recordBreach(_debtKey(m.spoke, ids[i]), d);
-            reasons |= d;
-        }
-        // The only external calls are to the MarketRegistry, an Avana contract that makes no calls back.
-        // forge-lint: disable-next-line(reentrancy-events)
-        emit BreakersPoked(marketId, reasons);
+        if (reason != DriftReason.None) emit ConfigDriftDetected(spoke, reason);
     }
 
     /// @inheritdoc IRiskModule
@@ -285,11 +251,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
         } catch {
             return _unavailable();
         }
-        try logic.pauseOf(proxy) returns (PauseState state, PauseReason reason) {
-            (status.pauseState, status.pauseReason) = (state, reason);
-        } catch {
-            return _unavailable();
-        }
     }
 
     /// @dev The status when it cannot be computed: nothing allowed, every reserve field `type(uint256).max`.
@@ -318,50 +279,27 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
     }
 
     /// @inheritdoc IRiskModule
+    /// @dev Never reverts: a failed evaluation reports every market reason.
     function getBreakerStatus(
-        uint256 marketId
-    ) external view override returns (uint32 reasons, uint64 reopensAt) {
-        try IRiskModuleBreakerLogic(_BREAKER_LOGIC).marketBreaker(marketId) returns (uint32 r, uint64 t) {
-            (reasons, reopensAt) = (r, t);
-        } catch {
-            reasons = BreakerReasons.TEMPORARY | BreakerReasons.SECURITY;
-        }
-    }
-
-    /// @inheritdoc IRiskModule
-    function getDebtBreakerStatus(
-        address spoke,
-        uint256 debtReserveId
-    ) external view override returns (uint32 reasons, uint64 reopensAt) {
-        try IRiskModuleBreakerLogic(_BREAKER_LOGIC).debtBreaker(spoke, debtReserveId) returns (uint32 r, uint64 t) {
-            (reasons, reopensAt) = (r, t);
-        } catch {
-            reasons = BreakerReasons.TEMPORARY | BreakerReasons.SECURITY;
-        }
-    }
-
-    /// @inheritdoc IRiskModule
-    /// @dev Never reverts: a failed evaluation reports every security reason, so a reset is refused.
-    function liveBreakerReasons(
         uint256 marketId
     ) external view override returns (uint32 reasons) {
         try IRiskModuleBreakerLogic(_BREAKER_LOGIC).marketConditions(marketId) returns (uint32 r) {
-            reasons = r & BreakerReasons.SECURITY;
+            reasons = r;
         } catch {
-            reasons = BreakerReasons.SECURITY;
+            reasons = BreakerReasons.MARKET;
         }
     }
 
     /// @inheritdoc IRiskModule
-    /// @dev Never reverts: a failed evaluation reports every security reason, so a reset is refused.
-    function liveDebtBreakerReasons(
+    /// @dev Never reverts: a failed evaluation reports every debt reason.
+    function getDebtBreakerStatus(
         address spoke,
         uint256 debtReserveId
     ) external view override returns (uint32 reasons) {
         try IRiskModuleBreakerLogic(_BREAKER_LOGIC).debtConditions(spoke, debtReserveId) returns (uint32 r) {
-            reasons = r & BreakerReasons.SECURITY;
+            reasons = r;
         } catch {
-            reasons = BreakerReasons.SECURITY;
+            reasons = BreakerReasons.DEBT;
         }
     }
 

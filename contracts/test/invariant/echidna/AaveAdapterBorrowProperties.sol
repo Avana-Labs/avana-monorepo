@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AaveAdapterUserLogic} from "../../../src/policy/aave-adapter/AaveAdapterUserLogic.sol";
-import {PauseState} from "../../../src/types/MarketTypes.sol";
 import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {AaveAdapterPathHarness, BorActor, BorToken} from "./AaveAdapterPathStandIns.sol";
 
@@ -14,10 +13,9 @@ import {AaveAdapterPathHarness, BorActor, BorToken} from "./AaveAdapterPathStand
 /// the Adapter's storage, with the real `Lock` and real `PositionProxy`s, over `BorWorld` (Spoke, Hub, MarketRegistry,
 /// VaultTokenFactory, ProxyManager, Collateralization and the RiskModule's borrow-side checks). Three wallets pledge
 /// LP positions, borrow USDC up to and past their room, repay themselves or through a third party; prices move,
-/// interest accrues, the pause state and the freeze change. Between transactions: every borrow left HF at least
-/// `max(1, hard floor, minHealthFactor)` (INV-025); every borrow sent exactly its amount to the receiver and the proxy
-/// kept nothing (INV-020); no borrow completed under a pause or for a frozen wallet (INV-024); every funded repay
-/// completed, in every pause state, and spent exactly what the Spoke booked (INV-081); each account's debt is what it
+/// interest accrues. Between transactions: every borrow left HF at least `max(1, hard floor, minHealthFactor)`
+/// (INV-025); every borrow sent exactly its amount to the receiver and the proxy kept nothing (INV-020); every funded
+/// repay completed and spent exactly what the Spoke booked (INV-081); each account's debt is what it
 /// borrowed and accrued less what it repaid; supplied units equal credited units and the vault token's supply
 /// (INV-003, INV-008); the Adapter and the proxies hold no token and no allowance (INV-021); the Lock is free.
 /// @dev The AaveAdapter router with its four logic contracts and the real Aave V4 exceed the 49,152-byte initcode
@@ -85,12 +83,9 @@ contract AaveAdapterBorrowProperties is AaveAdapterPathHarness {
         uint256 amount = _borrowAmount(p, _required(m), frac);
         BorActor w = _wallet(i);
         uint256 before = USDC.balanceOf(address(w));
-        bool gated = W.state() != PauseState.None || W.isFrozenAddress(address(w));
         if (!_borrow(w, p, amount, m)) return;
         ++done[1];
         booked[i] += amount;
-        // INV-024: no borrow under a pause or for a frozen wallet.
-        _ensure(BAD_GATE, !gated);
         // INV-025: HF after the borrow is at least max(1, hard floor, minHealthFactor).
         _ensure(BAD_HEALTH, W.healthFactor(p) >= _required(m));
         // INV-020: the receiver got exactly the amount; the proxy keeps nothing.
@@ -128,7 +123,7 @@ contract AaveAdapterBorrowProperties is AaveAdapterPathHarness {
     }
 
     /// @notice A repay of wallet `who`'s debt by the wallet or by a third party (`thirdParty`): a quarter, half, all
-    /// with `repayAll`, or twice the debt as the cap (`frac`). A repay never reads the pause state or the freeze.
+    /// with `repayAll`, or twice the debt as the cap (`frac`).
     function repayDebt(
         uint8 who,
         uint8 frac,
@@ -153,7 +148,7 @@ contract AaveAdapterBorrowProperties is AaveAdapterPathHarness {
             )
         );
         payer.exec(address(USDC), abi.encodeCall(BorToken.approve, (address(this), 0)));
-        // INV-081: a funded repay completes in every pause state and for a frozen wallet.
+        // INV-081: a funded repay completes.
         _ensure(BAD_REPAY, ok);
         ++done[2];
         uint256 spent = before - USDC.balanceOf(address(payer));
@@ -166,11 +161,6 @@ contract AaveAdapterBorrowProperties is AaveAdapterPathHarness {
     /// @notice INV-020: every borrow sent exactly its amount to the receiver.
     function property_borrowForwardsExactly() external view returns (bool) {
         return violations & BAD_FORWARD == 0;
-    }
-
-    /// @notice INV-024: no borrow completed under a pause or for a frozen wallet.
-    function property_borrowGatedByStops() external view returns (bool) {
-        return violations & BAD_GATE == 0;
     }
 
     /// @notice INV-081: every funded repay completed and spent at most its cap, exactly what the Spoke booked.

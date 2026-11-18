@@ -6,7 +6,6 @@ pragma solidity 0.8.28;
 import {IClIntegration} from "../../src/amm/IClIntegration.sol";
 import {IClPositionManager} from "../../src/amm/concentrated-liquidity/IClPositionManager.sol";
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
-import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {ClLPVaultBase, ClLPVaultSlipstreamHooks, ClLPVaultUniswapHooks, IClTestManager} from "./ClLPVault.Base.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -14,44 +13,37 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 /// @title ClLPVaultExitsTests
 /// @notice The LPVault's part of the exit, settlement and liquidation flows of 5.1, on the production contract: what it
 /// removes, pays and returns when Collateralization instructs it inside an AaveAdapter or LPVaultSwap Lock session, and
-/// that no Avana state (pause state and reason, a broken or hostile MarketRegistry, the spot price, outside liquidity)
-/// changes any of it. The AaveAdapter, Collateralization and LPVaultSwap steps of the same flows are checked in their own
-/// suites; here they are the named addresses that hold the Lock and call. Each body runs on the Uniswap v3 and the
-/// Slipstream LPVault.
+/// that no Avana state (a broken or hostile MarketRegistry, the spot price, outside liquidity) changes any of it. The
+/// AaveAdapter, Collateralization and LPVaultSwap steps of the same flows are checked in their own suites; here they
+/// are the named addresses that hold the Lock and call. Each body runs on the Uniswap v3 and the Slipstream LPVault.
 abstract contract ClLPVaultExitsTests is ClLPVaultBase {
     // ─── Debt-free withdrawal and zero-credit release ───
 
     // TEST-018 verifies: REQ-VAULT-152, REQ-VAULT-005, INV-007, INV-045
-    // Sources: 5.1 TEST-018 (the LPVault returns the whole NFT to the depositor of record with transferFrom; it succeeds
-    // in None, Frozen and Paused with either reason)
-    /// @notice In each pause state, a pledged NFT carrying donated liquidity and owed fees is returned whole to its
-    /// depositor by one `transferFrom`, with `PositionReturned`, and its custody entry is gone; the LPVault never reads
-    /// the MarketRegistry.
-    /// @dev Kills: a return that keeps liquidity or fees, a hook-running transfer, a custody entry left behind, a pause
-    /// read on the withdrawal path.
-    function test_TEST_018_returnSendsTheWholeNftToItsDepositorInEveryState() public {
+    // Sources: 5.1 TEST-018 (the LPVault returns the whole NFT to the depositor of record with transferFrom)
+    /// @notice A pledged NFT carrying donated liquidity and owed fees is returned whole to its depositor by one
+    /// `transferFrom`, with `PositionReturned`, and its custody entry is gone; the LPVault never reads the
+    /// MarketRegistry.
+    /// @dev Kills: a return that keeps liquidity or fees, a hook-running transfer, a custody entry left behind, a
+    /// registry read on the withdrawal path.
+    function test_TEST_018_returnSendsTheWholeNftToItsDepositor() public {
         Core memory c = _cCore();
         IClIntegration v = _cVault();
         vm.expectCall(c.registry, "", 0);
-        for (uint8 state = 0; state < 4; ++state) {
-            _mockPause(state < 3 ? state : 2, state < 2 ? 0 : state - 1);
-            (bytes32 key,) = _cPledge(MKT_A, alice, 1e12);
-            uint256 id = _cTokenId(key);
-            IClTestManager manager = _cManager(key);
-            manager.accrue(id, 7, 8);
-            vm.prank(bob);
-            manager.increaseLiquidity(id, 3e11);
-            uint128 liquidity = _cLiquidity(key);
-            vm.expectCall(
-                address(manager), abi.encodeWithSelector(IERC721.transferFrom.selector, address(v), alice, id), 1
-            );
-            _returnExpectingEvent(c.adapter, key, alice);
-            assertEq(manager.ownerOf(id), alice, "the NFT is back with its depositor");
-            assertEq(_cLiquidity(key), liquidity, "with all its liquidity, donated included");
-            assertFalse(v.isInCustody(key));
-            assertEq(v.depositorOf(key), address(0));
-            _assertOwedFees(key, alice, 7, 8);
-        }
+        (bytes32 key,) = _cPledge(MKT_A, alice, 1e12);
+        uint256 id = _cTokenId(key);
+        IClTestManager manager = _cManager(key);
+        manager.accrue(id, 7, 8);
+        vm.prank(bob);
+        manager.increaseLiquidity(id, 3e11);
+        uint128 liquidity = _cLiquidity(key);
+        vm.expectCall(address(manager), abi.encodeWithSelector(IERC721.transferFrom.selector, address(v), alice, id), 1);
+        _returnExpectingEvent(c.adapter, key, alice);
+        assertEq(manager.ownerOf(id), alice, "the NFT is back with its depositor");
+        assertEq(_cLiquidity(key), liquidity, "with all its liquidity, donated included");
+        assertFalse(v.isInCustody(key));
+        assertEq(v.depositorOf(key), address(0));
+        _assertOwedFees(key, alice, 7, 8);
     }
 
     // TEST-020 verifies: REQ-VAULT-079, REQ-VAULT-152, REQ-AMM-CORE-010
@@ -275,41 +267,14 @@ abstract contract ClLPVaultExitsTests is ClLPVaultBase {
         _exitAll(key, units, alice);
     }
 
-    // TEST-193 verifies: REQ-VAULT-005, INV-043, INV-044, INV-045
-    // Sources: 5.1 TEST-193 (liquidation, fee collection, debt-free withdrawal and partial removal and zero-credit
-    // release succeed in every pause state and reason)
-    /// @notice In None, Frozen, Paused(General) and Paused(MintPathSuspect), a seizure, a fee collection, a partial
-    /// removal, a removal down to zero units and the return of the position all succeed, and none reads the state.
-    /// @dev Kills: a pause-state read on any LPVault path that a liquidation or an exit takes.
-    function testFuzz_TEST_193_exitsAndSeizurePassInEveryPauseState(
-        uint8 state,
-        uint8 reason
-    ) public {
-        Core memory c = _cCore();
-        state = uint8(bound(state, 0, 2));
-        reason = state == 2 ? uint8(bound(reason, 1, 2)) : 0;
-        _mockPause(state, reason);
-        vm.expectCall(c.registry, "", 0);
-        (bytes32 key, uint128 units) = _cPledge(MKT_A, alice, 1e12);
-        _cAs(c.lpVaultSwap, abi.encodeCall(ILPVault.unwind, (key, units / 3, _cZeros(), c.lpVaultSwap)));
-        _cManager(key).accrue(_cTokenId(key), 2, 2);
-        _cAs(c.adapter, abi.encodeCall(ILPVault.collectFees, (key, alice)));
-        _cAs(c.adapter, abi.encodeCall(ILPVault.releaseToDepositor, (key, units / 3, _cZeros())));
-        uint128 rest = _cVault().unitsOf(key);
-        _cAs(c.lpVaultSwap, abi.encodeCall(ILPVault.unwind, (key, rest, _cZeros(), c.lpVaultSwap)));
-        _cAs(c.adapter, abi.encodeCall(ILPVault.returnPosition, (key)));
-        assertEq(_cManager(key).ownerOf(_cTokenId(key)), alice, "the zero-unit position is released to its depositor");
-    }
-
     // TEST-195 verifies: INV-045, REQ-VAULT-152
-    // Sources: 5.1 TEST-195 (inside the delay, while Paused, the borrower withdraws three NFTs in two markets; the
-    // queued hostile Adapter then finds no position to touch)
-    /// @notice While Paused(General), three NFTs in two markets return whole to their depositor; afterwards no custody
-    /// call through any Lock session can reach them, so a later Adapter finds nothing.
-    /// @dev Kills: a withdrawal path the pause stops, a custody entry that outlives the return.
-    function test_TEST_195_threeNftsLeaveWhilePausedAndNothingRemains() public {
+    // Sources: 5.1 TEST-195 (inside the delay the borrower withdraws three NFTs in two markets; the queued hostile
+    // Adapter then finds no position to touch)
+    /// @notice Three NFTs in two markets return whole to their depositor; afterwards no custody call through any Lock
+    /// session can reach them, so a later Adapter finds nothing.
+    /// @dev Kills: a custody entry that outlives the return.
+    function test_TEST_195_threeNftsLeaveAndNothingRemains() public {
         Core memory c = _cCore();
-        _mockPause(2, 1);
         vm.expectCall(c.registry, "", 0);
         bytes32[3] memory keys;
         uint128[3] memory liq;
@@ -428,16 +393,6 @@ abstract contract ClLPVaultExitsTests is ClLPVaultBase {
         assertEq(v.returnPosition(key), depositor);
         vm.prank(holder);
         c.lock.release();
-    }
-
-    /// @dev Answers the MarketRegistry's pause views (state, reason) for any Hub.
-    function _mockPause(
-        uint8 state,
-        uint8 reason
-    ) internal {
-        address r = _cCore().registry;
-        vm.mockCall(r, abi.encodeWithSelector(IMarketRegistry.pauseState.selector), abi.encode(state));
-        vm.mockCall(r, abi.encodeWithSelector(IMarketRegistry.pauseReason.selector), abi.encode(reason));
     }
 
     /// @dev The 5.1 example: NFT 42 with 1,000 units and NFT 7 with 800 units, both alice's.

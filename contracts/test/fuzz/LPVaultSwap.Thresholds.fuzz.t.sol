@@ -148,20 +148,4 @@ contract LPVaultSwapThresholdsFuzzTest is LPVaultSwapUnitBase {
         assertEq(r.amountsOut[0], probe.amountsOut[0], "USDC at its minimum");
         assertEq(r.amountsOut[1], probe.amountsOut[1], "USDT at its minimum");
     }
-
-    /// @notice A frozen caller is refused with its own address whatever the parameters; unfreezing restores it.
-    // TEST-229 verifies: REQ-SWAP-105, REQ-SWAP-109
-    function testFuzz_TEST_229_frozenCaller(
-        address caller
-    ) public {
-        vm.assume(caller != address(0) && caller.code.length == 0 && uint160(caller) > 0xffff);
-        vm.assume(caller != address(lvs) && caller != bob && caller != aave.cdpSpoke);
-        registry.setFrozen(caller, true);
-        _expectLiquidateRevert(
-            caller, _params(proxy, 1950e6), abi.encodeWithSelector(ILPVaultSwapBase.AddressIsFrozen.selector, caller)
-        );
-        registry.setFrozen(caller, false);
-        LiquidationResult memory r = _liquidateAs(caller, _params(proxy, 1950e6));
-        assertGt(r.unitsSeized, 0, "unfrozen caller settles");
-    }
 }

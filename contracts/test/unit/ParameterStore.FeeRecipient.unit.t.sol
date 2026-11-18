@@ -7,7 +7,7 @@ import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterSt
 import {ProxyManager} from "../../src/proxy/proxy-manager/ProxyManager.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockProxyManager} from "../utils/mocks/ParameterStoreMocks.sol";
-import {FreezeRegistryMock} from "../utils/mocks/ProxyMocks.sol";
+import {StubRegistryMock} from "../utils/mocks/ProxyMocks.sol";
 
 /// @notice A fee-recipient candidate whose answer to each selector is programmed: a fixed return blob, or a revert.
 contract ProgrammableCandidate {
@@ -180,14 +180,14 @@ contract ParameterStoreFeeRecipientUnitTest is ParameterStoreFixture {
         // AaveAdapter: only the predictProxy branch can recognise it.
         address otherAdapter = makeAddr("otherAdapter");
         assertTrue(otherAdapter != registry.AAVE_ADAPTER());
-        ProxyManager pm = new ProxyManager(otherAdapter, address(new FreezeRegistryMock()));
+        ProxyManager pm = new ProxyManager(otherAdapter, address(new StubRegistryMock()));
         vm.prank(otherAdapter);
         address proxy = pm.deployProxy(alice, address(spoke), M);
         // Recorded as the chain's ProxyManager: its prediction maps the proxy's bindings to the proxy itself.
         registry.setProxyManager(address(pm));
         _refused(proxy);
         // Another ProxyManager's prediction of the same bindings is another address: not a proxy of this chain.
-        registry.setProxyManager(address(new ProxyManager(otherAdapter, address(new FreezeRegistryMock()))));
+        registry.setProxyManager(address(new ProxyManager(otherAdapter, address(new StubRegistryMock()))));
         _accepted(proxy);
     }
 

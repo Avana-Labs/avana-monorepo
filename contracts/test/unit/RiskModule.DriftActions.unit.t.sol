@@ -15,9 +15,9 @@ import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 /// @notice Per-action table of every Aave configuration drift the RiskModule detects: the drift check, a new-account
 /// pledge, a borrow and a withdraw-with-debt revert `ConfigDrift(marketId, reason)` with the reason's market (0 for a
 /// Spoke-wide reason); a top-up of an indebted account passes (REQ-RISK-069: never top-ups); the account status reports
-/// the reason and both actions refused; the market breaker reports `CONFIG_DRIFT` live; `pokeConfig` latches it, so once
-/// the setting is restored a borrow still reverts `BreakerTripped(m, CONFIG_DRIFT)` until an authorized reset
-/// (REQ-RISK-078, REQ-ADAPTER-020, REQ-ADAPTER-036, REQ-RISK-088).
+/// the reason and both actions refused; the market breaker reports `CONFIG_DRIFT` live; `pokeConfig` reports it and
+/// records nothing, so once the setting is restored a borrow passes in the same block (REQ-RISK-078, REQ-ADAPTER-020,
+/// REQ-ADAPTER-036, REQ-RISK-088).
 contract RiskModuleDriftActionsUnitTest is RiskModuleFixture {
     uint128 internal constant UNITS = 10_000e18;
     uint256 internal constant REASONS = 8;
@@ -93,8 +93,7 @@ contract RiskModuleDriftActionsUnitTest is RiskModuleFixture {
             _expectDrift(m, reason);
             riskModule.checkPledge(wallet, address(proxy), mid, V3, bytes32(uint256(1)), UNITS, k, false);
             // The market breaker reports CONFIG_DRIFT live.
-            (uint32 reasons,) = riskModule.getBreakerStatus(mid);
-            assertTrue(reasons & BreakerReasons.CONFIG_DRIFT != 0, tag);
+            assertTrue(riskModule.getBreakerStatus(mid) & BreakerReasons.CONFIG_DRIFT != 0, tag);
             // An indebted account: the top-up passes, new debt and withdraw-with-debt stop.
             _debt(1.5e18, 1000);
             PledgeCharge memory charge =
@@ -114,45 +113,37 @@ contract RiskModuleDriftActionsUnitTest is RiskModuleFixture {
     }
 
     // TEST-268 verifies: REQ-RISK-078, REQ-RISK-090, SPEC-BRK-008
-    function test_TEST_268_everyDriftLatchesUntilReset() public {
+    function test_TEST_268_everyDriftPokeReportsIt() public {
         _debt(1.5e18, 1000);
         for (uint256 i = 0; i < REASONS; ++i) {
             uint256 snap = vm.snapshotState();
             (DriftReason reason,) = _drift(i);
             assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(reason), vm.toString(i));
-            (uint32 latched,) = registry.marketBreaker(mid);
-            assertEq(latched, BreakerReasons.CONFIG_DRIFT);
+            assertEq(riskModule.getBreakerStatus(mid), BreakerReasons.CONFIG_DRIFT, vm.toString(i));
             vm.revertToState(snap);
         }
     }
 
     // TEST-268 verifies: REQ-RISK-078, SPEC-BRK-008, REQ-RISK-073
-    function test_TEST_268_restoredSettingStaysClosedUntilReset() public {
+    function test_TEST_268_restoredSettingReopensAtOnce() public {
         _debt(1.5e18, 1000);
         rSpoke.setImplSlot(bytes32(uint256(uint160(makeAddr("upgraded")))));
         riskModule.pokeConfig(address(spoke));
+        _expectDrift(0, DriftReason.SpokeImplementation);
+        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
+        _expectDrift(0, DriftReason.SpokeImplementation);
+        riskModule.preWithdrawCheck(address(proxy));
+        // The setting restored: the drift check, new debt and withdraw-with-debt pass in the same block, with no reset.
         spoke.setImplementation(address(spokeImpl));
         uint256[] memory ids = new uint256[](1);
         ids[0] = mid;
-        // The drift check itself passes again; the latched freeze still stops new debt, never the top-up.
         riskModule.checkAaveConfig(address(spoke), ids);
-        vm.expectRevert(
-            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.CONFIG_DRIFT)
-        );
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        vm.expectRevert(
-            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.CONFIG_DRIFT)
-        );
         riskModule.preWithdrawCheck(address(proxy));
         riskModule.checkPledge(wallet, address(proxy), mid, V3, bytes32(uint256(1)), UNITS, _counters(), false);
         AccountGateStatus memory s = riskModule.getAccountGateStatus(address(proxy));
         assertEq(uint8(s.driftReason), uint8(DriftReason.None));
-        assertEq(s.markets[0].breakerReasons, BreakerReasons.CONFIG_DRIFT);
-        assertFalse(s.borrowAllowed);
-        vm.prank(emergencyGuardian);
-        registry.resetMarketBreaker(mid);
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        riskModule.preWithdrawCheck(address(proxy));
+        assertEq(s.markets[0].breakerReasons, 0);
+        assertTrue(s.borrowAllowed);
     }
 }
-

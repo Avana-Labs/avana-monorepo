@@ -8,10 +8,9 @@ import {RiskModuleHandler} from "./handlers/RiskModuleHandler.sol";
 
 /// @title RiskModuleInvariantTest
 /// @notice RiskModule half of TEST-095 and TEST-098: random sequences of collateral price states, feed ages, Aave pauses
-/// and freezes, drift, issuer actions, keeper counts, offboarding, time steps, breaker pokes and guardian resets, with
-/// borrow and withdraw-with-debt pre-checks in between. After every call: no pre-check passed while a gate of 2.7 was
-/// closed (an independent reading of the gates); no borrow pre-check passed with 0 active keepers; no poke cleared a
-/// latch.
+/// and freezes, drift, issuer actions, keeper counts, offboarding and time steps, with borrow and withdraw-with-debt
+/// pre-checks in between. After every call: no pre-check passed while a gate of 2.7 was closed (an independent reading
+/// of the gates); no borrow pre-check passed with 0 active keepers.
 /// @dev The Adapter-side half (Aave HF after the Spoke call, nonce, receiver) is outside this suite.
 contract RiskModuleInvariantTest is RiskModuleFixture {
     RiskModuleHandler internal handler;
@@ -29,7 +28,6 @@ contract RiskModuleInvariantTest is RiskModuleFixture {
                 swap: swap,
                 usdt: tUsdt,
                 proxy: address(proxy),
-                guardian: emergencyGuardian,
                 marketId: mid,
                 vtReserve: VT_RESERVE,
                 debtReserve: GHO_RESERVE,
@@ -53,10 +51,5 @@ contract RiskModuleInvariantTest is RiskModuleFixture {
     // TEST-098 verifies: REQ-RISK-071, REQ-ADAPTER-010
     function invariant_TEST_098_noBorrowWithoutKeeper() public view {
         assertEq(handler.borrowsWithoutKeeper(), 0, "a borrow passed with no active keeper");
-    }
-
-    // TEST-228 verifies: REQ-RISK-091, SPEC-BRK-008
-    function invariant_TEST_228_pokeNeverClearsLatch() public view {
-        assertEq(handler.latchShrinks(), 0, "a poke cleared a latch");
     }
 }

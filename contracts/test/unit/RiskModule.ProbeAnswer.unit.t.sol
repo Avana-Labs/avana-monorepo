@@ -28,7 +28,7 @@ abstract contract RiskModuleProbeAnswerBase is RiskModuleFixture {
     function _reads() internal pure virtual returns (bytes4[] memory sels);
 
     function _debtReasons() internal view returns (uint32) {
-        return riskModule.liveDebtBreakerReasons(address(spoke), GHO_RESERVE);
+        return riskModule.getDebtBreakerStatus(address(spoke), GHO_RESERVE);
     }
 
     /// @dev Answers `sel` with `answer` and every other read of the kind with a clear one-word 0.
@@ -43,7 +43,7 @@ abstract contract RiskModuleProbeAnswerBase is RiskModuleFixture {
         }
     }
 
-    /// @dev Gas of one `liveDebtBreakerReasons` call, which runs the probe, and its result. Measured in a fresh call
+    /// @dev Gas of one `getDebtBreakerStatus` call, which runs the probe, and its result. Measured in a fresh call
     /// frame (`measureProbe`), so the test's own memory, grown by building a 1 MB answer, does not price the call.
     function _measured() internal view returns (uint256 used, uint32 reasons) {
         (used, reasons) = this.measureProbe();

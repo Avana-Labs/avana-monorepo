@@ -7,7 +7,7 @@ pragma solidity 0.8.28;
 /// @notice Borrower previews of the Lens, sized to stay valid until the transaction deadline.
 interface ILensPreview {
     /// @notice Returns the largest borrow that keeps the health factor above the floor once debt grows to `deadline`.
-    /// @dev Rounds down; 0 when a Hub is paused, the wallet is frozen or the borrow gate reverts.
+    /// @dev Rounds down; 0 when the borrow gate reverts.
     /// @return amount Debt-asset base units.
     function previewBorrowMax(
         address wallet,

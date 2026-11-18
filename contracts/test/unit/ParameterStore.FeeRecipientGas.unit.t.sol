@@ -8,7 +8,7 @@ import {IParameterStoreLogic} from "../../src/policy/parameter-store/IParameterS
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
 import {ProxyManager} from "../../src/proxy/proxy-manager/ProxyManager.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
-import {FreezeRegistryMock} from "../utils/mocks/ProxyMocks.sol";
+import {StubRegistryMock} from "../utils/mocks/ProxyMocks.sol";
 
 /// @notice A candidate that answers every probe with `size` bytes: the first word `head`, zeros after it.
 /// `logicConfig()` reverts with the same `size` bytes, so the candidate is no logic contract.
@@ -114,7 +114,7 @@ contract ParameterStoreFeeRecipientGasUnitTest is ParameterStoreFixture {
     // TEST-062 verifies: REQ-CONFIG-056
     function test_TEST_062_avanaGettersFitTheProbeGas() public {
         // Real getters behind their proxies and the logic contracts: each costs well under a third of PROBE_GAS.
-        ProxyManager pm = new ProxyManager(makeAddr("adapter"), address(new FreezeRegistryMock()));
+        ProxyManager pm = new ProxyManager(makeAddr("adapter"), address(new StubRegistryMock()));
         vm.prank(makeAddr("adapter"));
         address proxy = pm.deployProxy(alice, address(spoke), M);
         bytes[6] memory calls = [

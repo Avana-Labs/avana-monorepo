@@ -17,8 +17,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// @notice Invariants of the whole chain stack as one deployment runs it (`FullStackMarkets`: the real
 /// MarketRegistry, ParameterStore, RiskModule, AaveAdapter, Collateralization, AvanaTimelock, LPOracles and USDC
 /// DebtOracle on the real local Aave V4) under random sequences of pledges, borrows of GHO and USDC, repays by owners
-/// and third parties, debt-free withdrawals, liquidations, pause-state changes, price moves, draw-cap cuts, timelock
-/// tightenings, an AaveAdapter upgrade to a second reviewed implementation, and time.
+/// and third parties, debt-free withdrawals, liquidations, price moves, draw-cap cuts, timelock tightenings, an
+/// AaveAdapter upgrade to a second reviewed implementation, and time.
 /// @dev Each handler call is one transaction.
 /// forge-config: default.isolate = false
 /// forge-config: default.invariant.runs = 16
@@ -70,17 +70,16 @@ contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
 
     /// @dev The fuzzed actions (`seedAccounts` is set-up only).
     function _actions() internal pure returns (bytes4[] memory a) {
-        a = new bytes4[](11);
-        (a[0], a[1], a[2], a[3], a[4], a[5]) =
+        a = new bytes4[](10);
+        (a[0], a[1], a[2], a[3], a[4]) =
         (
             FullStackHandler.pledge.selector,
             FullStackHandler.borrow.selector,
             FullStackHandler.repay.selector,
             FullStackHandler.withdraw.selector,
-            FullStackHandler.liquidate.selector,
-            FullStackHandler.setPause.selector
+            FullStackHandler.liquidate.selector
         );
-        (a[6], a[7], a[8], a[9], a[10]) =
+        (a[5], a[6], a[7], a[8], a[9]) =
         (
             FullStackHandler.setPrice.selector,
             FullStackHandler.warp.selector,
@@ -92,20 +91,19 @@ contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
 
     // TEST-082 verifies: TEST-007
     /// @notice The handler does real work: over 16 fixed-seed runs of 24 calls from this suite's set-up state, the
-    /// actions succeed in at least 20 % of their calls (borrow 10 %: it is refused while the Hub is stopped and beyond
-    /// the account's room, and the set-up's accounts are near it; `upgradeAdapter` runs once) and a liquidation, a
+    /// actions succeed in at least 20 % of their calls (borrow 10 %: it is refused beyond the account's room, and the
+    /// set-up's accounts are near it; `upgradeAdapter` runs once) and a liquidation, a
     /// repay and a debt-free withdrawal are each reached in at least 75 % of the runs.
     function test_TEST_082_handlerReach() public {
-        string[] memory names = new string[](11);
-        (names[0], names[1], names[2], names[3], names[4], names[5]) =
-        ("pledge", "borrow", "repay", "withdraw", "liquidate", "setPause");
-        (names[6], names[7], names[8], names[9], names[10]) =
+        string[] memory names = new string[](10);
+        (names[0], names[1], names[2], names[3], names[4]) = ("pledge", "borrow", "repay", "withdraw", "liquidate");
+        (names[5], names[6], names[7], names[8], names[9]) =
         ("setPrice", "warp", "cutDrawCap", "tightenSlice", "upgradeAdapter");
         string[] memory targets = new string[](3);
         (targets[0], targets[1], targets[2]) = ("liquidation", "repay", "debt-free withdrawal");
-        uint256[] memory minOk = _floors(11, 20);
+        uint256[] memory minOk = _floors(10, 20);
         minOk[1] = 10;
-        minOk[10] = 0;
+        minOk[9] = 0;
         Reach memory r = _replay(address(handler), _actions(), FullStackHandler.Skipped.selector, 16, 24, 3);
         _check(r, names, targets, minOk, _floors(3, 75));
     }
@@ -119,9 +117,9 @@ contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
 
     // TEST-215 verifies: REQ-ACCESS-148, INV-075
     /// @notice Every handler action reaches its entry point and completes in a plain sequence, so the random campaign
-    /// exercises real calls: pledges in both markets, borrows of GHO and USDC, a repay by a third party, a cap tightening
-    /// and the AaveAdapter upgrade through the timelock, a pause and its lifting, a price fall and a liquidation, a
-    /// draw-cap cut, and a debt-free withdrawal.
+    /// exercises real calls: pledges in both markets, borrows of GHO and USDC, a repay by a third party, a cap
+    /// tightening and the AaveAdapter upgrade through the timelock, a price fall and a liquidation, a draw-cap cut, and
+    /// a debt-free withdrawal.
     function test_TEST_215_handlerActionsComplete() public {
         // Counts from here on; the set-up seeded 3 pledges and 6 borrows.
         uint256[4] memory base = [handler.pledges(), handler.borrows(), handler.liquidations(), handler.withdrawals()];
@@ -138,8 +136,6 @@ contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
         assertEq(store.topUpSliceUsd(mA), 100_000e8 - 1e8, "slice tightened through the timelock");
         handler.upgradeAdapter();
         assertEq(handler.upgrades(), 1, "Adapter upgraded through the timelock");
-        handler.setPause(2);
-        handler.setPause(0);
         handler.setPrice(93_000_000);
         handler.liquidate(0);
         assertEq(handler.liquidations() - base[2], 1, "liquidation");
@@ -148,18 +144,15 @@ contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
         assertEq(handler.withdrawals() - base[3], 1, "debt-free withdrawal");
         assertEq(handler.pledges() - base[0], 2, "pledges");
         assertGe(handler.repays(), 1, "repay");
-        assertEq(handler.exitBlocked() + handler.gateViolations() + handler.earlyExecutions(), 0, "no violation");
+        assertEq(handler.exitBlocked() + handler.earlyExecutions(), 0, "no violation");
     }
 
-    // ─── TEST-193: exits and liquidation under every pause state ───
+    // ─── TEST-193: exits and liquidation never stopped by a breaker ───
 
     // TEST-193 verifies: REQ-MREG-002, REQ-ADAPTER-047, REQ-ADAPTER-086, REQ-ACCESS-068, INV-067, ATTACK-035
-    /// @notice Whatever the Hub's state on the real MarketRegistry, no repay, debt-free withdrawal or liquidation
-    /// reverted for a pause, a freeze or a breaker; no borrow and no pledge of a debt-free account completed while
-    /// Frozen, no borrow while Paused, and no pledge while Paused(MintPathSuspect).
-    function invariant_TEST_193_exitsLiveUnderEveryPauseState() public view {
-        assertEq(handler.exitBlocked(), 0, "an exit stopped by a pause");
-        assertEq(handler.gateViolations(), 0, "a gated action completed");
+    /// @notice No repay, debt-free withdrawal or liquidation reverted for a market or debt breaker.
+    function invariant_TEST_193_exitsNeverStoppedByABreaker() public view {
+        assertEq(handler.exitBlocked(), 0, "an exit stopped by a breaker");
     }
 
     // ─── TEST-211: proxies, backing and the debt set ───

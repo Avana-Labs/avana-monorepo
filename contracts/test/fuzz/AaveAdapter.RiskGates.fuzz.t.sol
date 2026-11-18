@@ -9,7 +9,7 @@ import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.s
 
 /// @title AaveAdapterRiskGatesFuzzTest
 /// @notice The reviewed RiskModule's gates reached through the Adapter on the real Aave V4 Spoke, over random inputs:
-/// the sequencer gate (down, unknown, grace, up), a breaker's recovery window after a breach, the pool-share
+/// the sequencer gate (down, unknown, grace, up), a live breaker condition with no recovery window, the pool-share
 /// concentration breaker reading Avana's pool units from the real Collateralization under the Adapter's Lock, and the
 /// health check with rescue units excluded. Repay passes in every case.
 /// forge-config: default.isolate = false
@@ -40,26 +40,28 @@ contract AaveAdapterRiskGatesFuzzTest is AaveAdapterRiskFixture {
     }
 
     // TEST-028 verifies: REQ-ADAPTER-094, REQ-RISK-065
-    /// @notice After a breach recorded at `lastBreach` with nothing latched, borrowing reopens exactly
-    /// `gateRecoverySeconds` later; a latched reason refuses whatever the time.
-    function testFuzz_TEST_028_breakerRecovery(
-        uint32 sinceBreach,
-        bool latched
+    /// @notice The pool-depth breaker holds exactly while the LPVault reports no usable depth (unavailable or 0): a
+    /// borrow is refused `BreakerTripped(market, POOL_DEPTH)` then, and passes in the same block once depth is back.
+    function testFuzz_TEST_028_breakerHoldsOnlyWhileConditionHolds(
+        uint256 depth,
+        bool available
     ) public {
-        sinceBreach = uint32(bound(sinceBreach, 0, 7200));
-        uint64 at = uint64(block.timestamp - sinceBreach);
-        uint32 reasons = latched ? BreakerReasons.MANUAL : 0;
-        registry.setLatched(bytes32(MARKET_ID), reasons, at);
-        bool recovering = sinceBreach < 1800;
+        depth = bound(depth, 0, 2e13);
+        riskVault.setDepth(depth, available);
+        bool holds = !available || depth == 0;
         (bool ok, bytes memory err) = _tryBorrow(1e18);
-        if (latched || recovering) {
-            uint32 expected = reasons | (recovering ? BreakerReasons.TEMPORARY : 0);
+        if (holds) {
             assertFalse(ok, "breaker refuses");
             assertEq(
-                err, abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, MARKET_ID, expected), "reasons"
+                err,
+                abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, MARKET_ID, BreakerReasons.POOL_DEPTH),
+                "reasons"
             );
+            riskVault.setDepth(2e13, true);
+            (ok,) = _tryBorrow(1e18);
+            assertTrue(ok, "passes once the condition clears");
         } else {
-            assertTrue(ok, "recovered");
+            assertTrue(ok, "no condition holds");
         }
         _repayOne();
     }

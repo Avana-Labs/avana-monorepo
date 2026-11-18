@@ -283,8 +283,7 @@ contract RiskStoreMock is RegistryParameterStoreMock {
     mapping(address => uint16) public tokenCollateralFactorBps;
     mapping(address => mapping(address => uint256)) public tokenUsdCap;
     mapping(address => uint32) public borrowPriceMaxAge;
-    mapping(address => mapping(address => uint256)) public breakerDeficitMax;
-    uint64 public gateRecoverySeconds = 1800;
+    mapping(address => mapping(address => uint256)) public deficitMax;
 
     function setTokenCf(
         address token,
@@ -313,13 +312,7 @@ contract RiskStoreMock is RegistryParameterStoreMock {
         address asset,
         uint256 v
     ) external {
-        breakerDeficitMax[hub][asset] = v;
-    }
-
-    function setRecovery(
-        uint64 v
-    ) external {
-        gateRecoverySeconds = v;
+        deficitMax[hub][asset] = v;
     }
 
     function setMinPledge(

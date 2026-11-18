@@ -31,7 +31,7 @@ struct DebtReserveDef {
 struct MarketRegistryImmutables {
     // The chain's AvanaTimelock, the only holder of `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN`.
     address timelock;
-    // The Aave governance executor, protected from the address freeze.
+    // The Aave governance executor.
     address aaveGovernanceExecutor;
     address vaultTokenFactory;
     // The AaveAdapter fixed proxy.
@@ -46,7 +46,7 @@ struct MarketRegistryImmutables {
     // The LPVaultSwap fixed proxy.
     address lpVaultSwap;
     address payoutEscrow;
-    // The public flash liquidation helper, protected from the address freeze.
+    // The public flash liquidation helper.
     address flashLiquidator;
     // The standard Aave V4 Spoke implementation, approved from deployment.
     address standardSpokeImplementation;
@@ -54,7 +54,7 @@ struct MarketRegistryImmutables {
     uint256 maxMarketCount;
 }
 
-/// @notice The six immutable logic contracts the MarketRegistry delegatecalls for its write bodies.
+/// @notice The five immutable logic contracts the MarketRegistry delegatecalls for its write bodies.
 /// @dev Each must be built with the same `MarketRegistryImmutables` as the MarketRegistry; the constructor checks this.
 struct MarketRegistryLogics {
     // Hubs, integrations, First-Loss Reserves, cross-Hub lines, the flash source, CDP Spokes and debt reserves.
@@ -65,8 +65,6 @@ struct MarketRegistryLogics {
     address activation;
     // Swap routes and the AMM integration contract record.
     address routes;
-    // Pause state and reason, address freeze and breakers.
-    address safety;
     // Wind-down, close, settlement reserve and the credit-line registry.
     address windDown;
 }

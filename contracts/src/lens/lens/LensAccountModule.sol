@@ -177,10 +177,8 @@ contract LensAccountModule is ILensAccount, LensDeleverage {
         (a.blockNumber, a.timestamp, a.wallet, a.spoke, a.marketId) =
         (block.number, block.timestamp, wallet, m.spoke, marketId);
         (a.proxy, a.deployed) = _proxy(wallet, marketId, m.spoke);
-        a.walletFrozen = _registry().isFrozenAddress(wallet);
         a.gateStatus = IRiskModule(_RISK_MODULE).getAccountGateStatus(a.proxy);
-        // forge-lint: disable-next-line(unused-return)
-        (uint32 reasons,) = IRiskModule(_RISK_MODULE).getBreakerStatus(marketId);
+        uint32 reasons = IRiskModule(_RISK_MODULE).getBreakerStatus(marketId);
         if (a.deployed) {
             a.borrowNonce = IAaveAdapter(_ADAPTER).borrowNonce(a.proxy);
             IAaveV4Spoke.UserAccountData memory d = IAaveV4Spoke(m.spoke).getUserAccountData(a.proxy);
@@ -215,8 +213,7 @@ contract LensAccountModule is ILensAccount, LensDeleverage {
         }
         p.paused = IAaveV4Spoke(spoke).getReserveConfig(reserveId).paused;
         p.priceFresh = _debtView(spoke, def).borrowFresh;
-        // forge-lint: disable-next-line(unused-return)
-        (p.breakerReasons,) = IRiskModule(_RISK_MODULE).getDebtBreakerStatus(spoke, reserveId);
+        p.breakerReasons = IRiskModule(_RISK_MODULE).getDebtBreakerStatus(spoke, reserveId);
     }
 
     function _marketPosition(

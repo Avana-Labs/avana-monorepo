@@ -224,7 +224,7 @@ contract LiquidationLensPreviewIntegrationTest is RealStackVolatile {
         vm.prank(aaveDao);
         (ok,) = aave.spokeConfigurator
             .call(abi.encodeWithSignature("updatePaused(address,uint256,bool)", aave.cdpSpoke, usdcReserveId, false));
-        assertTrue(ok, "unpause the reserve");
+        assertTrue(ok, "lift the reserve pause");
         // Every gate clear: the same preview executes.
         p = lens.previewLiquidation(proxy, usdcReserveId, _deadlineIn());
         assertTrue(p.pricesUsable && p.debtPriceFresh && !p.debtReservePaused, "gates clear");

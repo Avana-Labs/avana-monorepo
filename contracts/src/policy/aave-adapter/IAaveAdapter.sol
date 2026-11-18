@@ -47,7 +47,7 @@ interface IAaveAdapter is IAaveAdapterBase {
     ) external returns (uint256 debtRepaid, uint256 debtAssetToWallet);
 
     /// @notice Burns `units` of a market's vault token from LPVaultSwap's balance.
-    /// @dev Only LPVaultSwap while it holds the Lock; reads no pause state, so liquidation always runs.
+    /// @dev Only LPVaultSwap while it holds the Lock.
     function burnSeized(
         uint256 marketId,
         address vaultToken,
@@ -74,7 +74,6 @@ interface IAaveAdapter is IAaveAdapterBase {
     ) external returns (uint256[] memory amounts, bool closed);
 
     /// @notice Pledges one AMM position into a market, creating the wallet's proxy for that market if needed.
-    /// @dev Blocked while the market's Hub is Paused with reason `MintPathSuspect`.
     function pledge(
         uint256 marketId,
         PositionRef calldata position,
@@ -82,7 +81,7 @@ interface IAaveAdapter is IAaveAdapterBase {
     ) external returns (address proxy, uint256 recordId, uint128 credited);
 
     /// @notice Borrows `amount` of an approved debt asset on the caller's account and sends it to `receiver`.
-    /// @dev Consumes `expectedNonce`; reverts while either Hub is paused or frozen, or caller or receiver is frozen.
+    /// @dev Consumes `expectedNonce`.
     /// @param minHealthFactor Caller's minimum health factor after the borrow, WAD; 0 for none.
     function borrow(
         uint256 marketId,
@@ -95,7 +94,7 @@ interface IAaveAdapter is IAaveAdapterBase {
     ) external returns (uint256 drawn);
 
     /// @notice Repays one debt reserve of `borrower`'s account for a market with the caller's funds.
-    /// @dev Any caller pays; reads no MarketRegistry, pause or price, so repay always works.
+    /// @dev Any caller pays; reads no MarketRegistry or price, so repay always works.
     /// @param maxRepaySpend Most the payer allows to be pulled, base units.
     /// @param repayAll True to clear the reserve's whole debt or revert.
     function repay(

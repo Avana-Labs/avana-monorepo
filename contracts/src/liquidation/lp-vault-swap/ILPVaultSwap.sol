@@ -37,7 +37,7 @@ interface ILPVaultSwap is ILPVaultSwapBase, IFlashReceiver {
     ) external returns (uint256 debtRepaid, uint256 debtAssetOut);
 
     /// @notice Liquidates one account against one debt reserve and settles it in the debt asset in the same call.
-    /// @dev Any caller that is not frozen; pulls `params.debtToCover` from the caller and takes no flash loan.
+    /// @dev Any caller; pulls `params.debtToCover` from the caller and takes no flash loan.
     function liquidate(
         LiquidationParams calldata params
     ) external returns (LiquidationResult memory result);
@@ -55,10 +55,10 @@ interface ILPVaultSwap is ILPVaultSwapBase, IFlashReceiver {
         address keeper
     ) external view returns (bool approved);
 
-    /// @notice Number of registered committed operators, frozen ones included.
+    /// @notice Number of registered committed operators.
     function approvedKeeperCount() external view returns (uint256 count);
 
-    /// @notice Number of registered committed operators the MarketRegistry has not frozen.
+    /// @notice Number of registered committed operators; new borrowing halts when it is 0.
     function activeKeeperCount() external view returns (uint256 count);
 
     /// @notice Most transfers `onFlashLoan` makes to repay the flash source by balance delta.

@@ -121,26 +121,19 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
 
     // TEST-064 verifies: REQ-PSTORE-030, REQ-PSTORE-018, REQ-PSTORE-024, PROP-042
     function testFuzz_TEST_064_chainScalarsModel(
-        uint64 gate,
         uint16 shortfall,
         uint16 flash,
         uint8 which
     ) public {
-        which = uint8(bound(which, 0, 5));
+        which = uint8(bound(which, 0, 3));
         bytes memory err;
         if (which == 0) {
-            err = gate <= 1800 ? _notStricter() : (gate > 7200 ? _oob() : bytes(""));
-            _expect(abi.encodeCall(store.tightenGateRecoverySeconds, (gate)), err);
-        } else if (which == 1) {
-            err = gate >= 1800 ? _notLooser() : (gate < 600 ? _oob() : bytes(""));
-            _expect(abi.encodeCall(store.loosenGateRecoverySeconds, (gate)), err);
-        } else if (which == 2) {
             err = shortfall >= 1000 ? _notStricter() : bytes("");
             _expect(abi.encodeCall(store.tightenMaxShortfallBps, (shortfall)), err);
-        } else if (which == 3) {
+        } else if (which == 1) {
             err = shortfall <= 1000 ? _notLooser() : (shortfall > 5000 ? _oob() : bytes(""));
             _expect(abi.encodeCall(store.loosenMaxShortfallBps, (shortfall)), err);
-        } else if (which == 4) {
+        } else if (which == 2) {
             err = flash >= 10 ? _notStricter() : bytes("");
             _expect(abi.encodeCall(store.tightenMaxFlashFeeBps, (flash)), err);
         } else {
@@ -148,8 +141,6 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
             err = flash > 100 ? _oob() : bytes("");
             _expect(abi.encodeCall(store.setMaxFlashFeeBps, (flash)), err);
         }
-        assertGe(store.gateRecoverySeconds(), 600);
-        assertLe(store.gateRecoverySeconds(), 7200);
         assertLe(store.maxShortfallBps(), 5000);
         assertLe(store.maxFlashFeeBps(), 100);
     }

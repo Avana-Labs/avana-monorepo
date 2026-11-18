@@ -9,7 +9,6 @@ import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {CloseAccountView, DeleverageSizing, RemovalSizing} from "../../src/lens/lens/types/LensTypes.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {RiskModuleMath} from "../../src/policy/risk-module/RiskModuleMath.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensInverseSizingUnitTest
@@ -101,16 +100,12 @@ contract LensInverseSizingUnitTest is LensFixture {
     // TEST-247 verifies: REQ-LENS-054
     function test_TEST_247_maxWithdrawClosedGatesAndNoAccount() public {
         _borrow(aliceProxy, 1000e18);
-        rm.setGate(aliceProxy, false, false, PauseState.None);
-        assertEq(lens.previewMaxWithdraw(alice, MARKET_ID, 1e18).maxUnits, 0, "withdraw-with-debt closed");
-        rm.setGate(aliceProxy, true, false, PauseState.Paused);
-        assertEq(lens.previewMaxWithdraw(alice, MARKET_ID, 1e18).maxUnits, 0, "Paused");
-        rm.setGate(aliceProxy, true, false, PauseState.Frozen);
-        assertGt(lens.previewMaxWithdraw(alice, MARKET_ID, 1e18).maxUnits, 0, "Frozen leaves it open");
-        reg.setFrozen(alice, true);
+        rm.setGate(aliceProxy, false, false);
         RemovalSizing memory s = lens.previewMaxWithdraw(alice, MARKET_ID, 1e18);
-        assertEq(s.maxUnits, 0, "a frozen wallet");
+        assertEq(s.maxUnits, 0, "withdraw-with-debt closed");
         assertFalse(s.records[0].fits, "nothing fits");
+        rm.setGate(aliceProxy, true, false);
+        assertGt(lens.previewMaxWithdraw(alice, MARKET_ID, 1e18).maxUnits, 0, "open again");
         s = lens.previewMaxWithdraw(bob, MARKET_ID, 1e18);
         assertEq(s.records.length, 0, "no proxy");
         assertEq(s.maxUnits, 0, "nothing");
@@ -182,12 +177,6 @@ contract LensInverseSizingUnitTest is LensFixture {
     // TEST-247 verifies: REQ-LENS-055, REQ-LENS-032
     function test_TEST_247_deleverageToClosedOrUnknown() public {
         _borrow(aliceProxy, 12_000e18);
-        reg.setPause(aave.hub, PauseState.Paused, PauseReason.MintPathSuspect);
-        assertFalse(
-            lens.previewDeleverageTo(alice, MARKET_ID, _key(1), debtReserveId, 1.6e18).reachable,
-            "Paused(MintPathSuspect)"
-        );
-        reg.setPause(aave.hub, PauseState.None, PauseReason.None);
         assertFalse(lens.previewDeleverageTo(bob, MARKET_ID, _key(1), debtReserveId, 1.6e18).reachable, "not his");
         assertFalse(lens.previewDeleverageTo(alice, MARKET_ID, _key(1), usdcReserveId, 1.6e18).reachable, "no USDC");
         vm.expectRevert(abi.encodeWithSelector(ILensErrors.UnknownDebtReserve.selector, aave.cdpSpoke, 7));

@@ -13,7 +13,6 @@ import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVau
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackVolatile} from "../utils/fixtures/RealStackVolatile.sol";
@@ -224,8 +223,8 @@ contract LPVaultSwapHostileIntegrationTest is RealStackVolatile {
 
     /// @notice The Adapter's seized-unit burn: any caller other than LPVaultSwap, and LPVaultSwap without the Lock,
     /// reverts `NotLPVaultSwap`; in a liquidation it burns exactly `c` from LPVaultSwap, emits `SeizedUnitsBurned`, and
-    /// the proxy's share drop, `c` and the supply drop are equal, in the None, Frozen and Paused states alike. Each
-    /// liquidation repays 50 USDC, so bob's account stays below HF 1 for the next.
+    /// the proxy's share drop, `c` and the supply drop are equal, over three liquidations in a row. Each liquidation
+    /// repays 50 USDC, so bob's account stays below HF 1 for the next.
     // TEST-208 verifies: REQ-ADAPTER-070, REQ-SWAP-020, REQ-SWAP-092
     function test_TEST_208_burnSeizedOnlyLPVaultSwapUnderTheLock() public {
         vm.prank(attacker);
@@ -234,11 +233,9 @@ contract LPVaultSwapHostileIntegrationTest is RealStackVolatile {
         vm.prank(lpVaultSwap);
         vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         IAaveAdapter(adapter).burnSeized(mA, vt, 1);
-        PauseState[3] memory states = [PauseState.None, PauseState.Frozen, PauseState.Paused];
         (address proxy,) = _account(bob, UNITS, 5880e6);
         _depegUsdt(93_000_000);
         for (uint256 i = 0; i < 3; ++i) {
-            _setPause(states[i], i == 0 ? PauseReason.None : PauseReason.General);
             uint256 shares = _sharesOf(proxy, mkt[mA].reserveId);
             uint256 supply = IERC20(vt).totalSupply();
             vm.recordLogs();

@@ -30,9 +30,8 @@ interface ILVSDriftConfigurator {
 }
 
 /// @title LPVaultSwapOpenUnderHaltsUnitTest
-/// @notice LPVaultSwap's liquidation and pending settlement under Avana's pause states (5.1 TEST-192) and under each
-/// drift of the standard CDP Spoke settings the Aave DAO executor can make (5.1 TEST-268), on the real local Aave V4,
-/// the real LPVaultSwap, Collateralization and vault token.
+/// @notice LPVaultSwap's liquidation under each drift of the standard CDP Spoke settings the Aave DAO executor can make
+/// (5.1 TEST-268), on the real local Aave V4, the real LPVaultSwap, Collateralization and vault token.
 /// forge-config: default.isolate = false
 contract LPVaultSwapOpenUnderHaltsUnitTest is LPVaultSwapUnitBase {
     address internal proxy;
@@ -40,25 +39,6 @@ contract LPVaultSwapOpenUnderHaltsUnitTest is LPVaultSwapUnitBase {
     function setUp() public override {
         super.setUp();
         (proxy,) = _bobAccount();
-    }
-
-    /// @notice In None, Frozen, Paused(General) and Paused(MintPathSuspect) a liquidation settles and `settlePending`
-    /// clears the pending balance: neither reads the pause state.
-    // TEST-192 verifies: REQ-ACCESS-068, REQ-SWAP-065, INV-045
-    function test_TEST_192_liquidationAndPendingOpenInEveryPauseState() public {
-        uint8[2][4] memory cells = [[uint8(0), 0], [uint8(1), 0], [uint8(2), 1], [uint8(2), 2]];
-        for (uint256 i = 0; i < cells.length; ++i) {
-            uint256 snapshot = vm.snapshotState();
-            registry.setPause(cells[i][0], cells[i][1]);
-            _seizeAndKeep(proxy, 1000e6);
-            LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, 500e6));
-            assertGt(r.unitsSeized, 0, "liquidated");
-            assertGt(coll.getPending(address(vt)).units, 0, "pending balance");
-            vm.prank(makeAddr("anyone"));
-            lvs.settlePending(MARKET_ID, usdcReserveId);
-            assertEq(coll.getPending(address(vt)).units, 0, "pending settled");
-            vm.revertToState(snapshot);
-        }
     }
 
     /// @notice Before any change, `liquidationCall` with `receiveShares = true` reverts on the Avana reserve. Then, for

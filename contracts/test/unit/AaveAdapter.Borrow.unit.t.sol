@@ -9,13 +9,12 @@ import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.s
 import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 
 /// @title AaveAdapterBorrowUnitTest
-/// @notice `borrow` on the real Aave V4 Spoke: the order of its call bounds (deadline, amount, pause state of the
-/// market's and the funding Hub, proxy, debt-reserve enablement, receiver rule, freeze, nonce), the RiskModule calls
-/// around the proxy's Spoke call, the exact forwarding of the drawn asset and the single-use nonce.
+/// @notice `borrow` on the real Aave V4 Spoke: the order of its call bounds (deadline, amount, proxy, debt-reserve
+/// enablement, receiver rule, nonce), the RiskModule calls around the proxy's Spoke call, the exact forwarding of the
+/// drawn asset and the single-use nonce.
 /// forge-config: default.isolate = false
 contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
     bytes32 internal aliceKey;
@@ -123,8 +122,6 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
     // TEST-027 verifies: REQ-PROXY-015, REQ-PROXY-058, REQ-PROXY-060, REQ-PROXY-093, REQ-ADAPTER-052, REQ-ADAPTER-072, REQ-ADAPTER-073, REQ-PROXY-057, REQ-PROXY-062, REQ-PROXY-061, REQ-ADAPTER-087, REQ-PROXY-059
     /// @notice With every bound failing at once, the errors come one by one in the order of REQ-PROXY-015.
     function test_TEST_027_checkOrder() public {
-        registry.setFrozen(alice, true);
-        _pause(PauseState.Frozen, PauseReason.None);
         uint256 past = block.timestamp - 1;
         vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.DeadlineExpired.selector, past));
         vm.prank(alice);
@@ -133,10 +130,6 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
         vm.expectRevert(IAaveAdapterBase.ZeroAmount.selector);
         vm.prank(alice);
         adapterC.borrow(MARKET_B, 99, 0, address(0), d, 0, 7);
-        vm.expectRevert(IAaveAdapterBase.ApplicationFrozen.selector);
-        vm.prank(alice);
-        adapterC.borrow(MARKET_B, 99, 1, address(0), d, 0, 7);
-        _pause(PauseState.None, PauseReason.None);
         vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.NoProxy.selector, alice, MARKET_B));
         vm.prank(alice);
         adapterC.borrow(MARKET_B, 99, 1, address(0), d, 0, 7);
@@ -146,14 +139,6 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
         vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.InvalidReceiver.selector, address(0)));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1, address(0), d, 0, 7);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, alice));
-        vm.prank(alice);
-        adapterC.borrow(MARKET_ID, debtReserveId, 1, bob, d, 0, 7);
-        registry.setFrozen(alice, false);
-        registry.setFrozen(bob, true);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, bob));
-        vm.prank(alice);
-        adapterC.borrow(MARKET_ID, debtReserveId, 1, bob, d, 0, 7);
         vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.BadNonce.selector, 0, 7));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1, carol, d, 0, 7);
@@ -167,29 +152,7 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
         assertEq(debt.balanceOf(alice), 1e18, "borrowed at the deadline");
     }
 
-    // ─── Pause state ───
-
-    // TEST-192 verifies: REQ-ADAPTER-045, REQ-ADAPTER-046, REQ-ADAPTER-072, REQ-ADAPTER-073, REQ-ACCESS-080
-    /// @notice Every borrow reverts under Frozen and under Paused with either reason.
-    function test_TEST_192_borrowRefusedUnlessNone() public {
-        _pause(PauseState.Frozen, PauseReason.None);
-        _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterBase.ApplicationFrozen.selector), debtReserveId, 1, alice, 0
-        );
-        _pause(PauseState.Paused, PauseReason.General);
-        _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector), debtReserveId, 1, alice, 0
-        );
-        _pause(PauseState.Paused, PauseReason.MintPathSuspect);
-        _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector), debtReserveId, 1, alice, 0
-        );
-        _pause(PauseState.None, PauseReason.None);
-        _borrow(debtReserveId, 1, alice, 0, 0);
-        assertEq(adapterC.borrowNonce(aliceProxy), 1, "None borrows");
-    }
-
-    // ─── Debt reserve, receiver and freeze ───
+    // ─── Debt reserve and receiver ───
 
     // TEST-030 verifies: REQ-ADAPTER-067, REQ-PROXY-009, REQ-PROXY-062, INV-073
     /// @notice A reserve the registry has not enabled for the Spoke (the vault-token reserve itself, a disabled GHO
@@ -275,20 +238,6 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
         );
         _expectBorrowRevert(
             abi.encodeWithSelector(IAaveAdapterBase.InvalidReceiver.selector, vtB), usdcReserveId, 1e6, vtB, 0
-        );
-    }
-
-    // TEST-229 verifies: REQ-ADAPTER-082, REQ-ADAPTER-087, INV-024
-    /// @notice A frozen caller cannot borrow and nobody can borrow to a frozen receiver.
-    function test_TEST_229_frozenCallerOrReceiver() public {
-        registry.setFrozen(alice, true);
-        _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, alice), debtReserveId, 1, bob, 0
-        );
-        registry.setFrozen(alice, false);
-        registry.setFrozen(bob, true);
-        _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, bob), debtReserveId, 1, bob, 0
         );
     }
 

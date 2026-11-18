@@ -9,7 +9,7 @@ import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/
 import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {SpeedView} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
-import {AccountGateStatus, Market, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {AccountGateStatus, Market} from "../../../src/types/MarketTypes.sol";
 import {PriceState} from "../../../src/types/OracleTypes.sol";
 import {PledgePreview} from "../../../src/types/PositionTypes.sol";
 import {CollLPVaultMock} from "./CollateralizationMocks.sol";
@@ -29,9 +29,6 @@ contract LensRegistryMock {
     mapping(address => uint256[]) internal _ids;
     mapping(address => mapping(uint256 => DebtReserveDef)) internal _defs;
     mapping(bytes32 => Route) internal _routes;
-    mapping(address => PauseState) public pauseState;
-    mapping(address => PauseReason) public pauseReason;
-    mapping(address => bool) public isFrozenAddress;
     address[] internal _spokes;
     mapping(address => mapping(address => address)) public firstLossReserveOf;
     mapping(address => mapping(address => uint256[3])) internal _coverage;
@@ -90,21 +87,6 @@ contract LensRegistryMock {
         bool usable
     ) external {
         _routes[keccak256(abi.encode(marketId, token, debtAsset, kind))] = Route(route, usable);
-    }
-
-    function setPause(
-        address hub,
-        PauseState state,
-        PauseReason reason
-    ) external {
-        (pauseState[hub], pauseReason[hub]) = (state, reason);
-    }
-
-    function setFrozen(
-        address account,
-        bool frozen
-    ) external {
-        isFrozenAddress[account] = frozen;
     }
 
     function addSpoke(
@@ -291,41 +273,35 @@ contract LensRiskModuleMock {
         bool set;
         bool borrowAllowed;
         bool unavailable;
-        PauseState pauseState;
     }
 
     mapping(address => Gate) internal _gates;
     mapping(uint256 => uint32) internal _marketReasons;
-    mapping(uint256 => uint64) internal _marketReopens;
     mapping(address => mapping(uint256 => uint32)) internal _debtReasons;
-    mapping(address => mapping(uint256 => uint64)) internal _debtReopens;
-    mapping(uint256 => uint32) internal _debtBreakerOn;
+    mapping(uint256 => uint32) internal _debtReasonsAnySpoke;
 
     function setGate(
         address proxy,
         bool borrowAllowed,
-        bool unavailable,
-        PauseState state
+        bool unavailable
     ) external {
-        _gates[proxy] = Gate(true, borrowAllowed, unavailable, state);
+        _gates[proxy] = Gate(true, borrowAllowed, unavailable);
     }
 
     function setMarketBreaker(
         uint256 id,
-        uint32 reasons,
-        uint64 reopensAt
+        uint32 reasons
     ) external {
-        (_marketReasons[id], _marketReopens[id]) = (reasons, reopensAt);
+        _marketReasons[id] = reasons;
     }
 
     function setDebtBreaker(
         address spoke,
         uint256 id,
-        uint32 reasons,
-        uint64 reopensAt
+        uint32 reasons
     ) external {
-        (_debtReasons[spoke][id], _debtReopens[spoke][id]) = (reasons, reopensAt);
-        _debtBreakerOn[id] = reasons;
+        _debtReasons[spoke][id] = reasons;
+        _debtReasonsAnySpoke[id] = reasons;
     }
 
     function getAccountGateStatus(
@@ -341,7 +317,6 @@ contract LensRiskModuleMock {
         st.statusUnavailable = !g.set || g.unavailable;
         if (st.statusUnavailable) return st;
         (st.spokeApproved, st.borrowAllowed, st.withdrawWithDebtAllowed) = (true, g.borrowAllowed, g.borrowAllowed);
-        st.pauseState = g.pauseState;
     }
 
     /// @notice The RiskModule's gates of a borrow: refused when the account's status is unset, unavailable or not
@@ -352,7 +327,7 @@ contract LensRiskModuleMock {
     ) external view {
         Gate memory g = _gates[proxy];
         require(g.set && !g.unavailable && g.borrowAllowed, "gate");
-        require(_debtBreakerOn[debtReserveId] == 0, "debt breaker");
+        require(_debtReasonsAnySpoke[debtReserveId] == 0, "debt breaker");
     }
 
     PledgePreview internal _pledge;
@@ -375,15 +350,15 @@ contract LensRiskModuleMock {
 
     function getBreakerStatus(
         uint256 id
-    ) external view returns (uint32, uint64) {
-        return (_marketReasons[id], _marketReopens[id]);
+    ) external view returns (uint32) {
+        return _marketReasons[id];
     }
 
     function getDebtBreakerStatus(
         address spoke,
         uint256 id
-    ) external view returns (uint32, uint64) {
-        return (_debtReasons[spoke][id], _debtReopens[spoke][id]);
+    ) external view returns (uint32) {
+        return _debtReasons[spoke][id];
     }
 
     /// @notice The speed windows the Lens forwards (REQ-LENS-061): open windows with no room, read-only.

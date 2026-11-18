@@ -371,11 +371,8 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
     ) internal view returns (RiskModuleMath.Outcome o) {
         RiskModuleMath.Exemption memory x;
         x.requireRescue = requireRescue;
-        // Only the reasons decide the pledge; the reopening time is not used.
-        // forge-lint: disable-next-line(unused-return)
-        (uint32 brk,) = IRiskModuleBreakerLogic(_BREAKER).marketBreaker(c.marketId);
-        // `ORACLE` is the price-state rule's own gate; `CONFIG_DRIFT` never stops a top-up.
-        brk &= ~BreakerReasons.ORACLE;
+        uint32 brk = IRiskModuleBreakerLogic(_BREAKER).marketConditions(c.marketId);
+        // `CONFIG_DRIFT` never stops a top-up.
         if (c.topUp) brk &= ~BreakerReasons.CONFIG_DRIFT;
         x.brk = brk;
         x.belowMinimum = c.pledgeUsd < c.minPledge;

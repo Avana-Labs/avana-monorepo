@@ -119,10 +119,6 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         _deployFactoryRegistryAndRisk(registryAddress);
         vm.label(address(registry), "MarketRegistry");
         vm.label(address(riskModule), "RiskModule");
-        vm.startPrank(address(timelock));
-        registry.grantRole(PAUSE_GUARDIAN, emergencyGuardian);
-        registry.grantRole(FREEZE_GUARDIAN, emergencyGuardian);
-        vm.stopPrank();
     }
 
     /// @dev The VaultTokenFactory (naming `marketRegistry_`), the MarketRegistry and the RiskModule, each at the address
@@ -135,8 +131,8 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         );
         coll.setCore(address(factory), address(adapter), address(lpVaultSwap));
         uint256 n = vm.getNonce(address(this));
-        address predictedRegistry = vm.computeCreateAddress(address(this), n + 7);
-        address predictedRisk = vm.computeCreateAddress(address(this), n + 15);
+        address predictedRegistry = vm.computeCreateAddress(address(this), n + 6);
+        address predictedRisk = vm.computeCreateAddress(address(this), n + 14);
         im = MarketRegistryImmutables({
             timelock: address(timelock),
             aaveGovernanceExecutor: aaveGovernanceExecutor,

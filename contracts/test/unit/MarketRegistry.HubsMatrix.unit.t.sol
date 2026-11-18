@@ -9,6 +9,7 @@ import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketR
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryAaveOracleMock, RegistryHubMock, RegistrySpokeMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
 import {RegistryFlashSourceMock, RegistryLPVaultMock, RegistryTokenMock} from "../utils/mocks/MarketRegistryMocks.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 /// @notice Boundaries of the Hub-level records: the AMM-contract list of an integration (1 to 16 per call, no partial
 /// record), Hub records of every tier, cross-Hub line totals over several Spokes against the funding Hub's coverage,
@@ -99,8 +100,7 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
     }
 
     // TEST-054 verifies: REQ-MREG-020, REQ-CONFIG-040
-    // A bad entry anywhere in the list reverts the whole call: none of the good entries before it is recorded or
-    // protected.
+    // A bad entry anywhere in the list reverts the whole call: none of the good entries before it is recorded.
     function test_TEST_054_badEntryLeavesNoPartialRecord() public {
         address[] memory list = _contracts(3);
         list[2] = makeAddr("eoa");
@@ -108,10 +108,6 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, V3));
         registry.recordIntegrationContracts(V3, list);
         assertEq(registry.integrationContracts(V3).length, 0);
-        // The first entry was not protected: a guardian can freeze it.
-        vm.prank(emergencyGuardian);
-        registry.freezeAddress(list[0]);
-        assertTrue(registry.isFrozenAddress(list[0]));
     }
 
     // TEST-054 verifies: REQ-MREG-020, REQ-CONFIG-040
@@ -174,20 +170,34 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         vm.expectEmit(address(registry));
         emit IMarketRegistry.FlashSourceSet(address(flash), address(good));
         registry.setFlashSource(address(good));
-        // The old source and its lender lose their protection; the new ones gain it.
         vm.stopPrank();
         assertEq(registry.flashSource(), address(good));
-        vm.prank(emergencyGuardian);
-        registry.freezeAddress(address(flash));
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, address(good)));
-        registry.freezeAddress(address(good));
-        address otherPool = makeAddr("otherPool");
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, otherPool));
-        registry.freezeAddress(otherPool);
-        vm.prank(emergencyGuardian);
-        registry.freezeAddress(aaveV3Pool);
+    }
+
+    // TEST-285 verifies: REQ-CONFIG-005, REQ-FLASH-006, REQ-MREG-020, Q-386
+    // Sources: decisions of 2026-11-11 (dedicated FlashSourceSet test)
+    // `FlashSourceSet(previous, current)` on the first setting (previous 0) and on a replacement; a refused source
+    // emits nothing and leaves the source in force.
+    function test_TEST_285_flashSourceSetOnFirstSettingAndReplacement() public {
+        _deployRegistry();
+        RegistryFlashSourceMock f1 = new RegistryFlashSourceMock(makeAddr("pool1"), address(lpVaultSwap));
+        RegistryFlashSourceMock f2 = new RegistryFlashSourceMock(makeAddr("pool2"), address(lpVaultSwap));
+        vm.expectEmit(address(registry));
+        emit IMarketRegistry.FlashSourceSet(address(0), address(f1));
+        vm.prank(address(timelock));
+        registry.setFlashSource(address(f1));
+        vm.expectEmit(address(registry));
+        emit IMarketRegistry.FlashSourceSet(address(f1), address(f2));
+        vm.prank(address(timelock));
+        registry.setFlashSource(address(f2));
+        RegistryFlashSourceMock wrong = new RegistryFlashSourceMock(makeAddr("pool3"), alice);
+        vm.recordLogs();
+        vm.prank(address(timelock));
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
+        registry.setFlashSource(address(wrong));
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 0, "a refused source emitted");
+        assertEq(registry.flashSource(), address(f2));
     }
 
     // TEST-285 verifies: REQ-CONFIG-083, INV-095, Q-388, ATTACK-195

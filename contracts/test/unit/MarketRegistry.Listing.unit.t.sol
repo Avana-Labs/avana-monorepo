@@ -353,31 +353,22 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
     function test_TEST_252_relistingStartsClean() public {
         (uint256 id, address vt, RegistryLPOracleMock o) = _listMarket();
         address r1 = _setRoute(id, address(usdc), address(gho), 0, "dexA");
-        vm.prank(emergencyGuardian);
-        registry.tripMarketBreaker(id);
-        (uint32 latched,) = registry.marketBreaker(id);
-        assertGt(latched, 0);
         vm.prank(address(timelock));
         registry.cancelRegistration(id);
         vm.prank(address(timelock));
         registry.listCollateralMarket(_marketDef(vt, address(o)));
-        // The cancelled registration's route, its approval for `restoreRoute` and its latch are gone.
+        // The cancelled registration's route and its approval for `restoreRoute` are gone.
         (address route, bool usable) = registry.getRoute(id, address(usdc), address(gho), 0);
         assertEq(route, address(0));
         assertFalse(usable);
         vm.prank(address(timelock));
         vm.expectRevert(IMarketRegistryBase.NotPreviouslyApproved.selector);
         registry.restoreRoute(id, address(usdc), address(gho), 0, r1);
-        (latched,) = registry.marketBreaker(id);
-        assertEq(latched, 0);
-        // The relisting's own routes are recorded as usual; the route stays in the protected set.
+        // The relisting's own routes are recorded as usual.
         address r2 = _setRoute(id, address(usdc), address(gho), 0, "dexB");
         (route, usable) = registry.getRoute(id, address(usdc), address(gho), 0);
         assertEq(route, r2);
         assertTrue(usable);
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, r1));
-        registry.freezeAddress(r1);
         // A second cancel and relisting moves to the next route epoch.
         vm.prank(address(timelock));
         registry.cancelRegistration(id);
@@ -385,7 +376,7 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         (route,) = registry.getRoute(id, address(usdc), address(gho), 0);
         assertEq(route, address(0));
-        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(id), 46))), 2, "routeEpoch");
+        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(id), 34))), 2, "routeEpoch");
     }
 
     /// @dev Slot of `mapping[key]` at field `field` of the ERC-7201 layout.
@@ -406,27 +397,21 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
             keccak256(abi.encode(uint256(keccak256("avana.storage.MarketRegistry")) - 1)) & ~bytes32(uint256(0xff));
         assertEq(ns, LAYOUT);
         (uint256 id,,) = _listMarket();
-        // Field 0 marketCount, 20 flashSource: unchanged positions.
+        // Field 0 marketCount, 19 flashSource.
         assertEq(uint256(vm.load(address(registry), LAYOUT)), id);
-        assertEq(address(uint160(uint256(vm.load(address(registry), bytes32(uint256(LAYOUT) + 20))))), address(flash));
-        // Field 40 frozen, 41 freezeBuckets.
-        vm.warp(7200);
-        vm.prank(emergencyGuardian);
-        registry.freezeAddress(alice);
-        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(alice))), 40))), 1);
-        bytes32 inner = _mapSlot(bytes32(uint256(uint160(emergencyGuardian))), 41);
-        assertEq(uint256(vm.load(address(registry), keccak256(abi.encode(uint256(2), inner)))), 1);
-        // Appended: 42 approvedSpokeCodeHash, 43 spokeCodeHash, 45 knownIntegrationContract.
+        assertEq(address(uint160(uint256(vm.load(address(registry), bytes32(uint256(LAYOUT) + 19))))), address(flash));
+        // Appended: 31 approvedSpokeCodeHash, 32 spokeCodeHash, 33 integrationContracts.
         bytes32 h = keccak256("some implementation");
         vm.prank(address(timelock));
         registry.approveSpokeCodeHash(h);
-        assertEq(uint256(vm.load(address(registry), _mapSlot(h, 42))), 1);
-        bytes32 spokeHash = vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(address(spoke)))), 43));
+        assertEq(uint256(vm.load(address(registry), _mapSlot(h, 31))), 1);
+        bytes32 spokeHash = vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(address(spoke)))), 32));
         assertEq(spokeHash, address(spokeImpl).codehash);
         address[] memory amm = new address[](1);
         amm[0] = address(usdc);
         vm.prank(address(timelock));
         registry.recordIntegrationContracts(V3, amm);
-        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(address(usdc)))), 45))), 1);
+        uint256 recorded = registry.integrationContracts(V3).length;
+        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(uint256(V3)), 33))), recorded);
     }
 }

@@ -70,7 +70,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         l.integrationLpVault[integrationId] = lpVault;
         l.integrationPricing[integrationId] = pricing;
         l.integrationIdOf[lpVault] = integrationId;
-        l.isPricing[pricing] = true;
         emit IMarketRegistry.IntegrationRegistered(integrationId, lpVault, pricing);
     }
 
@@ -89,7 +88,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
                 || IAvanaFirstLossReserve(firstLossReserve).ASSET_ID() != IAaveV4Hub(hub).getAssetId(asset)
         ) revert IMarketRegistry.InvalidAvanaFirstLossReserve(firstLossReserve);
         l.firstLossReserveOf[hub][asset] = firstLossReserve;
-        l.knownAvanaFirstLossReserve[firstLossReserve] = true;
         emit IMarketRegistry.AvanaFirstLossReserveSet(hub, asset, firstLossReserve);
     }
 
@@ -182,9 +180,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         rec.firstLossReserve = def.firstLossReserve;
         rec.approved = true;
         l.debtReserveIds[spoke].push(def.reserveId);
-        l.knownAvanaFirstLossReserve[def.firstLossReserve] = true;
-        l.knownPriceSource[def.priceSource] = true;
-        l.isDebtAsset[def.asset] = true;
         if (l.coverageRefs[def.fundingHub][def.asset][spoke]++ == 0) {
             l.coverageSpokes[def.fundingHub][def.asset].push(spoke);
         }
@@ -219,9 +214,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         if (--l.coverageRefs[rec.fundingHub][rec.asset][spoke] == 0) {
             _removeAddress(l.coverageSpokes[rec.fundingHub][rec.asset], spoke);
         }
-        bytes32 key = _debtKey(spoke, reserveId);
-        delete l.latched[key];
-        _clearBreachTimes(l, key);
         delete l.debtReserves[spoke][reserveId];
         _removeId(l.debtReserveIds[spoke], reserveId);
         emit DebtReserveRemoved(spoke, reserveId);

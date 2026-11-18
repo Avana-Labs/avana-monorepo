@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
@@ -19,11 +18,10 @@ interface IParitySpokeConfigurator {
 
 /// @title AaveAdapterGateParityFuzzTest
 /// @notice Every combination of the conditions the reviewed RiskModule reads (market price not Live, a stale feed, a
-/// stale USDC price, a latched breaker, `Offboarding`, the vault-token reserve frozen on Aave), on a healthy indebted
-/// account: a borrow passes exactly when none holds; a withdrawal that leaves debt passes exactly when none holds
-/// apart from `Offboarding` and the Aave freeze, which liquidation shares (REQ-PROXY-036); repay,
-/// `repayAllAndWithdraw` and a debt-free withdrawal pass whatever holds.
-/// forge-config: default.isolate = false
+/// stale USDC price, a live breaker condition (no pool depth), `Offboarding`, the vault-token reserve frozen on Aave),
+/// on a healthy indebted account: a borrow passes exactly when none holds; a withdrawal that leaves debt passes exactly
+/// when none holds apart from `Offboarding` and the Aave freeze, which liquidation shares (REQ-PROXY-036); repay,
+/// `repayAllAndWithdraw` and a debt-free withdrawal pass whatever holds. forge-config: default.isolate = false
 contract AaveAdapterGateParityFuzzTest is AaveAdapterRiskFixture {
     bytes32 internal k1;
     bytes32 internal k2;
@@ -50,7 +48,7 @@ contract AaveAdapterGateParityFuzzTest is AaveAdapterRiskFixture {
         if (mask & PRICE != 0) lpOracleA.setState(PriceState.Cached, 0, false);
         if (mask & FEED != 0) _report(lpOracleA, uint64(block.timestamp - FEED_AGE - 1));
         if (mask & DEBT != 0) usdcOracle.setReport(PriceState.Live, uint64(block.timestamp - 90_000), true);
-        if (mask & BREAKER != 0) registry.setLatched(bytes32(MARKET_ID), BreakerReasons.MANUAL, 0);
+        if (mask & BREAKER != 0) riskVault.setDepth(0, false);
         if (mask & OFFBOARD != 0) registry.setMarketStatus(MARKET_ID, MarketStatus.Offboarding);
         if (mask & FROZEN != 0) {
             vm.prank(aaveDao);
@@ -136,7 +134,6 @@ contract AaveAdapterGateParityFuzzTest is AaveAdapterRiskFixture {
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.postHealthCheck.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.checkPledge.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.pokeBreakers.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.pokeConfig.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.checkRemainingRecord.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.checkAaveConfig.selector), 0);

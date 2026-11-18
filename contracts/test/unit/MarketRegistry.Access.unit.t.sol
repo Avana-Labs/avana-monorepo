@@ -14,7 +14,6 @@ import {
 import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
-import {PauseReason} from "../../src/types/MarketTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -35,13 +34,9 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         registry.grantRole(APP_ADMIN, alice);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.AdminRoleOnlyTimelock.selector, defaultAdmin, alice));
         registry.grantRole(defaultAdmin, alice);
-        registry.grantRole(FREEZE_GUARDIAN, alice);
         vm.stopPrank();
-        assertTrue(registry.hasRole(FREEZE_GUARDIAN, alice));
         assertTrue(registry.hasRole(APP_ADMIN, address(timelock)));
         assertTrue(registry.hasRole(defaultAdmin, address(timelock)));
-        assertEq(registry.getRoleAdmin(PAUSE_GUARDIAN), APP_ADMIN);
-        assertEq(registry.getRoleAdmin(FREEZE_GUARDIAN), APP_ADMIN);
         assertEq(registry.getRoleAdmin(APP_ADMIN), defaultAdmin);
     }
 
@@ -56,67 +51,9 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         impl.initialize(address(timelock));
     }
 
-    // TEST-066 verifies: REQ-MREG-004, REQ-MREG-022, REQ-MREG-028, Q-262, Q-263, REQ-ACCESS-089, REQ-ACCESS-094, REQ-ACCESS-112, REQ-ACCESS-128
-    // Sources: 5.1 TEST-066
-    function test_TEST_066_guardianPowersAreStopsOnly() public {
-        bytes[] memory adminOnly = new bytes[](5);
-        adminOnly[0] = abi.encodeCall(registry.recordHub, (alice, RiskTier.Stable));
-        adminOnly[1] = abi.encodeCall(registry.unfreezeAddress, (alice));
-        adminOnly[2] = abi.encodeCall(registry.setRoute, (1, address(usdc), address(gho), 0, alice));
-        adminOnly[3] = abi.encodeCall(registry.setFlashSource, (alice));
-        adminOnly[4] = abi.encodeCall(registry.upgradeToAndCall, (alice, ""));
-        for (uint256 i = 0; i < adminOnly.length; ++i) {
-            vm.prank(emergencyGuardian);
-            (bool ok, bytes memory ret) = address(registry).call(adminOnly[i]);
-            assertFalse(ok);
-            assertEq(bytes4(ret), IAccessControl.AccessControlUnauthorizedAccount.selector);
-        }
-        // Guardian stops take effect at once.
-        vm.startPrank(emergencyGuardian);
-        registry.freeze(address(hub));
-        registry.pause(address(hub), PauseReason.General);
-        registry.freezeAddress(attacker);
-        vm.stopPrank();
-    }
-
-    // TEST-066 verifies: REQ-MREG-004, REQ-MREG-017, REQ-ACCESS-086, REQ-ACCESS-124
-    function test_TEST_066_freezeRoleAloneCannotLift() public {
-        address freezer = makeAddr("freezeOnly");
-        vm.prank(address(timelock));
-        registry.grantRole(FREEZE_GUARDIAN, freezer);
-        vm.startPrank(freezer);
-        registry.freeze(address(hub));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, freezer));
-        registry.unfreeze(address(hub));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, freezer));
-        registry.pause(address(hub), PauseReason.General);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, freezer));
-        registry.resetMarketBreaker(1);
-        vm.stopPrank();
-    }
-
     // TEST-062 verifies: REQ-MREG-004, REQ-MREG-026, REQ-CONFIG-028
     // Sources: 5.1 TEST-062
     function test_TEST_062_strangerRefusedOnEveryWrite() public {
-        bytes[] memory guarded = new bytes[](9);
-        guarded[0] = abi.encodeCall(registry.freeze, (address(hub)));
-        guarded[1] = abi.encodeCall(registry.pause, (address(hub), PauseReason.General));
-        guarded[2] = abi.encodeCall(registry.freezeAll, ());
-        guarded[3] = abi.encodeCall(registry.pauseAll, (PauseReason.General));
-        guarded[4] = abi.encodeCall(registry.unfreeze, (address(hub)));
-        guarded[5] = abi.encodeCall(registry.unpause, (address(hub)));
-        guarded[6] = abi.encodeCall(registry.freezeAddress, (bob));
-        guarded[7] = abi.encodeCall(registry.tripMarketBreaker, (1));
-        guarded[8] = abi.encodeCall(registry.resetDebtBreaker, (address(spoke), 0));
-        for (uint256 i = 0; i < guarded.length; ++i) {
-            vm.prank(attacker);
-            (bool ok, bytes memory ret) = address(registry).call(guarded[i]);
-            assertFalse(ok);
-            assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, attacker));
-        }
-        vm.prank(attacker);
-        vm.expectRevert(IMarketRegistryBase.NotRiskModule.selector);
-        registry.recordBreach(bytes32(uint256(1)), 1);
         vm.prank(attacker);
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, attacker, APP_ADMIN)
@@ -127,8 +64,6 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
     // TEST-168 verifies: REQ-CONFIG-001, REQ-CONFIG-002, REQ-MREG-003, REQ-ACCESS-015, REQ-ACCESS-031
     // Sources: 5.1 TEST-168
     function test_TEST_168_upgradeKeepsStateAndNeedsAdmin() public {
-        vm.prank(emergencyGuardian);
-        registry.freeze(address(hub));
         MarketRegistry next = new MarketRegistry(im, logics);
         vm.prank(alice);
         vm.expectRevert(
@@ -137,7 +72,6 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         registry.upgradeToAndCall(address(next), "");
         vm.prank(address(timelock));
         registry.upgradeToAndCall(address(next), "");
-        assertEq(uint8(registry.pauseState(address(hub))), 1);
         assertTrue(registry.getToken(address(usdc)).listed);
         assertEq(registry.getDebtReserveIds(address(spoke)).length, 1);
     }
@@ -153,7 +87,7 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         MarketRegistryImmutables memory other = im;
         other.lock = makeAddr("otherLock");
         MarketRegistryLogics memory foreign = logics;
-        foreign.safety = _deployLogics(other).safety;
+        foreign.windDown = _deployLogics(other).windDown;
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("logic")));
         new MarketRegistry(im, foreign);
         other = im;
@@ -182,7 +116,6 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         assertEq(registry.FLASH_LIQUIDATOR(), flashLiquidator);
         assertEq(registry.STANDARD_SPOKE_IMPLEMENTATION(), address(spokeImpl));
         assertEq(registry.flashSource(), address(flash));
-        assertEq(registry.MAX_ADDRESS_FREEZES_PER_DAY(), 20);
     }
 
     // TEST-053 verifies: REQ-MREG-016, REQ-MREG-029, REQ-MREG-011, REQ-MREG-013, Q-401, REQ-ACCESS-055, REQ-ACCESS-056, REQ-ACCESS-163, REQ-ACCESS-137, REQ-ACCESS-151, SPEC-GOV-010, REQ-CONFIG-068
@@ -225,7 +158,7 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
     /// added to the MarketRegistry or one of its logic contracts.
     // TEST-032 verifies: REQ-CONFIG-014
     function test_TEST_032_noRiskParameterModeAllowlistOrWalletCapSelectors() public {
-        bytes4[36] memory params = [
+        bytes4[33] memory params = [
             IParameterStore.marketUsdCap.selector,
             IParameterStore.topUpSliceUsd.selector,
             IParameterStore.stressFloorUsd.selector,
@@ -254,12 +187,9 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
             IParameterStore.loosenMaxShortfallBps.selector,
             IParameterStore.debtStressRiseBps.selector,
             IParameterStore.setLiquidationExpectations.selector,
-            IParameterStore.breakerDeficitMax.selector,
-            IParameterStore.gateRecoverySeconds.selector,
-            IParameterStore.tightenGateRecoverySeconds.selector,
-            IParameterStore.loosenGateRecoverySeconds.selector,
-            IParameterStore.tightenBreakerDeficitMax.selector,
-            IParameterStore.loosenBreakerDeficitMax.selector,
+            IParameterStore.deficitMax.selector,
+            IParameterStore.tightenDeficitMax.selector,
+            IParameterStore.loosenDeficitMax.selector,
             IParameterStore.coverageRatioBps.selector,
             IParameterStore.setCoverageRatioBps.selector
         ];

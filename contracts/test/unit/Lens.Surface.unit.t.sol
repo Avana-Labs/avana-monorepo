@@ -164,11 +164,8 @@ contract LensSurfaceUnitTest is LensFixture {
         _same(abi.encodeCall(ILensMarket.getPendingSettlement, (vt)), modules[1]);
         _same(abi.encodeCall(ILens.getPriceState, (vt)), modules[2]);
         _same(abi.encodeCall(ILens.getDebtPriceState, (aave.cdpSpoke, usdcReserveId)), modules[2]);
-        _same(abi.encodeCall(ILens.getApplicationState, (aave.hub)), modules[2]);
-        _same(abi.encodeCall(ILens.getPauseReason, (aave.hub)), modules[2]);
         _same(abi.encodeCall(ILens.previewLiquidation, (aliceProxy, debtReserveId, T0)), modules[3]);
         _same(abi.encodeCall(ILensRisk.getBreakerStatus, (MARKET_ID)), modules[4]);
-        _same(abi.encodeCall(ILensRisk.isFrozenAddress, (alice)), modules[4]);
         _same(abi.encodeCall(ILensRisk.uncoveredDeficit, (aave.hub, address(debt))), modules[4]);
         _same(abi.encodeCall(ILensRisk.getTailCoverage, (aave.hub, address(debt))), modules[4]);
         _same(abi.encodeCall(ILensRisk.getHubAssetExposure, (aave.hub, address(debt))), modules[4]);
@@ -296,7 +293,7 @@ contract LensSurfaceUnitTest is LensFixture {
     }
 
     function _allCalls() internal view returns (bytes[] memory c) {
-        c = new bytes[](34);
+        c = new bytes[](31);
         address[] memory toks = new address[](1);
         toks[0] = address(usdc);
         uint256[] memory ids = new uint256[](1);
@@ -312,29 +309,26 @@ contract LensSurfaceUnitTest is LensFixture {
         c[8] = abi.encodeCall(ILensMarket.getCapHeadroom, (vt, alice));
         c[9] = abi.encodeCall(ILens.getPriceState, (vt));
         c[10] = abi.encodeCall(ILens.getDebtPriceState, (aave.cdpSpoke, debtReserveId));
-        c[11] = abi.encodeCall(ILens.getApplicationState, (aave.hub));
-        c[12] = abi.encodeCall(ILens.getPauseReason, (aave.hub));
-        c[13] = abi.encodeCall(ILens.previewLiquidation, (aliceProxy, debtReserveId, T0));
-        c[14] = abi.encodeCall(ILensRisk.getBreakerStatus, (MARKET_ID));
-        c[15] = abi.encodeCall(ILensRisk.getDebtBreakerStatus, (aave.cdpSpoke, debtReserveId));
-        c[16] = abi.encodeCall(ILensRisk.isFrozenAddress, (alice));
-        c[17] = abi.encodeCall(ILensRisk.getTailCoverage, (aave.hub, address(debt)));
-        c[18] = abi.encodeCall(ILensRisk.uncoveredDeficit, (aave.hub, address(debt)));
-        c[19] = abi.encodeCall(ILensRisk.getHubAssetExposure, (aave.hub, address(debt)));
-        c[20] = abi.encodeCall(ILensPreview.previewBorrowMax, (alice, MARKET_ID, debtReserveId, T0));
-        c[21] = abi.encodeCall(ILensPreview.previewBorrowRecommended, (alice, MARKET_ID, debtReserveId, T0));
-        c[22] = abi.encodeCall(ILensPreview.quoteRepayAll, (alice, MARKET_ID, debtReserveId, T0));
-        c[23] = abi.encodeCall(ILensPreview.previewRecredit, (MARKET_ID, _key(1)));
-        c[24] =
+        c[11] = abi.encodeCall(ILens.previewLiquidation, (aliceProxy, debtReserveId, T0));
+        c[12] = abi.encodeCall(ILensRisk.getBreakerStatus, (MARKET_ID));
+        c[13] = abi.encodeCall(ILensRisk.getDebtBreakerStatus, (aave.cdpSpoke, debtReserveId));
+        c[14] = abi.encodeCall(ILensRisk.getTailCoverage, (aave.hub, address(debt)));
+        c[15] = abi.encodeCall(ILensRisk.uncoveredDeficit, (aave.hub, address(debt)));
+        c[16] = abi.encodeCall(ILensRisk.getHubAssetExposure, (aave.hub, address(debt)));
+        c[17] = abi.encodeCall(ILensPreview.previewBorrowMax, (alice, MARKET_ID, debtReserveId, T0));
+        c[18] = abi.encodeCall(ILensPreview.previewBorrowRecommended, (alice, MARKET_ID, debtReserveId, T0));
+        c[19] = abi.encodeCall(ILensPreview.quoteRepayAll, (alice, MARKET_ID, debtReserveId, T0));
+        c[20] = abi.encodeCall(ILensPreview.previewRecredit, (MARKET_ID, _key(1)));
+        c[21] =
             abi.encodeCall(ILensPreview.previewRepayWithCollateral, (alice, MARKET_ID, _key(1), 100e6, debtReserveId));
-        c[25] = abi.encodeCall(ILensMarkets.getMarkets, (0, 10));
-        c[26] = abi.encodeCall(ILensMarkets.getMarket, (MARKET_ID));
-        c[27] = abi.encodeCall(ILensMarkets.getDebtReserve, (aave.cdpSpoke, debtReserveId));
-        c[28] = abi.encodeCall(ILensMarkets.getDebtReserves, (aave.cdpSpoke));
-        c[29] = abi.encodeCall(ILensPositions.getAccountRisk, (alice, MARKET_ID));
-        c[30] = abi.encodeCall(ILensPositions.previewPledge, (alice, MARKET_ID, _key(1)));
-        c[31] = abi.encodeCall(ILensPositions.previewWithdraw, (alice, MARKET_ID, _key(1), 0));
-        c[32] = abi.encodeCall(ILensSpeed.getBorrowSpeed, (MARKET_ID, debtReserveId));
-        c[33] = abi.encodeCall(ILensSpeed.getPledgeSpeed, (MARKET_ID));
+        c[22] = abi.encodeCall(ILensMarkets.getMarkets, (0, 10));
+        c[23] = abi.encodeCall(ILensMarkets.getMarket, (MARKET_ID));
+        c[24] = abi.encodeCall(ILensMarkets.getDebtReserve, (aave.cdpSpoke, debtReserveId));
+        c[25] = abi.encodeCall(ILensMarkets.getDebtReserves, (aave.cdpSpoke));
+        c[26] = abi.encodeCall(ILensPositions.getAccountRisk, (alice, MARKET_ID));
+        c[27] = abi.encodeCall(ILensPositions.previewPledge, (alice, MARKET_ID, _key(1)));
+        c[28] = abi.encodeCall(ILensPositions.previewWithdraw, (alice, MARKET_ID, _key(1), 0));
+        c[29] = abi.encodeCall(ILensSpeed.getBorrowSpeed, (MARKET_ID, debtReserveId));
+        c[30] = abi.encodeCall(ILensSpeed.getPledgeSpeed, (MARKET_ID));
     }
 }

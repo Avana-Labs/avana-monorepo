@@ -154,9 +154,9 @@ contract LensAccountUnitTest is LensFixture {
     // TEST-228 verifies: REQ-LENS-009, REQ-LENS-037, Q-241
     function test_TEST_228_getAccountBreakersOrMarketAndIndebtedReserves() public {
         _borrow(aliceProxy, 1000e18);
-        rm.setMarketBreaker(MARKET_ID, 4, uint64(block.timestamp + 1800));
-        rm.setDebtBreaker(aave.cdpSpoke, debtReserveId, 32, type(uint64).max);
-        rm.setDebtBreaker(aave.cdpSpoke, usdcReserveId, 8, type(uint64).max);
+        rm.setMarketBreaker(MARKET_ID, 4);
+        rm.setDebtBreaker(aave.cdpSpoke, debtReserveId, 32);
+        rm.setDebtBreaker(aave.cdpSpoke, usdcReserveId, 8);
         AccountView memory a = lens.getAccount(alice, MARKET_ID);
         assertEq(a.breakerReasons, 4 | 32, "market and the GHO reserve with debt; USDC has no debt");
         assertEq(a.markets[0].breakerReasons, 4, "market reasons");
@@ -166,21 +166,12 @@ contract LensAccountUnitTest is LensFixture {
         assertEq(lens.getAccount(alice, MARKET_ID).breakerReasons, 4 | 32 | 8, "USDC now indebted");
     }
 
-    // TEST-229 verifies: REQ-LENS-009, REQ-LENS-037, Q-242
-    function test_TEST_229_getAccountWalletFrozen() public {
-        assertFalse(lens.getAccount(alice, MARKET_ID).walletFrozen, "not frozen");
-        reg.setFrozen(alice, true);
-        AccountView memory a = lens.getAccount(alice, MARKET_ID);
-        assertTrue(a.walletFrozen, "frozen");
-        assertEq(a.markets[0].credited, UNITS, "the account still reports");
-    }
-
     // TEST-247 verifies: REQ-LENS-009
     function test_TEST_247_getAccountGateStatusPassedThrough() public {
         AccountView memory a = lens.getAccount(alice, MARKET_ID);
         assertTrue(a.gateStatus.borrowAllowed, "borrow allowed");
         assertFalse(a.gateStatus.statusUnavailable, "available");
-        rm.setGate(aliceProxy, false, true, a.gateStatus.pauseState);
+        rm.setGate(aliceProxy, false, true);
         a = lens.getAccount(alice, MARKET_ID);
         assertTrue(a.gateStatus.statusUnavailable, "fallback reported");
         assertFalse(a.gateStatus.borrowAllowed, "nothing allowed");
@@ -209,7 +200,7 @@ contract LensAccountUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-009, REQ-LENS-008
     function test_TEST_247_getAccountUndeployedProxy() public {
-        rm.setMarketBreaker(MARKET_ID, 1, uint64(block.timestamp + 60));
+        rm.setMarketBreaker(MARKET_ID, 1 << 11);
         AccountView memory a = lens.getAccount(bob, MARKET_ID);
         assertFalse(a.deployed, "not deployed");
         assertEq(a.proxy, proxyManager.predictProxy(bob, aave.cdpSpoke, MARKET_ID), "predicted address");
@@ -219,7 +210,7 @@ contract LensAccountUnitTest is LensFixture {
         assertEq(a.borrowNonce, 0, "no nonce");
         assertEq(a.healthFactor, 0, "no Aave data read");
         assertTrue(a.gateStatus.statusUnavailable, "no gate status for an undeployed proxy");
-        assertEq(a.breakerReasons, 1, "the market's breakers still apply");
+        assertEq(a.breakerReasons, 1 << 11, "the market's breakers still apply");
     }
 
     // TEST-247 verifies: REQ-LENS-022

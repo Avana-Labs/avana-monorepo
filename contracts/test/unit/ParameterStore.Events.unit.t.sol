@@ -190,7 +190,6 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         address tl = address(timelock);
         vm.startPrank(tl);
         store.tightenDebtStressRiseBps(usdc, 500);
-        store.tightenGateRecoverySeconds(3600);
         store.setDebtAssetParams(gho, DebtReserveParams(0.5e18));
         vm.stopPrank();
         _tl();
@@ -211,12 +210,8 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         store.loosenDebtStressRiseBps(usdc, 200);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterLoosened("gateRecoverySeconds", CHAIN, 3600, 900, tl);
-        store.loosenGateRecoverySeconds(900);
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterLoosened("breakerDeficitMax", _pair(address(hub), gho), 0, 10_000e18, tl);
-        store.loosenBreakerDeficitMax(address(hub), gho, 10_000e18);
+        emit IParameterStoreBase.ParameterLoosened("deficitMax", _pair(address(hub), gho), 0, 10_000e18, tl);
+        store.loosenDeficitMax(address(hub), gho, 10_000e18);
     }
 
     // TEST-061 verifies: REQ-PSTORE-005, REQ-CONFIG-070, REQ-ROUTE-006

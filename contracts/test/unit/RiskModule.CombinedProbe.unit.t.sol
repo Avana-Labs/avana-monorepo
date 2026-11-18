@@ -26,7 +26,7 @@ contract RiskModuleCombinedProbeUnitTest is RiskModuleFixture {
     }
 
     function _debtReasons() internal view returns (uint32) {
-        return riskModule.liveDebtBreakerReasons(address(spoke), GHO_RESERVE);
+        return riskModule.getDebtBreakerStatus(address(spoke), GHO_RESERVE);
     }
 
     // TEST-228 verifies: SPEC-BRK-003, REQ-MREG-027, REQ-RISK-065
@@ -45,8 +45,10 @@ contract RiskModuleCombinedProbeUnitTest is RiskModuleFixture {
             )
         );
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
+        // Cleared, the borrow passes in the same block.
         tGho.setPaused(false, false);
         assertEq(_debtReasons(), 0);
+        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
         // A reverting pause read trips, as it does for `PausedFlag`.
         tGho.setPaused(false, true);
         assertEq(_debtReasons(), BreakerReasons.ISSUER);
@@ -65,8 +67,10 @@ contract RiskModuleCombinedProbeUnitTest is RiskModuleFixture {
             )
         );
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
+        // Cleared, the borrow passes in the same block.
         tGho.setFee(0, false);
         assertEq(_debtReasons(), 0);
+        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
         // Both tripped at once report the one `ISSUER` reason.
         tGho.setFee(10, false);
         tGho.setPaused(true, false);
@@ -88,20 +92,5 @@ contract RiskModuleCombinedProbeUnitTest is RiskModuleFixture {
         assertEq(_debtReasons(), BreakerReasons.ISSUER);
         vm.clearMockedCalls();
         assertEq(_debtReasons(), 0);
-    }
-
-    // TEST-228 verifies: SPEC-BRK-003, SPEC-BRK-008, REQ-RISK-091, INV-081
-    /// @notice The latch of a combined-probe trip holds after the read clears, as for a single kind.
-    function test_TEST_228_combinedProbeLatchesUntilReset() public {
-        tGho.setPaused(true, false);
-        riskModule.pokeBreakers(mid);
-        (uint32 latched,) = registry.debtBreaker(address(spoke), GHO_RESERVE);
-        assertEq(latched, BreakerReasons.ISSUER);
-        tGho.setPaused(false, false);
-        assertEq(_debtReasons(), 0);
-        (uint32 reasons,) = riskModule.getDebtBreakerStatus(address(spoke), GHO_RESERVE);
-        assertEq(reasons, BreakerReasons.ISSUER);
-        // GHO is not a pool token of the market, so the market breaker stays clear.
-        assertEq(riskModule.liveBreakerReasons(mid), 0);
     }
 }

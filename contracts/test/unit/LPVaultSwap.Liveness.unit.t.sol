@@ -61,9 +61,8 @@ contract LPVaultSwapLivenessUnitTest is LPVaultSwapUnitBase {
     /// committed-operator list settles; and a liquidation writes no word of LPVaultSwap's storage.
     // TEST-168 verifies: REQ-SWAP-001, REQ-SWAP-003, REQ-SWAP-034
     function test_TEST_168_noRestrictionStateOnLPVaultSwap() public {
-        bytes[8] memory calls = [
+        bytes[7] memory calls = [
             abi.encodeWithSignature("pause()"),
-            abi.encodeWithSignature("unpause()"),
             abi.encodeWithSignature("freeze()"),
             abi.encodeWithSignature("setPaused(bool)", true),
             abi.encodeWithSignature("pauseLiquidations(uint256)", MARKET_ID),
@@ -86,20 +85,19 @@ contract LPVaultSwapLivenessUnitTest is LPVaultSwapUnitBase {
 
     /// @notice LPVaultSwap writes no breaker counter: three liquidations that each fail the primary route (falling to
     /// the backup) and seize most of the market leave the MarketRegistry's storage untouched, with no state-changing
-    /// call from LPVaultSwap to it; liquidation and pending settlement settle under the registry's Paused state.
+    /// call from LPVaultSwap to it; liquidation and pending settlement settle.
     // TEST-228 verifies: REQ-SWAP-003, REQ-SWAP-066
     function test_TEST_228_noBreakerWrittenByLiquidations() public {
         (address carolProxy,) = _openAccount(carol, 10_000e6, 18_000e6, 250_000_000);
         (address aliceProxy,) = _openAccount(alice, 10_000e6, 18_000e6, 250_000_000);
         _seizeAndKeep(aliceProxy, 500e6);
-        registry.setPause(2, 1);
         usdtUsdcPool.setRate(9000, 10_000);
         vm.startStateDiffRecording();
         address[3] memory proxies = [proxy, carolProxy, aliceProxy];
         for (uint256 i = 0; i < 3; ++i) {
             vm.recordLogs();
             LiquidationResult memory r = _liquidateAs(keeper, _params(proxies[i], 6000e6));
-            assertGt(r.unitsSeized, 0, "settled under Paused with the primary failing");
+            assertGt(r.unitsSeized, 0, "settled with the primary failing");
             assertEq(_count(vm.getRecordedLogs(), RouteFailed.selector), 1, "primary failed, backup used");
         }
         vm.prank(stranger);

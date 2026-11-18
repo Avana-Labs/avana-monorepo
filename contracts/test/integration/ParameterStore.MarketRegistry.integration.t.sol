@@ -137,14 +137,14 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
             address(ghoCoverage), abi.encodeWithSignature("firstLossReserveMinimum()"), abi.encode(uint256(100_000e18))
         );
         vm.prank(address(timelock));
-        store.loosenBreakerDeficitMax(address(hub), address(gho), 10_000e18);
-        _refuses(abi.encodeCall(store.loosenBreakerDeficitMax, (address(hub), address(gho), 100_000e18 + 1)), oob);
+        store.loosenDeficitMax(address(hub), address(gho), 10_000e18);
+        _refuses(abi.encodeCall(store.loosenDeficitMax, (address(hub), address(gho), 100_000e18 + 1)), oob);
         vm.prank(address(timelock));
-        store.loosenBreakerDeficitMax(address(hub), address(gho), 100_000e18);
-        assertEq(store.breakerDeficitMax(address(hub), address(gho)), 100_000e18);
+        store.loosenDeficitMax(address(hub), address(gho), 100_000e18);
+        assertEq(store.deficitMax(address(hub), address(gho)), 100_000e18);
         // USDT has no reserve funded by the Hub.
         _refuses(
-            abi.encodeCall(store.loosenBreakerDeficitMax, (address(hub), address(usdt), 1)),
+            abi.encodeCall(store.loosenDeficitMax, (address(hub), address(usdt), 1)),
             abi.encodeWithSelector(IParameterStoreBase.UnknownDebtReserve.selector, address(0), 0)
         );
     }

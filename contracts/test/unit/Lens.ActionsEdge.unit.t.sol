@@ -5,14 +5,12 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ActionPreview, RemovalSizing} from "../../src/lens/lens/types/LensTypes.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
 
 /// @title LensActionsEdgeUnitTest
 /// @notice The after-action previews and the removal sizing at their edges: a 6-decimal debt with a risk premium, a
-/// price move, collateral switched off, the application paused (previews still answer), many records and the
-/// rescue-free account with no debt.
+/// price move, collateral switched off, many records and the rescue-free account with no debt.
 /// forge-config: default.isolate = false
 contract LensActionsEdgeUnitTest is LensFixture {
     function setUp() public {
@@ -87,17 +85,6 @@ contract LensActionsEdgeUnitTest is LensFixture {
         _assertAfter(v);
         v = lens.previewWithdrawAfter(alice, MARKET_ID, _key(2));
         assertEq(v.collateralValueAfter, 20_000 * 2e26, "the record's units leave");
-    }
-
-    // TEST-247 verifies: REQ-LENS-052, REQ-LENS-004
-    function test_TEST_247_previewsAnswerInEveryPauseState() public {
-        _borrow(aliceProxy, 1000e18);
-        reg.setPause(aave.hub, PauseState.Paused, PauseReason.MintPathSuspect);
-        reg.setFrozen(alice, true);
-        ActionPreview memory v = lens.previewRepayAfter(alice, MARKET_ID, debtReserveId, 500e18);
-        assertEq(v.healthFactorAfter, uint256(32_000e18) / 500, "the arithmetic does not depend on the gates");
-        v = lens.previewBorrowAfter(alice, MARKET_ID, debtReserveId, 500e18);
-        assertEq(v.healthFactorAfter, uint256(32_000e18) / 1500, "advisory: the Adapter re-checks every gate");
     }
 
     // TEST-247 verifies: REQ-LENS-054

@@ -23,7 +23,7 @@ import {
     SpokeDef
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
-import {Market, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
 import {PositionRef, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {VaultToken} from "../../../src/vault-token/vault-token/VaultToken.sol";
 import {
@@ -374,13 +374,6 @@ abstract contract AaveAdapterFixture is CollateralizationFixture {
         uint256 reserveId
     ) internal view returns (uint256) {
         return IAaveV4Spoke(aave.cdpSpoke).getUserSuppliedShares(reserveId, proxy);
-    }
-
-    function _pause(
-        PauseState state,
-        PauseReason reason
-    ) internal {
-        registry.setPause(aave.hub, state, reason);
     }
 
     function _mins() internal pure returns (uint256[] memory m) {

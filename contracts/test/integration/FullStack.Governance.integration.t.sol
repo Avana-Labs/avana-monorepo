@@ -4,15 +4,14 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {FullStackMarkets} from "../utils/fixtures/FullStackMarkets.sol";
 import {HostileAdapter} from "../utils/mocks/HostileAdapter.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title FullStackGovernanceIntegrationTest
 /// @notice The exit window of a hostile AaveAdapter upgrade on the full real stack (`FullStackMarkets`): the upgrade is
-/// an operation of the real AvanaTimelock at the normal delay, the pause is the real MarketRegistry's, and the exits
-/// run through the real AaveAdapter, Collateralization, RiskModule and Aave V4 Spoke.
+/// an operation of the real AvanaTimelock at the normal delay, and the exits run through the real AaveAdapter,
+/// Collateralization, RiskModule and Aave V4 Spoke.
 /// @dev The borrower holds 3,000 GHO and 2,000 USDC of debt and two pledged positions in market A and a third in
 /// market B; `HostileAdapter` is the hostile implementation a test installs on purpose.
 /// forge-config: default.isolate = false
@@ -60,10 +59,9 @@ contract FullStackGovernanceIntegrationTest is FullStackMarkets {
     }
 
     /// @notice The governance multisig schedules an AaveAdapter upgrade to a hostile implementation at the normal
-    /// delay (5 days) and the Emergency Guardian pauses the Hub at once; while Paused and well inside the delay the
-    /// borrower repays both debt reserves and withdraws all three positions (two repays, three withdrawals); a
-    /// canceller then cancels the operation. In a second run the operation becomes ready and executes, and the
-    /// borrower's accounts hold nothing for the hostile code to touch.
+    /// delay (5 days); well inside the delay the borrower repays both debt reserves and withdraws all three positions
+    /// (two repays, three withdrawals); a canceller then cancels the operation. In a second run the operation becomes
+    /// ready and executes, and the borrower's accounts hold nothing for the hostile code to touch.
     // TEST-195 verifies: REQ-ADAPTER-060, REQ-ADAPTER-001, REQ-ADAPTER-003, REQ-ADAPTER-099, REQ-PROXY-086
     function test_TEST_195_exitInsideTheDelay() public {
         address hostile = address(new HostileAdapter());
@@ -73,8 +71,6 @@ contract FullStackGovernanceIntegrationTest is FullStackMarkets {
         vm.prank(governanceMultisig);
         timelock.schedule(adapter, 0, call, bytes32(0), bytes32("hostile"), NORMAL_DELAY);
         bytes32 id = timelock.hashOperation(adapter, 0, call, bytes32(0), bytes32("hostile"));
-        _pause(PauseState.Paused, PauseReason.General);
-        assertEq(uint8(registry.pauseState(aave.hub)), uint8(PauseState.Paused), "paused");
         uint256 snap = vm.snapshotState();
         vm.warp(block.timestamp + 1 hours);
         _refreshFeeds();

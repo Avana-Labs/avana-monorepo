@@ -156,14 +156,6 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
     // TEST-064 verifies: REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-024, REQ-PSTORE-030, Q-399, REQ-ACCESS-165
     function test_TEST_064_breakerShortfallStressFlash() public {
         _tl();
-        store.tightenGateRecoverySeconds(7200);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.tightenGateRecoverySeconds(7201);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
-        store.tightenGateRecoverySeconds(7200);
-        _tl();
         store.tightenMaxShortfallBps(50);
         assertEq(store.maxShortfallBps(), 50);
         _tl();
@@ -183,15 +175,15 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         _tl();
         vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenMaxFlashFeeBps(0);
-        // breakerDeficitMax starts at 0, so only a loosening writes its first value.
+        // deficitMax starts at 0, so only a loosening writes its first value.
         _tl();
         vm.expectRevert(IParameterStoreBase.NotStricter.selector);
-        store.tightenBreakerDeficitMax(address(hub), gho, 0);
+        store.tightenDeficitMax(address(hub), gho, 0);
         _tl();
-        store.loosenBreakerDeficitMax(address(hub), gho, 10_000e18);
+        store.loosenDeficitMax(address(hub), gho, 10_000e18);
         _tl();
-        store.tightenBreakerDeficitMax(address(hub), gho, 5000e18);
-        assertEq(store.breakerDeficitMax(address(hub), gho), 5000e18);
+        store.tightenDeficitMax(address(hub), gho, 5000e18);
+        assertEq(store.deficitMax(address(hub), gho), 5000e18);
     }
 
     // TEST-064 verifies: REQ-CONFIG-051, REQ-CONFIG-067, INV-047

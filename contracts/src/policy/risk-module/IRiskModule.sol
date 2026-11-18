@@ -21,13 +21,10 @@ interface IRiskModule is IRiskModuleErrors {
     /// @notice `pokeConfig` found the Spoke's Aave settings drifted.
     event ConfigDriftDetected(address indexed spoke, DriftReason reason);
 
-    /// @notice `pokeBreakers` evaluated a market and its Spoke's debt reserves.
-    event BreakersPoked(uint256 indexed marketId, uint32 reasons);
-
     /// @notice Pledge eligibility, rescue rule, minimum, breaker, charge and cap check; returns the charge or reverts.
     /// @dev Only Collateralization's call writes the pledge-speed window; any other caller writes nothing.
     /// @param units Units to credit: the position's units for a pledge, the added units for a re-credit.
-    /// @param requireRescue True under `Paused(General)` or for a frozen depositor: only a rescue top-up passes.
+    /// @param requireRescue True when only a rescue top-up may pass; the AaveAdapter passes false.
     function checkPledge(
         address depositor,
         address proxy,
@@ -66,7 +63,7 @@ interface IRiskModule is IRiskModuleErrors {
     ) external;
 
     /// @notice Pre-withdrawal gate for an account with debt.
-    /// @dev `preBorrowCheck`'s gates without the Offboarding and frozen refusals, over every debt reserve held.
+    /// @dev `preBorrowCheck`'s gates without the Offboarding and frozen-reserve refusals, over every debt reserve held.
     function preWithdrawCheck(
         address proxy
     ) external;
@@ -88,17 +85,12 @@ interface IRiskModule is IRiskModuleErrors {
     ) external view;
 
     /// @notice Runs the Aave configuration drift check over every market of a CDP Spoke outside any user call.
-    /// @dev Anyone may call. Emits `ConfigDriftDetected` instead of reverting.
+    /// @dev Anyone may call. Emits `ConfigDriftDetected` instead of reverting and records nothing: the borrow, withdraw
+    /// and pledge checks read the drift live.
     /// @return reason The first drift found, `None` when the settings hold.
     function pokeConfig(
         address spoke
     ) external returns (DriftReason reason);
-
-    /// @notice Records the breaker conditions of a market and of every enabled debt reserve of its Spoke.
-    /// @dev Anyone may call. Never reverts because a condition holds.
-    function pokeBreakers(
-        uint256 marketId
-    ) external returns (uint32 reasons);
 
     /// @notice Whether the market's home Hub has added assets equal to added shares for its vault-token asset, exactly.
     function isHubSharesEqualAssets(
@@ -161,30 +153,17 @@ interface IRiskModule is IRiskModuleErrors {
     /// @notice AaveAdapter, the caller of the borrow-side checks (implementation immutable).
     function ADAPTER() external view returns (address adapter);
 
-    /// @notice Live, recovering and latched reasons of a market's circuit breaker.
+    /// @notice Reasons of a market's circuit breaker that hold now, from live state.
     /// @dev Never reverts.
+    /// @return reasons Bitmap of `BreakerReasons`, within `BreakerReasons.MARKET`.
     function getBreakerStatus(
-        uint256 marketId
-    ) external view returns (uint32 reasons, uint64 reopensAt);
-
-    /// @notice Live, recovering and latched reasons of a debt reserve's circuit breaker.
-    /// @dev Never reverts.
-    function getDebtBreakerStatus(
-        address spoke,
-        uint256 debtReserveId
-    ) external view returns (uint32 reasons, uint64 reopensAt);
-
-    /// @notice Security-freeze conditions of a market that hold now, from live state only.
-    /// @dev Never reverts. Excludes latched bits and temporary gates.
-    /// @return reasons Bitmap of `BreakerReasons`, within `BreakerReasons.SECURITY`.
-    function liveBreakerReasons(
         uint256 marketId
     ) external view returns (uint32 reasons);
 
-    /// @notice Security-freeze conditions of a debt reserve that hold now, from live state only.
-    /// @dev Never reverts. Excludes latched bits and temporary gates.
-    /// @return reasons Bitmap of `BreakerReasons`, within `BreakerReasons.SECURITY`.
-    function liveDebtBreakerReasons(
+    /// @notice Reasons of a debt reserve's circuit breaker that hold now, from live state.
+    /// @dev Never reverts.
+    /// @return reasons Bitmap of `BreakerReasons`, within `BreakerReasons.DEBT`.
+    function getDebtBreakerStatus(
         address spoke,
         uint256 debtReserveId
     ) external view returns (uint32 reasons);

@@ -60,11 +60,11 @@ contract LVSEchidnaOutsider {
 /// and implementation, with this harness as the timelock, and the shared swap-leg step on the real
 /// `LPVaultSwapSettlement` code. Between transactions: the registry holds between `keeperFloor` (1) and `MAX_KEEPERS`
 /// (32) entries and at least `keeperFloor` active ones; only the timelock holds the admin roles. Inside one
-/// transaction: `addKeeper` succeeds exactly for a new, unfrozen keeper below the cap; `removeKeeper` exactly for a
+/// transaction: `addKeeper` succeeds exactly for a new keeper below the cap; `removeKeeper` exactly for a
 /// registered keeper whose removal keeps the floor; an outsider changes nothing; a leg step never routes the debt asset
 /// (no buy leg), routes each other token into the debt asset only, at a minimum of at least 1.
-/// @dev `property_` functions run in property mode; `addKeeper`, `removeKeeper`, `freeze`, `outsider` and `legs` run in
-/// assertion mode, each selecting among eight concrete keepers with `if` branches.
+/// @dev `property_` functions run in property mode; `addKeeper`, `removeKeeper`, `outsider` and `legs` run in assertion
+/// mode, each selecting among eight concrete keepers with `if` branches.
 contract LPVaultSwapProperties {
     uint256 internal constant FLOOR = 1;
     uint256 internal constant MAX_KEEPERS = 32;
@@ -134,7 +134,7 @@ contract LPVaultSwapProperties {
 
     function _active() internal view returns (uint256 n) {
         for (uint256 i = 0; i < 8; ++i) {
-            if (LVS.isApprovedKeeper(_keeper(i)) && !REGISTRY.isFrozenAddress(_keeper(i))) ++n;
+            if (LVS.isApprovedKeeper(_keeper(i))) ++n;
         }
     }
 
@@ -163,8 +163,7 @@ contract LPVaultSwapProperties {
     ) external {
         ++sequences;
         address k = _keeper(i);
-        bool expected =
-            !LVS.isApprovedKeeper(k) && !REGISTRY.isFrozenAddress(k) && LVS.approvedKeeperCount() < MAX_KEEPERS;
+        bool expected = !LVS.isApprovedKeeper(k) && LVS.approvedKeeperCount() < MAX_KEEPERS;
         uint256 before = LVS.approvedKeeperCount();
         (bool ok,) = address(LVS).call(abi.encodeWithSignature("addKeeper(address)", k));
         assert(ok == expected);
@@ -178,25 +177,11 @@ contract LPVaultSwapProperties {
         address k = _keeper(i);
         uint256 active = LVS.activeKeeperCount();
         bool registered = LVS.isApprovedKeeper(k);
-        uint256 activeAfter = registered && !REGISTRY.isFrozenAddress(k) ? active - 1 : active;
+        uint256 activeAfter = registered ? active - 1 : active;
         bool expected = registered && activeAfter >= FLOOR;
         (bool ok,) = address(LVS).call(abi.encodeWithSignature("removeKeeper(address)", k));
         assert(ok == expected);
         if (ok) assert(!LVS.isApprovedKeeper(k) && LVS.activeKeeperCount() >= FLOOR);
-    }
-
-    function freeze(
-        uint8 i,
-        bool frozen
-    ) external {
-        ++sequences;
-        address k = _keeper(i);
-        // A freeze is the MarketRegistry's; it may take the active count below the floor only through the registry,
-        // which PROP-071 bounds. Here it is applied only while it keeps one active keeper.
-        bool was = REGISTRY.isFrozenAddress(k);
-        REGISTRY.setFrozen(k, frozen);
-        if (LVS.activeKeeperCount() < FLOOR) REGISTRY.setFrozen(k, was);
-        assert(LVS.activeKeeperCount() >= FLOOR);
     }
 
     function outsider(

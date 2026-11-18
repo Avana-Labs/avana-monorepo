@@ -6,7 +6,6 @@ pragma solidity 0.8.28;
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
-import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {MarketStatus, WindDownState} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market, MarketDef} from "../../src/types/MarketTypes.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
@@ -327,12 +326,6 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
     // A relisting takes the reserved identifier back, rewrites the indexes and does not grow the market count or the
     // Spoke's list; a new market listed after it takes the next identifier.
     function test_TEST_252_relistReclaimsTheIdAndIndexes() public {
-        // A breach of the cancelled registration (a security latch and a temporary gate time) does not carry over.
-        vm.prank(address(rm));
-        registry.recordBreach(bytes32(id), BreakerReasons.ISSUER | BreakerReasons.ORACLE | BreakerReasons.POOL_DEPTH);
-        (uint32 latchedBefore, uint64 breachBefore) = registry.marketBreaker(id);
-        assertEq(latchedBefore, BreakerReasons.ISSUER);
-        assertEq(breachBefore, block.timestamp);
         vm.prank(address(timelock));
         registry.cancelRegistration(id);
         vm.warp(block.timestamp + 1 days);
@@ -345,16 +338,6 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         assertEq(registry.marketOfLpOracle(address(lpo)), id);
         assertEq(uint8(_status(id)), uint8(MarketStatus.Registered));
         assertEq(registry.getMarket(id).registeredAt, block.timestamp, "registration time restarts");
-        (uint32 latched, uint64 breach) = registry.marketBreaker(id);
-        assertEq(latched, 0, "latch cleared");
-        assertEq(breach, 0, "breach time cleared");
-        assertEq(registry.lastBreachAt(bytes32(id)), 0);
-        // Each temporary reason's own breach time is cleared too, so the RiskModule reopens no gate of the cancelled
-        // registration on the relisted market.
-        uint32[2] memory temporary = [BreakerReasons.ORACLE, BreakerReasons.POOL_DEPTH];
-        for (uint256 i = 0; i < 2; ++i) {
-            assertEq(registry.lastBreachAt(BreakerReasons.breachKey(bytes32(id), temporary[i])), 0, "reason time");
-        }
         assertEq(registry.marketCount(), 1);
         assertEq(registry.marketsOfSpoke(address(spoke)).length, 1);
         (uint256 id2,,) = _listSecond();

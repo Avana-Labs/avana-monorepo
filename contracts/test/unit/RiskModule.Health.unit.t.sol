@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {AccountGateStatus, PauseState} from "../../src/types/MarketTypes.sol";
+import {AccountGateStatus} from "../../src/types/MarketTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {PledgeCounters, PledgePreview} from "../../src/types/PositionTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
@@ -132,11 +132,6 @@ contract RiskModuleHealthUnitTest is RiskModuleFixture {
         assertTrue(s.withdrawWithDebtAllowed);
         assertTrue(s.markets[0].aaveReserveFrozen);
         assertEq(oracle.pokes(), pokes);
-        // The pause state of the market's Hub is reported.
-        vm.prank(emergencyGuardian);
-        registry.freeze(address(hub));
-        s = riskModule.getAccountGateStatus(address(proxy));
-        assertEq(uint8(s.pauseState), uint8(PauseState.Frozen));
         // A broken account never reverts the view.
         s = riskModule.getAccountGateStatus(makeAddr("notAProxy"));
         assertFalse(s.borrowAllowed);

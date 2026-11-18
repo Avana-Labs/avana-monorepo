@@ -64,7 +64,7 @@ interface ILPVaultSwapBase {
     /// @notice `addKeeper` got zero or a registered operator, or `removeKeeper` an unregistered one.
     error InvalidKeeper();
 
-    /// @notice The removal would leave fewer than `KEEPER_FLOOR` active (unfrozen) committed operators.
+    /// @notice The removal would leave fewer than `KEEPER_FLOOR` committed operators.
     error KeeperFloor(uint256 activeAfter, uint256 keeperFloor);
 
     error TooManyKeepers(uint256 maxKeepers);
@@ -78,9 +78,6 @@ interface ILPVaultSwapBase {
 
     /// @notice `gasleft()` before a gas-limited escrowable payout transfer is below the required headroom.
     error InsufficientGas(uint256 gasLeft, uint256 required);
-
-    /// @notice The caller of `liquidate`, or the address passed to `addKeeper`, is frozen in the MarketRegistry.
-    error AddressIsFrozen(address account);
 
     /// @notice The repayment a `deleverage` can make is 0 or below the borrower's `minDebtRepaid`.
     error DeleverageTooSmall(uint256 repayable, uint256 minDebtRepaid);

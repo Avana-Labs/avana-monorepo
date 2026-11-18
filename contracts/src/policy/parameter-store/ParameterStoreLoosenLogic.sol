@@ -189,33 +189,21 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         emit ParameterLoosened("debtStressRiseBps", _a(asset), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStore.loosenGateRecoverySeconds`.
-    function loosenGateRecoverySeconds(
-        uint64 value
-    ) external {
-        _onlyDelegated();
-        uint64 old = _s().g.gateRecoverySeconds;
-        if (value >= old) revert NotLooser();
-        if (value < GATE_RECOVERY_MIN) revert OutOfBounds();
-        _s().g.gateRecoverySeconds = value;
-        emit ParameterLoosened("gateRecoverySeconds", bytes32(0), old, value, msg.sender);
-    }
-
-    /// @notice Body of `IParameterStore.loosenBreakerDeficitMax`.
-    function loosenBreakerDeficitMax(
+    /// @notice Body of `IParameterStore.loosenDeficitMax`.
+    function loosenDeficitMax(
         address hub,
         address asset,
         uint256 value
     ) external {
         _onlyDelegated();
         _requireHub(hub);
-        uint256 old = _s().breakerDeficitMax[hub][asset];
+        uint256 old = _s().deficitMax[hub][asset];
         if (value <= old) revert NotLooser();
         (bool found, uint256 coverageMin,,) = _scanReserves(asset, hub);
         if (!found) revert UnknownDebtReserve(address(0), 0);
         if (value > coverageMin) revert OutOfBounds();
-        _s().breakerDeficitMax[hub][asset] = value;
-        emit ParameterLoosened("breakerDeficitMax", _pair(hub, asset), old, value, msg.sender);
+        _s().deficitMax[hub][asset] = value;
+        emit ParameterLoosened("deficitMax", _pair(hub, asset), old, value, msg.sender);
     }
 
     /// @notice Body of `IParameterStore.loosenMarketSpeedLimits`.

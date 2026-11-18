@@ -10,7 +10,6 @@ import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IAaveAdapterBase} from "../../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
-import {PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
 import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {VaultToken} from "../../../src/vault-token/vault-token/VaultToken.sol";
 import {CollPriceSource} from "../../utils/fixtures/CollateralizationFixture.sol";
@@ -50,11 +49,11 @@ struct AdapterWorld {
 /// @notice Actor handler of the AaveAdapter invariants on the real local Aave V4, the real Collateralization, vault
 /// tokens, ProxyManager and PositionProxies: three wallets pledge into two markets, borrow GHO and USDC, repay (their
 /// own debt or, as a third-party payer, someone else's), withdraw, remove liquidity, re-credit, repay with collateral;
-/// prices move, the Hub's pause state and the address freeze change, LPVaultSwap liquidates honestly, time passes.
+/// prices move, LPVaultSwap liquidates honestly, time passes.
 /// @dev Ghosts: units minted and burned per vault token, the matching credit or debit in Collateralization per call,
 /// borrows completed per proxy, every completed borrow's forwarding, and exit liveness: a repay of an indebted account,
-/// a debt-free withdrawal and a fee collection must succeed whatever the Avana pause state and freeze, since Aave
-/// allows them here (no Aave pause or halt is set). Each failed expectation increments a counter the invariants read.
+/// a debt-free withdrawal and a fee collection must succeed whatever the Avana state, since Aave allows them here (no
+/// Aave pause or halt is set). Each failed expectation increments a counter the invariants read.
 contract AaveAdapterHandler is CommonBase, StdUtils {
     /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
     /// campaign's success count, so the metrics show the calls that did real work.
@@ -491,21 +490,6 @@ contract AaveAdapterHandler is CommonBase, StdUtils {
     ) external {
         ++calls;
         w.vtPrice.set(int256(bound(seed, 0.9e8, 2.2e8)));
-    }
-
-    function setPause(
-        uint256 seed,
-        uint256 freezeSeed
-    ) external {
-        ++calls;
-        // None half of the time, so new activity runs between the stops.
-        uint256 s = seed % 8;
-        PauseState state = s < 4 ? PauseState.None : (s == 4 ? PauseState.Frozen : PauseState.Paused);
-        PauseReason reason =
-            s == 5 || s == 7 ? PauseReason.General : (s == 6 ? PauseReason.MintPathSuspect : PauseReason.None);
-        w.registry.setPause(w.hub, state, reason);
-        address who = wallets[freezeSeed % 3];
-        w.registry.setFrozen(who, (freezeSeed >> 8) % 4 == 0);
     }
 
     /// @notice LPVaultSwap liquidates an account below HF 1.

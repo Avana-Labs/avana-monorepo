@@ -11,7 +11,6 @@ import {MarketRegistryActivationLogic} from "../../src/policy/market-registry/Ma
 import {MarketRegistryHubsLogic} from "../../src/policy/market-registry/MarketRegistryHubsLogic.sol";
 import {MarketRegistryListingLogic} from "../../src/policy/market-registry/MarketRegistryListingLogic.sol";
 import {MarketRegistryRoutesLogic} from "../../src/policy/market-registry/MarketRegistryRoutesLogic.sol";
-import {MarketRegistrySafetyLogic} from "../../src/policy/market-registry/MarketRegistrySafetyLogic.sol";
 import {MarketRegistryWindDownLogic} from "../../src/policy/market-registry/MarketRegistryWindDownLogic.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
 import {
@@ -195,7 +194,6 @@ contract MarketRegistryMarketsHalmosTest is Test {
         l.listing = address(new MarketRegistryListingLogic(im));
         l.activation = address(new MarketRegistryActivationLogic(im));
         l.routes = address(new MarketRegistryRoutesLogic(im));
-        l.safety = address(new MarketRegistrySafetyLogic(im));
         l.windDown = address(new MarketRegistryWindDownLogic(im));
         MarketRegistry impl = new MarketRegistry(im, l);
         registry = IMarketRegistry(

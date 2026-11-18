@@ -1374,17 +1374,6 @@ export const aaveAdapterAbi = [
   },
   {
     "type": "error",
-    "name": "AddressIsFrozen",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "AdminRoleOnlyTimelock",
     "inputs": [
       {
@@ -1398,16 +1387,6 @@ export const aaveAdapterAbi = [
         "internalType": "address"
       }
     ]
-  },
-  {
-    "type": "error",
-    "name": "ApplicationFrozen",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "ApplicationPaused",
-    "inputs": []
   },
   {
     "type": "error",

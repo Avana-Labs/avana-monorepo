@@ -351,16 +351,24 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
         _pledge(1000e18, k, false);
     }
 
-    // TEST-228 verifies: REQ-RISK-065, REQ-RISK-073, SPEC-BRK-008, INV-081, REQ-ACCESS-166, REQ-ACCESS-084, REQ-ACCESS-081
-    function test_TEST_228_marketBreakerOnPledge() public {
-        vm.prank(emergencyGuardian);
-        registry.tripMarketBreaker(mid);
+    // TEST-228 verifies: REQ-RISK-065, REQ-RISK-073, SPEC-BRK-008, INV-081
+    function test_TEST_228_liveMarketReasonOnPledge() public {
+        // The USDT issuer probe trips: the market breaker holds `ISSUER`.
+        tUsdt.setPaused(true, false);
         PledgeCounters memory k = _counters();
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.MANUAL));
+        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.ISSUER));
+        _pledge(TEN_K, k, false);
+        // A healthy top-up is refused too.
+        _debt(1.5e18, 1000);
+        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.ISSUER));
         _pledge(TEN_K, k, false);
         // A rescue top-up passes the breaker.
         _debt(1.02e18, 1_000_000);
         assertTrue(_pledge(TEN_K, k, false).rescue);
+        // Cleared, the healthy top-up passes in the same block, with no reset.
+        tUsdt.setPaused(false, false);
+        _debt(1.5e18, 1000);
+        assertFalse(_pledge(TEN_K, k, false).rescue);
     }
 
     // TEST-164 verifies: REQ-RISK-006, REQ-RISK-026, SPEC-CAP-001

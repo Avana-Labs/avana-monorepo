@@ -8,7 +8,6 @@ import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
 import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {MarketParams as MarketParamsLike} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
@@ -295,7 +294,6 @@ contract LensLiquidationUnitTest is LensFixture {
         assertEq(p.activeKeeperCount, 1, "one committed operator");
         assertFalse(p.vaultTokenReservePaused, "collateral live");
         assertFalse(p.debtReservePaused, "debt live");
-        assertEq(uint8(p.pauseState), uint8(PauseState.None), "no pause");
     }
 
     // TEST-069 verifies: REQ-LENS-016, REQ-SWAP-008
@@ -375,15 +373,12 @@ contract LensLiquidationUnitTest is LensFixture {
 
     // TEST-069 verifies: REQ-LENS-016, Q-242
     function test_TEST_069_informationalFields() public {
-        reg.setPause(aave.hub, PauseState.Paused, PauseReason.General);
-        swapMock.setKeeper(makeAddr("k2"), true, true);
-        swapMock.setKeeper(makeAddr("k3"), true, false);
+        swapMock.setKeeper(makeAddr("k2"), true);
         vm.startPrank(aaveDao);
         _updatePaused(vtReserveId, true);
         vm.stopPrank();
         LiquidationPreview memory p = lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE);
-        assertEq(uint8(p.pauseState), uint8(PauseState.Paused), "pause shown, never blocking");
-        assertEq(p.activeKeeperCount, 2, "frozen operator not counted");
+        assertEq(p.activeKeeperCount, 2, "every registered operator");
         assertTrue(p.vaultTokenReservePaused, "Aave paused flag");
         assertFalse(p.debtReservePaused, "debt reserve live");
     }

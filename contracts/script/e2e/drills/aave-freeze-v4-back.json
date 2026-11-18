@@ -1,6 +1,6 @@
 {
   "name": "aave-freeze-v4-back",
-  "description": "AIP: unfreeze it",
+  "description": "AIP: lift the freeze",
   "via": "aip",
   "restores": "aave-freeze-v4-forward",
   "changes": [

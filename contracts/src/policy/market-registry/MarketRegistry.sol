@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
-import {MarketDef, PauseReason} from "../../types/MarketTypes.sol";
+import {MarketDef} from "../../types/MarketTypes.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {IMarketRegistryRoutes} from "./IMarketRegistryRoutes.sol";
@@ -23,15 +23,13 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 /// @title MarketRegistry
-/// @notice The chain's registry of Hubs, integrations, CDP Spokes, debt reserves, markets, routes, pause state, address
-/// freeze and breakers.
+/// @notice The chain's registry of Hubs, integrations, CDP Spokes, debt reserves, markets and routes.
 /// @dev UUPS proxy; only the timelock can upgrade it. Write bodies run in logic contracts by delegatecall.
 contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegistryViews {
     address internal immutable _HUBS_LOGIC;
     address internal immutable _LISTING_LOGIC;
     address internal immutable _ACTIVATION_LOGIC;
     address internal immutable _ROUTES_LOGIC;
-    address internal immutable _SAFETY_LOGIC;
     address internal immutable _WIND_DOWN_LOGIC;
 
     constructor(
@@ -42,13 +40,11 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
         _requireLogic(logics.listing, keccak256("MarketRegistryListingLogic"));
         _requireLogic(logics.activation, keccak256("MarketRegistryActivationLogic"));
         _requireLogic(logics.routes, keccak256("MarketRegistryRoutesLogic"));
-        _requireLogic(logics.safety, keccak256("MarketRegistrySafetyLogic"));
         _requireLogic(logics.windDown, keccak256("MarketRegistryWindDownLogic"));
         _HUBS_LOGIC = logics.hubs;
         _LISTING_LOGIC = logics.listing;
         _ACTIVATION_LOGIC = logics.activation;
         _ROUTES_LOGIC = logics.routes;
-        _SAFETY_LOGIC = logics.safety;
         _WIND_DOWN_LOGIC = logics.windDown;
         _disableInitializers();
     }
@@ -144,14 +140,6 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
         granted = super._grantRole(role, account);
     }
 
-    function _onlyGuardianOrAdmin(
-        bytes32 guardianRole
-    ) internal view {
-        if (!hasRole(guardianRole, msg.sender) && !hasRole(AvanaRoles.APPLICATION_ADMIN, msg.sender)) {
-            revert Unauthorized(msg.sender);
-        }
-    }
-
     /// @dev Delegatecalls `logic` with the current calldata; reverts bubble up unchanged.
     function _forward(
         address logic
@@ -180,8 +168,6 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
         if (timelock != _TIMELOCK) revert AdminRoleOnlyTimelock(DEFAULT_ADMIN_ROLE, timelock);
         __AccessControl_init();
         __UUPSUpgradeable_init();
-        _setRoleAdmin(AvanaRoles.APPLICATION_PAUSE_GUARDIAN, AvanaRoles.APPLICATION_ADMIN);
-        _setRoleAdmin(AvanaRoles.APPLICATION_FREEZE_GUARDIAN, AvanaRoles.APPLICATION_ADMIN);
         _grantRole(DEFAULT_ADMIN_ROLE, timelock);
         _grantRole(AvanaRoles.APPLICATION_ADMIN, timelock);
     }
@@ -339,111 +325,6 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
         address
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
         _forward(_ROUTES_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function freeze(
-        address
-    ) external override {
-        _onlyGuardianOrAdmin(AvanaRoles.APPLICATION_FREEZE_GUARDIAN);
-        _forward(_SAFETY_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function pause(
-        address,
-        PauseReason
-    ) external override {
-        _onlyGuardianOrAdmin(AvanaRoles.APPLICATION_PAUSE_GUARDIAN);
-        _forward(_SAFETY_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function freezeAll() external override {
-        _onlyGuardianOrAdmin(AvanaRoles.APPLICATION_FREEZE_GUARDIAN);
-        _forward(_SAFETY_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function pauseAll(
-        PauseReason
-    ) external override {
-        _onlyGuardianOrAdmin(AvanaRoles.APPLICATION_PAUSE_GUARDIAN);
-        _forward(_SAFETY_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function unfreeze(
-        address
-    ) external override {
-        _onlyGuardianOrAdmin(AvanaRoles.APPLICATION_PAUSE_GUARDIAN);
-        _forward(_SAFETY_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function unpause(
-        address
-    ) external override {
-        _onlyGuardianOrAdmin(AvanaRoles.APPLICATION_PAUSE_GUARDIAN);
-        _forward(_SAFETY_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function freezeAddress(
-        address
-    ) external override {
-        _onlyGuardianOrAdmin(AvanaRoles.APPLICATION_FREEZE_GUARDIAN);
-        _forward(_SAFETY_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function unfreezeAddress(
-        address
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_SAFETY_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function recordBreach(
-        bytes32,
-        uint32
-    ) external override {
-        if (msg.sender != _RISK_MODULE) revert NotRiskModule();
-        _forward(_SAFETY_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function tripMarketBreaker(
-        uint256
-    ) external override {
-        _onlyGuardianOrAdmin(AvanaRoles.APPLICATION_FREEZE_GUARDIAN);
-        _forward(_SAFETY_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function tripDebtBreaker(
-        address,
-        uint256
-    ) external override {
-        _onlyGuardianOrAdmin(AvanaRoles.APPLICATION_FREEZE_GUARDIAN);
-        _forward(_SAFETY_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function resetMarketBreaker(
-        uint256
-    ) external override {
-        _onlyGuardianOrAdmin(AvanaRoles.APPLICATION_PAUSE_GUARDIAN);
-        _forward(_SAFETY_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function resetDebtBreaker(
-        address,
-        uint256
-    ) external override {
-        _onlyGuardianOrAdmin(AvanaRoles.APPLICATION_PAUSE_GUARDIAN);
-        _forward(_SAFETY_LOGIC);
     }
 
     /// @inheritdoc IMarketRegistry

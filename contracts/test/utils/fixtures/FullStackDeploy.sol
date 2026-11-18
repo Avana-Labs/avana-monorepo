@@ -28,7 +28,6 @@ import {MarketRegistryActivationLogic} from "../../../src/policy/market-registry
 import {MarketRegistryHubsLogic} from "../../../src/policy/market-registry/MarketRegistryHubsLogic.sol";
 import {MarketRegistryListingLogic} from "../../../src/policy/market-registry/MarketRegistryListingLogic.sol";
 import {MarketRegistryRoutesLogic} from "../../../src/policy/market-registry/MarketRegistryRoutesLogic.sol";
-import {MarketRegistrySafetyLogic} from "../../../src/policy/market-registry/MarketRegistrySafetyLogic.sol";
 import {MarketRegistryWindDownLogic} from "../../../src/policy/market-registry/MarketRegistryWindDownLogic.sol";
 import {
     MarketRegistryImmutables,
@@ -159,11 +158,6 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
             _installLPVaultSwap();
             _deployLens();
         }
-        vm.startPrank(tl);
-        registry.grantRole(AvanaRoles.APPLICATION_PAUSE_GUARDIAN, emergencyGuardian);
-        registry.grantRole(AvanaRoles.APPLICATION_FREEZE_GUARDIAN, emergencyGuardian);
-        store.grantRole(AvanaRoles.APPLICATION_PAUSE_GUARDIAN, emergencyGuardian);
-        vm.stopPrank();
         _labelCore();
     }
 
@@ -355,7 +349,6 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         l.listing = address(new MarketRegistryListingLogic(registryIm));
         l.activation = address(new MarketRegistryActivationLogic(registryIm));
         l.routes = address(new MarketRegistryRoutesLogic(registryIm));
-        l.safety = address(new MarketRegistrySafetyLogic(registryIm));
         l.windDown = address(new MarketRegistryWindDownLogic(registryIm));
         MarketRegistry impl = new MarketRegistry(registryIm, l);
         AdapterPlaceholder(registryAddr)
@@ -386,7 +379,6 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         g.maxFlashFeeBps = uint16(MAX_FLASH_FEE_BPS);
         g.avanaFeeShareBps = uint16(AVANA_FEE_SHARE_BPS);
         g.feeRecipient = feeRecipient;
-        g.gateRecoverySeconds = 1800;
         g.maxShortfallBps = uint16(MAX_SHORTFALL_BPS);
     }
 

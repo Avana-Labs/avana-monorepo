@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
+import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {DriftReason} from "../../src/types/MarketTypes.sol";
@@ -252,18 +253,6 @@ contract AaveAdapterRiskModuleIntegrationTest is AaveAdapterRiskFixture {
         assertEq(_borrowCountOf(p), 0, "debt-free");
     }
 
-    // TEST-028 verifies: REQ-ADAPTER-094, REQ-ADAPTER-049, REQ-ADAPTER-086, REQ-RISK-065, INV-072
-    /// @notice A latched market breaker refuses every borrow and every withdrawal with debt with
-    /// `BreakerTripped(market, reasons)`; repay and the debt-free exits read no breaker and pass.
-    function test_TEST_028_latchedMarketBreaker() public {
-        registry.setLatched(bytes32(MARKET_ID), BreakerReasons.MANUAL, 0);
-        bytes memory err =
-            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, MARKET_ID, BreakerReasons.MANUAL);
-        _expectBorrow(err, debtReserveId, 1e18);
-        _expectWithdrawWithDebt(err);
-        _exitsPass();
-    }
-
     // TEST-028 verifies: REQ-ADAPTER-094, REQ-RISK-065, REQ-RISK-015
     /// @notice A live pool-depth condition trips the market breaker the same way.
     function test_TEST_028_liveDepthBreaker() public {
@@ -277,16 +266,21 @@ contract AaveAdapterRiskModuleIntegrationTest is AaveAdapterRiskFixture {
     }
 
     // TEST-028 verifies: REQ-ADAPTER-094, REQ-RISK-065
-    /// @notice A debt breaker on the borrowed reserve refuses that borrow (`DebtBreakerTripped(spoke, r, reasons)`)
-    /// but not a borrow of another reserve; at a withdrawal with debt every reserve the account holds is checked.
-    function test_TEST_028_debtBreaker() public {
-        registry.setLatched(keccak256(abi.encode(aave.cdpSpoke, usdcReserveId)), BreakerReasons.DEFICIT, 0);
+    /// @notice A live debt breaker condition on the borrowed reserve (its asset's issuer probe trips) refuses that
+    /// borrow (`DebtBreakerTripped(spoke, r, reasons)`) but not a borrow of another reserve; at a withdrawal with debt
+    /// every reserve the account holds is checked. The borrow passes in the same block once the probe clears, and repay
+    /// and the debt-free exits pass while it holds.
+    function test_TEST_028_debtReserveBreaker() public {
+        registry.setIssuerProbe(address(usdcDebt), IssuerProbe.PausedFlag);
         bytes memory err = abi.encodeWithSelector(
-            IRiskModuleErrors.DebtBreakerTripped.selector, aave.cdpSpoke, usdcReserveId, BreakerReasons.DEFICIT
+            IRiskModuleErrors.DebtBreakerTripped.selector, aave.cdpSpoke, usdcReserveId, BreakerReasons.ISSUER
         );
         _expectBorrow(err, usdcReserveId, 1e6);
         _borrowAs(alice, MARKET_ID, debtReserveId, 1e18);
         _expectWithdrawWithDebt(err);
+        registry.setIssuerProbe(address(usdcDebt), IssuerProbe.None);
+        _borrowAs(alice, MARKET_ID, usdcReserveId, 1e6);
+        registry.setIssuerProbe(address(usdcDebt), IssuerProbe.PausedFlag);
         _exitsPass();
     }
 

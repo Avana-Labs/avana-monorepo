@@ -3,20 +3,22 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {RiskStatus} from "../../src/amm/types/AmmTypes.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {DebtReserveDef, MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {DriftReason, PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {DriftReason} from "../../src/types/MarketTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
 
 /// @title AaveAdapterRiskModuleScenariosIntegrationTest
 /// @notice Account scope, gate precedence and the repay with collateral against the reviewed RiskModule on the real
-/// Aave V4 Spoke: the Adapter's own bounds (deadline, pause state, proxy, debt reserve, receiver, freeze, nonce) come
-/// before any RiskModule gate; the RiskModule's scope is the account's one market and every reserve it borrows;
+/// Aave V4 Spoke: the Adapter's own bounds (deadline, proxy, debt reserve, receiver, nonce) come before any RiskModule
+/// gate; the RiskModule's scope is the account's one market and every reserve it borrows;
 /// a repay with collateral and every exit never call the RiskModule, so no gate it applies can stop them.
 /// forge-config: default.isolate = false
 contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture {
@@ -54,7 +56,7 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
     function _stopEverythingTheRiskModuleReads() internal {
         lpOracleA.setState(PriceState.Expired, 0, false);
         usdcOracle.setReport(PriceState.Expired, uint64(block.timestamp), false);
-        registry.setLatched(bytes32(MARKET_ID), BreakerReasons.MANUAL, 0);
+        riskVault.setDepth(0, false);
         swap.setActiveKeeperCount(0);
     }
 
@@ -108,7 +110,7 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
     function test_TEST_239_repayWithCollateralCallsNoRiskModule() public {
         lpOracleA.setState(PriceState.Expired, 0, false);
         usdcOracle.setReport(PriceState.Expired, uint64(block.timestamp), false);
-        registry.setLatched(bytes32(MARKET_ID), BreakerReasons.MANUAL, 0);
+        riskVault.setDepth(0, false);
         swap.setActiveKeeperCount(0);
         swap.setDeleverage(1000e18, 2e12, 0);
         // The one RiskModule call an exit makes is the speed credit (REQ-RISK-005); no check is called.
@@ -116,7 +118,6 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.postHealthCheck.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.checkPledge.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.pokeBreakers.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.pokeConfig.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.checkRemainingRecord.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.checkAaveConfig.selector), 0);
@@ -137,7 +138,6 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.postHealthCheck.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.checkPledge.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.pokeBreakers.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.pokeConfig.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.checkRemainingRecord.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.checkAaveConfig.selector), 0);
@@ -179,21 +179,37 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
     }
 
     // TEST-028 verifies: REQ-ADAPTER-094, REQ-PROXY-018, REQ-ADAPTER-049
-    /// @notice A market breaker is the market's own: market A's latched breaker and Offboarding status stop market A's
-    /// account, while the same wallet's account in market B keeps borrowing, and market B's breaker stops only B.
+    /// @notice A market breaker is the market's own: market A's pool-depth breaker and Offboarding status stop market
+    /// A's account, while the same wallet's account in market B keeps borrowing; market B's pool-depth breaker stops
+    /// only B, and B borrows again in the same block once its depth is back.
     function test_TEST_028_breakerScopedToMarket() public {
         (, address pB) = _pledgeAs(alice, MARKET_B, UNITS);
-        registry.setLatched(bytes32(MARKET_ID), BreakerReasons.MANUAL, 0);
+        _noDepth(MARKET_ID);
         registry.setMarketStatus(MARKET_ID, MarketStatus.Offboarding);
         _borrowExpect(abi.encodeWithSelector(IRiskModuleErrors.MarketOffboarding.selector, MARKET_ID));
         _borrowAs(alice, MARKET_B, debtReserveId, 100e18);
         assertEq(_debtOf(pB, debtReserveId), 100e18, "market B borrows");
-        registry.setLatched(bytes32(MARKET_B), BreakerReasons.MANUAL, 0);
+        _noDepth(MARKET_B);
         uint256 d = _deadline();
         vm.expectRevert(
-            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, MARKET_B, BreakerReasons.MANUAL)
+            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, MARKET_B, BreakerReasons.POOL_DEPTH)
         );
         vm.prank(alice);
         adapterC.borrow(MARKET_B, debtReserveId, 1e18, alice, d, 0, 1);
+        vm.clearMockedCalls();
+        vm.prank(alice);
+        adapterC.borrow(MARKET_B, debtReserveId, 1e18, alice, d, 0, 1);
+        assertEq(_debtOf(pB, debtReserveId), 101e18, "market B borrows once its depth is back");
+    }
+
+    /// @dev The market's LPVault reports no pool depth, whatever the window: its `POOL_DEPTH` condition holds.
+    function _noDepth(
+        uint256 marketId
+    ) internal {
+        vm.mockCall(
+            address(riskVault),
+            abi.encodeWithSelector(ILPVault.riskStatus.selector, marketId),
+            abi.encode(RiskStatus(0, false))
+        );
     }
 }

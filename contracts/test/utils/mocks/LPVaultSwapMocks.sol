@@ -13,9 +13,9 @@ import {DebtPriceView} from "./DebtPriceView.sol";
 
 /// @title LVSMarketRegistryMock
 /// @notice MarketRegistry stand-in for the LPVaultSwap suites: the market and debt-reserve records, the settlement
-/// reserve, First-Loss Reserves, the flash source, recorded Hubs, swap-route slots and the address freeze, each set by the
-/// test. It has no pause state, pause reason or breaker: a read of any of them reverts, so a suite in which LPVaultSwap
-/// completes shows that it never reads one (REQ-SWAP-003, REQ-SWAP-104).
+/// reserve, First-Loss Reserves, the flash source, recorded Hubs and swap-route slots, each set by the test. It has no
+/// breaker: a read of one reverts, so a suite in which LPVaultSwap completes shows that it never reads one
+/// (REQ-SWAP-003, REQ-SWAP-104).
 contract LVSMarketRegistryMock {
     mapping(uint256 marketId => Market) internal _markets;
     mapping(address spoke => mapping(uint256 reserveId => DebtReserveDef)) internal _debt;
@@ -23,23 +23,9 @@ contract LVSMarketRegistryMock {
     mapping(uint256 marketId => uint256 reserveId) public settlementReserve;
     mapping(address hub => mapping(address asset => address coverage)) public firstLossReserveOf;
     mapping(address hub => bool) public isRecordedHub;
-    mapping(address account => bool) public isFrozenAddress;
     mapping(bytes32 slot => address route) internal _route;
     mapping(bytes32 slot => bool usable) internal _usable;
     address public flashSource;
-    /// @notice Pause state and reason (0 None, 1 Frozen, 2 Paused; reason 0 None, 1 General, 2 MintPathSuspect), held
-    /// for the pause handler; LPVaultSwap never reads them.
-    uint8 public pauseState;
-    uint8 public pauseReason;
-    /// @notice When true, `isFrozenAddress` reverts (a registry read failing).
-    bool public freezeReadReverts;
-
-    function setPause(
-        uint8 state,
-        uint8 reason
-    ) external {
-        (pauseState, pauseReason) = (state, reason);
-    }
 
     function setMarket(
         uint256 marketId,
@@ -97,13 +83,6 @@ contract LVSMarketRegistryMock {
         bool recorded
     ) external {
         isRecordedHub[hub] = recorded;
-    }
-
-    function setFrozen(
-        address account,
-        bool frozen
-    ) external {
-        isFrozenAddress[account] = frozen;
     }
 
     function setRoute(

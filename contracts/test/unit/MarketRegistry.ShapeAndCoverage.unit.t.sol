@@ -148,10 +148,6 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
         _expectBadCoverage(
             address(hub), address(dai), address(new RegistryAvanaFirstLossReserveMock(address(hub), address(dai), 4))
         );
-        // The recorded First-Loss Reserve is protected from the address freeze.
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, address(good)));
-        registry.freezeAddress(address(good));
     }
 
     // TEST-273 verifies: REQ-MREG-009, REQ-CONFIG-083
@@ -168,8 +164,8 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
     // ─── Integrations ───
 
     // TEST-264 verifies: REQ-CONFIG-075, REQ-MREG-020, Q-376
-    // Registering pins the LPVault and the pricing for the id, emits them, and protects both; an LPVault already
-    // pinned to another id is refused.
+    // Registering pins the LPVault and the pricing for the id and emits them; an LPVault already pinned to another id
+    // is refused.
     function test_TEST_264_registerIntegrationRecordAndEvent() public {
         RegistryLPVaultMock v2 = new RegistryLPVaultMock(2, address(collat), lockAddr);
         v2.setRegistry(address(registry));
@@ -187,11 +183,5 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
         registry.registerIntegration(3, address(lpVault), makeAddr("pricing3"));
         vm.stopPrank();
         assertEq(registry.integrationIdOf(address(v2)), 2);
-        vm.startPrank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, address(v2)));
-        registry.freezeAddress(address(v2));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, pricing2));
-        registry.freezeAddress(pricing2);
-        vm.stopPrank();
     }
 }

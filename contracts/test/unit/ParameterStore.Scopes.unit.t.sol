@@ -121,8 +121,8 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
             _refuses(abi.encodeCall(store.tightenTokenUsdCap, (h, usdc, 1)), err);
             _refuses(abi.encodeCall(store.loosenTokenUsdCap, (h, usdc, 1)), err);
             _refuses(abi.encodeCall(store.setInitialTokenCap, (h, usdt, 1)), err);
-            _refuses(abi.encodeCall(store.tightenBreakerDeficitMax, (h, gho, 0)), err);
-            _refuses(abi.encodeCall(store.loosenBreakerDeficitMax, (h, gho, 1)), err);
+            _refuses(abi.encodeCall(store.tightenDeficitMax, (h, gho, 0)), err);
+            _refuses(abi.encodeCall(store.loosenDeficitMax, (h, gho, 1)), err);
             assertEq(store.tokenUsdCap(h, usdt), 0);
         }
     }
@@ -198,7 +198,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         _refuses(abi.encodeCall(store.tightenFloorRoundingAllowance, (unlisted, 1)), notStricter);
         _refuses(abi.encodeCall(store.loosenDebtStressRiseBps, (unlisted, 0)), notLooser);
         _refuses(abi.encodeCall(store.loosenDebtStressRiseBps, (unlisted, 100)), notLooser);
-        _refuses(abi.encodeCall(store.tightenBreakerDeficitMax, (address(hub), unlisted, 0)), notStricter);
+        _refuses(abi.encodeCall(store.tightenDeficitMax, (address(hub), unlisted, 0)), notStricter);
     }
 
     // ─── Feeds ───
@@ -236,20 +236,20 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         address hub2 = makeAddr("hub2");
         registry.setHub(hub2, true);
         // The GHO reserve is funded by `hub`, not `hub2`.
-        _refuses(abi.encodeCall(store.loosenBreakerDeficitMax, (hub2, gho, 1)), err);
+        _refuses(abi.encodeCall(store.loosenDeficitMax, (hub2, gho, 1)), err);
         // No reserve lends USDT.
-        _refuses(abi.encodeCall(store.loosenBreakerDeficitMax, (address(hub), usdt, 1)), err);
+        _refuses(abi.encodeCall(store.loosenDeficitMax, (address(hub), usdt, 1)), err);
         // An unapproved reserve does not count.
         DebtReserveDef memory d = registry.getDebtReserve(address(spoke), 1);
         d.approved = false;
         registry.setDebtReserve(address(spoke), d);
-        _refuses(abi.encodeCall(store.loosenBreakerDeficitMax, (address(hub), gho, 1)), err);
+        _refuses(abi.encodeCall(store.loosenDeficitMax, (address(hub), gho, 1)), err);
         d.approved = true;
         registry.setDebtReserve(address(spoke), d);
         _tl();
-        store.loosenBreakerDeficitMax(address(hub), gho, 1);
-        assertEq(store.breakerDeficitMax(address(hub), gho), 1);
-        assertEq(store.breakerDeficitMax(hub2, gho), 0);
+        store.loosenDeficitMax(address(hub), gho, 1);
+        assertEq(store.deficitMax(address(hub), gho), 1);
+        assertEq(store.deficitMax(hub2, gho), 0);
     }
 
     // ─── Views for unknown keys ───
@@ -267,7 +267,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         assertEq(store.liquidationPriceMaxAge(noFeed), 0);
         assertEq(store.floorRoundingAllowance(unlisted), 0);
         assertEq(store.debtAssetParams(unlisted).floorRoundingAllowance, 0);
-        assertEq(store.breakerDeficitMax(stray, unlisted), 0);
+        assertEq(store.deficitMax(stray, unlisted), 0);
         assertEq(store.debtStressRiseBps(unlisted), 0);
         assertEq(store.aaveTargetHealthFactor(stray), 0);
         assertEq(store.minLiquidationBonus(stray), 0);
@@ -302,12 +302,12 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         d.firstLossReserve = address(c2);
         registry.setDebtReserve(spoke2, d);
         _refuses(
-            abi.encodeCall(store.loosenBreakerDeficitMax, (address(hub), gho, 100_000e18 + 1)),
+            abi.encodeCall(store.loosenDeficitMax, (address(hub), gho, 100_000e18 + 1)),
             abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector)
         );
         _tl();
-        store.loosenBreakerDeficitMax(address(hub), gho, 100_000e18);
-        assertEq(store.breakerDeficitMax(address(hub), gho), 100_000e18);
+        store.loosenDeficitMax(address(hub), gho, 100_000e18);
+        assertEq(store.deficitMax(address(hub), gho), 100_000e18);
     }
 
     // TEST-246 verifies: REQ-CONFIG-050, Q-397

@@ -9,7 +9,6 @@ import {BackingView, LiquidationPreview, RecordView} from "../../src/lens/lens/t
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {PendingView} from "../../src/types/PositionTypes.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -107,9 +106,7 @@ contract LiquidationPendingIntegrationTest is RealStackFlows {
         assertEq(pv.firstLossReserve, reserve, "Lens: the settlement asset's First-Loss Reserve");
         assertTrue(lens.checkBacking(vt).supplyEqualsCredited, "Lens: supply = credited + pending");
 
-        // Any caller, under Paused, with both pool tokens swapped into the settlement asset and added to its
-        // First-Loss Reserve.
-        _setPause(PauseState.Paused, PauseReason.MintPathSuspect);
+        // Any caller, with both pool tokens swapped into the settlement asset and added to its First-Loss Reserve.
         uint256 supplyBefore = IERC20(vt).totalSupply();
         uint256 fundedBefore = IAvanaFirstLossReserve(reserve).fundedBalance();
         vm.expectEmit(true, true, false, true, adapter);

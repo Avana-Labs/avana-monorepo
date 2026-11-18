@@ -128,9 +128,7 @@ contract LensMarketsModule is LensBase, ILensMarkets, ILensFees {
         v.marketHeadroomUsd = _room(v.marketUsdCap, k.regularUsed);
         v.sliceHeadroomUsd = _room(v.topUpSliceUsd, k.sliceUsed);
         v.addHeadroom = _addHeadroom(m);
-        v.pauseState = _registry().pauseState(m.hub);
-        // forge-lint: disable-next-line(unused-return)
-        (v.breakerReasons,) = IRiskModule(_RISK_MODULE).getBreakerStatus(marketId);
+        v.breakerReasons = IRiskModule(_RISK_MODULE).getBreakerStatus(marketId);
         _riskConfig(v, m);
     }
 
@@ -170,9 +168,7 @@ contract LensMarketsModule is LensBase, ILensMarkets, ILensFees {
         (v.paused, v.frozen, v.borrowable) = (rc.paused, rc.frozen, rc.borrowable);
         v.drawCap = IAaveV4Hub(def.fundingHub).getSpokeConfig(def.hubAssetId, spoke).drawCap;
         v.drawHeadroom = _drawHeadroom(spoke, def);
-        // forge-lint: disable-next-line(unused-return)
-        (v.breakerReasons,) = IRiskModule(_RISK_MODULE).getDebtBreakerStatus(spoke, def.reserveId);
-        v.pauseState = _registry().pauseState(def.fundingHub);
+        v.breakerReasons = IRiskModule(_RISK_MODULE).getDebtBreakerStatus(spoke, def.reserveId);
     }
 
     function _hubTotals(

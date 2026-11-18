@@ -3,8 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
-import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -41,8 +39,7 @@ contract HostileMarketRegistry {
 
 /// @title MarketRegistryHostileAndManualBreakerUnitTest
 /// @notice The real MarketRegistry proxy upgraded through the timelock to a hostile implementation changes no binding
-/// that matters to custody; and route failures open no settlement mode: only the guardian's manual breaker, read by
-/// the reviewed RiskModule, stops new borrowing.
+/// that matters to custody; and route failures open no settlement mode and do not stop new borrowing.
 contract MarketRegistryHostileAndManualBreakerUnitTest is RiskModuleFixture {
     function setUp() public {
         _deployRiskWorld();
@@ -102,12 +99,10 @@ contract MarketRegistryHostileAndManualBreakerUnitTest is RiskModuleFixture {
     }
 
     // TEST-234 verifies: REQ-MREG-025, Q-251, Q-399, Q-401
-    // Sources: 5.1 TEST-234 (no automatic in-kind; the guardian's freeze is the manual breaker)
+    // Sources: 5.1 TEST-234 (no automatic in-kind)
     /// @notice The registry has no selector that records a route failure or opens another settlement mode; an hour
-    /// with three failed liquidation attempts records nothing, so borrowing stays open and no breaker latches. The
-    /// Emergency Guardian's `tripMarketBreaker` then makes the reviewed RiskModule refuse a new borrow with
-    /// `BreakerTripped(market, MANUAL)`.
-    function test_TEST_234_routeFailuresOpenNothingUntilTheGuardianTrips() public {
+    /// with three failed liquidation attempts records nothing, so borrowing stays open.
+    function test_TEST_234_routeFailuresOpenNothing() public {
         string[6] memory absent = [
             "reportRouteFailure(uint256,address,address)",
             "recordRouteFailure(uint256,address)",
@@ -124,12 +119,6 @@ contract MarketRegistryHostileAndManualBreakerUnitTest is RiskModuleFixture {
         for (uint256 i = 0; i < 3; ++i) {
             vm.warp(block.timestamp + 20 minutes);
             riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-            (uint32 latched,) = registry.marketBreaker(mid);
-            assertEq(latched, 0, "nothing latched by time or failures");
         }
-        vm.prank(emergencyGuardian);
-        registry.tripMarketBreaker(mid);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.MANUAL));
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
     }
 }

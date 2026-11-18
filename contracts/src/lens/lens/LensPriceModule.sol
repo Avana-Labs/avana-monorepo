@@ -6,7 +6,6 @@ pragma solidity 0.8.28;
 import {IFlashSource} from "../../flash/IFlashSource.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../oracle/ILPOracle.sol";
-import {PauseState} from "../../types/MarketTypes.sol";
 import {PriceState, PriceView} from "../../types/OracleTypes.sol";
 import {LensBase} from "./LensBase.sol";
 import {LensDeleverage} from "./LensDeleverage.sol";
@@ -109,20 +108,6 @@ contract LensPriceModule is LensDeleverage {
         _unlocked();
         v = _debtView(spoke, _debtReserve(spoke, debtReserveId));
         (v.blockNumber, v.timestamp) = (block.number, block.timestamp);
-    }
-
-    function getApplicationState(
-        address hub
-    ) external view returns (PauseState state) {
-        _unlocked();
-        state = _registry().pauseState(hub);
-    }
-
-    function getPauseReason(
-        address hub
-    ) external view returns (uint8 reason) {
-        _unlocked();
-        reason = uint8(_registry().pauseReason(hub));
     }
 
     function _lpOracleOf(

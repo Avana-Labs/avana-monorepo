@@ -102,12 +102,4 @@ abstract contract RiskModuleBase is IRiskModuleErrors {
         IAaveV4Spoke sp = IAaveV4Spoke(spoke);
         cfBps = sp.getDynamicReserveConfig(m.reserveId, sp.getReserve(m.reserveId).dynamicConfigKey).collateralFactor;
     }
-
-    /// @dev Breaker key of a debt reserve, as the MarketRegistry keys it.
-    function _debtKey(
-        address spoke,
-        uint256 debtReserveId
-    ) internal pure returns (bytes32 key) {
-        key = keccak256(abi.encode(spoke, debtReserveId));
-    }
 }

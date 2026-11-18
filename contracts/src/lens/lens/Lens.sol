@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {SpeedView} from "../../policy/risk-module/types/RiskModuleTypes.sol";
-import {CapView, PauseState} from "../../types/MarketTypes.sol";
+import {CapView} from "../../types/MarketTypes.sol";
 import {PriceView} from "../../types/OracleTypes.sol";
 import {PendingView} from "../../types/PositionTypes.sol";
 import {ILens} from "./ILens.sol";
@@ -183,22 +183,6 @@ contract Lens is ILens {
     }
 
     /// @inheritdoc ILens
-    function getApplicationState(
-        address
-    ) external view override returns (PauseState state) {
-        state;
-        _forward(_PRICE_MODULE);
-    }
-
-    /// @inheritdoc ILens
-    function getPauseReason(
-        address
-    ) external view override returns (uint8 reason) {
-        reason;
-        _forward(_PRICE_MODULE);
-    }
-
-    /// @inheritdoc ILens
     function previewLiquidation(
         address,
         uint256,
@@ -211,8 +195,8 @@ contract Lens is ILens {
     /// @inheritdoc ILensRisk
     function getBreakerStatus(
         uint256
-    ) external view override returns (uint32 reasons, uint64 reopensAt) {
-        (reasons, reopensAt);
+    ) external view override returns (uint32 reasons) {
+        reasons;
         _forward(_RISK_MODULE_LENS);
     }
 
@@ -220,16 +204,8 @@ contract Lens is ILens {
     function getDebtBreakerStatus(
         address,
         uint256
-    ) external view override returns (uint32 reasons, uint64 reopensAt) {
-        (reasons, reopensAt);
-        _forward(_RISK_MODULE_LENS);
-    }
-
-    /// @inheritdoc ILensRisk
-    function isFrozenAddress(
-        address
-    ) external view override returns (bool frozen) {
-        frozen;
+    ) external view override returns (uint32 reasons) {
+        reasons;
         _forward(_RISK_MODULE_LENS);
     }
 

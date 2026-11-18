@@ -128,9 +128,9 @@ contract MarketRegistrySpokeRecordsUnitTest is MarketRegistryFixture {
     }
 
     // TEST-185 verifies: REQ-CONFIG-077, REQ-CONFIG-083, REQ-MREG-020
-    // Recording a second Spoke on another Hub adds it to the list, maps it to its Hub and protects it from the freeze;
-    // its debt-reserve set starts empty.
-    function test_TEST_185_secondSpokeRecordedAndProtected() public {
+    // Recording a second Spoke on another Hub adds it to the list and maps it to its Hub; its debt-reserve set starts
+    // empty.
+    function test_TEST_185_secondSpokeRecorded() public {
         vm.prank(address(timelock));
         registry.deployCdpSpoke(_def2());
         address[] memory spokes = registry.getSpokes();
@@ -139,9 +139,6 @@ contract MarketRegistrySpokeRecordsUnitTest is MarketRegistryFixture {
         assertEq(registry.hubOf(address(spoke2)), address(hub2));
         assertEq(registry.getDebtReserveIds(address(spoke2)).length, 0);
         assertEq(registry.activeMarketCount(address(spoke2)), 0);
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, address(spoke2)));
-        registry.freezeAddress(address(spoke2));
     }
 
     // TEST-185 verifies: REQ-CONFIG-077, REQ-CONFIG-079, REQ-MREG-006

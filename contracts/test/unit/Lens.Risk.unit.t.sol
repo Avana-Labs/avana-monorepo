@@ -11,7 +11,7 @@ import {Market} from "../../src/types/MarketTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensRiskUnitTest
-/// @notice Breaker and freeze pass-through, the cap-based tail coverage of SPEC-CAP-008, the uncovered deficit and the
+/// @notice Breaker pass-through, the cap-based tail coverage of SPEC-CAP-008, the uncovered deficit and the
 /// (Hub, asset) exposure view on the real Aave V4 Hub.
 /// forge-config: default.isolate = false
 contract LensRiskUnitTest is LensFixture {
@@ -24,40 +24,26 @@ contract LensRiskUnitTest is LensFixture {
         _listSecondMarket(aave.hub, MarketStatus.Active);
     }
 
-    // ─── breakers and freezes ───
+    // ─── breakers ───
 
     // TEST-228 verifies: REQ-LENS-037, Q-241, Q-399
     function test_TEST_228_breakerStatusPassThrough() public {
         assertEq(_marketReasons(), 0, "nothing blocks");
-        rm.setMarketBreaker(MARKET_ID, 1 << 11, uint64(block.timestamp + 1800));
-        (uint32 reasons, uint64 reopensAt) = lens.getBreakerStatus(MARKET_ID);
-        assertEq(reasons, 1 << 11, "POOL_DEPTH recovering");
-        assertEq(reopensAt, block.timestamp + 1800, "lastBreachAt + gateRecoverySeconds");
-        rm.setMarketBreaker(MARKET_ID, (1 << 11) | 512, type(uint64).max);
-        (reasons, reopensAt) = lens.getBreakerStatus(MARKET_ID);
-        assertEq(reasons, 2560, "MANUAL latched too");
-        assertEq(reopensAt, type(uint64).max, "a security freeze reopens only by reset");
+        rm.setMarketBreaker(MARKET_ID, 1 << 11);
+        assertEq(lens.getBreakerStatus(MARKET_ID), 1 << 11, "POOL_DEPTH holds");
+        rm.setMarketBreaker(MARKET_ID, (1 << 11) | (1 << 10));
+        assertEq(lens.getBreakerStatus(MARKET_ID), 3072, "CONFIG_DRIFT too");
+        rm.setMarketBreaker(MARKET_ID, 0);
+        assertEq(_marketReasons(), 0, "the conditions cleared");
     }
 
     // TEST-228 verifies: REQ-LENS-037, Q-241
-    function test_TEST_228_debtBreakerStatusPassThrough() public {
-        rm.setDebtBreaker(aave.cdpSpoke, debtReserveId, 32, type(uint64).max);
-        (uint32 reasons, uint64 reopensAt) = lens.getDebtBreakerStatus(aave.cdpSpoke, debtReserveId);
-        assertEq(reasons, 32, "DEFICIT");
-        assertEq(reopensAt, type(uint64).max, "latched");
-        (reasons, reopensAt) = lens.getDebtBreakerStatus(aave.cdpSpoke, usdcReserveId);
-        assertEq(reasons, 0, "the other reserve is open");
-        assertEq(reopensAt, 0, "nothing blocks");
-    }
-
-    // TEST-229 verifies: REQ-LENS-037, Q-242
-    function test_TEST_229_isFrozenAddress() public {
-        assertFalse(lens.isFrozenAddress(alice), "not frozen");
-        reg.setFrozen(alice, true);
-        assertTrue(lens.isFrozenAddress(alice), "frozen chain-wide");
-        assertFalse(lens.isFrozenAddress(bob), "others unaffected");
-        reg.setFrozen(alice, false);
-        assertFalse(lens.isFrozenAddress(alice), "unfrozen");
+    function test_TEST_228_debtReserveBreakerStatusPassThrough() public {
+        rm.setDebtBreaker(aave.cdpSpoke, debtReserveId, 32);
+        assertEq(lens.getDebtBreakerStatus(aave.cdpSpoke, debtReserveId), 32, "DEFICIT");
+        assertEq(lens.getDebtBreakerStatus(aave.cdpSpoke, usdcReserveId), 0, "the other reserve is open");
+        rm.setDebtBreaker(aave.cdpSpoke, debtReserveId, 0);
+        assertEq(lens.getDebtBreakerStatus(aave.cdpSpoke, debtReserveId), 0, "the condition cleared");
     }
 
     // ─── tail coverage ───
@@ -265,7 +251,7 @@ contract LensRiskUnitTest is LensFixture {
     // ─── helpers ───
 
     function _marketReasons() internal view returns (uint32 reasons) {
-        (reasons,) = lens.getBreakerStatus(MARKET_ID);
+        reasons = lens.getBreakerStatus(MARKET_ID);
     }
 
     function _openAlice() internal returns (address) {

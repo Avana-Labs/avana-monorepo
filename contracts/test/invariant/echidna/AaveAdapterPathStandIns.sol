@@ -11,7 +11,7 @@ import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/Aave
 import {DebtReserveDef, SpokeDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {RiskModuleMath} from "../../../src/policy/risk-module/RiskModuleMath.sol";
 import {PositionProxy} from "../../../src/proxy/position-proxy/PositionProxy.sol";
-import {Market, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
 
 // Stand-ins and the shared base of the AaveAdapter path harnesses (`AaveAdapterBorrowProperties` and
 // `AaveAdapterWithdrawProperties`). This file declares no `*Properties` contract, so the runners never fuzz it alone.
@@ -86,9 +86,9 @@ contract BorToken {
 }
 
 /// @notice The chain around the AaveAdapter at one address: the CDP Spoke (vault-token reserve 0, USDC reserve 1),
-/// its Hub, the MarketRegistry (market 1, debt reserve 1, the pause state and the address freeze), the
-/// VaultTokenFactory, the ProxyManager (deploying the real `PositionProxy`), Collateralization (records credited at
-/// the units the harness sets, debt mark) and the RiskModule's borrow-side checks.
+/// its Hub, the MarketRegistry (market 1, debt reserve 1), the VaultTokenFactory, the ProxyManager (deploying the real
+/// `PositionProxy`), Collateralization (records credited at the units the harness sets, debt mark) and the RiskModule's
+/// borrow-side checks.
 /// @dev The Spoke values a vault token (1e18 units) at `price` (8 decimals) with an 80 % collateral factor and USDC
 /// at $1, and refuses a borrow or a withdrawal that leaves HF below 1, as Aave does. The RiskModule stand-in's
 /// `postHealthCheck` reads that HF and requires `RiskModuleMath.requiredHealthFactor(minHealthFactor)`, as
@@ -105,12 +105,9 @@ contract BorWorld {
     BorProxyFactory internal immutable PROXIES = new BorProxyFactory();
 
     uint256 public price = 1000e8;
-    PauseState public state;
-    PauseReason public reason;
     uint256 public nextCredit;
     uint256 public totalCredited;
     uint256 internal records;
-    mapping(address account => bool frozen) public isFrozenAddress;
     mapping(address proxy => uint256 units) public supplied;
     mapping(address proxy => uint256 amount) public debt;
     mapping(address proxy => bool enabled) public collateralOn;
@@ -130,20 +127,6 @@ contract BorWorld {
         uint256 p
     ) external {
         price = p;
-    }
-
-    function setPause(
-        PauseState s,
-        PauseReason r
-    ) external {
-        (state, reason) = (s, r);
-    }
-
-    function setFrozen(
-        address account,
-        bool frozen
-    ) external {
-        isFrozenAddress[account] = frozen;
     }
 
     function setNextCredit(
@@ -328,18 +311,6 @@ contract BorWorld {
         (m.hub, m.spoke, m.integrationId, m.vaultToken, m.decimals) = (address(this), address(this), 7, address(vt), 18);
     }
 
-    function pauseState(
-        address
-    ) external view returns (PauseState) {
-        return state;
-    }
-
-    function pauseReason(
-        address
-    ) external view returns (PauseReason) {
-        return reason;
-    }
-
     function getSpoke(
         address s
     ) external view returns (SpokeDef memory def) {
@@ -356,10 +327,10 @@ contract BorWorld {
 
     function getDebtReserve(
         address,
-        uint256
+        uint256 reserveId
     ) external view returns (DebtReserveDef memory d) {
         (d.reserveId, d.asset, d.decimals, d.fundingHub, d.hubAssetId) = (1, address(usdc), 6, address(this), 1);
-        (d.fixedPrice, d.approved) = (true, true);
+        (d.fixedPrice, d.approved) = (true, reserveId == 1);
     }
 
     function integrationIdOf(
@@ -508,7 +479,6 @@ abstract contract AaveAdapterPathHarness is AaveAdapterStorage {
 
     uint256 internal constant BAD_HEALTH = 1;
     uint256 internal constant BAD_FORWARD = 2;
-    uint256 internal constant BAD_GATE = 4;
     uint256 internal constant BAD_REPAY = 8;
     uint256 internal constant BAD_SUPPLY = 16;
 
@@ -673,21 +643,6 @@ abstract contract AaveAdapterPathHarness is AaveAdapterStorage {
         uint256 amount = W.debt(p) * (k == 0 ? 50 : (k == 1 ? 200 : (k == 2 ? 500 : 1000))) / 1e4;
         W.accrue(p, amount);
         booked[i] += amount;
-    }
-
-    /// @notice The Hub's application pause state (None, Frozen, Paused General, Paused MintPathSuspect) and the
-    /// freeze of wallet `who`.
-    function setStops(
-        uint8 pause,
-        uint8 who,
-        bool frozen
-    ) external {
-        uint256 k = pause & 3;
-        if (k == 0) W.setPause(PauseState.None, PauseReason.General);
-        else if (k == 1) W.setPause(PauseState.Frozen, PauseReason.General);
-        else if (k == 2) W.setPause(PauseState.Paused, PauseReason.General);
-        else W.setPause(PauseState.Paused, PauseReason.MintPathSuspect);
-        W.setFrozen(address(_wallet(_index(who))), frozen);
     }
 
     // ─── Common properties ───

@@ -4,14 +4,13 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {CloseAccountView, DeleverageSizing, RecordView} from "../../src/lens/lens/types/LensTypes.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensSizingGatesUnitTest
-/// @notice `previewDeleverageTo` is unreachable exactly when the repay with collateral it sizes is closed: a Hub Paused
-/// for `MintPathSuspect`, a Hub whose vault-token shares differ from its assets, a market whose collateral price is not
-/// liquidation-grade, a debt reserve the account does not owe, or a record that is not the account's; and the
-/// close-account preview's quotes and units follow the deadline and the record list.
+/// @notice `previewDeleverageTo` is unreachable exactly when the repay with collateral it sizes is closed: a Hub whose
+/// vault-token shares differ from its assets, a market whose collateral price is not liquidation-grade, a debt reserve
+/// the account does not owe, or a record that is not the account's; and the close-account preview's quotes and units
+/// follow the deadline and the record list.
 /// forge-config: default.isolate = false
 contract LensSizingGatesUnitTest is LensFixture {
     function setUp() public {
@@ -29,19 +28,6 @@ contract LensSizingGatesUnitTest is LensFixture {
     // TEST-247 verifies: REQ-LENS-055, REQ-LENS-038
     function test_TEST_247_openByDefault() public view {
         assertTrue(_reachable(), "every gate open");
-    }
-
-    // TEST-247 verifies: REQ-LENS-055, REQ-LENS-038, REQ-ADAPTER-080, REQ-ADAPTER-082
-    function test_TEST_247_onlyMintPathSuspectPauseClosesIt() public {
-        reg.setPause(aave.hub, PauseState.Paused, PauseReason.MintPathSuspect);
-        assertFalse(_reachable(), "Paused(MintPathSuspect)");
-        reg.setPause(aave.hub, PauseState.Paused, PauseReason.General);
-        assertTrue(_reachable(), "Paused(General) keeps it open");
-        reg.setPause(aave.hub, PauseState.Frozen, PauseReason.None);
-        assertTrue(_reachable(), "Frozen keeps it open");
-        reg.setPause(aave.hub, PauseState.None, PauseReason.None);
-        reg.setFrozen(alice, true);
-        assertTrue(_reachable(), "a frozen wallet keeps it open");
     }
 
     // TEST-247 verifies: REQ-LENS-055, REQ-LENS-038
@@ -65,8 +51,9 @@ contract LensSizingGatesUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-055
     function test_TEST_247_proxyIsReportedEvenWhenClosed() public {
-        reg.setPause(aave.hub, PauseState.Paused, PauseReason.MintPathSuspect);
+        vm.mockCall(aave.hub, abi.encodeWithSignature("getAddedShares(uint256)", vtAssetId), abi.encode(uint256(1)));
         DeleverageSizing memory s = lens.previewDeleverageTo(alice, MARKET_ID, _key(1), debtReserveId, 1.6e18);
+        assertFalse(s.reachable, "closed");
         assertEq(s.proxy, aliceProxy, "the account");
         assertEq(s.blockNumber, block.number, "block");
         assertEq(s.timestamp, block.timestamp, "time");

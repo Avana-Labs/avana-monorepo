@@ -10,7 +10,7 @@ import {INonfungiblePositionManager} from "../../../src/interfaces/external/unis
 import {DexHop, HopKind, RouteConfig} from "../../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {LPOracle} from "../../../src/oracle/LPOracle.sol";
 import {MarketParams, MarketSpeedLimits} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {MarketDef, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {MarketDef} from "../../../src/types/MarketTypes.sol";
 import {PositionRef, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {RegistryRouteMock} from "../mocks/MarketRegistryMocks.sol";
 import {ClTestToken, IClFactory, IClPool} from "./ClPoolFixture.sol";
@@ -414,17 +414,6 @@ abstract contract FullStackMarkets is FullStackFixture {
         uint256 reserveId
     ) internal view returns (uint256) {
         return IAaveV4Spoke(aave.cdpSpoke).getUserSuppliedShares(reserveId, proxy);
-    }
-
-    /// @dev The Emergency Guardian moves the Hub to `state` for `reason` (None unpauses and unfreezes).
-    function _pause(
-        PauseState state,
-        PauseReason reason
-    ) internal {
-        vm.startPrank(emergencyGuardian);
-        if (state == PauseState.Frozen) registry.freeze(aave.hub);
-        else if (state == PauseState.Paused) registry.pause(aave.hub, reason);
-        vm.stopPrank();
     }
 
     function _mins() internal pure returns (uint256[] memory m) {

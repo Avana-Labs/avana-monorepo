@@ -9,7 +9,7 @@ import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {ChainlinkPrice} from "../../oracle/ChainlinkPrice.sol";
 import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {LPPriceMath} from "../../oracle/LPPriceMath.sol";
-import {AccountGateStatus, MarketGateStatus, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {AccountGateStatus, MarketGateStatus} from "../../types/MarketTypes.sol";
 import {PriceState} from "../../types/OracleTypes.sol";
 import {DebtReserveDef, MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleBorrowLogic} from "./IRiskModuleBorrowLogic.sol";
@@ -22,7 +22,7 @@ import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleStatusLogic
 /// @notice Body of `getAccountGateStatus`: every borrow-side gate outcome of an account, without poking.
-/// @dev Reads no pause state; reserve fields hold `type(uint256).max` when no reserve matches.
+/// @dev Reserve fields hold `type(uint256).max` when no reserve matches.
 // View calls in loops over the account's reserves and legs, bounded by listings.
 // forge-lint: disable-start(calls-loop)
 contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic {
@@ -76,16 +76,6 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
         st.withdrawWithDebtAllowed = _passes(proxy, false);
     }
 
-    /// @inheritdoc IRiskModuleStatusLogic
-    function pauseOf(
-        address proxy
-    ) external view override returns (PauseState state, PauseReason reason) {
-        (, uint256 marketId) = _account(proxy);
-        address hub = _market(marketId).hub;
-        state = _registry().pauseState(hub);
-        reason = _registry().pauseReason(hub);
-    }
-
     function _accountReserves(
         AccountGateStatus memory st,
         Scope memory s
@@ -128,7 +118,7 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
         g.hubSharesEqualAssets = IRiskModuleDriftLogic(_DRIFT).isHubSharesEqualAssets(s.marketId);
         (g.noSettlementPath,) = _routeHalt(s);
         g.liquidationHalted = noKeeper || g.noSettlementPath;
-        (g.breakerReasons, g.breakerLatchedUntil) = IRiskModuleBreakerLogic(_BREAKER).marketBreaker(s.marketId);
+        g.breakerReasons = IRiskModuleBreakerLogic(_BREAKER).marketConditions(s.marketId);
     }
 
     function _debtStatus(
@@ -148,10 +138,8 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
             if (sp.getReserveConfig(r).paused && st.pausedDebtReserveId == NO_RESERVE) st.pausedDebtReserveId = r;
             if (st.staleDebtReserveId == NO_RESERVE && _stale(oracle, r, i, s)) st.staleDebtReserveId = r;
             if (st.breakerDebtReserveId == NO_RESERVE) {
-                // The status reports the reasons; the reopening time is not used.
-                // forge-lint: disable-next-line(unused-return)
-                (uint32 reasons,) = IRiskModuleBreakerLogic(_BREAKER).debtBreaker(s.spoke, r);
-                if (reasons != 0) (st.breakerDebtReserveId, st.debtBreakerReasons) = (r, reasons);
+                uint32 reasons = IRiskModuleBreakerLogic(_BREAKER).debtConditions(s.spoke, r);
+                if (reasons != 0) (st.breakerDebtReserveId, st.breakerDebtReasons) = (r, reasons);
             }
         }
     }

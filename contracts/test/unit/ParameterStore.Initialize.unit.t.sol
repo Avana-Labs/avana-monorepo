@@ -78,21 +78,6 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         _refused(g, oob);
     }
 
-    // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-030
-    function test_TEST_242_gateRecoveryEdges() public {
-        GlobalParams memory g = _defaultGlobals();
-        g.gateRecoverySeconds = 600;
-        assertEq(_accepted(g).gateRecoverySeconds(), 600);
-        g.gateRecoverySeconds = 7200;
-        assertEq(_accepted(g).gateRecoverySeconds(), 7200);
-        g.gateRecoverySeconds = 599;
-        _refused(g, oob);
-        g.gateRecoverySeconds = 7201;
-        _refused(g, oob);
-        g.gateRecoverySeconds = type(uint64).max;
-        _refused(g, oob);
-    }
-
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-018
     function test_TEST_242_maxShortfallEdges() public {
         GlobalParams memory g = _defaultGlobals();
@@ -148,7 +133,6 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         assertTrue(s.hasRole(AvanaRoles.APPLICATION_ADMIN, address(timelock)));
         assertFalse(s.hasRole(bytes32(0), address(this)));
         assertFalse(s.hasRole(AvanaRoles.APPLICATION_ADMIN, address(this)));
-        assertEq(s.getRoleAdmin(AvanaRoles.APPLICATION_PAUSE_GUARDIAN), AvanaRoles.APPLICATION_ADMIN);
         assertEq(s.getRoleAdmin(AvanaRoles.APPLICATION_RISK_STEWARD), AvanaRoles.APPLICATION_ADMIN);
         assertEq(s.TIMELOCK(), address(timelock));
         assertEq(s.MARKET_REGISTRY(), address(registry));
@@ -162,7 +146,6 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         assertEq(store.maxFlashFeeBps(), g.maxFlashFeeBps);
         assertEq(store.avanaFeeShareBps(), g.avanaFeeShareBps);
         assertEq(store.feeRecipient(), g.feeRecipient);
-        assertEq(store.gateRecoverySeconds(), g.gateRecoverySeconds);
         assertEq(store.maxShortfallBps(), g.maxShortfallBps);
         // Fixed constants of the implementation.
         assertEq(store.MAX_HEARTBEAT_MARGIN(), 3600);
@@ -177,14 +160,14 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         bytes32 slot =
             keccak256(abi.encode(uint256(keccak256("avana.storage.ParameterStore")) - 1)) & ~bytes32(uint256(0xff));
         assertEq(slot, 0x97d60a1f76524429d85918aee5154ffd84c83f78fddb1d1f3d0a0bfeca081800);
-        // GlobalParams opens the layout: the flash fee, the fee share, the recipient and the gate recovery share the
-        // first word, then the shortfall bound.
+        // GlobalParams opens the layout: the flash fee, the fee share, the recipient and the shortfall bound share the
+        // first word.
         uint256 w0 = uint256(vm.load(address(store), slot));
         assertEq(uint16(w0), store.maxFlashFeeBps());
         assertEq(uint16(w0 >> 16), store.avanaFeeShareBps());
         assertEq(address(uint160(w0 >> 32)), store.feeRecipient());
-        assertEq(uint64(w0 >> 192), store.gateRecoverySeconds());
-        assertEq(uint16(uint256(vm.load(address(store), bytes32(uint256(slot) + 1)))), store.maxShortfallBps());
+        assertEq(uint16(w0 >> 192), store.maxShortfallBps());
+        assertEq(w0 >> 208, 0);
         // Neither the implementation nor any logic contract holds a value of its own.
         assertEq(vm.load(address(implementation), slot), bytes32(0));
         assertEq(vm.load(logics.tighten, slot), bytes32(0));

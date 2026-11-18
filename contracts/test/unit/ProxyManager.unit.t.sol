@@ -9,15 +9,15 @@ import {IProxyManager} from "../../src/proxy/proxy-manager/IProxyManager.sol";
 import {ProxyManager} from "../../src/proxy/proxy-manager/ProxyManager.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {BytecodeInspector} from "../utils/BytecodeInspector.sol";
-import {FreezeRegistryMock, ProxyCallTarget} from "../utils/mocks/ProxyMocks.sol";
+import {ProxyCallTarget, StubRegistryMock} from "../utils/mocks/ProxyMocks.sol";
 
 /// @title ProxyManagerUnitTest
 /// @notice The ProxyManager on its own (2.5): Adapter-only CREATE2 deployment at `predictProxy(wallet, spoke,
-/// marketId)`, one proxy per triple, frozen wallets refused, the check order of `deployProxy`, and a runtime code with
-/// no storage, role, pause or upgrade selector.
-/// @dev The Adapter is a plain address; the MarketRegistry is the freeze-only mock. The Adapter's side of TEST-025,
-/// TEST-190 and TEST-271 (`proxyOf`, `UserProxyCreated`, registration in the vault token, `AaveAdapter.predictProxy`
-/// and the Lens value) joins these rows with the AaveAdapter and the Lens.
+/// marketId)`, one proxy per triple, the check order of `deployProxy`, and a runtime code with no storage, role, pause
+/// or upgrade selector.
+/// @dev The Adapter is a plain address; the MarketRegistry is a code-only stand-in the ProxyManager never calls. The
+/// Adapter's side of TEST-025, TEST-190 and TEST-271 (`proxyOf`, `UserProxyCreated`, registration in the vault token,
+/// `AaveAdapter.predictProxy` and the Lens value) joins these rows with the AaveAdapter and the Lens.
 contract ProxyManagerUnitTest is AvanaTest {
     using BytecodeInspector for bytes;
 
@@ -27,14 +27,14 @@ contract ProxyManagerUnitTest is AvanaTest {
     address internal adapter;
     address internal spokeHub1;
     address internal spokeHub2;
-    FreezeRegistryMock internal registry;
+    StubRegistryMock internal registry;
     ProxyManager internal manager;
 
     function setUp() public {
         adapter = makeAddr("AaveAdapter");
         spokeHub1 = makeAddr("UniswapV3StableSpoke");
         spokeHub2 = makeAddr("SecondHubSpoke");
-        registry = new FreezeRegistryMock();
+        registry = new StubRegistryMock();
         manager = new ProxyManager(adapter, address(registry));
         vm.label(address(manager), "ProxyManager");
     }
@@ -84,12 +84,14 @@ contract ProxyManagerUnitTest is AvanaTest {
         );
     }
 
-    /// @notice `predictProxy` reads nothing from the MarketRegistry: it answers while the registry reverts.
+    /// @notice `predictProxy` and `deployProxy` read nothing from the MarketRegistry.
     // TEST-190 verifies: REQ-PROXY-099, REQ-PROXY-052
     function test_TEST_190_predictReadsNoRegistry() public {
-        registry.setDown(true);
+        vm.expectCall(address(registry), "", 0);
         address predicted = manager.predictProxy(carol, spokeHub1, MARKET_A);
         assertTrue(predicted != address(0));
+        vm.prank(adapter);
+        assertEq(manager.deployProxy(carol, spokeHub1, MARKET_A), predicted, "deployed");
     }
 
     // ─── Deployment ───
@@ -200,47 +202,11 @@ contract ProxyManagerUnitTest is AvanaTest {
         assertEq(manager.deployProxy(carol, spokeHub1, MARKET_A), predicted);
     }
 
-    // ─── Freeze ───
-
-    // TEST-229 verifies: REQ-PROXY-099, REQ-PROXY-102, Q-242, REQ-ACCESS-147, REQ-MREG-023
-    // Sources: 5.1 TEST-229 (ProxyManager side)
-    function test_TEST_229_frozenWalletGetsNoProxy() public {
-        registry.setFrozen(carol, true);
-        address predicted = manager.predictProxy(carol, spokeHub1, MARKET_A);
-        vm.prank(adapter);
-        vm.expectRevert(abi.encodeWithSelector(IProxyManager.AddressIsFrozen.selector, carol));
-        manager.deployProxy(carol, spokeHub1, MARKET_A);
-        assertEq(predicted.code.length, 0);
-        registry.setFrozen(carol, false);
-        vm.prank(adapter);
-        assertEq(manager.deployProxy(carol, spokeHub1, MARKET_A), predicted, "unfrozen wallet gets its proxy");
-    }
-
-    /// @notice The freeze is read for the wallet only, and only on deployment.
-    // TEST-229 verifies: REQ-PROXY-099, REQ-MREG-023
-    function test_TEST_229_freezeReadForWalletOnly() public {
-        registry.setFrozen(spokeHub1, true);
-        registry.setFrozen(adapter, true);
-        vm.expectCall(address(registry), abi.encodeCall(FreezeRegistryMock.isFrozenAddress, (carol)), 1);
-        vm.prank(adapter);
-        manager.deployProxy(carol, spokeHub1, MARKET_A);
-    }
-
-    /// @notice A registry that reverts stops new proxies only; its error propagates.
-    // TEST-229 verifies: REQ-PROXY-099, REQ-CONFIG-069
-    function test_TEST_229_registryRevertPropagates() public {
-        registry.setDown(true);
-        vm.prank(adapter);
-        vm.expectRevert(FreezeRegistryMock.RegistryDown.selector);
-        manager.deployProxy(carol, spokeHub1, MARKET_A);
-    }
-
     // ─── Check order ───
 
-    /// @notice OnlyAdapter, then ZeroAddress, then ProxyExists, then AddressIsFrozen.
+    /// @notice OnlyAdapter, then ZeroAddress, then ProxyExists.
     // TEST-190 verifies: REQ-PROXY-051, REQ-PROXY-097, REQ-PROXY-099
     function test_TEST_190_checkOrder() public {
-        registry.setFrozen(carol, true);
         vm.prank(carol);
         vm.expectRevert(IProxyManager.OnlyAdapter.selector);
         manager.deployProxy(carol, address(0), 0);
@@ -249,10 +215,8 @@ contract ProxyManagerUnitTest is AvanaTest {
         vm.expectRevert(IProxyManager.ZeroAddress.selector);
         manager.deployProxy(carol, address(0), MARKET_A);
 
-        registry.setFrozen(carol, false);
         vm.prank(adapter);
         manager.deployProxy(carol, spokeHub1, MARKET_A);
-        registry.setFrozen(carol, true);
         vm.prank(adapter);
         vm.expectRevert(abi.encodeWithSelector(IProxyManager.ProxyExists.selector, carol, spokeHub1, MARKET_A));
         manager.deployProxy(carol, spokeHub1, MARKET_A);

@@ -92,18 +92,6 @@ contract LPVaultSwapFlashHelpersIntegrationTest is LPVaultSwapUnitBase {
         }
     }
 
-    /// @notice A frozen address liquidates through the public helper: the freeze binds `msg.sender` only, and
-    /// LPVaultSwap's caller is the helper (REQ-SWAP-105).
-    // TEST-289 verifies: REQ-SWAP-105, REQ-HELPER-006, REQ-HELPER-010, Q-242, Q-404
-    // TEST-229 verifies: REQ-SWAP-105, Q-404
-    function test_TEST_289_frozenAddressThroughHelper() public {
-        registry.setFrozen(attacker, true);
-        vm.prank(attacker);
-        uint256 payout = helper.flashLiquidate(_request(1950e6, 1950e6));
-        assertGt(payout, 0, "settled through the helper");
-        assertEq(usdc.balanceOf(attacker), payout, "paid");
-    }
-
     /// @notice `F < X`: the helper pulls the inventory `X − F` from its caller and returns it in the payout; the Lens
     /// margin above the debt Aave pulls returns too.
     // TEST-289 verifies: REQ-HELPER-004, REQ-HELPER-008, SPEC-LIQ-017

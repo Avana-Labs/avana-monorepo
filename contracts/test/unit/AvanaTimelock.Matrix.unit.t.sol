@@ -65,15 +65,8 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         rows.push(Row(mr, IMarketRegistry.setMarketOffboarding.selector, true, false));
         rows.push(Row(mr, IMarketRegistry.activateMarket.selector, true, false));
         rows.push(Row(mr, IMarketRegistry.cancelRegistration.selector, true, false));
-        rows.push(Row(mr, IMarketRegistry.freeze.selector, true, false));
-        rows.push(Row(mr, IMarketRegistry.pause.selector, true, false));
-        rows.push(Row(mr, IMarketRegistry.freezeAddress.selector, true, false));
-        rows.push(Row(mr, IMarketRegistry.tripMarketBreaker.selector, true, false));
-        rows.push(Row(mr, IMarketRegistry.tripDebtBreaker.selector, true, false));
         // Short delay, DAO-only cancel (restoring).
         rows.push(Row(mr, IMarketRegistryRoutes.restoreRoute.selector, true, true));
-        // Normal delay, DAO-only cancel (restoring).
-        rows.push(Row(mr, IMarketRegistry.unfreezeAddress.selector, false, true));
         // Normal delay, any canceller.
         rows.push(Row(mr, IMarketRegistry.listCollateralMarket.selector, false, false));
         rows.push(Row(mr, IMarketRegistry.setPriceSource.selector, false, false));
@@ -86,20 +79,13 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         rows.push(Row(mr, IMarketRegistry.enableDebtReserve.selector, false, false));
         rows.push(Row(mr, IMarketRegistry.removeDebtReserve.selector, false, false));
         rows.push(Row(mr, IMarketRegistry.setFlashSource.selector, false, false));
-        rows.push(Row(mr, IMarketRegistry.unpause.selector, false, false));
-        rows.push(Row(mr, IMarketRegistry.unfreeze.selector, false, false));
-        // The chain-wide stops wait the normal delay from the admin: the guardians already stop every Hub at once.
-        rows.push(Row(mr, IMarketRegistry.freezeAll.selector, false, false));
-        rows.push(Row(mr, IMarketRegistry.pauseAll.selector, false, false));
-        rows.push(Row(mr, IMarketRegistry.resetMarketBreaker.selector, false, false));
-        rows.push(Row(mr, IMarketRegistry.resetDebtBreaker.selector, false, false));
         rows.push(Row(mr, UUPSUpgradeable.upgradeToAndCall.selector, false, false));
     }
 
     function _parameterStoreRows(
         address ps
     ) internal {
-        bytes4[16] memory tighten = [
+        bytes4[15] memory tighten = [
             IParameterStoreTighten.tightenSlippageAllowanceBps.selector,
             IParameterStoreTighten.tightenFloorRoundingAllowance.selector,
             IParameterStoreTighten.tightenBorrowPriceMaxAge.selector,
@@ -109,8 +95,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStoreTighten.tightenTopUpSliceUsd.selector,
             IParameterStoreTighten.tightenTokenUsdCap.selector,
             IParameterStoreTighten.tightenMinPledgeUsd.selector,
-            IParameterStore.tightenBreakerDeficitMax.selector,
-            IParameterStore.tightenGateRecoverySeconds.selector,
+            IParameterStore.tightenDeficitMax.selector,
             IParameterStore.tightenMaxShortfallBps.selector,
             IParameterStore.tightenDebtStressRiseBps.selector,
             IParameterStore.tightenMaxFlashFeeBps.selector,
@@ -120,7 +105,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         for (uint256 i; i < tighten.length; ++i) {
             rows.push(Row(ps, tighten[i], true, false));
         }
-        bytes4[32] memory normal = [
+        bytes4[31] memory normal = [
             IParameterStoreLoosen.loosenSlippageAllowanceBps.selector,
             IParameterStoreLoosen.loosenFloorRoundingAllowance.selector,
             IParameterStoreLoosen.loosenRouteDepthThreshold.selector,
@@ -128,8 +113,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStoreLoosen.loosenTopUpSliceUsd.selector,
             IParameterStoreLoosen.loosenTokenUsdCap.selector,
             IParameterStoreLoosen.loosenMinPledgeUsd.selector,
-            IParameterStore.loosenBreakerDeficitMax.selector,
-            IParameterStore.loosenGateRecoverySeconds.selector,
+            IParameterStore.loosenDeficitMax.selector,
             IParameterStore.loosenMaxShortfallBps.selector,
             IParameterStore.loosenDebtStressRiseBps.selector,
             IParameterStore.loosenMarketSpeedLimits.selector,
@@ -281,7 +265,9 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     function test_TEST_067_everyOperationTypeByEveryCanceller() public {
         address[4] memory cancellers = [governanceMultisig, emergencyGuardian, aaveGuardian, aaveGovernanceExecutor];
         Call[][7] memory ops;
-        ops[0] = _one(address(marketRegistry), abi.encodeCall(IMarketRegistry.freeze, (address(1))));
+        ops[0] = _one(
+            address(marketRegistry), abi.encodeCall(IMarketRegistryRoutes.disableRoute, (1, address(2), address(3), 0))
+        );
         ops[1] = _one(
             address(marketRegistry),
             abi.encodeCall(IMarketRegistryRoutes.setRoute, (1, address(2), address(3), 0, address(4)))
@@ -354,16 +340,15 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
 
     // ─── Removal of a guardian (SPEC-GOV-006) ───
 
-    /// @notice Revoking a guardian role on the MarketRegistry is a role-change operation: it needs the normal delay
-    /// (a short schedule reverts `DelayBelowRequired`), neither guardian can cancel it, it cannot run before
+    /// @notice Revoking a guardian's `CANCELLER_ROLE` on the timelock is a role-change operation: it needs the normal
+    /// delay (a short schedule reverts `DelayBelowRequired`), neither guardian can cancel it, it cannot run before
     /// `readyAt`, and anyone executes it at `readyAt`, the guardian's last moment of power.
     // TEST-244 verifies: SPEC-GOV-006, SPEC-GOV-005, REQ-ACCESS-112, REQ-ACCESS-091, REQ-ACCESS-149, SPEC-GOV-014
     // Sources: 2.15 SPEC-GOV-006
     function test_TEST_244_guardianRemovalIsARoleChangeTheGuardiansCannotStop() public {
-        Call[] memory calls = _one(
-            address(marketRegistry),
-            abi.encodeCall(IAccessControl.revokeRole, (AvanaRoles.APPLICATION_PAUSE_GUARDIAN, emergencyGuardian))
-        );
+        bytes32 cancellerRole = timelock.CANCELLER_ROLE();
+        Call[] memory calls =
+            _one(address(timelock), abi.encodeCall(IAccessControl.revokeRole, (cancellerRole, emergencyGuardian)));
         assertEq(_required(calls), NORMAL_DELAY);
         vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.DelayBelowRequired.selector, SHORT_DELAY, NORMAL_DELAY));
         this.scheduleAs(governanceMultisig, calls, SHORT_DELAY, bytes32(0));
@@ -382,8 +367,8 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         timelock.executeBatch(t, v, p, bytes32(0), bytes32(0));
         vm.warp(ts + NORMAL_DELAY);
         _execute(attacker, calls, bytes32(0));
-        assertEq(marketRegistry.callCount(), 1);
-        assertEq(marketRegistry.callAt(0).caller, address(timelock));
+        assertFalse(timelock.hasRole(cancellerRole, emergencyGuardian), "guardian removed");
+        assertTrue(timelock.hasRole(cancellerRole, aaveGuardian));
     }
 
     // ─── Handover to the Aave DAO (REQ-ACCESS-105) ───
@@ -511,7 +496,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             lock: makeAddr("lock"),
             aaveAdapter: makeAddr("aaveAdapter"),
             collateralization: makeAddr("collateralization"),
-            marketRegistry: address(new LVSMarketRegistryMock()), // freeze reads of addKeeper and activeKeeperCount
+            marketRegistry: address(new LVSMarketRegistryMock()),
             parameterStore: makeAddr("store"),
             payoutEscrow: makeAddr("escrow"),
             keeperFloor: 1

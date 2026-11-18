@@ -30,7 +30,6 @@ contract RiskModuleHandlerLegsUnitTest is RiskModuleFixture {
                 swap: swap,
                 usdt: tUsdt,
                 proxy: address(proxy),
-                guardian: emergencyGuardian,
                 marketId: mid,
                 vtReserve: VT_RESERVE,
                 debtReserve: GHO_RESERVE,

@@ -496,11 +496,6 @@ export const lensAbi = [
                     "name": "breakerReasons",
                     "type": "uint32",
                     "internalType": "uint32"
-                  },
-                  {
-                    "name": "breakerLatchedUntil",
-                    "type": "uint64",
-                    "internalType": "uint64"
                   }
                 ]
               },
@@ -545,11 +540,6 @@ export const lensAbi = [
                 "internalType": "bool"
               },
               {
-                "name": "pauseState",
-                "type": "uint8",
-                "internalType": "enum PauseState"
-              },
-              {
                 "name": "healthFactor",
                 "type": "uint256",
                 "internalType": "uint256"
@@ -565,11 +555,6 @@ export const lensAbi = [
                 "internalType": "bool"
               },
               {
-                "name": "pauseReason",
-                "type": "uint8",
-                "internalType": "enum PauseReason"
-              },
-              {
                 "name": "healthFactorExcludingRescue",
                 "type": "uint256",
                 "internalType": "uint256"
@@ -580,7 +565,7 @@ export const lensAbi = [
                 "internalType": "uint256"
               },
               {
-                "name": "debtBreakerReasons",
+                "name": "breakerDebtReasons",
                 "type": "uint32",
                 "internalType": "uint32"
               },
@@ -590,11 +575,6 @@ export const lensAbi = [
                 "internalType": "bool"
               }
             ]
-          },
-          {
-            "name": "walletFrozen",
-            "type": "bool",
-            "internalType": "bool"
           },
           {
             "name": "breakerReasons",
@@ -1017,11 +997,6 @@ export const lensAbi = [
                     "name": "breakerReasons",
                     "type": "uint32",
                     "internalType": "uint32"
-                  },
-                  {
-                    "name": "breakerLatchedUntil",
-                    "type": "uint64",
-                    "internalType": "uint64"
                   }
                 ]
               },
@@ -1066,11 +1041,6 @@ export const lensAbi = [
                 "internalType": "bool"
               },
               {
-                "name": "pauseState",
-                "type": "uint8",
-                "internalType": "enum PauseState"
-              },
-              {
                 "name": "healthFactor",
                 "type": "uint256",
                 "internalType": "uint256"
@@ -1086,11 +1056,6 @@ export const lensAbi = [
                 "internalType": "bool"
               },
               {
-                "name": "pauseReason",
-                "type": "uint8",
-                "internalType": "enum PauseReason"
-              },
-              {
                 "name": "healthFactorExcludingRescue",
                 "type": "uint256",
                 "internalType": "uint256"
@@ -1101,7 +1066,7 @@ export const lensAbi = [
                 "internalType": "uint256"
               },
               {
-                "name": "debtBreakerReasons",
+                "name": "breakerDebtReasons",
                 "type": "uint32",
                 "internalType": "uint32"
               },
@@ -1111,11 +1076,6 @@ export const lensAbi = [
                 "internalType": "bool"
               }
             ]
-          },
-          {
-            "name": "walletFrozen",
-            "type": "bool",
-            "internalType": "bool"
           },
           {
             "name": "breakerReasons",
@@ -1232,25 +1192,6 @@ export const lensAbi = [
             ]
           }
         ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getApplicationState",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "state",
-        "type": "uint8",
-        "internalType": "enum PauseState"
       }
     ],
     "stateMutability": "view"
@@ -1380,11 +1321,6 @@ export const lensAbi = [
         "name": "reasons",
         "type": "uint32",
         "internalType": "uint32"
-      },
-      {
-        "name": "reopensAt",
-        "type": "uint64",
-        "internalType": "uint64"
       }
     ],
     "stateMutability": "view"
@@ -1512,11 +1448,6 @@ export const lensAbi = [
         "name": "reasons",
         "type": "uint32",
         "internalType": "uint32"
-      },
-      {
-        "name": "reopensAt",
-        "type": "uint64",
-        "internalType": "uint64"
       }
     ],
     "stateMutability": "view"
@@ -1772,11 +1703,6 @@ export const lensAbi = [
             "name": "breakerReasons",
             "type": "uint32",
             "internalType": "uint32"
-          },
-          {
-            "name": "pauseState",
-            "type": "uint8",
-            "internalType": "enum PauseState"
           }
         ]
       }
@@ -1938,11 +1864,6 @@ export const lensAbi = [
             "name": "breakerReasons",
             "type": "uint32",
             "internalType": "uint32"
-          },
-          {
-            "name": "pauseState",
-            "type": "uint8",
-            "internalType": "enum PauseState"
           }
         ]
       }
@@ -2571,11 +2492,6 @@ export const lensAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "pauseState",
-            "type": "uint8",
-            "internalType": "enum PauseState"
-          },
-          {
             "name": "breakerReasons",
             "type": "uint32",
             "internalType": "uint32"
@@ -2822,11 +2738,6 @@ export const lensAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "pauseState",
-            "type": "uint8",
-            "internalType": "enum PauseState"
-          },
-          {
             "name": "breakerReasons",
             "type": "uint32",
             "internalType": "uint32"
@@ -2887,25 +2798,6 @@ export const lensAbi = [
             "internalType": "uint256[]"
           }
         ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getPauseReason",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "reason",
-        "type": "uint8",
-        "internalType": "uint8"
       }
     ],
     "stateMutability": "view"
@@ -3429,25 +3321,6 @@ export const lensAbi = [
             "internalType": "uint256"
           }
         ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "isFrozenAddress",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "frozen",
-        "type": "bool",
-        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -3988,11 +3861,6 @@ export const lensAbi = [
             "name": "debtReservePaused",
             "type": "bool",
             "internalType": "bool"
-          },
-          {
-            "name": "pauseState",
-            "type": "uint8",
-            "internalType": "enum PauseState"
           },
           {
             "name": "slippageBps",

@@ -10,12 +10,10 @@ import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 /// @notice The role matrix of every ParameterStore setter: the Joint Configuration Safe (`APPLICATION_RISK_STEWARD`)
-/// runs each of the 14 tighten setters and `setAvanaFeeShareBps` at once with the timelock path's checks and its own
-/// address as `caller`; the guardians hold no setter; the timelock's delay class of every selector; and who
-/// administers each role.
+/// runs each of the 13 tighten setters and `setAvanaFeeShareBps` at once with the timelock path's checks and its own
+/// address as `caller`; the timelock's delay class of every selector; and who administers each role.
 contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
     bytes32 internal constant ADMIN = AvanaRoles.APPLICATION_ADMIN;
-    bytes32 internal constant GUARDIAN = AvanaRoles.APPLICATION_PAUSE_GUARDIAN;
     bytes32 internal constant STEWARD = AvanaRoles.APPLICATION_RISK_STEWARD;
     address internal safe = makeAddr("jointConfigurationSafe");
     bytes internal notStricter = abi.encodeWithSelector(IParameterStoreBase.NotStricter.selector);
@@ -25,8 +23,6 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         _listMarket();
         vm.startPrank(address(timelock));
         store.grantRole(STEWARD, safe);
-        store.grantRole(GUARDIAN, emergencyGuardian);
-        store.grantRole(GUARDIAN, aaveGuardian);
         vm.stopPrank();
     }
 
@@ -51,7 +47,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         return abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, who, role);
     }
 
-    // ─── The 21 steward selectors, one by one ───
+    // ─── The 14 steward selectors, one by one ───
 
     // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-052, REQ-CONFIG-051, REQ-ACCESS-041, REQ-ACCESS-185
     function test_TEST_062_stewardLowersSlippage() public {
@@ -164,31 +160,19 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         store.setMaxFlashFeeBps(10);
     }
 
-    // TEST-062 verifies: REQ-PSTORE-002, REQ-PSTORE-030
-    function test_TEST_062_stewardRaisesGateRecovery() public {
-        vm.prank(safe);
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterTightened("gateRecoverySeconds", bytes32(0), 1800, 3600, safe);
-        store.tightenGateRecoverySeconds(3600);
-        _stewardRepeats(abi.encodeCall(store.tightenGateRecoverySeconds, (3600)));
-        vm.prank(safe);
-        vm.expectRevert(_unauthorized(safe, ADMIN));
-        store.loosenGateRecoverySeconds(1800);
-    }
-
     // TEST-062 verifies: REQ-PSTORE-002, REQ-PSTORE-016
     function test_TEST_062_stewardLowersDeficitThreshold() public {
         _tl();
-        store.loosenBreakerDeficitMax(address(hub), gho, 10_000e18);
+        store.loosenDeficitMax(address(hub), gho, 10_000e18);
         bytes32 scope = keccak256(abi.encode(address(hub), gho));
         vm.prank(safe);
         vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterTightened("breakerDeficitMax", scope, 10_000e18, 5000e18, safe);
-        store.tightenBreakerDeficitMax(address(hub), gho, 5000e18);
-        _stewardRepeats(abi.encodeCall(store.tightenBreakerDeficitMax, (address(hub), gho, 5000e18)));
+        emit IParameterStoreBase.ParameterTightened("deficitMax", scope, 10_000e18, 5000e18, safe);
+        store.tightenDeficitMax(address(hub), gho, 5000e18);
+        _stewardRepeats(abi.encodeCall(store.tightenDeficitMax, (address(hub), gho, 5000e18)));
         vm.prank(safe);
         vm.expectRevert(_unauthorized(safe, ADMIN));
-        store.loosenBreakerDeficitMax(address(hub), gho, 10_000e18);
+        store.loosenDeficitMax(address(hub), gho, 10_000e18);
     }
 
     // TEST-062 verifies: REQ-PSTORE-002, REQ-PSTORE-018
@@ -242,41 +226,23 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         }
     }
 
-    // ─── Guardian ───
-
-    // TEST-066 verifies: REQ-PSTORE-029, REQ-CONFIG-058
-    function test_TEST_066_guardianHoldsNoTighteningOrSetter() public {
-        bytes[] memory calls = _timelockOnlyCalls();
-        for (uint256 i = 0; i < calls.length; ++i) {
-            vm.prank(emergencyGuardian);
-            (bool ok, bytes memory ret) = address(store).call(calls[i]);
-            assertFalse(ok);
-            assertEq(ret, _unauthorized(emergencyGuardian, ADMIN));
-        }
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(_unauthorized(emergencyGuardian, ADMIN));
-        store.tightenMarketUsdCap(M, 1);
-    }
-
     // ─── Role administration ───
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-002, REQ-ACCESS-153
     function test_TEST_242_roleAdminsAreFixed() public view {
         assertEq(store.getRoleAdmin(bytes32(0)), bytes32(0));
         assertEq(store.getRoleAdmin(ADMIN), bytes32(0));
-        assertEq(store.getRoleAdmin(GUARDIAN), ADMIN);
         assertEq(store.getRoleAdmin(STEWARD), ADMIN);
         assertTrue(store.hasRole(STEWARD, safe));
         assertFalse(store.hasRole(ADMIN, safe));
         assertFalse(store.hasRole(bytes32(0), safe));
         assertFalse(store.hasRole(STEWARD, address(timelock)));
-        assertFalse(store.hasRole(GUARDIAN, address(timelock)));
     }
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-002, REQ-ACCESS-153
     function test_TEST_242_onlyTheTimelockGrantsAndRevokes() public {
         address[3] memory holders = [safe, emergencyGuardian, attacker];
-        bytes32[4] memory roles = [bytes32(0), ADMIN, GUARDIAN, STEWARD];
+        bytes32[3] memory roles = [bytes32(0), ADMIN, STEWARD];
         for (uint256 i = 0; i < holders.length; ++i) {
             for (uint256 j = 0; j < roles.length; ++j) {
                 bytes32 needed = store.getRoleAdmin(roles[j]);
@@ -350,7 +316,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
     // ─── Fixtures of calls ───
 
     function _tightenCalls() internal view returns (bytes[] memory c) {
-        c = new bytes[](14);
+        c = new bytes[](13);
         c[0] = abi.encodeCall(store.tightenSlippageAllowanceBps, (M, 50));
         c[1] = abi.encodeCall(store.tightenFloorRoundingAllowance, (gho, 1));
         c[2] = abi.encodeCall(store.tightenBorrowPriceMaxAge, (address(fUsdc), 1));
@@ -361,17 +327,16 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         c[7] = abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 10_000e8));
         c[8] = abi.encodeCall(store.tightenMinPledgeUsd, (M, 20e8));
         c[9] = abi.encodeCall(store.tightenMaxFlashFeeBps, (0));
-        c[10] = abi.encodeCall(store.tightenGateRecoverySeconds, (7200));
-        c[11] = abi.encodeCall(store.tightenBreakerDeficitMax, (address(hub), gho, 0));
-        c[12] = abi.encodeCall(store.tightenMaxShortfallBps, (0));
-        c[13] = abi.encodeCall(store.tightenDebtStressRiseBps, (usdc, 100));
+        c[10] = abi.encodeCall(store.tightenDeficitMax, (address(hub), gho, 0));
+        c[11] = abi.encodeCall(store.tightenMaxShortfallBps, (0));
+        c[12] = abi.encodeCall(store.tightenDebtStressRiseBps, (usdc, 100));
     }
 
     /// @dev Every APPLICATION_ADMIN-only selector (loosen, structural, listing, second source, role change, upgrade).
     function _timelockOnlyCalls() internal view returns (bytes[] memory c) {
         MarketParams memory mp;
         FeedDef memory fd;
-        c = new bytes[](29);
+        c = new bytes[](28);
         uint256 k;
         c[k++] = abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 101));
         c[k++] = abi.encodeCall(store.loosenFloorRoundingAllowance, (gho, 1));
@@ -380,8 +345,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         c[k++] = abi.encodeCall(store.loosenTopUpSliceUsd, (M, 600_000e8));
         c[k++] = abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 21_000_000e8));
         c[k++] = abi.encodeCall(store.loosenMinPledgeUsd, (M, 1));
-        c[k++] = abi.encodeCall(store.loosenGateRecoverySeconds, (600));
-        c[k++] = abi.encodeCall(store.loosenBreakerDeficitMax, (address(hub), gho, 1));
+        c[k++] = abi.encodeCall(store.loosenDeficitMax, (address(hub), gho, 1));
         c[k++] = abi.encodeCall(store.loosenMaxShortfallBps, (2000));
         c[k++] = abi.encodeCall(store.loosenDebtStressRiseBps, (usdc, 100));
         c[k++] = abi.encodeCall(store.setBorrowPriceMaxAge, (address(fUsdc), 1));
@@ -400,8 +364,8 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         c[k++] = abi.encodeCall(store.setDebtAssetParams, (gho, DebtReserveParams(1)));
         c[k++] = abi.encodeCall(store.setLiquidationExpectations, (address(spoke), 1.1e18, 200));
         c[k++] = abi.encodeCall(store.setCoverageRatioBps, (2000));
-        c[k++] = abi.encodeCall(store.grantRole, (GUARDIAN, alice));
-        c[k++] = abi.encodeCall(store.revokeRole, (GUARDIAN, emergencyGuardian));
+        c[k++] = abi.encodeCall(store.grantRole, (STEWARD, alice));
+        c[k++] = abi.encodeCall(store.revokeRole, (STEWARD, safe));
         assert(k == c.length);
     }
 }

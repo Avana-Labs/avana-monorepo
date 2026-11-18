@@ -99,7 +99,6 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
     uint256 public donatedUsdc;
     uint256 public donatedUsdt;
     uint256 public hfDrops;
-    uint256 public liquidationsWhilePaused;
     uint256 public backupOnlyLiquidations;
     uint256 public unregisteredLiquidations;
     uint256 public shortfallLiquidations;
@@ -162,7 +161,6 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
         try env.lvs.liquidate(p) returns (LiquidationResult memory r) {
             _checkBalances(before, _usdc(caller, env.wallets[i]), r, p);
             ++liquidations;
-            if (env.registry.pauseState() != 0) ++liquidationsWhilePaused;
             if (backupOnly) ++backupOnlyLiquidations;
             if (!env.lvs.isApprovedKeeper(caller)) ++unregisteredLiquidations;
             if (r.shortfall != 0) ++shortfallLiquidations;
@@ -187,7 +185,7 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
 
     /// @notice Liveness probe of INV-046 (run by the suite after every call, from a snapshot it reverts): every account
     /// with HF < 1 and debt is liquidated by an unregistered caller funding all of its debt with a shortfall budget of
-    /// the debt, in whatever pause state, price and routes the run reached; the call succeeds and leaves the account at
+    /// the debt, at whatever price and routes the run reached; the call succeeds and leaves the account at
     /// HF >= 1, with no debt or with no collateral. With no working route (both below `WORKING_ROUTE_BPS`) only
     /// `NoRouteAvailable` may refuse it. Returns the number of failed probes, the last failure and the probes made.
     function probeLiveness() external returns (uint256 failures, bytes memory last, uint256 probes) {
@@ -243,15 +241,6 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
         return s == ILPVaultSwapBase.NotLiquidatable.selector || s == ILPVaultSwapBase.NoRouteAvailable.selector
             || s == ILPVaultSwapBase.RecoveryBelowFloor.selector || s == ILPVaultSwapBase.NothingSeized.selector
             || s == bytes4(keccak256("MustNotLeaveDust()"));
-    }
-
-    /// @notice Moves the MarketRegistry through None, Frozen, Paused(General) and Paused(MintPathSuspect).
-    function movePause(
-        uint256 state,
-        uint256 reason
-    ) external {
-        uint8 st = uint8(bound(state, 0, 2));
-        env.registry.setPause(st, st == 2 ? uint8(bound(reason, 1, 2)) : 0);
     }
 
     function movePrice(

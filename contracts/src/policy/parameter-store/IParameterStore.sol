@@ -110,39 +110,26 @@ interface IParameterStore is
         uint256 value
     ) external;
 
-    /// @notice Hub deficit of a debt asset above which the deficit freeze trips.
+    /// @notice Hub deficit of a debt asset above which the debt breaker's `DEFICIT` condition holds.
     /// @return value Asset base units; 0 when none is written.
-    function breakerDeficitMax(
+    function deficitMax(
         address hub,
         address asset
     ) external view returns (uint256 value);
 
-    /// @notice Seconds of healthy observations before a temporary gate reopens after its last breach.
-    function gateRecoverySeconds() external view returns (uint64 value);
-
-    /// @notice Raises `gateRecoverySeconds` (a temporary gate stays closed longer).
-    function tightenGateRecoverySeconds(
-        uint64 value
-    ) external;
-
-    /// @notice Lowers `gateRecoverySeconds`.
-    function loosenGateRecoverySeconds(
-        uint64 value
-    ) external;
-
-    /// @notice Lowers a debt asset's `breakerDeficitMax(hub, asset)` (more sensitive).
+    /// @notice Lowers a debt asset's `deficitMax(hub, asset)` (more sensitive).
     /// @dev Reverts `UnknownHub` unless the MarketRegistry records `hub`.
     /// @param value New maximum, asset base units.
-    function tightenBreakerDeficitMax(
+    function tightenDeficitMax(
         address hub,
         address asset,
         uint256 value
     ) external;
 
-    /// @notice Raises a debt asset's `breakerDeficitMax(hub, asset)`.
+    /// @notice Raises a debt asset's `deficitMax(hub, asset)`.
     /// @dev Reverts `OutOfBounds` above the `firstLossReserveMinimum()` of a matching debt reserve.
     /// @param value New maximum, asset base units.
-    function loosenBreakerDeficitMax(
+    function loosenDeficitMax(
         address hub,
         address asset,
         uint256 value

@@ -5,7 +5,6 @@ pragma solidity 0.8.28;
 
 import {IFlashReceiver} from "../../flash/IFlashReceiver.sol";
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
-import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {ILPVaultSwap} from "./ILPVaultSwap.sol";
 import {ILPVaultSwapLogic} from "./ILPVaultSwapLogic.sol";
 import {LPVaultSwapStorage} from "./LPVaultSwapStorage.sol";
@@ -19,8 +18,6 @@ import {
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-// activeKeeperCount reads the freeze list once per keeper, at most MAX_KEEPERS; a view.
-// forge-lint: disable-start(calls-loop)
 // The keeper events follow a view read; the setters are timelock-only.
 // forge-lint: disable-start(reentrancy-events)
 // A zero or repeated initial keeper must revert the initialisation.
@@ -132,7 +129,6 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
         Layout storage l = _s();
         if (keeper == address(0) || l.keepers[keeper]) revert InvalidKeeper();
-        if (IMarketRegistry(_MARKET_REGISTRY).isFrozenAddress(keeper)) revert AddressIsFrozen(keeper);
         if (l.keeperList.length >= _MAX_KEEPERS) revert TooManyKeepers(_MAX_KEEPERS);
         _register(keeper);
     }
@@ -143,10 +139,9 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
         Layout storage l = _s();
         if (!l.keepers[keeper]) revert InvalidKeeper();
-        uint256 active = activeKeeperCount();
-        uint256 activeAfter = IMarketRegistry(_MARKET_REGISTRY).isFrozenAddress(keeper) ? active : active - 1;
-        if (activeAfter < _KEEPER_FLOOR) revert KeeperFloor(activeAfter, _KEEPER_FLOOR);
         address[] storage list = l.keeperList;
+        uint256 activeAfter = list.length - 1;
+        if (activeAfter < _KEEPER_FLOOR) revert KeeperFloor(activeAfter, _KEEPER_FLOOR);
         uint256 last = list.length - 1;
         uint256 index = 0;
         while (list[index] != keeper) {
@@ -171,13 +166,8 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
     }
 
     /// @inheritdoc ILPVaultSwap
-    function activeKeeperCount() public view override returns (uint256 count) {
-        address[] storage list = _s().keeperList;
-        IMarketRegistry mr = IMarketRegistry(_MARKET_REGISTRY);
-        uint256 n = list.length;
-        for (uint256 i = 0; i < n; ++i) {
-            if (!mr.isFrozenAddress(list[i])) ++count;
-        }
+    function activeKeeperCount() external view override returns (uint256 count) {
+        count = _s().keeperList.length;
     }
 
     /// @inheritdoc ILPVaultSwap
@@ -295,6 +285,5 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
         if (k != kind || h != _IMMUTABLES_HASH) revert InvalidLogic();
     }
 }
-// forge-lint: disable-end(calls-loop)
 // forge-lint: disable-end(reentrancy-events)
 // forge-lint: disable-end(require-revert-in-loop)

@@ -40,8 +40,6 @@ struct GlobalParams {
     // Avana share of realized liquidation surplus, bps.
     uint16 avanaFeeShareBps;
     address feeRecipient;
-    // Healthy-observation window before a temporary gate reopens, seconds.
-    uint64 gateRecoverySeconds;
     // Largest per-leg slippage raise a caller shortfall top-up can buy, bps.
     uint16 maxShortfallBps;
 }

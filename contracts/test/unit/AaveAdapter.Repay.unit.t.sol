@@ -7,7 +7,6 @@ import {ICollateralization} from "../../src/custody/collateralization/ICollatera
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -15,7 +14,7 @@ import {Vm} from "forge-std/Vm.sol";
 /// @title AaveAdapterRepayUnitTest
 /// @notice `repay` on the real Aave V4 Spoke: any payer, live-debt sizing (partial and repay-all with refund), zero debt
 /// returning 0 with no movement, concurrent payers, transfer-fee tokens measured by balance delta, the debt mark, and
-/// no read of the MarketRegistry, the pause state, the freeze, a breaker, a price or the RiskModule.
+/// no read of the MarketRegistry, a breaker, a price or the RiskModule.
 /// forge-config: default.isolate = false
 contract AaveAdapterRepayUnitTest is AaveAdapterFixture {
     address internal p;
@@ -280,12 +279,8 @@ contract AaveAdapterRepayUnitTest is AaveAdapterFixture {
     }
 
     // TEST-029 verifies: REQ-PROXY-027, REQ-PROXY-032, REQ-ADAPTER-047, REQ-ADAPTER-086, REQ-ACCESS-068, INV-043, INV-067, ATTACK-035, ATTACK-078
-    /// @notice Repay succeeds with a MarketRegistry and a RiskModule that revert on every call, in every pause state,
-    /// for a frozen payer and a frozen borrower: it reads none of them.
+    /// @notice Repay succeeds with a MarketRegistry and a RiskModule that revert on every call: it reads none of them.
     function test_TEST_029_repayReadsNoRegistryOrRiskModule() public {
-        registry.setFrozen(alice, true);
-        registry.setFrozen(carol, true);
-        _pause(PauseState.Paused, PauseReason.MintPathSuspect);
         registry.setBroken(true);
         risk.setBroken(true);
         vm.expectCall(address(registry), "", 0);
@@ -294,7 +289,6 @@ contract AaveAdapterRepayUnitTest is AaveAdapterFixture {
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.postHealthCheck.selector), 0);
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.checkPledge.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.pokeBreakers.selector), 0);
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.pokeConfig.selector), 0);
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.checkRemainingRecord.selector), 0);
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.checkAaveConfig.selector), 0);
@@ -304,19 +298,6 @@ contract AaveAdapterRepayUnitTest is AaveAdapterFixture {
         _fund(alice, usdcReserveId, live);
         _repayAs(alice, usdcReserveId, live, true);
         assertEq(_debtOf(p, usdcReserveId), 0, "cleared with a broken registry");
-    }
-
-    // TEST-192 verifies: REQ-PROXY-032, REQ-ADAPTER-045, REQ-ADAPTER-046, REQ-ACCESS-072, REQ-ACCESS-073, REQ-ACCESS-074, REQ-ACCESS-164
-    /// @notice Repay is open in None, Frozen and both Paused reasons.
-    function test_TEST_192_repayInEveryPauseState() public {
-        PauseState[4] memory states = [PauseState.None, PauseState.Frozen, PauseState.Paused, PauseState.Paused];
-        PauseReason[4] memory reasons =
-            [PauseReason.None, PauseReason.None, PauseReason.General, PauseReason.MintPathSuspect];
-        for (uint256 i = 0; i < 4; ++i) {
-            _pause(states[i], reasons[i]);
-            _fund(carol, debtReserveId, 10e18);
-            assertEq(_repayAs(carol, debtReserveId, 10e18, false), 10e18, "repaid");
-        }
     }
 
     // ─── Debt mark ───

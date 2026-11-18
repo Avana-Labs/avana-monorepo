@@ -20,7 +20,7 @@ import {PayoutEscrow} from "../../../src/liquidation/payout-escrow/PayoutEscrow.
 import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
-import {Market, PauseState} from "../../../src/types/MarketTypes.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
 import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {AaveAdapterLensMock} from "../mocks/AaveAdapterLensMock.sol";
 import {LPVaultSwapLensMock} from "../mocks/LPVaultSwapLensMock.sol";
@@ -224,7 +224,7 @@ abstract contract LensFixture is CollateralizationFixture {
         store.setCaps(MARKET_ID, 1_000_000e8, 100_000e8, 1e8);
         store.setTokenCap(aave.hub, address(usdc), 300_000e8);
         store.setTokenCap(aave.hub, address(usdt), 250_000e8);
-        swapMock.setKeeper(keeper, true, false);
+        swapMock.setKeeper(keeper, true);
         vault.setDepth(1e15, true);
     }
 
@@ -252,7 +252,7 @@ abstract contract LensFixture is CollateralizationFixture {
         uint128 units
     ) internal returns (uint256 recordId) {
         adapterMock.bind(wallet, proxy, aave.cdpSpoke, MARKET_ID, vt, vtReserveId);
-        rm.setGate(proxy, true, false, PauseState.None);
+        rm.setGate(proxy, true, false);
         recordId = _pledge(wallet, proxy, _key(tokenId), units);
     }
 

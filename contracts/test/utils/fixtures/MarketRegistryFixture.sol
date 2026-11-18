@@ -11,7 +11,6 @@ import {MarketRegistryActivationLogic} from "../../../src/policy/market-registry
 import {MarketRegistryHubsLogic} from "../../../src/policy/market-registry/MarketRegistryHubsLogic.sol";
 import {MarketRegistryListingLogic} from "../../../src/policy/market-registry/MarketRegistryListingLogic.sol";
 import {MarketRegistryRoutesLogic} from "../../../src/policy/market-registry/MarketRegistryRoutesLogic.sol";
-import {MarketRegistrySafetyLogic} from "../../../src/policy/market-registry/MarketRegistrySafetyLogic.sol";
 import {MarketRegistryWindDownLogic} from "../../../src/policy/market-registry/MarketRegistryWindDownLogic.sol";
 import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
 import {
@@ -48,7 +47,7 @@ import {TimelockFixture} from "./TimelockFixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @title MarketRegistryFixture
-/// @notice The real MarketRegistry (six logic contracts, implementation, ERC-1967 proxy) with the real
+/// @notice The real MarketRegistry (five logic contracts, implementation, ERC-1967 proxy) with the real
 /// VaultTokenFactory and VaultTokens, and settable mocks for the other neighbours (ParameterStore views,
 /// RiskModule, LPVault, LPOracle, routes, flash source, First-Loss Reserve) and for the Aave reserve reads.
 /// @dev World after `_setUpWorld`: the Stable LP Hub recorded (Stable tier), integration 1 registered, the CDP Spoke
@@ -61,8 +60,6 @@ abstract contract MarketRegistryFixture is TimelockFixture {
     uint256 internal constant GHO_ASSET = 0;
     uint256 internal constant VT_ASSET = 1;
     uint256 internal constant VT_RESERVE = 1;
-    bytes32 internal constant PAUSE_GUARDIAN = AvanaRoles.APPLICATION_PAUSE_GUARDIAN;
-    bytes32 internal constant FREEZE_GUARDIAN = AvanaRoles.APPLICATION_FREEZE_GUARDIAN;
     bytes32 internal constant APP_ADMIN = AvanaRoles.APPLICATION_ADMIN;
 
     MarketRegistry internal registry;
@@ -118,12 +115,6 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         _deployFactoryAndRegistry(standardImpl, predictedRegistry);
         vm.label(address(registry), "MarketRegistry");
         require(address(registry) == predictedRegistry, "registry prediction");
-        vm.startPrank(address(timelock));
-        registry.grantRole(PAUSE_GUARDIAN, emergencyGuardian);
-        registry.grantRole(FREEZE_GUARDIAN, emergencyGuardian);
-        registry.grantRole(PAUSE_GUARDIAN, aaveGuardian);
-        registry.grantRole(FREEZE_GUARDIAN, aaveGuardian);
-        vm.stopPrank();
     }
 
     /// @dev The VaultTokenFactory (naming `marketRegistry_`), the registry's logic contracts, implementation and proxy.
@@ -165,7 +156,6 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         l.listing = address(new MarketRegistryListingLogic(i));
         l.activation = address(new MarketRegistryActivationLogic(i));
         l.routes = address(new MarketRegistryRoutesLogic(i));
-        l.safety = address(new MarketRegistrySafetyLogic(i));
         l.windDown = address(new MarketRegistryWindDownLogic(i));
     }
 

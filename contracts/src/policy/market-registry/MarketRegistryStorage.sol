@@ -13,12 +13,11 @@ import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFi
 import {IAaveV4ExtSload} from "../../interfaces/external/aave/IAaveV4ExtSload.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {ILPOracle} from "../../oracle/ILPOracle.sol";
-import {Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {FeedDef} from "../parameter-store/types/ParameterStoreTypes.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryBase} from "./IMarketRegistryBase.sol";
-import {BreakerReasons} from "./types/Breaker.sol";
 import {
     DebtReserveDef,
     MarketRegistryImmutables,
@@ -66,7 +65,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         mapping(uint32 integrationId => address) integrationLpVault;
         mapping(uint32 integrationId => address) integrationPricing;
         mapping(address lpVault => uint32) integrationIdOf;
-        mapping(address pricing => bool) isPricing;
         address[] spokeList;
         mapping(address spoke => SpokeDef) spokes;
         /// @dev Unused; kept for storage layout.
@@ -74,9 +72,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         address flashSource;
         mapping(address spoke => mapping(uint256 reserveId => DebtReserveDef)) debtReserves;
         mapping(address spoke => uint256[]) debtReserveIds;
-        mapping(address firstLossReserve => bool) knownAvanaFirstLossReserve;
-        mapping(address priceSource => bool) knownPriceSource;
-        mapping(address asset => bool) isDebtAsset;
         mapping(address hub => mapping(address asset => address)) firstLossReserveOf;
         /// @dev Unused (the recorded credit lines and cross-Hub lines); kept for storage layout.
         mapping(address hub => mapping(address asset => uint256[2])) unusedCreditLines;
@@ -87,18 +82,10 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         mapping(address token => TokenDef) tokens;
         mapping(bytes32 slotKey => RouteRecord) routes;
         mapping(bytes32 slotKey => mapping(address route => bool)) approvedBefore;
-        mapping(address route => bool) knownRoute;
-        mapping(address hub => PauseState) pauseState;
-        mapping(address hub => PauseReason) pauseReason;
-        mapping(bytes32 key => uint32) latched;
-        mapping(bytes32 key => uint64) lastBreachAt;
-        mapping(address account => bool) frozen;
-        mapping(address caller => mapping(uint64 hour => uint16)) freezeBuckets;
         // Fields below are appended; earlier fields keep their slots.
         mapping(bytes32 codeHash => bool) approvedSpokeCodeHash;
         mapping(address spoke => bytes32) spokeCodeHash;
         mapping(uint32 integrationId => address[]) integrationContracts;
-        mapping(address account => bool) knownIntegrationContract;
         mapping(uint256 marketId => uint32) routeEpoch;
         mapping(uint32 integrationId => IntegrationRecord) integrationRecords;
         mapping(uint256 marketId => RouteSlotRef[]) routeSlots;
@@ -113,8 +100,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
     /// @dev `keccak256(abi.encode(uint256(keccak256("avana.storage.MarketRegistry")) - 1)) & ~bytes32(uint256(0xff))`.
     bytes32 private constant _STORAGE_SLOT = 0x598189494afc908fd08b2b882e497a0aa6147de6d30a80184ae623e37f6d8000;
 
-    /// @dev Most address freezes one caller can make in the 24 one-hour buckets ending with the current hour.
-    uint256 internal constant _MAX_FREEZES_PER_DAY = 20;
     uint8 internal constant _ORACLE_DECIMALS = 8;
     uint256 internal constant _BPS = 10_000;
     /// @dev Stand-in for an unbounded draw cap: above any line, yet a sum of them cannot overflow.
@@ -214,22 +199,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         uint32 epoch = _s().routeEpoch[marketId];
         if (epoch == 0) return keccak256(abi.encode(marketId, token, debtAsset, kind));
         return keccak256(abi.encode(marketId, token, debtAsset, kind, epoch));
-    }
-
-    function _clearBreachTimes(
-        Layout storage l,
-        bytes32 key
-    ) internal {
-        delete l.lastBreachAt[key];
-        delete l.lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.ORACLE)];
-        delete l.lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_DEPTH)];
-    }
-
-    function _debtKey(
-        address spoke,
-        uint256 reserveId
-    ) internal pure returns (bytes32) {
-        return keccak256(abi.encode(spoke, reserveId));
     }
 
     function _routeUsable(
@@ -403,16 +372,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         }
         codeHash = implementation.codehash;
         current = implementation == sp.implementation && codeHash == _s().spokeCodeHash[spoke];
-    }
-
-    function _freezesInWindow(
-        address caller,
-        uint64 hour
-    ) internal view returns (uint256 count) {
-        uint64 first = hour >= 23 ? hour - 23 : 0;
-        for (uint64 h = first; h <= hour; ++h) {
-            count += _s().freezeBuckets[caller][h];
-        }
     }
 
     /// @dev True when the LPOracle is deployed; the stateless oracle has no configuration to check.

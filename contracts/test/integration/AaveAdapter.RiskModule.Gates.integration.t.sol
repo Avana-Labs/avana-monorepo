@@ -4,10 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
-import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
-import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {DriftReason, PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {DriftReason} from "../../src/types/MarketTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
@@ -26,10 +24,9 @@ interface IGatesSpokeConfigurator {
 }
 
 /// @title AaveAdapterRiskModuleGatesIntegrationTest
-/// @notice The Adapter with the reviewed RiskModule on the real Aave V4 Spoke: the application pause refuses a borrow
-/// and a withdrawal that leaves debt before the RiskModule is reached; Spoke-implementation drift, an Aave-side price
-/// source switch and a second market's bad price state stop new risk on the account they touch while repay and the
-/// debt-free exits stay open.
+/// @notice The Adapter with the reviewed RiskModule on the real Aave V4 Spoke: Spoke-implementation drift, an Aave-side
+/// price source switch and a second market's bad price state stop new risk on the account they touch while repay and
+/// the debt-free exits stay open.
 /// @dev The account holds two records in market A (10,000 and 5,000 vault tokens) and owes 1,000 GHO and 500 USDC.
 /// forge-config: default.isolate = false
 contract AaveAdapterRiskModuleGatesIntegrationTest is AaveAdapterRiskFixture {
@@ -90,48 +87,6 @@ contract AaveAdapterRiskModuleGatesIntegrationTest is AaveAdapterRiskFixture {
         assertEq(lpVault.ownerOf(k1), alice, "k1 back");
         assertEq(lpVault.ownerOf(k2), alice, "k2 back");
         assertEq(_debtOf(p, debtReserveId) + _debtOf(p, usdcReserveId), 0, "debt-free");
-    }
-
-    // ─── The application pause comes before the RiskModule ───
-
-    // TEST-027 verifies: REQ-ADAPTER-052
-    // Sources: 2.7 REQ-ADAPTER-052 (borrow while Frozen or Paused: the RiskModule is not reached)
-    /// @notice Under Frozen and under each Paused reason a borrow reverts with the Adapter's own error and
-    /// `preBorrowCheck` is never called; with the pause lifted the same borrow reaches it and succeeds.
-    function test_TEST_027_pausedOrFrozenBorrowNeverReachesTheRiskModule() public {
-        PauseState[3] memory states = [PauseState.Frozen, PauseState.Paused, PauseState.Paused];
-        PauseReason[3] memory reasons = [PauseReason.None, PauseReason.General, PauseReason.MintPathSuspect];
-        bytes4[3] memory errs = [
-            IAaveAdapterBase.ApplicationFrozen.selector,
-            IAaveAdapterBase.ApplicationPaused.selector,
-            IAaveAdapterBase.ApplicationPaused.selector
-        ];
-        // Over the whole test exactly one `preBorrowCheck` reaches the RiskModule: the final borrow's.
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preBorrowCheck.selector), 1);
-        for (uint256 i = 0; i < 3; ++i) {
-            _pause(states[i], reasons[i]);
-            _expectBorrow(abi.encodeWithSelector(errs[i]));
-        }
-        _pause(PauseState.None, PauseReason.None);
-        _borrowAs(alice, MARKET_ID, debtReserveId, 1e18);
-    }
-
-    // TEST-019 verifies: REQ-ADAPTER-053
-    // Sources: 2.7 REQ-ADAPTER-053 (withdraw-with-debt while Paused: refused before preWithdrawCheck)
-    /// @notice Under each Paused reason a withdrawal that leaves debt reverts `ApplicationPaused` without calling
-    /// `preWithdrawCheck`; a debt-free withdrawal of another account passes in the same state.
-    function test_TEST_019_pausedWithdrawWithDebtNeverReachesTheRiskModule() public {
-        (bytes32 kb,) = _pledgeAs(bob, MARKET_B, UNITS);
-        PauseReason[2] memory reasons = [PauseReason.General, PauseReason.MintPathSuspect];
-        // No `preWithdrawCheck` reaches the RiskModule anywhere below.
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
-        for (uint256 i = 0; i < 2; ++i) {
-            _pause(PauseState.Paused, reasons[i]);
-            _expectWithdrawWithDebt(abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector));
-        }
-        vm.prank(bob);
-        adapterC.withdraw(MARKET_B, _ref(kb), UNITS, _deadline(), 0);
-        assertEq(lpVault.ownerOf(kb), bob, "debt-free withdrawal under Paused");
     }
 
     // ─── Drift and other markets ───

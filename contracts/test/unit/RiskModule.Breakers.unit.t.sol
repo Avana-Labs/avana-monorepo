@@ -3,17 +3,16 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
-import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {RiskModuleMathHarness} from "../utils/harness/RiskModuleMathHarness.sol";
 
 /// @title RiskModuleBreakersUnitTest
-/// @notice Breaker conditions, `pokeBreakers`, temporary-gate recovery, security latches and the issuer-probe gas floor.
+/// @notice Live breaker conditions (issuer probe, Hub deficit, pool depth) on the borrow path, and the issuer-probe gas
+/// floor.
 contract RiskModuleBreakersUnitTest is RiskModuleFixture {
     /// @dev GHO is listed with a transfer-fee probe (basisPointsRate 0 at listing), for the transfer-fee breaker test.
     function _ghoIssuerProbe() internal pure override returns (IssuerProbe) {
@@ -26,84 +25,60 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
     }
 
     // TEST-228 verifies: SPEC-BRK-003, SPEC-BRK-008, REQ-RISK-091, INV-081
-    // Sources: 2.7 SPEC-BRK-008 example (issuer action, latched, reset only once the probe clears)
-    function test_TEST_228_issuerLatchesUntilReset() public {
+    // Sources: 2.7 SPEC-BRK-008 example (issuer action holds the market while the probe trips)
+    function test_TEST_228_issuerHoldsWhileProbeTrips() public {
         tUsdt.setPaused(true, false);
-        assertEq(riskModule.liveBreakerReasons(mid), BreakerReasons.ISSUER);
+        assertEq(riskModule.getBreakerStatus(mid), BreakerReasons.ISSUER);
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.ISSUER));
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        vm.expectEmit(address(riskModule));
-        emit IRiskModule.BreakersPoked(mid, BreakerReasons.ISSUER);
-        assertEq(riskModule.pokeBreakers(mid), BreakerReasons.ISSUER);
-        // A reset is refused while the probe still trips.
-        vm.prank(emergencyGuardian);
-        vm.expectRevert();
-        registry.resetMarketBreaker(mid);
+        // The probe clears: the borrow passes in the same block, with no reset.
         tUsdt.setPaused(false, false);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.ISSUER));
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        vm.prank(emergencyGuardian);
-        registry.resetMarketBreaker(mid);
+        assertEq(riskModule.getBreakerStatus(mid), 0);
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
         // A reverting probe counts as tripped.
         tUsdt.setPaused(false, true);
-        assertEq(riskModule.liveBreakerReasons(mid), BreakerReasons.ISSUER);
+        assertEq(riskModule.getBreakerStatus(mid), BreakerReasons.ISSUER);
     }
 
     // TEST-228 verifies: REQ-RISK-065, SPEC-BRK-007, REQ-ACCESS-136
-    function test_TEST_228_depthAndOracleGates() public {
+    function test_TEST_228_depthGateAndPriceFreshness() public {
         rVault.setDepth(0, false);
-        (uint32 reasons,) = riskModule.getBreakerStatus(mid);
-        assertEq(reasons, BreakerReasons.POOL_DEPTH);
+        assertEq(riskModule.getBreakerStatus(mid), BreakerReasons.POOL_DEPTH);
+        vm.expectRevert(
+            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.POOL_DEPTH)
+        );
+        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
         rVault.setDepth(2e13, true);
+        assertEq(riskModule.getBreakerStatus(mid), 0);
+        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
+        // A price that is not fresh to borrow is the freshness check's refusal, not a breaker reason.
         oracle.setState(PriceState.Drifting, 1 << 3, false);
-        assertEq(riskModule.pokeBreakers(mid), BreakerReasons.ORACLE);
-        // The oracle gate recovers 1,800 s after the last poke that saw it, alone.
+        assertEq(riskModule.getBreakerStatus(mid), 0);
+        vm.expectPartialRevert(IRiskModuleErrors.PriceTooOld.selector);
+        riskModule.preWithdrawCheck(address(proxy));
         oracle.setState(PriceState.Live, 0, true);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.ORACLE));
         riskModule.preWithdrawCheck(address(proxy));
     }
 
     // TEST-228 verifies: SPEC-BRK-004, SPEC-BRK-008, REQ-RISK-091, INV-081, REQ-ACCESS-158, REQ-ACCESS-167, REQ-FLR-021
-    // Sources: 2.7 SPEC-BRK-004 example (deficit 10,000.5 GHO above 10,000 GHO), 2.14 REQ-FLR-021 (coverage alone
-    // does not reopen the reserve; a reset does, once the deficit is at or below the limit)
-    function test_TEST_228_deficitFreezesDebtReserve() public {
+    // Sources: 2.7 SPEC-BRK-004 example (deficit 10,000.5 GHO above 10,000 GHO), 2.14 REQ-FLR-021 (the reserve
+    // reopens once the deficit is at or below the limit)
+    function test_TEST_228_deficitHoldsDebtReserve() public {
         store.setDeficitMax(address(hub), address(gho), 10_000e18);
         hub.setOwed(GHO_ASSET, address(spoke), 0, 10_000e18 * 1e27);
-        assertEq(riskModule.liveDebtBreakerReasons(address(spoke), GHO_RESERVE), 0);
+        assertEq(riskModule.getDebtBreakerStatus(address(spoke), GHO_RESERVE), 0);
         hub.setOwed(GHO_ASSET, address(spoke), 0, 10_000.5e18 * 1e27);
-        assertEq(riskModule.liveDebtBreakerReasons(address(spoke), GHO_RESERVE), BreakerReasons.DEFICIT);
+        assertEq(riskModule.getDebtBreakerStatus(address(spoke), GHO_RESERVE), BreakerReasons.DEFICIT);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IRiskModuleErrors.DebtBreakerTripped.selector, address(spoke), GHO_RESERVE, BreakerReasons.DEFICIT
             )
         );
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        assertEq(riskModule.pokeBreakers(mid), BreakerReasons.DEFICIT);
-        // A reset is refused while the deficit is still above the limit.
-        vm.prank(emergencyGuardian);
-        vm.expectPartialRevert(IMarketRegistryBase.ConditionStillHolds.selector);
-        registry.resetDebtBreaker(address(spoke), GHO_RESERVE);
-        // Covered: the latch keeps the reserve closed until reset.
+        // Covered: the borrow passes in the same block, with no reset.
         hub.setOwed(GHO_ASSET, address(spoke), 0, 0);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IRiskModuleErrors.DebtBreakerTripped.selector, address(spoke), GHO_RESERVE, BreakerReasons.DEFICIT
-            )
-        );
+        assertEq(riskModule.getDebtBreakerStatus(address(spoke), GHO_RESERVE), 0);
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        (uint32 reasons,) = riskModule.getDebtBreakerStatus(address(spoke), GHO_RESERVE);
-        assertEq(reasons, BreakerReasons.DEFICIT);
-        vm.prank(emergencyGuardian);
-        registry.resetDebtBreaker(address(spoke), GHO_RESERVE);
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-    }
-
-    // TEST-228 verifies: REQ-MREG-026, REQ-RISK-091, REQ-ACCESS-167
-    function test_TEST_228_recordBreachOnlyRiskModule() public {
-        vm.expectRevert(IMarketRegistryBase.NotRiskModule.selector);
-        registry.recordBreach(bytes32(mid), BreakerReasons.ISSUER);
-        assertEq(riskModule.pokeBreakers(mid), 0);
     }
 
     // TEST-221 verifies: SPEC-BRK-003, REQ-RISK-089
@@ -116,11 +91,6 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
         assertEq(len, 32);
         vm.expectPartialRevert(IRiskModuleErrors.InsufficientGas.selector);
         h.probe{gas: 34_000}(address(tUsdt), 30_000);
-        // A starved poke reverts as a whole and latches nothing.
-        (ok,) = address(riskModule).call{gas: 300_000}(abi.encodeCall(riskModule.pokeBreakers, (mid)));
-        assertFalse(ok);
-        (uint32 latched,) = registry.marketBreaker(mid);
-        assertEq(latched, 0);
     }
 
     // TEST-228 verifies: SPEC-BRK-003, SPEC-BRK-004, SPEC-BRK-008, REQ-RISK-091, INV-081
@@ -128,23 +98,14 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
         _enableUsdcDebt();
         // USDC is listed with a `paused()` probe and is both a pool token and a debt asset.
         tUsdc.setPaused(true, false);
-        assertEq(riskModule.liveDebtBreakerReasons(address(spoke), USDC_RESERVE), BreakerReasons.ISSUER);
-        (uint32 reasons, uint64 reopensAt) = riskModule.getDebtBreakerStatus(address(spoke), USDC_RESERVE);
-        assertEq(reasons, BreakerReasons.ISSUER);
-        assertEq(reopensAt, 0);
+        assertEq(riskModule.getDebtBreakerStatus(address(spoke), USDC_RESERVE), BreakerReasons.ISSUER);
+        assertEq(riskModule.getBreakerStatus(mid), BreakerReasons.ISSUER);
         // GHO, listed without a probe, is untouched.
-        assertEq(riskModule.liveDebtBreakerReasons(address(spoke), GHO_RESERVE), 0);
-        // The poke latches the market and the USDC debt reserve, not the GHO reserve.
-        assertEq(riskModule.pokeBreakers(mid), BreakerReasons.ISSUER);
-        (uint32 latched,) = registry.debtBreaker(address(spoke), USDC_RESERVE);
-        assertEq(latched, BreakerReasons.ISSUER);
-        (latched,) = registry.debtBreaker(address(spoke), GHO_RESERVE);
-        assertEq(latched, 0);
-        // Once the probe clears, the latch keeps the debt reserve closed until reset.
+        assertEq(riskModule.getDebtBreakerStatus(address(spoke), GHO_RESERVE), 0);
+        // Once the probe clears, neither the debt reserve nor the market holds.
         tUsdc.setPaused(false, false);
-        assertEq(riskModule.liveDebtBreakerReasons(address(spoke), USDC_RESERVE), 0);
-        (reasons,) = riskModule.getDebtBreakerStatus(address(spoke), USDC_RESERVE);
-        assertEq(reasons, BreakerReasons.ISSUER);
+        assertEq(riskModule.getDebtBreakerStatus(address(spoke), USDC_RESERVE), 0);
+        assertEq(riskModule.getBreakerStatus(mid), 0);
     }
 
     // TEST-228 verifies: SPEC-BRK-003, REQ-RISK-065, ATTACK-197
@@ -152,10 +113,10 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
     function test_TEST_228_transferFeeTripsDebtBreaker() public {
         // GHO is listed with the `UsdtFeeRate` probe by this suite's `_ghoIssuerProbe`.
         assertEq(registry.getToken(address(gho)).issuerProbe == IssuerProbe.UsdtFeeRate, true);
-        assertEq(riskModule.liveDebtBreakerReasons(address(spoke), GHO_RESERVE), 0);
+        assertEq(riskModule.getDebtBreakerStatus(address(spoke), GHO_RESERVE), 0);
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
         tGho.setFee(10, false);
-        assertEq(riskModule.liveDebtBreakerReasons(address(spoke), GHO_RESERVE), BreakerReasons.ISSUER);
+        assertEq(riskModule.getDebtBreakerStatus(address(spoke), GHO_RESERVE), BreakerReasons.ISSUER);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IRiskModuleErrors.DebtBreakerTripped.selector, address(spoke), GHO_RESERVE, BreakerReasons.ISSUER
@@ -163,8 +124,10 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
         );
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
         // GHO is not a pool token of the market, so the market breaker stays clear.
-        assertEq(riskModule.liveBreakerReasons(mid), 0);
+        assertEq(riskModule.getBreakerStatus(mid), 0);
+        // The fee is switched off: the borrow passes in the same block, with no reset.
         tGho.setFee(0, false);
-        assertEq(riskModule.liveDebtBreakerReasons(address(spoke), GHO_RESERVE), 0);
+        assertEq(riskModule.getDebtBreakerStatus(address(spoke), GHO_RESERVE), 0);
+        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
     }
 }

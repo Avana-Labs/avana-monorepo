@@ -6,24 +6,19 @@ pragma solidity 0.8.28;
 import {HubAssetExposureView, TailCoverageView} from "./types/LensTypes.sol";
 
 /// @title ILensRisk
-/// @notice Risk views of the Lens: breaker status, address freezes, tail coverage and Hub asset exposure.
+/// @notice Risk views of the Lens: breaker status, tail coverage and Hub asset exposure.
 interface ILensRisk {
-    /// @notice Returns a market's circuit-breaker status, passed through from the RiskModule.
-    /// @dev `reasons` ORs current conditions, recovering temporary gates and latched security freezes.
+    /// @notice Returns the reasons of a market's circuit breaker that hold now, passed through from the RiskModule.
     function getBreakerStatus(
         uint256 marketId
-    ) external view returns (uint32 reasons, uint64 reopensAt);
+    ) external view returns (uint32 reasons);
 
-    /// @notice Returns a debt reserve's circuit-breaker status, passed through from the RiskModule.
+    /// @notice Returns the reasons of a debt reserve's circuit breaker that hold now, passed through from the
+    /// RiskModule.
     function getDebtBreakerStatus(
         address spoke,
         uint256 debtReserveId
-    ) external view returns (uint32 reasons, uint64 reopensAt);
-
-    /// @notice Returns whether an address is frozen in the MarketRegistry.
-    function isFrozenAddress(
-        address account
-    ) external view returns (bool frozen);
+    ) external view returns (uint32 reasons);
 
     /// @notice Returns a First-Loss Reserve's funded balance against its largest one-token tail exposure.
     /// @dev Rounding never overstates coverage.

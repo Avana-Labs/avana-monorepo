@@ -7,7 +7,7 @@ import {ICollateralization} from "../../custody/collateralization/ICollateraliza
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
-import {Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {PositionRef} from "../../types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
@@ -44,28 +44,22 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _onlyDelegated();
         _acquire();
         if (block.timestamp > deadline) revert DeadlineExpired(deadline);
-        (Market memory m, PauseState state) = _pledgeGates(marketId, position.integrationId);
+        Market memory m = _pledgeGates(marketId, position.integrationId);
         uint256 reserveId;
         (proxy, reserveId) = _proxyForPledge(marketId, m.spoke, m.vaultToken);
-        if (state == PauseState.Frozen && _borrowCount(m.spoke, proxy) == 0) revert ApplicationFrozen();
-        // Paused here means reason General: only a rescue top-up passes, as for a frozen wallet.
-        bool requireRescue = state == PauseState.Paused || _isFrozen(msg.sender);
-        (recordId, credited) = _custodyAndSupply(proxy, m, reserveId, position.positionKey, requireRescue);
+        (recordId, credited) = _custodyAndSupply(proxy, m, reserveId, position.positionKey);
         emit CollateralAdded(
             msg.sender, marketId, m.vaultToken, proxy, recordId, position.integrationId, position.positionKey, credited
         );
         _release();
     }
 
-    /// @dev Pledge gates checked before the proxy exists; returns the Hub's pause state.
+    /// @dev Pledge gates checked before the proxy exists.
     function _pledgeGates(
         uint256 marketId,
         uint32 integrationId
-    ) private view returns (Market memory m, PauseState state) {
+    ) private view returns (Market memory m) {
         m = _marketForPledge(marketId);
-        PauseReason reason;
-        (state, reason) = _pauseOf(m.hub);
-        if (state == PauseState.Paused && reason == PauseReason.MintPathSuspect) revert ApplicationPaused();
         if (!IMarketRegistry(_MARKET_REGISTRY).getSpoke(m.spoke).approved) revert UnknownSpoke(m.spoke);
         if (integrationId != m.integrationId) revert IntegrationMismatch(marketId, integrationId);
     }
@@ -74,14 +68,13 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         address proxy,
         Market memory m,
         uint256 reserveId,
-        bytes32 positionKey,
-        bool requireRescue
+        bytes32 positionKey
     ) private returns (uint256 recordId, uint128 credited) {
         IVaultToken vt = IVaultToken(m.vaultToken);
         if (!vt.isValidProxy(proxy)) vt.addValidProxy(proxy);
         int256 gapBefore = _gap(m.vaultToken);
         (recordId, credited) =
-            ICollateralization(_COLLATERALIZATION).pledge(msg.sender, proxy, m.vaultToken, positionKey, requireRescue);
+            ICollateralization(_COLLATERALIZATION).pledge(msg.sender, proxy, m.vaultToken, positionKey, false);
         if (credited == 0) revert ZeroAmount();
         vt.mint(proxy, credited);
         _supply(proxy, m.spoke, m.vaultToken, reserveId, vt.marketId(), credited);
@@ -135,14 +128,10 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _acquire();
         if (block.timestamp > deadline) revert DeadlineExpired(deadline);
         if (amount == 0) revert ZeroAmount();
-        DebtReserveDef memory def = _borrowPauseGate(marketId, debtReserveId);
         (address proxy, AdapterAccount memory account) = _accountOf(msg.sender, marketId);
-        if (!IMarketRegistry(_MARKET_REGISTRY).isApprovedDebtReserve(account.spoke, debtReserveId)) {
-            revert UnknownDebtReserve(account.spoke, debtReserveId);
-        }
+        DebtReserveDef memory def = IMarketRegistry(_MARKET_REGISTRY).getDebtReserve(account.spoke, debtReserveId);
+        if (!def.approved) revert UnknownDebtReserve(account.spoke, debtReserveId);
         _checkReceiver(receiver, def);
-        if (_isFrozen(msg.sender)) revert AddressIsFrozen(msg.sender);
-        if (_isFrozen(receiver)) revert AddressIsFrozen(receiver);
         uint256 nonce = _s().borrowNonce[proxy];
         if (nonce != expectedNonce) revert BadNonce(nonce, expectedNonce);
         _s().borrowNonce[proxy] = nonce + 1;
@@ -153,24 +142,6 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         emit Borrowed(msg.sender, marketId, debtReserveId, receiver, amount, nonce, hf);
         _release();
         drawn = amount;
-    }
-
-    function _borrowPauseGate(
-        uint256 marketId,
-        uint256 debtReserveId
-    ) private view returns (DebtReserveDef memory def) {
-        Market memory m = IMarketRegistry(_MARKET_REGISTRY).getMarket(marketId);
-        _requireNone(m.hub);
-        def = IMarketRegistry(_MARKET_REGISTRY).getDebtReserve(m.spoke, debtReserveId);
-        if (def.fundingHub != m.hub) _requireNone(def.fundingHub);
-    }
-
-    function _requireNone(
-        address hub
-    ) private view {
-        (PauseState state,) = _pauseOf(hub);
-        if (state == PauseState.Frozen) revert ApplicationFrozen();
-        if (state == PauseState.Paused) revert ApplicationPaused();
     }
 
     function _checkReceiver(

@@ -75,7 +75,6 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
         _contained(tl, abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 10_000e8)));
         _contained(tl, abi.encodeCall(store.tightenMinPledgeUsd, (M, 20e8)));
         _contained(tl, abi.encodeCall(store.tightenMaxFlashFeeBps, (5)));
-        _contained(tl, abi.encodeCall(store.tightenGateRecoverySeconds, (3600)));
         _contained(tl, abi.encodeCall(store.tightenMaxShortfallBps, (50)));
         _contained(tl, abi.encodeCall(store.tightenDebtStressRiseBps, (usdc, 500)));
     }
@@ -89,8 +88,7 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
         _contained(tl, abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 110)));
         _contained(tl, abi.encodeCall(store.loosenMinPledgeUsd, (M, 1e8)));
         _contained(tl, abi.encodeCall(store.loosenMaxShortfallBps, (2000)));
-        _contained(tl, abi.encodeCall(store.loosenGateRecoverySeconds, (900)));
-        _contained(tl, abi.encodeCall(store.loosenBreakerDeficitMax, (address(hub), gho, 1e18)));
+        _contained(tl, abi.encodeCall(store.loosenDeficitMax, (address(hub), gho, 1e18)));
         _contained(tl, abi.encodeCall(store.setDebtAssetParams, (gho, DebtReserveParams(1e18))));
         _contained(tl, abi.encodeCall(store.setInitialMarketParams, (M, store.getMarketParams(M))));
         _contained(tl, abi.encodeCall(store.setInitialMarketCaps, (M, 5_000_000e8, 500_000e8, 1e8)));

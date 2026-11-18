@@ -3,14 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {MarketRegistryActivationLogic} from "../../../src/policy/market-registry/MarketRegistryActivationLogic.sol";
 import {MarketRegistryHubsLogic} from "../../../src/policy/market-registry/MarketRegistryHubsLogic.sol";
 import {MarketRegistryListingLogic} from "../../../src/policy/market-registry/MarketRegistryListingLogic.sol";
 import {MarketRegistryRoutesLogic} from "../../../src/policy/market-registry/MarketRegistryRoutesLogic.sol";
-import {MarketRegistrySafetyLogic} from "../../../src/policy/market-registry/MarketRegistrySafetyLogic.sol";
 import {MarketRegistryWindDownLogic} from "../../../src/policy/market-registry/MarketRegistryWindDownLogic.sol";
 import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
 import {
@@ -112,13 +110,8 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         _deployFactoryRegistryAndStore(predictedRegistry, predictedStore);
         require(address(registry) == predictedRegistry, "registry prediction");
         require(address(store) == predictedStore, "store prediction");
-        address tl = address(timelock);
         vm.label(address(registry), "MarketRegistry");
         vm.label(address(store), "ParameterStore");
-        vm.startPrank(tl);
-        registry.grantRole(AvanaRoles.APPLICATION_PAUSE_GUARDIAN, emergencyGuardian);
-        store.grantRole(AvanaRoles.APPLICATION_PAUSE_GUARDIAN, emergencyGuardian);
-        vm.stopPrank();
     }
 
     /// @dev The VaultTokenFactory (naming `registry_`), the registry's logic contracts, implementation and proxy (naming
@@ -152,7 +145,6 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         l.listing = address(new MarketRegistryListingLogic(im));
         l.activation = address(new MarketRegistryActivationLogic(im));
         l.routes = address(new MarketRegistryRoutesLogic(im));
-        l.safety = address(new MarketRegistrySafetyLogic(im));
         l.windDown = address(new MarketRegistryWindDownLogic(im));
         MarketRegistry impl = new MarketRegistry(im, l);
         registry = MarketRegistry(
@@ -177,7 +169,6 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         g.maxFlashFeeBps = 10;
         g.avanaFeeShareBps = 2000;
         g.feeRecipient = feeRecipient;
-        g.gateRecoverySeconds = 1800;
         g.maxShortfallBps = 1000;
     }
 

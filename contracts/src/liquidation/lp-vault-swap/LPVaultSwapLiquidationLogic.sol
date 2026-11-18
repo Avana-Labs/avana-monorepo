@@ -10,7 +10,6 @@ import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILock} from "../../lock/lock/ILock.sol";
 import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
-import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {Market} from "../../types/MarketTypes.sol";
@@ -77,7 +76,6 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
     ) external returns (LiquidationResult memory result) {
         _onlyDelegated();
         if (block.timestamp > p.deadline) revert DeadlineExpired(p.deadline);
-        if (IMarketRegistry(_MARKET_REGISTRY).isFrozenAddress(msg.sender)) revert AddressIsFrozen(msg.sender);
         ILock(_LOCK).acquire();
         Liq memory c = _entryChecks(p);
         _fund(c, p);

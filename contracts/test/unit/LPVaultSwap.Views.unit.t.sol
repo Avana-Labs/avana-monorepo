@@ -11,7 +11,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 /// @title LPVaultSwapViewsUnitTest
 /// @notice LPVaultSwap's views (2.11 "Interface", REQ-SWAP-032 to REQ-SWAP-038, REQ-SWAP-076, REQ-SWAP-122): the
 /// construction bindings, the constants of the spec, the committed-operator list in registration order with
-/// swap-and-pop removal, and `activeKeeperCount` as the unfrozen part of the list, read through the proxy.
+/// swap-and-pop removal, and `activeKeeperCount` as the length of the list, read through the proxy.
 /// forge-config: default.isolate = false
 contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
     /// @notice The bindings are the construction immutables; the timelock is the initialised one.
@@ -60,43 +60,22 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
         assertFalse(lvs.isApprovedKeeper(k[1]), "removed");
     }
 
-    /// @notice `activeKeeperCount` counts the registered keepers the MarketRegistry has not frozen; `isApprovedKeeper`
-    /// and `approvedKeeperCount` ignore the freeze.
+    /// @notice `activeKeeperCount` equals `approvedKeeperCount`, the number of registered keepers, each of which
+    /// `isApprovedKeeper` reports.
     // TEST-098 verifies: REQ-SWAP-034, REQ-SWAP-036, REQ-ACCESS-100
-    function testFuzz_TEST_098_activeCountIgnoresFrozen(
-        uint8 n,
-        uint256 frozenMask
+    function testFuzz_TEST_098_activeCountEqualsRegistered(
+        uint8 n
     ) public {
         n = uint8(bound(n, 1, 20));
-        uint256 frozen = 0;
         for (uint256 i = 0; i < n; ++i) {
-            address k = address(uint160(0xF000 + i));
             vm.prank(timelock);
-            lvs.addKeeper(k);
-            if ((frozenMask >> i) & 1 == 1) {
-                registry.setFrozen(k, true);
-                ++frozen;
-            }
+            lvs.addKeeper(address(uint160(0xF000 + i)));
         }
-        assertEq(lvs.approvedKeeperCount(), uint256(n) + 1, "registered count ignores freezes");
-        assertEq(lvs.activeKeeperCount(), uint256(n) + 1 - frozen, "active count excludes the frozen");
+        assertEq(lvs.approvedKeeperCount(), uint256(n) + 1, "registered count");
+        assertEq(lvs.activeKeeperCount(), uint256(n) + 1, "active count equals the registered count");
         for (uint256 i = 0; i < n; ++i) {
-            assertTrue(lvs.isApprovedKeeper(address(uint160(0xF000 + i))), "a frozen keeper stays registered");
+            assertTrue(lvs.isApprovedKeeper(address(uint160(0xF000 + i))), "registered");
         }
-    }
-
-    /// @notice Removing a frozen keeper leaves the active count unchanged, so it is allowed even at the floor.
-    // TEST-098 verifies: REQ-SWAP-035, REQ-ACCESS-121, SPEC-GOV-008
-    function test_TEST_098_removeFrozenAtTheFloor() public {
-        address k = makeAddr("frozenKeeper");
-        vm.prank(timelock);
-        lvs.addKeeper(k);
-        registry.setFrozen(k, true);
-        assertEq(lvs.activeKeeperCount(), 1, "only the initial keeper is active");
-        vm.prank(timelock);
-        lvs.removeKeeper(k);
-        assertEq(lvs.activeKeeperCount(), 1, "unchanged");
-        assertEq(lvs.approvedKeeperCount(), 1, "one left");
     }
 
     /// @notice The cap is exactly 32: the 32nd registration succeeds, the 33rd reverts `TooManyKeepers(32)`; a removal
@@ -159,15 +138,13 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
         lvs.removeKeeper(keeper);
     }
 
-    /// @notice Registration is the only way onto the list: any other address reads as not approved, and a frozen
-    /// stranger changes no count.
+    /// @notice Registration is the only way onto the list: any other address reads as not approved and changes no
+    /// count.
     // TEST-098 verifies: REQ-SWAP-032, REQ-SWAP-036
     function testFuzz_TEST_098_strangersNeverApproved(
-        address stranger,
-        bool frozen
-    ) public {
+        address stranger
+    ) public view {
         vm.assume(stranger != keeper);
-        registry.setFrozen(stranger, frozen);
         assertFalse(lvs.isApprovedKeeper(stranger), "not approved");
         assertEq(lvs.approvedKeeperCount(), 1, "count unchanged");
         assertEq(lvs.activeKeeperCount(), 1, "active count unchanged");

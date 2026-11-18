@@ -114,7 +114,7 @@ contract CascadeIntegrationTest is RealStackFlows {
         RiskStatus memory rs = uniVault.riskStatus(mA, 1800);
         assertTrue(rs.depthAvailable, "depth available");
         assertApproxEqRel(rs.depthUnits, poolA.liquidity(), 1e14, "depth = the pool's liquidity over the window");
-        (uint32 reasons,) = riskModule.getBreakerStatus(mA);
+        uint32 reasons = riskModule.getBreakerStatus(mA);
         assertEq(reasons & BreakerReasons.POOL_DEPTH, 0, "no POOL_DEPTH breaker while depth remains");
         address proxy = adapterC.proxyOf(probe, mA);
         uint256 nonce = adapterC.borrowNonce(proxy);

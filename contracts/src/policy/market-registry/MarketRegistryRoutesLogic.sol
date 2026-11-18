@@ -53,7 +53,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         if (replaced != address(0) && replaced != route) delete l.approvedBefore[key][replaced];
         l.routes[key] = RouteRecord({route: route, active: true});
         l.approvedBefore[key][route] = true;
-        l.knownRoute[route] = true;
         // List the slot once per market, so a later integration-record addition re-checks it.
         bytes32 slotId = keccak256(abi.encode(marketId, token, debtAsset, kind));
         if (!l.routeSlotListed[slotId]) {
@@ -82,7 +81,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
                 bad = 1;
             } else {
                 list.push(c);
-                l.knownIntegrationContract[c] = true;
             }
         }
         if (bad != 0) revert IMarketRegistry.InvalidIntegration(integrationId);

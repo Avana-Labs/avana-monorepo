@@ -7,22 +7,21 @@ import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 
 /// @title AvanaRolesProperties
 /// @notice Echidna and Medusa properties of the role identifiers in `AvanaRoles`. Each Avana role is the keccak256 of
-/// its own name, none equals `DEFAULT_ADMIN_ROLE` (`0x00`), and the four Avana roles and the three OpenZeppelin
-/// `TimelockController` roles held on the AvanaTimelock (`PROPOSER_ROLE`, `EXECUTOR_ROLE`, `CANCELLER_ROLE`) are seven
+/// its own name, none equals `DEFAULT_ADMIN_ROLE` (`0x00`), and the three Avana roles and the three OpenZeppelin
+/// `TimelockController` roles held on the AvanaTimelock (`PROPOSER_ROLE`, `EXECUTOR_ROLE`, `CANCELLER_ROLE`) are six
 /// distinct identifiers, so a grant of one role can never authorize a holder of another.
 /// @dev `property_` functions run in property mode; `checkRolePair` runs in assertion mode, where the fuzzer and the
 /// symbolic engines (hevm, Mythril) search every index pair for a failing `assert`.
 contract AvanaRolesProperties {
-    uint256 internal constant AVANA_ROLE_COUNT = 4;
-    uint256 internal constant ROLE_COUNT = 7;
+    uint256 internal constant AVANA_ROLE_COUNT = 3;
+    uint256 internal constant ROLE_COUNT = 6;
 
     /// @notice Number of role pairs checked in assertion mode; written so the call is a transaction.
     uint256 public pairsChecked;
 
     function property_roleIdsAreNameHashes() external pure returns (bool) {
         return AvanaRoles.APPLICATION_ADMIN == keccak256("APPLICATION_ADMIN")
-            && AvanaRoles.APPLICATION_PAUSE_GUARDIAN == keccak256("APPLICATION_PAUSE_GUARDIAN")
-            && AvanaRoles.APPLICATION_FREEZE_GUARDIAN == keccak256("APPLICATION_FREEZE_GUARDIAN")
+            && AvanaRoles.APPLICATION_RISK_STEWARD == keccak256("APPLICATION_RISK_STEWARD")
             && AvanaRoles.DAO_CANCELLER_ROLE == keccak256("DAO_CANCELLER_ROLE");
     }
 
@@ -69,12 +68,11 @@ contract AvanaRolesProperties {
         uint256 k
     ) internal pure returns (bytes32) {
         if (k == 0) return AvanaRoles.APPLICATION_ADMIN;
-        if (k == 1) return AvanaRoles.APPLICATION_PAUSE_GUARDIAN;
-        if (k == 2) return AvanaRoles.APPLICATION_FREEZE_GUARDIAN;
-        if (k == 3) return AvanaRoles.DAO_CANCELLER_ROLE;
+        if (k == 1) return AvanaRoles.APPLICATION_RISK_STEWARD;
+        if (k == 2) return AvanaRoles.DAO_CANCELLER_ROLE;
         // OpenZeppelin 5.1 `TimelockController` defines each of its roles as the keccak256 of the role's name.
-        if (k == 4) return keccak256("PROPOSER_ROLE");
-        if (k == 5) return keccak256("EXECUTOR_ROLE");
+        if (k == 3) return keccak256("PROPOSER_ROLE");
+        if (k == 4) return keccak256("EXECUTOR_ROLE");
         return keccak256("CANCELLER_ROLE");
     }
 }

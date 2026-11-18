@@ -6,13 +6,12 @@ pragma solidity 0.8.28;
 import {BackingRecord} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 
 /// @title AaveAdapterHostileRegistryRowsUnitTest
 /// @notice A hostile MarketRegistry seen from the reviewed AaveAdapter (TEST-133): the fixture's settable
 /// `AdapterRegistryMock` plays a registry implementation that remaps a market to another Spoke, Hub and vault token,
-/// rewrites a debt reserve's definition and reports Paused. Driven through the real Adapter on the real local Aave V4,
+/// rewrites a debt reserve's definition. Driven through the real Adapter on the real local Aave V4,
 /// Collateralization, vault tokens, ProxyManager and PositionProxies.
 /// forge-config: default.isolate = false
 contract AaveAdapterHostileRegistryRowsUnitTest is AaveAdapterFixture {
@@ -24,9 +23,8 @@ contract AaveAdapterHostileRegistryRowsUnitTest is AaveAdapterFixture {
     // Sources: 5.1 TEST-133 (Adapter side), Q-119, Q-226, Q-227
     /// @notice Remapping market A to another Spoke, Hub and vault token and rewriting the GHO reserve's definition
     /// changes no vault-token immutable, no proxy's Spoke or market and no Collateralization record, and mints
-    /// nothing: a new pledge into the remapped market is refused. With the remap still in force and the switch
-    /// reporting Paused(MintPathSuspect), the borrower's repay and debt-free withdrawal and an honest liquidation of
-    /// another account all complete, since none of them reads the registry's pause state.
+    /// nothing: a new pledge into the remapped market is refused. With the remap still in force, the borrower's repay
+    /// and debt-free withdrawal and an honest liquidation of another account all complete.
     function test_TEST_133_hostileRegistryChangesNoBindingAndBlocksNoExit() public {
         (key, proxy) = _pledgeAs(alice, MARKET_ID, UNITS);
         _borrowAs(alice, MARKET_ID, debtReserveId, 1000e18);
@@ -40,7 +38,7 @@ contract AaveAdapterHostileRegistryRowsUnitTest is AaveAdapterFixture {
         _exitsAndLiquidationPass();
     }
 
-    /// @dev Remaps market A to another Spoke, Hub and vault token, rewrites the GHO reserve and reports Paused.
+    /// @dev Remaps market A to another Spoke, Hub and vault token and rewrites the GHO reserve.
     function _hostileRemap() internal {
         registry.setMarketSpoke(MARKET_ID, aave.lendSpoke);
         registry.setMarketHub(MARKET_ID, makeAddr("attackerHub"));
@@ -48,7 +46,6 @@ contract AaveAdapterHostileRegistryRowsUnitTest is AaveAdapterFixture {
         registry.setDebtReserve(
             aave.cdpSpoke, debtReserveId, _debtDef(debtReserveId, address(usdcDebt), 6, usdcAssetId)
         );
-        registry.setPause(aave.hub, PauseState.Paused, PauseReason.MintPathSuspect);
     }
 
     /// @dev Bindings are immutables of the token and the proxy, and Collateralization's record is untouched.
@@ -82,7 +79,7 @@ contract AaveAdapterHostileRegistryRowsUnitTest is AaveAdapterFixture {
         assertEq(tokenB.totalSupply(), 0, "no mint in market B");
     }
 
-    /// @dev Exits and liquidation pass with the remap and the Paused report in force.
+    /// @dev Exits and liquidation pass with the remap in force.
     function _exitsAndLiquidationPass() internal {
         uint256 owed = _debtOf(proxy, debtReserveId);
         _fund(alice, debtReserveId, owed);

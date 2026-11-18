@@ -154,15 +154,16 @@ contract RiskModuleBorrowUnitTest is RiskModuleFixture {
         _borrow(GHO_RESERVE);
     }
 
-    // TEST-228 verifies: REQ-RISK-065, REQ-RISK-073, SPEC-BRK-008, INV-081, REQ-ACCESS-166, REQ-ACCESS-084
+    // TEST-228 verifies: REQ-RISK-065, REQ-RISK-073, SPEC-BRK-008, INV-081
     function test_TEST_228_breakersOnBorrowAndWithdraw() public {
-        vm.prank(emergencyGuardian);
-        registry.tripDebtBreaker(address(spoke), USDC_RESERVE);
+        // The USDC funding Hub's deficit on the Spoke is above `deficitMax`.
+        store.setDeficitMax(address(hub), address(usdc), 1000e6);
+        hub.setOwed(USDC_ASSET, address(spoke), 0, 1000.5e6 * 1e27);
         // A GHO borrow passes; a USDC borrow reverts.
         _borrow(GHO_RESERVE);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IRiskModuleErrors.DebtBreakerTripped.selector, address(spoke), USDC_RESERVE, BreakerReasons.MANUAL
+                IRiskModuleErrors.DebtBreakerTripped.selector, address(spoke), USDC_RESERVE, BreakerReasons.DEFICIT
             )
         );
         _borrow(USDC_RESERVE);
@@ -171,14 +172,27 @@ contract RiskModuleBorrowUnitTest is RiskModuleFixture {
         rSpoke.setStatus(address(proxy), USDC_RESERVE, false, true);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IRiskModuleErrors.DebtBreakerTripped.selector, address(spoke), USDC_RESERVE, BreakerReasons.MANUAL
+                IRiskModuleErrors.DebtBreakerTripped.selector, address(spoke), USDC_RESERVE, BreakerReasons.DEFICIT
             )
         );
         riskModule.preWithdrawCheck(address(proxy));
-        vm.prank(emergencyGuardian);
-        registry.tripMarketBreaker(mid);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.MANUAL));
+        // The deficit back at the limit: both pass in the same block, with no reset.
+        hub.setOwed(USDC_ASSET, address(spoke), 0, 1000e6 * 1e27);
+        _borrow(USDC_RESERVE);
+        riskModule.preWithdrawCheck(address(proxy));
+        // A market condition stops every borrow and withdraw-with-debt while it holds.
+        rVault.setDepth(0, false);
+        vm.expectRevert(
+            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.POOL_DEPTH)
+        );
         _borrow(GHO_RESERVE);
+        vm.expectRevert(
+            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.POOL_DEPTH)
+        );
+        riskModule.preWithdrawCheck(address(proxy));
+        rVault.setDepth(2e13, true);
+        _borrow(GHO_RESERVE);
+        riskModule.preWithdrawCheck(address(proxy));
     }
 
     // TEST-028 verifies: REQ-ADAPTER-013, REQ-RISK-009, INV-024

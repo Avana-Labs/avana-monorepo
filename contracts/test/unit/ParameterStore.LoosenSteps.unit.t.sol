@@ -268,7 +268,6 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         vm.startPrank(address(timelock));
         store.tightenMaxShortfallBps(100);
         store.tightenDebtStressRiseBps(usdc, 3000);
-        store.tightenGateRecoverySeconds(7200);
         store.tightenRouteDepthThreshold(M, usdc, gho, 0, 1_000_000e8);
         store.setDebtAssetParams(gho, DebtReserveParams(1e18));
         store.tightenFloorRoundingAllowance(gho, 1);
@@ -279,18 +278,15 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         store.loosenMaxShortfallBps(5000);
         store.loosenDebtStressRiseBps(usdc, 1000);
         store.loosenDebtStressRiseBps(usdc, 100);
-        store.loosenGateRecoverySeconds(3600);
-        store.loosenGateRecoverySeconds(600);
-        store.loosenBreakerDeficitMax(address(hub), gho, 1e18);
-        store.loosenBreakerDeficitMax(address(hub), gho, 100_000e18);
+        store.loosenDeficitMax(address(hub), gho, 1e18);
+        store.loosenDeficitMax(address(hub), gho, 100_000e18);
         store.loosenRouteDepthThreshold(M, usdc, gho, 0, 500_000e8);
         store.loosenRouteDepthThreshold(M, usdc, gho, 0, 1);
         store.loosenFloorRoundingAllowance(gho, 2);
         store.loosenFloorRoundingAllowance(gho, 1e18);
         vm.stopPrank();
         assertEq(store.maxShortfallBps(), 5000);
-        assertEq(store.gateRecoverySeconds(), 600);
-        assertEq(store.breakerDeficitMax(address(hub), gho), 100_000e18);
+        assertEq(store.deficitMax(address(hub), gho), 100_000e18);
         assertEq(store.floorRoundingAllowance(gho), 1e18);
         assertEq(store.lastLoosenedAt(_key("maxShortfallBps", bytes32(0))), 0);
     }
@@ -392,10 +388,10 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         store.tightenDebtStressRiseBps(usdc, 500);
         store.tightenRouteDepthThreshold(M, usdc, gho, 0, 5e8);
         store.setDebtAssetParams(gho, DebtReserveParams(1e17));
-        store.loosenBreakerDeficitMax(address(hub), gho, 1e18);
+        store.loosenDeficitMax(address(hub), gho, 1e18);
         vm.stopPrank();
         bytes memory notLooser = abi.encodeWithSelector(IParameterStoreBase.NotLooser.selector);
-        bytes[11] memory same = [
+        bytes[10] memory same = [
             abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 100)),
             abi.encodeCall(store.loosenFloorRoundingAllowance, (gho, 1e17)),
             abi.encodeCall(store.loosenRouteDepthThreshold, (M, usdc, gho, 0, 5e8)),
@@ -405,8 +401,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
             abi.encodeCall(store.loosenMinPledgeUsd, (M, 10e8)),
             abi.encodeCall(store.loosenMaxShortfallBps, (1000)),
             abi.encodeCall(store.loosenDebtStressRiseBps, (usdc, 500)),
-            abi.encodeCall(store.loosenGateRecoverySeconds, (1800)),
-            abi.encodeCall(store.loosenBreakerDeficitMax, (address(hub), gho, 1e18))
+            abi.encodeCall(store.loosenDeficitMax, (address(hub), gho, 1e18))
         ];
         for (uint256 i = 0; i < same.length; ++i) {
             _refuses(same[i], notLooser);

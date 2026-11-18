@@ -16,8 +16,7 @@ import {Vm} from "forge-std/Vm.sol";
 /// @notice No settlement budget, no in-kind mode, no cross-call state (2.11 REQ-SWAP-029, REQ-SWAP-030, REQ-SWAP-031,
 /// REQ-SWAP-103, REQ-SWAP-104, REQ-SWAP-003; Q-397, Q-399, Q-401): a liquidation writes no storage of LPVaultSwap, so
 /// many dust liquidations in one market change nothing about how another market settles; the caller alone bears a
-/// recovery below the debt it funded; repeated route failures switch no mode; LPVaultSwap reads no pause state, pause
-/// reason or breaker and runs in every market status.
+/// recovery below the debt it funded; repeated route failures switch no mode; LPVaultSwap runs in every market status.
 /// forge-config: default.isolate = false
 contract LPVaultSwapNoBudgetUnitTest is LPVaultSwapUnitBase {
     address internal proxy;
@@ -128,14 +127,10 @@ contract LPVaultSwapNoBudgetUnitTest is LPVaultSwapUnitBase {
         assertEq(rep2.routeUsed[1], 1, "primary again");
     }
 
-    /// @notice REQ-SWAP-003: LPVaultSwap never reads the pause state, pause reason or a breaker of the MarketRegistry;
-    /// it settles in every market status (Registered, Active, Offboarding, Closed records alike).
+    /// @notice REQ-SWAP-003: LPVaultSwap settles in every market status (Registered, Active, Offboarding, Closed
+    /// records alike).
     // TEST-053 verifies: REQ-SWAP-003, REQ-SWAP-049, REQ-SWAP-104, INV-067, Q-241, Q-252
-    function test_TEST_053_noPauseOrBreakerReads() public {
-        vm.expectCall(address(registry), abi.encodeWithSignature("pauseState(address)"), 0);
-        vm.expectCall(address(registry), abi.encodeWithSignature("pauseReason(address)"), 0);
-        vm.expectCall(address(registry), abi.encodeWithSignature("marketBreaker(uint256)"), 0);
-        vm.expectCall(address(registry), abi.encodeWithSignature("debtBreaker(address,uint256)"), 0);
+    function test_TEST_053_settlesInEveryMarketStatus() public {
         MarketStatus[3] memory statuses = [MarketStatus.Registered, MarketStatus.Offboarding, MarketStatus.Closed];
         for (uint256 i = 0; i < statuses.length; ++i) {
             Market memory m = registry.getMarket(MARKET_ID);

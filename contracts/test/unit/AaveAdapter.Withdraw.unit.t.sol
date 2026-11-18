@@ -10,7 +10,6 @@ import {ILock} from "../../src/lock/lock/ILock.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {PositionRef} from "../../src/types/PositionTypes.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
@@ -21,7 +20,7 @@ import {Vm} from "forge-std/Vm.sol";
 /// @notice `withdraw`, `repayAllAndWithdraw`, `collectFees`, `releaseZeroCredit` and `refreshDebtMark` on the real
 /// Aave V4 Spoke and Collateralization: the debt-free test from Aave's borrow count, the order withdraw → burn → release
 /// → cleanup or health check → backing check, the with-debt gates, the reconciliation of an unsettled seizure, and the
-/// exits that read no MarketRegistry, pause, freeze, breaker or RiskModule.
+/// exits that read no MarketRegistry, breaker or RiskModule.
 /// forge-config: default.isolate = false
 contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     bytes32 internal k1;
@@ -56,8 +55,6 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     }
 
     function _breakEverything() internal {
-        registry.setFrozen(alice, true);
-        _pause(PauseState.Paused, PauseReason.MintPathSuspect);
         registry.setBroken(true);
         risk.setBroken(true);
     }
@@ -153,8 +150,8 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
 
     // TEST-229 verifies: REQ-PROXY-035, REQ-ADAPTER-047, REQ-ADAPTER-082, REQ-ADAPTER-086, REQ-ACCESS-068, INV-045, INV-067, ATTACK-035, ATTACK-043
     // Sources: real-Aave list (exits with a reverting registry or RiskModule)
-    /// @notice A debt-free withdrawal succeeds for a frozen wallet under `Paused(MintPathSuspect)` with a
-    /// MarketRegistry, a RiskModule and a sequencer read that all revert: it reads none of them.
+    /// @notice A debt-free withdrawal succeeds with a MarketRegistry, a RiskModule and a sequencer read that all
+    /// revert: it reads none of them.
     function test_TEST_229_debtFreeWithdrawIgnoresEveryStop() public {
         _breakEverything();
         vm.expectCall(address(registry), "", 0);
@@ -168,30 +165,11 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
 
     // ─── With debt ───
 
-    // TEST-019 verifies: REQ-PROXY-036, REQ-ADAPTER-046, REQ-ADAPTER-053, REQ-ADAPTER-073, REQ-ACCESS-069, REQ-ACCESS-073, REQ-ACCESS-074, INV-023
-    // Sources: 5.1 TEST-019
-    /// @notice A withdrawal that leaves debt reverts `ApplicationPaused` under Paused with either reason and passes
-    /// under Frozen.
-    function test_TEST_019_withDebtPauseGate() public {
-        _borrowAs(alice, MARKET_ID, debtReserveId, 1000e18);
-        _pause(PauseState.Paused, PauseReason.General);
-        _expectWithdrawRevert(abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector), k2, UNITS / 2);
-        _pause(PauseState.Paused, PauseReason.MintPathSuspect);
-        _expectWithdrawRevert(abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector), k2, UNITS / 2);
-        _pause(PauseState.Frozen, PauseReason.None);
-        assertEq(risk.preWithdrawCalls(), 0, "refused before the RiskModule");
-        _withdraw(k2, UNITS / 2, 0);
-        assertEq(lpVault.ownerOf(k2), alice, "withdrawn under Frozen");
-    }
-
     // TEST-019 verifies: REQ-PROXY-036, REQ-PROXY-022, SPEC-PROXY-001, REQ-ADAPTER-087, INV-024, INV-025
-    /// @notice With debt: a frozen caller reverts `AddressIsFrozen`; otherwise `preWithdrawCheck` runs before the Spoke
-    /// call and `postHealthCheck(proxy, minHealthFactor)` after the release, and the event carries its health factor.
+    /// @notice With debt, `preWithdrawCheck` runs before the Spoke call and `postHealthCheck(proxy, minHealthFactor)`
+    /// after the release, and the event carries its health factor.
     function test_TEST_019_withDebtGatesAndHealthCheck() public {
         _borrowAs(alice, MARKET_ID, debtReserveId, 1000e18);
-        registry.setFrozen(alice, true);
-        _expectWithdrawRevert(abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, alice), k2, UNITS / 2);
-        registry.setFrozen(alice, false);
         vm.expectCall(address(risk), abi.encodeCall(IRiskModule.preWithdrawCheck, (p)), 1);
         vm.expectCall(address(risk), abi.encodeCall(IRiskModule.postHealthCheck, (p, 1.2e18)), 1);
         uint256 hfAfter = uint256(16_000e18) * 1e18 / 1000e18; // the remaining $20,000 record at CF 80%
@@ -400,8 +378,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
 
     // TEST-243 verifies: REQ-ADAPTER-071, REQ-ADAPTER-047, REQ-ADAPTER-086, REQ-PROXY-034, ATTACK-035
     // Sources: real-Aave list (exits with a reverting registry or RiskModule)
-    /// @notice `repayAllAndWithdraw` completes with a reverting MarketRegistry and RiskModule, for a frozen wallet under
-    /// `Paused(MintPathSuspect)`.
+    /// @notice `repayAllAndWithdraw` completes with a reverting MarketRegistry and RiskModule.
     function test_TEST_243_repayAllAndWithdrawIgnoresEveryStop() public {
         _borrowAs(alice, MARKET_ID, debtReserveId, 3000e18);
         uint256 g = _debtOf(p, debtReserveId);
@@ -417,7 +394,6 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.postHealthCheck.selector), 0);
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.checkPledge.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.pokeBreakers.selector), 0);
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.pokeConfig.selector), 0);
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.checkRemainingRecord.selector), 0);
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.checkAaveConfig.selector), 0);

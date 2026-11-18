@@ -7,7 +7,7 @@ import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveV4SpokePositionManagers} from "../../src/interfaces/external/aave/IAaveV4SpokePositionManagers.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {
     CollHubSpokeConfig,
@@ -102,23 +102,23 @@ contract AaveAdapterRealAaveUnitTest is AaveAdapterFixture {
     // TEST-203 verifies: REQ-PROXY-034, REQ-ADAPTER-051, SPEC-PROXY-006
     // Sources: real-Aave list (`borrowCount` debt-free)
     /// @notice The debt-free test is Aave's `borrowCount`: one wei of GHO debt makes a withdrawal a with-debt one (the
-    /// RiskModule is called, Paused refuses), and only a repay that clears every reserve brings it to 0.
+    /// RiskModule is called and its refusal holds), and only a repay that clears every reserve brings it to 0.
     function test_TEST_203_borrowCountDecidesDebtFree() public {
         (bytes32 k1, address p) = _pledgeAs(alice, MARKET_ID, UNITS);
         (bytes32 k2,) = _pledgeAs(alice, MARKET_ID, UNITS);
         _borrowAs(alice, MARKET_ID, debtReserveId, 1);
         _borrowAs(alice, MARKET_ID, usdcReserveId, 1);
         assertEq(_borrowCountOf(p), 2, "two borrowed reserves");
-        _pause(PauseState.Paused, PauseReason.General);
+        risk.setRefuse(true);
         uint256 d = _deadline();
-        vm.expectRevert(bytes4(keccak256("ApplicationPaused()")));
+        vm.expectRevert(IRiskModuleErrors.AaveReserveUnavailable.selector);
         vm.prank(alice);
         adapterC.withdraw(MARKET_ID, _ref(k1), UNITS, d, 0);
         _fund(alice, debtReserveId, 1);
         vm.prank(alice);
         adapterC.repay(alice, MARKET_ID, debtReserveId, 1, true, d);
         assertEq(_borrowCountOf(p), 1, "USDC still borrowed");
-        vm.expectRevert(bytes4(keccak256("ApplicationPaused()")));
+        vm.expectRevert(IRiskModuleErrors.AaveReserveUnavailable.selector);
         vm.prank(alice);
         adapterC.withdraw(MARKET_ID, _ref(k1), UNITS, d, 0);
         _fund(alice, usdcReserveId, 1);
@@ -128,7 +128,7 @@ contract AaveAdapterRealAaveUnitTest is AaveAdapterFixture {
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
         vm.prank(alice);
         adapterC.withdraw(MARKET_ID, _ref(k1), UNITS, d, 0);
-        assertEq(lpVault.ownerOf(k1), alice, "debt-free exit under Paused");
+        assertEq(lpVault.ownerOf(k1), alice, "debt-free exit while the RiskModule refuses");
         assertEq(lpVault.depositorOf(k2), alice, "k2 still pledged");
     }
 
@@ -332,15 +332,13 @@ contract AaveAdapterRealAaveUnitTest is AaveAdapterFixture {
     // Sources: real-Aave list (exits with a reverting registry or RiskModule)
     /// @notice A two-reserve account with two records exits completely (two repays by the wallet and a third party,
     /// two debt-free withdrawals, fee collection on the way) while the MarketRegistry and the RiskModule revert on
-    /// every call, the Hub is `Paused(MintPathSuspect)` and the wallet is frozen.
+    /// every call.
     function test_TEST_099_fullExitWithBrokenRegistryAndRiskModule() public {
         (bytes32 k1, address p) = _pledgeAs(alice, MARKET_ID, UNITS);
         (bytes32 k2,) = _pledgeAs(alice, MARKET_ID, UNITS / 2);
         _borrowAs(alice, MARKET_ID, debtReserveId, 6000e18);
         _borrowAs(alice, MARKET_ID, usdcReserveId, 2000e6);
         vm.warp(block.timestamp + 20 days);
-        registry.setFrozen(alice, true);
-        _pause(PauseState.Paused, PauseReason.MintPathSuspect);
         registry.setBroken(true);
         risk.setBroken(true);
         uint256 g = _debtOf(p, debtReserveId);
@@ -372,7 +370,7 @@ contract AaveAdapterRealAaveUnitTest is AaveAdapterFixture {
     // TEST-158 verifies: REQ-PROXY-077, REQ-PROXY-096, REQ-PROXY-032, REQ-PROXY-035
     // Sources: real-Aave list (reserve paused on Aave)
     /// @notice A debt reserve paused on Aave blocks its repay (the Spoke's `ReservePaused`) and a paused vault-token
-    /// reserve blocks the withdrawal; both pass again once Aave unpauses, with no Avana state involved.
+    /// reserve blocks the withdrawal; both pass again once Aave lifts the pause, with no Avana state involved.
     function test_TEST_158_aavePauseBlocksFromAaveSideOnly() public {
         (bytes32 k, address p) = _pledgeAs(alice, MARKET_ID, UNITS);
         _borrowAs(alice, MARKET_ID, debtReserveId, 1000e18);
@@ -397,6 +395,6 @@ contract AaveAdapterRealAaveUnitTest is AaveAdapterFixture {
         cfg.updatePaused(aave.cdpSpoke, vtReserveId, false);
         vm.prank(alice);
         adapterC.withdraw(MARKET_ID, _ref(k), UNITS, d, 0);
-        assertEq(lpVault.ownerOf(k), alice, "exit after unpause");
+        assertEq(lpVault.ownerOf(k), alice, "exit after the pause lifts");
     }
 }

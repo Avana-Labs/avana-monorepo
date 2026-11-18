@@ -18,7 +18,7 @@ import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 /// PositionManager and PoolManager: the return of a whole position to its depositor in every state (`TEST-018`), a
 /// zero-unit position (`TEST-020`), `returnPosition` naming no recipient (`TEST-209`), the reconcile removal
 /// (`TEST-150`), a hostile AaveAdapter (`TEST-130`), exits whatever the MarketRegistry and the spot (`TEST-099`), three
-/// positions leaving while Paused (`TEST-195`), fee collection (`TEST-017`), the depositor's partial removal
+/// positions leaving for good (`TEST-195`), fee collection (`TEST-017`), the depositor's partial removal
 /// (`TEST-237`), no top-up (`TEST-238`), split removals (`TEST-074`), re-entry from a pool token (`TEST-222`), approvals
 /// and operators (`TEST-021`, `TEST-291`), the Lock (`TEST-060`, `TEST-270`), isolation from vault tokens and gates
 /// (`TEST-162`), a transfer fee on a payout (`TEST-221`), the exact range and the clamp (`TEST-279`), and a removal at
@@ -203,7 +203,7 @@ contract UniswapV4IntegrationCustodyUnitTest is UniswapV4IntegrationFixture {
     // TEST-018 verifies: REQ-VAULT-152, REQ-VAULT-005, INV-007, INV-045
     /// @notice Three pledged positions carrying owed fees, with the spot at three places, are each returned whole to the
     /// depositor by one `transferFrom`, with `PositionReturned`, their liquidity and owed fees unchanged and their custody
-    /// entry gone; the LPVault never calls the MarketRegistry, so no pause state can stop a return.
+    /// entry gone; the LPVault never calls the MarketRegistry.
     function test_TEST_018_returnSendsTheWholeNftToItsDepositor() public {
         vm.expectCall(registry, "", 0);
         int24[3] memory spots = [int24(0), int24(-30), int24(200)];
@@ -372,9 +372,9 @@ contract UniswapV4IntegrationCustodyUnitTest is UniswapV4IntegrationFixture {
 
     // TEST-195 verifies: INV-045, REQ-VAULT-152
     /// @notice Three positions in two markets, one of them native ETH, return whole to their depositor with no
-    /// MarketRegistry read (so while Paused too); afterwards no custody call through any Lock session reaches them, so a
-    /// later Adapter finds nothing.
-    function test_TEST_195_threeNftsLeaveWhilePausedAndNothingRemains() public {
+    /// MarketRegistry read; afterwards no custody call through any Lock session reaches them, so a later Adapter finds
+    /// nothing.
+    function test_TEST_195_threeNftsLeaveAndNothingRemains() public {
         vm.expectCall(registry, "", 0);
         bytes32[3] memory keys;
         PoolKey[3] memory pools = [stableKey, stableKey, ethKey];
@@ -715,8 +715,7 @@ contract UniswapV4IntegrationCustodyUnitTest is UniswapV4IntegrationFixture {
         _as(adapter, abi.encodeCall(vault.returnPosition, (key)));
         (bool hasPause,) = address(vault).call(abi.encodeWithSignature("pause()"));
         (bool hasPaused,) = address(vault).call(abi.encodeWithSignature("paused()"));
-        (bool hasState,) = address(vault).call(abi.encodeWithSignature("pauseState(address)", address(0)));
-        assertFalse(hasPause || hasPaused || hasState, "no pause of its own");
+        assertFalse(hasPause || hasPaused, "no pause of its own");
         bytes memory code = address(vault).code;
         assertTrue(_pushes(code, posm.modifyLiquidities.selector), "the scan sees the PositionManager call");
         assertFalse(_pushes(code, IVaultToken.mint.selector), "no vault-token mint");

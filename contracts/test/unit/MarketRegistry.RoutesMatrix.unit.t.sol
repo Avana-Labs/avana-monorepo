@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
-import {MarketDef, PauseReason} from "../../src/types/MarketTypes.sol";
+import {MarketDef} from "../../src/types/MarketTypes.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
@@ -254,10 +254,10 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
     // TEST-168 verifies: REQ-ROUTE-020, REQ-ROUTE-018, REQ-ROUTE-038, Q-227
     // Sources: 2.12 REQ-ROUTE-020 (no route quarantine; a suspect route is disabled, guardians stop new activity)
     /// @notice A route has no quarantine or suspension state: no such selector exists; neither guardian can disable a
-    /// route in either slot; a guardian's freeze or pause leaves both routes usable, so liquidation keeps its path;
-    /// and only the timelock's `disableRoute` takes a route out of use, in the primary and the backup slot alike.
-    /// @dev Kills: a quarantine or suspension selector added to the MarketRegistry, a guardian path into
-    /// `disableRoute`, and a freeze or pause that disables or hides routes.
+    /// route in either slot; and only the timelock's `disableRoute` takes a route out of use, in the primary and the
+    /// backup slot alike.
+    /// @dev Kills: a quarantine or suspension selector added to the MarketRegistry and a guardian path into
+    /// `disableRoute`.
     function test_TEST_168_noRouteQuarantine() public {
         string[4] memory absent = [
             "quarantineRoute(uint256,address,address,uint8)",
@@ -286,13 +286,6 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
                 registry.disableRoute(id, address(usdc), address(gho), kind);
             }
         }
-        uint256 snap = vm.snapshotState();
-        vm.prank(emergencyGuardian);
-        registry.freeze(address(hub));
-        _assertUsable(routes, true);
-        vm.revertToState(snap);
-        vm.prank(emergencyGuardian);
-        registry.pause(address(hub), PauseReason.General);
         _assertUsable(routes, true);
         vm.startPrank(address(timelock));
         registry.disableRoute(id, address(usdc), address(gho), 0);

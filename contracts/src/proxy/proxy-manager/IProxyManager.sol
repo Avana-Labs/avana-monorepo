@@ -17,9 +17,6 @@ interface IProxyManager {
     /// @notice A proxy already exists at the predicted address of `(wallet, spoke, marketId)`.
     error ProxyExists(address wallet, address spoke, uint256 marketId);
 
-    /// @notice `deployProxy` for a wallet the MarketRegistry has frozen.
-    error AddressIsFrozen(address account);
-
     /// @notice A required address argument is zero, or `marketId` is 0.
     error ZeroAddress();
 
@@ -28,7 +25,7 @@ interface IProxyManager {
     error ProxyAddressMismatch(address deployed, address predicted);
 
     /// @notice Deploys the PositionProxy of `(wallet, spoke, marketId)`.
-    /// @dev Only the Adapter; reverts `AddressIsFrozen` for a frozen wallet.
+    /// @dev Only the Adapter.
     function deployProxy(
         address wallet,
         address spoke,
@@ -49,6 +46,6 @@ interface IProxyManager {
     /// @notice Returns the AaveAdapter, the only caller of `deployProxy` and the `ADAPTER` of every proxy.
     function ADAPTER() external view returns (address adapter);
 
-    /// @notice Returns the MarketRegistry, read for the address freeze in `deployProxy`.
+    /// @notice Returns the MarketRegistry (implementation immutable).
     function MARKET_REGISTRY() external view returns (address marketRegistry);
 }

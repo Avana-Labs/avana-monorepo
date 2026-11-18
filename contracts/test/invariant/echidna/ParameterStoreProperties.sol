@@ -40,7 +40,6 @@ contract ParameterStoreProperties is ParameterStoreStorage {
         $.marketUsdCap[M] = 5_000_000e8;
         $.topUpSliceUsd[M] = 500_000e8;
         $.stressFloorUsd[M] = 1e8;
-        $.g.gateRecoverySeconds = 1800;
         $.g.maxShortfallBps = 1000;
         $.g.maxFlashFeeBps = 10;
     }
@@ -76,8 +75,7 @@ contract ParameterStoreProperties is ParameterStoreStorage {
     }
 
     function property_chainValuesInRange() external view returns (bool) {
-        Layout storage $ = _s();
-        return $.g.gateRecoverySeconds >= 600 && $.g.gateRecoverySeconds <= 7200 && $.g.maxShortfallBps <= 5000;
+        return _s().g.maxShortfallBps <= 5000;
     }
 
     // ─── Assertion entry points ───
@@ -137,22 +135,6 @@ contract ParameterStoreProperties is ParameterStoreStorage {
         uint256 before = _s().topUpSliceUsd[M];
         bool ok = _call(TIGHTEN, abi.encodeCall(ParameterStoreTightenLogic.tightenTopUpSliceUsd, (M, value)));
         assert(ok == (value < before));
-    }
-
-    function tightenGate(
-        uint64 value
-    ) external {
-        uint64 before = _s().g.gateRecoverySeconds;
-        bool ok = _call(TIGHTEN, abi.encodeCall(ParameterStoreTightenLogic.tightenGateRecoverySeconds, (value)));
-        assert(ok == (value > before && value <= 7200));
-    }
-
-    function loosenGate(
-        uint64 value
-    ) external {
-        uint64 before = _s().g.gateRecoverySeconds;
-        bool ok = _call(LOOSEN, abi.encodeCall(ParameterStoreLoosenLogic.loosenGateRecoverySeconds, (value)));
-        assert(ok == (value < before && value >= 600));
     }
 
     function loosenSlice(

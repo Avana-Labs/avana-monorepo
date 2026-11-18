@@ -3,14 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DriftReason, Market, MarketDef, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {DriftReason, Market, MarketDef} from "../../types/MarketTypes.sol";
 import {IMarketRegistryBase} from "./IMarketRegistryBase.sol";
 import {IMarketRegistryRoutes} from "./IMarketRegistryRoutes.sol";
 import {DebtReserveDef, RiskTier, SpokeDef, TokenDef, WindDownState} from "./types/MarketRegistryTypes.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 /// @title IMarketRegistry
-/// @notice The chain's registry of Hubs, integrations, CDP Spokes, debt reserves, markets, routes and safety state.
+/// @notice The chain's registry of Hubs, integrations, CDP Spokes, debt reserves, markets and routes.
 /// @dev UUPS proxy; only the timelock can upgrade it. Holds no funds and stores no risk parameter.
 interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistryRoutes {
     /// @notice Initializes the proxy storage.
@@ -168,134 +168,6 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
     function setFlashSource(
         address newSource
     ) external;
-
-    /// @notice Moves the state from None to Frozen.
-    /// @dev `APPLICATION_FREEZE_GUARDIAN` or `APPLICATION_ADMIN`.
-    function freeze(
-        address hub
-    ) external;
-
-    /// @notice Moves the state from None or Frozen to Paused(reason), or changes the reason while Paused.
-    /// @dev `APPLICATION_PAUSE_GUARDIAN` or `APPLICATION_ADMIN`.
-    function pause(
-        address hub,
-        PauseReason reason
-    ) external;
-
-    /// @notice Applies `freeze` to every Hub registered on the chain in one call.
-    /// @dev `APPLICATION_FREEZE_GUARDIAN` or `APPLICATION_ADMIN`; reverts `AlreadyFrozen` when no Hub changes.
-    function freezeAll() external;
-
-    /// @notice Applies `pause(hub, reason)` to every Hub registered on the chain in one call.
-    /// @dev `APPLICATION_PAUSE_GUARDIAN` or `APPLICATION_ADMIN`; reverts `AlreadyPaused` when no Hub changes.
-    function pauseAll(
-        PauseReason reason
-    ) external;
-
-    /// @notice Moves the state from Frozen to None.
-    /// @dev `APPLICATION_PAUSE_GUARDIAN` or `APPLICATION_ADMIN`; the freeze role alone cannot unfreeze.
-    function unfreeze(
-        address hub
-    ) external;
-
-    /// @notice Moves the state from Paused to None and clears the reason.
-    /// @dev `APPLICATION_PAUSE_GUARDIAN` or `APPLICATION_ADMIN`. The state returns to None, never to Frozen.
-    function unpause(
-        address hub
-    ) external;
-
-    /// @notice A Hub's pause state.
-    /// @return state None, Frozen or Paused (None for an unrecorded Hub).
-    function pauseState(
-        address hub
-    ) external view returns (PauseState state);
-
-    /// @notice The reason of a Hub's current pause.
-    /// @return reason `None` exactly when the state is not Paused.
-    function pauseReason(
-        address hub
-    ) external view returns (PauseReason reason);
-
-    /// @notice Freezes an address for new activity.
-    /// @dev `APPLICATION_FREEZE_GUARDIAN` or `APPLICATION_ADMIN`. Reverts `FreezeLimitReached` past the per-day limit.
-    function freezeAddress(
-        address account
-    ) external;
-
-    /// @notice Unfreezes an address.
-    /// @dev `APPLICATION_ADMIN` only.
-    function unfreezeAddress(
-        address account
-    ) external;
-
-    /// @notice Whether an address is frozen. Never reverts.
-    function isFrozenAddress(
-        address account
-    ) external view returns (bool frozen);
-
-    /// @notice Freezes a caller made in the 24 one-hour buckets ending with the current one.
-    /// @return count Freezes counted toward `MAX_ADDRESS_FREEZES_PER_DAY`.
-    function freezesInWindow(
-        address caller
-    ) external view returns (uint256 count);
-
-    /// @notice Most freezes one caller can make in the 24 one-hour buckets ending with the current hour.
-    function MAX_ADDRESS_FREEZES_PER_DAY() external view returns (uint256 limit);
-
-    /// @notice Records the reasons a `pokeBreakers` call observed for one key.
-    /// @dev RiskModule only. Latches security reasons and stamps temporary-gate breach times; never clears a latch.
-    function recordBreach(
-        bytes32 key,
-        uint32 reasons
-    ) external;
-
-    /// @notice Latches a manual breaker on a market until reset.
-    /// @dev `APPLICATION_FREEZE_GUARDIAN` or `APPLICATION_ADMIN`.
-    function tripMarketBreaker(
-        uint256 marketId
-    ) external;
-
-    /// @notice Latches a manual breaker on a debt reserve until reset.
-    /// @dev Same roles as `tripMarketBreaker`. Reverts `UnknownDebtReserve` unless approved.
-    function tripDebtBreaker(
-        address spoke,
-        uint256 debtReserveId
-    ) external;
-
-    /// @notice Clears a market's latched security freezes, `MANUAL` included.
-    /// @dev `APPLICATION_PAUSE_GUARDIAN` or `APPLICATION_ADMIN`; reverts while a latched condition still holds.
-    function resetMarketBreaker(
-        uint256 marketId
-    ) external;
-
-    /// @notice Clears a debt reserve's latched security freezes, `MANUAL` included.
-    /// @dev Same roles and errors as `resetMarketBreaker`.
-    function resetDebtBreaker(
-        address spoke,
-        uint256 debtReserveId
-    ) external;
-
-    /// @notice A market's latched security freezes and last temporary-gate breach. Never reverts.
-    /// @return latchedReasons Latched `BreakerReasons` bits, 0 when none.
-    /// @return lastBreach Latest time `pokeBreakers` recorded a temporary gate breached, 0 if never.
-    function marketBreaker(
-        uint256 marketId
-    ) external view returns (uint32 latchedReasons, uint64 lastBreach);
-
-    /// @notice A debt reserve's latched security freezes and last temporary-gate breach. Never reverts.
-    /// @return latchedReasons Latched `BreakerReasons` bits, 0 when none.
-    /// @return lastBreach Latest time `pokeBreakers` recorded a temporary gate breached, 0 if never.
-    function debtBreaker(
-        address spoke,
-        uint256 debtReserveId
-    ) external view returns (uint32 latchedReasons, uint64 lastBreach);
-
-    /// @notice Latest time `pokeBreakers` recorded a temporary gate breached for `key`, 0 if never. Never reverts.
-    /// @dev With a per-reason key (`BreakerReasons.breachKey`), the latest breach of that reason alone.
-    /// @return at Block timestamp, seconds.
-    function lastBreachAt(
-        bytes32 key
-    ) external view returns (uint64 at);
 
     /// @notice Number of the Spoke's markets that are Active or Offboarding. Never reverts; 0 for an unknown Spoke.
     function activeMarketCount(
@@ -490,22 +362,22 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
     /// @notice The Avana timelock, the only holder of `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN`.
     function TIMELOCK() external view returns (address timelock);
 
-    /// @notice The Aave governance executor, protected from the address freeze.
+    /// @notice The Aave governance executor (implementation immutable).
     function AAVE_GOVERNANCE_EXECUTOR() external view returns (address executor);
 
-    /// @notice The chain's IFlashSource implementation, replaceable through the timelock (protected from the freeze).
+    /// @notice The chain's IFlashSource implementation, replaceable through the timelock.
     function flashSource() external view returns (address source);
 
-    /// @notice Lock (protected from the freeze).
+    /// @notice Lock (implementation immutable).
     function LOCK() external view returns (address lock);
 
     /// @notice The standard Aave V4 Spoke implementation whose code hash is approved from deployment.
     function STANDARD_SPOKE_IMPLEMENTATION() external view returns (address implementation);
 
-    /// @notice PayoutEscrow, the payout escrow (protected from the freeze).
+    /// @notice PayoutEscrow, the payout escrow (implementation immutable).
     function PAYOUT_ESCROW() external view returns (address escrow);
 
-    /// @notice The public flash liquidation helper (implementation immutable, protected from the freeze).
+    /// @notice The public flash liquidation helper (implementation immutable).
     function FLASH_LIQUIDATOR() external view returns (address helper);
 
     /// @notice Returns an approved debt reserve's record.

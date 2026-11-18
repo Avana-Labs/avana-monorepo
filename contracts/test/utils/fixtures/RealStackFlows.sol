@@ -12,7 +12,6 @@ import {
 import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
 import {DebtReserveDef, TokenDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
 import {OracleFeedMock} from "../mocks/LPOracleMocks.sol";
 import {ClTestToken, IClPool} from "./ClPoolFixture.sol";
 import {FullStackMarkets} from "./FullStackMarkets.sol";
@@ -281,31 +280,6 @@ abstract contract RealStackFlows is FullStackMarkets {
 
     /// @dev Long enough after a pool move for the 1,800 s TWAP to sit at the new rate.
     uint256 internal constant TWAP_WAIT = 1860;
-
-    // ─── Pause and freeze, by the Emergency Guardian ───
-
-    /// @notice Moves the Hub to `state` for `reason` from whatever it is now (None clears it), as the Emergency
-    /// Guardian does.
-    function _setPause(
-        PauseState state,
-        PauseReason reason
-    ) internal {
-        PauseState now_ = registry.pauseState(aave.hub);
-        vm.startPrank(emergencyGuardian);
-        if (now_ == PauseState.Paused) registry.unpause(aave.hub);
-        else if (now_ == PauseState.Frozen) registry.unfreeze(aave.hub);
-        if (state == PauseState.Frozen) registry.freeze(aave.hub);
-        else if (state == PauseState.Paused) registry.pause(aave.hub, reason);
-        vm.stopPrank();
-    }
-
-    /// @notice The Emergency Guardian freezes `account`.
-    function _freezeWallet(
-        address account
-    ) internal {
-        vm.prank(emergencyGuardian);
-        registry.freezeAddress(account);
-    }
 
     // ─── Liquidation through LPVaultSwap ───
 

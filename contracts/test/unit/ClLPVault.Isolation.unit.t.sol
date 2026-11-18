@@ -357,8 +357,7 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         address v = address(_cVault());
         (bool hasPause,) = v.call(abi.encodeWithSignature("pause()"));
         (bool hasPaused,) = v.call(abi.encodeWithSignature("paused()"));
-        (bool hasState,) = v.call(abi.encodeWithSignature("pauseState(address)", address(0)));
-        assertFalse(hasPause || hasPaused || hasState, "no pause of its own");
+        assertFalse(hasPause || hasPaused, "no pause of its own");
         bytes memory code = v.code;
         // The scan finds the calls the LPVault does make, so an absent selector is a real absence.
         assertTrue(_hasSelectorConstant(code, IClPositionManager.collect.selector), "scan sees the manager's collect");

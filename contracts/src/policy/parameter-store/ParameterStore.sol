@@ -186,7 +186,6 @@ contract ParameterStore is UUPSUpgradeable, ParameterStoreForwardRisk, Parameter
         if (timelock != _TIMELOCK) revert AdminRoleOnlyTimelock(DEFAULT_ADMIN_ROLE, timelock);
         __AccessControl_init();
         __UUPSUpgradeable_init();
-        _setRoleAdmin(AvanaRoles.APPLICATION_PAUSE_GUARDIAN, AvanaRoles.APPLICATION_ADMIN);
         _setRoleAdmin(AvanaRoles.APPLICATION_RISK_STEWARD, AvanaRoles.APPLICATION_ADMIN);
         _grantRole(DEFAULT_ADMIN_ROLE, timelock);
         _grantRole(AvanaRoles.APPLICATION_ADMIN, timelock);
@@ -231,16 +230,11 @@ contract ParameterStore is UUPSUpgradeable, ParameterStoreForwardRisk, Parameter
     }
 
     /// @inheritdoc IParameterStore
-    function breakerDeficitMax(
+    function deficitMax(
         address hub,
         address asset
     ) external view override returns (uint256 value) {
-        value = _s().breakerDeficitMax[hub][asset];
-    }
-
-    /// @inheritdoc IParameterStore
-    function gateRecoverySeconds() external view override returns (uint64 value) {
-        value = _s().g.gateRecoverySeconds;
+        value = _s().deficitMax[hub][asset];
     }
 
     /// @inheritdoc IParameterStore
@@ -261,21 +255,7 @@ contract ParameterStore is UUPSUpgradeable, ParameterStoreForwardRisk, Parameter
     }
 
     /// @inheritdoc IParameterStore
-    function tightenGateRecoverySeconds(
-        uint64
-    ) external override onlyAdminOrSteward {
-        _forward(_TIGHTEN_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function loosenGateRecoverySeconds(
-        uint64
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_LOOSEN_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function tightenBreakerDeficitMax(
+    function tightenDeficitMax(
         address,
         address,
         uint256
@@ -284,7 +264,7 @@ contract ParameterStore is UUPSUpgradeable, ParameterStoreForwardRisk, Parameter
     }
 
     /// @inheritdoc IParameterStore
-    function loosenBreakerDeficitMax(
+    function loosenDeficitMax(
         address,
         address,
         uint256

@@ -7,16 +7,15 @@ import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol"
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
 import {ProxyManager} from "../../src/proxy/proxy-manager/ProxyManager.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
-import {FreezeRegistryMock} from "../utils/mocks/ProxyMocks.sol";
+import {StubRegistryMock} from "../utils/mocks/ProxyMocks.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";
 import {ProxyManagerHandler} from "./handlers/ProxyManagerHandler.sol";
 
 /// @title ProxyManagerInvariantTest
-/// @notice ProxyManager and PositionProxy half of TEST-089: random deployments by the Adapter (frozen wallets
-/// included), deployment and execution attempts by strangers, and Adapter calls through the proxies. After every call:
-/// code sits at `predictProxy` exactly for the triples the Adapter deployed, each such proxy has the PositionProxy code
-/// and its own unchanged binding, and no second, frozen, stranger or misplaced deployment and no stranger execution
-/// ever succeeded.
+/// @notice ProxyManager and PositionProxy half of TEST-089: random deployments by the Adapter, deployment and
+/// execution attempts by strangers, and Adapter calls through the proxies. After every call: code sits at
+/// `predictProxy` exactly for the triples the Adapter deployed, each such proxy has the PositionProxy code and its own
+/// unchanged binding, and no second, stranger or misplaced deployment and no stranger execution ever succeeded.
 /// @dev The vault-token registry and the Adapter's `proxyOf` records of TEST-089 join this row with the AaveAdapter.
 contract ProxyManagerInvariantTest is AvanaTest, HandlerReach {
     ProxyManagerHandler internal handler;
@@ -25,16 +24,15 @@ contract ProxyManagerInvariantTest is AvanaTest, HandlerReach {
 
     function setUp() public {
         adapter = makeAddr("AaveAdapter");
-        FreezeRegistryMock registry = new FreezeRegistryMock();
+        StubRegistryMock registry = new StubRegistryMock();
         manager = new ProxyManager(adapter, address(registry));
-        handler = new ProxyManagerHandler(manager, registry, adapter);
+        handler = new ProxyManagerHandler(manager, adapter);
         targetContract(address(handler));
-        bytes4[] memory actions = new bytes4[](5);
+        bytes4[] memory actions = new bytes4[](4);
         actions[0] = ProxyManagerHandler.deploy.selector;
         actions[1] = ProxyManagerHandler.strangerDeploy.selector;
         actions[2] = ProxyManagerHandler.strangerExecute.selector;
         actions[3] = ProxyManagerHandler.adapterExecute.selector;
-        actions[4] = ProxyManagerHandler.setFrozen.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
     }
 
@@ -50,15 +48,14 @@ contract ProxyManagerInvariantTest is AvanaTest, HandlerReach {
         Reach memory r =
             _replayLanded(address(handler), actions, ProxyManagerHandler.Skipped.selector, 32, 50, 0, own, true);
         // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
-        uint256[] memory floors = new uint256[](5);
-        bool[] memory check = new bool[](5);
+        uint256[] memory floors = new uint256[](4);
+        bool[] memory check = new bool[](4);
         floors[0] = 40; // deploy
         floors[1] = 80; // strangerDeploy
         check[1] = true; // strangerDeploy
         floors[2] = 20; // strangerExecute
         check[2] = true; // strangerExecute
         floors[3] = 15; // adapterExecute
-        floors[4] = 40; // setFrozen
         _check(r, names, new string[](0), floors, new uint256[](0), check);
     }
 
@@ -72,7 +69,7 @@ contract ProxyManagerInvariantTest is AvanaTest, HandlerReach {
         pure
         returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
     {
-        (actions, names, kinds) = (new bytes4[](5), new string[](5), new int16[][](5));
+        (actions, names, kinds) = (new bytes4[](4), new string[](4), new int16[][](4));
         (actions[0], names[0]) = (ProxyManagerHandler.deploy.selector, "deploy");
         kinds[0] = new int16[](1);
         kinds[0][0] = 256;
@@ -88,10 +85,6 @@ contract ProxyManagerInvariantTest is AvanaTest, HandlerReach {
         kinds[3] = new int16[](2);
         kinds[3][0] = 256;
         kinds[3][1] = 128;
-        (actions[4], names[4]) = (ProxyManagerHandler.setFrozen.selector, "setFrozen");
-        kinds[4] = new int16[](2);
-        kinds[4][0] = 256;
-        kinds[4][1] = 1;
     }
 
     function _calldata(
@@ -127,7 +120,6 @@ contract ProxyManagerInvariantTest is AvanaTest, HandlerReach {
     // TEST-089 verifies: REQ-PROXY-051, REQ-PROXY-053, REQ-PROXY-099, REQ-PROXY-102, INV-063, INV-064
     function invariant_TEST_089_noForbiddenSuccess() public view {
         assertEq(handler.secondDeploySucceeded(), 0, "second deployment of a triple");
-        assertEq(handler.frozenDeploySucceeded(), 0, "deployment for a frozen wallet");
         assertEq(handler.strangerDeploySucceeded(), 0, "deployment by a stranger");
         assertEq(handler.deployedAtWrongAddress(), 0, "deployment away from predictProxy");
         assertEq(handler.strangerExecuteSucceeded(), 0, "execution by a stranger");

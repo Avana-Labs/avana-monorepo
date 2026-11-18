@@ -10,7 +10,6 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {INonfungiblePositionManager} from "../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
 import {IUniswapV3Pool} from "../../src/interfaces/external/uniswap/IUniswapV3Pool.sol";
 import {ILPOracle} from "../../src/oracle/ILPOracle.sol";
-import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {BytecodeInspector} from "../utils/BytecodeInspector.sol";
@@ -111,13 +110,13 @@ contract CollateralizationSurfaceUnitTest is CollateralizationFixture {
     }
 
     /// @notice Collateralization's runtime code carries no selector of an AMM protocol call (position manager,
-    /// pool), of `PositionProxy.execute`, of a Spoke supply, collateral switch, borrow or liquidation, of a price-state,
-    /// pause-state or freeze read, or of the liquidation bonus.
+    /// pool), of `PositionProxy.execute`, of a Spoke supply, collateral switch, borrow or liquidation, of a price-state
+    /// read, or of the liquidation bonus.
     /// @dev Kills: a call of any of these added to Collateralization (the selector constant would appear in its code).
     // TEST-032 verifies: REQ-COLL-004, REQ-VAULT-019, REQ-VAULT-020, REQ-VAULT-063, REQ-VAULT-090
     function test_TEST_032_codeCallsNoAmmProxySupplyOrPolicyRead() public view {
         bytes memory code = address(coll).code;
-        bytes4[20] memory forbidden = [
+        bytes4[18] memory forbidden = [
             INonfungiblePositionManager.positions.selector,
             INonfungiblePositionManager.mint.selector,
             INonfungiblePositionManager.increaseLiquidity.selector,
@@ -135,14 +134,11 @@ contract CollateralizationSurfaceUnitTest is CollateralizationFixture {
             IAaveV4Spoke.liquidationCall.selector,
             IAaveV4Spoke.getLiquidationBonus.selector,
             ILPOracle.getPriceStatus.selector,
-            ILPOracle.latestAnswer.selector,
-            IMarketRegistry.pauseState.selector,
-            IMarketRegistry.isFrozenAddress.selector
+            ILPOracle.latestAnswer.selector
         ];
         for (uint256 i = 0; i < forbidden.length; ++i) {
             assertFalse(_pushes(code, forbidden[i]), "forbidden call in Collateralization");
         }
-        assertFalse(_pushes(code, IMarketRegistry.pauseReason.selector), "pause reason read");
         assertFalse(_pushes(code, bytes4(keccak256("isValidSignature(bytes32,bytes)"))), "ERC-1271");
         assertFalse(code.hasOpcode(0, code.length, 0xf4), "DELEGATECALL");
         assertTrue(_pushes(code, ICollateralization.pledge.selector), "scan sanity: the dispatcher");

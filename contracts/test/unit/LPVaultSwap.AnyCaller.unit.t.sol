@@ -29,8 +29,7 @@ contract LVSContractCaller {
 /// @notice One entry point for every caller (2.11 REQ-SWAP-001, REQ-SWAP-072, REQ-SWAP-085, REQ-SWAP-086, Q-404): a
 /// registered committed operator, an unregistered EOA and a contract all liquidate with either route mode under the
 /// same checks and the same settlement; the registry is never read and a liquidation never changes it; the caller is
-/// always `msg.sender`, so a copied calldata funds itself and pays only its own sender; the address freeze refuses a
-/// frozen direct caller only.
+/// always `msg.sender`, so a copied calldata funds itself and pays only its own sender.
 /// forge-config: default.isolate = false
 contract LPVaultSwapAnyCallerUnitTest is LPVaultSwapUnitBase {
     LVSContractCaller internal bot;
@@ -133,23 +132,6 @@ contract LPVaultSwapAnyCallerUnitTest is LPVaultSwapUnitBase {
         LiquidationResult memory r = _liquidateAs(attacker, p);
         assertEq(usdc.balanceOf(attacker), r.keeperOut, "attacker paid only its own payout");
         assertEq(usdc.balanceOf(keeper), 1950e6, "keeper's funds untouched");
-    }
-
-    /// @notice REQ-SWAP-105: the freeze binds `msg.sender` only. A frozen EOA is refused directly, a contract it
-    /// controls is not frozen and liquidates; unfreezing restores the direct call.
-    // TEST-229 verifies: REQ-SWAP-105, REQ-SWAP-109, INV-085, PROP-066, Q-242, Q-404
-    function test_TEST_229_freezeBindsMsgSenderOnly() public {
-        (address proxy,) = _bobAccount();
-        registry.setFrozen(carol, true);
-        _expectLiquidateRevert(
-            carol, _params(proxy, 1950e6), abi.encodeWithSelector(ILPVaultSwapBase.AddressIsFrozen.selector, carol)
-        );
-        usdc.mint(address(bot), 1950e6);
-        vm.prank(carol);
-        LiquidationResult memory r = bot.liquidate(lvs, usdc, _params(proxy, 1950e6));
-        assertGt(r.keeperOut, 0, "contract caller settles");
-        registry.setFrozen(carol, false);
-        _liquidateAs(carol, _params(proxy, 1950e6));
     }
 
     /// @notice `BackupOnly` never calls the primary route, and either mode is open to every caller.

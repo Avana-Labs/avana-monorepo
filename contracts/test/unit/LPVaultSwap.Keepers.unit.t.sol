@@ -15,9 +15,9 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// @notice The committed-operator registry (2.11 REQ-SWAP-032 to REQ-SWAP-038, REQ-SWAP-065, REQ-SWAP-069,
 /// REQ-SWAP-107, REQ-SWAP-117; 2.15 REQ-ACCESS-011, REQ-ACCESS-053, REQ-ACCESS-054, REQ-ACCESS-100, REQ-ACCESS-121,
 /// SPEC-GOV-008): `initialize` registers the initial operators; `addKeeper` and `removeKeeper` need `APPLICATION_ADMIN`
-/// (the timelock), refuse zero, duplicate, unregistered and frozen addresses, cap the list at `MAX_KEEPERS = 32` and
-/// keep at least `KEEPER_FLOOR = 1` active (unfrozen) operator; `activeKeeperCount` excludes frozen operators; the
-/// registry gates no liquidation.
+/// (the timelock), refuse zero, duplicate and unregistered addresses, cap the list at `MAX_KEEPERS = 32` and keep at
+/// least `KEEPER_FLOOR = 1` operator; `activeKeeperCount` equals the registered count; the registry gates no
+/// liquidation.
 /// forge-config: default.isolate = false
 contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
     function _add(
@@ -75,22 +75,12 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
         assertEq(lvs.activeKeeperCount(), 2, "two active");
     }
 
-    /// @notice `InvalidKeeper` for zero and for a registered operator; `AddressIsFrozen(operator)` for a frozen one,
-    /// checked in that order.
+    /// @notice `InvalidKeeper` for zero and for a registered operator.
     // TEST-045 verifies: REQ-SWAP-033, REQ-SWAP-107, REQ-SWAP-117, REQ-ACCESS-053
     function test_TEST_045_addKeeperRefusals() public {
         vm.startPrank(timelock);
         vm.expectRevert(_err(ILPVaultSwapBase.InvalidKeeper.selector));
         lvs.addKeeper(address(0));
-        vm.expectRevert(_err(ILPVaultSwapBase.InvalidKeeper.selector));
-        lvs.addKeeper(keeper);
-        vm.stopPrank();
-        registry.setFrozen(carol, true);
-        registry.setFrozen(keeper, true);
-        vm.startPrank(timelock);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.AddressIsFrozen.selector, carol));
-        lvs.addKeeper(carol);
-        // A registered operator that is frozen still reports InvalidKeeper first.
         vm.expectRevert(_err(ILPVaultSwapBase.InvalidKeeper.selector));
         lvs.addKeeper(keeper);
         vm.stopPrank();
@@ -140,39 +130,6 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
         vm.prank(timelock);
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 0, 1));
         lvs.removeKeeper(carol);
-    }
-
-    /// @notice REQ-SWAP-107: `activeKeeperCount` excludes frozen operators; the floor counts active ones: with one
-    /// active and one frozen operator, removing the frozen one keeps the active count (allowed), removing the active one
-    /// would leave 0 (refused); a guardian can freeze the last active operator (no floor in the freeze), leaving 0.
-    // TEST-098 verifies: REQ-SWAP-034, REQ-SWAP-107, REQ-SWAP-039, REQ-ACCESS-100, SPEC-GOV-008, INV-048, Q-400
-    function test_TEST_098_frozenOperatorsAreNotActive() public {
-        _add(carol);
-        registry.setFrozen(carol, true);
-        assertEq(lvs.approvedKeeperCount(), 2, "registered count includes frozen");
-        assertEq(lvs.activeKeeperCount(), 1, "active excludes frozen");
-        vm.prank(timelock);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 0, 1));
-        lvs.removeKeeper(keeper);
-        _remove(carol);
-        assertEq(lvs.activeKeeperCount(), 1, "the frozen one removed");
-        registry.setFrozen(keeper, true);
-        assertEq(lvs.activeKeeperCount(), 0, "0 active: new borrowing halts on the chain");
-        // With zero active the last frozen operator cannot be removed either (activeAfter 0 < 1).
-        vm.prank(timelock);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 0, 1));
-        lvs.removeKeeper(keeper);
-    }
-
-    /// @notice Liquidation never halts on the registry: with zero active operators every caller still liquidates.
-    // TEST-098 verifies: REQ-SWAP-034, REQ-SWAP-039, REQ-ACCESS-092, Q-404
-    // TEST-045 verifies: REQ-SWAP-001, REQ-SWAP-036, REQ-SWAP-037, REQ-ACCESS-092
-    function test_TEST_045_zeroActiveOperatorsLiquidationOpen() public {
-        registry.setFrozen(keeper, true);
-        assertEq(lvs.activeKeeperCount(), 0, "no active operator");
-        (address proxy,) = _bobAccount();
-        _liquidateAs(carol, _params(proxy, 1950e6));
-        assertLt(_debtOf(proxy, usdcReserveId), 18_000e6, "liquidated");
     }
 
     /// @notice The enumeration stays consistent through removals from the middle (swap with the last entry).
@@ -249,29 +206,28 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
         assertEq(afterChange, before, "identical settlement");
     }
 
-    /// @notice Fuzzed sequences of add, remove, freeze and unfreeze never leave fewer than `KEEPER_FLOOR` active
-    /// operators through `removeKeeper`, never exceed 32, and keep the list and the mapping in step.
+    /// @notice Fuzzed sequences of add and remove never leave fewer than `KEEPER_FLOOR` operators through
+    /// `removeKeeper`, never exceed 32, and keep the list, the mapping and both counts in step.
     // TEST-098 verifies: REQ-SWAP-033, REQ-SWAP-035, REQ-SWAP-107, REQ-ACCESS-100, SPEC-GOV-008, INV-048
     function testFuzz_TEST_098_floorAndCapUnderSequences(
         uint8[24] memory ops
     ) public {
         for (uint256 i = 0; i < ops.length; ++i) {
             address k = _keeperN(ops[i] % 6);
-            uint256 kind = (ops[i] / 6) % 4;
+            uint256 kind = (ops[i] / 6) % 2;
             uint256 activeBefore = lvs.activeKeeperCount();
             vm.prank(timelock);
             if (kind == 0) {
                 try lvs.addKeeper(k) {} catch {}
-            } else if (kind == 1) {
+            } else {
                 try lvs.removeKeeper(k) {
                     assertGe(lvs.activeKeeperCount(), activeBefore >= 1 ? 1 : 0, "floor broken by a removal");
                 } catch {}
-            } else {
-                registry.setFrozen(k, kind == 2);
             }
             address[] memory list = lvs.getKeepers();
             assertLe(list.length, 32, "cap");
             assertEq(list.length, lvs.approvedKeeperCount(), "count");
+            assertEq(lvs.activeKeeperCount(), list.length, "active count");
             for (uint256 j = 0; j < list.length; ++j) {
                 assertTrue(lvs.isApprovedKeeper(list[j]), "list entry not registered");
             }

@@ -10,9 +10,7 @@ import {ILock} from "../../src/lock/lock/ILock.sol";
 import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
-import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {PositionRef} from "../../src/types/PositionTypes.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
@@ -158,7 +156,7 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
     }
 
     // TEST-239 verifies: REQ-ADAPTER-080, REQ-ADAPTER-091, REQ-ADAPTER-067
-    /// @notice Bounds in order: deadline, zero units, proxy, pause reason, integration, enabled reserve, debt on it.
+    /// @notice Bounds in order: deadline, zero units, proxy, integration, enabled reserve, debt on it.
     function test_TEST_239_checkOrder() public {
         RepayWithCollateralParams memory params = _rwc(MARKET_ID, k1, 0, usdcReserveId);
         params.position = PositionRef(9, k1);
@@ -170,9 +168,6 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
         vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.NoProxy.selector, bob, MARKET_ID));
         vm.prank(bob);
         adapterC.repayWithCollateral(params);
-        _pause(PauseState.Paused, PauseReason.MintPathSuspect);
-        _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector), params);
-        _pause(PauseState.None, PauseReason.None);
         _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterBase.IntegrationMismatch.selector, MARKET_ID, 9), params);
         params.position = _ref(k1);
         params.debtReserveId = vtReserveId;
@@ -181,24 +176,6 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
         );
         params.debtReserveId = usdcReserveId;
         _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterBase.NothingToRepay.selector, usdcReserveId), params);
-    }
-
-    // TEST-192 verifies: REQ-ADAPTER-080, REQ-ADAPTER-045, REQ-ADAPTER-046, REQ-ADAPTER-082, REQ-ADAPTER-086, Q-356
-    /// @notice Repay with collateral is open under Frozen, under `Paused(General)` and for a frozen wallet (it reads no
-    /// freeze), and refused only under `Paused(MintPathSuspect)`.
-    function test_TEST_192_repayWithCollateralPauseMatrix() public {
-        swap.setDeleverage(1000e18, 2e12, 0);
-        registry.setFrozen(alice, true);
-        vm.expectCall(address(registry), abi.encodeWithSelector(IMarketRegistry.isFrozenAddress.selector), 0);
-        _pause(PauseState.Frozen, PauseReason.None);
-        _rwcAs(alice, _rwc(MARKET_ID, k1, 500_000_000, debtReserveId));
-        _pause(PauseState.Paused, PauseReason.General);
-        _rwcAs(alice, _rwc(MARKET_ID, k1, 500_000_000, debtReserveId));
-        _pause(PauseState.Paused, PauseReason.MintPathSuspect);
-        _expectRwcRevert(
-            abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector),
-            _rwc(MARKET_ID, k1, 500_000_000, debtReserveId)
-        );
     }
 
     // TEST-239 verifies: REQ-ADAPTER-091
@@ -299,12 +276,11 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
     // Sources: 5.1 TEST-208
     /// @notice In a liquidation LPVaultSwap, holding the Lock, has the Adapter burn exactly the seized units from its
     /// own balance; `SeizedUnitsBurned` is emitted and Collateralization's settlement finds the supply drop. It runs
-    /// with a broken registry and RiskModule under `Paused(MintPathSuspect)`.
+    /// with a broken registry and RiskModule.
     function test_TEST_208_burnSeizedInLiquidation() public {
         vtPrice.set(1.2e8);
         registry.setBroken(true);
         risk.setBroken(true);
-        _pause(PauseState.Paused, PauseReason.MintPathSuspect);
         uint256 supplyBefore = token.totalSupply();
         vm.recordLogs();
         uint256 seized = swap.liquidate(aave.cdpSpoke, MARKET_ID, vt, vtReserveId, debtReserveId, p, 2000e18, 2);

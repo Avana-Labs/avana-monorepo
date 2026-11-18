@@ -99,10 +99,11 @@ interface IRiskModuleErrors {
     /// @param required `max(1e18, minHealthFactor)`, WAD.
     error HealthFactorTooLow(uint256 healthFactor, uint256 required);
 
-    /// @notice A market circuit breaker is tripped (new activity on that market, or by an account holding it).
+    /// @notice A live condition of a market's circuit breaker holds (new activity on that market, or by an account
+    /// holding it); the check passes again as soon as the condition clears.
     error BreakerTripped(uint256 marketId, uint32 reasons);
 
-    /// @notice A debt circuit breaker of `(spoke, debtReserveId)` is tripped.
+    /// @notice A live condition of the debt circuit breaker of `(spoke, debtReserveId)` holds.
     error DebtBreakerTripped(address spoke, uint256 debtReserveId, uint32 reasons);
 
     /// @notice A pledge needed the rescue exemption but is not a rescue top-up.

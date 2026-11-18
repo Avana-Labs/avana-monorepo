@@ -275,7 +275,7 @@ library RiskModuleMath {
     /// @notice Inputs of the exemption step of a pledge.
     struct Exemption {
         bool requireRescue;
-        // The market breaker without `ORACLE`: live, recovering or latched.
+        // The live market breaker reasons (`CONFIG_DRIFT` cleared for a top-up).
         uint32 brk;
         // `pledgeUsd < minPledgeUsd`.
         bool belowMinimum;

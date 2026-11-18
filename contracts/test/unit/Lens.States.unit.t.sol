@@ -9,14 +9,13 @@ import {ILensMarket} from "../../src/lens/lens/ILensMarket.sol";
 import {ILensPreview} from "../../src/lens/lens/ILensPreview.sol";
 import {ILensRisk} from "../../src/lens/lens/ILensRisk.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensStatesUnitTest
-/// @notice Every view answers in every market and position state the spec says the Lens reports: paused and frozen
-/// Hubs, paused Aave reserves, Cached and Expired collateral prices, an Expired debt price, a market offboarding or
-/// closed, unusable swap routes, a frozen wallet, latched breakers, a seized account and a wallet with no positions.
+/// @notice Every view answers in every market and position state the spec says the Lens reports: paused Aave reserves,
+/// Cached and Expired collateral prices, an Expired debt price, a market offboarding or closed, unusable swap routes,
+/// breakers holding, a seized account and a wallet with no positions.
 /// forge-config: default.isolate = false
 contract LensStatesUnitTest is LensFixture {
     function setUp() public {
@@ -25,17 +24,6 @@ contract LensStatesUnitTest is LensFixture {
         _open(alice, aliceProxy, 2, 5000e6);
         _borrow(aliceProxy, 15_000e18);
         _borrowUsdc(aliceProxy, 5000e6);
-    }
-
-    // TEST-247 verifies: REQ-LENS-007, REQ-LENS-031
-    function test_TEST_247_answersUnderEveryPauseState() public {
-        _allAnswer("baseline");
-        reg.setPause(aave.hub, PauseState.Frozen, PauseReason.None);
-        _allAnswer("Frozen");
-        reg.setPause(aave.hub, PauseState.Paused, PauseReason.General);
-        _allAnswer("Paused(General)");
-        reg.setPause(aave.hub, PauseState.Paused, PauseReason.MintPathSuspect);
-        _allAnswer("Paused(MintPathSuspect)");
     }
 
     // TEST-247 verifies: REQ-LENS-007, REQ-LENS-009, REQ-LENS-016
@@ -87,12 +75,12 @@ contract LensStatesUnitTest is LensFixture {
     }
 
     // TEST-247 verifies: REQ-LENS-007, REQ-LENS-037, Q-241, Q-242
-    function test_TEST_247_answersWithFreezesAndBreakers() public {
-        reg.setFrozen(alice, true);
-        rm.setMarketBreaker(MARKET_ID, 512 | 1024, type(uint64).max);
-        rm.setDebtBreaker(aave.cdpSpoke, debtReserveId, 32, type(uint64).max);
-        rm.setGate(aliceProxy, false, true, PauseState.None);
-        _allAnswer("frozen wallet, latched breakers, unavailable status");
+    function test_TEST_247_answersWithBreakers() public {
+        _allAnswer("baseline");
+        rm.setMarketBreaker(MARKET_ID, 1024 | 2048);
+        rm.setDebtBreaker(aave.cdpSpoke, debtReserveId, 32);
+        rm.setGate(aliceProxy, false, true);
+        _allAnswer("breakers holding, unavailable status");
     }
 
     // TEST-247 verifies: REQ-LENS-007, REQ-LENS-011, REQ-LENS-026
@@ -127,7 +115,7 @@ contract LensStatesUnitTest is LensFixture {
         address proxy,
         string memory why
     ) internal view {
-        bytes[] memory c = new bytes[](proxy == address(0) ? 22 : 26);
+        bytes[] memory c = new bytes[](proxy == address(0) ? 19 : 23);
         address[] memory toks = new address[](2);
         (toks[0], toks[1]) = (address(usdc), address(debt));
         uint256[] memory ids = new uint256[](1);
@@ -144,23 +132,20 @@ contract LensStatesUnitTest is LensFixture {
         c[8] = abi.encodeCall(ILens.getPriceState, (vt));
         c[9] = abi.encodeCall(ILens.getDebtPriceState, (aave.cdpSpoke, debtReserveId));
         c[10] = abi.encodeCall(ILens.getDebtPriceState, (aave.cdpSpoke, usdcReserveId));
-        c[11] = abi.encodeCall(ILens.getApplicationState, (aave.hub));
-        c[12] = abi.encodeCall(ILens.getPauseReason, (aave.hub));
-        c[13] = abi.encodeCall(ILensRisk.getBreakerStatus, (MARKET_ID));
-        c[14] = abi.encodeCall(ILensRisk.getDebtBreakerStatus, (aave.cdpSpoke, debtReserveId));
-        c[15] = abi.encodeCall(ILensRisk.isFrozenAddress, (wallet));
-        c[16] = abi.encodeCall(ILensRisk.getTailCoverage, (aave.hub, address(debt)));
-        c[17] = abi.encodeCall(ILensRisk.uncoveredDeficit, (aave.hub, address(debt)));
-        c[18] = abi.encodeCall(ILensRisk.getHubAssetExposure, (aave.hub, address(usdc)));
-        c[19] = abi.encodeCall(ILensPreview.previewBorrowRecommended, (wallet, MARKET_ID, usdcReserveId, t));
-        c[20] = abi.encodeCall(ILensPreview.quoteRepayAll, (wallet, MARKET_ID, debtReserveId, t));
-        c[21] =
+        c[11] = abi.encodeCall(ILensRisk.getBreakerStatus, (MARKET_ID));
+        c[12] = abi.encodeCall(ILensRisk.getDebtBreakerStatus, (aave.cdpSpoke, debtReserveId));
+        c[13] = abi.encodeCall(ILensRisk.getTailCoverage, (aave.hub, address(debt)));
+        c[14] = abi.encodeCall(ILensRisk.uncoveredDeficit, (aave.hub, address(debt)));
+        c[15] = abi.encodeCall(ILensRisk.getHubAssetExposure, (aave.hub, address(usdc)));
+        c[16] = abi.encodeCall(ILensPreview.previewBorrowRecommended, (wallet, MARKET_ID, usdcReserveId, t));
+        c[17] = abi.encodeCall(ILensPreview.quoteRepayAll, (wallet, MARKET_ID, debtReserveId, t));
+        c[18] =
             abi.encodeCall(ILensPreview.previewRepayWithCollateral, (wallet, MARKET_ID, _key(1), 1e6, debtReserveId));
         if (proxy != address(0)) {
-            c[22] = abi.encodeCall(ILensAccount.getRecords, (proxy, 0, 16));
-            c[23] = abi.encodeCall(ILens.previewLiquidation, (proxy, debtReserveId, t));
-            c[24] = abi.encodeCall(ILens.previewLiquidation, (proxy, usdcReserveId, t));
-            c[25] = abi.encodeCall(ILensPreview.previewRecredit, (MARKET_ID, _key(1)));
+            c[19] = abi.encodeCall(ILensAccount.getRecords, (proxy, 0, 16));
+            c[20] = abi.encodeCall(ILens.previewLiquidation, (proxy, debtReserveId, t));
+            c[21] = abi.encodeCall(ILens.previewLiquidation, (proxy, usdcReserveId, t));
+            c[22] = abi.encodeCall(ILensPreview.previewRecredit, (MARKET_ID, _key(1)));
         }
         for (uint256 i = 0; i < c.length; ++i) {
             (bool ok,) = address(lens).staticcall(c[i]);

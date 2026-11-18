@@ -12,7 +12,7 @@ import {
     TokenDef,
     WindDownState
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {DriftReason, Market, PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {DriftReason, Market} from "../../src/types/MarketTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistrySpokeImplMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
 import {RegistryLPOracleMock} from "../utils/mocks/MarketRegistryMocks.sol";
@@ -52,7 +52,6 @@ contract MarketRegistryViewsUnitTest is MarketRegistryFixture {
         vm.assume(anyIntegration != V3);
         _marketViewsEmpty(anyId, anyAddr, anyKey);
         _hubViewsEmpty(anyAddr, anyIntegration);
-        _safetyViewsEmpty(anyId, anyAddr);
     }
 
     function _marketViewsEmpty(
@@ -105,19 +104,7 @@ contract MarketRegistryViewsUnitTest is MarketRegistryFixture {
         assertEq(impl, address(0));
         assertEq(codeHash, bytes32(0));
         assertFalse(current);
-    }
-
-    function _safetyViewsEmpty(
-        uint256 anyId,
-        address anyAddr
-    ) internal view {
-        assertEq(uint8(registry.pauseState(anyAddr)), uint8(PauseState.None));
-        assertEq(uint8(registry.pauseReason(anyAddr)), uint8(PauseReason.None));
-        assertFalse(registry.isFrozenAddress(anyAddr));
-        assertEq(registry.freezesInWindow(anyAddr), 0);
         assertEq(registry.activeMarketCount(anyAddr), 0);
-        (uint32 latched, uint64 at) = registry.marketBreaker(anyId);
-        assertEq(uint256(latched) + at, 0);
     }
 
     // TEST-204 verifies: REQ-CONFIG-083, REQ-CONFIG-077
@@ -223,6 +210,5 @@ contract MarketRegistryViewsUnitTest is MarketRegistryFixture {
         assertEq(w.targetLtBps, 0);
         assertEq(registry.settlementReserve(marketId), GHO_RESERVE);
         assertEq(registry.activeMarketCount(address(spoke)), 1);
-        assertEq(registry.MAX_ADDRESS_FREEZES_PER_DAY(), 20);
     }
 }

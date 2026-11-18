@@ -42,7 +42,7 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (units == 0) revert ZeroAmount();
         _checkIntegration(marketId, account.vaultToken, position.integrationId);
         bool debtFree = _borrowCount(account.spoke, proxy) == 0;
-        if (!debtFree) _withDebtGates(account.vaultToken, proxy);
+        if (!debtFree) IRiskModule(_RISK_MODULE).preWithdrawCheck(proxy);
         _withdrawRecord(proxy, account, position.positionKey, units, debtFree, minHealthFactor);
         _release();
     }

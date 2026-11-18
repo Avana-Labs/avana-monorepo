@@ -41,26 +41,18 @@ contract LensRiskModule is LensBase, ILensRisk, ILensHubAssets {
     /// @inheritdoc ILensRisk
     function getBreakerStatus(
         uint256 marketId
-    ) external view override returns (uint32 reasons, uint64 reopensAt) {
+    ) external view override returns (uint32 reasons) {
         _unlocked();
-        (reasons, reopensAt) = IRiskModule(_RISK_MODULE).getBreakerStatus(marketId);
+        reasons = IRiskModule(_RISK_MODULE).getBreakerStatus(marketId);
     }
 
     /// @inheritdoc ILensRisk
     function getDebtBreakerStatus(
         address spoke,
         uint256 debtReserveId
-    ) external view override returns (uint32 reasons, uint64 reopensAt) {
+    ) external view override returns (uint32 reasons) {
         _unlocked();
-        (reasons, reopensAt) = IRiskModule(_RISK_MODULE).getDebtBreakerStatus(spoke, debtReserveId);
-    }
-
-    /// @inheritdoc ILensRisk
-    function isFrozenAddress(
-        address account
-    ) external view override returns (bool frozen) {
-        _unlocked();
-        frozen = _registry().isFrozenAddress(account);
+        reasons = IRiskModule(_RISK_MODULE).getDebtBreakerStatus(spoke, debtReserveId);
     }
 
     /// @inheritdoc ILensRisk

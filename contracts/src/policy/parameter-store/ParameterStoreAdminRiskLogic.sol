@@ -51,7 +51,6 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         _onlyDelegated();
         if (
             params.maxFlashFeeBps > FLASH_FEE_MAX_BPS || params.avanaFeeShareBps > FEE_SHARE_MAX_BPS
-                || params.gateRecoverySeconds < GATE_RECOVERY_MIN || params.gateRecoverySeconds > GATE_RECOVERY_MAX
                 || params.maxShortfallBps > SHORTFALL_MAX_BPS
         ) revert OutOfBounds();
         _requireFeeRecipient(params.feeRecipient);

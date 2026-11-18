@@ -102,7 +102,6 @@ contract LensLiquidationModule is LensBase {
         p.activeKeeperCount = ILPVaultSwap(_LP_VAULT_SWAP).activeKeeperCount();
         p.vaultTokenReservePaused = IAaveV4Spoke(c.spoke).getReserveConfig(c.m.reserveId).paused;
         p.debtReservePaused = IAaveV4Spoke(c.spoke).getReserveConfig(p.debtReserveId).paused;
-        p.pauseState = _registry().pauseState(c.m.hub);
         uint32 key = IAaveV4Spoke(c.spoke).getUserPosition(c.m.reserveId, p.proxy).dynamicConfigKey;
         uint256 lf = IAaveV4Spoke(c.spoke).getDynamicReserveConfig(c.m.reserveId, key).liquidationFee;
         uint256 allowance = _store().getMarketParams(p.marketId).slippageAllowanceBps;

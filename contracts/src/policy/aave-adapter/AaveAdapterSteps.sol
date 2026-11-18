@@ -7,9 +7,7 @@ import {ICollateralization} from "../../custody/collateralization/ICollateraliza
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
-import {PauseReason, PauseState} from "../../types/MarketTypes.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
-import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {AdapterAccount} from "./types/AaveAdapterTypes.sol";
@@ -59,29 +57,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         address proxy
     ) internal view returns (uint256 count) {
         count = IAaveV4Spoke(spoke).getUserAccountData(proxy).borrowCount;
-    }
-
-    function _pauseOf(
-        address hub
-    ) internal view returns (PauseState state, PauseReason reason) {
-        state = IMarketRegistry(_MARKET_REGISTRY).pauseState(hub);
-        if (state == PauseState.Paused) reason = IMarketRegistry(_MARKET_REGISTRY).pauseReason(hub);
-    }
-
-    function _isFrozen(
-        address account
-    ) internal view returns (bool frozen) {
-        frozen = IMarketRegistry(_MARKET_REGISTRY).isFrozenAddress(account);
-    }
-
-    function _withDebtGates(
-        address vaultToken,
-        address proxy
-    ) internal {
-        (PauseState state,) = _pauseOf(IVaultToken(vaultToken).hub());
-        if (state == PauseState.Paused) revert ApplicationPaused();
-        if (_isFrozen(msg.sender)) revert AddressIsFrozen(msg.sender);
-        IRiskModule(_RISK_MODULE).preWithdrawCheck(proxy);
     }
 
     function _backing(

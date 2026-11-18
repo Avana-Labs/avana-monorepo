@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {BreakerReasons} from "../../../src/policy/market-registry/types/Breaker.sol";
+import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
 import {
     DebtReserveDef,
     MarketStatus,
@@ -14,7 +14,7 @@ import {
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {IPositionProxy} from "../../../src/proxy/position-proxy/IPositionProxy.sol";
-import {Market, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @notice UUPS stand-in that lets the fixture deploy the Adapter's ERC-1967 proxy first, so the Lock, Collateralization,
@@ -25,16 +25,13 @@ contract AdapterPlaceholder is UUPSUpgradeable {
     ) internal override {}
 }
 
-/// @notice MarketRegistry stand-in with the views the AaveAdapter and the ProxyManager read. `setBroken(true)` makes
+/// @notice MarketRegistry stand-in with the views the AaveAdapter and the RiskModule read. `setBroken(true)` makes
 /// every view revert, standing in for a faulty or hostile registry implementation; `reads` counts every view call.
 contract AdapterRegistryMock {
     error RegistryBroken();
 
     mapping(uint256 => Market) internal _markets;
     mapping(address => SpokeDef) internal _spokes;
-    mapping(address => PauseState) public pauseStateOf;
-    mapping(address => PauseReason) public pauseReasonOf;
-    mapping(address => bool) public frozen;
     mapping(address => mapping(uint256 => DebtReserveDef)) internal _debt;
     mapping(address => uint32) public integrationIdOfMap;
     mapping(address => bool) public recordedHub;
@@ -72,8 +69,7 @@ contract AdapterRegistryMock {
     mapping(address => mapping(uint256 => bool)) internal _debtKnown;
     mapping(address => uint256[]) internal _debtIds;
     mapping(bytes32 => bool) public routeDown;
-    mapping(bytes32 => uint32) public latched;
-    mapping(bytes32 => uint64) public lastBreachAt;
+    mapping(address => IssuerProbe) public issuerProbeOf;
     bool public implementationStale;
 
     function setMarketStatus(
@@ -100,18 +96,6 @@ contract AdapterRegistryMock {
         bool down
     ) external {
         routeDown[keccak256(abi.encode(marketId, token, debtAsset, kind))] = down;
-    }
-
-    function setLatched(
-        bytes32 key,
-        uint32 reasons,
-        uint64 at
-    ) external {
-        latched[key] = reasons;
-        lastBreachAt[key] = at;
-        // A breach set here stands for every temporary reason, each with its own breach time.
-        lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.ORACLE)] = at;
-        lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_DEPTH)] = at;
     }
 
     function setImplementationStale(
@@ -151,11 +135,19 @@ contract AdapterRegistryMock {
         return _spokeList;
     }
 
+    /// @dev Sets the issuer probe `getToken` reports for `token`, so the RiskModule's live ISSUER condition can hold.
+    function setIssuerProbe(
+        address token,
+        IssuerProbe probe
+    ) external {
+        issuerProbeOf[token] = probe;
+    }
+
     function getToken(
-        address
+        address token
     ) external view returns (TokenDef memory def) {
         _ok();
-        return def;
+        def.issuerProbe = issuerProbeOf[token];
     }
 
     /// @dev A route contract set for a slot; the registry itself stands in for an unset one.
@@ -190,39 +182,6 @@ contract AdapterRegistryMock {
         _ok();
         current = !implementationStale;
         (implementation, codeHash) = (address(0), bytes32(0));
-    }
-
-    function marketBreaker(
-        uint256 marketId
-    ) external view returns (uint32, uint64) {
-        _ok();
-        bytes32 key = bytes32(marketId);
-        return (latched[key], lastBreachAt[key]);
-    }
-
-    function debtBreaker(
-        address spoke,
-        uint256 debtReserveId
-    ) external view returns (uint32, uint64) {
-        _ok();
-        bytes32 key = keccak256(abi.encode(spoke, debtReserveId));
-        return (latched[key], lastBreachAt[key]);
-    }
-
-    function recordBreach(
-        bytes32 key,
-        uint32 reasons
-    ) external {
-        _ok();
-        latched[key] |= reasons;
-        uint32 temp = reasons & BreakerReasons.TEMPORARY;
-        if (temp == 0) return;
-        uint64 at = uint64(block.timestamp);
-        lastBreachAt[key] = at;
-        if (temp & BreakerReasons.ORACLE != 0) lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.ORACLE)] = at;
-        if (temp & BreakerReasons.POOL_DEPTH != 0) {
-            lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_DEPTH)] = at;
-        }
     }
 
     function drawCapCoverage(
@@ -266,22 +225,6 @@ contract AdapterRegistryMock {
         SpokeDef calldata def
     ) external {
         _spokes[spoke] = def;
-    }
-
-    function setPause(
-        address hub,
-        PauseState state,
-        PauseReason reason
-    ) external {
-        pauseStateOf[hub] = state;
-        pauseReasonOf[hub] = reason;
-    }
-
-    function setFrozen(
-        address account,
-        bool on
-    ) external {
-        frozen[account] = on;
     }
 
     function setDebtReserve(
@@ -336,27 +279,6 @@ contract AdapterRegistryMock {
     ) external view returns (SpokeDef memory) {
         _ok();
         return _spokes[spoke];
-    }
-
-    function pauseState(
-        address hub
-    ) external view returns (PauseState) {
-        _ok();
-        return pauseStateOf[hub];
-    }
-
-    function pauseReason(
-        address hub
-    ) external view returns (PauseReason) {
-        _ok();
-        return pauseReasonOf[hub];
-    }
-
-    function isFrozenAddress(
-        address account
-    ) external view returns (bool) {
-        _ok();
-        return frozen[account];
     }
 
     function isApprovedDebtReserve(

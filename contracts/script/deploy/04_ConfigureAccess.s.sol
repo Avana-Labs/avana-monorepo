@@ -56,13 +56,12 @@ interface IFactoryRegistration {
 /// @title ConfigureAccess
 /// @notice Step 13 and the chain wiring: the first two AvanaTimelock operations, both at the normal delay, written for
 /// the governance Safe and, on anvil, scheduled as the Safe.
-/// @dev `guardian-roles` is the role-change operation of `REQ-ACCESS-027`: `APPLICATION_PAUSE_GUARDIAN` and
-/// `APPLICATION_FREEZE_GUARDIAN` on the MarketRegistry for the Emergency Guardian, the Aave Protocol Guardian and the
-/// Joint Configuration Safe; `APPLICATION_PAUSE_GUARDIAN` on the ParameterStore for the Emergency Guardian and the Aave
-/// Protocol Guardian; `APPLICATION_RISK_STEWARD` on the ParameterStore for the Joint Configuration Safe. Only the Aave
-/// governance executor can cancel it. `chain-wiring` records the chain's Avana Hubs, the flash source, each LPVault in
-/// the VaultTokenFactory and in the MarketRegistry with its concentrated-liquidity LPOracle implementation as pricing.
-/// It is kept apart so a cancel of one never drops the other.
+/// @dev `guardian-roles` is the role-change operation of `REQ-ACCESS-027`: `APPLICATION_RISK_STEWARD` on the
+/// ParameterStore for the Joint Configuration Safe. Only the Aave governance executor can cancel it. Emergency stops
+/// go through Aave's own reserve freeze, so the guardians hold no Avana contract role. `chain-wiring` records the
+/// chain's Avana Hubs, the flash source, each LPVault in the VaultTokenFactory and in the MarketRegistry with its
+/// concentrated-liquidity LPOracle implementation as pricing. It is kept apart so a cancel of one never drops the
+/// other.
 /// Scheduling as the Safe needs `AVANA_SCHEDULE=1` and a node that accepts the Safe as an unlocked sender
 /// (`anvil --auto-impersonate`), run with `--unlocked --sender <safe>`.
 contract ConfigureAccess is TimelockOperations {
@@ -77,7 +76,7 @@ contract ConfigureAccess is TimelockOperations {
     }
 
     /// @notice Writes the operation and, with `AVANA_SCHEDULE`, schedules it as the Safe. Each operation holds only
-    /// what the config adds to the chain (a Hub, an integration, a guardian); with nothing new it is not written, and
+    /// what the config adds to the chain (a Hub, an integration, a role grant); with nothing new it is not written, and
     /// the previous file (already executed) stays.
     function _propose(
         address timelock,
@@ -103,36 +102,8 @@ contract ConfigureAccess is TimelockOperations {
         ChainInputs memory c,
         string memory out
     ) private view returns (Operation memory roles) {
-        address registry = vm.parseJsonAddress(out, ".marketRegistry.proxy");
         address store = vm.parseJsonAddress(out, ".parameterStore.proxy");
-        roles = _newOperation("guardian-roles", c.release, 9);
-        address[3] memory mrGuardians = [c.gov.emergencyGuardian, c.gov.aaveProtocolGuardian, c.gov.jointConfigSafe];
-        for (uint256 i = 0; i < 3; ++i) {
-            _grant(
-                roles, registry, AvanaRoles.APPLICATION_PAUSE_GUARDIAN, mrGuardians[i], "MarketRegistry PAUSE_GUARDIAN"
-            );
-            _grant(
-                roles,
-                registry,
-                AvanaRoles.APPLICATION_FREEZE_GUARDIAN,
-                mrGuardians[i],
-                "MarketRegistry FREEZE_GUARDIAN"
-            );
-        }
-        _grant(
-            roles,
-            store,
-            AvanaRoles.APPLICATION_PAUSE_GUARDIAN,
-            c.gov.emergencyGuardian,
-            "ParameterStore PAUSE_GUARDIAN"
-        );
-        _grant(
-            roles,
-            store,
-            AvanaRoles.APPLICATION_PAUSE_GUARDIAN,
-            c.gov.aaveProtocolGuardian,
-            "ParameterStore PAUSE_GUARDIAN"
-        );
+        roles = _newOperation("guardian-roles", c.release, 1);
         _grant(roles, store, AvanaRoles.APPLICATION_RISK_STEWARD, c.gov.jointConfigSafe, "ParameterStore RISK_STEWARD");
     }
 

@@ -57,7 +57,6 @@ contract ParameterStoreHalmosTest is Test {
         g.maxFlashFeeBps = 10;
         g.avanaFeeShareBps = 2000;
         g.feeRecipient = RECIPIENT;
-        g.gateRecoverySeconds = 1800;
         g.maxShortfallBps = 1000;
         store = IParameterStore(
             address(new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStore.initialize, (TIMELOCK, g))))
@@ -145,15 +144,9 @@ contract ParameterStoreHalmosTest is Test {
 
     // PROP-042 verifies: REQ-PSTORE-030, REQ-PSTORE-018, REQ-PSTORE-024, Q-399
     function check_PROP_042_tightenChainScalars(
-        uint64 gate,
         uint16 shortfall,
         uint16 flash
     ) public {
-        assert(
-            _asTimelock(abi.encodeCall(IParameterStore.tightenGateRecoverySeconds, (gate)))
-                == (gate > 1800 && gate <= 7200)
-        );
-        assert(store.gateRecoverySeconds() >= 600 && store.gateRecoverySeconds() <= 7200);
         assert(_asTimelock(abi.encodeCall(IParameterStore.tightenMaxShortfallBps, (shortfall))) == (shortfall < 1000));
         assert(_asTimelock(abi.encodeCall(IParameterStore.tightenMaxFlashFeeBps, (flash))) == (flash < 10));
     }

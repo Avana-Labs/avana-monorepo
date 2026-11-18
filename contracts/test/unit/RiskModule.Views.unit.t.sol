@@ -23,23 +23,12 @@ contract RiskModuleViewsUnitTest is RiskModuleFixture {
 
     // TEST-228 verifies: REQ-RISK-065, SPEC-BRK-007, SPEC-BRK-008, REQ-MREG-025
     function test_TEST_228_failedEvaluationReportsEveryReason() public view {
-        // Market 999 has no record, so its LPOracle cannot be read; debt reserve 99 has no definition.
-        (uint32 reasons, uint64 reopensAt) = riskModule.getBreakerStatus(999);
-        assertEq(reasons, BreakerReasons.TEMPORARY | BreakerReasons.SECURITY);
-        assertEq(reopensAt, 0);
-        (reasons, reopensAt) = riskModule.getDebtBreakerStatus(address(spoke), 99);
-        assertEq(reasons, BreakerReasons.TEMPORARY | BreakerReasons.SECURITY);
-        assertEq(reopensAt, 0);
-        // A failed evaluation reports every security reason, so a reset is refused.
-        assertEq(riskModule.liveBreakerReasons(999), BreakerReasons.SECURITY);
-        assertEq(riskModule.liveDebtBreakerReasons(address(spoke), 99), BreakerReasons.SECURITY);
+        // Market 999 has no record, so its integration cannot be read; debt reserve 99 has no definition.
+        assertEq(riskModule.getBreakerStatus(999), BreakerReasons.MARKET);
+        assertEq(riskModule.getDebtBreakerStatus(address(spoke), 99), BreakerReasons.DEBT);
         // The listed market and debt reserve evaluate normally.
-        (reasons, reopensAt) = riskModule.getBreakerStatus(mid);
-        assertEq(reasons, 0);
-        (reasons,) = riskModule.getDebtBreakerStatus(address(spoke), GHO_RESERVE);
-        assertEq(reasons, 0);
-        assertEq(riskModule.liveBreakerReasons(mid), 0);
-        assertEq(riskModule.liveDebtBreakerReasons(address(spoke), GHO_RESERVE), 0);
+        assertEq(riskModule.getBreakerStatus(mid), 0);
+        assertEq(riskModule.getDebtBreakerStatus(address(spoke), GHO_RESERVE), 0);
     }
 
     // TEST-034 verifies: REQ-RISK-031, SPEC-CAP-002

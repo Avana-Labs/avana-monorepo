@@ -257,22 +257,6 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
         if (_as(_tightener(steward), abi.encodeCall(STORE.tightenMaxFlashFeeBps, (v))) && v >= old) ++wrongDirection;
     }
 
-    function gateRecovery(
-        uint64 v,
-        bool tighten,
-        bool steward
-    ) external {
-        uint64 old = STORE.gateRecoverySeconds();
-        v = uint64(bound(v, 500, 7300));
-        if (tighten) {
-            if (_as(_tightener(steward), abi.encodeCall(STORE.tightenGateRecoverySeconds, (v))) && v <= old) {
-                ++wrongDirection;
-            }
-        } else if (_as(TIMELOCK, abi.encodeCall(STORE.loosenGateRecoverySeconds, (v))) && v >= old) {
-            ++wrongDirection;
-        }
-    }
-
     function shortfall(
         uint16 v,
         bool tighten,

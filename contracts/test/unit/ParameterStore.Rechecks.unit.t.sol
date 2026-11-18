@@ -118,7 +118,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         address stranger = makeAddr("strangerHub");
         _tl();
         vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownHub.selector, stranger));
-        store.tightenBreakerDeficitMax(stranger, gho, 1);
+        store.tightenDeficitMax(stranger, gho, 1);
     }
 
     // TEST-272 verifies: REQ-RISK-041, REQ-RISK-042, REQ-RISK-043

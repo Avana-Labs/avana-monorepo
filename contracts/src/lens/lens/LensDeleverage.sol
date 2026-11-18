@@ -10,7 +10,7 @@ import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol";
 import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
-import {Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {ILensHubReads} from "./ILensHubReads.sol";
 import {ILensSpokeReads} from "./ILensSpokeReads.sol";
 import {LensAccountMath} from "./LensAccountMath.sol";
@@ -78,7 +78,7 @@ abstract contract LensDeleverage is LensAccountMath {
         return RAY_UNIT + Math.mulDiv(rate, dt, SECONDS_PER_YEAR, Math.Rounding.Ceil);
     }
 
-    /// @dev Whether `repayWithCollateral` would pass; `Paused(General)` and freezes leave it open.
+    /// @dev Whether `repayWithCollateral` would pass.
     function _deleverageOpen(
         Repay memory r
     ) internal view returns (bool) {
@@ -92,9 +92,6 @@ abstract contract LensDeleverage is LensAccountMath {
     ) internal view returns (uint256) {
         Market memory m = r.m;
         if (IAaveV4Spoke(m.spoke).getUserTotalDebt(r.def.reserveId, r.proxy) == 0) return 0;
-        if (_registry().pauseState(m.hub) == PauseState.Paused) {
-            if (_registry().pauseReason(m.hub) == PauseReason.MintPathSuspect) return 0;
-        }
         IAaveV4Hub hub = IAaveV4Hub(m.hub);
         if (hub.getAddedAssets(m.hubAssetId) != hub.getAddedShares(m.hubAssetId)) return 0;
         if (!_marketPriceUsable(m) || !_debtView(m.spoke, r.def).liquidationFresh) return 0;

@@ -11,7 +11,7 @@ import {LPVaultSwapHandler} from "./handlers/LPVaultSwapHandler.sol";
 /// @title LPVaultSwapInvariantTest
 /// @notice Invariant suite of LPVaultSwap on the real local Aave V4 (TEST-090, TEST-092, TEST-093, TEST-100 for
 /// LPVaultSwap): random sequences of liquidations by registered and unregistered callers in both route modes with
-/// shortfall budgets, pause-state moves (None, Frozen, Paused with either reason), price and route moves, donations,
+/// shortfall budgets, price and route moves, donations,
 /// direct `liquidationCall` attempts by an attacker and pending settlements. After every call: every completed
 /// liquidation conserved the debt asset on token balances (what left the caller and the unwind reached the Hub, the
 /// fee recipient and the borrower, nothing appeared or vanished) and its result reported those balance changes; it met
@@ -168,25 +168,25 @@ contract LPVaultSwapInvariantTest is LPVaultSwapUnitBase, HandlerReach {
     /// action succeeds in at least 30 % of its calls (a liquidation counts only when it completes; `settlePending` at
     /// least 5 %, since one call settles all that is pending), and the runs reach each target state: a completed
     /// liquidation, one by an unregistered caller and one paying a borrower surplus in at least 75 % of the runs, a
-    /// backup-only liquidation in 60 %, a liquidation under Frozen or Paused and a pending settlement (which needs a
+    /// backup-only liquidation in 60 %, a pending settlement (which needs a
     /// liquidation of Bob first, to reconcile the kept units) in 50 %, and a shortfall top-up in 15 % (it needs the
     /// LPOracle price above the unwind's value, about $2.11, with the account still below HF 1 there, so mostly Bob's
     /// first liquidation), and a liquidation that books a deficit, where `B` funds the First-Loss Reserve, in 15 %
     /// (6 of 32 at these seeds).
     function test_TEST_082_handlerReach() public {
-        string[] memory names = new string[](7);
-        (names[0], names[1], names[2], names[3]) = ("liquidate", "movePause", "movePrice", "moveRoutes");
-        (names[4], names[5], names[6]) = ("donate", "directLiquidation", "settlePending");
-        uint256[] memory minOk = _floors(7, 30);
-        minOk[6] = 5;
-        string[] memory targets = new string[](8);
-        (targets[0], targets[1], targets[2]) = ("liquidation", "liquidation while paused", "backup-only liquidation");
-        (targets[3], targets[4], targets[5]) =
-        ("unregistered caller liquidation", "shortfall top-up", "borrower surplus");
-        (targets[6], targets[7]) = ("pending settlement", "deficit liquidation");
-        uint256[] memory minReach = _floors(8, 75);
-        (minReach[1], minReach[2], minReach[4], minReach[6], minReach[7]) = (50, 60, 15, 50, DEFICIT_REACH);
-        Reach memory r = _replay(address(handler), _actions(), LPVaultSwapHandler.Skipped.selector, 32, 32, 8);
+        string[] memory names = new string[](6);
+        (names[0], names[1], names[2]) = ("liquidate", "movePrice", "moveRoutes");
+        (names[3], names[4], names[5]) = ("donate", "directLiquidation", "settlePending");
+        uint256[] memory minOk = _floors(6, 30);
+        minOk[5] = 5;
+        string[] memory targets = new string[](7);
+        (targets[0], targets[1], targets[2]) =
+        ("liquidation", "backup-only liquidation", "unregistered caller liquidation");
+        (targets[3], targets[4], targets[5]) = ("shortfall top-up", "borrower surplus", "pending settlement");
+        targets[6] = "deficit liquidation";
+        uint256[] memory minReach = _floors(7, 75);
+        (minReach[1], minReach[3], minReach[5], minReach[6]) = (60, 15, 50, DEFICIT_REACH);
+        Reach memory r = _replay(address(handler), _actions(), LPVaultSwapHandler.Skipped.selector, 32, 32, 7);
         _check(r, names, targets, minOk, minReach);
     }
 
@@ -207,25 +207,23 @@ contract LPVaultSwapInvariantTest is LPVaultSwapUnitBase, HandlerReach {
     }
 
     function _reached() internal view override returns (bool[] memory hit) {
-        hit = new bool[](8);
+        hit = new bool[](7);
         hit[0] = handler.liquidations() != 0;
-        hit[1] = handler.liquidationsWhilePaused() != 0;
-        hit[2] = handler.backupOnlyLiquidations() != 0;
-        hit[3] = handler.unregisteredLiquidations() != 0;
-        hit[4] = handler.shortfallLiquidations() != 0;
-        hit[5] = handler.surplusLiquidations() != 0;
-        hit[6] = handler.settlements() != 0;
-        hit[7] = handler.deficitLiquidations() != 0;
+        hit[1] = handler.backupOnlyLiquidations() != 0;
+        hit[2] = handler.unregisteredLiquidations() != 0;
+        hit[3] = handler.shortfallLiquidations() != 0;
+        hit[4] = handler.surplusLiquidations() != 0;
+        hit[5] = handler.settlements() != 0;
+        hit[6] = handler.deficitLiquidations() != 0;
     }
 
     function _actions() internal pure returns (bytes4[] memory actions) {
-        actions = new bytes4[](7);
+        actions = new bytes4[](6);
         actions[0] = LPVaultSwapHandler.liquidate.selector;
-        actions[1] = LPVaultSwapHandler.movePause.selector;
-        actions[2] = LPVaultSwapHandler.movePrice.selector;
-        actions[3] = LPVaultSwapHandler.moveRoutes.selector;
-        actions[4] = LPVaultSwapHandler.donate.selector;
-        actions[5] = LPVaultSwapHandler.directLiquidation.selector;
-        actions[6] = LPVaultSwapHandler.settlePending.selector;
+        actions[1] = LPVaultSwapHandler.movePrice.selector;
+        actions[2] = LPVaultSwapHandler.moveRoutes.selector;
+        actions[3] = LPVaultSwapHandler.donate.selector;
+        actions[4] = LPVaultSwapHandler.directLiquidation.selector;
+        actions[5] = LPVaultSwapHandler.settlePending.selector;
     }
 }
