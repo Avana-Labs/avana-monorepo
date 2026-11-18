@@ -3,9 +3,8 @@
 // The rows of one chain snapshot, by scope. A chain has several Hubs, each with its Lend and CDP Spokes, and every row
 // names its Hub. Each number has one owner: Hub totals live only in `HubAssetRow`, a Spoke's draw on an asset only in
 // `HubAssetSpokeRow`, a CDP reserve's own flags only in `SpokeReserveRow`, a collateral market's figures only in
-// `MarketRow`, a Hub-to-Hub line's cap only in `CreditLineRow`. Every row of one snapshot is read at the same block,
-// so the identities of the scope model hold exactly between them. Integers are decimal strings in base units; rates
-// are RAY per year; prices are USD with 8 decimals.
+// `MarketRow`. Every row of one snapshot is read at the same block, so the identities of the scope model hold exactly
+// between them. Integers are decimal strings in base units; rates are RAY per year; prices are USD with 8 decimals.
 
 import type { DecimalString } from "../export.ts";
 
@@ -86,8 +85,16 @@ export interface HubAssetRow {
   /** From `Lens.getHubAssetExposure`; null when the Lens refuses the asset. */
   readonly exposure: {
     readonly firstLossReserve: Address;
+    /** The First-Loss Reserve's funded balance, base units: the `funded` of `MarketRegistry.drawCapCoverage`. */
     readonly fundedBalance: DecimalString;
-    readonly line: DecimalString;
+    /**
+     * Σ live Aave draw caps of every CDP Spoke with an enabled reserve of the asset on this Hub, whole tokens (an
+     * unbounded cap counts 2^128).
+     */
+    readonly drawCapSum: DecimalString;
+    /** `MarketRegistry.drawCapCoverage`: ⌈drawCapSum × 10^decimals × coverage ratio⌉, base units. */
+    readonly required: DecimalString;
+    /** required ≤ fundedBalance; borrowing the asset stops (`CoverageBelowRatio`) when it does not hold. */
     readonly coverageBoundHolds: boolean;
     readonly uncovered: DecimalString;
     readonly priceAdj: DecimalString;
@@ -280,32 +287,11 @@ export interface HubRow {
   readonly blockNumber: DecimalString;
 }
 
-/**
- * A Hub-to-Hub credit line: a CDP Spoke whose home Hub is another one draws on this funding Hub's asset. The cap and
- * the funding Hub's total of caps are the MarketRegistry's; the Spoke's draw is its `HubAssetSpokeRow`, joined.
- */
-export interface CreditLineRow {
-  readonly chainId: number;
-  readonly fundingHub: Address;
-  readonly assetId: DecimalString;
-  readonly asset: Address;
-  readonly spoke: Address;
-  readonly homeHub: Address;
-  /** `crossHubLineCap(fundingHub, asset, spoke)`, base units. */
-  readonly cap: DecimalString;
-  /** `crossHubLineTotal(fundingHub, asset)`: Σ caps of every cross-Hub line on this asset. */
-  readonly total: DecimalString;
-  /** `crossHubLinesEnabled()` of the chain. */
-  readonly enabled: boolean;
-  readonly blockNumber: DecimalString;
-}
-
 export interface ChainSnapshot {
   readonly chainId: number;
   readonly blockNumber: DecimalString;
   readonly timestamp: number;
   readonly hubs: readonly HubRow[];
-  readonly creditLines: readonly CreditLineRow[];
   readonly hubAssets: readonly HubAssetRow[];
   readonly slices: readonly HubAssetSpokeRow[];
   readonly spokeReserves: readonly SpokeReserveRow[];

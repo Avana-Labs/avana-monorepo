@@ -61,7 +61,6 @@ export interface Topology {
   /** The manifest's Lend Spokes in manifest order, then those found on later Hubs in address order. */
   readonly lendSpokes: readonly Address[];
   readonly assets: readonly HubAssetInfo[];
-  readonly crossHubLinesEnabled: boolean;
 }
 
 const reg = (registry: Address, functionName: string, args: readonly unknown[] = []): ContractCall => ({ address: registry, abi: registryViewsAbi, functionName, args });
@@ -72,12 +71,8 @@ export async function discover(client: ViewClient, dep: ChainDeployment): Promis
   const registry = lower(dep.marketRegistry);
   const lens = lower(dep.lens);
 
-  // 1. The registry's Hubs and CDP Spokes, and whether Hub-to-Hub lines are open.
-  const [recordedHubs, approvedSpokes, crossHubLinesEnabled] = (await all(client, [reg(registry, "getHubs"), reg(registry, "getSpokes"), reg(registry, "crossHubLinesEnabled")])) as [
-    readonly string[],
-    readonly string[],
-    boolean,
-  ];
+  // 1. The registry's Hubs and CDP Spokes.
+  const [recordedHubs, approvedSpokes] = (await all(client, [reg(registry, "getHubs"), reg(registry, "getSpokes")])) as [readonly string[], readonly string[]];
   const labels = new Map(dep.hubs.map((h) => [lower(h.address), h.label]));
   const recorded = new Set(recordedHubs.map(lower));
   const candidateHubs = uniq([...dep.hubs.map((h) => lower(h.address)), ...recorded]);
@@ -187,7 +182,7 @@ export async function discover(client: ViewClient, dep: ChainDeployment): Promis
   const probes = await some(client, candidates.map((sp): ContractCall => ({ address: sp, abi: spokeViewsAbi, functionName: "getReserveCount", args: [] })));
   const lendSpokes = [...manifestLend, ...candidates.filter((_, i) => probes[i] !== null)];
 
-  return { hubs, cdpSpokes, homeHubOf, coverage, lendSpokes, assets, crossHubLinesEnabled };
+  return { hubs, cdpSpokes, homeHubOf, coverage, lendSpokes, assets };
 }
 
 function lendShaped(s: { spoke: Address; data: DecodedSpokeData }, a: { feeReceiver: Address }, cdp: ReadonlySet<Address>, coverage: ReadonlySet<Address>): boolean {

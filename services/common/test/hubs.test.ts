@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The snapshot reader on a chain with several Hubs: every row is keyed by its Hub, two Lend Spokes on one Hub and a
-// third on another are read, a Hub-to-Hub credit line is reported, the Hub identities hold per Hub asset, and a Hub
-// the MarketRegistry records after start-up appears with its Lend Spoke, First-Loss Reserve and CDP Spoke at the next read
-// with the same deployment.
+// third on another are read, each covered Hub asset carries its draw-cap coverage, the Hub identities hold per Hub
+// asset, and a Hub the MarketRegistry records after start-up appears with its Lend Spoke, First-Loss Reserve and CDP
+// Spoke at the next read with the same deployment.
 
 import { describe, expect, it } from "vitest";
 import {
@@ -82,13 +82,13 @@ describe("a chain with two Hubs and three Lend Spokes", () => {
     }
   });
 
-  it("reports the Hub-to-Hub credit line with its registry cap; the draw stays in the slice", async () => {
+  it("reads the draw-cap coverage of each covered Hub asset: the CDP Spokes' draw caps and the balance they require", async () => {
     const snap = await read();
-    expect(snap.creditLines).toEqual([
-      { chainId: 1, fundingHub: HUB_B, assetId: "0", asset: USDC, spoke: CDP_A, homeHub: HUB_A, cap: six(1_000_000), total: six(1_000_000), enabled: true, blockNumber: "100" },
-    ]);
-    const draw = snap.slices.find((s) => s.hub === HUB_B && s.spoke === CDP_A)!;
-    expect(draw.owed).toBe(six(500_000));
+    const exposure = (hub: string) => snap.hubAssets.find((a) => a.hub === hub && a.underlying === USDC)!.exposure;
+    // Hub A USDC: CDP A's draw cap of 4,000,000 at the fake registry's 5 % needs 200,000, the Coverage Spoke's balance.
+    expect(exposure(HUB_A)).toMatchObject({ drawCapSum: "4000000", required: six(200_000), fundedBalance: six(200_000), coverageBoundHolds: true });
+    // Hub B USDC has no First-Loss Reserve: the Lens refuses the exposure.
+    expect(exposure(HUB_B)).toBeNull();
   });
 
   it("reads each CDP Spoke's debt reserves with the Hub that funds them", async () => {

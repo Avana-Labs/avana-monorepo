@@ -1,5 +1,5 @@
 {
-  "_comment": "Local stack only. Every number the Aave DAO, governance or a risk provider sets on a real network (amounts, caps, credit lines, speed limits, collateral factors, liquidation bonus, pool risk factor, tolerances, slippage, rate models, liquidity fees), so the local chains can run. Never part of a release config or a Hub file. Values here are the rehearsal's (contracts/script/deploy/config/anvil.json).",
+  "_comment": "Local stack only. Every number the Aave DAO, governance or a risk provider sets on a real network (amounts, caps, speed limits, collateral factors, liquidation bonus, pool risk factor, tolerances, slippage, rate models, liquidity fees), so the local chains can run. Never part of a release config or a Hub file. Values here are the rehearsal's (contracts/script/deploy/config/anvil.json).",
   "debtAssets": {
     "GHO": {
       "drawCap": 10000000,
@@ -26,7 +26,6 @@
     }
   },
   "routeDepthThreshold": 5000000,
-  "creditLineWhole": 100000000,
   "speedLimits": {
     "window": 21600,
     "borrowRateBps": 2500,

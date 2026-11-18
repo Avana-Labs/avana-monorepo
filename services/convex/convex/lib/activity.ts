@@ -18,10 +18,7 @@ export interface Resolver {
   isLendSpoke(spoke: string): boolean;
   /** Hub asset key `chainId:hub:assetId` of a reserve on any Spoke, or null for an unknown reserve. */
   hubAssetOfReserve(spoke: string, reserveId: string): Promise<string | null>;
-  hubAssetOfUnderlying(hub: string, asset: string): Promise<string | null>;
-  /** Spoke reserve key `chainId:spoke:reserveId` of a CDP Spoke's debt reserve, by its underlying address. */
-  spokeReserveOfAsset(spoke: string, asset: string): Promise<string | null>;
-  /** The same, by the Hub asset key the reserve draws from. */
+  /** Spoke reserve key `chainId:spoke:reserveId` of a CDP Spoke's debt reserve, by the Hub asset key it draws from. */
   spokeReserveOfHubAsset(spoke: string, hubAssetKey: string): Promise<string | null>;
   /** Market key of a vault-token reserve, or null when the reserve is a debt reserve. */
   marketOfCollateralReserve(spoke: string, reserveId: string): Promise<string | null>;
@@ -124,16 +121,6 @@ export async function decodeRecord(r: ExportRecord, at: number, res: Resolver): 
       return { log: base, changes, listing: { operationId: a(args.id), salt: a(args.salt), executed: false } };
     case "AvanaTimelock.CallExecuted":
       return { log: base, changes, listing: { operationId: a(args.id), executed: true } };
-    case "MarketRegistry.CreditLineSet": {
-      const key = await res.hubAssetOfUnderlying(a(args.hub), a(args.asset));
-      if (key) await change("lend", key, "Credit line", String(args.line));
-      return { log: { ...base, ...(key ? { hubAssetKey: key } : {}) }, changes };
-    }
-    case "MarketRegistry.CreditLineRecorded": {
-      const key = await res.spokeReserveOfAsset(a(args.spoke), a(args.asset));
-      if (key) await change("asset", key, "Draw cap", String(args.drawCap));
-      return { log: { ...base, ...(key ? { spokeReserveKey: key } : {}) }, changes };
-    }
     case "MarketRegistry.MarketOffboarding": {
       // One step: the notice ends `OFFBOARD_NOTICE_SECONDS` after this block, the earliest time of the Aave DAO's one
       // liquidation-threshold drop and of `closeMarket`.

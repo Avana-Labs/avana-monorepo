@@ -49,7 +49,9 @@ export const fixtureHubAsset: HubAssetRow = {
   exposure: {
     firstLossReserve: FIXTURE_COVERAGE,
     fundedBalance: USDC(200_000),
-    line: USDC(7_000_000),
+    // CDP Spokes' draw caps, whole tokens: 4,000,000 + 3,000,000; 2.5 % of them must be funded.
+    drawCapSum: "7000000",
+    required: USDC(175_000),
     coverageBoundHolds: true,
     uncovered: "0",
     priceAdj: "1000000",

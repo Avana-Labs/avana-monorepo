@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Risk parameters, the market risk premium card, liquidation activity and cashflow, each for the scope its page
-// owns: a supply market shows supply cap, reserve factor, credit line and coverage (no collateral parameters); a
+// owns: a supply market shows supply cap, reserve factor and draw-cap coverage (no collateral parameters); a
 // debt reserve shows its Spoke's draw cap and price status; a collateral market shows its collateral factor, bonus,
 // collateral risk and caps.
 
@@ -13,6 +13,8 @@ import type { Cashflow, LiquidationRisk, PageRisk, RiskAssessment, RiskLevel, Ri
 const PAUSE = ["None", "Frozen", "Paused"] as const;
 const PRICE = ["Live", "Drifting", "Cached", "Expired"] as const;
 const cap = (whole: string) => (BigInt(whole) === MAX_SPOKE_CAP ? "Unlimited" : Number(whole).toLocaleString("en-US"));
+/** The registry counts an unbounded draw cap as 2^128 whole tokens in a draw-cap sum. */
+const capSum = (whole: string) => (BigInt(whole) >= 2n ** 128n ? "Unlimited" : Number(whole).toLocaleString("en-US"));
 const usd8 = (v: string) => compactUsd(Number(BigInt(v)) / 1e8);
 const wadHf = (v: string) => (Number(BigInt(v)) / 1e18).toFixed(2);
 
@@ -28,7 +30,6 @@ export function lendRiskParameters(slug: string, asset: HubAssetRow, slices: rea
   const lends = slices.filter((s) => s.kind === "lend");
   const supplyCap = lends.some((s) => BigInt(s.addCap) === MAX_SPOKE_CAP) ? MAX_SPOKE_CAP.toString() : lends.reduce((acc, s) => acc + BigInt(s.addCap), 0n).toString();
   const drawCaps = slices.filter((s) => s.kind === "cdp").reduce((acc, s) => acc + BigInt(s.drawCap), 0n);
-  const otherHubs = slices.filter((s) => s.kind === "cdp" && s.homeHub !== asset.hub && !/^0x0{40}$/.test(s.homeHub)).reduce((acc, s) => acc + BigInt(s.owed), 0n);
   const status = (r: { paused: boolean; frozen: boolean }) => (r.paused ? "Paused" : r.frozen ? "Frozen" : "Active");
   const ex = asset.exposure;
   const p = (id: string, label: string, value: string, description?: string) => ({ id, label, value, ...(description ? { description } : {}) });
@@ -37,15 +38,14 @@ export function lendRiskParameters(slug: string, asset: HubAssetRow, slices: rea
     kind: "lend",
     parameters: [
       p("depositCapacity", "Deposit capacity", lends.length > 0 ? `${cap(supplyCap)} ${symbol}` : "—", "Most the Lend Spokes accept together on this Hub asset."),
-      p("borrowCapacity", "Borrow capacity", ex ? `${tokens(ex.line, asset.decimals).toLocaleString("en-US")} ${symbol}` : "—", "Most the CDP Spokes may draw together: the Hub's credit line for this asset."),
+      p("borrowCapacity", "Borrow capacity", ex ? `${capSum(ex.drawCapSum)} ${symbol}` : "—", "Most the CDP Spokes may draw together: the sum of their draw caps on this Hub asset."),
       p("oracle", "Oracle source", "Aave oracle", "Aave V4's price for the asset, read by the Hub and the Spokes."),
       p("supplyCap", "Supply cap", lends.length > 0 ? `${cap(supplyCap)} ${symbol}` : "—", "Most the Lend Spokes accept together on this Hub asset."),
       p("reserveFactor", "Reserve factor", pct(bpsToPct(asset.liquidityFeeBps)), "Share of interest kept by the Hub as fees."),
-      p("creditLine", "Credit line", ex ? `${tokens(ex.line, asset.decimals).toLocaleString("en-US")} ${symbol}` : "—", "Most the CDP Spokes may draw together."),
       p("drawCaps", "Draw caps (all CDP Spokes)", `${drawCaps.toLocaleString("en-US")} ${symbol}`),
-      p("otherHubDraws", "Drawn by other Hubs", `${tokens(otherHubs, asset.decimals).toLocaleString("en-US")} ${symbol}`, "Owed by CDP Spokes of other Hubs on their credit lines."),
       p("firstLoss", "First-loss reserve", ex ? `${tokens(ex.fundedBalance, asset.decimals).toLocaleString("en-US")} ${symbol}` : "—", "Funded balance of the First-Loss Reserve, used before lenders."),
-      p("coverageBound", "Coverage bound", ex ? (ex.coverageBoundHolds ? "Holds" : "Breached") : "—"),
+      p("coverageRequired", "Coverage required", ex ? `${tokens(ex.required, asset.decimals).toLocaleString("en-US")} ${symbol}` : "—", "First-loss balance the CDP Spokes' draw caps require at the coverage ratio."),
+      p("coverageBound", "Coverage bound", ex ? (ex.coverageBoundHolds ? "Holds" : "Breached") : "—", "Holds while the First-Loss Reserve's balance covers the required amount; borrowing the asset stops otherwise."),
       p("status", asset.lendReserves.length > 1 ? "Lend reserves" : "Lend reserve", asset.lendReserves.map(status).join(", ")),
     ],
     updatedAt: asset.timestamp * 1000,

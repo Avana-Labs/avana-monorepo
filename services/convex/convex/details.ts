@@ -32,8 +32,6 @@ const CHANGE_SOURCES: Readonly<Record<string, string>> = {
   "AaveSpoke.UpdateReserveConfig": "Reserve configuration update",
   "AaveHub.UpdateAssetConfig": "Asset configuration update",
   "AaveHub.UpdateSpokeConfig": "Spoke configuration update",
-  "MarketRegistry.CreditLineSet": "Credit line update",
-  "MarketRegistry.CreditLineRecorded": "Credit line update",
   "MarketRegistry.MarketOffboarding": "Market offboarding",
 };
 

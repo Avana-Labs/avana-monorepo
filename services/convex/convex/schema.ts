@@ -65,23 +65,6 @@ export default defineSchema({
     .index("by_key", ["chainId", "hub"])
     .index("by_slug", ["slug"]),
 
-  /** A Hub-to-Hub credit line: the registry's cap; the Spoke's draw on it is its `hubAssetSpokes` row. */
-  creditLines: defineTable({
-    chainId: v.number(),
-    fundingHub: address,
-    assetId: dec,
-    asset: address,
-    spoke: address,
-    homeHub: address,
-    cap: dec,
-    total: dec,
-    enabled: v.boolean(),
-    ...read,
-  })
-    .index("by_key", ["chainId", "fundingHub", "assetId", "spoke"])
-    .index("by_funding", ["chainId", "fundingHub"])
-    .index("by_home", ["chainId", "homeHub"]),
-
   hubAssets: defineTable({
     chainId: v.number(),
     hub: address,
@@ -112,7 +95,7 @@ export default defineSchema({
     lendReserves: v.array(v.object({ spoke: address, reserveId: dec, paused: v.boolean(), frozen: v.boolean() })),
     exposure: v.union(
       v.null(),
-      v.object({ firstLossReserve: address, fundedBalance: dec, line: dec, coverageBoundHolds: v.boolean(), uncovered: dec, priceAdj: dec, deficitOffset: address, offsetFunded: dec }),
+      v.object({ firstLossReserve: address, fundedBalance: dec, drawCapSum: dec, required: dec, coverageBoundHolds: v.boolean(), uncovered: dec, priceAdj: dec, deficitOffset: address, offsetFunded: dec }),
     ),
     timestamp: v.number(),
     ...read,

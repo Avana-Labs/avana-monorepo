@@ -3,14 +3,15 @@
 // Test data only: one Ethereum deployment with several Hubs, as an in-memory chain (fixtureChain.ts) at two moments.
 //
 // At start-up the manifest names Hub A ("Stable", tier 1) and Hub B ("Core", tier 2), three Lend Spokes (A and A2 on
-// Hub A, B on Hub B) and two CDP Spokes (CDP A at home on Hub A, CDP B on Hub B). CDP A also draws USDC from Hub B
-// through a Hub-to-Hub credit line. Later the MarketRegistry records Hub C (tier 3) with its own Lend Spoke, Coverage
-// Spoke, CDP Spoke and the DAO deficit offset behind that First-Loss Reserve, none of which the manifest names; the reader
-// must find all four and must not read the offset, supply-only like a Lend Spoke, as one.
+// Hub A, B on Hub B) and two CDP Spokes (CDP A at home on Hub A, CDP B on Hub B). CDP A also has a USDC slice and debt
+// reserve on Hub B, which the MarketRegistry no longer enables (a debt reserve's funding Hub is its Spoke's home Hub) but
+// the reader still reads as the Hub reports it. Later the MarketRegistry records Hub C (tier 3) with its own Lend Spoke,
+// Coverage Spoke, CDP Spoke and the DAO deficit offset behind that First-Loss Reserve, none of which the manifest names;
+// the reader must find all four and must not read the offset, supply-only like a Lend Spoke, as one.
 //
 // Amounts (whole tokens): Hub A USDC 10,000,000 added (Lend A 9,000,000, Lend A2 800,000, Coverage 200,000), 3,000,000
 // owed by CDP A; Hub A USDT 4,000,000 added, 1,000,000 owed; Hub B USDC 6,000,000 added, 2,000,000 owed (CDP B
-// 1,500,000, CDP A 500,000 on its line); Hub B GHO 1,000,000 added; Hub C USDC 2,050,000 added (50,000 by the deficit
+// 1,500,000, CDP A 500,000); Hub B GHO 1,000,000 added; Hub C USDC 2,050,000 added (50,000 by the deficit
 // offset), 500,000 owed.
 
 import type { FakeAsset, FakeChain, FakeHub } from "./fixtureChain.ts";
@@ -175,8 +176,6 @@ const START: FakeChain = {
       ],
     },
   ],
-  crossHubLines: [{ fundingHub: HUB_B, asset: USDC, spoke: CDP_A, cap: six(1_000_000) }],
-  crossHubLinesEnabled: true,
   markets: [market(1n, HUB_A, CDP_A, VT_A, 2n, [1n, 2n, 3n])],
 };
 

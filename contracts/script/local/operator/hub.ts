@@ -111,7 +111,6 @@ export interface DebtAssetValues {
   /** A fixed-price debt asset (not priced by its feed): its primary feed's deviation instead of a stress rise. */
   fixedPrice?: boolean;
   deviationBps?: number;
-  creditLineWhole?: number;
   debtMinWhole?: number;
   debtMaxWhole?: number;
   rateModel?: RateModel;
@@ -434,7 +433,6 @@ export function planHub(config: Json, input: HubInput, tv: TestValues, chainId: 
         fixedPrice: fixed,
         ...(fixed ? { deviationBps: dv.deviationBps } : { stressRiseBps: dv.stressRiseBps }),
         floorRoundingAllowance: dv.floorRoundingAllowance,
-        ...(dv.creditLineWhole ? { creditLineWhole: dv.creditLineWhole } : {}),
         ...(dv.debtMinWhole ? { debtMinWhole: dv.debtMinWhole, debtMaxWhole: dv.debtMaxWhole } : {}),
         address: `$world:.tokens.${a.symbol}`,
         feeds: { primary: `$world:.feeds.${a.symbol}.primary` },

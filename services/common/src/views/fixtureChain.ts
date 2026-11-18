@@ -3,8 +3,8 @@
 // Test data only: an in-memory chain that answers the snapshot reader's view calls the way the contracts do, so the
 // tests run the real reader (snapshot.ts, discovery.ts) end to end. It holds Hubs with their assets and Spokes, Lend
 // Spokes with their oracles, CDP Spokes with their debt reserves, DAO deficit offsets, the MarketRegistry's records and
-// Hub-to-Hub lines, and the Lens with its Hub-asset and speed-limit views. A call to an address or function the chain does not hold
-// fails, as it reverts on chain.
+// draw-cap coverage, and the Lens with its Hub-asset and speed-limit views. A call to an address or function the chain
+// does not hold fails, as it reverts on chain.
 
 import type { CallResult, ContractCall, ViewClient } from "./client.ts";
 import type { Address } from "./types.ts";
@@ -64,8 +64,6 @@ export interface FakeChain {
   readonly lendSpokes: readonly FakeLendSpoke[];
   /** CDP Spokes the registry has approved. */
   readonly cdpSpokes: readonly FakeCdpSpoke[];
-  readonly crossHubLines: readonly { readonly fundingHub: Address; readonly asset: Address; readonly spoke: Address; readonly cap: bigint }[];
-  readonly crossHubLinesEnabled: boolean;
   readonly markets: readonly Record<string, unknown>[];
   /** The Lock is held: the Lens speed views revert `Locked()`. */
   readonly locked?: boolean;
@@ -85,6 +83,30 @@ const eq = (a: unknown, b: string) => String(a).toLowerCase() === b.toLowerCase(
 
 class CallFailed extends Error {}
 
+/** The coverage ratio every (Hub, asset) of the fake registry uses: 5 %. */
+export const FAKE_COVERAGE_RATIO_BPS = 500n;
+const MAX_SPOKE_CAP = 2n ** 40n - 1n;
+
+/**
+ * `MarketRegistry.drawCapCoverage(hub, asset)`: the live draw caps of every CDP Spoke with a reserve of the asset on the
+ * Hub (an unbounded cap counts 2^128), the balance they require at `FAKE_COVERAGE_RATIO_BPS` and the First-Loss Reserve's
+ * funded balance.
+ */
+function drawCapCoverage(c: FakeChain, hub: unknown, asset: unknown): { drawCapSum: bigint; required: bigint; funded: bigint } {
+  const h = c.hubs.find((x) => eq(hub, x.hub));
+  const a = h?.assets.find((x) => eq(asset, x.underlying));
+  if (!a) return { drawCapSum: 0n, required: 0n, funded: 0n };
+  const spokes = c.cdpSpokes.filter((s) => s.debtReserves.some((r) => eq(hub, r.hub) && eq(asset, r.asset)));
+  const drawCapSum = spokes.reduce((acc, s) => {
+    const cap = BigInt(a.slices.find((x) => x.spoke === s.spoke)?.drawCap ?? 0);
+    return acc + (cap === MAX_SPOKE_CAP ? 2n ** 128n : cap);
+  }, 0n);
+  const needed = drawCapSum * 10n ** BigInt(a.decimals) * FAKE_COVERAGE_RATIO_BPS;
+  const required = (needed + 9_999n) / 10_000n;
+  const funded = a.firstLossReserve ? (a.slices.find((x) => x.spoke === a.firstLossReserve)?.added ?? 0n) : 0n;
+  return { drawCapSum, required, funded };
+}
+
 /** The view the chain answers for one call; throws `CallFailed` when the contract would refuse the call. */
 function answer(c: FakeChain, call: ContractCall): unknown {
   const at = call.address.toLowerCase();
@@ -92,14 +114,11 @@ function answer(c: FakeChain, call: ContractCall): unknown {
   const fn = call.functionName;
   if (at === c.registry) {
     const hubOf = (sp: unknown) => c.cdpSpokes.find((x) => eq(sp, x.spoke))?.homeHub ?? ZERO;
-    const lines = (hub: unknown, asset: unknown) => c.crossHubLines.filter((l) => eq(hub, l.fundingHub) && eq(asset, l.asset));
     switch (fn) {
       case "getHubs":
         return c.recordedHubs;
       case "getSpokes":
         return c.cdpSpokes.map((s) => s.spoke);
-      case "crossHubLinesEnabled":
-        return c.crossHubLinesEnabled;
       case "isRecordedHub":
         return c.recordedHubs.some((h) => eq(args[0], h));
       case "hubTier": {
@@ -110,10 +129,10 @@ function answer(c: FakeChain, call: ContractCall): unknown {
         return hubOf(args[0]);
       case "firstLossReserveOf":
         return c.hubs.find((h) => eq(args[0], h.hub))?.assets.find((a) => eq(args[1], a.underlying))?.firstLossReserve ?? ZERO;
-      case "crossHubLineCap":
-        return lines(args[0], args[1]).find((l) => eq(args[2], l.spoke))?.cap ?? 0n;
-      case "crossHubLineTotal":
-        return lines(args[0], args[1]).reduce((acc, l) => acc + l.cap, 0n);
+      case "drawCapCoverage": {
+        const cov = drawCapCoverage(c, args[0], args[1]);
+        return [cov.drawCapSum, cov.required, cov.funded];
+      }
     }
   }
   const hub = c.hubs.find((h) => h.hub === at);
@@ -218,6 +237,7 @@ function answer(c: FakeChain, call: ContractCall): unknown {
         const h = c.hubs.find((x) => eq(args[0], x.hub))!;
         const a = h.assets.find((x) => eq(args[1], x.underlying));
         if (!a?.firstLossReserve) throw new CallFailed("NoCoverage");
+        const cov = drawCapCoverage(c, args[0], args[1]);
         const cdpOf = (sp: Address) => c.cdpSpokes.find((s) => s.spoke === sp);
         const isOffset = (x: FakeSlice) => x.firstLossLayer === a.firstLossReserve;
         const kind = (x: FakeSlice) =>
@@ -242,9 +262,9 @@ function answer(c: FakeChain, call: ContractCall): unknown {
         const offsets = a.slices.filter(isOffset);
         return {
           firstLossReserve: a.firstLossReserve,
-          fundedBalance: a.slices.find((x) => x.spoke === a.firstLossReserve)?.added ?? 0n,
-          line: 0n,
-          coverageBoundHolds: true,
+          fundedBalance: cov.funded,
+          drawCapSum: cov.drawCapSum,
+          coverageBoundHolds: cov.required <= cov.funded,
           uncovered: 0n,
           priceAdj: 10n ** 6n,
           spokes,

@@ -1331,9 +1331,9 @@ async function deficitCoverage(e: Env) {
   return { ok, detail: ok ? `deficit of ${fmt(covered, d)} ${e.sym(m.debtAsset)} covered by ${key}, ${burned} Hub shares burned` : "deficit not fully covered, or the First-Loss Reserve's shares did not fall by the shares burned" };
 }
 
-// ─── 7. Cross-Hub credit line (off by default) ───
+// ─── 7. Debt reserve funded by another Hub (refused) ───
 
-async function crossHubLine(e: Env) {
+async function foreignFundingHub(e: Env) {
   const m = e.market("uni-USDC-USDT-100");
   const n = e.numbers;
   const gho = e.token("GHO");
@@ -1345,10 +1345,9 @@ async function crossHubLine(e: Env) {
     if (tier !== 0 && (!fundingHub || h.label === "volatile")) fundingHub = h.address;
   }
   if (!fundingHub) throw new StepError("no second recorded Hub");
-  const enabled = (await e.read(e.registry, marketRegistryAbi, "crossHubLinesEnabled")) as boolean;
   const admin = (await e.read(e.registry, marketRegistryAbi, "hasRole", [keccak256(stringToBytes("APPLICATION_ADMIN")), e.timelock])) as boolean;
-  const r1 = await e.tryCall(e.timelock, e.registry, marketRegistryAbi, "setCrossHubLine", [fundingHub, gho, m.spoke, 1_000_000n * WAD]);
-  // A cross-Hub GHO debt reserve on the stable CDP Spoke funded by the other Hub, at an unused reserve ID.
+  // A GHO debt reserve on the stable CDP Spoke funded by the other Hub, at an unused reserve ID: a debt reserve's
+  // funding Hub must be its Spoke's home Hub.
   const reserveId = (await e.read(m.spoke, aaveV4SpokeAbi, "getReserveCount")) as bigint;
   const homeGho = await e.debtReserveOf(m).catch(() => undefined);
   const homeDef = homeGho === undefined ? undefined : await e.read(e.registry, marketRegistryAbi, "getDebtReserve", [m.spoke, homeGho]);
@@ -1361,15 +1360,13 @@ async function crossHubLine(e: Env) {
     priceSource: (homeDef?.priceSource ?? e.ctx.world.feeds?.GHO?.primary) as Address,
     fixedPrice: true,
     firstLossReserve: (await e.read(e.registry, marketRegistryAbi, "firstLossReserveOf", [fundingHub, gho])) as Address,
-    crossHub: true,
     approved: true,
   };
-  const r2 = await e.tryCall(e.timelock, e.registry, marketRegistryAbi, "enableDebtReserve", [m.spoke, def]);
-  n.switch = `crossHubLinesEnabled ${enabled}; timelock holds APPLICATION_ADMIN ${admin}`;
-  n.setCrossHubLine = `(funding Hub ${fundingHub}, GHO, ${m.spokeLabel}, 1,000,000 GHO) as timelock: ${r1.reverted ? `reverted ${r1.name}` : "SUCCEEDED"}`;
-  n.enableDebtReserve = `cross-Hub GHO reserve ${reserveId} on ${m.spokeLabel} as timelock: ${r2.reverted ? `reverted ${r2.name}` : "SUCCEEDED"}`;
-  const ok = !enabled && admin && r1.name.startsWith("CrossHubLinesDisabled") && r2.name.startsWith("CrossHubLinesDisabled");
-  return { ok, detail: ok ? "cross-Hub line and cross-Hub debt reserve refused with CrossHubLinesDisabled" : "a cross-Hub call was not refused with CrossHubLinesDisabled" };
+  const r = await e.tryCall(e.timelock, e.registry, marketRegistryAbi, "enableDebtReserve", [m.spoke, def]);
+  n.admin = `timelock holds APPLICATION_ADMIN ${admin}`;
+  n.enableDebtReserve = `GHO reserve ${reserveId} on ${m.spokeLabel} funded by Hub ${fundingHub} as timelock: ${r.reverted ? `reverted ${r.name}` : "SUCCEEDED"}`;
+  const ok = admin && r.name.startsWith("InvalidDebtReserve");
+  return { ok, detail: ok ? "debt reserve funded by another Hub refused with InvalidDebtReserve" : "a debt reserve funded by another Hub was not refused with InvalidDebtReserve" };
 }
 
 // ─── Export ───
@@ -1649,7 +1646,7 @@ export function marketScenarios(ctx: ScenarioContext): Scenario[] {
     s("keeper liquidates a borrower the USDC issuer has blocked on a Uniswap v4 market (fees go with the principal)", uniswapV4BlockedBorrowerLiquidation),
     s("self-liquidation attempt by the borrower", selfLiquidation),
     s("deficit after a 90 % crash and First-Loss Reserve coverage", deficitCoverage),
-    s("cross-Hub credit line borrow (off by default: must revert)", crossHubLine),
+    s("debt reserve funded by another Hub than its Spoke's (must revert)", foreignFundingHub),
     s("keeper failover drill: with every primary stopped the standby liquidates within the M-09 window", failoverDrill),
   ];
 }

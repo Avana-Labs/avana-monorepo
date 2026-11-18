@@ -29,7 +29,6 @@ export function fixtureSnapshot(b: Block, edit: (s: ChainSnapshot) => ChainSnaps
     blockNumber: b.number.toString(10),
     timestamp: b.timestamp,
     hubs: [{ chainId: 1, hub: FIXTURE_HUB, label: "Stable", tier: 1, recorded: true, applicationState: 0, assetCount: 1, lendAssetIds: ["1"], lendSpokes: [FIXTURE_LEND], cdpSpokes: [FIXTURE_U, FIXTURE_X], blockNumber: b.number.toString(10) }],
-    creditLines: [],
     hubAssets: [fixtureHubAsset],
     slices: fixtureSlices,
     spokeReserves: fixtureSpokeReserves,

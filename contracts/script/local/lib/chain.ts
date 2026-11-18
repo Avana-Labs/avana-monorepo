@@ -134,7 +134,7 @@ export const testValues = (): Record<string, any> => JSON.parse(readFileSync(joi
  * The chain's first-release config: one Aave Hub for the chain (label `ethereum` or `base`, page "Avana <Chain> Hub",
  * tier 3, which takes stable, correlated and volatile markets) with its Lend Spoke and the debt assets, and no CDP Spoke
  * or market: the chain's Hub files add those (script/deploy/hubs/<chain>/). Built from the anvil config's protocol
- * parameters; the values the DAO sets (caps, credit lines, First-Loss Reserve and offset amounts, speed limits) come
+ * parameters; the values the DAO sets (caps, First-Loss Reserve and offset amounts, speed limits) come
  * from test-values.json. The stack's keystores fill every role: the deployer is also the test tokens' minter and the
  * First-Loss Reserves' funder, the keeper is the keeper and the operator helper's signer, the treasury is the fee
  * recipient, the guardian is the Aave Protocol Guardian.
@@ -187,7 +187,6 @@ export function baseConfig(
     const v = tv.debtAssets?.[d.symbol] ?? {};
     for (const k of ["drawCap", "bootstrapSupply", "coverageMinimum", "offsetMinimum", "rateModel", "liquidityFeeBps"]) if (v[k] !== undefined) d[k] = v[k];
   }
-  cfg.listing.creditLineWhole = tv.creditLineWhole;
   cfg.listing.speedLimits = tv.speedLimits;
   cfg.listing.spokes = [];
   cfg.listing.debtReserves = [];

@@ -96,7 +96,6 @@
     ]
   },
   "listing": {
-    "creditLineWhole": 100000000,
     "tokens": [
       {
         "symbol": "USDC",

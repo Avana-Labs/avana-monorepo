@@ -133,7 +133,6 @@ describe("snapshot reader", () => {
   const answers: Record<string, unknown> = {
     [`getHubs:${REGISTRY}`]: [HUB],
     [`getSpokes:${REGISTRY}`]: [FIXTURE_U],
-    [`crossHubLinesEnabled:${REGISTRY}`]: false,
     [`isRecordedHub:${REGISTRY}:${HUB}`]: true,
     [`hubTier:${REGISTRY}:${HUB}`]: 1,
     [`hubOf:${REGISTRY}:${FIXTURE_U}`]: HUB,
@@ -164,7 +163,8 @@ describe("snapshot reader", () => {
     [`getSpokeAddress:${HUB}:1:1`]: COV,
     [`getSpokeAddress:${HUB}:1:2`]: FIXTURE_U,
     [`getInterestRateData:${IRS}:1`]: { optimalUsageRatio: 8_000, baseDrawnRate: 0, rateGrowthBeforeOptimal: 400, rateGrowthAfterOptimal: 6_000 },
-    [`getHubAssetExposure:${LENS}:${HUB}:${fixtureHubAsset.underlying}`]: { firstLossReserve: COV, fundedBalance: u(200_000), line: u(7_000_000), coverageBoundHolds: true, uncovered: 0n, priceAdj: 10n ** 6n, spokes: [{ spoke: FIXTURE_U, homeHub: HUB, kind: 1 }], deficitOffset: "0x0000000000000000000000000000000000000000", offsetFunded: 0n },
+    [`getHubAssetExposure:${LENS}:${HUB}:${fixtureHubAsset.underlying}`]: { firstLossReserve: COV, fundedBalance: u(200_000), drawCapSum: 4_000_000n, coverageBoundHolds: true, uncovered: 0n, priceAdj: 10n ** 6n, spokes: [{ spoke: FIXTURE_U, homeHub: HUB, kind: 1 }], deficitOffset: "0x0000000000000000000000000000000000000000", offsetFunded: 0n },
+    [`drawCapCoverage:${REGISTRY}:${HUB}:${fixtureHubAsset.underlying}`]: [4_000_000n, u(100_000), u(200_000)],
     [`getBorrowSpeed:${LENS}:1:1`]: { market: window(10n ** 14n, 6n * 10n ** 13n, 1_200n), debt: window(u(500_000), 0n, 0n), availableNow: u(400_000), moreAt: 1_200n },
     [`LENS_MAX_PAGE:${LENS}`]: 200n,
     [`getMarkets:${LENS}:0:200`]: [market],
@@ -218,11 +218,12 @@ describe("snapshot reader", () => {
     ]);
     expect(snap.markets[0]!.pledgeSpeed).toBeNull();
     expect(asset.exposure).toMatchObject({ deficitOffset: "0x0000000000000000000000000000000000000000", offsetFunded: "0" });
+    // Draw-cap coverage: the Lens's sum of draw caps (whole tokens) and the registry's required balance (base units).
+    expect(asset.exposure).toMatchObject({ fundedBalance: u(200_000).toString(), drawCapSum: "4000000", required: u(100_000).toString(), coverageBoundHolds: true });
     expect(new Set([asset.blockNumber, ...snap.slices.map((s) => s.blockNumber), snap.markets[0]!.blockNumber, snap.hubs[0]!.blockNumber])).toEqual(new Set(["77"]));
     expect(snap.hubs).toEqual([
       { chainId: 1, hub: HUB, label: "Stable", tier: 1, recorded: true, applicationState: 0, assetCount: 2, lendAssetIds: ["1"], lendSpokes: [LEND], cdpSpokes: [FIXTURE_U], blockNumber: "77" },
     ]);
-    expect(snap.creditLines).toEqual([]);
   });
 
   it("leaves out a manifest Hub and Spokes with no code yet at the block read (added in a later release step)", async () => {

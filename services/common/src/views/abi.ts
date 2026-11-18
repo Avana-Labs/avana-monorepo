@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Avana Labs
 // The view functions the snapshot reader calls, as human-readable ABI fragments that mirror the Solidity
 // declarations field for field: the Lens market, exposure and speed-limit views (contracts/src/lens/lens/), the MarketRegistry
-// Hub, Spoke and credit-line views, the Aave V4 Hub and Spoke views at the pinned release, the asset rate strategy and
+// Hub, Spoke and draw-cap coverage views, the Aave V4 Hub and Spoke views at the pinned release, the asset rate strategy and
 // the Spoke's AaveOracle. Struct fields are decoded by position, so a field added in the middle of a struct must be
 // added here in the same place.
 // services/indexer/test/views-abi.test.ts checks every selector against the ABIs generated in packages/protocol.
@@ -13,7 +13,7 @@ export const lensViewsAbi = parseAbi([
   "struct MarketView { uint256 blockNumber; uint256 timestamp; uint256 marketId; uint64 chainId; uint8 status; address pool; bytes32 poolId; address[] tokens; uint8[] tokenDecimals; uint24 feeTier; int24 tickLower; int24 tickUpper; uint32 integrationId; bytes32 ammProtocol; address vaultToken; string name; string symbol; address lpOracle; address hub; address spoke; uint256 reserveId; uint256 hubAssetId; uint256 acceptedPrice; uint8 priceState; uint256 suppliedUnits; uint256 suppliedUsd; uint256 collateralFactorBps; uint256 liquidationThresholdBps; uint256 maxLiquidationBonusBps; uint256 marketHeadroomUsd; uint256 sliceHeadroomUsd; uint256 addHeadroom; uint8 pauseState; uint32 breakerReasons; uint256 collateralRiskBps; uint256 liquidationFeeBps; uint256 targetHealthFactor; uint256 healthFactorForMaxBonus; uint256 liquidationBonusFactorBps; uint256 hardHealthFloor; uint256 marketUsdCap; uint256 topUpSliceUsd; uint256[] tokenUsdCaps; uint256 addCap; uint256[] debtReserveIds; uint256[] borrowRatesRay; }",
   "struct DebtReserveView { uint256 blockNumber; uint256 timestamp; address spoke; uint256 reserveId; address asset; uint8 decimals; uint256 price; bool fixedPrice; address hub; uint256 hubAssetId; uint256 added; uint256 drawn; uint256 premium; uint256 liquidity; uint256 utilizationBps; uint256 drawnRateRay; uint256 supplyRateRay; uint256 liquidityFeeBps; uint256 optimalUsageBps; uint256 baseDrawnRateBps; uint256 rateGrowthBeforeOptimalBps; uint256 rateGrowthAfterOptimalBps; uint256 drawCap; uint256 drawHeadroom; bool paused; bool frozen; bool borrowable; uint32 breakerReasons; uint8 pauseState; }",
   "struct SpokeDraw { address spoke; address homeHub; uint256 drawCap; uint256 drawn; uint256 deficit; uint8 kind; uint256 added; uint256 addedShares; uint256 addCap; uint256 drawnOwed; uint256 premiumOwed; uint256 drawnShares; uint256 premiumShares; bool active; bool halted; }",
-  "struct HubAssetExposureView { uint256 blockNumber; uint256 timestamp; address hub; address asset; address firstLossReserve; uint256 fundedBalance; uint256 line; bool coverageBoundHolds; uint256 uncovered; uint256 priceAdj; SpokeDraw[] spokes; address deficitOffset; uint256 offsetFunded; }",
+  "struct HubAssetExposureView { uint256 blockNumber; uint256 timestamp; address hub; address asset; address firstLossReserve; uint256 fundedBalance; uint256 drawCapSum; bool coverageBoundHolds; uint256 uncovered; uint256 priceAdj; SpokeDraw[] spokes; address deficitOffset; uint256 offsetFunded; }",
   "struct SpeedView { uint256 limit; uint256 used; uint256 available; uint64 moreAt; uint256 moreAmount; bool unavailable; }",
   "struct BorrowSpeedView { SpeedView market; SpeedView debt; uint256 availableNow; uint64 moreAt; }",
   "function LENS_MAX_PAGE() view returns (uint256 maxPage)",
@@ -32,8 +32,8 @@ export const lensViewsAbi = parseAbi([
 export const deficitOffsetViewsAbi = parseAbi(["function FIRST_LOSS_LAYER() view returns (address layer)"]);
 
 /**
- * MarketRegistry views that name every recorded Hub, every approved CDP Spoke and the Hub-to-Hub credit lines, so a
- * Hub or CDP Spoke listed after start-up is read at the next snapshot without a deployment change.
+ * MarketRegistry views that name every recorded Hub and every approved CDP Spoke, so a Hub or CDP Spoke listed after
+ * start-up is read at the next snapshot without a deployment change, and the draw-cap coverage of each Hub asset.
  */
 export const registryViewsAbi = parseAbi([
   "function getHubs() view returns (address[] hubs)",
@@ -42,9 +42,7 @@ export const registryViewsAbi = parseAbi([
   "function hubTier(address hub) view returns (uint8 tier)",
   "function isRecordedHub(address account) view returns (bool recorded)",
   "function firstLossReserveOf(address hub, address asset) view returns (address firstLossReserve)",
-  "function crossHubLineCap(address fundingHub, address asset, address spoke) view returns (uint256 cap)",
-  "function crossHubLineTotal(address fundingHub, address asset) view returns (uint256 total)",
-  "function crossHubLinesEnabled() view returns (bool enabled)",
+  "function drawCapCoverage(address hub, address asset) view returns (uint256 drawCapSum, uint256 required, uint256 funded)",
 ]);
 
 export const hubViewsAbi = parseAbi([

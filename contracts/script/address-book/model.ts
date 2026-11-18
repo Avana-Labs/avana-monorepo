@@ -135,7 +135,6 @@ export interface DebtAsset {
   readonly fixedPrice: boolean;
   /** The fixed price source the listing deployed for a fixed-price asset (a test-network stand-in), if any. */
   readonly fixedPriceSource?: string;
-  readonly creditLineWhole?: number;
   readonly firstLossReserve: string;
   readonly daoDeficitOffset: string;
 }
@@ -384,7 +383,6 @@ export function buildModel(d: Deployment, problems: string[]): Model {
       listed: !!l,
       fixedPrice,
       fixedPriceSource: fixedPrice && d.listingOracles[sym] ? need(`${sym} fixed price source (listing-oracles.json)`, d.listingOracles[sym]) : undefined,
-      creditLineWhole: l ? num(`${sym} creditLineWhole`, l.creditLineWhole ?? listing.creditLineWhole) : undefined,
       firstLossReserve: need(`First-Loss Reserve of ${sym} (manifest avana.firstLossReserves)`, flr?.address),
       daoDeficitOffset: need(`DAO deficit offset of ${sym} (manifest avana.daoDeficitOffsets)`, offset?.address),
     };

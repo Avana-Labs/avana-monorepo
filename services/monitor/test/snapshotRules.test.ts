@@ -18,7 +18,6 @@ function snapshot(timestamp: number, edit: { markets?: (m: MarketRow) => MarketR
     blockNumber: String(timestamp),
     timestamp,
     hubs: [{ chainId: 1, hub: FIXTURE_HUB, label: "Stable", tier: 1, recorded: true, applicationState: edit.hubState ?? 0, assetCount: 1, lendAssetIds: ["1"], lendSpokes: [FIXTURE_LEND], cdpSpokes: [FIXTURE_U, FIXTURE_X], blockNumber: String(timestamp) }],
-    creditLines: [],
     hubAssets: [edit.asset ? edit.asset(fixtureHubAsset) : fixtureHubAsset],
     slices: fixtureSlices.map((s) => (s.spoke === FIXTURE_LEND && edit.lendAdded ? { ...s, added: edit.lendAdded } : s.spoke === FIXTURE_X && edit.owedX ? { ...s, owed: edit.owedX } : s)),
     spokeReserves: fixtureSpokeReserves,

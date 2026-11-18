@@ -71,7 +71,7 @@ test("writes the network's section of all three pages from the deployment", () =
     assert.ok(parameters.includes("| `routeDepthThreshold` | 5,000,000 |"));
     assert.ok(!parameters.includes("pokeMinGas"));
     assert.ok(parameters.includes("| Uniswap v3 Stable | 156 bps | 50 bps |"));
-    assert.ok(parameters.includes("| Aave DAO, through the Lend Spoke | Avana Ethereum Hub | USDC | 100,000,000 USDC |"));
+    assert.ok(!parameters.includes("Credit line"));
     assert.ok(parameters.includes("[Fixed $1 price source, GHO](/developers/reference/addresses?network=ethereum-sepolia#avana-core)"));
     assert.ok(parameters.includes("## All networks"));
     assert.ok(!/primary and a standby signer|Standby keeper \|/.test(parameters));

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Current values: every 60 s per chain the sampler reads the snapshot (Hubs, Hub assets, Spoke slices, Hub-to-Hub
-// credit lines, CDP debt reserves, markets) at one block over Convex's RPC and writes the rows the pages read, with
+// Current values: every 60 s per chain the sampler reads the snapshot (Hubs, Hub assets with their draw-cap coverage,
+// Spoke slices, CDP debt reserves, markets) at one block over Convex's RPC and writes the rows the pages read, with
 // the gas price for the fee quote. A Hub, Spoke, market, pool or asset listed on chain appears at the next run; its
 // content arrives with the listing metadata.
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Reads one chain's Hubs, their assets and Spoke slices, the Hub-to-Hub credit lines, the CDP debt reserves and the
+// Reads one chain's Hubs, their assets and Spoke slices with their draw-cap coverage, the CDP debt reserves and the
 // collateral markets at one block, for every Hub and Spoke discovery.ts finds.
 // The indexer runs it at each hourly sample block (chart history) and Convex at the head (current values); both
 // get the same rows from the same calls. Lens market, exposure and speed-limit views plus the Aave V4 Hub and Spoke
@@ -15,7 +15,6 @@ import type {
   Address,
   ChainDeployment,
   ChainSnapshot,
-  CreditLineRow,
   HubAssetRow,
   HubAssetSpokeRow,
   HubRow,
@@ -43,7 +42,7 @@ interface DecodedReserveConfig {
 interface DecodedExposure {
   firstLossReserve: Address;
   fundedBalance: bigint;
-  line: bigint;
+  drawCapSum: bigint;
   coverageBoundHolds: boolean;
   uncovered: bigint;
   priceAdj: bigint;
@@ -228,11 +227,12 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
     };
   });
 
-  // 4. Rate curves and the Lens exposure of each lend asset.
+  // 4. Rate curves, the Lens exposure and the registry's draw-cap coverage of each lend asset.
   const curves = await some(client, totals.map(({ info: a }) => ({ address: a.irStrategy, abi: rateStrategyAbi, functionName: "getInterestRateData", args: [a.assetId] })));
   const exposures = (await some(client, totals.map(({ info: a }) => ({ address: lens, abi: lensViewsAbi, functionName: "getHubAssetExposure", args: [a.hub, a.underlying] })))) as (DecodedExposure | null)[];
+  const coverages = (await some(client, totals.map(({ info: a }) => reg(registry, "drawCapCoverage", [a.hub, a.underlying])))) as (readonly [bigint, bigint, bigint] | null)[];
 
-  // 5. Each slice's added and owed amounts; the registry cap of each Hub-to-Hub line.
+  // 5. Each slice's added and owed amounts.
   const lendSet = new Set(lendSpokes);
   const cdpSet = new Set(cdpSpokes);
   const sliceKeys = totals.flatMap((t, ti) =>
@@ -250,16 +250,13 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
               : spoke === t.info.feeReceiver
                 ? "feeReceiver"
                 : "other";
-      return { t, spoke, data, homeHub, kind, crossHub: kind === "cdp" && homeHub !== ZERO && homeHub !== t.info.hub };
+      return { t, spoke, data, homeHub, kind };
     }),
   );
-  const lines = sliceKeys.filter((k) => k.crossHub);
-  const lineAssets = uniq(lines.map((k) => k.t));
-  const sliceReads = await all(client, [
-    ...sliceKeys.flatMap(({ t, spoke }) => [hubCall(t.info.hub, "getSpokeAddedAssets", [t.info.assetId, spoke]), hubCall(t.info.hub, "getSpokeTotalOwed", [t.info.assetId, spoke])]),
-    ...lines.map(({ t, spoke }) => reg(registry, "crossHubLineCap", [t.info.hub, t.info.underlying, spoke])),
-    ...lineAssets.map((t) => reg(registry, "crossHubLineTotal", [t.info.hub, t.info.underlying])),
-  ]);
+  const sliceReads = await all(
+    client,
+    sliceKeys.flatMap(({ t, spoke }) => [hubCall(t.info.hub, "getSpokeAddedAssets", [t.info.assetId, spoke]), hubCall(t.info.hub, "getSpokeTotalOwed", [t.info.assetId, spoke])]),
+  );
   const slices: HubAssetSpokeRow[] = sliceKeys.map(({ t, spoke, data, homeHub, kind }, i) => ({
     chainId: dep.chainId,
     hub: t.info.hub,
@@ -279,25 +276,12 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
     halted: data.halted,
     blockNumber: block,
   }));
-  const S2 = sliceKeys.length * 2;
-  const creditLines: CreditLineRow[] = lines.map(({ t, spoke, homeHub }, i) => ({
-    chainId: dep.chainId,
-    fundingHub: t.info.hub,
-    assetId: s(t.info.assetId),
-    asset: t.info.underlying,
-    spoke,
-    homeHub,
-    cap: s(sliceReads[S2 + i] as bigint),
-    total: s(sliceReads[S2 + lines.length + lineAssets.indexOf(t)] as bigint),
-    enabled: topo.crossHubLinesEnabled,
-    blockNumber: block,
-  }));
-
   const hubAssets: HubAssetRow[] = totals.map((t, i) => {
     const a = t.info;
     const owed = t.drawn + t.premium;
     const curve = curves[i] as { optimalUsageRatio: number; baseDrawnRate: number; rateGrowthBeforeOptimal: number; rateGrowthAfterOptimal: number } | null;
     const exposure = exposures[i];
+    const coverage = coverages[i];
     return {
       chainId: dep.chainId,
       hub: a.hub,
@@ -329,18 +313,20 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
         : null,
       lend: t.reserves[0]!,
       lendReserves: t.reserves,
-      exposure: exposure
-        ? {
-            firstLossReserve: lower(exposure.firstLossReserve),
-            fundedBalance: s(exposure.fundedBalance),
-            line: s(exposure.line),
-            coverageBoundHolds: exposure.coverageBoundHolds,
-            uncovered: s(exposure.uncovered),
-            priceAdj: s(exposure.priceAdj),
-            deficitOffset: lower(exposure.deficitOffset),
-            offsetFunded: s(exposure.offsetFunded),
-          }
-        : null,
+      exposure:
+        exposure && coverage
+          ? {
+              firstLossReserve: lower(exposure.firstLossReserve),
+              fundedBalance: s(exposure.fundedBalance),
+              drawCapSum: s(exposure.drawCapSum),
+              required: s(coverage[1]),
+              coverageBoundHolds: exposure.coverageBoundHolds,
+              uncovered: s(exposure.uncovered),
+              priceAdj: s(exposure.priceAdj),
+              deficitOffset: lower(exposure.deficitOffset),
+              offsetFunded: s(exposure.offsetFunded),
+            }
+          : null,
       blockNumber: block,
       timestamp: at.timestamp,
     };
@@ -463,6 +449,6 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
     };
   });
 
-  return { chainId: dep.chainId, blockNumber: block, timestamp: at.timestamp, hubs, creditLines, hubAssets, slices, spokeReserves, markets };
+  return { chainId: dep.chainId, blockNumber: block, timestamp: at.timestamp, hubs, hubAssets, slices, spokeReserves, markets };
 }
 

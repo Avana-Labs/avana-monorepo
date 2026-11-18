@@ -63,9 +63,8 @@ export function needsWrite(existing: { readonly updatedAt: number }, row: { read
 }
 
 /**
- * Writes the current rows of one snapshot: Hubs (a Hub recorded since the last run is inserted), Hub-to-Hub credit
- * lines, Hub assets, slices, reserves and markets. Rows of credit lines, reserves and slices that left the chain's
- * views are removed. An existing row is replaced only when `needsWrite` says so.
+ * Writes the current rows of one snapshot: Hubs (a Hub recorded since the last run is inserted), Hub assets, slices,
+ * reserves and markets. Rows of reserves and slices that left the chain's views are removed. An existing row is replaced only when `needsWrite` says so.
  */
 export const applySnapshot = internalMutation({
   args: { snapshot: v.any() },
@@ -82,16 +81,6 @@ export const applySnapshot = internalMutation({
       if (existing) {
         if (needsWrite(existing, row)) await ctx.db.replace(existing._id, row);
       } else await ctx.db.insert("hubs", row);
-    }
-    const keepLines = new Set(s.creditLines.map((l) => `${l.fundingHub}:${l.assetId}:${l.spoke}`));
-    const lines = await ctx.db.query("creditLines").withIndex("by_key", (q) => q.eq("chainId", s.chainId)).collect();
-    for (const old of lines.filter((l) => !keepLines.has(`${l.fundingHub}:${l.assetId}:${l.spoke}`))) await ctx.db.delete(old._id);
-    for (const l of s.creditLines) {
-      const row = { ...l, updatedAt: now };
-      const existing = await ctx.db.query("creditLines").withIndex("by_key", (q) => q.eq("chainId", l.chainId).eq("fundingHub", l.fundingHub).eq("assetId", l.assetId).eq("spoke", l.spoke)).unique();
-      if (existing) {
-        if (needsWrite(existing, row)) await ctx.db.replace(existing._id, row);
-      } else await ctx.db.insert("creditLines", row);
     }
     for (const a of s.hubAssets) {
       const slug = (await contentSlug(ctx, "lend", s.chainId, `${a.hub}:${a.assetId}`)) ?? defaultSlug.lend(s.chainId, labelOf(a.hub), await symbol(a.underlying));
@@ -164,14 +153,6 @@ export function resolver(ctx: QueryCtx, dep: Doc<"deployments">, lendSpokes: Rea
       }
       const r = await ctx.db.query("spokeReserves").withIndex("by_key", (q) => q.eq("chainId", chainId).eq("spoke", spoke).eq("reserveId", reserveId)).unique();
       return r ? `${chainId}:${r.hub}:${r.assetId}` : null;
-    },
-    async hubAssetOfUnderlying(hub, asset) {
-      const a = (await ctx.db.query("hubAssets").withIndex("by_chain_underlying", (q) => q.eq("chainId", chainId).eq("underlying", asset)).collect()).find((x) => x.hub === hub);
-      return a ? `${chainId}:${a.hub}:${a.assetId}` : null;
-    },
-    async spokeReserveOfAsset(spoke, asset) {
-      const r = (await ctx.db.query("spokeReserves").withIndex("by_spoke", (q) => q.eq("chainId", chainId).eq("spoke", spoke)).collect()).find((x) => x.asset === asset);
-      return r ? `${chainId}:${r.spoke}:${r.reserveId}` : null;
     },
     async spokeReserveOfHubAsset(spoke, hubAssetKey) {
       const r = (await ctx.db.query("spokeReserves").withIndex("by_spoke", (q) => q.eq("chainId", chainId).eq("spoke", spoke)).collect()).find((x) => `${chainId}:${x.hub}:${x.assetId}` === hubAssetKey);

@@ -416,15 +416,6 @@ export function renderParameters(m: Model, problems: string[]): string {
       ]),
     ),
     "",
-    "### Credit lines",
-    "",
-    "The Aave DAO funds each borrowable asset by supplying it to the Hub through the Lend Spoke, up to the credit line the MarketRegistry records.",
-    "",
-    table(
-      ["Origin", "Target Hub", "Reserve", "Credit line size"],
-      m.debtAssets.filter((d) => d.listed).map((d) => ["Aave DAO, through the Lend Spoke", m.hub.name, d.symbol, `${int(d.creditLineWhole ?? Number.NaN)} ${d.symbol}`]),
-    ),
-    "",
   );
 
   const caps: string[][] = m.debtAssets.map((d) => ["Lend Spoke", d.symbol, "Max", "0"]);

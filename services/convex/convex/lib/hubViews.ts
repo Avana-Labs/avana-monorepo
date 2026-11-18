@@ -2,19 +2,10 @@
 // Copyright (c) 2026 Avana Labs
 // The views of a chain with several Hubs, built from the scope rows. Totals add the Hub assets of every Hub (where
 // the screens show one figure); the breakdowns keep each Hub apart (where they show detail). No Hub figure is stored
-// twice: a Hub's totals are the sum of its Hub assets, a credit line's draw is its Spoke slice.
+// twice: a Hub's totals are the sum of its Hub assets.
 
-import {
-  type CreditLineRow,
-  type HubAssetRow,
-  type HubAssetSpokeRow,
-  type HubRow,
-  rayToAprPct,
-  rayToApyPct,
-  spokeHeadroom,
-  usd,
-} from "@avana/services-common/views";
-import type { CreditLineView, HubBreakdownRow, HubSummary, HubTotals, LendTokenTotals, LendTotals } from "./uiTypes.ts";
+import { type HubAssetRow, type HubRow, rayToAprPct, rayToApyPct, usd } from "@avana/services-common/views";
+import type { HubBreakdownRow, HubSummary, HubTotals, LendTokenTotals, LendTotals } from "./uiTypes.ts";
 
 type Slugged<T> = T & { readonly slug: string };
 
@@ -87,53 +78,8 @@ export function lendTotals(
   return { ...totalsOf(assets), hubCount: hubs.length, byHub, byToken };
 }
 
-/**
- * One Hub-to-Hub line with its draw: the Spoke's owed amount on the funding Hub's asset, the share of the cap used and
- * what the Spoke can still draw, `min(cap − owed, its headroom on the Hub)`.
- */
-export function creditLineView(
-  line: CreditLineRow,
-  slice: HubAssetSpokeRow | undefined,
-  asset: HubAssetRow | undefined,
-  labelOf: (h: { chainId: number; hub: string }) => string,
-  symbol: string,
-): CreditLineView {
-  const cap = BigInt(line.cap);
-  const owed = slice ? BigInt(slice.owed) : 0n;
-  const capLeft = cap > owed ? cap - owed : 0n;
-  const room = slice && asset ? spokeHeadroom(slice, asset) : 0n;
-  const headroom = capLeft < room ? capLeft : room;
-  const value = (units: bigint | string) => (asset ? usd(units, asset.decimals, asset.priceUsd8) : 0);
-  return {
-    chainId: line.chainId,
-    fundingHub: line.fundingHub,
-    fundingHubLabel: labelOf({ chainId: line.chainId, hub: line.fundingHub }),
-    homeHub: line.homeHub,
-    homeHubLabel: labelOf({ chainId: line.chainId, hub: line.homeHub }),
-    spoke: line.spoke,
-    assetId: line.assetId,
-    asset: line.asset,
-    symbol,
-    enabled: line.enabled,
-    cap: line.cap,
-    owed: owed.toString(),
-    capUsd: value(cap),
-    owedUsd: value(owed),
-    headroomUsd: value(headroom),
-    usedPct: cap > 0n ? Number((owed * 1_000_000n) / cap) / 10_000 : 0,
-    fundingHubTotalCapUsd: value(line.total),
-    blockNumber: line.blockNumber,
-  };
-}
-
-/** A Hub's page: its row, totals, lend assets, Spokes and the credit lines it funds and draws on. */
-export function hubSummary(
-  hub: Slugged<HubRow>,
-  label: string,
-  assets: readonly HubAssetRow[],
-  linesIn: readonly CreditLineView[],
-  linesOut: readonly CreditLineView[],
-): HubSummary {
+/** A Hub's page: its row, totals, lend assets and Spokes. */
+export function hubSummary(hub: Slugged<HubRow>, label: string, assets: readonly HubAssetRow[]): HubSummary {
   const mine = assets.filter((a) => a.chainId === hub.chainId && a.hub === hub.hub);
   return {
     ...breakdownRow(hub, label, mine),
@@ -142,8 +88,6 @@ export function hubSummary(
     assetCount: hub.assetCount,
     lendSpokes: [...hub.lendSpokes],
     cdpSpokes: [...hub.cdpSpokes],
-    fundsLines: [...linesIn],
-    drawsOnLines: [...linesOut],
     blockNumber: hub.blockNumber,
   };
 }

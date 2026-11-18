@@ -30,7 +30,6 @@ import type * as borrow_scope from "../borrow/scope.js";
 import type * as codedError from "../codedError.js";
 import type * as collateralMarkets from "../collateralMarkets.js";
 import type * as contractAddresses from "../contractAddresses.js";
-import type * as creditLines from "../creditLines.js";
 import type * as crons from "../crons.js";
 import type * as deployments from "../deployments.js";
 import type * as detailHydration from "../detailHydration.js";
@@ -158,7 +157,6 @@ declare const fullApi: ApiFromModules<{
   codedError: typeof codedError;
   collateralMarkets: typeof collateralMarkets;
   contractAddresses: typeof contractAddresses;
-  creditLines: typeof creditLines;
   crons: typeof crons;
   deployments: typeof deployments;
   detailHydration: typeof detailHydration;
