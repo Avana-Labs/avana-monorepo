@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {ILock} from "../../lock/lock/ILock.sol";
-import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
+import {LPPriceMath} from "../../oracle/LPPriceMath.sol";
 import {IClIntegration} from "../IClIntegration.sol";
 import {ClMarketConfig} from "../types/AmmTypes.sol";
 import {ClPriceMath} from "./ClPriceMath.sol";

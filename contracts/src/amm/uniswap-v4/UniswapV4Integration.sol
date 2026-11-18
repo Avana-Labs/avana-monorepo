@@ -8,7 +8,7 @@ import {IUniswapV4PoolManager, UniswapV4PoolKey} from "../../interfaces/external
 import {IUniswapV4PositionManager} from "../../interfaces/external/uniswap-v4/IUniswapV4PositionManager.sol";
 import {IUniswapV3Factory} from "../../interfaces/external/uniswap/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.sol";
-import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
+import {LPPriceMath} from "../../oracle/LPPriceMath.sol";
 import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
 import {ClLPVaultBase} from "../concentrated-liquidity/ClLPVaultBase.sol";
 import {ClLPVaultCustody} from "../concentrated-liquidity/ClLPVaultCustody.sol";

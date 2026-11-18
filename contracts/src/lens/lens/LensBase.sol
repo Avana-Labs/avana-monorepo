@@ -7,11 +7,12 @@ import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
+import {IAggregatorV3} from "../../interfaces/external/chainlink/IAggregatorV3.sol";
 import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol";
 import {ILock} from "../../lock/lock/ILock.sol";
-import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
-import {DebtPriceView as OracleDebtView} from "../../oracle/debt-oracle/types/DebtPriceView.sol";
-import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
+import {ChainlinkPrice} from "../../oracle/ChainlinkPrice.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
+import {LPPriceMath} from "../../oracle/LPPriceMath.sol";
 import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryBase} from "../../policy/market-registry/IMarketRegistryBase.sol";
@@ -19,7 +20,7 @@ import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryT
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
 import {Market} from "../../types/MarketTypes.sol";
-import {PriceState, TokenPriceView} from "../../types/OracleTypes.sol";
+import {PriceState} from "../../types/OracleTypes.sol";
 import {ILensErrors} from "./ILensErrors.sol";
 import {LensConstants} from "./LensConstants.sol";
 import {DebtPriceView, PriceInput} from "./types/LensTypes.sol";
@@ -157,11 +158,6 @@ abstract contract LensBase is ILensErrors {
         DebtReserveDef memory def
     ) internal view returns (uint256 price) {
         price = IAaveV4Oracle(IAaveV4Spoke(spoke).ORACLE()).getReservePrice(def.reserveId);
-        if (!def.fixedPrice) {
-            int256 answer = IDebtOracle(def.priceSource).latestAnswer();
-            // forge-lint: disable-next-line(unsafe-typecast)
-            if (answer > 0 && uint256(answer) > price) price = uint256(answer);
-        }
     }
 
     /// @dev Debt-reserve price report without the block stamp; both freshness flags apply execution's `LPPriceMath` rules.
@@ -179,27 +175,11 @@ abstract contract LensBase is ILensErrors {
             (v.borrowFresh, v.liquidationFresh) = (true, true);
             return v;
         }
-        IDebtOracle debtOracle = IDebtOracle(def.priceSource);
-        OracleDebtView memory r = debtOracle.getPriceState();
-        v.state = r.state;
-        v.acceptedPrice = r.acceptedAnswer;
-        // Execution measures age from the served route's live timestamp, since it pokes first.
-        v.updatedAt = r.servedUpdatedAt;
+        ChainlinkPrice.Reading memory r = ChainlinkPrice.read(def.priceSource, address(_store()));
+        (v.acceptedPrice, v.updatedAt) = (r.price8, r.updatedAt);
+        v.state = r.liquidationFresh ? PriceState.Live : PriceState.Cached;
         v.age = LPPriceMath.age(v.updatedAt);
-        // A route that names no feed has no source age to check, so it is never reported fresh.
-        bool named = r.legFeeds[0] != address(0) || r.legFeeds[1] != address(0);
-        // The oracle's own gates can close borrowing or liquidation while the state is still Live.
-        v.borrowFresh = named && LPPriceMath.debtBorrowable(r, debtOracle.borrowPriceMaxAge());
-        v.liquidationFresh = named && r.state == PriceState.Live && !r.liquidationPaused;
-        // LPVaultSwap's leg rule: an unused leg passes; a used one must be within its liquidation max age.
-        for (uint256 j = 0; j < 2 && v.liquidationFresh; ++j) {
-            address feed = r.legFeeds[j];
-            if (feed != address(0)) {
-                v.liquidationFresh =
-                    LPPriceMath.liquidationFresh(r.legUpdatedAt[j], _store().liquidationPriceMaxAge(feed));
-            }
-        }
-        v.stressPriced = v.price > v.acceptedPrice;
+        (v.borrowFresh, v.liquidationFresh) = (r.borrowFresh, r.liquidationFresh);
     }
 
     /// @dev `drawCap` headroom of `spoke` on one debt reserve's funding Hub asset, base units.
@@ -261,23 +241,23 @@ abstract contract LensBase is ILensErrors {
         return cap > used ? cap - used : 0;
     }
 
-    /// @dev One `PriceInput` per Chainlink leg of each token's served route, in pool order.
+    /// @dev One `PriceInput` per Chainlink leg of each token's route, in pool order.
     function _inputs(
-        TokenPriceView[] memory tokens
+        address lpOracle
     ) internal view returns (PriceInput[] memory inputs) {
+        ILPOracle o = ILPOracle(lpOracle);
+        uint256 tokenCount = o.tokens().length;
         uint256 n = 0;
-        for (uint256 i = 0; i < tokens.length; ++i) {
-            for (uint256 j = 0; j < 2; ++j) {
-                if (tokens[i].legFeeds[j] != address(0)) ++n;
-            }
+        for (uint256 i = 0; i < tokenCount; ++i) {
+            n += o.feedsOf(i).length;
         }
         inputs = new PriceInput[](n);
         n = 0;
-        for (uint256 i = 0; i < tokens.length; ++i) {
-            for (uint256 j = 0; j < 2; ++j) {
-                address feed = tokens[i].legFeeds[j];
-                if (feed == address(0)) continue;
-                inputs[n++] = _input(feed, tokens[i].legUpdatedAt[j]);
+        for (uint256 i = 0; i < tokenCount; ++i) {
+            address[] memory feeds = o.feedsOf(i);
+            for (uint256 j = 0; j < feeds.length; ++j) {
+                (,,, uint256 at,) = IAggregatorV3(feeds[j]).latestRoundData();
+                inputs[n++] = _input(feeds[j], at);
             }
         }
     }

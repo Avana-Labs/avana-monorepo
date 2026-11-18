@@ -10,12 +10,13 @@ import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol";
 import {IPayoutEscrow} from "../../liquidation/payout-escrow/IPayoutEscrow.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {Market} from "../../types/MarketTypes.sol";
+import {PriceState} from "../../types/OracleTypes.sol";
 import {ILensAccount} from "./ILensAccount.sol";
 import {ILensHubReads} from "./ILensHubReads.sol";
 import {ILensSpokeReads} from "./ILensSpokeReads.sol";
@@ -52,7 +53,7 @@ contract LensAccountModule is ILensAccount, LensDeleverage {
         v.debts = _debtCloses(m, v.proxy, deadline);
         RecordRemoval[] memory rs = _removals(m, v.proxy);
         // forge-lint: disable-next-line(unused-return)
-        (uint256[] memory prices,,) = ILPOracle(m.lpOracle).getTokenPrices();
+        (uint256[] memory prices,) = ILPOracle(m.lpOracle).getTokenPrices();
         bool priced = true;
         for (uint256 i = 0; i < prices.length; ++i) {
             if (prices[i] == 0) priced = false;
@@ -233,7 +234,7 @@ contract LensAccountModule is ILensAccount, LensDeleverage {
         p.recordCount = coll.getOpenRecordCount(proxy, m.vaultToken);
         p.shortfall = p.credited > p.suppliedShares ? p.credited - p.suppliedShares : 0;
         // forge-lint: disable-next-line(unused-return)
-        (,, p.priceState) = ILPOracle(m.lpOracle).getTokenPrices();
+        p.priceState = ILPOracle(m.lpOracle).getPriceStatus().liquidationFresh ? PriceState.Live : PriceState.Cached;
         p.rescueUnits = coll.getAccountRescueUnits(proxy, m.vaultToken);
     }
 

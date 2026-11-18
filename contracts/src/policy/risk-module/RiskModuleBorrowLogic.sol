@@ -7,12 +7,10 @@ import {ICollateralization} from "../../custody/collateralization/ICollateraliza
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
-import {DebtPriceView} from "../../oracle/debt-oracle/types/DebtPriceView.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
+import {ChainlinkPrice} from "../../oracle/ChainlinkPrice.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
+import {LPPriceMath} from "../../oracle/LPPriceMath.sol";
 import {DriftReason, Market} from "../../types/MarketTypes.sol";
-import {PriceState, PriceStateView, TokenPriceView} from "../../types/OracleTypes.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleBorrowLogic} from "./IRiskModuleBorrowLogic.sol";
@@ -46,16 +44,7 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
         uint256 debtReserveId,
         bool borrow
     ) external override {
-        _requireSequencerUp();
-        Scope memory s = _scope(proxy, debtReserveId, borrow);
-        // The gates read the price state themselves, so the poke results are not used.
-        // forge-lint: disable-next-line(unused-return)
-        ILPOracle(s.m.lpOracle).poke();
-        for (uint256 i = 0; i < s.debt.length; ++i) {
-            // forge-lint: disable-next-line(unused-return)
-            if (!s.defs[i].fixedPrice) IDebtOracle(s.defs[i].priceSource).poke();
-        }
-        _gates(s, borrow);
+        _gates(_scope(proxy, debtReserveId, borrow), borrow);
     }
 
     /// @inheritdoc IRiskModuleBorrowLogic
@@ -64,7 +53,6 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
         uint256 debtReserveId,
         bool borrow
     ) external view override {
-        _requireSequencerUp();
         _gates(_scope(proxy, debtReserveId, borrow), borrow);
     }
 
@@ -74,12 +62,9 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
         uint256 minHealthFactor
     ) external view override returns (uint256 healthFactor) {
         uint256 marketId;
-        address lpOracle;
-        uint256 served;
-        (, healthFactor, served, marketId, lpOracle) = _healthAndPrice(proxy);
-        // The accepted price bounds borrowing; the served price is reused if the rescue valuation read it.
-        if (served == 0) served = _served(lpOracle);
-        healthFactor = RiskModuleMath.boundedHealthFactor(healthFactor, served, _accepted(lpOracle));
+        // The price and the oracle are not used here.
+        // forge-lint: disable-next-line(unused-return)
+        (, healthFactor,, marketId,) = _healthAndPrice(proxy);
         uint256 required = RiskModuleMath.requiredHealthFactor(_store().hardHealthFloor(marketId), minHealthFactor);
         if (healthFactor < required) revert HealthFactorTooLow(healthFactor, required);
     }
@@ -155,36 +140,8 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
     function _collateralPrice(
         Scope memory s
     ) internal view {
-        PriceStateView memory pv = ILPOracle(s.m.lpOracle).getPriceState();
-        if (pv.state != PriceState.Live) revert PriceNotLive(s.marketId, pv.state);
-        for (uint256 i = 0; i < pv.tokens.length; ++i) {
-            TokenPriceView memory t = pv.tokens[i];
-            for (uint256 j = 0; j < 2; ++j) {
-                address feed = t.legFeeds[j];
-                if (feed == address(0)) continue;
-                uint256 at = t.legUpdatedAt[j];
-                if (!LPPriceMath.borrowFresh(at, _store().borrowPriceMaxAge(feed))) {
-                    // forge-lint: disable-next-line(require-revert-in-loop)
-                    revert PriceTooOld(feed, LPPriceMath.age(at));
-                }
-            }
-            // forge-lint: disable-next-line(require-revert-in-loop)
-            if (!_tokenSecondSourceConfirmed(t)) revert SecondSourceDisagrees(t.token);
-        }
-        if (!_marketSecondSourcesConfirmed(pv)) revert SecondSourceDisagrees(address(0));
-        if (!pv.borrowAllowed) revert PriceNotLive(s.marketId, pv.state);
-    }
-
-    function _tokenSecondSourceConfirmed(
-        TokenPriceView memory t
-    ) internal pure returns (bool) {
-        return t.reasons & TOKEN_SECOND_SOURCE_BITS == 0;
-    }
-
-    function _marketSecondSourcesConfirmed(
-        PriceStateView memory pv
-    ) internal pure returns (bool) {
-        return pv.reasons & PRICE_SECOND_SOURCE_BIT == 0;
+        ILPOracle.PriceStatus memory st = ILPOracle(s.m.lpOracle).getPriceStatus();
+        if (!st.borrowFresh) revert PriceTooOld(s.m.lpOracle, LPPriceMath.age(st.updatedAt));
     }
 
     function _debtPrices(
@@ -200,11 +157,9 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
             // forge-lint: disable-next-line(require-revert-in-loop)
             if (source != s.defs[i].priceSource) revert UnexpectedDebtPriceSource(r, source);
             if (s.defs[i].fixedPrice) continue;
-            DebtPriceView memory dv = IDebtOracle(source).getPriceState();
-            if (!LPPriceMath.debtBorrowable(dv, IDebtOracle(source).borrowPriceMaxAge())) {
-                // forge-lint: disable-next-line(require-revert-in-loop)
-                revert DebtPriceTooOld(r, source, LPPriceMath.age(dv.servedUpdatedAt));
-            }
+            ChainlinkPrice.Reading memory p = ChainlinkPrice.read(source, address(_store()));
+            // forge-lint: disable-next-line(require-revert-in-loop)
+            if (!p.borrowFresh) revert DebtPriceTooOld(r, source, LPPriceMath.age(p.updatedAt));
         }
     }
 

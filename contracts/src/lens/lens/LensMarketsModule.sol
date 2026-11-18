@@ -15,11 +15,12 @@ import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IUniswapV4PoolManager} from "../../interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {Market} from "../../types/MarketTypes.sol";
+import {PriceState} from "../../types/OracleTypes.sol";
 import {PledgeCounters, ShapeKind} from "../../types/PositionTypes.sol";
 import {ILensFees} from "./ILensFees.sol";
 import {ILensHubReads} from "./ILensHubReads.sol";
@@ -103,10 +104,11 @@ contract LensMarketsModule is LensBase, ILensMarkets, ILensFees {
         (v.vaultToken, v.lpOracle, v.hub, v.spoke) = (m.vaultToken, m.lpOracle, m.hub, m.spoke);
         (v.name, v.symbol) = (IERC20Metadata(m.vaultToken).name(), IERC20Metadata(m.vaultToken).symbol());
         (v.reserveId, v.hubAssetId) = (m.reserveId, m.hubAssetId);
-        // forge-lint: disable-next-line(unused-return)
-        (v.acceptedPrice,) = ILPOracle(m.lpOracle).lastAcceptedPrice();
-        // forge-lint: disable-next-line(unused-return)
-        (,, v.priceState) = ILPOracle(m.lpOracle).getTokenPrices();
+        ILPOracle.PriceStatus memory st = ILPOracle(m.lpOracle).getPriceStatus();
+        // The oracle serves at least 1.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        v.acceptedPrice = uint256(st.answer);
+        v.priceState = st.liquidationFresh ? PriceState.Live : PriceState.Cached;
         v.suppliedUnits = IAaveV4Hub(m.hub).getSpokeAddedAssets(m.hubAssetId, m.spoke);
         v.suppliedUsd = Math.mulDiv(v.suppliedUnits, v.acceptedPrice, 10 ** m.decimals);
         _limits(v, m, marketId);

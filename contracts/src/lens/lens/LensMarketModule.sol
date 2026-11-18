@@ -10,7 +10,7 @@ import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {CapView, Market} from "../../types/MarketTypes.sol";
 import {PendingView, PledgeCounters} from "../../types/PositionTypes.sol";
@@ -116,13 +116,9 @@ contract LensMarketModule is LensBase, ILensMarket {
         }
         c.poolShareMaxBps = _store().poolShareMaxBpsOf(k.poolKey);
         c.poolShareBps = _poolShareBps(marketId, m.integration, k.poolUnits);
-        // forge-lint: disable-next-line(unused-return)
-        (uint256 accepted,) = ILPOracle(m.lpOracle).lastAcceptedPrice();
-        // Cap charges are booked at the fresh price; a failed market's fresh price is 0 and keeps the accepted one.
-        int256 fresh = ILPOracle(m.lpOracle).getPriceState().freshAnswer;
-        // A positive int256 is cast.
+        // The oracle serves at least 1.
         // forge-lint: disable-next-line(unsafe-typecast)
-        if (fresh > 0) accepted = uint256(fresh);
+        uint256 accepted = uint256(ILPOracle(m.lpOracle).latestAnswer());
         uint256 floor = _store().stressFloorUsd(marketId);
         c.chargePricePerWholeToken = Math.max(accepted, floor);
         c.vaultTokenAddHeadroom = _addHeadroom(m);

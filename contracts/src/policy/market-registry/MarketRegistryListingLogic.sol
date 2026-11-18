@@ -16,7 +16,7 @@ import {IntegrationCapabilities, PoolKeying} from "../../amm/types/AmmTypes.sol"
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAggregatorV3} from "../../interfaces/external/chainlink/IAggregatorV3.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {Market, MarketDef} from "../../types/MarketTypes.sol";
 import {RouteSlot} from "../../types/OracleTypes.sol";

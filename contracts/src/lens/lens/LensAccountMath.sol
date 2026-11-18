@@ -7,7 +7,7 @@ import {ICollateralization} from "../../custody/collateralization/ICollateraliza
 import {BackingRecord} from "../../custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {RiskModuleMath} from "../../policy/risk-module/RiskModuleMath.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {Market} from "../../types/MarketTypes.sol";

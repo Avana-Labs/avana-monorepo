@@ -10,12 +10,10 @@ import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol";
 import {LiquidationParams, RouteMode} from "../../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../types/MarketTypes.sol";
-import {PriceStateView} from "../../types/OracleTypes.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {LensBase} from "./LensBase.sol";
 import {LensConstants} from "./LensConstants.sol";
@@ -116,35 +114,8 @@ contract LensLiquidationModule is LensBase {
         LiquidationPreview memory p,
         Ctx memory c
     ) internal view {
-        PriceStateView memory ps = ILPOracle(c.m.lpOracle).getPriceState();
         p.debtPriceFresh = _debtView(c.spoke, c.def).liquidationFresh;
-        PriceInput[] memory inputs = _inputs(ps.tokens);
-        bool inputsFresh = true;
-        for (uint256 i = 0; i < inputs.length; ++i) {
-            if (!inputs[i].liquidationFresh) inputsFresh = false;
-        }
-        p.pricesUsable = !ps.liquidationPaused && inputsFresh && p.debtPriceFresh;
-        p.feedsDisagree = ps.disagreementPauseActive;
-        p.inGrace = ps.inGrace;
-        p.belowGraceHealthFactor = ps.inGrace && p.healthFactor < _store().graceHealthFactor();
-        p.stressValued = _stressValued(c.spoke, p.proxy, p.debtReserveId);
-    }
-
-    function _stressValued(
-        address spoke,
-        address proxy,
-        uint256 debtReserveId
-    ) internal view returns (bool stressed) {
-        uint256[] memory ids = _registry().getDebtReserveIds(spoke);
-        address oracle = IAaveV4Spoke(spoke).ORACLE();
-        for (uint256 i = 0; i < ids.length; ++i) {
-            if (ids[i] == debtReserveId || IAaveV4Spoke(spoke).getUserTotalDebt(ids[i], proxy) == 0) continue;
-            DebtReserveDef memory def = _registry().getDebtReserve(spoke, ids[i]);
-            if (def.fixedPrice) continue;
-            // forge-lint: disable-next-line(unused-return)
-            (uint256 accepted,) = IDebtOracle(def.priceSource).lastAcceptedPrice();
-            if (IAaveV4Oracle(oracle).getReservePrice(ids[i]) > accepted) stressed = true;
-        }
+        p.pricesUsable = ILPOracle(c.m.lpOracle).getPriceStatus().liquidationFresh && p.debtPriceFresh;
     }
 
     function _routes(
@@ -232,7 +203,7 @@ contract LensLiquidationModule is LensBase {
         uint256 pd = _debtPrice(c.spoke, c.def);
         if (pc == 0 || pd == 0) return;
         // forge-lint: disable-next-line(unused-return)
-        (uint256[] memory prices,,) = ILPOracle(c.m.lpOracle).getTokenPrices();
+        (uint256[] memory prices,) = ILPOracle(c.m.lpOracle).getTokenPrices();
         uint256 eps = _store().floorRoundingAllowance(c.def.asset);
         uint256 u = _unitValues(c, prices, pd);
         uint256 dv = c.m.decimals;

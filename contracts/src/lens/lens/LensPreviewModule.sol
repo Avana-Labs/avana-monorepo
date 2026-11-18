@@ -10,7 +10,7 @@ import {IFlashSource} from "../../flash/IFlashSource.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {BreakerReasons} from "../../policy/market-registry/types/Breaker.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
@@ -93,13 +93,9 @@ contract LensPreviewModule is LensDeleverage, ILensPreview {
         ICollateralization coll = ICollateralization(_COLLATERALIZATION);
         added = coll.previewRecredit(m.integrationId, positionKey);
         if (added == 0) return (0, 0, false);
-        // forge-lint: disable-next-line(unused-return)
-        (uint256 accepted,) = ILPOracle(m.lpOracle).lastAcceptedPrice();
-        // A re-credit is booked like a pledge, at min(fresh, accepted).
-        int256 fresh = ILPOracle(m.lpOracle).getPriceState().freshAnswer;
-        // A positive int256 is cast.
+        // A re-credit is booked like a pledge, at the oracle's price, which is at least 1.
         // forge-lint: disable-next-line(unsafe-typecast)
-        if (fresh > 0 && uint256(fresh) < accepted) accepted = uint256(fresh);
+        uint256 accepted = uint256(ILPOracle(m.lpOracle).latestAnswer());
         uint256 floor = _store().stressFloorUsd(marketId);
         usdCharge = Math.mulDiv(added, accepted > floor ? accepted : floor, 10 ** m.decimals, Math.Rounding.Ceil);
         address depositor = coll.getRecord(coll.recordIdOf(m.integrationId, positionKey)).depositor;

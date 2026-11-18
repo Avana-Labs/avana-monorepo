@@ -4,8 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../policy/market-registry/IMarketRegistryRoutes.sol";
@@ -109,7 +107,6 @@ library TimelockSelectors {
     ) private pure returns (bool) {
         return selector == IAaveAdapter.initialize.selector || selector == IRiskModule.initialize.selector
             || selector == IMarketRegistry.initialize.selector || selector == IParameterStore.initialize.selector
-            || selector == ILPOracle.initialize.selector || selector == IDebtOracle.initialize.selector
             || selector == ILPVaultSwap.initialize.selector;
     }
 }

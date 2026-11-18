@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
-import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
+import {LPPriceMath} from "../../oracle/LPPriceMath.sol";
 import {IClIntegration} from "../IClIntegration.sol";
 import {ClMarketConfig} from "../types/AmmTypes.sol";
 import {ClLPVaultBase} from "./ClLPVaultBase.sol";
