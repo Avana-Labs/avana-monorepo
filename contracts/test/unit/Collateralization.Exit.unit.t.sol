@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {BackingRecord, Pending} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
@@ -189,13 +189,13 @@ contract CollateralizationExitUnitTest is CollateralizationFixture {
         _acquire(adapter);
         _withdrawAndBurn(aliceProxy, 800_000_000);
         lpVault.setPoolLocked(true);
-        vm.expectRevert(ILPVaultErrors.PoolLocked.selector);
+        vm.expectRevert(ILPVaultBase.PoolLocked.selector);
         vm.prank(adapter);
         coll.releaseForDeleverage(aliceProxy, vt, KEY7, 800_000_000, new uint256[](2));
         lpVault.setPoolLocked(false);
         uint256[] memory mins = new uint256[](2);
         mins[0] = 640_000_001;
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultErrors.BelowMinimum.selector, 0, 640_000_000, 640_000_001));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultBase.BelowMinimum.selector, 0, 640_000_000, 640_000_001));
         vm.prank(adapter);
         coll.releaseForDeleverage(aliceProxy, vt, KEY7, 800_000_000, mins);
         _release(adapter);
@@ -417,11 +417,11 @@ contract CollateralizationExitUnitTest is CollateralizationFixture {
         BackingRecord memory before = coll.getRecord(id);
         vm.mockCallRevert(
             address(lpVault),
-            abi.encodeWithSelector(IAmmIntegration.collectFees.selector),
-            abi.encodeWithSelector(ILPVaultErrors.FeesRolledIn.selector)
+            abi.encodeWithSelector(ILPVault.collectFees.selector),
+            abi.encodeWithSelector(ILPVaultBase.FeesRolledIn.selector)
         );
         _acquire(adapter);
-        vm.expectRevert(ILPVaultErrors.FeesRolledIn.selector);
+        vm.expectRevert(ILPVaultBase.FeesRolledIn.selector);
         vm.prank(adapter);
         coll.collectFees(alice, vt, KEY7);
         _release(adapter);

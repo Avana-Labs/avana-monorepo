@@ -68,7 +68,7 @@ contracts/
 ├── slither.config.json, aderyn.toml, .solhint.json, .solhintignore, echidna.yaml, medusa.json
 ├── security/             triage files of Slither, slither-check-upgradeability, Aderyn and Mythril; mythril.conf; size-margins.json
 ├── src/
-│   ├── amm/                        IAmmIntegration, IAmmIntegrationHooks, IClIntegration; uniswap-v3/, slipstream/; shared AMM types
+│   ├── amm/                        ILPVault, ILPVault, IClIntegration; uniswap-v3/, slipstream/; shared AMM types
 │   ├── custody/
 │   │   ├── lp-vault/               ILPVault: NFT custody, liquidity removal, fee collection, stray NFTs (one LPVault per AMM protocol per chain)
 │   │   └── collateralization/      ICollateralization: records, pledge and release, seizure, pending settlement, counters
@@ -163,7 +163,7 @@ Callers import only the piece they call, for example `IRiskModule` for `checkPle
 | MarketRegistry | `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistryRoutes`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistryBase` |
 | ParameterStore | `IParameterStoreTighten`, `IParameterStoreLoosen`, `IParameterStoreListing`, `IParameterStore`, `IParameterStore`, `IParameterStore`, `IParameterStore`, `IParameterStore`, `IParameterStore` |
 | AaveAdapter | `IAaveAdapter`, `IAaveAdapter`, `IAaveAdapter`, `IAaveAdapter`, `IAaveAdapter` |
-| LPVault | `ILPVault`, which implements `IAmmIntegration` and `IAmmIntegrationHooks` (`src/amm/`) |
+| LPVault | `ILPVault`, which implements `ILPVault` and `ILPVault` (`src/amm/`) |
 | Collateralization | `ICollateralization`, `ICollateralization`, `ICollateralization`, `ICollateralization`, `ICollateralization` |
 | LPVaultSwap | `ILPVaultSwapKeeper`, `ILPVaultSwapPermissionless`, `ILPVaultSwap`, `ILPVaultSwap`, `ILPVaultSwap` |
 | RiskModule | `IRiskModule`, `IRiskModule`, `IRiskModule` |

@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
-import {PoolKeying} from "../../src/amm/types/PoolKeying.sol";
+import {PoolKeying} from "../../src/amm/types/AmmTypes.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {
@@ -214,7 +214,7 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
     /// @notice The integration's open-record cap must be between 1 and the global bound of 16; 12 lists.
     function test_TEST_138_recordCapMustBeWithinTheGlobalBound() public {
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(1, _shape());
-        bytes memory cap = abi.encodeCall(IAmmIntegration.maxRecordsPerAccountMarket, ());
+        bytes memory cap = abi.encodeCall(ILPVault.maxRecordsPerAccountMarket, ());
         vm.mockCall(address(lpVault), cap, abi.encode(uint256(0)));
         vm.prank(address(timelock));
         _expectListing("records");

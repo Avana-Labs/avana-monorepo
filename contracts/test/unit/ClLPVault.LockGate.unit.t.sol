@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
 import {IClIntegration} from "../../src/amm/IClIntegration.sol";
 import {IClPositionManager} from "../../src/amm/concentrated-liquidity/IClPositionManager.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {MintableToken} from "../utils/mocks/UniswapV3Mocks.sol";
 import {ClLPVaultBase, ClLPVaultSlipstreamHooks, ClLPVaultUniswapHooks} from "./ClLPVault.Base.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -50,11 +50,11 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
         bytes32 fresh
     ) internal view returns (bytes[5] memory calls) {
         address swap = _cCore().lpVaultSwap;
-        calls[0] = abi.encodeCall(IAmmIntegration.receivePosition, (MKT_A, alice, fresh));
-        calls[1] = abi.encodeCall(IAmmIntegration.returnPosition, (key));
-        calls[2] = abi.encodeCall(IAmmIntegration.unwind, (key, uint128(1), _cZeros(), swap));
-        calls[3] = abi.encodeCall(IAmmIntegration.releaseToDepositor, (key, uint128(1), _cZeros()));
-        calls[4] = abi.encodeCall(IAmmIntegration.collectFees, (key, bob));
+        calls[0] = abi.encodeCall(ILPVault.receivePosition, (MKT_A, alice, fresh));
+        calls[1] = abi.encodeCall(ILPVault.returnPosition, (key));
+        calls[2] = abi.encodeCall(ILPVault.unwind, (key, uint128(1), _cZeros(), swap));
+        calls[3] = abi.encodeCall(ILPVault.releaseToDepositor, (key, uint128(1), _cZeros()));
+        calls[4] = abi.encodeCall(ILPVault.collectFees, (key, bob));
     }
 
     function _plain(
@@ -216,8 +216,8 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
         _cBindMarketC(address(new MintableToken("DAI", 18)), address(new MintableToken("USDS", 18)));
         (bytes32 later, uint128 laterUnits) = _cPledge(MKT_C, alice, 1e15);
         assertGt(laterUnits, 0, "pledged into the later market");
-        _cAs(c.lpVaultSwap, abi.encodeCall(IAmmIntegration.unwind, (later, laterUnits / 2, _cZeros(), c.lpVaultSwap)));
-        _cAs(c.adapter, abi.encodeCall(IAmmIntegration.returnPosition, (later)));
+        _cAs(c.lpVaultSwap, abi.encodeCall(ILPVault.unwind, (later, laterUnits / 2, _cZeros(), c.lpVaultSwap)));
+        _cAs(c.adapter, abi.encodeCall(ILPVault.returnPosition, (later)));
         assertEq(_cManager(later).ownerOf(_cTokenId(later)), alice, "returned to its depositor");
         assertEq(c.lock.AAVE_ADAPTER(), member0, "members unchanged");
         assertEq(c.lock.LP_VAULT_SWAP(), member1, "members unchanged");
@@ -245,7 +245,7 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
         bytes32 key,
         address owner
     ) internal {
-        bytes memory data = abi.encodeCall(IAmmIntegration.receivePosition, (MKT_A, owner, key));
+        bytes memory data = abi.encodeCall(ILPVault.receivePosition, (MKT_A, owner, key));
         (bool ok, bytes memory out) = _cTry(_cCore().adapter, _cCore().coll, data);
         assertFalse(ok, "a stray cannot be pledged");
         assertEq(out, _err(NotTokenOwner.selector), "NotTokenOwner");
@@ -269,13 +269,13 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
         address swap = _cCore().lpVaultSwap;
         uint256 b0 = _cToken(MKT_A, 0).balanceOf(swap);
         uint256 b1 = _cToken(MKT_A, 1).balanceOf(swap);
-        _cAs(swap, abi.encodeCall(IAmmIntegration.unwind, (key, half, got, swap)));
+        _cAs(swap, abi.encodeCall(ILPVault.unwind, (key, half, got, swap)));
         assertEq(_cToken(MKT_A, 0).balanceOf(swap) - b0, got[0], "leg 0 to LPVaultSwap");
         assertEq(_cToken(MKT_A, 1).balanceOf(swap) - b1, got[1], "leg 1 to LPVaultSwap");
-        _cAs(swap, abi.encodeCall(IAmmIntegration.unwind, (key, units - half, _cZeros(), swap)));
+        _cAs(swap, abi.encodeCall(ILPVault.unwind, (key, units - half, _cZeros(), swap)));
         assertEq(_cVault().unitsOf(key), 0, "every unit removed");
         assertEq(_cVault().depositorOf(key), bob, "still in custody at 0 units");
-        _cAs(_cCore().adapter, abi.encodeCall(IAmmIntegration.returnPosition, (key)));
+        _cAs(_cCore().adapter, abi.encodeCall(ILPVault.returnPosition, (key)));
         assertEq(_cManager(key).ownerOf(_cTokenId(key)), bob, "full units return the NFT");
     }
 
@@ -286,7 +286,7 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
     ) internal returns (uint256[] memory got) {
         address swap = _cCore().lpVaultSwap;
         uint256 snap = vm.snapshotState();
-        got = abi.decode(_cAs(swap, abi.encodeCall(IAmmIntegration.unwind, (key, units, _cZeros(), swap))), (uint256[]));
+        got = abi.decode(_cAs(swap, abi.encodeCall(ILPVault.unwind, (key, units, _cZeros(), swap))), (uint256[]));
         vm.revertToState(snap);
     }
 
@@ -301,7 +301,7 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
         uint256[] memory mins = new uint256[](2);
         (mins[0], mins[1]) = (got[0], got[1]);
         mins[leg] += 1;
-        bytes memory data = abi.encodeCall(IAmmIntegration.unwind, (key, units, mins, swap));
+        bytes memory data = abi.encodeCall(ILPVault.unwind, (key, units, mins, swap));
         (bool ok,) = _cTry(swap, _cCore().coll, data);
         assertFalse(ok, "a minimum above the leg's amount reverts");
     }
@@ -329,7 +329,7 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
         // forge-lint: disable-next-line(unsafe-typecast)
         _cPool(MKT_A).setPrice(int24(bound(spot, -5000, 5000)));
         address swap = _cCore().lpVaultSwap;
-        bytes memory data = abi.encodeCall(IAmmIntegration.unwind, (key, x, _cZeros(), swap));
+        bytes memory data = abi.encodeCall(ILPVault.unwind, (key, x, _cZeros(), swap));
         uint256[] memory got = abi.decode(_cAs(swap, data), (uint256[]));
         // Both pool tokens have 6 decimals in both fixtures.
         assertGe(got[0] * prices[0] + got[1] * prices[1], comp[0] * prices[0] + comp[1] * prices[1], "under-backed");
@@ -355,14 +355,13 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
         IClLockablePool(address(_cPool(MKT_A))).setUnlocked(false);
         _assertRefused(exact, PoolLocked.selector);
         IClLockablePool(address(_cPool(MKT_A))).setUnlocked(true);
-        uint128 units = abi.decode(
-            _cAs(c.adapter, abi.encodeCall(IAmmIntegration.receivePosition, (MKT_A, alice, exact))), (uint128)
-        );
+        uint128 units =
+            abi.decode(_cAs(c.adapter, abi.encodeCall(ILPVault.receivePosition, (MKT_A, alice, exact))), (uint128));
         assertEq(_cVault().depositorOf(exact), alice, "exact range received");
         _assertFeesOnly(exact, units);
         // Zero minimums at a spot moved off the oracle price remove exactly the units.
         _cPool(MKT_A).setPrice(40);
-        _cAs(c.lpVaultSwap, abi.encodeCall(IAmmIntegration.unwind, (exact, units / 4, _cZeros(), c.lpVaultSwap)));
+        _cAs(c.lpVaultSwap, abi.encodeCall(ILPVault.unwind, (exact, units / 4, _cZeros(), c.lpVaultSwap)));
         assertEq(_cVault().unitsOf(exact), units - units / 4, "exactly the units removed");
     }
 
@@ -373,7 +372,7 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
     ) internal {
         Core memory c = _cCore();
         (bool ok, bytes memory out) =
-            _cTry(c.adapter, c.coll, abi.encodeCall(IAmmIntegration.receivePosition, (MKT_A, alice, key)));
+            _cTry(c.adapter, c.coll, abi.encodeCall(ILPVault.receivePosition, (MKT_A, alice, key)));
         assertFalse(ok, "refused");
         assertEq(bytes4(out), selector, "refusal error");
         assertEq(_cVault().depositorOf(key), address(0), "no custody entry");
@@ -387,7 +386,7 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
         _cManager(key).accrue(_cTokenId(key), 7e6, 3e6);
         uint256 a0 = _cToken(MKT_A, 0).balanceOf(alice);
         uint256 a1 = _cToken(MKT_A, 1).balanceOf(alice);
-        _cAs(_cCore().adapter, abi.encodeCall(IAmmIntegration.collectFees, (key, alice)));
+        _cAs(_cCore().adapter, abi.encodeCall(ILPVault.collectFees, (key, alice)));
         assertEq(_cToken(MKT_A, 0).balanceOf(alice) - a0, 7e6, "fee 0 only");
         assertEq(_cToken(MKT_A, 1).balanceOf(alice) - a1, 3e6, "fee 1 only");
         assertEq(_cVault().unitsOf(key), units, "no principal taken");
@@ -413,7 +412,7 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
         vm.prank(alice);
         _cManager(key).setApprovalForAll(operator, true);
         uint128 units = abi.decode(
-            _cAs(_cCore().adapter, abi.encodeCall(IAmmIntegration.receivePosition, (MKT_A, alice, key))), (uint128)
+            _cAs(_cCore().adapter, abi.encodeCall(ILPVault.receivePosition, (MKT_A, alice, key))), (uint128)
         );
         address[2] memory actors = [alice, operator];
         for (uint256 i = 0; i < 2; ++i) {
@@ -471,7 +470,7 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
         bytes32 key,
         address owner
     ) internal {
-        bytes memory data = abi.encodeCall(IAmmIntegration.receivePosition, (MKT_A, owner, key));
+        bytes memory data = abi.encodeCall(ILPVault.receivePosition, (MKT_A, owner, key));
         (bool ok,) = _cTry(_cCore().adapter, _cCore().coll, data);
         assertFalse(ok, "re-pledge");
     }

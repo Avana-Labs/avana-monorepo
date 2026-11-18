@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
-import {PoolKeying} from "../../src/amm/types/PoolKeying.sol";
+import {PoolKeying} from "../../src/amm/types/AmmTypes.sol";
 import {UniswapV3Integration} from "../../src/amm/uniswap-v3/UniswapV3Integration.sol";
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
@@ -104,13 +103,13 @@ contract VaultTokenFactoryBoundedReadsUnitTest is VaultTokenFactoryFixture {
         _deployFactory();
         vault = new ProgrammableLPVault();
         getters = [
-            IAmmIntegration.INTEGRATION_ID.selector,
-            IAmmIntegration.AMM_PROTOCOL.selector,
+            ILPVault.INTEGRATION_ID.selector,
+            ILPVault.AMM_PROTOCOL.selector,
             ILPVault.COLLATERALIZATION.selector,
             ILPVault.LOCK.selector,
             ILPVault.TIMELOCK.selector,
             ILPVault.MARKET_REGISTRY.selector,
-            IAmmIntegration.capabilities.selector
+            ILPVault.capabilities.selector
         ];
         vault.setAnswer(getters[0], abi.encode(uint256(SLIPSTREAM_ID)));
         vault.setAnswer(getters[1], abi.encode(AERODROME_SLIPSTREAM));

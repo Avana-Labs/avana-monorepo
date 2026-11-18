@@ -8,11 +8,10 @@ pragma solidity 0.8.28;
 /// @dev A call that reverts or returns an unusable value counts as a failed check.
 // Loop lengths are the registry's size, which only timelock operations grow.
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {IntegrationCapabilities} from "../../amm/types/IntegrationCapabilities.sol";
-import {RiskStatus} from "../../amm/types/RiskStatus.sol";
+import {IntegrationCapabilities, RiskStatus} from "../../amm/types/AmmTypes.sol";
 import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
@@ -281,7 +280,7 @@ abstract contract ParameterStoreRisk is ParameterStoreStorage {
         uint32 window
     ) internal view {
         if (!_withinGrace(window)) revert OutOfBounds();
-        IntegrationCapabilities memory caps = IAmmIntegration(m.integration).capabilities();
+        IntegrationCapabilities memory caps = ILPVault(m.integration).capabilities();
         if (!caps.hasTwap) {
             if (window != 0) revert OutOfBounds();
             return;
@@ -295,7 +294,7 @@ abstract contract ParameterStoreRisk is ParameterStoreStorage {
             (,,, uint16 cardinality) = IPoolObservations(m.pool).slot0();
             if (cardinality < need) revert OutOfBounds();
         }
-        try IAmmIntegration(m.integration).riskStatus(marketId, window) returns (RiskStatus memory st) {
+        try ILPVault(m.integration).riskStatus(marketId, window) returns (RiskStatus memory st) {
             if (!st.depthAvailable) revert OutOfBounds();
         } catch {
             revert OutOfBounds();

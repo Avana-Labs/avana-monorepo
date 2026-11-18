@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {BackingRecord, Pending} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
@@ -163,7 +163,7 @@ contract CollateralizationSeizureUnitTest is CollateralizationFixture {
         vm.prank(lpVaultSwap);
         coll.settleSeizure(aliceProxy, vt, seized, mins);
         lpVault.setPoolLocked(true);
-        vm.expectRevert(ILPVaultErrors.PoolLocked.selector);
+        vm.expectRevert(ILPVaultBase.PoolLocked.selector);
         vm.prank(lpVaultSwap);
         coll.settleSeizure(aliceProxy, vt, seized, new uint256[](2));
         _endLock();

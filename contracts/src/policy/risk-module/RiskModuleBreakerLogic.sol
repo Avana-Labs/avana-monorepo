@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {RiskStatus} from "../../amm/types/RiskStatus.sol";
+import {RiskStatus} from "../../amm/types/AmmTypes.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
@@ -142,7 +142,7 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
         PriceStateView memory pv = ILPOracle(m.lpOracle).getPriceState();
         if (pv.state != PriceState.Live || !pv.borrowAllowed) live |= BreakerReasons.ORACLE;
         RiskStatus memory rs =
-            IAmmIntegration(m.integration).riskStatus(marketId, _store().getMarketParams(marketId).twapWindow);
+            ILPVault(m.integration).riskStatus(marketId, _store().getMarketParams(marketId).twapWindow);
         if (!rs.depthAvailable || rs.depthUnits == 0) live |= BreakerReasons.POOL_DEPTH;
         if (_concentrated(m, pv, rs, unitsGiven, poolUnits)) live |= BreakerReasons.POOL_SHARE;
         for (uint256 i = 0; i < m.tokens.length; ++i) {

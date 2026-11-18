@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {ISettlementRoute} from "../../liquidation/settlement-routes/ISettlementRoute.sol";
 import {Market} from "../../types/Market.sol";
 import {RouteSlot} from "../../types/RouteSlot.sol";
@@ -279,7 +279,7 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
     ) private view returns (bytes32) {
         address lpVault = _s().integrationLpVault[integrationId];
         if (lpVault == address(0)) revert IMarketRegistry.InvalidIntegration(integrationId);
-        IAmmIntegration v = IAmmIntegration(lpVault);
+        ILPVault v = ILPVault(lpVault);
         return
             keccak256(
                 abi.encode(block.chainid, lpVault, lpVault.codehash, v.AMM_PROTOCOL(), v.capabilities().poolKeying)

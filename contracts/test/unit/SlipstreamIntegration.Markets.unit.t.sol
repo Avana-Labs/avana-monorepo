@@ -5,11 +5,13 @@ pragma solidity 0.8.28;
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
 import {SlipstreamIntegration} from "../../src/amm/slipstream/SlipstreamIntegration.sol";
-import {ClMarketConfig} from "../../src/amm/types/ClMarketConfig.sol";
-import {IntegrationCapabilities} from "../../src/amm/types/IntegrationCapabilities.sol";
-import {PoolKeying} from "../../src/amm/types/PoolKeying.sol";
-import {RiskMetadata} from "../../src/amm/types/RiskMetadata.sol";
-import {RiskStatus} from "../../src/amm/types/RiskStatus.sol";
+import {
+    ClMarketConfig,
+    IntegrationCapabilities,
+    PoolKeying,
+    RiskMetadata,
+    RiskStatus
+} from "../../src/amm/types/AmmTypes.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {SlipstreamIntegrationFixture} from "../utils/fixtures/SlipstreamIntegrationFixture.sol";

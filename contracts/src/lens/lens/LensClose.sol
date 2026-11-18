@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
@@ -44,7 +44,7 @@ abstract contract LensClose is LensDeleverage {
             (v.records[i].positionKey, v.records[i].units) = (rs[i].positionKey, rs[i].units);
             if (priced && rs[i].units > 0) {
                 // forge-lint: disable-next-line(unused-return)
-                (v.records[i].amounts,) = IAmmIntegration(m.integration).composition(marketId, rs[i].units, prices);
+                (v.records[i].amounts,) = ILPVault(m.integration).composition(marketId, rs[i].units, prices);
             } else {
                 v.records[i].amounts = new uint256[](m.tokens.length);
             }

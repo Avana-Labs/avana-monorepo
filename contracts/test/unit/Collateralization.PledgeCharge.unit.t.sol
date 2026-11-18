@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
@@ -169,12 +169,12 @@ contract CollateralizationPledgeChargeUnitTest is CollateralizationFixture {
         lpVault.setPoolLocked(true);
         vm.startPrank(adapter);
         lock.acquire();
-        vm.expectRevert(ILPVaultErrors.PoolLocked.selector);
+        vm.expectRevert(ILPVaultBase.PoolLocked.selector);
         coll.pledge(alice, aliceProxy, vt, KEY42, false);
         vm.stopPrank();
         _withdrawAndBurn(aliceProxy, 1_000_000_000);
         vm.prank(adapter);
-        vm.expectRevert(ILPVaultErrors.PoolLocked.selector);
+        vm.expectRevert(ILPVaultBase.PoolLocked.selector);
         coll.releasePartial(aliceProxy, vt, KEY7, 1_000_000_000, new uint256[](2));
         lpVault.setPoolLocked(false);
         vm.prank(adapter);

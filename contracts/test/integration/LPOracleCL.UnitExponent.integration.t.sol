@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
-import {ClUnitMath} from "../../src/amm/concentrated-liquidity/ClUnitMath.sol";
 import {SettlementMath} from "../../src/liquidation/lp-vault-swap/SettlementMath.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
@@ -164,7 +163,7 @@ contract LPOracleCLUnitExponentIntegrationTest is LPOracleCLFixture {
         _bind(EARLIER, -_top(), _top(), price0, price1);
         assertEq(vault.unitExponent(EARLIER), 3, "first market k = 3");
         price0 = 300e8;
-        (, uint8 fresh) = ClUnitMath.firstBindingExponent(_valuation(), pool.tickSpacing());
+        (, uint8 fresh) = ClPriceMath.firstBindingExponent(_valuation(), pool.tickSpacing());
         assertEq(fresh, 4, "a first binding at $300 would take k = 4");
         _swapTo(pool, ClPriceMath.oracleSqrtPrice(price0, price1, token0.decimals(), token1.decimals()));
         (tickLower, tickUpper) = _range(10);
@@ -279,7 +278,7 @@ contract LPOracleCLUnitExponentIntegrationTest is LPOracleCLFixture {
         Case memory c
     ) internal returns (Listed memory l) {
         _setUpPool(c);
-        (bool found, uint8 k) = ClUnitMath.firstBindingExponent(_valuation(), pool.tickSpacing());
+        (bool found, uint8 k) = ClPriceMath.firstBindingExponent(_valuation(), pool.tickSpacing());
         assertTrue(found, "pool has a unit exponent");
         l = _listWithK(k);
     }
@@ -456,8 +455,8 @@ contract LPOracleCLUnitExponentIntegrationTest is LPOracleCLFixture {
         m.lpOracle = address(oracle);
     }
 
-    function _valuation() internal view returns (ClUnitMath.Valuation memory) {
-        return ClUnitMath.valuation(price0, price1, token0.decimals(), token1.decimals());
+    function _valuation() internal view returns (ClPriceMath.Valuation memory) {
+        return ClPriceMath.valuation(price0, price1, token0.decimals(), token1.decimals());
     }
 
     /// @dev The full range for `spacings == 0`, else `spacings` tick spacings each side of the spacing holding the

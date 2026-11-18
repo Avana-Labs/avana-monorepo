@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {PledgeCounters} from "../../types/PledgeCounters.sol";
 import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
+import {ILPVault} from "../lp-vault/ILPVault.sol";
 import {CollateralizationLedger} from "./CollateralizationLedger.sol";
 import {ICollateralization} from "./ICollateralization.sol";
 import {BackingRecord, Pending} from "./types/CollateralizationTypes.sol";
@@ -145,7 +145,7 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         uint256 credited = _creditedAfterReconcile(c, id, r);
         if (credited == 0) return 0;
         // Reconciliation removes exactly the units it debits, so `live - credited` is unchanged by it.
-        uint256 live = IAmmIntegration(c.lpVault).unitsOf(positionKey);
+        uint256 live = ILPVault(c.lpVault).unitsOf(positionKey);
         uint256 before = r.credited;
         // Live units cover credit and are below 2^128.
         // forge-lint: disable-next-line(unsafe-typecast)

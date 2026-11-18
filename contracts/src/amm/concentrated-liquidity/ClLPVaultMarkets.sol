@@ -3,14 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
-import {IAmmIntegration} from "../IAmmIntegration.sol";
-import {IAmmIntegrationHooks} from "../IAmmIntegrationHooks.sol";
 import {IClIntegration} from "../IClIntegration.sol";
-import {ClMarketConfig} from "../types/ClMarketConfig.sol";
+import {ClMarketConfig} from "../types/AmmTypes.sol";
 import {ClLPVaultBase} from "./ClLPVaultBase.sol";
 import {ClPriceMath} from "./ClPriceMath.sol";
-import {ClUnitMath} from "./ClUnitMath.sol";
 import {IClPoolObservations} from "./IClPoolObservations.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
@@ -38,7 +36,7 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
         return _tokenId(positionKey);
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     /// @dev Each amount is reduced by 1 raw unit when positive, so rounding never overvalues.
     function composition(
         uint256 marketId,
@@ -76,7 +74,7 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
         clamped = sqrtUsedX96 != sqrtOracleX96 || ClPriceMath.oracleSqrtClamped(p0, p1, m.decimals0, m.decimals1);
     }
 
-    /// @inheritdoc IAmmIntegrationHooks
+    /// @inheritdoc ILPVault
     function rateProviders(
         uint256 marketId
     ) external view override returns (address[] memory providers) {
@@ -84,7 +82,7 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
         providers = new address[](TOKEN_COUNT);
     }
 
-    /// @inheritdoc IAmmIntegrationHooks
+    /// @inheritdoc ILPVault
     function effectiveSupply(
         uint256 marketId
     ) external view override returns (uint256) {
@@ -106,12 +104,12 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
         ) {
             revert InvalidPool();
         }
-        ClUnitMath.Valuation memory v = ClUnitMath.valuation(price0, price1, d0, d1);
+        ClPriceMath.Valuation memory v = ClPriceMath.valuation(price0, price1, d0, d1);
         uint8 stored = _poolUnitExp[poolRef];
         bool found = true;
         if (stored != 0) k = stored - 1;
-        else (found, k) = ClUnitMath.firstBindingExponent(v, cfg.tickSpacing);
-        if (found) (found, d) = ClUnitMath.unitDecimals(v, cfg.tickLower, cfg.tickUpper, k);
+        else (found, k) = ClPriceMath.firstBindingExponent(v, cfg.tickSpacing);
+        if (found) (found, d) = ClPriceMath.unitDecimals(v, cfg.tickLower, cfg.tickUpper, k);
         if (!found) revert InvalidPool();
     }
 

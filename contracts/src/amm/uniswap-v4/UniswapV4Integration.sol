@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IUniswapV4PoolManager, UniswapV4PoolKey} from "../../interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {IUniswapV4PositionManager} from "../../interfaces/external/uniswap-v4/IUniswapV4PositionManager.sol";
 import {IUniswapV3Factory} from "../../interfaces/external/uniswap/IUniswapV3Factory.sol";
@@ -10,19 +11,19 @@ import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.s
 import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
 import {PositionShape} from "../../types/PositionShape.sol";
 import {ShapeKind} from "../../types/ShapeKind.sol";
-import {IAmmIntegration} from "../IAmmIntegration.sol";
-import {IAmmIntegrationHooks} from "../IAmmIntegrationHooks.sol";
 import {ClLPVaultBase} from "../concentrated-liquidity/ClLPVaultBase.sol";
 import {ClLPVaultCustody} from "../concentrated-liquidity/ClLPVaultCustody.sol";
 import {ClLPVaultMarkets} from "../concentrated-liquidity/ClLPVaultMarkets.sol";
 import {ClPriceMath} from "../concentrated-liquidity/ClPriceMath.sol";
-import {ClMarketConfig} from "../types/ClMarketConfig.sol";
-import {FeeMode} from "../types/FeeMode.sol";
-import {IntegrationCapabilities} from "../types/IntegrationCapabilities.sol";
-import {PoolKeying} from "../types/PoolKeying.sol";
-import {PricingMode} from "../types/PricingMode.sol";
-import {RiskMetadata} from "../types/RiskMetadata.sol";
-import {RiskStatus} from "../types/RiskStatus.sol";
+import {
+    ClMarketConfig,
+    FeeMode,
+    IntegrationCapabilities,
+    PoolKeying,
+    PricingMode,
+    RiskMetadata,
+    RiskStatus
+} from "../types/AmmTypes.sol";
 import {IUniswapV4Integration} from "./IUniswapV4Integration.sol";
 import {UniswapV4State} from "./UniswapV4State.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -127,12 +128,12 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         return _HOOK_MASK;
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function AMM_PROTOCOL() external pure override returns (bytes32) {
         return UNISWAP_V4;
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     /// @dev Later markets of the same pool must name the same reference pool.
     function bindMarket(
         uint256 marketId,
@@ -170,7 +171,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         emit MarketBound(marketId, address(0), poolId, shape.tickLower, shape.tickUpper);
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function marketOf(
         uint256 marketId
     )
@@ -193,7 +194,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         return _v4Pools[_market(marketId).poolRef];
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function capabilities() external pure override returns (IntegrationCapabilities memory) {
         return IntegrationCapabilities({
             poolKeying: PoolKeying.Id,
@@ -207,12 +208,12 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         });
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function maxRecordsPerAccountMarket() external pure override returns (uint256) {
         return MAX_RECORDS;
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function riskMetadata(
         uint256 marketId,
         bytes32 positionKey
@@ -230,7 +231,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         }
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function riskStatus(
         uint256 marketId,
         uint32 window
@@ -243,14 +244,14 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         status.depthUnits = _toUnits(m, status.depthUnits);
     }
 
-    /// @inheritdoc IAmmIntegrationHooks
+    /// @inheritdoc ILPVault
     function checkReadSafe(
         uint256 marketId
     ) external view override {
         _requireReadSafe(_market(marketId));
     }
 
-    /// @inheritdoc IAmmIntegrationHooks
+    /// @inheritdoc ILPVault
     /// @dev The larger of the v4 spot and the reference pool's TWAP deviation from the oracle tick.
     function consistencyDeviation(
         uint256 marketId,
@@ -278,12 +279,12 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         available = true;
     }
 
-    /// @inheritdoc IAmmIntegrationHooks
+    /// @inheritdoc ILPVault
     function wrappedNative() external view override returns (address) {
         return _WETH;
     }
 
-    /// @inheritdoc IAmmIntegrationHooks
+    /// @inheritdoc ILPVault
     function isAllowedPoolHook(
         address hooks
     ) external pure override returns (bool) {

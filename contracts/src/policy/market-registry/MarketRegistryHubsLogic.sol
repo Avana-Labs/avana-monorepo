@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IFlashSource} from "../../flash/IFlashSource.sol";
@@ -64,7 +63,7 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
                 || l.integrationLpVault[integrationId] != address(0) || l.integrationIdOf[lpVault] != 0
         ) revert IMarketRegistry.InvalidIntegration(integrationId);
         if (
-            IAmmIntegration(lpVault).INTEGRATION_ID() != integrationId
+            ILPVault(lpVault).INTEGRATION_ID() != integrationId
                 || IVaultTokenFactory(_VAULT_TOKEN_FACTORY).lpVaultOf(integrationId) != lpVault
                 || ILPVault(lpVault).MARKET_REGISTRY() != address(this)
         ) revert IMarketRegistry.InvalidIntegration(integrationId);

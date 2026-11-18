@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegrationHooks} from "../../src/amm/IAmmIntegrationHooks.sol";
 import {UniswapV3Integration} from "../../src/amm/uniswap-v3/UniswapV3Integration.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
@@ -117,7 +117,7 @@ contract UniswapV3IntegrationCustodyForkTest is AvanaTest {
 
         // Any other range of the same pool is refused.
         (uint256 other,) = _mint(alice, lower - 1, upper);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultErrors.RangeMismatch.selector, lower - 1, upper));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultBase.RangeMismatch.selector, lower - 1, upper));
         vault.validatePosition(MARKET, alice, bytes32(other));
 
         // Received at the exact range: the credited units are the position's liquidity.
@@ -150,9 +150,9 @@ contract UniswapV3IntegrationCustodyForkTest is AvanaTest {
 
         // The pool's reentrancy flag blocks the integration's reads; outside the flash they pass.
         _fund(address(mover), 10e6);
-        mover.probeLocked(IClPoolActions(POOL), IAmmIntegrationHooks(address(vault)), MARKET);
+        mover.probeLocked(IClPoolActions(POOL), ILPVault(address(vault)), MARKET);
         assertTrue(mover.probeRan());
-        assertEq(mover.probed(), ILPVaultErrors.PoolLocked.selector, "PoolLocked while the pool is locked");
+        assertEq(mover.probed(), ILPVaultBase.PoolLocked.selector, "PoolLocked while the pool is locked");
         vault.checkReadSafe(MARKET);
 
         _lock();

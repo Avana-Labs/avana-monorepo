@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RiskStatus} from "../../../src/amm/types/RiskStatus.sol";
+import {RiskStatus} from "../../../src/amm/types/AmmTypes.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {DebtPriceView} from "../../../src/oracle/debt-oracle/types/DebtPriceView.sol";
 import {MarketSpeedLimits, SpeedLimit} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";

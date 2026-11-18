@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IntegrationCapabilities} from "../../../src/amm/types/IntegrationCapabilities.sol";
-import {RiskStatus} from "../../../src/amm/types/RiskStatus.sol";
+import {IntegrationCapabilities, RiskStatus} from "../../../src/amm/types/AmmTypes.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {OracleConfig} from "../../../src/types/OracleConfig.sol";

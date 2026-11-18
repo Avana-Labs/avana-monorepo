@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IntegrationCapabilities} from "../../../src/amm/types/IntegrationCapabilities.sol";
-import {PoolKeying} from "../../../src/amm/types/PoolKeying.sol";
+import {IntegrationCapabilities, PoolKeying} from "../../../src/amm/types/AmmTypes.sol";
 import {ShapeKind} from "../../../src/types/ShapeKind.sol";
 
 /// @title LPVaultIdentityMock

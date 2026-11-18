@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PoolKeying} from "../../amm/types/PoolKeying.sol";
+import {PoolKeying} from "../../amm/types/AmmTypes.sol";
 import {PositionShape} from "../../types/PositionShape.sol";
 import {ShapeKind} from "../../types/ShapeKind.sol";
 import {VaultTokenBindings} from "../../types/VaultTokenBindings.sol";

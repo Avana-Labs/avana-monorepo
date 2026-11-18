@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../../src/amm/IAmmIntegration.sol";
 import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.sol";
 import {IUniswapV4Integration} from "../../../src/amm/uniswap-v4/IUniswapV4Integration.sol";
+import {ILPVault} from "../../../src/custody/lp-vault/ILPVault.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
 import {PositionShape} from "../../../src/types/PositionShape.sol";
 import {IV4TestPositionManager, V4PoolActor} from "../../utils/fixtures/UniswapV4WorldFixture.sol";
@@ -255,7 +255,7 @@ contract UniswapV4FeesCustodyHandler is CommonBase, StdUtils {
         uint256 marketId = 1 + marketSeed % 2;
         uint128[2] memory b = pledgeBounds[marketId - 1];
         bytes32 key = SOURCE.v4MintFor(marketId, owner, uint128(bound(liquidity, b[0], b[1])));
-        (bool ok,) = _asColl(ADAPTER, abi.encodeCall(IAmmIntegration.receivePosition, (marketId, owner, key)));
+        (bool ok,) = _asColl(ADAPTER, abi.encodeCall(ILPVault.receivePosition, (marketId, owner, key)));
         if (!ok) {
             ++liveFailures;
             return;
@@ -275,7 +275,7 @@ contract UniswapV4FeesCustodyHandler is CommonBase, StdUtils {
         (uint256 o0, uint256 o1) = owed(key);
         uint256[] memory s = _snap();
         (bool ok, bytes memory ret) =
-            _asColl(ADAPTER, abi.encodeCall(IAmmIntegration.releaseToDepositor, (key, units, new uint256[](2))));
+            _asColl(ADAPTER, abi.encodeCall(ILPVault.releaseToDepositor, (key, units, new uint256[](2))));
         if (!ok) {
             // A depositor that cannot receive blocks only their own release (`REQ-AMM-V4-013`).
             if (!_isBlocked(depositor)) {
@@ -304,7 +304,7 @@ contract UniswapV4FeesCustodyHandler is CommonBase, StdUtils {
         address named = pick < 2 ? depositor : pick == 2 ? depositors[depositor == depositors[0] ? 1 : 0] : ATTACKER;
         (uint256 o0, uint256 o1) = owed(key);
         uint256[] memory s = _snap();
-        (bool ok, bytes memory ret) = _asColl(ADAPTER, abi.encodeCall(IAmmIntegration.collectFees, (key, named)));
+        (bool ok, bytes memory ret) = _asColl(ADAPTER, abi.encodeCall(ILPVault.collectFees, (key, named)));
         paidToOthers += _othersReceived(s, _actorIndex(depositor), type(uint256).max);
         if (!ok) {
             if (named == depositor && !_isBlocked(depositor)) {
@@ -348,7 +348,7 @@ contract UniswapV4FeesCustodyHandler is CommonBase, StdUtils {
         if (key == bytes32(0)) revert Skipped();
         (uint256 o0, uint256 o1) = owed(key);
         uint256[] memory s = _snap();
-        (bool ok,) = _asColl(ADAPTER, abi.encodeCall(IAmmIntegration.returnPosition, (key)));
+        (bool ok,) = _asColl(ADAPTER, abi.encodeCall(ILPVault.returnPosition, (key)));
         if (!ok) {
             ++liveFailures;
             return;
@@ -377,8 +377,7 @@ contract UniswapV4FeesCustodyHandler is CommonBase, StdUtils {
         (o[0], o[1]) = owed(key);
         uint256[] memory s = _snap();
         (bool ok, bytes memory ret) = _asColl(
-            reconcile ? ADAPTER : SWAP,
-            abi.encodeCall(IAmmIntegration.unwind, (key, units, new uint256[](2), recipient))
+            reconcile ? ADAPTER : SWAP, abi.encodeCall(ILPVault.unwind, (key, units, new uint256[](2), recipient))
         );
         if (!ok) {
             ++liveFailures;
@@ -543,11 +542,11 @@ contract UniswapV4FeesCustodyHandler is CommonBase, StdUtils {
         } else {
             address[4] memory callers = [ATTACKER, ADAPTER, SWAP, TIMELOCK];
             bytes[5] memory calls = [
-                abi.encodeCall(IAmmIntegration.returnPosition, (key)),
-                abi.encodeCall(IAmmIntegration.unwind, (key, 1, new uint256[](2), ATTACKER)),
-                abi.encodeCall(IAmmIntegration.releaseToDepositor, (key, 1, new uint256[](2))),
-                abi.encodeCall(IAmmIntegration.collectFees, (key, ATTACKER)),
-                abi.encodeCall(IAmmIntegration.receivePosition, (1, ATTACKER, key))
+                abi.encodeCall(ILPVault.returnPosition, (key)),
+                abi.encodeCall(ILPVault.unwind, (key, 1, new uint256[](2), ATTACKER)),
+                abi.encodeCall(ILPVault.releaseToDepositor, (key, 1, new uint256[](2))),
+                abi.encodeCall(ILPVault.collectFees, (key, ATTACKER)),
+                abi.encodeCall(ILPVault.receivePosition, (1, ATTACKER, key))
             ];
             address holder = swapSession ? SWAP : ADAPTER;
             vm.prank(holder);

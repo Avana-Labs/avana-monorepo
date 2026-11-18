@@ -3,15 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {IClIntegration} from "../../amm/IClIntegration.sol";
 import {ISlipstreamIntegration} from "../../amm/slipstream/ISlipstreamIntegration.sol";
-import {ClMarketConfig} from "../../amm/types/ClMarketConfig.sol";
-import {FeeMode} from "../../amm/types/FeeMode.sol";
+import {ClMarketConfig, FeeMode} from "../../amm/types/AmmTypes.sol";
 import {IUniswapV4Integration} from "../../amm/uniswap-v4/IUniswapV4Integration.sol";
 import {UniswapV4State} from "../../amm/uniswap-v4/UniswapV4State.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {BackingRecord} from "../../custody/collateralization/types/CollateralizationTypes.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IUniswapV4PoolManager} from "../../interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {Market} from "../../types/Market.sol";
@@ -88,7 +87,7 @@ abstract contract LensFees is LensBase, ILensFees {
         (v.blockNumber, v.timestamp, v.marketId, v.positionKey) = (block.number, block.timestamp, marketId, positionKey);
         v.tokensOwed = new uint256[](m.tokens.length);
         v.amounts = new uint256[](m.tokens.length);
-        IAmmIntegration integration = IAmmIntegration(m.integration);
+        ILPVault integration = ILPVault(m.integration);
         v.depositor = integration.depositorOf(positionKey);
         v.inCustody = v.depositor != address(0);
         bytes32 protocol = integration.AMM_PROTOCOL();

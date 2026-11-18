@@ -3,11 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
 import {IClIntegration} from "../../src/amm/IClIntegration.sol";
 import {SlipstreamIntegration} from "../../src/amm/slipstream/SlipstreamIntegration.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
-import {ILPVaultEvents} from "../../src/custody/lp-vault/ILPVaultEvents.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
@@ -54,7 +53,7 @@ interface IClTestPool {
 /// each on its own fixture with the real Lock, so a rule of 2.2 or 2.19 is checked on both deployed contracts. The hooks
 /// give the suite the LPVault, its named core addresses, its position manager and pools, and a minting helper.
 /// @dev Suites set `isolate = false`: one test is one transaction, so the Lock behaves as in production.
-abstract contract ClLPVaultBase is AvanaTest, ILPVaultErrors, ILPVaultEvents {
+abstract contract ClLPVaultBase is AvanaTest, ILPVaultBase {
     /// @dev Market 1 is `[-50, 50]` and market 2 the full range of the second pool, in both fixtures.
     uint256 internal constant MKT_A = 1;
     uint256 internal constant MKT_B = 2;
@@ -161,7 +160,7 @@ abstract contract ClLPVaultBase is AvanaTest, ILPVaultErrors, ILPVaultEvents {
     ) internal returns (bytes32 key, uint128 units) {
         key = _cMint(marketId, owner, liquidity);
         units = abi.decode(
-            _cAs(_cCore().adapter, abi.encodeCall(IAmmIntegration.receivePosition, (marketId, owner, key))), (uint128)
+            _cAs(_cCore().adapter, abi.encodeCall(ILPVault.receivePosition, (marketId, owner, key))), (uint128)
         );
     }
 

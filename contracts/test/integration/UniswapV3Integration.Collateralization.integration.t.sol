@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {BackingRecord} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
@@ -249,7 +249,7 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
         vm.startPrank(adapter);
         lock.acquire();
         token2.addValidProxy(bobProxy);
-        vm.expectRevert(ILPVaultErrors.NotTokenOwner.selector);
+        vm.expectRevert(ILPVaultBase.NotTokenOwner.selector);
         coll.pledge(attacker, bobProxy, vt2, bytes32(pushed), false);
         // A third party cannot re-credit the donated liquidity.
         vm.expectRevert(ICollateralizationBase.NotDepositor.selector);
@@ -285,7 +285,7 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
         nfpm.increaseLiquidity(uint256(key), 2e9);
         vm.startPrank(adapter);
         lock.acquire();
-        vm.expectRevert(ILPVaultErrors.TopUpNotSupported.selector);
+        vm.expectRevert(ILPVaultBase.TopUpNotSupported.selector);
         coll.recredit(alice, aliceProxy, vt2, key, hex"01", false);
         (uint128 added,) = coll.recredit(alice, aliceProxy, vt2, key, "", false);
         lock.release();
@@ -308,7 +308,7 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
         vm.startPrank(adapter);
         lock.acquire();
         token2.addValidProxy(aliceProxy);
-        vm.expectRevert(ILPVaultErrors.PoolMismatch.selector);
+        vm.expectRevert(ILPVaultBase.PoolMismatch.selector);
         coll.pledge(alice, aliceProxy, vt2, bytes32(id), false);
         lock.release();
         vm.stopPrank();
@@ -421,7 +421,7 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
         nfpm.transferFrom(alice, address(v3Vault), id);
         vm.startPrank(adapter);
         lock.acquire();
-        vm.expectRevert(ILPVaultErrors.NotTokenOwner.selector);
+        vm.expectRevert(ILPVaultBase.NotTokenOwner.selector);
         coll.pledge(alice, aliceProxy, vt2, bytes32(id), false);
         lock.release();
         vm.stopPrank();

@@ -3,14 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {ICLFactory} from "../../interfaces/external/aerodrome/ICLFactory.sol";
 import {ICLPool} from "../../interfaces/external/aerodrome/ICLPool.sol";
 import {INonfungiblePositionManager} from "../../interfaces/external/aerodrome/INonfungiblePositionManager.sol";
-import {IAmmIntegration} from "../IAmmIntegration.sol";
 import {ClLPVaultBase} from "../concentrated-liquidity/ClLPVaultBase.sol";
 import {ClNfpmLPVault} from "../concentrated-liquidity/ClNfpmLPVault.sol";
 import {IClPositionManager} from "../concentrated-liquidity/IClPositionManager.sol";
-import {ClMarketConfig} from "../types/ClMarketConfig.sol";
+import {ClMarketConfig} from "../types/AmmTypes.sol";
 import {ISlipstreamIntegration} from "./ISlipstreamIntegration.sol";
 
 /// @title SlipstreamIntegration
@@ -80,7 +80,7 @@ contract SlipstreamIntegration is ClNfpmLPVault, ISlipstreamIntegration {
         _BLOCK_TIME = BLOCK_TIME;
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function AMM_PROTOCOL() external pure override returns (bytes32) {
         return AERODROME_SLIPSTREAM;
     }

@@ -6,12 +6,12 @@ pragma solidity 0.8.28;
 // External calls go only to known protocol contracts while a Lock member holds the Lock, so nothing can re-enter.
 // Ledger writes happen only inside entry points that emit their own event.
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {PledgeCharge} from "../../policy/risk-module/types/RiskModuleTypes.sol";
 import {PledgeCounters} from "../../types/PledgeCounters.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
+import {ILPVault} from "../lp-vault/ILPVault.sol";
 import {CollateralizationLedger} from "./CollateralizationLedger.sol";
 import {ICollateralization} from "./ICollateralization.sol";
 import {BackingRecord} from "./types/CollateralizationTypes.sol";
@@ -63,7 +63,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         uint256[] memory before = _balances(c, depositor);
         // The amounts returned are the depositor's measured balance deltas, not the LPVault's report.
         // forge-lint: disable-next-line(unused-return)
-        IAmmIntegration(c.lpVault).releaseToDepositor(positionKey, units, minAmounts);
+        ILPVault(c.lpVault).releaseToDepositor(positionKey, units, minAmounts);
         amounts = _received(c, depositor, before);
     }
 
@@ -117,7 +117,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         _onlyAdapter();
         Ctx memory c = _load(vaultToken);
         _depositorRecord(c, positionKey, depositor);
-        amounts = IAmmIntegration(c.lpVault).collectFees(positionKey, depositor);
+        amounts = ILPVault(c.lpVault).collectFees(positionKey, depositor);
     }
 
     /// @dev `lengthPlusOne` is 0 for `release`; otherwise `minAmounts.length + 1`, and the pool lock is checked.
@@ -196,10 +196,10 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         if (open >= _recordCap(c.lpVault)) revert TooManyRecords(open);
 
         _checkReadSafe(c);
-        credited = IAmmIntegration(c.lpVault).receivePosition(c.marketId, depositor, positionKey);
+        credited = ILPVault(c.lpVault).receivePosition(c.marketId, depositor, positionKey);
         if (credited == 0) revert ZeroUnits();
         if (credited > MAX_CREDITED_UNITS) revert LiquidityAboveBound();
-        if (IAmmIntegration(c.lpVault).marketOfPosition(positionKey) != c.marketId) revert ShapeMismatch();
+        if (ILPVault(c.lpVault).marketOfPosition(positionKey) != c.marketId) revert ShapeMismatch();
         PledgeCharge memory charge = _charge(c, depositor, proxy, positionKey, credited, requireRescue);
         _checkCharge(charge, credited);
 
@@ -268,7 +268,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         BackingRecord storage r,
         bytes32 positionKey
     ) private view returns (uint128 added) {
-        uint256 live = IAmmIntegration(c.lpVault).unitsOf(positionKey);
+        uint256 live = ILPVault(c.lpVault).unitsOf(positionKey);
         uint256 credited = r.credited;
         if (credited == 0 || live <= credited) revert NothingToRecredit(positionKey);
         if (live > MAX_CREDITED_UNITS) revert LiquidityAboveBound();
@@ -334,7 +334,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         _reconcile(c, proxy, _supplied(c, proxy));
         // The credit is the live units read next, not the LPVault's report of the top-up.
         // forge-lint: disable-next-line(unused-return)
-        if (topUp.length != 0) IAmmIntegration(c.lpVault).topUpPosition(positionKey, depositor, topUp);
+        if (topUp.length != 0) ILPVault(c.lpVault).topUpPosition(positionKey, depositor, topUp);
     }
 
     /// @dev Counters are passed in because the ledger's views revert while the Lock is held.

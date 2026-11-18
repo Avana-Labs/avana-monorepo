@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IntegrationCapabilities} from "../../../src/amm/types/IntegrationCapabilities.sol";
-import {PoolKeying} from "../../../src/amm/types/PoolKeying.sol";
+import {IntegrationCapabilities, PoolKeying} from "../../../src/amm/types/AmmTypes.sol";
 import {FeedDef, MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {OracleConfig} from "../../../src/types/OracleConfig.sol";
 import {PositionShape} from "../../../src/types/PositionShape.sol";

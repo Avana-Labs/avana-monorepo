@@ -8,9 +8,9 @@ pragma solidity 0.8.28;
 /// @dev Safe under STATICCALL: makes no call to Collateralization or the LPVault.
 // View calls in loops over the market's pool tokens and the Spoke's reserves, bounded by listings.
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {RiskStatus} from "../../amm/types/RiskStatus.sol";
+import {RiskStatus} from "../../amm/types/AmmTypes.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
@@ -89,9 +89,8 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         if (p.reason != bytes4(0)) return p;
         p.usdCharge =
             RiskModuleMath.usdCharge(units, _capPrice(m.lpOracle), _store().stressFloorUsd(marketId), m.decimals);
-        uint256 cap = Math.min(
-            IAmmIntegration(m.integration).maxRecordsPerAccountMarket(), AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET
-        );
+        uint256 cap =
+            Math.min(ILPVault(m.integration).maxRecordsPerAccountMarket(), AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET);
         if (k.accountRecords >= cap) {
             p.reason = TooManyRecords.selector;
             return p;
@@ -116,7 +115,7 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         address depositor,
         bytes32 positionKey
     ) internal view returns (bytes4 reason, uint128 units) {
-        IAmmIntegration amm = IAmmIntegration(m.integration);
+        ILPVault amm = ILPVault(m.integration);
         if (amm.positionOwner(positionKey) != depositor) return (NotPositionOwner.selector, 0);
         try amm.validatePosition(marketId, depositor, positionKey) returns (uint128 u) {
             units = u;
@@ -148,8 +147,7 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         if (cap >= NO_POOL_SHARE_CAP) {
             p.poolShareRoomUnits = type(uint256).max;
         } else {
-            RiskStatus memory rs =
-                IAmmIntegration(m.integration).riskStatus(marketId, ps.getMarketParams(marketId).twapWindow);
+            RiskStatus memory rs = ILPVault(m.integration).riskStatus(marketId, ps.getMarketParams(marketId).twapWindow);
             if (rs.depthAvailable) {
                 p.poolShareRoomUnits = RiskModuleMath.poolShareRoom(k.poolUnits, cap, rs.depthUnits);
             }
@@ -393,8 +391,8 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         x.requireRescue = requireRescue;
         uint256 cap = _store().poolShareMaxBpsOf(_poolKey(c.m));
         if (cap < NO_POOL_SHARE_CAP) {
-            RiskStatus memory rs = IAmmIntegration(c.m.integration)
-                .riskStatus(c.marketId, _store().getMarketParams(c.marketId).twapWindow);
+            RiskStatus memory rs =
+                ILPVault(c.m.integration).riskStatus(c.marketId, _store().getMarketParams(c.marketId).twapWindow);
             x.depthUnavailable = !rs.depthAvailable;
             x.capFail = rs.depthAvailable && RiskModuleMath.poolShareExceeds(k.poolUnits + c.units, cap, rs.depthUnits);
         }

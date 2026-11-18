@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClMarketConfig} from "../../../src/amm/types/ClMarketConfig.sol";
-import {RiskStatus} from "../../../src/amm/types/RiskStatus.sol";
+import {ClMarketConfig, RiskStatus} from "../../../src/amm/types/AmmTypes.sol";
 import {DebtPriceView as OracleDebtView} from "../../../src/oracle/debt-oracle/types/DebtPriceView.sol";
 import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";

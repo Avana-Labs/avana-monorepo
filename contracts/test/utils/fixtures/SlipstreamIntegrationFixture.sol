@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {SlipstreamIntegration} from "../../../src/amm/slipstream/SlipstreamIntegration.sol";
-import {ILPVaultErrors} from "../../../src/custody/lp-vault/ILPVaultErrors.sol";
-import {ILPVaultEvents} from "../../../src/custody/lp-vault/ILPVaultEvents.sol";
+import {ILPVaultBase} from "../../../src/custody/lp-vault/ILPVaultBase.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
 import {PositionShape} from "../../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../../src/types/ShapeKind.sol";
@@ -20,7 +19,7 @@ import {MintableToken} from "../mocks/UniswapV3Mocks.sol";
 /// 100. Collateralization, the MarketRegistry, the AaveAdapter, LPVaultSwap and the timelock are named addresses.
 /// @dev Suites set `isolate = false`: `_asColl` takes the Lock as the AaveAdapter, makes one call as Collateralization
 /// and frees the Lock, as one outer entry point would.
-abstract contract SlipstreamIntegrationFixture is AvanaTest, ILPVaultErrors, ILPVaultEvents {
+abstract contract SlipstreamIntegrationFixture is AvanaTest, ILPVaultBase {
     uint32 internal constant INTEGRATION = 2;
     uint256 internal constant M1 = 1;
     uint256 internal constant M2 = 2;

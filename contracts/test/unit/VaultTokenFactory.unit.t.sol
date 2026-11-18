@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
-import {PoolKeying} from "../../src/amm/types/PoolKeying.sol";
+import {PoolKeying} from "../../src/amm/types/AmmTypes.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {VaultTokenBindings} from "../../src/types/VaultTokenBindings.sol";
@@ -130,7 +130,7 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
         _expectInvalidIntegration(V3_ID, address(v3Vault));
         _expectInvalidIntegration(SLIPSTREAM_ID, address(v3Vault));
         // Even when it reports the other ID, the registered LPVault stays bound to its first one.
-        vm.mockCall(address(v3Vault), abi.encodeCall(IAmmIntegration.INTEGRATION_ID, ()), abi.encode(SLIPSTREAM_ID));
+        vm.mockCall(address(v3Vault), abi.encodeCall(ILPVault.INTEGRATION_ID, ()), abi.encode(SLIPSTREAM_ID));
         _expectInvalidIntegration(SLIPSTREAM_ID, address(v3Vault));
         vm.clearMockedCalls();
         assertEq(factory.lpVaultOf(SLIPSTREAM_ID), address(0), "no second entry");

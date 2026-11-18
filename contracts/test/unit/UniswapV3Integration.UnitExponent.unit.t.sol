@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
-import {RiskMetadata} from "../../src/amm/types/RiskMetadata.sol";
+import {RiskMetadata} from "../../src/amm/types/AmmTypes.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {UniswapV3IntegrationFixture} from "../utils/fixtures/UniswapV3IntegrationFixture.sol";

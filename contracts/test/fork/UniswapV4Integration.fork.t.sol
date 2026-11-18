@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IUniswapV4Integration} from "../../src/amm/uniswap-v4/IUniswapV4Integration.sol";
 import {UniswapV4State} from "../../src/amm/uniswap-v4/UniswapV4State.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {
     IUniswapV4PoolManager,
     UniswapV4PoolKey
@@ -169,7 +169,7 @@ contract UniswapV4IntegrationForkTest is AvanaTest {
 
         // Any other range of the same pool is refused.
         uint256 other = _mint(alice, lower - SPACING, upper, l);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultErrors.RangeMismatch.selector, lower - SPACING, upper));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultBase.RangeMismatch.selector, lower - SPACING, upper));
         vault.validatePosition(MARKET, alice, bytes32(other));
 
         // Received at the exact range: the credited units are the position's liquidity in the market's unit.
@@ -215,7 +215,7 @@ contract UniswapV4IntegrationForkTest is AvanaTest {
         V4ForkUnlockProbe probe = new V4ForkUnlockProbe(POOL_MANAGER);
         probe.probe(vault, MARKET);
         assertTrue(probe.ran());
-        assertEq(probe.probed(), ILPVaultErrors.PoolLocked.selector, "PoolLocked inside unlock");
+        assertEq(probe.probed(), ILPVaultBase.PoolLocked.selector, "PoolLocked inside unlock");
         vault.checkReadSafe(MARKET);
 
         _lock();

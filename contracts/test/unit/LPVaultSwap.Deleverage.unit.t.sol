@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {DeleverageRequest} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
@@ -413,7 +413,7 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
         uint256[] memory mins = new uint256[](2);
         mins[0] = a0 + 1;
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultErrors.BelowMinimum.selector, 0, a0, a0 + 1));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultBase.BelowMinimum.selector, 0, a0, a0 + 1));
         adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, mins, 0);
         DeleverageRequest memory r = _request(1000e6);
         r.minAmounts = new uint256[](0);

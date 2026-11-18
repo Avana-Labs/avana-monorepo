@@ -1,36 +1,4 @@
 {
-  "contracts/src/amm/IAmmIntegration.sol": {
-    "IAmmIntegration": ["REQ-AMM-CORE-001", "REQ-AMM-CORE-002", "REQ-AMM-CORE-005", "REQ-AMM-CORE-006", "REQ-AMM-CORE-007", "REQ-AMM-CORE-008", "INV-005", "INV-091", "Q-369", "Q-370", "Q-371"],
-    "IAmmIntegration.INTEGRATION_ID": ["REQ-AMM-CORE-001"],
-    "IAmmIntegration.AMM_PROTOCOL": ["REQ-AMM-CORE-009"],
-    "IAmmIntegration.capabilities": ["REQ-AMM-CORE-009"],
-    "IAmmIntegration.maxRecordsPerAccountMarket": ["REQ-AMM-CORE-020", "INV-096"],
-    "IAmmIntegration.bindMarket": ["REQ-AMM-CORE-003", "REQ-AMM-CORE-004", "REQ-AMM-CORE-014"],
-    "IAmmIntegration.marketOf": ["REQ-AMM-CORE-004"],
-    "IAmmIntegration.receivePosition": ["REQ-AMM-CORE-005", "REQ-VAULT-147", "REQ-VAULT-101", "REQ-VAULT-011", "REQ-VAULT-156", "REQ-VAULT-157", "DEP-008", "Q-258"],
-    "IAmmIntegration.returnPosition": ["REQ-AMM-CORE-005", "REQ-VAULT-148", "REQ-VAULT-072", "REQ-VAULT-094", "INV-045"],
-    "IAmmIntegration.topUpPosition": ["REQ-AMM-CORE-011", "REQ-COLL-037", "Q-294", "Q-297"],
-    "IAmmIntegration.positionOwner": ["REQ-AMM-CORE-005", "REQ-RISK-031"],
-    "IAmmIntegration.validatePosition": ["REQ-AMM-CORE-005"],
-    "IAmmIntegration.composition": ["REQ-AMM-CORE-006", "REQ-AMM-CORE-012", "SPEC-ORC-007"],
-    "IAmmIntegration.unwind": ["REQ-AMM-CORE-007", "REQ-VAULT-149", "REQ-VAULT-057", "REQ-VAULT-058", "REQ-VAULT-067", "REQ-VAULT-095", "REQ-VAULT-135", "REQ-VAULT-146", "REQ-VAULT-159", "SPEC-BACK-008", "Q-217", "Q-250", "Q-255", "Q-271"],
-    "IAmmIntegration.releaseToDepositor": ["REQ-AMM-CORE-007", "REQ-VAULT-161", "REQ-VAULT-099", "REQ-VAULT-163", "SPEC-BACK-008", "Q-254"],
-    "IAmmIntegration.collectFees": ["REQ-AMM-CORE-011", "REQ-VAULT-064", "REQ-VAULT-065", "REQ-VAULT-066", "REQ-VAULT-126", "FEE-001", "FEE-002", "FEE-006", "INV-044"],
-    "IAmmIntegration.riskMetadata": ["REQ-AMM-CORE-008"],
-    "IAmmIntegration.riskStatus": ["REQ-AMM-CORE-013", "SPEC-CAP-005", "Q-295"],
-    "IAmmIntegration.depositorOf": ["REQ-VAULT-151", "REQ-VAULT-152", "REQ-VAULT-160"],
-    "IAmmIntegration.marketOfPosition": ["REQ-VAULT-151"],
-    "IAmmIntegration.unitsOf": ["REQ-VAULT-162", "REQ-VAULT-151", "REQ-VAULT-160", "Q-254"]
-  },
-  "contracts/src/amm/IAmmIntegrationHooks.sol": {
-    "IAmmIntegrationHooks": ["REQ-AMM-CORE-009", "REQ-AMM-CORE-010", "REQ-AMM-CORE-011", "REQ-AMM-CORE-012", "REQ-AMM-CORE-013", "REQ-AMM-CORE-014", "Q-371"],
-    "IAmmIntegrationHooks.checkReadSafe": ["REQ-AMM-CORE-013", "REQ-VAULT-010", "REQ-VAULT-105"],
-    "IAmmIntegrationHooks.consistencyDeviation": ["REQ-AMM-CORE-009", "REQ-ORACLE-046", "REQ-ORACLE-103"],
-    "IAmmIntegrationHooks.rateProviders": ["REQ-AMM-CORE-010"],
-    "IAmmIntegrationHooks.wrappedNative": ["REQ-AMM-CORE-010"],
-    "IAmmIntegrationHooks.isAllowedPoolHook": ["REQ-AMM-CORE-014", "REQ-AMM-V4-001"],
-    "IAmmIntegrationHooks.effectiveSupply": ["REQ-AMM-CORE-012"]
-  },
   "contracts/src/amm/IClIntegration.sol": {
     "IClIntegration": ["REQ-AMM-V3-001", "REQ-AMM-V3-003", "REQ-AMM-V3-004", "REQ-AMM-SLIP-001", "REQ-AMM-SLIP-003", "Q-370", "Q-371"],
     "IClIntegration.unitExponent": ["SPEC-UNIT-002", "SPEC-ORC-005"],
@@ -99,7 +67,7 @@
     "ClNfpmLPVault.isAllowedPoolHook": ["REQ-AMM-CORE-014"]
   },
   "contracts/src/amm/concentrated-liquidity/ClPriceMath.sol": {
-    "ClPriceMath": ["SPEC-ORC-006", "SPEC-ORC-009", "SPEC-ORC-010", "SPEC-AMM-V3-001", "SPEC-AMM-CORE-001", "SPEC-BACK-001", "REQ-AMM-V3-005", "REQ-AMM-V3-006", "REQ-AMM-V3-007", "REQ-ORACLE-012"],
+    "ClPriceMath": ["SPEC-ORC-006", "SPEC-ORC-009", "SPEC-ORC-010", "SPEC-AMM-V3-001", "SPEC-AMM-CORE-001", "SPEC-BACK-001", "REQ-AMM-V3-005", "REQ-AMM-V3-006", "REQ-AMM-V3-007", "REQ-ORACLE-012", "SPEC-ORC-005", "SPEC-UNIT-001", "SPEC-UNIT-002"],
     "ClPriceMath.sqrtRatioAtTick": ["SPEC-ORC-006", "SPEC-AMM-V3-001"],
     "ClPriceMath.tickAtSqrtRatio": ["SPEC-ORC-010"],
     "ClPriceMath.oracleSqrtPrice": ["SPEC-ORC-009", "REQ-ORACLE-012"],
@@ -115,9 +83,6 @@
     "ClTickMath": ["SPEC-ORC-006", "SPEC-ORC-010", "SPEC-AMM-V3-001"],
     "ClTickMath.getSqrtPriceAtTick": ["SPEC-ORC-006", "SPEC-AMM-V3-001"],
     "ClTickMath.getTickAtSqrtPrice": ["SPEC-ORC-010"]
-  },
-  "contracts/src/amm/concentrated-liquidity/ClUnitMath.sol": {
-    "ClUnitMath": ["SPEC-ORC-005", "SPEC-UNIT-001", "SPEC-UNIT-002"]
   },
   "contracts/src/amm/concentrated-liquidity/IClPoolObservations.sol": {
     "IClPoolObservations": ["REQ-AMM-V3-006", "REQ-AMM-CORE-013", "Q-371"]
@@ -146,25 +111,13 @@
     "SlipstreamIntegration._validatePool": ["REQ-AMM-SLIP-005", "REQ-AMM-SLIP-007", "REQ-AMM-SLIP-008", "REQ-AMM-SLIP-014", "SPEC-AMM-SLIP-001", "REQ-AMM-SLIP-015", "REQ-AMM-SLIP-016", "REQ-AMM-SLIP-017", "REQ-AMM-CORE-017"],
     "SlipstreamIntegration._isEncumbered": ["REQ-AMM-SLIP-009", "REQ-AMM-SLIP-019", "REQ-AMM-CORE-005"]
   },
-  "contracts/src/amm/types/ClMarketConfig.sol": {
-    "ClMarketConfig": ["REQ-AMM-V3-002", "REQ-AMM-SLIP-002", "REQ-AMM-CORE-004", "Q-370"]
-  },
-  "contracts/src/amm/types/FeeMode.sol": {
-    "FeeMode": ["REQ-AMM-CORE-011", "Q-371"]
-  },
-  "contracts/src/amm/types/IntegrationCapabilities.sol": {
-    "IntegrationCapabilities": ["REQ-AMM-CORE-009", "REQ-AMM-CORE-010", "REQ-AMM-CORE-011", "REQ-AMM-CORE-012", "REQ-AMM-CORE-013", "REQ-ORACLE-103", "Q-371"]
-  },
-  "contracts/src/amm/types/PoolKeying.sol": {
-    "PoolKeying": ["REQ-AMM-CORE-010", "Q-371"]
-  },
-  "contracts/src/amm/types/PricingMode.sol": {
-    "PricingMode": ["REQ-AMM-CORE-012", "Q-371"]
-  },
-  "contracts/src/amm/types/RiskMetadata.sol": {
-    "RiskMetadata": ["REQ-AMM-CORE-008", "REQ-RISK-004", "Q-371"]
-  },
-  "contracts/src/amm/types/RiskStatus.sol": {
+  "contracts/src/amm/types/AmmTypes.sol": {
+    "ClMarketConfig": ["REQ-AMM-V3-002", "REQ-AMM-SLIP-002", "REQ-AMM-CORE-004", "Q-370"],
+    "FeeMode": ["REQ-AMM-CORE-011", "Q-371"],
+    "IntegrationCapabilities": ["REQ-AMM-CORE-009", "REQ-AMM-CORE-010", "REQ-AMM-CORE-011", "REQ-AMM-CORE-012", "REQ-AMM-CORE-013", "REQ-ORACLE-103", "Q-371"],
+    "PoolKeying": ["REQ-AMM-CORE-010", "Q-371"],
+    "PricingMode": ["REQ-AMM-CORE-012", "Q-371"],
+    "RiskMetadata": ["REQ-AMM-CORE-008", "REQ-RISK-004", "Q-371"],
     "RiskStatus": ["REQ-AMM-CORE-013", "SPEC-CAP-005", "Q-295", "Q-371"]
   },
   "contracts/src/amm/uniswap-v3/IUniswapV3Integration.sol": {
@@ -463,52 +416,75 @@
     "Pending": ["REQ-VAULT-029", "REQ-VAULT-061", "REQ-VAULT-135", "REQ-VAULT-137", "SPEC-BACK-009", "SPEC-BACK-012", "Q-271", "Q-370"]
   },
   "contracts/src/custody/lp-vault/ILPVault.sol": {
-    "ILPVault": ["REQ-VAULT-001", "REQ-VAULT-002", "REQ-VAULT-003", "REQ-VAULT-004", "REQ-VAULT-005", "REQ-VAULT-039", "REQ-VAULT-040", "REQ-VAULT-041", "REQ-VAULT-044", "REQ-VAULT-045", "REQ-VAULT-077", "REQ-VAULT-085", "REQ-VAULT-093", "REQ-VAULT-094", "REQ-VAULT-095", "REQ-VAULT-096", "REQ-VAULT-097", "REQ-VAULT-098", "REQ-VAULT-099", "REQ-VAULT-150", "REQ-VAULT-152", "REQ-VAULT-153", "REQ-VAULT-154", "REQ-AMM-CORE-001", "INV-005", "INV-007", "INV-017", "INV-052", "Q-224", "Q-226", "Q-240", "Q-371", "INV-091"],
+    "ILPVault": ["REQ-VAULT-001", "REQ-VAULT-002", "REQ-VAULT-003", "REQ-VAULT-004", "REQ-VAULT-005", "REQ-VAULT-039", "REQ-VAULT-040", "REQ-VAULT-041", "REQ-VAULT-044", "REQ-VAULT-045", "REQ-VAULT-077", "REQ-VAULT-085", "REQ-VAULT-093", "REQ-VAULT-094", "REQ-VAULT-095", "REQ-VAULT-096", "REQ-VAULT-097", "REQ-VAULT-098", "REQ-VAULT-099", "REQ-VAULT-150", "REQ-VAULT-152", "REQ-VAULT-153", "REQ-VAULT-154", "REQ-AMM-CORE-001", "INV-005", "INV-007", "INV-017", "INV-052", "Q-224", "Q-226", "Q-240", "Q-371", "INV-091", "REQ-AMM-CORE-002", "REQ-AMM-CORE-005", "REQ-AMM-CORE-006", "REQ-AMM-CORE-007", "REQ-AMM-CORE-008", "Q-369", "Q-370", "REQ-AMM-CORE-009", "REQ-AMM-CORE-010", "REQ-AMM-CORE-011", "REQ-AMM-CORE-012", "REQ-AMM-CORE-013", "REQ-AMM-CORE-014"],
     "ILPVault.returnStray": ["REQ-VAULT-079", "REQ-VAULT-080", "REQ-VAULT-081", "REQ-VAULT-082", "REQ-VAULT-083", "REQ-VAULT-084", "REQ-VAULT-122", "REQ-VAULT-123", "INV-007", "INV-091", "Q-104", "Q-228"],
     "ILPVault.isInCustody": ["REQ-VAULT-151", "REQ-VAULT-152", "REQ-VAULT-160"],
     "ILPVault.COLLATERALIZATION": ["REQ-VAULT-155", "REQ-VAULT-002"],
     "ILPVault.MARKET_REGISTRY": ["REQ-VAULT-155", "REQ-AMM-CORE-004"],
     "ILPVault.LOCK": ["REQ-VAULT-155", "REQ-VAULT-150"],
-    "ILPVault.TIMELOCK": ["REQ-VAULT-155", "REQ-VAULT-080"]
+    "ILPVault.TIMELOCK": ["REQ-VAULT-155", "REQ-VAULT-080"],
+    "ILPVault.INTEGRATION_ID": ["REQ-AMM-CORE-001"],
+    "ILPVault.AMM_PROTOCOL": ["REQ-AMM-CORE-009"],
+    "ILPVault.capabilities": ["REQ-AMM-CORE-009"],
+    "ILPVault.maxRecordsPerAccountMarket": ["REQ-AMM-CORE-020", "INV-096"],
+    "ILPVault.bindMarket": ["REQ-AMM-CORE-003", "REQ-AMM-CORE-004", "REQ-AMM-CORE-014"],
+    "ILPVault.marketOf": ["REQ-AMM-CORE-004"],
+    "ILPVault.receivePosition": ["REQ-AMM-CORE-005", "REQ-VAULT-147", "REQ-VAULT-101", "REQ-VAULT-011", "REQ-VAULT-156", "REQ-VAULT-157", "DEP-008", "Q-258"],
+    "ILPVault.returnPosition": ["REQ-AMM-CORE-005", "REQ-VAULT-148", "REQ-VAULT-072", "REQ-VAULT-094", "INV-045"],
+    "ILPVault.topUpPosition": ["REQ-AMM-CORE-011", "REQ-COLL-037", "Q-294", "Q-297"],
+    "ILPVault.positionOwner": ["REQ-AMM-CORE-005", "REQ-RISK-031"],
+    "ILPVault.validatePosition": ["REQ-AMM-CORE-005"],
+    "ILPVault.composition": ["REQ-AMM-CORE-006", "REQ-AMM-CORE-012", "SPEC-ORC-007"],
+    "ILPVault.unwind": ["REQ-AMM-CORE-007", "REQ-VAULT-149", "REQ-VAULT-057", "REQ-VAULT-058", "REQ-VAULT-067", "REQ-VAULT-095", "REQ-VAULT-135", "REQ-VAULT-146", "REQ-VAULT-159", "SPEC-BACK-008", "Q-217", "Q-250", "Q-255", "Q-271"],
+    "ILPVault.releaseToDepositor": ["REQ-AMM-CORE-007", "REQ-VAULT-161", "REQ-VAULT-099", "REQ-VAULT-163", "SPEC-BACK-008", "Q-254"],
+    "ILPVault.collectFees": ["REQ-AMM-CORE-011", "REQ-VAULT-064", "REQ-VAULT-065", "REQ-VAULT-066", "REQ-VAULT-126", "FEE-001", "FEE-002", "FEE-006", "INV-044"],
+    "ILPVault.riskMetadata": ["REQ-AMM-CORE-008"],
+    "ILPVault.riskStatus": ["REQ-AMM-CORE-013", "SPEC-CAP-005", "Q-295"],
+    "ILPVault.depositorOf": ["REQ-VAULT-151", "REQ-VAULT-152", "REQ-VAULT-160"],
+    "ILPVault.marketOfPosition": ["REQ-VAULT-151"],
+    "ILPVault.unitsOf": ["REQ-VAULT-162", "REQ-VAULT-151", "REQ-VAULT-160", "Q-254"],
+    "ILPVault.checkReadSafe": ["REQ-AMM-CORE-013", "REQ-VAULT-010", "REQ-VAULT-105"],
+    "ILPVault.consistencyDeviation": ["REQ-AMM-CORE-009", "REQ-ORACLE-046", "REQ-ORACLE-103"],
+    "ILPVault.rateProviders": ["REQ-AMM-CORE-010"],
+    "ILPVault.wrappedNative": ["REQ-AMM-CORE-010"],
+    "ILPVault.isAllowedPoolHook": ["REQ-AMM-CORE-014", "REQ-AMM-V4-001"],
+    "ILPVault.effectiveSupply": ["REQ-AMM-CORE-012"]
   },
-  "contracts/src/custody/lp-vault/ILPVaultErrors.sol": {
-    "ILPVaultErrors": ["REQ-VAULT-153", "REQ-AMM-CORE-005", "Q-371"],
-    "ILPVaultErrors.NotCollateralization": ["REQ-VAULT-147", "REQ-VAULT-148", "REQ-VAULT-149", "REQ-VAULT-156", "REQ-VAULT-161"],
-    "ILPVaultErrors.LockNotHeld": ["REQ-VAULT-147", "REQ-VAULT-148", "REQ-VAULT-149", "REQ-VAULT-157"],
-    "ILPVaultErrors.NotMarketRegistry": ["REQ-AMM-CORE-004"],
-    "ILPVaultErrors.MarketBinding": ["REQ-AMM-CORE-004"],
-    "ILPVaultErrors.InvalidPool": ["REQ-AMM-CORE-004", "REQ-AMM-CORE-014"],
-    "ILPVaultErrors.InvalidShape": ["REQ-AMM-CORE-003", "REQ-AMM-CORE-004"],
-    "ILPVaultErrors.PoolMismatch": ["REQ-VAULT-008", "REQ-VAULT-103"],
-    "ILPVaultErrors.RangeMismatch": ["REQ-VAULT-009", "REQ-VAULT-104", "REQ-AMM-CORE-003", "SPEC-BACK-001"],
-    "ILPVaultErrors.PoolLocked": ["REQ-VAULT-010", "REQ-VAULT-105", "REQ-AMM-CORE-013"],
-    "ILPVaultErrors.NotTokenOwner": ["REQ-VAULT-147", "REQ-VAULT-101", "Q-258"],
-    "ILPVaultErrors.PositionEncumbered": ["REQ-AMM-SLIP-004", "REQ-AMM-V4-003"],
-    "ILPVaultErrors.ZeroUnits": ["REQ-VAULT-012", "REQ-VAULT-107"],
-    "ILPVaultErrors.NotInCustody": ["REQ-VAULT-148", "REQ-VAULT-149", "REQ-VAULT-161", "REQ-VAULT-162", "REQ-VAULT-064", "REQ-VAULT-120", "REQ-VAULT-158"],
-    "ILPVaultErrors.NotDepositor": ["REQ-VAULT-064", "REQ-VAULT-120"],
-    "ILPVaultErrors.NotStray": ["REQ-VAULT-079", "REQ-VAULT-083", "REQ-VAULT-122"],
-    "ILPVaultErrors.InvalidRecipient": ["REQ-VAULT-080", "REQ-VAULT-122", "REQ-VAULT-149", "REQ-VAULT-159"],
-    "ILPVaultErrors.UnsupportedNft": ["REQ-VAULT-078", "REQ-VAULT-124"],
-    "ILPVaultErrors.NotTimelock": ["REQ-VAULT-080", "REQ-VAULT-123"],
-    "ILPVaultErrors.LengthMismatch": ["REQ-AMM-CORE-002"],
-    "ILPVaultErrors.BelowMinimum": ["REQ-AMM-CORE-007"],
-    "ILPVaultErrors.FeesRolledIn": ["REQ-AMM-CORE-011"],
-    "ILPVaultErrors.InvalidPrices": ["REQ-AMM-CORE-006"],
-    "ILPVaultErrors.Locked": ["REQ-VAULT-151", "REQ-VAULT-160"],
-    "ILPVaultErrors.TopUpNotSupported": ["REQ-AMM-CORE-011", "REQ-COLL-037"],
-    "ILPVaultErrors.InvalidDeployment": ["REQ-VAULT-155", "REQ-AMM-V3-001"]
-  },
-  "contracts/src/custody/lp-vault/ILPVaultEvents.sol": {
-    "ILPVaultEvents": ["REQ-VAULT-147", "REQ-VAULT-148", "REQ-VAULT-149", "REQ-AMM-CORE-001", "Q-076", "Q-371"],
-    "ILPVaultEvents.MarketBound": ["REQ-AMM-CORE-004"],
-    "ILPVaultEvents.PositionReceived": ["REQ-VAULT-147", "DEP-008"],
-    "ILPVaultEvents.PositionReturned": ["REQ-VAULT-148"],
-    "ILPVaultEvents.UnitsUnwound": ["REQ-VAULT-149", "SPEC-BACK-008"],
-    "ILPVaultEvents.UnitsReleased": ["REQ-VAULT-161", "SPEC-BACK-008", "Q-254"],
-    "ILPVaultEvents.FeesCollected": ["REQ-VAULT-065", "FEE-006"],
-    "ILPVaultEvents.StrayReceived": ["REQ-VAULT-078"],
-    "ILPVaultEvents.StrayReturned": ["REQ-VAULT-080"]
+  "contracts/src/custody/lp-vault/ILPVaultBase.sol": {
+    "ILPVaultBase": ["REQ-VAULT-147", "REQ-VAULT-148", "REQ-VAULT-149", "REQ-AMM-CORE-001", "Q-076", "Q-371", "REQ-VAULT-153", "REQ-AMM-CORE-005"],
+    "ILPVaultBase.MarketBound": ["REQ-AMM-CORE-004"],
+    "ILPVaultBase.PositionReceived": ["REQ-VAULT-147", "DEP-008"],
+    "ILPVaultBase.PositionReturned": ["REQ-VAULT-148"],
+    "ILPVaultBase.UnitsUnwound": ["REQ-VAULT-149", "SPEC-BACK-008"],
+    "ILPVaultBase.UnitsReleased": ["REQ-VAULT-161", "SPEC-BACK-008", "Q-254"],
+    "ILPVaultBase.FeesCollected": ["REQ-VAULT-065", "FEE-006"],
+    "ILPVaultBase.StrayReceived": ["REQ-VAULT-078"],
+    "ILPVaultBase.StrayReturned": ["REQ-VAULT-080"],
+    "ILPVaultBase.NotCollateralization": ["REQ-VAULT-147", "REQ-VAULT-148", "REQ-VAULT-149", "REQ-VAULT-156", "REQ-VAULT-161"],
+    "ILPVaultBase.LockNotHeld": ["REQ-VAULT-147", "REQ-VAULT-148", "REQ-VAULT-149", "REQ-VAULT-157"],
+    "ILPVaultBase.NotMarketRegistry": ["REQ-AMM-CORE-004"],
+    "ILPVaultBase.MarketBinding": ["REQ-AMM-CORE-004"],
+    "ILPVaultBase.InvalidPool": ["REQ-AMM-CORE-004", "REQ-AMM-CORE-014"],
+    "ILPVaultBase.InvalidShape": ["REQ-AMM-CORE-003", "REQ-AMM-CORE-004"],
+    "ILPVaultBase.PoolMismatch": ["REQ-VAULT-008", "REQ-VAULT-103"],
+    "ILPVaultBase.RangeMismatch": ["REQ-VAULT-009", "REQ-VAULT-104", "REQ-AMM-CORE-003", "SPEC-BACK-001"],
+    "ILPVaultBase.PoolLocked": ["REQ-VAULT-010", "REQ-VAULT-105", "REQ-AMM-CORE-013"],
+    "ILPVaultBase.NotTokenOwner": ["REQ-VAULT-147", "REQ-VAULT-101", "Q-258"],
+    "ILPVaultBase.PositionEncumbered": ["REQ-AMM-SLIP-004", "REQ-AMM-V4-003"],
+    "ILPVaultBase.ZeroUnits": ["REQ-VAULT-012", "REQ-VAULT-107"],
+    "ILPVaultBase.NotInCustody": ["REQ-VAULT-148", "REQ-VAULT-149", "REQ-VAULT-161", "REQ-VAULT-162", "REQ-VAULT-064", "REQ-VAULT-120", "REQ-VAULT-158"],
+    "ILPVaultBase.NotDepositor": ["REQ-VAULT-064", "REQ-VAULT-120"],
+    "ILPVaultBase.NotStray": ["REQ-VAULT-079", "REQ-VAULT-083", "REQ-VAULT-122"],
+    "ILPVaultBase.InvalidRecipient": ["REQ-VAULT-080", "REQ-VAULT-122", "REQ-VAULT-149", "REQ-VAULT-159"],
+    "ILPVaultBase.UnsupportedNft": ["REQ-VAULT-078", "REQ-VAULT-124"],
+    "ILPVaultBase.NotTimelock": ["REQ-VAULT-080", "REQ-VAULT-123"],
+    "ILPVaultBase.LengthMismatch": ["REQ-AMM-CORE-002"],
+    "ILPVaultBase.BelowMinimum": ["REQ-AMM-CORE-007"],
+    "ILPVaultBase.FeesRolledIn": ["REQ-AMM-CORE-011"],
+    "ILPVaultBase.InvalidPrices": ["REQ-AMM-CORE-006"],
+    "ILPVaultBase.Locked": ["REQ-VAULT-151", "REQ-VAULT-160"],
+    "ILPVaultBase.TopUpNotSupported": ["REQ-AMM-CORE-011", "REQ-COLL-037"],
+    "ILPVaultBase.InvalidDeployment": ["REQ-VAULT-155", "REQ-AMM-V3-001"]
   },
   "contracts/src/flash/AaveV3FlashSource.sol": {
     "AaveV3FlashSource": ["REQ-FLASH-001", "REQ-FLASH-002", "REQ-FLASH-003", "REQ-FLASH-004", "REQ-FLASH-005", "REQ-FLASH-009", "REQ-FLASH-010", "SPEC-LIQ-015", "INV-040", "INV-095", "Q-334", "Q-335", "Q-373", "Q-386", "Q-390"],

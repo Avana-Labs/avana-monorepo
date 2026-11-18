@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {BackingRecord} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
@@ -101,7 +101,7 @@ contract CollateralizationChecksUnitTest is CollateralizationFixture {
         lpVault.setPoolLocked(true);
         _acquire(adapter);
         _register(aliceProxy);
-        _expectPledgeFail(alice, aliceProxy, vt, KEY42, abi.encodeWithSelector(ILPVaultErrors.PoolLocked.selector));
+        _expectPledgeFail(alice, aliceProxy, vt, KEY42, abi.encodeWithSelector(ILPVaultBase.PoolLocked.selector));
         lpVault.setPoolLocked(false);
         lpVault.setReceiveOverride(uint256(type(uint120).max) + 1);
         lpVault.setMarketOfPositionOverride(MARKET_ID + 9);
@@ -222,7 +222,7 @@ contract CollateralizationChecksUnitTest is CollateralizationFixture {
         vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.LengthMismatch.selector, 2, 1));
         coll.releaseForDeleverage(aliceProxy, vt, KEY42, 5_000_000_000, new uint256[](1));
         lpVault.setPoolLocked(true);
-        vm.expectRevert(ILPVaultErrors.PoolLocked.selector);
+        vm.expectRevert(ILPVaultBase.PoolLocked.selector);
         coll.releaseForDeleverage(aliceProxy, vt, KEY42, 5_000_000_000, two);
         lpVault.setPoolLocked(false);
         vm.stopPrank();
@@ -258,11 +258,11 @@ contract CollateralizationChecksUnitTest is CollateralizationFixture {
         uint256[] memory mins = new uint256[](2);
         mins[1] = 6_249_999_999;
         vm.prank(adapter);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultErrors.BelowMinimum.selector, 1, 6_249_999_998, 6_249_999_999));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultBase.BelowMinimum.selector, 1, 6_249_999_998, 6_249_999_999));
         coll.releasePartial(aliceProxy, vt, KEY42, 4_999_999_999, mins);
         lpVault.setPoolLocked(true);
         vm.prank(adapter);
-        vm.expectRevert(ILPVaultErrors.PoolLocked.selector);
+        vm.expectRevert(ILPVaultBase.PoolLocked.selector);
         coll.releasePartial(aliceProxy, vt, KEY42, 4_999_999_999, new uint256[](2));
         lpVault.setPoolLocked(false);
         mins[1] = 6_249_999_998;

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PoolKeying} from "../../src/amm/types/PoolKeying.sol";
+import {PoolKeying} from "../../src/amm/types/AmmTypes.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";

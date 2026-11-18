@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.sol";
-import {ClUnitMath} from "../../../src/amm/concentrated-liquidity/ClUnitMath.sol";
 import {UniswapV4State} from "../../../src/amm/uniswap-v4/UniswapV4State.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {
@@ -405,13 +404,13 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
         address t1,
         int24 spacing
     ) internal view returns (uint8 d, uint8 k) {
-        ClUnitMath.Valuation memory v =
-            ClUnitMath.valuation(_usdPrice(t0), _usdPrice(t1), ClTestToken(t0).decimals(), ClTestToken(t1).decimals());
+        ClPriceMath.Valuation memory v =
+            ClPriceMath.valuation(_usdPrice(t0), _usdPrice(t1), ClTestToken(t0).decimals(), ClTestToken(t1).decimals());
         bool found;
-        (found, k) = ClUnitMath.firstBindingExponent(v, spacing);
+        (found, k) = ClPriceMath.firstBindingExponent(v, spacing);
         require(found, "unit exponent");
         (int24 lower, int24 upper) = _v4FullRange(spacing);
-        (found, d) = ClUnitMath.unitDecimals(v, lower, upper, k);
+        (found, d) = ClPriceMath.unitDecimals(v, lower, upper, k);
         require(found, "unit decimals");
     }
 

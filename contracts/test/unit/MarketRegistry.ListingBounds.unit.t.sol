@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
@@ -234,7 +234,7 @@ contract MarketRegistryListingBoundsUnitTest is MarketRegistryFixture {
         registry.cancelRegistration(id);
         address[] memory toks = new address[](2);
         (toks[0], toks[1]) = (address(usdc), address(usdt));
-        bytes memory call = abi.encodeWithSelector(IAmmIntegration.marketOf.selector, id);
+        bytes memory call = abi.encodeWithSelector(ILPVault.marketOf.selector, id);
         PositionShape memory sh = _shape();
         vm.mockCall(address(lpVault), call, abi.encode(makeAddr("otherPool"), bytes32(0), sh, toks));
         vm.prank(address(timelock));

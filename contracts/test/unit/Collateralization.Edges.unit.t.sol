@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {Pending} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
@@ -80,7 +80,7 @@ contract CollateralizationEdgesUnitTest is CollateralizationFixture {
         token.addValidProxy(aliceProxy);
         vm.mockCall(
             address(lpVault),
-            abi.encodeWithSelector(IAmmIntegration.receivePosition.selector, MARKET_ID, alice, KEY42),
+            abi.encodeWithSelector(ILPVault.receivePosition.selector, MARKET_ID, alice, KEY42),
             abi.encode(uint128(0))
         );
         vm.expectRevert(ICollateralizationBase.ZeroUnits.selector);

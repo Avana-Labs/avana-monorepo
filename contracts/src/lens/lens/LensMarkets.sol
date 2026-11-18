@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {IClIntegration} from "../../amm/IClIntegration.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
@@ -84,7 +84,7 @@ abstract contract LensMarkets is LensBase, ILensMarkets {
         (v.tickLower, v.tickUpper, v.integrationId) = (m.shape.tickLower, m.shape.tickUpper, m.integrationId);
         if (m.vaultToken == address(0)) return v;
         if (m.shape.kind == ShapeKind.TickRange) v.feeTier = IClIntegration(m.integration).clMarket(marketId).fee;
-        v.ammProtocol = IAmmIntegration(m.integration).AMM_PROTOCOL();
+        v.ammProtocol = ILPVault(m.integration).AMM_PROTOCOL();
         (v.vaultToken, v.lpOracle, v.hub, v.spoke) = (m.vaultToken, m.lpOracle, m.hub, m.spoke);
         (v.name, v.symbol) = (IERC20Metadata(m.vaultToken).name(), IERC20Metadata(m.vaultToken).symbol());
         (v.reserveId, v.hubAssetId) = (m.reserveId, m.hubAssetId);

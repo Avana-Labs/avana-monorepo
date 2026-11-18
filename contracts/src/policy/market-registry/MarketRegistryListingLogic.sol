@@ -12,9 +12,8 @@ pragma solidity 0.8.28;
 // setPriceSource re-checks every market using the token with view calls; bounded by the market count.
 // forge-lint: disable-start(calls-loop)
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {IntegrationCapabilities} from "../../amm/types/IntegrationCapabilities.sol";
-import {PoolKeying} from "../../amm/types/PoolKeying.sol";
+import {IntegrationCapabilities, PoolKeying} from "../../amm/types/AmmTypes.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAggregatorV3} from "../../interfaces/external/chainlink/IAggregatorV3.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
@@ -41,7 +40,7 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         address lpVault,
         MarketDef calldata def
     ) internal view {
-        IntegrationCapabilities memory caps = IAmmIntegration(lpVault).capabilities();
+        IntegrationCapabilities memory caps = ILPVault(lpVault).capabilities();
         bool byAddress = caps.poolKeying == PoolKeying.Address;
         if (byAddress ? (def.pool == address(0) || def.poolId != 0) : (def.pool != address(0) || def.poolId == 0)) {
             revert ListingCheckFailed("pool");
@@ -51,7 +50,7 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         if (sh.kind == ShapeKind.FullPool ? (sh.tickLower != 0 || sh.tickUpper != 0) : sh.tickLower >= sh.tickUpper) {
             revert ListingCheckFailed("shape");
         }
-        uint256 records = IAmmIntegration(lpVault).maxRecordsPerAccountMarket();
+        uint256 records = ILPVault(lpVault).maxRecordsPerAccountMarket();
         if (records == 0 || records > AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET) {
             revert ListingCheckFailed("records");
         }
@@ -336,12 +335,12 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         MarketDef calldata def
     ) private returns (address[] memory tokens, uint8 unitDecimals) {
         if (!relisting) {
-            return IAmmIntegration(lpVault).bindMarket(marketId, def.pool, def.poolId, def.shape, def.integrationData);
+            return ILPVault(lpVault).bindMarket(marketId, def.pool, def.poolId, def.shape, def.integrationData);
         }
         PositionShape memory sh;
         address pool;
         bytes32 poolId;
-        (pool, poolId, sh, tokens) = IAmmIntegration(lpVault).marketOf(marketId);
+        (pool, poolId, sh, tokens) = ILPVault(lpVault).marketOf(marketId);
         if (
             pool != def.pool || poolId != def.poolId || sh.kind != def.shape.kind || sh.tickLower != def.shape.tickLower
                 || sh.tickUpper != def.shape.tickUpper

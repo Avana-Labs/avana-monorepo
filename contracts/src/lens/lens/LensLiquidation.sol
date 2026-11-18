@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
@@ -287,7 +287,7 @@ abstract contract LensLiquidation is LensBase {
         uint256 debtPrice
     ) internal view returns (uint256 rv) {
         // forge-lint: disable-next-line(unused-return)
-        (uint256[] memory amounts,) = IAmmIntegration(c.m.integration).composition(marketId, units, prices);
+        (uint256[] memory amounts,) = ILPVault(c.m.integration).composition(marketId, units, prices);
         for (uint256 i = 0; i < amounts.length; ++i) {
             uint256 a = amounts[i] > 0 ? amounts[i] - 1 : 0;
             if (a == 0) continue;

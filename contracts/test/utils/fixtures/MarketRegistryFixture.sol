@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../../src/amm/IAmmIntegration.sol";
+import {ILPVault} from "../../../src/custody/lp-vault/ILPVault.sol";
 import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
@@ -244,7 +244,7 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         uint32 id
     ) internal view returns (bytes32) {
         (address v,) = registry.integrationOf(id);
-        IAmmIntegration a = IAmmIntegration(v);
+        ILPVault a = ILPVault(v);
         return keccak256(abi.encode(block.chainid, v, v.codehash, a.AMM_PROTOCOL(), a.capabilities().poolKeying));
     }
 

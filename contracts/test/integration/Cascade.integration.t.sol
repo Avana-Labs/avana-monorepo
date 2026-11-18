@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RiskStatus} from "../../src/amm/types/RiskStatus.sol";
+import {RiskStatus} from "../../src/amm/types/AmmTypes.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";

@@ -4,9 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IClIntegration} from "../../src/amm/IClIntegration.sol";
-import {ClMarketConfig} from "../../src/amm/types/ClMarketConfig.sol";
+import {ClMarketConfig} from "../../src/amm/types/AmmTypes.sol";
 import {IUniswapV4Integration} from "../../src/amm/uniswap-v4/IUniswapV4Integration.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
@@ -179,7 +179,7 @@ contract MarketRegistryUniswapV4ListingUnitTest is MarketRegistryFixture {
         (MarketDef memory d, uint8 unitDecimals) = _uni4Def(_data());
         d.integrationData = "";
         vm.prank(address(timelock));
-        vm.expectRevert(ILPVaultErrors.InvalidPool.selector);
+        vm.expectRevert(ILPVaultBase.InvalidPool.selector);
         registry.listCollateralMarket(d);
         d.integrationData = _data();
         vm.prank(address(timelock));

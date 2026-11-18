@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
-import {FeeMode} from "../../src/amm/types/FeeMode.sol";
-import {IntegrationCapabilities} from "../../src/amm/types/IntegrationCapabilities.sol";
+import {FeeMode, IntegrationCapabilities} from "../../src/amm/types/AmmTypes.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {PositionFeesView} from "../../src/lens/lens/types/PositionFeesView.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
@@ -214,7 +213,7 @@ contract LensFeesUnitTest is LensFeesV3Fixture {
     function test_TEST_247_unknownProtocolOrRolledInFeesAreUnsupported() public {
         bytes32 key = _pledge1(alice, L);
         pool500.setFeeGrowthGlobal(Q128, Q128);
-        vm.mockCall(address(vault), abi.encodeCall(IAmmIntegration.AMM_PROTOCOL, ()), abi.encode(keccak256("CURVE")));
+        vm.mockCall(address(vault), abi.encodeCall(ILPVault.AMM_PROTOCOL, ()), abi.encode(keccak256("CURVE")));
         PositionFeesView memory f = lens.getPositionFees(M1, key);
         assertFalse(f.supported, "no fee reader");
         assertTrue(f.inCustody, "custody still reported");
@@ -222,7 +221,7 @@ contract LensFeesUnitTest is LensFeesV3Fixture {
         vm.clearMockedCalls();
         IntegrationCapabilities memory caps = vault.capabilities();
         caps.feeMode = FeeMode.RolledIn;
-        vm.mockCall(address(vault), abi.encodeCall(IAmmIntegration.capabilities, ()), abi.encode(caps));
+        vm.mockCall(address(vault), abi.encodeCall(ILPVault.capabilities, ()), abi.encode(caps));
         assertFalse(lens.getPositionFees(M1, key).supported, "fees roll into the position");
         vm.clearMockedCalls();
         assertTrue(lens.getPositionFees(M1, key).supported, "back to separate fees");

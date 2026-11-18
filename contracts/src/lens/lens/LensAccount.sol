@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {BackingRecord} from "../../custody/collateralization/types/CollateralizationTypes.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IPayoutEscrow} from "../../liquidation/payout-escrow/IPayoutEscrow.sol";
@@ -209,8 +209,8 @@ abstract contract LensAccount is LensBase, ILensAccount {
         bytes32 positionKey
     ) internal view returns (uint256 units) {
         address lpVault = ICollateralization(_COLLATERALIZATION).lpVaultOf(integrationId);
-        if (IAmmIntegration(lpVault).depositorOf(positionKey) != address(0)) {
-            units = IAmmIntegration(lpVault).unitsOf(positionKey);
+        if (ILPVault(lpVault).depositorOf(positionKey) != address(0)) {
+            units = ILPVault(lpVault).unitsOf(positionKey);
         }
     }
 }

@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
@@ -166,7 +166,7 @@ contract AaveAdapterCollateralUnitTest is AaveAdapterFixture {
         adapterC.removeLiquidity(MARKET_ID, _ref(k1), 1_000_000_000, three, d, 0);
         uint256[] memory high = new uint256[](2);
         high[0] = 800_000_001;
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultErrors.BelowMinimum.selector, 0, 800_000_000, 800_000_001));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultBase.BelowMinimum.selector, 0, 800_000_000, 800_000_001));
         vm.prank(alice);
         adapterC.removeLiquidity(MARKET_ID, _ref(k1), 1_000_000_000, high, d, 0);
     }

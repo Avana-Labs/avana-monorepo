@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
@@ -72,7 +72,7 @@ abstract contract LensActions is LensAccountMath, ILensActions {
         _unlocked();
         Acct memory a;
         (a, v) = _start(wallet, marketId);
-        v.amount = IAmmIntegration(a.m.integration).validatePosition(marketId, wallet, positionKey);
+        v.amount = ILPVault(a.m.integration).validatePosition(marketId, wallet, positionKey);
         // A pledge that turns the collateral on refreshes the account's dynamic configuration (`setUsingAsCollateral`).
         uint256 cf = a.enabled ? _cf(a.m, a.proxy) : _latestCf(a.m);
         _finish(a, v, cf, a.held + v.amount, a.debtRay);

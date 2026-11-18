@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../amm/concentrated-liquidity/ClPriceMath.sol";
-import {ClUnitMath} from "../../amm/concentrated-liquidity/ClUnitMath.sol";
 import {IUniswapV4Integration} from "../../amm/uniswap-v4/IUniswapV4Integration.sol";
 import {UniswapV4State} from "../../amm/uniswap-v4/UniswapV4State.sol";
 import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.sol";
@@ -134,7 +133,7 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         (okL, w.lower) = _int24(market, 6);
         (okU, w.upper) = _int24(market, 7);
         uint256 unitExp = uint256(bytes32(market[256:288]));
-        if (!okS || !okL || !okU || w.spacing < 1 || w.spacing > _MAX_SPACING || unitExp > ClUnitMath.MAX_UNIT_EXP) {
+        if (!okS || !okL || !okU || w.spacing < 1 || w.spacing > _MAX_SPACING || unitExp > ClPriceMath.MAX_UNIT_EXP) {
             return false;
         }
         // At most MAX_UNIT_EXP, checked above.

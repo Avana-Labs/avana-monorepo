@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {RiskStatus} from "../../amm/types/RiskStatus.sol";
+import {RiskStatus} from "../../amm/types/AmmTypes.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IFlashSource} from "../../flash/IFlashSource.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
@@ -251,7 +251,7 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
         uint256 cap = _store().poolShareMaxBpsOf(key);
         if (cap >= NO_POOL_SHARE_CAP) return false;
         RiskStatus memory rs =
-            IAmmIntegration(m.integration).riskStatus(marketId, _store().getMarketParams(marketId).twapWindow);
+            ILPVault(m.integration).riskStatus(marketId, _store().getMarketParams(marketId).twapWindow);
         if (!rs.depthAvailable) return true;
         uint256 units = ICollateralization(_COLLATERALIZATION).poolUnits(key) + added;
         return RiskModuleMath.poolShareExceeds(units, cap, rs.depthUnits);

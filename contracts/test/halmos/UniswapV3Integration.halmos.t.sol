@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
@@ -65,7 +65,7 @@ contract UniswapV3IntegrationHalmosTest is Test {
             assert(abi.decode(ret, (uint128)) == liquidity);
         } else if (lower != -50 || upper != 50) {
             assert(
-                keccak256(ret) == keccak256(abi.encodeWithSelector(ILPVaultErrors.RangeMismatch.selector, lower, upper))
+                keccak256(ret) == keccak256(abi.encodeWithSelector(ILPVaultBase.RangeMismatch.selector, lower, upper))
             );
         }
     }

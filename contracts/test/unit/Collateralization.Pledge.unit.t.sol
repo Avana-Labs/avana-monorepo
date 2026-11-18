@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {BackingRecord} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
@@ -174,7 +174,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         lpVault.mintPosition(KEY42, alice, MARKET_ID, 5_000_000_000);
         _acquire(adapter);
         _register(aliceProxy);
-        vm.expectRevert(ILPVaultErrors.NotTokenOwner.selector);
+        vm.expectRevert(ILPVaultBase.NotTokenOwner.selector);
         _pledgeAs(bob, aliceProxy, KEY42);
         vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.InvalidDepositor.selector, address(lpVault)));
         _pledgeAs(address(lpVault), aliceProxy, KEY42);
@@ -215,7 +215,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         lpVault.mintPosition(KEY42, alice, MARKET_ID + 1, 5_000_000_000);
         _acquire(adapter);
         _register(aliceProxy);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultErrors.RangeMismatch.selector, int24(-1), int24(1)));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultBase.RangeMismatch.selector, int24(-1), int24(1)));
         _pledgeAs(alice, aliceProxy, KEY42);
         lpVault.mintPosition(KEY42, alice, MARKET_ID, 5_000_000_000);
         lpVault.setMarketOfPositionOverride(MARKET_ID + 1);
@@ -426,7 +426,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
     function test_TEST_238_topUpAndBounds() public {
         _pledge(alice, aliceProxy, KEY42, 1_000_000_000);
         _acquire(adapter);
-        vm.expectRevert(ILPVaultErrors.TopUpNotSupported.selector);
+        vm.expectRevert(ILPVaultBase.TopUpNotSupported.selector);
         vm.prank(adapter);
         coll.recredit(alice, aliceProxy, vt, KEY42, abi.encode(uint128(250_000_000)), false);
         lpVault.setFungible(true);

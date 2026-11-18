@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {RiskStatus} from "../../amm/types/RiskStatus.sol";
+import {RiskStatus} from "../../amm/types/AmmTypes.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {BackingRecord, Pending} from "../../custody/collateralization/types/CollateralizationTypes.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol";
@@ -179,8 +179,8 @@ abstract contract LensMarket is LensBase, ILensMarket {
     ) internal view returns (RecordBackingView memory v) {
         (v.blockNumber, v.timestamp, v.recordId) = (block.number, block.timestamp, recordId);
         (v.integrationId, v.positionKey, v.credited) = (r.integrationId, r.positionKey, r.credited);
-        v.inCustody = IAmmIntegration(integration).depositorOf(r.positionKey) != address(0);
-        if (v.inCustody) v.liveUnits = IAmmIntegration(integration).unitsOf(r.positionKey);
+        v.inCustody = ILPVault(integration).depositorOf(r.positionKey) != address(0);
+        if (v.inCustody) v.liveUnits = ILPVault(integration).unitsOf(r.positionKey);
         v.backed = v.inCustody && v.liveUnits >= v.credited;
     }
 
@@ -191,8 +191,7 @@ abstract contract LensMarket is LensBase, ILensMarket {
         uint256 poolUnits
     ) internal view returns (uint256 bps) {
         if (poolUnits == 0) return 0;
-        RiskStatus memory rs =
-            IAmmIntegration(integration).riskStatus(marketId, _store().getMarketParams(marketId).twapWindow);
+        RiskStatus memory rs = ILPVault(integration).riskStatus(marketId, _store().getMarketParams(marketId).twapWindow);
         if (!rs.depthAvailable || rs.depthUnits == 0) return type(uint256).max;
         bps = Math.mulDiv(poolUnits, SettlementMath.BPS, rs.depthUnits, Math.Rounding.Ceil);
     }

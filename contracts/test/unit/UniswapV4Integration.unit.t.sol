@@ -3,11 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClMarketConfig} from "../../src/amm/types/ClMarketConfig.sol";
-import {IntegrationCapabilities} from "../../src/amm/types/IntegrationCapabilities.sol";
-import {PoolKeying} from "../../src/amm/types/PoolKeying.sol";
-import {RiskMetadata} from "../../src/amm/types/RiskMetadata.sol";
-import {RiskStatus} from "../../src/amm/types/RiskStatus.sol";
+import {
+    ClMarketConfig,
+    IntegrationCapabilities,
+    PoolKeying,
+    RiskMetadata,
+    RiskStatus
+} from "../../src/amm/types/AmmTypes.sol";
 import {IUniswapV4Integration} from "../../src/amm/uniswap-v4/IUniswapV4Integration.sol";
 import {UniswapV4State} from "../../src/amm/uniswap-v4/UniswapV4State.sol";
 import {IUniswapV4PoolManager} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";

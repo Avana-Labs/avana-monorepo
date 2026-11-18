@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {SlipstreamIntegration} from "../../src/amm/slipstream/SlipstreamIntegration.sol";
-import {ClMarketConfig} from "../../src/amm/types/ClMarketConfig.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ClMarketConfig} from "../../src/amm/types/AmmTypes.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {ICLFactory} from "../../src/interfaces/external/aerodrome/ICLFactory.sol";
 import {ICLPool} from "../../src/interfaces/external/aerodrome/ICLPool.sol";
 import {INonfungiblePositionManager} from "../../src/interfaces/external/aerodrome/INonfungiblePositionManager.sol";
@@ -116,7 +116,7 @@ contract SlipstreamIntegrationForkTest is AvanaTest {
             for (uint256 h = 0; h < 4; ++h) {
                 if (h == g) continue;
                 vm.prank(registry);
-                vm.expectRevert(ILPVaultErrors.InvalidPool.selector);
+                vm.expectRevert(ILPVaultBase.InvalidPool.selector);
                 vault.bindMarket(100 + g * 4 + h, pools[g], bytes32(0), _shape(-edge, edge), _data(h, 1e8, 1e8));
             }
             vm.prank(registry);
@@ -127,7 +127,7 @@ contract SlipstreamIntegrationForkTest is AvanaTest {
             assertEq(cfg.fee, 0);
             vault.checkReadSafe(1 + g);
             vm.prank(registry);
-            vm.expectRevert(ILPVaultErrors.InvalidShape.selector);
+            vm.expectRevert(ILPVaultBase.InvalidShape.selector);
             vault.bindMarket(200 + g, pools[g], bytes32(0), _shape(-edge - 1, edge), _data(g, 1e8, 1e8));
         }
     }
@@ -184,9 +184,9 @@ contract SlipstreamIntegrationForkTest is AvanaTest {
         vm.stopPrank();
         bytes32 key = vault.positionKeyOf(3, id);
         assertTrue(vault.isStaked(13, id));
-        vm.expectRevert(ILPVaultErrors.NotTokenOwner.selector);
+        vm.expectRevert(ILPVaultBase.NotTokenOwner.selector);
         vault.validatePosition(13, alice, key);
-        vm.expectRevert(ILPVaultErrors.PositionEncumbered.selector);
+        vm.expectRevert(ILPVaultBase.PositionEncumbered.selector);
         vault.validatePosition(13, gauge, key);
     }
 

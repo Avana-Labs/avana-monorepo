@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IClIntegration} from "../../src/amm/IClIntegration.sol";
-import {ClMarketConfig} from "../../src/amm/types/ClMarketConfig.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ClMarketConfig} from "../../src/amm/types/AmmTypes.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
@@ -142,7 +142,7 @@ contract MarketRegistryUniswapV3ListingUnitTest is MarketRegistryFixture {
         // Without listing prices (the fixture's empty data) the integration refuses the binding, and so the listing.
         d.integrationData = "";
         vm.prank(address(timelock));
-        vm.expectRevert(ILPVaultErrors.InvalidPool.selector);
+        vm.expectRevert(ILPVaultBase.InvalidPool.selector);
         registry.listCollateralMarket(d);
         d.integrationData = _prices();
         vm.prank(address(timelock));

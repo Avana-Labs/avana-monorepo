@@ -64,7 +64,6 @@
     "src/amm/concentrated-liquidity/ClLPVaultMarkets.sol": 96,
     "src/amm/concentrated-liquidity/ClPriceMath.sol": 98,
     "src/amm/concentrated-liquidity/ClTickMath.sol": 98,
-    "src/amm/concentrated-liquidity/ClUnitMath.sol": 100,
     "src/amm/slipstream/SlipstreamIntegration.sol": 90,
     "src/amm/uniswap-v3/UniswapV3Integration.sol": 88,
     "src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol": 100,

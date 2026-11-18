@@ -6,9 +6,8 @@ pragma solidity 0.8.28;
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {ILock} from "../../lock/lock/ILock.sol";
 import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
-import {IAmmIntegration} from "../IAmmIntegration.sol";
 import {IClIntegration} from "../IClIntegration.sol";
-import {ClMarketConfig} from "../types/ClMarketConfig.sol";
+import {ClMarketConfig} from "../types/AmmTypes.sol";
 import {ClPriceMath} from "./ClPriceMath.sol";
 import {IClPositionManager} from "./IClPositionManager.sol";
 
@@ -71,7 +70,7 @@ abstract contract ClLPVaultBase is IClIntegration {
         _TIMELOCK = timelock;
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function INTEGRATION_ID() external view override returns (uint32) {
         return _INTEGRATION_ID;
     }

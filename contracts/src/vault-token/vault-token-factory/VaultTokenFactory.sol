@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {PoolKeying} from "../../amm/types/PoolKeying.sol";
+import {PoolKeying} from "../../amm/types/AmmTypes.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
@@ -271,10 +270,10 @@ contract VaultTokenFactory is IVaultTokenFactory {
         uint32 integrationId,
         address lpVault
     ) private view returns (bytes32 ammProtocol) {
-        (bool idOk, uint256 id) = _readWord(lpVault, abi.encodeCall(IAmmIntegration.INTEGRATION_ID, ()));
+        (bool idOk, uint256 id) = _readWord(lpVault, abi.encodeCall(ILPVault.INTEGRATION_ID, ()));
         bool protocolOk;
         uint256 protocol;
-        (protocolOk, protocol) = _readWord(lpVault, abi.encodeCall(IAmmIntegration.AMM_PROTOCOL, ()));
+        (protocolOk, protocol) = _readWord(lpVault, abi.encodeCall(ILPVault.AMM_PROTOCOL, ()));
         address lock = _readAddress(_COLLATERALIZATION, abi.encodeCall(ICollateralization.LOCK, ()));
         if (
             !idOk || id != integrationId || !protocolOk || protocol == 0 || lock == address(0)
@@ -290,8 +289,7 @@ contract VaultTokenFactory is IVaultTokenFactory {
     function _readCapabilities(
         address lpVault
     ) private view returns (PoolKeying keying, ShapeKind kind) {
-        (bool ok, bytes memory ret) =
-            _read(lpVault, abi.encodeCall(IAmmIntegration.capabilities, ()), CAPABILITIES_SIZE);
+        (bool ok, bytes memory ret) = _read(lpVault, abi.encodeCall(ILPVault.capabilities, ()), CAPABILITIES_SIZE);
         if (!ok) revert InvalidIntegration();
         (uint256 keyingWord,,, uint256 kindWord) = abi.decode(ret, (uint256, uint256, uint256, uint256));
         if (

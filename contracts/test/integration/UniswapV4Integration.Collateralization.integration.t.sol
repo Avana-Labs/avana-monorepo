@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {ClTestToken} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackUniswapV4Journeys} from "../utils/fixtures/RealStackUniswapV4Journeys.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -30,11 +30,11 @@ contract UniswapV4IntegrationCollateralizationIntegrationTest is RealStackUniswa
         uint256 pending;
     }
 
-    IAmmIntegration internal vault;
+    ILPVault internal vault;
 
     function setUp() public {
         _setUpV4Journeys();
-        vault = IAmmIntegration(v4Vault);
+        vault = ILPVault(v4Vault);
     }
 
     function _snapshot(
@@ -133,7 +133,7 @@ contract UniswapV4IntegrationCollateralizationIntegrationTest is RealStackUniswa
         vm.prank(pusher);
         IERC721(address(v4posm)).safeTransferFrom(pusher, v4Vault, pushed);
         vm.prank(pusher);
-        vm.expectRevert(ILPVaultErrors.NotTokenOwner.selector);
+        vm.expectRevert(ILPVaultBase.NotTokenOwner.selector);
         adapterC.pledge(mS, _ref4(bytes32(pushed)), _deadline());
         assertEq(coll.recordIdOf(V4, bytes32(pushed)), 0, "nothing recorded");
     }
@@ -147,7 +147,7 @@ contract UniswapV4IntegrationCollateralizationIntegrationTest is RealStackUniswa
         uint256 id = _v4Mint(alice, other, lower, upper, 1e12);
         vm.startPrank(alice);
         v4posm.approve(v4Vault, id);
-        vm.expectRevert(ILPVaultErrors.PoolMismatch.selector);
+        vm.expectRevert(ILPVaultBase.PoolMismatch.selector);
         adapterC.pledge(mS, _ref4(bytes32(id)), _deadline());
         vm.stopPrank();
         assertEq(v4posm.ownerOf(id), alice, "the position stays with its owner");
@@ -155,7 +155,7 @@ contract UniswapV4IntegrationCollateralizationIntegrationTest is RealStackUniswa
         uint256 narrow = _v4Mint(alice, v4KeyOf[mS], -100, 100, 1e12);
         vm.startPrank(alice);
         v4posm.approve(v4Vault, narrow);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultErrors.RangeMismatch.selector, int24(-100), int24(100)));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultBase.RangeMismatch.selector, int24(-100), int24(100)));
         adapterC.pledge(mS, _ref4(bytes32(narrow)), _deadline());
         vm.stopPrank();
         assertEq(coll.getTotalCredited(vtS), 0, "no credit");

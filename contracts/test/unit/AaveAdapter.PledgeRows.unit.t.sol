@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
@@ -67,7 +67,7 @@ contract AaveAdapterPledgeRowsUnitTest is AaveAdapterFixture {
         uint256 d = _deadline();
         bytes32 bobKey = _newKey();
         lpVault.mintPosition(bobKey, bob, MARKET_ID, UNITS);
-        vm.expectRevert(ILPVaultErrors.NotTokenOwner.selector);
+        vm.expectRevert(ILPVaultBase.NotTokenOwner.selector);
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(bobKey), d);
         assertEq(token.totalSupply(), 0, "non-owner minted nothing");
@@ -75,7 +75,7 @@ contract AaveAdapterPledgeRowsUnitTest is AaveAdapterFixture {
         // A position bound to market B's range, named for market A.
         bytes32 otherRange = _newKey();
         lpVault.mintPosition(otherRange, alice, MARKET_B, UNITS);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultErrors.RangeMismatch.selector, int24(-1), int24(1)));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultBase.RangeMismatch.selector, int24(-1), int24(1)));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(otherRange), d);
         assertEq(token.totalSupply(), 0, "range mismatch minted nothing");

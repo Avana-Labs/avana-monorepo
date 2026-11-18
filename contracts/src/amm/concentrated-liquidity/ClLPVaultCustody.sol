@@ -5,7 +5,6 @@ pragma solidity 0.8.28;
 
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {ILock} from "../../lock/lock/ILock.sol";
-import {IAmmIntegration} from "../IAmmIntegration.sol";
 import {IClIntegration} from "../IClIntegration.sol";
 import {ClLPVaultBase} from "./ClLPVaultBase.sol";
 import {IClPositionManager} from "./IClPositionManager.sol";
@@ -17,7 +16,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 // Events report the position manager's return values, so they follow the call; emitters run only under the Lock.
 // forge-lint: disable-start(reentrancy-events)
 abstract contract ClLPVaultCustody is ClLPVaultBase {
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     /// @dev Custody entry is written before the pull.
     function receivePosition(
         uint256 marketId,
@@ -38,7 +37,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         emit PositionReceived(positionKey, marketId, owner, units);
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function validatePosition(
         uint256 marketId,
         address owner,
@@ -50,7 +49,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         if (units == 0) revert ZeroUnits();
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function returnPosition(
         bytes32 positionKey
     ) external override returns (address depositor) {
@@ -62,7 +61,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         _manager(positionKey).transferFrom(address(this), depositor, _tokenId(positionKey));
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function topUpPosition(
         bytes32,
         address,
@@ -72,7 +71,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         revert TopUpNotSupported();
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     /// @dev Principal to `recipient`; any fee the removal pays out goes to the depositor of record.
     function unwind(
         bytes32 positionKey,
@@ -91,7 +90,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         emit UnitsUnwound(positionKey, units, recipient, amounts);
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function releaseToDepositor(
         bytes32 positionKey,
         uint128 units,
@@ -107,7 +106,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         emit UnitsReleased(positionKey, units, depositor, amounts);
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     /// @dev Collateralization only, while the AaveAdapter (not LPVaultSwap) holds the Lock.
     function collectFees(
         bytes32 positionKey,
@@ -151,7 +150,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         return this.onERC721Received.selector;
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function positionOwner(
         bytes32 positionKey
     ) external view override returns (address owner) {
@@ -162,7 +161,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         }
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function depositorOf(
         bytes32 positionKey
     ) external view override returns (address) {
@@ -170,7 +169,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         return _depositorOf[positionKey];
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function marketOfPosition(
         bytes32 positionKey
     ) external view override returns (uint256) {
@@ -186,7 +185,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         return _depositorOf[positionKey] != address(0);
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     /// @dev Under the Lock the pool lock is checked first, so no read runs inside a pool callback.
     function unitsOf(
         bytes32 positionKey
