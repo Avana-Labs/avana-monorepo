@@ -14,8 +14,8 @@
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { type Address, type Hex, type PublicClient, createPublicClient, createWalletClient, http } from "viem";
-import { OCR2_ABI, transmit } from "./scenarios/ocr2.ts";
+import { type Address, type Hex, type PublicClient, createPublicClient, createWalletClient, encodeFunctionData, http } from "viem";
+import { OCR2_ABI, oracleAccounts, signedTransmit } from "./scenarios/ocr2.ts";
 
 const CONTRACTS = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 /** A loaded machine answers a burst of transmits slowly: viem's default 10 s request timeout failed a refresh there. */
@@ -25,23 +25,6 @@ export const feedsRpc = () => process.env.RPC_ANVIL ?? process.env.AVANA_RPC_URL
 
 /** A node's refusal of a nonce it already counts as used (geth's and some providers' wording). */
 export const isStaleNonce = (e: unknown) => /nonce too low|lower than the current nonce/i.test((e as Error)?.message ?? String(e));
-
-/**
- * `send`, sent again while the node rejects its nonce as already used. A load-balanced RPC (QuickNode on Base Sepolia)
- * can answer the pending nonce from a node one block behind, even after the previous receipt: the next transmit then
- * carries the mined nonce and is refused. A refused nonce means nothing was broadcast, so a retry after a short wait,
- * which takes a fresh nonce, is safe; any other error is thrown at once.
- */
-export async function retryStaleNonce<T>(send: () => Promise<T>, tries = 6, waitMs = 3000): Promise<T> {
-  for (let i = 1; ; i++) {
-    try {
-      return await send();
-    } catch (e) {
-      if (i >= tries || !isStaleNonce(e)) throw e;
-      await new Promise((r) => setTimeout(r, waitMs));
-    }
-  }
-}
 
 /** Every (symbol, aggregator, proxy) of the world, or of `symbols` when given. */
 export function worldFeeds(network: string, symbols?: readonly string[]) {
@@ -60,7 +43,95 @@ export function worldFeeds(network: string, symbols?: readonly string[]) {
   return out;
 }
 
-/** One fresh round on each feed, at `prices[symbol]` when given, else at the feed's current answer. */
+/** At most this many rounds in flight at once on a live chain. */
+export const LIVE_BURST = 50;
+/**
+ * Rounds signed, and receipts read, at the same time (a round takes about four reads): more hits a provider's rate limit
+ * (QuickNode answered 429 to 50 at once).
+ */
+export const PREPARE_AT_ONCE = 8;
+
+/** How `sendRounds` reaches the chain (a fake in the tests). `P` is a round signed and ready to send. */
+export type RoundSender<R, P> = {
+  /** Reads and signs one round; sends nothing. */
+  prepare: (round: R) => Promise<P>;
+  /** The signer's next nonce, counting its pending transactions (and anything else a burst's sends share). */
+  start: () => Promise<number>;
+  /** Sends one prepared round with `nonce`; returns its hash. */
+  send: (prepared: P, nonce: number) => Promise<Hex>;
+  /** Waits for the receipt of `hash`. */
+  receipt: (hash: Hex) => Promise<{ status: string }>;
+};
+
+/**
+ * Sends every round in bursts: each burst's rounds are signed in parallel, sent one after another on consecutive nonces
+ * from one read of the pending nonce, and only then are their receipts awaited. A burst holds at most `burst` rounds and
+ * never two for the same aggregator (`key`), since each round's epoch comes from the aggregator's last one. A
+ * load-balanced RPC can answer the pending nonce from a node one block behind (QuickNode on Base Sepolia): the send on
+ * that nonce is then refused as "nonce too low" and nothing from it on went out, so after the receipts of what did go
+ * out, the rest is sent again on a fresh nonce after `waitMs`, at most `tries` times in all. Any other error, and a
+ * reverted round, is thrown. Returns the hashes in the order sent.
+ */
+export async function sendRounds<R, P>(
+  rounds: readonly R[],
+  key: (round: R) => string,
+  s: RoundSender<R, P>,
+  burst: number,
+  tries = 6,
+  waitMs = 3000,
+): Promise<Hex[]> {
+  const hashes: Hex[] = [];
+  let rest = [...rounds];
+  while (rest.length > 0) {
+    const keys = new Set<string>();
+    const group: R[] = [];
+    const later: R[] = [];
+    for (const r of rest) {
+      if (group.length < burst && !keys.has(key(r))) {
+        keys.add(key(r));
+        group.push(r);
+      } else later.push(r);
+    }
+    rest = later;
+    let pending: P[] = [];
+    for (let i = 0; i < group.length; i += PREPARE_AT_ONCE) {
+      pending.push(...(await Promise.all(group.slice(i, i + PREPARE_AT_ONCE).map((r) => s.prepare(r)))));
+    }
+    for (let attempt = 1; pending.length > 0; attempt++) {
+      let nonce = await s.start();
+      const sent: Hex[] = [];
+      let refused: unknown;
+      for (const p of pending) {
+        try {
+          sent.push(await s.send(p, nonce));
+          nonce++;
+        } catch (e) {
+          if (!isStaleNonce(e)) throw e;
+          refused = e;
+          break;
+        }
+      }
+      for (let i = 0; i < sent.length; i += PREPARE_AT_ONCE) {
+        const chunk = sent.slice(i, i + PREPARE_AT_ONCE);
+        const receipts = await Promise.all(chunk.map((h) => s.receipt(h)));
+        const bad = chunk.find((_, j) => receipts[j]!.status !== "success");
+        if (bad) throw new Error(`transmit ${bad} reverted`);
+      }
+      hashes.push(...sent);
+      pending = pending.slice(sent.length);
+      if (pending.length > 0) {
+        if (attempt >= tries) throw refused;
+        await new Promise((r) => setTimeout(r, waitMs));
+      }
+    }
+  }
+  return hashes;
+}
+
+/**
+ * One fresh round on each feed, at `prices[symbol]` when given, else at the feed's current answer. On a live chain the
+ * rounds go out in bursts of `LIVE_BURST` (`sendRounds`); a local node takes them all in one burst.
+ */
 export async function refreshFeeds(
   client: PublicClient,
   network: string,
@@ -68,26 +139,37 @@ export async function refreshFeeds(
 ) {
   const wallet = createWalletClient({ transport: http(feedsRpc(), { timeout: RPC_TIMEOUT_MS }) });
   const feeds = worldFeeds(network, opts.symbols);
-  // A local node takes the whole burst at once; a live chain's RPC may lag on the pending nonce, so each round is mined
-  // before the next is sent.
-  const live = ![31337, 31338].includes(await client.getChainId());
-  const hashes: Hex[] = [];
-  for (const f of feeds) {
-    const answer =
-      opts.prices?.[f.symbol] ??
-      ((await client.readContract({ address: f.proxy, abi: OCR2_ABI, functionName: "latestRoundData" })) as readonly bigint[])[1]!;
-    const h = live
-      ? await retryStaleNonce(() => transmit(client, wallet, f.aggregator, answer))
-      : await transmit(client, wallet, f.aggregator, answer);
-    if (live) {
-      const r = await client.waitForTransactionReceipt({ hash: h });
-      if (r.status !== "success") throw new Error(`transmit ${h} reverted`);
-    } else hashes.push(h);
-  }
-  for (const h of hashes) {
-    const r = await client.waitForTransactionReceipt({ hash: h });
-    if (r.status !== "success") throw new Error(`transmit ${h} reverted`);
-  }
+  const [oracle] = await oracleAccounts();
+  const chainId = await client.getChainId();
+  const live = ![31337, 31338].includes(chainId);
+  let fees: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint } | undefined;
+  type Feed = (typeof feeds)[number];
+  type Prepared = { to: Address; data: Hex; gas: bigint };
+  const sender: RoundSender<Feed, Prepared> = {
+    prepare: async (f) => {
+      const answer =
+        opts.prices?.[f.symbol] ??
+        ((await client.readContract({ address: f.proxy, abi: OCR2_ABI, functionName: "latestRoundData" })) as readonly bigint[])[1]!;
+      const args = await signedTransmit(client, f.aggregator, answer);
+      const call = { abi: OCR2_ABI, functionName: "transmit", args } as const;
+      const gas = await client.estimateContractGas({ ...call, account: oracle!, address: f.aggregator });
+      return { to: f.aggregator, data: encodeFunctionData(call), gas };
+    },
+    start: async () => {
+      const [nonce, f] = await Promise.all([
+        client.getTransactionCount({ address: oracle!.address, blockTag: "pending" }),
+        client.estimateFeesPerGas(),
+      ]);
+      fees = { maxFeePerGas: f.maxFeePerGas!, maxPriorityFeePerGas: f.maxPriorityFeePerGas! };
+      return nonce;
+    },
+    send: async (p, nonce) =>
+      wallet.sendRawTransaction({
+        serializedTransaction: await oracle!.signTransaction({ chainId, type: "eip1559", nonce, ...p, ...fees! }),
+      }),
+    receipt: (hash) => client.waitForTransactionReceipt({ hash }),
+  };
+  await sendRounds(feeds, (f) => f.aggregator.toLowerCase(), sender, live ? LIVE_BURST : Math.max(feeds.length, 1));
   return feeds.length;
 }
 

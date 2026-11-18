@@ -53,11 +53,30 @@ export function oracleAccounts(): Promise<PrivateKeyAccount[]> {
   return cachedOracles;
 }
 
+/** The arguments of one signed `transmit` call. */
+export type TransmitArgs = readonly [readonly [Hex, Hex, Hex], Hex, Hex[], Hex[], Hex];
+
 /**
  * Transmits one report whose three observations are `answer` (8 decimals) to `aggregator`, at the chain's current
  * time. Returns the transaction hash. A later call always uses a later epoch, as a live OCR2 network does.
  */
 export async function transmit(client: PublicClient, wallet: WalletClient, aggregator: Address, answer: bigint): Promise<Hex> {
+  const oracles = await oracleAccounts();
+  return wallet.writeContract({
+    account: oracles[0]!,
+    chain: null,
+    address: aggregator,
+    abi: OCR2_ABI,
+    functionName: "transmit",
+    args: await signedTransmit(client, aggregator, answer),
+  });
+}
+
+/**
+ * The signed arguments of `transmit` for one report of `answer` on `aggregator`, at the chain's current time and the
+ * epoch after the aggregator's last one. Sends nothing: the caller sends it from oracle 0.
+ */
+export async function signedTransmit(client: PublicClient, aggregator: Address, answer: bigint): Promise<TransmitArgs> {
   const oracles = await oracleAccounts();
   const [, digest, epoch] = (await client.readContract({ address: aggregator, abi: OCR2_ABI, functionName: "latestConfigDigestAndEpoch" })) as [
     boolean,
@@ -82,12 +101,5 @@ export async function transmit(client: PublicClient, wallet: WalletClient, aggre
     ss.push(sig.s);
     rawVs |= BigInt(sig.yParity ?? Number(sig.v! - 27n)) << BigInt(248 - 8 * i);
   }
-  return wallet.writeContract({
-    account: oracles[0]!,
-    chain: null,
-    address: aggregator,
-    abi: OCR2_ABI,
-    functionName: "transmit",
-    args: [ctx, report, rs, ss, `0x${rawVs.toString(16).padStart(64, "0")}`],
-  });
+  return [ctx, report, rs, ss, `0x${rawVs.toString(16).padStart(64, "0")}`];
 }
