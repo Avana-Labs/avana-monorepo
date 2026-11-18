@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
@@ -64,7 +64,7 @@ contract LPOraclePokeFloorGasTest is LPOracleGasFixture {
             uint256 mid = (lo + hi) / 2;
             (bool ok, bytes memory ret) = _pokeWith(mid);
             vm.revertToState(snap);
-            bool pass = ok || (readBoundOnly && bytes4(ret) != ILPOracleErrors.InsufficientGas.selector);
+            bool pass = ok || (readBoundOnly && bytes4(ret) != ILPOracleBase.InsufficientGas.selector);
             if (pass) hi = mid;
             else lo = mid;
         }
@@ -86,7 +86,7 @@ contract LPOraclePokeFloorGasTest is LPOracleGasFixture {
         (bool below, bytes memory ret) = _pokeWith(readBound - 1);
         vm.revertToState(snap);
         assertFalse(below, "below the read bound");
-        assertEq(bytes4(ret), ILPOracleErrors.InsufficientGas.selector, "a read short of its bound reverts first");
+        assertEq(bytes4(ret), ILPOracleBase.InsufficientGas.selector, "a read short of its bound reverts first");
         (, uint256 left, uint256 required) = abi.decode(bytes.concat(bytes28(0), ret), (bytes32, uint256, uint256));
         emit log_named_uint("W_poke (cold, gas used with ample gas)", used);
         emit log_named_uint("max_k(u_k + bound_k): smallest entry gas with no InsufficientGas", readBound);

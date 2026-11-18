@@ -11,7 +11,7 @@ import {RouteConfig} from "../../src/liquidation/settlement-routes/types/RouteCo
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {DebtOracleInitParams} from "../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
+import {InitParams} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
 import {
     DebtReserveDef,

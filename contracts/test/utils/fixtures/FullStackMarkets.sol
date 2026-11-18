@@ -11,7 +11,7 @@ import {DexHop, HopKind} from "../../../src/liquidation/settlement-routes/types/
 import {RouteConfig} from "../../../src/liquidation/settlement-routes/types/RouteConfig.sol";
 import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {InitParams} from "../../../src/oracle/lp-oracle/types/InitParams.sol";
+import {InitParams} from "../../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {
     FeedDef,
     MarketParams,

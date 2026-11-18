@@ -5,16 +5,14 @@ pragma solidity 0.8.28;
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
 import {LPOracleCLInitLogic} from "../../src/oracle/lp-oracle/LPOracleCLInitLogic.sol";
 import {LPOracleCLModuleLogic} from "../../src/oracle/lp-oracle/LPOracleCLModuleLogic.sol";
 import {LPOracleCLPokeLogic} from "../../src/oracle/lp-oracle/LPOracleCLPokeLogic.sol";
 import {LPOracleCLViewLogic} from "../../src/oracle/lp-oracle/LPOracleCLViewLogic.sol";
+import {ClPriceStateView, InitParams, LPOracleLogicSet} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {LPPriceMath} from "../../src/oracle/lp-oracle/LPPriceMath.sol";
-import {ClPriceStateView} from "../../src/oracle/lp-oracle/types/ClPriceStateView.sol";
-import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
-import {LPOracleLogicSet} from "../../src/oracle/lp-oracle/types/LPOracleLogicSet.sol";
 import {OracleConfig} from "../../src/types/OracleConfig.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {PriceStateView} from "../../src/types/PriceStateView.sol";
@@ -369,7 +367,7 @@ contract LPOracleCLPoolReadsTest is LPOracleCLFixture {
             tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, m, LPOracleLogicSet(poke, init, poke, views)
         );
         bytes memory initData = abi.encodeCall(ILPOracle.initialize, (_params()));
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.ConfigCheckFailed.selector, type(uint256).max));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.ConfigCheckFailed.selector, type(uint256).max));
         new ERC1967Proxy(address(impl), initData);
     }
 
@@ -401,7 +399,7 @@ contract LPOracleCLPoolReadsTest is LPOracleCLFixture {
         InitParams memory p = _params();
         p.market = market;
         bytes memory init = abi.encodeCall(ILPOracle.initialize, (p));
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, MARKET));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, MARKET));
         new ERC1967Proxy(address(impl), init);
     }
 }

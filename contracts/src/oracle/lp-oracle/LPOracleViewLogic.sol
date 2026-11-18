@@ -8,8 +8,7 @@ import {PriceState} from "../../types/PriceState.sol";
 import {PriceStateView} from "../../types/PriceStateView.sol";
 import {ILPOracleLogic} from "./ILPOracleLogic.sol";
 import {LPOracleLogicBase} from "./LPOracleLogicBase.sol";
-import {Evaluation} from "./LPOracleTypes.sol";
-import {InitParams} from "./types/InitParams.sol";
+import {Evaluation, InitParams} from "./LPOracleTypes.sol";
 
 /// @title LPOracleViewLogic
 /// @notice The LPOracle's evaluation views, run by delegatecall from the implementation.

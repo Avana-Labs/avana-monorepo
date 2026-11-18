@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClPriceStateView} from "./types/ClPriceStateView.sol";
+import {ClPriceStateView} from "./LPOracleTypes.sol";
 
 /// @title ILPOracleCL
 /// @notice Concentrated-liquidity extension of the LPOracle for Uniswap v3 or Slipstream markets.

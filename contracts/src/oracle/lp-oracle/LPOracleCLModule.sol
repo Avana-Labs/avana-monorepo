@@ -14,8 +14,8 @@ import {SecondSource} from "../../types/SecondSource.sol";
 import {SecondSourceKind} from "../../types/SecondSourceKind.sol";
 import {LPOracleCLPool} from "./LPOracleCLPool.sol";
 import {LPOracleCalls} from "./LPOracleCalls.sol";
+import {ClPriceStateView} from "./LPOracleTypes.sol";
 import {LPPriceMath} from "./LPPriceMath.sol";
-import {ClPriceStateView} from "./types/ClPriceStateView.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LPOracleCLModule

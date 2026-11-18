@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {OracleConfig} from "../../types/OracleConfig.sol";
 import {PriceState} from "../../types/PriceState.sol";
 import {SecondSource} from "../../types/SecondSource.sol";
 
@@ -200,4 +201,59 @@ struct Evaluation {
     uint8 decimalsToken;
     uint8 decimalsRead;
     bool decimalsReadable;
+}
+
+/// @notice Concentrated-liquidity detail of an LPOracle evaluation, returned by `ILPOracleCL.getClPriceState()`.
+/// @dev One tick is a price ratio of 1.0001, about 1 bp.
+struct ClPriceStateView {
+    int24 tickLower;
+    int24 tickUpper;
+    // Oracle sqrt price before the clamp, Q64.96.
+    uint160 sqrtPriceOracleX96;
+    // Oracle sqrt price after the clamp to the range, Q64.96 (the composition input).
+    uint160 sqrtPriceUsedX96;
+    bool clamped;
+    // Pool TWAP mean tick over twapWindow, rounded toward negative infinity.
+    int24 meanTick;
+    // Oracle-implied tick from the uncapped quotes.
+    int24 tickRef;
+    // |meanTick - tickRef| in ticks.
+    uint24 tickDeviation;
+    // TWAP tolerance in ticks (`OracleConfig.consistencyToleranceBps`).
+    uint24 twapToleranceTicks;
+    uint16 observationCardinality;
+}
+
+/// @notice Arguments of `initialize`.
+/// @dev The MarketRegistry does not yet hold the market, so its identity comes from these arguments.
+struct InitParams {
+    // Avana timelock; must equal the implementation's TIMELOCK.
+    address timelock;
+    address parameterStore;
+    address marketRegistry;
+    // MarketRegistry identifier the market will be registered under.
+    uint256 marketId;
+    // The market's AMM integration (LPVault).
+    address integration;
+    // Stable-ceiling flag per token, in pool order.
+    bool[] isUsdStable;
+    string description;
+    uint32 pokeMinGas;
+    // Configuration validated by checkConfig and evaluated for the seed.
+    OracleConfig config;
+    // The pricing module's market encoding (pool, range and unit exponent).
+    bytes market;
+}
+
+/// @notice The immutable logic contracts of one LPOracle implementation, each run by delegatecall.
+/// @dev `initLogic` and `listingLogic` may be the same address.
+// The struct's name keeps its LPOracle prefix, as every LPOracle type does.
+// forge-lint: disable-next-item(pascal-case-struct)
+struct LPOracleLogicSet {
+    address pokeLogic;
+    // Runs `initializeMarket`.
+    address initLogic;
+    // Runs `checkConfig`.
+    address listingLogic;
+    address viewLogic;
 }

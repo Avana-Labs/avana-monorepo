@@ -1610,7 +1610,7 @@
     "DebtPriceView": ["REQ-ORACLE-093", "REQ-ORACLE-092", "REQ-ORACLE-090", "REQ-ORACLE-099", "REQ-ORACLE-100", "SPEC-ORC-015", "SPEC-ORC-018", "SPEC-ORC-020", "SPEC-ORC-021", "Q-247", "Q-248", "Q-274", "Q-323", "Q-324"]
   },
   "contracts/src/oracle/lp-oracle/ILPOracle.sol": {
-    "ILPOracle": ["REQ-ORACLE-011", "REQ-ORACLE-012", "REQ-ORACLE-013", "REQ-ORACLE-016", "REQ-ORACLE-045", "REQ-ORACLE-060", "REQ-ORACLE-061", "REQ-ORACLE-062", "REQ-ORACLE-063", "REQ-ORACLE-064", "REQ-ORACLE-065", "REQ-ORACLE-066", "REQ-ORACLE-078", "REQ-ORACLE-079", "REQ-ORACLE-080", "REQ-ORACLE-081", "REQ-ORACLE-083", "REQ-ORACLE-084", "REQ-ORACLE-094", "REQ-ORACLE-095", "REQ-ORACLE-097", "REQ-ORACLE-099", "REQ-ORACLE-100", "REQ-ORACLE-102", "REQ-ORACLE-103", "REQ-ORACLE-107", "SPEC-ORC-005", "SPEC-ORC-008", "SPEC-ORC-017", "SPEC-ORC-023", "Q-028", "Q-128", "Q-208", "Q-226", "Q-247", "Q-248", "Q-259", "Q-370", "Q-321", "Q-322", "Q-323", "Q-324"],
+    "ILPOracle": ["REQ-ORACLE-011", "REQ-ORACLE-012", "REQ-ORACLE-013", "REQ-ORACLE-016", "REQ-ORACLE-045", "REQ-ORACLE-060", "REQ-ORACLE-061", "REQ-ORACLE-062", "REQ-ORACLE-063", "REQ-ORACLE-064", "REQ-ORACLE-065", "REQ-ORACLE-066", "REQ-ORACLE-078", "REQ-ORACLE-079", "REQ-ORACLE-080", "REQ-ORACLE-081", "REQ-ORACLE-083", "REQ-ORACLE-084", "REQ-ORACLE-094", "REQ-ORACLE-095", "REQ-ORACLE-097", "REQ-ORACLE-099", "REQ-ORACLE-100", "REQ-ORACLE-102", "REQ-ORACLE-103", "REQ-ORACLE-107", "SPEC-ORC-005", "SPEC-ORC-008", "SPEC-ORC-017", "SPEC-ORC-023", "Q-028", "Q-128", "Q-208", "Q-226", "Q-247", "Q-248", "Q-259", "Q-370", "Q-321", "Q-322", "Q-323", "Q-324", "REQ-ORACLE-106"],
     "ILPOracle.initialize": ["REQ-ORACLE-010", "REQ-ORACLE-058", "REQ-ORACLE-059", "REQ-ORACLE-076", "REQ-ORACLE-088", "REQ-ORACLE-097", "SPEC-ORC-005", "MKT-019"],
     "ILPOracle.latestAnswer": ["REQ-ORACLE-020", "REQ-ORACLE-085", "REQ-ORACLE-086", "REQ-ORACLE-060", "REQ-ORACLE-061", "SPEC-ORC-008", "SPEC-ORC-012", "SPEC-ORC-017", "Q-247"],
     "ILPOracle.decimals": ["REQ-ORACLE-040", "REQ-ORACLE-081"],
@@ -1633,41 +1633,42 @@
     "ILPOracle.parameterStore": ["REQ-ORACLE-017", "REQ-ORACLE-094", "REQ-CONFIG-072"],
     "ILPOracle.marketRegistry": ["REQ-CONFIG-007", "REQ-ORACLE-094", "REQ-ORACLE-095"],
     "ILPOracle.stableCeilingUsd": ["SPEC-ORC-004", "Q-177"],
-    "ILPOracle.TIMELOCK": ["REQ-ORACLE-097", "Q-259"]
+    "ILPOracle.TIMELOCK": ["REQ-ORACLE-097", "Q-259"],
+    "ILPOracle.POKE_LOGIC": ["REQ-ORACLE-080"],
+    "ILPOracle.LISTING_LOGIC": ["REQ-ORACLE-080"],
+    "ILPOracle.INIT_LOGIC": ["REQ-ORACLE-080"],
+    "ILPOracle.VIEW_LOGIC": ["REQ-ORACLE-080"]
+  },
+  "contracts/src/oracle/lp-oracle/ILPOracleBase.sol": {
+    "ILPOracleBase": ["REQ-ORACLE-076", "REQ-ORACLE-035", "Q-370"],
+    "ILPOracleBase.InsufficientGas": ["REQ-ORACLE-024", "REQ-ORACLE-039", "REQ-ORACLE-074"],
+    "ILPOracleBase.ConfigCheckFailed": ["REQ-ORACLE-058", "REQ-ORACLE-076"],
+    "ILPOracleBase.NotLive": ["REQ-ORACLE-059", "REQ-ORACLE-076"],
+    "ILPOracleBase.PokeMinGasOutOfBounds": ["REQ-ORACLE-038"],
+    "ILPOracleBase.MarketMismatch": ["REQ-ORACLE-010", "Q-370"],
+    "ILPOracleBase.AdminRoleOnlyTimelock": ["REQ-ORACLE-097", "REQ-ORACLE-058", "Q-259"],
+    "ILPOracleBase.NotDelegated": ["REQ-ORACLE-062", "REQ-ORACLE-080"],
+    "ILPOracleBase.PriceSeeded": ["REQ-ORACLE-059"],
+    "ILPOracleBase.PriceAccepted": ["REQ-ORACLE-029", "REQ-ORACLE-035"],
+    "ILPOracleBase.PriceStateChanged": ["REQ-ORACLE-035", "Q-076"],
+    "ILPOracleBase.RouteChanged": ["REQ-ORACLE-035"],
+    "ILPOracleBase.FailureRecorded": ["REQ-ORACLE-027"],
+    "ILPOracleBase.FailureCleared": ["REQ-ORACLE-027"],
+    "ILPOracleBase.DisagreementRecorded": ["REQ-ORACLE-028", "Q-199"],
+    "ILPOracleBase.DisagreementCleared": ["REQ-ORACLE-028"],
+    "ILPOracleBase.OutageExpiredLatched": ["REQ-ORACLE-030"],
+    "ILPOracleBase.GraceStarted": ["REQ-ORACLE-032", "REQ-ORACLE-033"],
+    "ILPOracleBase.QuoteChangeCapped": ["REQ-ORACLE-103", "Q-321"],
+    "ILPOracleBase.PokeMinGasUpdated": ["REQ-ORACLE-038"],
+    "ILPOracleBase.PriceCheckpointed": ["REQ-ORACLE-088", "REQ-ORACLE-059", "Q-241"],
+    "ILPOracleBase.TokenDecimalsMismatch": ["REQ-ORACLE-107"],
+    "ILPOracleBase.TokenDecimalsRestored": ["REQ-ORACLE-107"],
+    "ILPOracleBase.PriceRouteVersionObserved": ["REQ-ORACLE-095", "REQ-ORACLE-035", "Q-248"]
   },
   "contracts/src/oracle/lp-oracle/ILPOracleCL.sol": {
     "ILPOracleCL": ["REQ-ORACLE-042", "REQ-ORACLE-046", "REQ-AMM-V3-005", "REQ-AMM-SLIP-005", "Q-325", "Q-330"],
     "ILPOracleCL.getClPriceState": ["REQ-ORACLE-042", "REQ-AMM-V3-005", "REQ-AMM-SLIP-005"],
     "ILPOracleCL.MODULE_LOGIC": ["REQ-ORACLE-080"]
-  },
-  "contracts/src/oracle/lp-oracle/ILPOracleErrors.sol": {
-    "ILPOracleErrors": ["REQ-ORACLE-076"],
-    "ILPOracleErrors.InsufficientGas": ["REQ-ORACLE-024", "REQ-ORACLE-039", "REQ-ORACLE-074"],
-    "ILPOracleErrors.ConfigCheckFailed": ["REQ-ORACLE-058", "REQ-ORACLE-076"],
-    "ILPOracleErrors.NotLive": ["REQ-ORACLE-059", "REQ-ORACLE-076"],
-    "ILPOracleErrors.PokeMinGasOutOfBounds": ["REQ-ORACLE-038"],
-    "ILPOracleErrors.MarketMismatch": ["REQ-ORACLE-010", "Q-370"],
-    "ILPOracleErrors.AdminRoleOnlyTimelock": ["REQ-ORACLE-097", "REQ-ORACLE-058", "Q-259"],
-    "ILPOracleErrors.NotDelegated": ["REQ-ORACLE-062", "REQ-ORACLE-080"]
-  },
-  "contracts/src/oracle/lp-oracle/ILPOracleEvents.sol": {
-    "ILPOracleEvents": ["REQ-ORACLE-035", "Q-370"],
-    "ILPOracleEvents.PriceSeeded": ["REQ-ORACLE-059"],
-    "ILPOracleEvents.PriceAccepted": ["REQ-ORACLE-029", "REQ-ORACLE-035"],
-    "ILPOracleEvents.PriceStateChanged": ["REQ-ORACLE-035", "Q-076"],
-    "ILPOracleEvents.RouteChanged": ["REQ-ORACLE-035"],
-    "ILPOracleEvents.FailureRecorded": ["REQ-ORACLE-027"],
-    "ILPOracleEvents.FailureCleared": ["REQ-ORACLE-027"],
-    "ILPOracleEvents.DisagreementRecorded": ["REQ-ORACLE-028", "Q-199"],
-    "ILPOracleEvents.DisagreementCleared": ["REQ-ORACLE-028"],
-    "ILPOracleEvents.OutageExpiredLatched": ["REQ-ORACLE-030"],
-    "ILPOracleEvents.GraceStarted": ["REQ-ORACLE-032", "REQ-ORACLE-033"],
-    "ILPOracleEvents.QuoteChangeCapped": ["REQ-ORACLE-103", "Q-321"],
-    "ILPOracleEvents.PokeMinGasUpdated": ["REQ-ORACLE-038"],
-    "ILPOracleEvents.PriceCheckpointed": ["REQ-ORACLE-088", "REQ-ORACLE-059", "Q-241"],
-    "ILPOracleEvents.TokenDecimalsMismatch": ["REQ-ORACLE-107"],
-    "ILPOracleEvents.TokenDecimalsRestored": ["REQ-ORACLE-107"],
-    "ILPOracleEvents.PriceRouteVersionObserved": ["REQ-ORACLE-095", "REQ-ORACLE-035", "Q-248"]
   },
   "contracts/src/oracle/lp-oracle/ILPOracleLogic.sol": {
     "ILPOracleLogic": ["REQ-ORACLE-106", "REQ-ORACLE-078", "REQ-ORACLE-080", "REQ-ORACLE-082", "Q-240"],
@@ -1675,13 +1676,6 @@
     "ILPOracleLogic.initializeMarket": ["REQ-ORACLE-058", "REQ-ORACLE-059"],
     "ILPOracleLogic.checkConfig": ["REQ-ORACLE-046"],
     "ILPOracleLogic.logicConfig": ["REQ-ORACLE-080"]
-  },
-  "contracts/src/oracle/lp-oracle/ILPOracleRouter.sol": {
-    "ILPOracleRouter": ["REQ-ORACLE-106", "REQ-ORACLE-078", "REQ-ORACLE-080"],
-    "ILPOracleRouter.POKE_LOGIC": ["REQ-ORACLE-080"],
-    "ILPOracleRouter.LISTING_LOGIC": ["REQ-ORACLE-080"],
-    "ILPOracleRouter.INIT_LOGIC": ["REQ-ORACLE-080"],
-    "ILPOracleRouter.VIEW_LOGIC": ["REQ-ORACLE-080"]
   },
   "contracts/src/oracle/lp-oracle/LPOracle.sol": {
     "LPOracle": ["REQ-ORACLE-106", "REQ-ORACLE-107", "REQ-ORACLE-016", "REQ-ORACLE-020", "REQ-ORACLE-040", "REQ-ORACLE-041", "REQ-ORACLE-042", "REQ-ORACLE-043", "REQ-ORACLE-044", "REQ-ORACLE-045", "REQ-ORACLE-058", "REQ-ORACLE-059", "REQ-ORACLE-060", "REQ-ORACLE-061", "REQ-ORACLE-062", "REQ-ORACLE-063", "REQ-ORACLE-064", "REQ-ORACLE-078", "REQ-ORACLE-080", "REQ-ORACLE-082", "REQ-ORACLE-087", "REQ-ORACLE-088", "REQ-ORACLE-097", "REQ-ORACLE-101", "Q-128", "Q-247", "Q-259", "Q-321"],
@@ -1793,27 +1787,18 @@
     "LPOracleCalls.wordArray": ["REQ-ORACLE-001", "REQ-ORACLE-061"]
   },
   "contracts/src/oracle/lp-oracle/LPOracleConfig.sol": {
-    "LPOracleConfig": ["REQ-ORACLE-017", "REQ-ORACLE-083", "REQ-ORACLE-094", "REQ-ORACLE-095", "REQ-ORACLE-099", "REQ-ORACLE-100", "REQ-ORACLE-107", "SPEC-ORC-021", "SPEC-ORC-023"],
+    "LPOracleConfig": ["REQ-ORACLE-017", "REQ-ORACLE-083", "REQ-ORACLE-094", "REQ-ORACLE-095", "REQ-ORACLE-099", "REQ-ORACLE-100", "REQ-ORACLE-107", "SPEC-ORC-021", "SPEC-ORC-023", "REQ-ORACLE-001", "REQ-ORACLE-002", "REQ-ORACLE-003", "REQ-ORACLE-004", "REQ-ORACLE-102", "SPEC-ORC-002", "SPEC-ORC-013", "SPEC-ORC-019"],
     "LPOracleConfig._loadLive": ["REQ-ORACLE-017", "REQ-ORACLE-094"],
     "LPOracleConfig._loadInputs": ["REQ-ORACLE-017", "REQ-ORACLE-083", "REQ-ORACLE-094"],
     "LPOracleConfig._loadSeed": ["REQ-ORACLE-046", "REQ-ORACLE-058", "REQ-ORACLE-059"],
     "LPOracleConfig._verifyDecimals": ["REQ-ORACLE-107", "REQ-ORACLE-017"],
-    "LPOracleConfig._readSequencer": ["SPEC-ORC-021", "REQ-ORACLE-099"]
-  },
-  "contracts/src/oracle/lp-oracle/LPOracleEval.sol": {
-    "LPOracleEval": ["REQ-ORACLE-005", "REQ-ORACLE-006", "REQ-ORACLE-008", "REQ-ORACLE-009", "REQ-ORACLE-011", "REQ-ORACLE-015", "REQ-ORACLE-016", "REQ-ORACLE-017", "REQ-ORACLE-018", "REQ-ORACLE-019", "REQ-ORACLE-020", "REQ-ORACLE-022", "REQ-ORACLE-034", "REQ-ORACLE-090", "REQ-ORACLE-095", "REQ-ORACLE-099", "REQ-ORACLE-100", "REQ-ORACLE-103", "SPEC-ORC-012", "SPEC-ORC-013", "SPEC-ORC-015", "SPEC-ORC-016", "SPEC-ORC-017"],
-    "LPOracleEval._evaluate": ["REQ-ORACLE-026", "REQ-ORACLE-042", "REQ-ORACLE-045", "REQ-ORACLE-100"],
-    "LPOracleEval._evaluatePoke": ["REQ-ORACLE-026", "REQ-ORACLE-107"],
-    "LPOracleEval._storedDecimals": ["REQ-ORACLE-107"],
-    "LPOracleEval._evaluateSeed": ["REQ-ORACLE-058", "REQ-ORACLE-059"],
-    "LPOracleEval._selectQuotes": ["REQ-ORACLE-005", "REQ-ORACLE-006", "REQ-ORACLE-008", "REQ-ORACLE-009", "REQ-ORACLE-019", "SPEC-ORC-013"],
-    "LPOracleEval._valueMarket": ["REQ-ORACLE-011", "REQ-ORACLE-015", "REQ-ORACLE-018", "REQ-ORACLE-086", "REQ-ORACLE-103", "SPEC-ORC-011", "SPEC-ORC-017"],
-    "LPOracleEval._price": ["SPEC-ORC-008", "REQ-ORACLE-011", "REQ-ORACLE-103"],
-    "LPOracleEval._chooseRoutes": ["SPEC-ORC-017", "REQ-ORACLE-086"],
-    "LPOracleEval._secondSources": ["SPEC-ORC-020", "REQ-ORACLE-100"],
-    "LPOracleEval._decide": ["REQ-ORACLE-016", "REQ-ORACLE-017", "REQ-ORACLE-018", "REQ-ORACLE-020", "REQ-ORACLE-022", "REQ-ORACLE-034", "REQ-ORACLE-084", "REQ-ORACLE-090", "REQ-ORACLE-095", "REQ-ORACLE-099", "REQ-ORACLE-100", "REQ-ORACLE-103", "REQ-ORACLE-107", "SPEC-ORC-013", "SPEC-ORC-016", "SPEC-ORC-017", "SPEC-ORC-021"],
-    "LPOracleEval._quoteCapped": ["REQ-ORACLE-103", "REQ-AMM-CORE-014"],
-    "LPOracleEval._grace": ["REQ-ORACLE-034", "REQ-ORACLE-099"]
+    "LPOracleConfig._readSequencer": ["SPEC-ORC-021", "REQ-ORACLE-099"],
+    "LPOracleConfig._tokenDecimals": ["REQ-ORACLE-017"],
+    "LPOracleConfig._latestRound": ["REQ-ORACLE-001"],
+    "LPOracleConfig._feedDecimals": ["REQ-ORACLE-001"],
+    "LPOracleConfig._readLeg": ["REQ-ORACLE-001", "REQ-ORACLE-002", "REQ-ORACLE-003", "SPEC-ORC-001", "SPEC-ORC-019"],
+    "LPOracleConfig._readRoute": ["REQ-ORACLE-004", "SPEC-ORC-002", "SPEC-ORC-013"],
+    "LPOracleConfig._readSecondSource": ["SPEC-ORC-020", "REQ-ORACLE-100"]
   },
   "contracts/src/oracle/lp-oracle/LPOracleListing.sol": {
     "LPOracleListing": ["REQ-ORACLE-046", "REQ-ORACLE-047", "REQ-ORACLE-048", "REQ-ORACLE-049", "REQ-ORACLE-050", "REQ-ORACLE-051", "REQ-ORACLE-053", "REQ-ORACLE-054", "REQ-ORACLE-056", "REQ-ORACLE-077", "REQ-ORACLE-100", "Q-091", "Q-184", "Q-191", "Q-321"],
@@ -1830,29 +1815,26 @@
     "LPOracleLogicBase.constructor": ["REQ-ORACLE-080"],
     "LPOracleLogicBase.logicConfig": ["REQ-ORACLE-080"]
   },
-  "contracts/src/oracle/lp-oracle/LPOraclePoke.sol": {
-    "LPOraclePoke": ["REQ-ORACLE-107", "REQ-ORACLE-024", "REQ-ORACLE-025", "REQ-ORACLE-026", "REQ-ORACLE-027", "REQ-ORACLE-028", "REQ-ORACLE-029", "REQ-ORACLE-030", "REQ-ORACLE-031", "REQ-ORACLE-032", "REQ-ORACLE-033", "REQ-ORACLE-035", "REQ-ORACLE-062", "REQ-ORACLE-065", "REQ-ORACLE-066", "REQ-ORACLE-088", "REQ-ORACLE-095", "REQ-ORACLE-103"],
-    "LPOraclePoke._poke": ["REQ-ORACLE-026"],
-    "LPOraclePoke._storeAccepted": ["REQ-ORACLE-029", "REQ-ORACLE-059", "REQ-ORACLE-103"],
-    "LPOraclePoke._storeCheckpoint": ["REQ-ORACLE-088", "REQ-ORACLE-059"]
-  },
   "contracts/src/oracle/lp-oracle/LPOraclePokeLogic.sol": {
     "LPOraclePokeLogic": ["REQ-ORACLE-106", "REQ-ORACLE-024", "REQ-ORACLE-025", "REQ-ORACLE-026"],
     "LPOraclePokeLogic.poke": ["REQ-ORACLE-026"]
   },
-  "contracts/src/oracle/lp-oracle/LPOracleReads.sol": {
-    "LPOracleReads": ["REQ-ORACLE-001", "REQ-ORACLE-002", "REQ-ORACLE-003", "REQ-ORACLE-004", "REQ-ORACLE-017", "REQ-ORACLE-094", "REQ-ORACLE-102", "SPEC-ORC-002", "SPEC-ORC-013", "SPEC-ORC-019", "SPEC-ORC-023"],
-    "LPOracleReads._tokenDecimals": ["REQ-ORACLE-017"],
-    "LPOracleReads._latestRound": ["REQ-ORACLE-001"],
-    "LPOracleReads._feedDecimals": ["REQ-ORACLE-001"],
-    "LPOracleReads._readLeg": ["REQ-ORACLE-001", "REQ-ORACLE-002", "REQ-ORACLE-003", "SPEC-ORC-001", "SPEC-ORC-019"],
-    "LPOracleReads._readRoute": ["REQ-ORACLE-004", "SPEC-ORC-002", "SPEC-ORC-013"],
-    "LPOracleReads._readSecondSource": ["SPEC-ORC-020", "REQ-ORACLE-100"]
-  },
   "contracts/src/oracle/lp-oracle/LPOracleRecovery.sol": {
-    "LPOracleRecovery": ["SPEC-ORC-014", "REQ-ORACLE-032", "REQ-ORACLE-033", "REQ-ORACLE-065", "REQ-ORACLE-075", "REQ-ORACLE-089", "Q-129", "Q-154", "Q-272"],
+    "LPOracleRecovery": ["SPEC-ORC-014", "REQ-ORACLE-032", "REQ-ORACLE-033", "REQ-ORACLE-065", "REQ-ORACLE-075", "REQ-ORACLE-089", "Q-129", "Q-154", "Q-272", "REQ-ORACLE-005", "REQ-ORACLE-006", "REQ-ORACLE-008", "REQ-ORACLE-009", "REQ-ORACLE-011", "REQ-ORACLE-015", "REQ-ORACLE-016", "REQ-ORACLE-017", "REQ-ORACLE-018", "REQ-ORACLE-019", "REQ-ORACLE-020", "REQ-ORACLE-022", "REQ-ORACLE-034", "REQ-ORACLE-090", "REQ-ORACLE-095", "REQ-ORACLE-099", "REQ-ORACLE-100", "REQ-ORACLE-103", "SPEC-ORC-012", "SPEC-ORC-013", "SPEC-ORC-015", "SPEC-ORC-016", "SPEC-ORC-017"],
     "LPOracleRecovery._recoveryEvidence": ["SPEC-ORC-014", "REQ-ORACLE-032", "REQ-ORACLE-033"],
-    "LPOracleRecovery._previousRound": ["SPEC-ORC-014", "REQ-ORACLE-089", "REQ-ORACLE-075"]
+    "LPOracleRecovery._previousRound": ["SPEC-ORC-014", "REQ-ORACLE-089", "REQ-ORACLE-075"],
+    "LPOracleRecovery._evaluate": ["REQ-ORACLE-026", "REQ-ORACLE-042", "REQ-ORACLE-045", "REQ-ORACLE-100"],
+    "LPOracleRecovery._evaluatePoke": ["REQ-ORACLE-026", "REQ-ORACLE-107"],
+    "LPOracleRecovery._storedDecimals": ["REQ-ORACLE-107"],
+    "LPOracleRecovery._evaluateSeed": ["REQ-ORACLE-058", "REQ-ORACLE-059"],
+    "LPOracleRecovery._selectQuotes": ["REQ-ORACLE-005", "REQ-ORACLE-006", "REQ-ORACLE-008", "REQ-ORACLE-009", "REQ-ORACLE-019", "SPEC-ORC-013"],
+    "LPOracleRecovery._valueMarket": ["REQ-ORACLE-011", "REQ-ORACLE-015", "REQ-ORACLE-018", "REQ-ORACLE-086", "REQ-ORACLE-103", "SPEC-ORC-011", "SPEC-ORC-017"],
+    "LPOracleRecovery._price": ["SPEC-ORC-008", "REQ-ORACLE-011", "REQ-ORACLE-103"],
+    "LPOracleRecovery._chooseRoutes": ["SPEC-ORC-017", "REQ-ORACLE-086"],
+    "LPOracleRecovery._secondSources": ["SPEC-ORC-020", "REQ-ORACLE-100"],
+    "LPOracleRecovery._decide": ["REQ-ORACLE-016", "REQ-ORACLE-017", "REQ-ORACLE-018", "REQ-ORACLE-020", "REQ-ORACLE-022", "REQ-ORACLE-034", "REQ-ORACLE-084", "REQ-ORACLE-090", "REQ-ORACLE-095", "REQ-ORACLE-099", "REQ-ORACLE-100", "REQ-ORACLE-103", "REQ-ORACLE-107", "SPEC-ORC-013", "SPEC-ORC-016", "SPEC-ORC-017", "SPEC-ORC-021"],
+    "LPOracleRecovery._quoteCapped": ["REQ-ORACLE-103", "REQ-AMM-CORE-014"],
+    "LPOracleRecovery._grace": ["REQ-ORACLE-034", "REQ-ORACLE-099"]
   },
   "contracts/src/oracle/lp-oracle/LPOracleStorage.sol": {
     "LPOracleStorage": ["REQ-ORACLE-080", "REQ-ORACLE-097", "REQ-ORACLE-103", "REQ-ORACLE-107", "SPEC-ORC-023", "Q-240", "Q-321"],
@@ -1872,7 +1854,10 @@
     "TokenEval": ["REQ-ORACLE-005", "REQ-ORACLE-008", "REQ-ORACLE-009", "REQ-ORACLE-094", "SPEC-ORC-017", "SPEC-ORC-020"],
     "ConfigEval": ["REQ-ORACLE-017", "REQ-ORACLE-083", "REQ-ORACLE-099"],
     "SequencerEval": ["SPEC-ORC-021", "REQ-ORACLE-099"],
-    "Evaluation": ["REQ-ORACLE-016", "REQ-ORACLE-026", "REQ-ORACLE-042", "REQ-ORACLE-107", "SPEC-ORC-012", "SPEC-ORC-013", "SPEC-ORC-015", "SPEC-ORC-016", "SPEC-ORC-017"]
+    "Evaluation": ["REQ-ORACLE-016", "REQ-ORACLE-026", "REQ-ORACLE-042", "REQ-ORACLE-107", "SPEC-ORC-012", "SPEC-ORC-013", "SPEC-ORC-015", "SPEC-ORC-016", "SPEC-ORC-017"],
+    "ClPriceStateView": ["REQ-ORACLE-042", "REQ-AMM-V3-005", "REQ-AMM-SLIP-005", "Q-325", "Q-330"],
+    "InitParams": ["REQ-ORACLE-010", "REQ-ORACLE-058", "REQ-ORACLE-097", "MKT-019", "Q-370", "Q-321"],
+    "LPOracleLogicSet": ["REQ-ORACLE-080", "REQ-ORACLE-106"]
   },
   "contracts/src/oracle/lp-oracle/LPOracleV4.sol": {
     "LPOracleV4": ["REQ-ORACLE-080", "REQ-ORACLE-103", "REQ-AMM-V4-005", "SPEC-AMM-V4-001"],
@@ -1898,11 +1883,14 @@
     "LPOracleViewLogic.liquidationPriceMaxAge": ["REQ-ORACLE-043", "REQ-ORACLE-090", "SPEC-ORC-015"]
   },
   "contracts/src/oracle/lp-oracle/LPOracleViews.sol": {
-    "LPOracleViews": ["REQ-ORACLE-042", "REQ-ORACLE-021", "REQ-ORACLE-082"],
-    "LPOracleViews._report": ["REQ-ORACLE-042", "REQ-ORACLE-016", "REQ-ORACLE-022", "REQ-ORACLE-034", "REQ-ORACLE-090", "REQ-ORACLE-100"]
+    "LPOracleViews": ["REQ-ORACLE-042", "REQ-ORACLE-021", "REQ-ORACLE-082", "REQ-ORACLE-107", "REQ-ORACLE-024", "REQ-ORACLE-025", "REQ-ORACLE-026", "REQ-ORACLE-027", "REQ-ORACLE-028", "REQ-ORACLE-029", "REQ-ORACLE-030", "REQ-ORACLE-031", "REQ-ORACLE-032", "REQ-ORACLE-033", "REQ-ORACLE-035", "REQ-ORACLE-062", "REQ-ORACLE-065", "REQ-ORACLE-066", "REQ-ORACLE-088", "REQ-ORACLE-095", "REQ-ORACLE-103"],
+    "LPOracleViews._report": ["REQ-ORACLE-042", "REQ-ORACLE-016", "REQ-ORACLE-022", "REQ-ORACLE-034", "REQ-ORACLE-090", "REQ-ORACLE-100"],
+    "LPOracleViews._poke": ["REQ-ORACLE-026"],
+    "LPOracleViews._storeAccepted": ["REQ-ORACLE-029", "REQ-ORACLE-059", "REQ-ORACLE-103"],
+    "LPOracleViews._storeCheckpoint": ["REQ-ORACLE-088", "REQ-ORACLE-059"]
   },
   "contracts/src/oracle/lp-oracle/LPPriceMath.sol": {
-    "LPPriceMath": ["SPEC-ORC-001", "SPEC-ORC-002", "SPEC-ORC-003", "SPEC-ORC-004", "SPEC-ORC-005", "SPEC-ORC-008", "SPEC-ORC-011", "SPEC-ORC-012", "SPEC-ORC-015", "SPEC-ORC-017", "SPEC-ORC-018", "SPEC-ORC-019", "SPEC-ORC-020", "SPEC-ORC-021", "SPEC-ORC-022", "SPEC-ORC-023", "REQ-ORACLE-012", "REQ-ORACLE-103", "Q-191", "Q-240"],
+    "LPPriceMath": ["SPEC-ORC-001", "SPEC-ORC-002", "SPEC-ORC-003", "SPEC-ORC-004", "SPEC-ORC-005", "SPEC-ORC-008", "SPEC-ORC-011", "SPEC-ORC-012", "SPEC-ORC-015", "SPEC-ORC-017", "SPEC-ORC-018", "SPEC-ORC-019", "SPEC-ORC-020", "SPEC-ORC-021", "SPEC-ORC-022", "SPEC-ORC-023", "REQ-ORACLE-012", "REQ-ORACLE-103", "Q-191", "Q-240", "REQ-RISK-061", "REQ-SWAP-008", "REQ-SWAP-091", "REQ-LENS-015", "REQ-LENS-030"],
     "LPPriceMath.normalizeAnswer": ["SPEC-ORC-001", "REQ-ORACLE-002", "REQ-ORACLE-012"],
     "LPPriceMath.routeValue": ["SPEC-ORC-002", "SPEC-ORC-001"],
     "LPPriceMath.routeValue#2": ["SPEC-ORC-002", "REQ-ORACLE-012", "REQ-ORACLE-049"],
@@ -1926,18 +1914,6 @@
     "LPPriceMath.minObservations": ["SPEC-ORC-022", "REQ-ORACLE-055", "REQ-ORACLE-105"],
     "LPPriceMath.gasForCall": ["SPEC-ORC-023", "REQ-ORACLE-039", "REQ-ORACLE-102"],
     "LPPriceMath.pokeMinGasFloor": ["SPEC-ORC-023", "REQ-ORACLE-038"]
-  },
-  "contracts/src/oracle/lp-oracle/PriceAge.sol": {
-    "PriceAge": ["REQ-RISK-061", "REQ-SWAP-008", "REQ-SWAP-091", "REQ-LENS-015", "REQ-LENS-030"]
-  },
-  "contracts/src/oracle/lp-oracle/types/ClPriceStateView.sol": {
-    "ClPriceStateView": ["REQ-ORACLE-042", "REQ-AMM-V3-005", "REQ-AMM-SLIP-005", "Q-325", "Q-330"]
-  },
-  "contracts/src/oracle/lp-oracle/types/InitParams.sol": {
-    "InitParams": ["REQ-ORACLE-010", "REQ-ORACLE-058", "REQ-ORACLE-097", "MKT-019", "Q-370", "Q-321"]
-  },
-  "contracts/src/oracle/lp-oracle/types/LPOracleLogicSet.sol": {
-    "LPOracleLogicSet": ["REQ-ORACLE-080", "REQ-ORACLE-106"]
   },
   "contracts/src/periphery/flash-liquidator/FlashLiquidator.sol": {
     "FlashLiquidator": ["REQ-HELPER-001", "REQ-HELPER-010", "REQ-SWAP-105", "Q-242", "Q-404"],

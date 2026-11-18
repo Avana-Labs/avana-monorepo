@@ -4,13 +4,13 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {LPOracleCLModuleCaller} from "../../src/oracle/lp-oracle/LPOracleCLModuleCaller.sol";
 import {LPOracleCLModuleLogic} from "../../src/oracle/lp-oracle/LPOracleCLModuleLogic.sol";
 import {LPOracleCLPool} from "../../src/oracle/lp-oracle/LPOracleCLPool.sol";
 import {LPOracleStorage} from "../../src/oracle/lp-oracle/LPOracleStorage.sol";
+import {ClPriceStateView} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {LPPriceMath} from "../../src/oracle/lp-oracle/LPPriceMath.sol";
-import {ClPriceStateView} from "../../src/oracle/lp-oracle/types/ClPriceStateView.sol";
 import {OracleConfig} from "../../src/types/OracleConfig.sol";
 import {SecondSource} from "../../src/types/SecondSource.sol";
 import {LPOracleCLFixture} from "../utils/fixtures/LPOracleCLFixture.sol";
@@ -337,18 +337,18 @@ contract LPOracleCLModuleEdgesTest is LPOracleCLFixture {
     /// @notice Called directly, outside a delegatecall, every entry point of the module contract reverts NotDelegated.
     function test_TEST_306_moduleEntryPointsRefuseDirectCalls() public {
         LPOracleCLModuleLogic m = new LPOracleCLModuleLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7);
-        vm.expectRevert(ILPOracleErrors.NotDelegated.selector);
+        vm.expectRevert(ILPOracleBase.NotDelegated.selector);
         m.composition(1e6, 1e8, 1e8);
-        vm.expectRevert(ILPOracleErrors.NotDelegated.selector);
+        vm.expectRevert(ILPOracleBase.NotDelegated.selector);
         m.poolCheck(1e8, 1e8, 1e8, 1e8, WINDOW, TOLERANCE);
-        vm.expectRevert(ILPOracleErrors.NotDelegated.selector);
+        vm.expectRevert(ILPOracleBase.NotDelegated.selector);
         m.poolTwapPrice(0, bytes32(0), WINDOW, 1e8, 1e8);
-        vm.expectRevert(ILPOracleErrors.NotDelegated.selector);
+        vm.expectRevert(ILPOracleBase.NotDelegated.selector);
         m.isOwnPool(bytes32(0));
         LPOracleCLPool.ClListingInputs memory x;
-        vm.expectRevert(ILPOracleErrors.NotDelegated.selector);
+        vm.expectRevert(ILPOracleBase.NotDelegated.selector);
         m.listingChecks(x, 1e8, 1e8);
-        vm.expectRevert(ILPOracleErrors.NotDelegated.selector);
+        vm.expectRevert(ILPOracleBase.NotDelegated.selector);
         m.clReport(true, _pair(1e8, 1e8), _pair(1e8, 1e8), WINDOW, TOLERANCE);
     }
 

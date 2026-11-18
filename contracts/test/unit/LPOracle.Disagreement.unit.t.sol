@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPOracleEvents} from "../../src/oracle/lp-oracle/ILPOracleEvents.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {PriceStateView} from "../../src/types/PriceStateView.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
@@ -35,7 +35,7 @@ contract LPOracleDisagreementUnitTest is LPOracleFixture {
         uint256[] memory alternate = new uint256[](2);
         (primary[0], primary[1], alternate[0], alternate[1]) = (ONE, ONE, ONE, 97_500_000);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.DisagreementRecorded(uint64(T1), primary, alternate);
+        emit ILPOracleBase.DisagreementRecorded(uint64(T1), primary, alternate);
         oracle.poke();
         (, uint64 since,,) = oracle.storedTimers();
         assertEq(since, T1);
@@ -56,7 +56,7 @@ contract LPOracleDisagreementUnitTest is LPOracleFixture {
         vm.warp(T1 + 120);
         aB.push(int256(ONE), T1 + 120);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.DisagreementCleared(uint64(T1), uint64(T1 + 120));
+        emit ILPOracleBase.DisagreementCleared(uint64(T1), uint64(T1 + 120));
         assertEq(uint8(oracle.poke()), uint8(PriceState.Live));
         (, uint64 since,,) = oracle.storedTimers();
         assertEq(since, 0);
@@ -168,7 +168,7 @@ contract LPOracleDisagreementUnitTest is LPOracleFixture {
         assertTrue(_has(v.reasons, 13), "ANY_TOKEN_ON_STANDBY");
         assertEq(uint8(v.tokens[1].replaced), uint8(RouteSlot.Alternate));
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.PriceRouteVersionObserved(1, 0, 1);
+        emit ILPOracleBase.PriceRouteVersionObserved(1, 0, 1);
         oracle.poke();
         (, uint64 since,,) = oracle.storedTimers();
         assertEq(since, T1 + 1000, "disagreeSince restarts at the observing poke");
@@ -192,9 +192,9 @@ contract LPOracleDisagreementUnitTest is LPOracleFixture {
         registry.setRoutes(address(tokenB), _one(address(pB)), _one(address(standby)), RouteSlot.Alternate);
         registry.bumpVersion(address(tokenB));
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.PriceRouteVersionObserved(1, 0, 1);
+        emit ILPOracleBase.PriceRouteVersionObserved(1, 0, 1);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.DisagreementCleared(uint64(T1), uint64(T1 + 1000));
+        emit ILPOracleBase.DisagreementCleared(uint64(T1), uint64(T1 + 1000));
         assertEq(uint8(oracle.poke()), uint8(PriceState.Live));
         (, since,,) = oracle.storedTimers();
         assertEq(since, 0, "cleared by the version change");
@@ -251,8 +251,8 @@ contract LPOracleDisagreementUnitTest is LPOracleFixture {
         uint256 observed = 0;
         for (uint256 i = 0; i < logs.length; ++i) {
             bytes32 topic = logs[i].topics[0];
-            assertTrue(topic != ILPOracleEvents.DisagreementCleared.selector, "no disagreement to clear");
-            if (topic != ILPOracleEvents.PriceRouteVersionObserved.selector) continue;
+            assertTrue(topic != ILPOracleBase.DisagreementCleared.selector, "no disagreement to clear");
+            if (topic != ILPOracleBase.PriceRouteVersionObserved.selector) continue;
             ++observed;
             (uint8 token, uint64 previous, uint64 current) = abi.decode(logs[i].data, (uint8, uint64, uint64));
             assertEq(token, 1, "token B");
@@ -270,9 +270,9 @@ contract LPOracleDisagreementUnitTest is LPOracleFixture {
         uint256[] memory alternate = new uint256[](2);
         (primary[0], primary[1], alternate[0], alternate[1]) = (ONE, ONE, ONE, 97_500_000);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.PriceRouteVersionObserved(1, 0, 1);
+        emit ILPOracleBase.PriceRouteVersionObserved(1, 0, 1);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.DisagreementRecorded(uint64(T1), primary, alternate);
+        emit ILPOracleBase.DisagreementRecorded(uint64(T1), primary, alternate);
         oracle.poke();
     }
 }

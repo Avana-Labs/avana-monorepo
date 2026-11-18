@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPOracleEvents} from "../../src/oracle/lp-oracle/ILPOracleEvents.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 import {OracleFeedMock, ReadMode} from "../utils/mocks/LPOracleMocks.sol";
@@ -59,7 +59,7 @@ contract LPOracleRecoveryEdgesUnitTest is LPOracleFixture {
         aB.push(int256(ONE), BACK);
         uint256 snap = vm.snapshotState();
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.GraceStarted(uint64(BACK), uint64(BACK + 1800), false);
+        emit ILPOracleBase.GraceStarted(uint64(BACK), uint64(BACK + 1800), false);
         oracle.poke();
         vm.revertToState(snap);
         pB.setMode(pB.getRoundData.selector, ReadMode.Revert);
@@ -119,7 +119,7 @@ contract LPOracleRecoveryEdgesUnitTest is LPOracleFixture {
         aB.push(int256(ONE), back);
         pB.push(int256(ONE), back);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.GraceStarted(uint64(back), uint64(back + 1800), false);
+        emit ILPOracleBase.GraceStarted(uint64(back), uint64(back + 1800), false);
         oracle.poke();
         (,,, uint64 rec) = oracle.storedTimers();
         assertEq(rec, back);

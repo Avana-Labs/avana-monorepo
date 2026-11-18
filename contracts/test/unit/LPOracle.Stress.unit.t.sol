@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPOracleEvents} from "../../src/oracle/lp-oracle/ILPOracleEvents.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {PriceStateView} from "../../src/types/PriceStateView.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
@@ -101,7 +101,7 @@ contract LPOracleStressUnitTest is LPOracleFixture {
         (prices,,) = oracle.getTokenPrices();
         assertEq(prices[0], ONE, "the accepted vector while capped");
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.QuoteChangeCapped(int256(SEEDED), int256(2 * 98_499_901));
+        emit ILPOracleBase.QuoteChangeCapped(int256(SEEDED), int256(2 * 98_499_901));
         oracle.poke();
         // A move within 1 % is not capped; a later block accepts the 1.5 % move.
         vm.roll(block.number + 1);

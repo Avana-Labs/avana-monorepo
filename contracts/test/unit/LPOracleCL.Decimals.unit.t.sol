@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPOracleEvents} from "../../src/oracle/lp-oracle/ILPOracleEvents.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {PriceStateView} from "../../src/types/PriceStateView.sol";
@@ -66,9 +66,9 @@ contract LPOracleCLDecimalsTest is LPOracleCLFixture {
         assertEq(uint8(v.state), uint8(PriceState.Live), "delayed detection: no poke yet");
         assertEq(v.answer, before, "still priced with the stored 6 decimals");
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.TokenDecimalsMismatch(0, 6, 18, true);
+        emit ILPOracleBase.TokenDecimalsMismatch(0, 6, 18, true);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.FailureRecorded(uint64(T1), LPOracleCodes.CONFIG_OR_DECIMALS_UNAVAILABLE);
+        emit ILPOracleBase.FailureRecorded(uint64(T1), LPOracleCodes.CONFIG_OR_DECIMALS_UNAVAILABLE);
         assertEq(uint8(oracle.poke()), uint8(PriceState.Cached), "the poke reports Cached");
         v = _state();
         assertTrue(_has(v.reasons, 1), "CONFIG_OR_DECIMALS_UNAVAILABLE");
@@ -99,7 +99,7 @@ contract LPOracleCLDecimalsTest is LPOracleCLFixture {
             vm.roll(block.number + 1);
             _setPrices(ONE, ONE);
             vm.expectEmit(address(oracle));
-            emit ILPOracleEvents.TokenDecimalsMismatch(1, 6, 0, false);
+            emit ILPOracleBase.TokenDecimalsMismatch(1, 6, 0, false);
             assertEq(uint8(oracle.poke()), uint8(PriceState.Cached), "unreadable decimals fail the market");
             vm.clearMockedCalls();
             vm.revertToState(snap);
@@ -121,7 +121,7 @@ contract LPOracleCLDecimalsTest is LPOracleCLFixture {
             _pokeAt(T1 + 60 + k * 1000);
             assertEq(_state().failureStart, T1 + 60, "the failure start does not move");
         }
-        assertEq(_count(vm.getRecordedLogs(), ILPOracleEvents.TokenDecimalsMismatch.selector), 0, "one event only");
+        assertEq(_count(vm.getRecordedLogs(), ILPOracleBase.TokenDecimalsMismatch.selector), 0, "one event only");
         _pokeAt(T1 + 60 + 3600);
         PriceStateView memory v = _state();
         assertEq(uint8(v.state), uint8(PriceState.Expired), "Expired from failedSince + cachedWindow");
@@ -133,9 +133,9 @@ contract LPOracleCLDecimalsTest is LPOracleCLFixture {
         vm.roll(block.number + 1);
         _setPrices(ONE, ONE);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.TokenDecimalsRestored(uint64(t));
+        emit ILPOracleBase.TokenDecimalsRestored(uint64(t));
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.FailureCleared(uint64(T1 + 60), uint64(t));
+        emit ILPOracleBase.FailureCleared(uint64(T1 + 60), uint64(t));
         assertEq(uint8(oracle.poke()), uint8(PriceState.Live), "restored");
         v = _state();
         assertEq(v.answer, before, "priced with the stored decimals");

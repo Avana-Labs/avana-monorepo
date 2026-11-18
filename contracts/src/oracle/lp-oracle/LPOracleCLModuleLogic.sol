@@ -7,7 +7,7 @@ import {SecondSource} from "../../types/SecondSource.sol";
 import {LPOracleCLModule} from "./LPOracleCLModule.sol";
 import {LPOracleCLPool} from "./LPOracleCLPool.sol";
 import {LPOracleStorage} from "./LPOracleStorage.sol";
-import {ClPriceStateView} from "./types/ClPriceStateView.sol";
+import {ClPriceStateView} from "./LPOracleTypes.sol";
 
 /// @title LPOracleCLModuleLogic
 /// @notice The concentrated-liquidity pricing module as one immutable logic contract, run by delegatecall.

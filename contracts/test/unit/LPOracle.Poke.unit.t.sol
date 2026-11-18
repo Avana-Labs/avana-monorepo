@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
-import {ILPOracleEvents} from "../../src/oracle/lp-oracle/ILPOracleEvents.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {PriceStateView} from "../../src/types/PriceStateView.sol";
@@ -37,7 +36,7 @@ contract LPOraclePokeUnitTest is LPOracleFixture {
         aB.setMode(aB.latestRoundData.selector, ReadMode.Revert);
         (bool ok, bytes memory ret) = address(oracle).call{gas: POKE_FLOOR - 1}(abi.encodeCall(oracle.poke, ()));
         assertFalse(ok, "below pokeMinGas");
-        assertEq(bytes4(ret), ILPOracleErrors.InsufficientGas.selector);
+        assertEq(bytes4(ret), ILPOracleBase.InsufficientGas.selector);
         (uint64 failedSince,,,) = oracle.storedTimers();
         assertEq(failedSince, 0, "a reverted poke stores nothing");
         oracle.poke();
@@ -63,7 +62,7 @@ contract LPOraclePokeUnitTest is LPOracleFixture {
         vm.warp(t);
         _keepOthersFresh(t);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.OutageExpiredLatched(1, uint64(T0 + MAX_AGE + 1), uint64(t));
+        emit ILPOracleBase.OutageExpiredLatched(1, uint64(T0 + MAX_AGE + 1), uint64(t));
         oracle.poke();
         (,, latched,) = oracle.storedTimers();
         assertTrue(latched);
@@ -119,7 +118,7 @@ contract LPOraclePokeUnitTest is LPOracleFixture {
         pB.push(int256(ONE), back);
         aB.push(int256(ONE), back);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.GraceStarted(uint64(back), uint64(back + 1800), false);
+        emit ILPOracleBase.GraceStarted(uint64(back), uint64(back + 1800), false);
         oracle.poke();
         (,,, uint64 recoveredAt) = oracle.storedTimers();
         assertEq(recoveredAt, back);
@@ -213,7 +212,7 @@ contract LPOraclePokeUnitTest is LPOracleFixture {
         (prices[0], prices[1]) = (99_990_000, 99_990_000);
         uint256 expected = 2 * 99_989_900;
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.PriceAccepted(int256(expected), uint64(T0 + 60), prices);
+        emit ILPOracleBase.PriceAccepted(int256(expected), uint64(T0 + 60), prices);
         oracle.poke();
         (address feed, uint80 roundId, uint64 seenAt) = oracle.storedSeen(0, 0, 0);
         assertEq(feed, address(pA));
@@ -222,18 +221,18 @@ contract LPOraclePokeUnitTest is LPOracleFixture {
         // A failure records and clears its timer with events; the route change is reported.
         pA.setMode(pA.latestRoundData.selector, ReadMode.Revert);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.RouteChanged(0, 1, 2);
+        emit ILPOracleBase.RouteChanged(0, 1, 2);
         oracle.poke();
         pA.setMode(pA.latestRoundData.selector, ReadMode.Normal);
         pB.setMode(pB.latestRoundData.selector, ReadMode.Revert);
         aB.setMode(aB.latestRoundData.selector, ReadMode.Revert);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.FailureRecorded(uint64(T0 + 60), 1 << 0);
+        emit ILPOracleBase.FailureRecorded(uint64(T0 + 60), 1 << 0);
         oracle.poke();
         pB.setMode(pB.latestRoundData.selector, ReadMode.Normal);
         aB.setMode(aB.latestRoundData.selector, ReadMode.Normal);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.FailureCleared(uint64(T0 + 60), uint64(T0 + 60));
+        emit ILPOracleBase.FailureCleared(uint64(T0 + 60), uint64(T0 + 60));
         oracle.poke();
     }
 
@@ -261,7 +260,7 @@ contract LPOraclePokeUnitTest is LPOracleFixture {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         for (uint256 i = 0; i < logs.length; ++i) {
             assertTrue(
-                logs[i].topics[0] != ILPOracleEvents.PriceAccepted.selector, "no PriceAccepted for the same rounds"
+                logs[i].topics[0] != ILPOracleBase.PriceAccepted.selector, "no PriceAccepted for the same rounds"
             );
         }
     }
@@ -319,12 +318,12 @@ contract LPOraclePokeUnitTest is LPOracleFixture {
         vm.roll(block.number + 1);
         vm.recordLogs();
         oracle.poke();
-        assertEq(_count(vm.getRecordedLogs(), ILPOracleEvents.OutageExpiredLatched.selector), 1, "one latch event");
+        assertEq(_count(vm.getRecordedLogs(), ILPOracleBase.OutageExpiredLatched.selector), 1, "one latch event");
         vm.warp(t + 60);
         vm.roll(block.number + 1);
         vm.recordLogs();
         oracle.poke();
-        assertEq(_count(vm.getRecordedLogs(), ILPOracleEvents.OutageExpiredLatched.selector), 0, "already latched");
+        assertEq(_count(vm.getRecordedLogs(), ILPOracleBase.OutageExpiredLatched.selector), 0, "already latched");
     }
 
     // TEST-042 verifies: REQ-ORACLE-031
@@ -390,7 +389,7 @@ contract LPOraclePokeUnitTest is LPOracleFixture {
         vm.warp(T0 + 3600);
         vm.roll(block.number + 1);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.PriceCheckpointed(SEEDED, uint64(T0 + 3600));
+        emit ILPOracleBase.PriceCheckpointed(SEEDED, uint64(T0 + 3600));
         oracle.poke();
     }
 
@@ -403,7 +402,7 @@ contract LPOraclePokeUnitTest is LPOracleFixture {
         vm.warp(T0 + 60);
         vm.roll(block.number + 1);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.PriceStateChanged(
+        emit ILPOracleBase.PriceStateChanged(
             PriceState.Live, PriceState.Cached, LPOracleCodes.ANY_TOKEN_NO_ROUTE, uint64(T0)
         );
         oracle.poke();
@@ -411,13 +410,13 @@ contract LPOraclePokeUnitTest is LPOracleFixture {
         vm.roll(block.number + 1);
         vm.recordLogs();
         oracle.poke();
-        assertEq(_count(vm.getRecordedLogs(), ILPOracleEvents.PriceStateChanged.selector), 0, "still Cached");
+        assertEq(_count(vm.getRecordedLogs(), ILPOracleBase.PriceStateChanged.selector), 0, "still Cached");
         pB.setMode(pB.latestRoundData.selector, ReadMode.Normal);
         aB.setMode(aB.latestRoundData.selector, ReadMode.Normal);
         vm.warp(T0 + 180);
         vm.roll(block.number + 1);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.PriceStateChanged(PriceState.Cached, PriceState.Live, 0, uint64(T0));
+        emit ILPOracleBase.PriceStateChanged(PriceState.Cached, PriceState.Live, 0, uint64(T0));
         oracle.poke();
     }
 
@@ -429,16 +428,16 @@ contract LPOraclePokeUnitTest is LPOracleFixture {
         vm.roll(block.number + 1);
         pA.setMode(pA.latestRoundData.selector, ReadMode.Revert);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.RouteChanged(0, 1, 2);
+        emit ILPOracleBase.RouteChanged(0, 1, 2);
         oracle.poke();
         vm.roll(block.number + 1);
         vm.recordLogs();
         oracle.poke();
-        assertEq(_count(vm.getRecordedLogs(), ILPOracleEvents.RouteChanged.selector), 0, "still on the alternate");
+        assertEq(_count(vm.getRecordedLogs(), ILPOracleBase.RouteChanged.selector), 0, "still on the alternate");
         pA.setMode(pA.latestRoundData.selector, ReadMode.Normal);
         vm.roll(block.number + 1);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.RouteChanged(0, 2, 1);
+        emit ILPOracleBase.RouteChanged(0, 2, 1);
         oracle.poke();
     }
 }

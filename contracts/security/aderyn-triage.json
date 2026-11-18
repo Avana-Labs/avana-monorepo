@@ -2145,25 +2145,25 @@
       "review": "Pattern: a3325c90f300c483 (bounded storage writes, approved Josue 2026-11-10)"
     },
     {
-      "fingerprint": "625a60f92f0b4ac0",
+      "fingerprint": "97eb1598510586f2",
       "check": "costly-loop",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
       "reason": "Storage writes inside loops bounded by the market's token count (2 to 8) and, for the seen records, 2 routes x at most 2 legs per token (REQ-ORACLE-031): initialize and the seed write each token's identity, decimals, route version, last route and listing price once; poke rewrites the accepted valuation vector (one word per token) and writes only the route versions and last routes that changed, the outage latch and the seen record of each decoded leg, behind the pokeMinGas floor (REQ-ORACLE-082). Same reasoning as the Collateralization entry a3325c90f300c483.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: a3325c90f300c483 (bounded storage writes, approved Josue 2026-11-10)"
     },
     {
-      "fingerprint": "ff7b5c4e58585b0d",
+      "fingerprint": "41c88001f4fa38aa",
       "check": "costly-loop",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
       "reason": "Storage writes inside loops bounded by the market's token count (2 to 8) and, for the seen records, 2 routes x at most 2 legs per token (REQ-ORACLE-031): initialize and the seed write each token's identity, decimals, route version, last route and listing price once; poke rewrites the accepted valuation vector (one word per token) and writes only the route versions and last routes that changed, the outage latch and the seen record of each decoded leg, behind the pokeMinGas floor (REQ-ORACLE-082). Same reasoning as the Collateralization entry a3325c90f300c483.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: a3325c90f300c483 (bounded storage writes, approved Josue 2026-11-10)"
     },
     {
-      "fingerprint": "7cf9954cc6833ff2",
+      "fingerprint": "80c355232ff3fe4d",
       "check": "costly-loop",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
       "reason": "Storage writes inside loops bounded by the market's token count (2 to 8) and, for the seen records, 2 routes x at most 2 legs per token (REQ-ORACLE-031): initialize and the seed write each token's identity, decimals, route version, last route and listing price once; poke rewrites the accepted valuation vector (one word per token) and writes only the route versions and last routes that changed, the outage latch and the seen record of each decoded leg, behind the pokeMinGas floor (REQ-ORACLE-082). Same reasoning as the Collateralization entry a3325c90f300c483.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: a3325c90f300c483 (bounded storage writes, approved Josue 2026-11-10)"
@@ -2241,9 +2241,9 @@
       "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
     },
     {
-      "fingerprint": "3f1a936bf3ce3e49",
+      "fingerprint": "f47dbaf486473ecc",
       "check": "require-revert-in-loop",
-      "file": "src/oracle/lp-oracle/LPOracleEval.sol",
+      "file": "src/oracle/lp-oracle/LPOracleRecovery.sol",
       "reason": "Bounded loops over the market's tokens (2 to 8; initialize refuses other counts), a token's two routes or a route's legs (at most 2). The only reverts reachable inside are the SPEC-ORC-023 gas guard InsufficientGas of LPOracleCalls.staticRead, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions of values already bounded (a token index below 8, a stale leg's end below now), which cannot fail. No partial evaluation is meaningful. Same as the DebtOracleEvaluation entry b27d930973ab3212.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
@@ -2257,17 +2257,17 @@
       "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
     },
     {
-      "fingerprint": "bc7119848011c2a4",
+      "fingerprint": "46c28ce7c7b7fe8b",
       "check": "require-revert-in-loop",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
       "reason": "Bounded loops over the market's tokens (2 to 8; initialize refuses other counts), a token's two routes or a route's legs (at most 2). The only reverts reachable inside are the SPEC-ORC-023 gas guard InsufficientGas of LPOracleCalls.staticRead, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions of values already bounded (a token index below 8, a stale leg's end below now), which cannot fail. No partial evaluation is meaningful. Same as the DebtOracleEvaluation entry b27d930973ab3212.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
     },
     {
-      "fingerprint": "83310c2ff871f406",
+      "fingerprint": "c0b6fb5b6a5e3766",
       "check": "require-revert-in-loop",
-      "file": "src/oracle/lp-oracle/LPOracleReads.sol",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
       "reason": "Bounded loops over the market's tokens (2 to 8; initialize refuses other counts), a token's two routes or a route's legs (at most 2). The only reverts reachable inside are the SPEC-ORC-023 gas guard InsufficientGas of LPOracleCalls.staticRead, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions of values already bounded (a token index below 8, a stale leg's end below now), which cannot fail. No partial evaluation is meaningful. Same as the DebtOracleEvaluation entry b27d930973ab3212.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"

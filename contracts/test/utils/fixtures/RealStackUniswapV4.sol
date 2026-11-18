@@ -18,10 +18,9 @@ import {LPOracleCLInitLogic} from "../../../src/oracle/lp-oracle/LPOracleCLInitL
 import {LPOracleCLListingLogic} from "../../../src/oracle/lp-oracle/LPOracleCLListingLogic.sol";
 import {LPOracleCLPokeLogic} from "../../../src/oracle/lp-oracle/LPOracleCLPokeLogic.sol";
 import {LPOracleCLViewLogic} from "../../../src/oracle/lp-oracle/LPOracleCLViewLogic.sol";
+import {InitParams, LPOracleLogicSet} from "../../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {LPOracleV4} from "../../../src/oracle/lp-oracle/LPOracleV4.sol";
 import {LPOracleV4ModuleLogic} from "../../../src/oracle/lp-oracle/LPOracleV4ModuleLogic.sol";
-import {InitParams} from "../../../src/oracle/lp-oracle/types/InitParams.sol";
-import {LPOracleLogicSet} from "../../../src/oracle/lp-oracle/types/LPOracleLogicSet.sol";
 import {DebtReserveDef, RiskTier, SpokeDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketDef} from "../../../src/types/MarketDef.sol";
 import {PositionRef} from "../../../src/types/PositionRef.sol";

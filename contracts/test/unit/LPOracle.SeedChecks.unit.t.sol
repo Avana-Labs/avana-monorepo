@@ -4,9 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
-import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
+import {InitParams, LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {OracleConfig} from "../../src/types/OracleConfig.sol";
 import {TokenOracleConfig} from "../../src/types/TokenOracleConfig.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
@@ -37,7 +36,7 @@ contract LPOracleSeedChecksUnitTest is LPOracleFixture {
     function _mismatch(
         uint256 id
     ) internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, id);
+        return abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, id);
     }
 
     /// @dev The configuration's first two tokens, then new 6-decimal tokens priced by token B's feeds, `count` in all.

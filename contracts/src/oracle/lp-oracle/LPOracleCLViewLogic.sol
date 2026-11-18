@@ -6,9 +6,8 @@ pragma solidity 0.8.28;
 import {LPOracleCLModuleCaller} from "./LPOracleCLModuleCaller.sol";
 import {LPOracleCLPool} from "./LPOracleCLPool.sol";
 import {LPOracleLogicBase} from "./LPOracleLogicBase.sol";
-import {Evaluation} from "./LPOracleTypes.sol";
+import {ClPriceStateView, Evaluation} from "./LPOracleTypes.sol";
 import {LPOracleViewLogic} from "./LPOracleViewLogic.sol";
-import {ClPriceStateView} from "./types/ClPriceStateView.sol";
 
 /// @title LPOracleCLViewLogic
 /// @notice Evaluation views of the concentrated-liquidity LPOracle, including `getClPriceState()`, run by delegatecall.

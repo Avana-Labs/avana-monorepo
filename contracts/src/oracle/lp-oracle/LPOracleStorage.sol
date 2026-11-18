@@ -5,13 +5,12 @@ pragma solidity 0.8.28;
 
 import {OracleConfig} from "../../types/OracleConfig.sol";
 import {SecondSource} from "../../types/SecondSource.sol";
-import {ILPOracleErrors} from "./ILPOracleErrors.sol";
-import {ILPOracleEvents} from "./ILPOracleEvents.sol";
+import {ILPOracleBase} from "./ILPOracleBase.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title LPOracleStorage
 /// @notice Storage layout, constants and pricing-module hooks of the LPOracle.
-abstract contract LPOracleStorage is ILPOracleEvents, ILPOracleErrors {
+abstract contract LPOracleStorage is ILPOracleBase {
     /// @notice The aggregator and round a writing call last read for one leg.
     struct Seen {
         address feed;

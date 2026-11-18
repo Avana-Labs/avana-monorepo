@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
-import {InitParams} from "../../../src/oracle/lp-oracle/types/InitParams.sol";
+import {InitParams} from "../../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {OracleConfig} from "../../../src/types/OracleConfig.sol";
 import {OracleLeg} from "../../../src/types/OracleLeg.sol";

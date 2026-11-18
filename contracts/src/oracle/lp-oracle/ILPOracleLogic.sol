@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {OracleConfig} from "../../types/OracleConfig.sol";
 import {PriceState} from "../../types/PriceState.sol";
-import {InitParams} from "./types/InitParams.sol";
+import {InitParams} from "./LPOracleTypes.sol";
 
 /// @title ILPOracleLogic
 /// @notice Entry points of the immutable logic contracts an LPOracle implementation runs by delegatecall.

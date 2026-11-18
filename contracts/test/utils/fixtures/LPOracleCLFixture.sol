@@ -11,8 +11,7 @@ import {LPOracleCLListingLogic} from "../../../src/oracle/lp-oracle/LPOracleCLLi
 import {LPOracleCLModuleLogic} from "../../../src/oracle/lp-oracle/LPOracleCLModuleLogic.sol";
 import {LPOracleCLPokeLogic} from "../../../src/oracle/lp-oracle/LPOracleCLPokeLogic.sol";
 import {LPOracleCLViewLogic} from "../../../src/oracle/lp-oracle/LPOracleCLViewLogic.sol";
-import {InitParams} from "../../../src/oracle/lp-oracle/types/InitParams.sol";
-import {LPOracleLogicSet} from "../../../src/oracle/lp-oracle/types/LPOracleLogicSet.sol";
+import {InitParams, LPOracleLogicSet} from "../../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {OracleConfig} from "../../../src/types/OracleConfig.sol";
 import {OracleLeg} from "../../../src/types/OracleLeg.sol";

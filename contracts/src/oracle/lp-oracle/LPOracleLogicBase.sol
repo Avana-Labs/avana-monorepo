@@ -8,7 +8,7 @@ import {PriceState} from "../../types/PriceState.sol";
 import {ILPOracleLogic} from "./ILPOracleLogic.sol";
 import {LPOracleListing} from "./LPOracleListing.sol";
 import {LPOracleStorage} from "./LPOracleStorage.sol";
-import {InitParams} from "./types/InitParams.sol";
+import {InitParams} from "./LPOracleTypes.sol";
 
 /// @title LPOracleLogicBase
 /// @notice Shared part of the LPOracle logic contracts: chain constants, delegatecall guard and `logicConfig()`.

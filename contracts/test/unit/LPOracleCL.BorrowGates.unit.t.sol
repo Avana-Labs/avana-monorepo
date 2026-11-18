@@ -4,9 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
+import {InitParams} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {OracleConfig} from "../../src/types/OracleConfig.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {PriceStateView} from "../../src/types/PriceStateView.sol";
@@ -319,7 +319,7 @@ contract LPOracleCLBorrowGatesTest is LPOracleCLFixture {
         PokeThenRead caller = new PokeThenRead();
         a1Feed.push(97_500_000, T1);
         assertEq(_state().disagreeSince, 0, "no poke has seen it");
-        vm.expectPartialRevert(ILPOracleErrors.InsufficientGas.selector);
+        vm.expectPartialRevert(ILPOracleBase.InsufficientGas.selector);
         caller.pokeThenRead(oracle, POKE_FLOOR - 50_000);
         assertEq(_state().disagreeSince, 0, "a gas-starved poke stores nothing");
         (uint64 since, bool borrowAllowed) = caller.pokeThenRead(oracle, POKE_CEILING);

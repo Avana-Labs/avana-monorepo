@@ -1021,16 +1021,16 @@
       "review": "Reviewed per call site, group L (bounded-returndata STATICCALL in assembly): checked 2026-11-11, memory-safe (copies at most maxWords words into the array allocated just before and only lowers its length); the gas guard ceil(64G/63) + 5,000 covers the cold-account charge (2,600) and the allocation between guard and call, so the callee gets its full G; a failed call's revert data is copied but every caller rejects !ok first. Same pattern as the LPOracleCalls entries. Helper previously approved (Josue, 2026-11-11); the changed sequencer call site awaits the lead's per-call-site review."
     },
     {
-      "fingerprint": "8db7583d7d905e12",
+      "fingerprint": "2f9a7429bfbe4eae",
       "check": "incorrect-equality",
-      "file": "src/oracle/lp-oracle/LPOracleEval.sol",
+      "file": "src/oracle/lp-oracle/LPOracleRecovery.sol",
       "reason": "Strict equality on an enum state or a route code (PriceState.Live, LPOracleCodes.ROUTE_ALTERNATE) or on block.number for the same-block quote-change cap (REQ-ORACLE-103); none compares a balance or an amount an attacker can move. Covered by TEST-219, TEST-250.",
       "approval": "approved (Josue, 2026-11-11)"
     },
     {
-      "fingerprint": "e38b19504fb924af",
+      "fingerprint": "95cb197846566dc4",
       "check": "incorrect-equality",
-      "file": "src/oracle/lp-oracle/LPOracleEval.sol",
+      "file": "src/oracle/lp-oracle/LPOracleRecovery.sol",
       "reason": "Strict equality on an enum state or a route code (PriceState.Live, LPOracleCodes.ROUTE_ALTERNATE) or on block.number for the same-block quote-change cap (REQ-ORACLE-103); none compares a balance or an amount an attacker can move. Covered by TEST-219, TEST-250.",
       "approval": "approved (Josue, 2026-11-11)"
     },
@@ -1056,9 +1056,9 @@
       "approval": "approved (Josue, 2026-11-11)"
     },
     {
-      "fingerprint": "7c61884f0c1a923a",
+      "fingerprint": "9dea0f69b1af613c",
       "check": "uninitialized-local",
-      "file": "src/oracle/lp-oracle/LPOracleReads.sol",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
       "reason": "A memory local (array or struct) declared and filled by the next call or field writes; Solidity zero-initialises memory, so every unread field is 0 by design (an unread word decodes as a failed read).",
       "approval": "approved (Josue, 2026-11-11)"
     },
@@ -1077,9 +1077,9 @@
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "d08ba90195a60fd7",
+      "fingerprint": "5daf39ecbdad0bde",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
       "reason": "Oracle freshness, failure, disagreement, grace and checkpoint windows are defined on block.timestamp (SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-019, REQ-ORACLE-034, REQ-ORACLE-088); the shortest window is the 3,600 s cachedWindow and every age limit is thousands of seconds, so a validator's few seconds of drift cannot change an outcome materially. Covered by TEST-040, TEST-042, TEST-044, TEST-159, TEST-250, PROP-049, PROP-074 (Halmos).",
       "approval": "pending review (approved pattern)"
     },
@@ -1091,16 +1091,16 @@
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "16b359bf95150d9d",
+      "fingerprint": "30767b68dcc7fb82",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/LPOracleEval.sol",
+      "file": "src/oracle/lp-oracle/LPOracleRecovery.sol",
       "reason": "Oracle freshness, failure, disagreement, grace and checkpoint windows are defined on block.timestamp (SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-019, REQ-ORACLE-034, REQ-ORACLE-088); the shortest window is the 3,600 s cachedWindow and every age limit is thousands of seconds, so a validator's few seconds of drift cannot change an outcome materially. Covered by TEST-040, TEST-042, TEST-044, TEST-159, TEST-250, PROP-049, PROP-074 (Halmos).",
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "d7019669833c0190",
+      "fingerprint": "1c29c7a073156e29",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/LPOracleEval.sol",
+      "file": "src/oracle/lp-oracle/LPOracleRecovery.sol",
       "reason": "Oracle freshness, failure, disagreement, grace and checkpoint windows are defined on block.timestamp (SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-019, REQ-ORACLE-034, REQ-ORACLE-088); the shortest window is the 3,600 s cachedWindow and every age limit is thousands of seconds, so a validator's few seconds of drift cannot change an outcome materially. Covered by TEST-040, TEST-042, TEST-044, TEST-159, TEST-250, PROP-049, PROP-074 (Halmos).",
       "approval": "pending review (approved pattern)"
     },
@@ -1112,9 +1112,9 @@
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "fac15001504e30c3",
+      "fingerprint": "c60691a8cb5263d4",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/LPOracleEval.sol",
+      "file": "src/oracle/lp-oracle/LPOracleRecovery.sol",
       "reason": "Oracle freshness, failure, disagreement, grace and checkpoint windows are defined on block.timestamp (SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-019, REQ-ORACLE-034, REQ-ORACLE-088); the shortest window is the 3,600 s cachedWindow and every age limit is thousands of seconds, so a validator's few seconds of drift cannot change an outcome materially. Covered by TEST-040, TEST-042, TEST-044, TEST-159, TEST-250, PROP-049, PROP-074 (Halmos).",
       "approval": "pending review (approved pattern)"
     },
@@ -1126,51 +1126,51 @@
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "b64fc55a804e13bb",
+      "fingerprint": "c97ba65d2479178a",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
       "reason": "Oracle freshness, failure, disagreement, grace and checkpoint windows are defined on block.timestamp (SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-019, REQ-ORACLE-034, REQ-ORACLE-088); the shortest window is the 3,600 s cachedWindow and every age limit is thousands of seconds, so a validator's few seconds of drift cannot change an outcome materially. Covered by TEST-040, TEST-042, TEST-044, TEST-159, TEST-250, PROP-049, PROP-074 (Halmos).",
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "fa692fa594a078e1",
+      "fingerprint": "d0a65159659135aa",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
       "reason": "Oracle freshness, failure, disagreement, grace and checkpoint windows are defined on block.timestamp (SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-019, REQ-ORACLE-034, REQ-ORACLE-088); the shortest window is the 3,600 s cachedWindow and every age limit is thousands of seconds, so a validator's few seconds of drift cannot change an outcome materially. Covered by TEST-040, TEST-042, TEST-044, TEST-159, TEST-250, PROP-049, PROP-074 (Halmos).",
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "2770fcde7db6a945",
+      "fingerprint": "ad4fdf81ca0b9cc5",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/LPOracleEval.sol",
+      "file": "src/oracle/lp-oracle/LPOracleRecovery.sol",
       "reason": "Oracle freshness, failure, disagreement, grace and checkpoint windows are defined on block.timestamp (SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-019, REQ-ORACLE-034, REQ-ORACLE-088); the shortest window is the 3,600 s cachedWindow and every age limit is thousands of seconds, so a validator's few seconds of drift cannot change an outcome materially. Covered by TEST-040, TEST-042, TEST-044, TEST-159, TEST-250, PROP-049, PROP-074 (Halmos).",
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "ed205429e2d27051",
+      "fingerprint": "7afc35fa117a2120",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/LPOracleEval.sol",
+      "file": "src/oracle/lp-oracle/LPOracleRecovery.sol",
       "reason": "Oracle freshness, failure, disagreement, grace and checkpoint windows are defined on block.timestamp (SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-019, REQ-ORACLE-034, REQ-ORACLE-088); the shortest window is the 3,600 s cachedWindow and every age limit is thousands of seconds, so a validator's few seconds of drift cannot change an outcome materially. Covered by TEST-040, TEST-042, TEST-044, TEST-159, TEST-250, PROP-049, PROP-074 (Halmos).",
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "d101612ffcd7b602",
+      "fingerprint": "dce3ec8a0c974238",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/LPOracleEval.sol",
+      "file": "src/oracle/lp-oracle/LPOracleRecovery.sol",
       "reason": "Oracle freshness, failure, disagreement, grace and checkpoint windows are defined on block.timestamp (SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-019, REQ-ORACLE-034, REQ-ORACLE-088); the shortest window is the 3,600 s cachedWindow and every age limit is thousands of seconds, so a validator's few seconds of drift cannot change an outcome materially. Covered by TEST-040, TEST-042, TEST-044, TEST-159, TEST-250, PROP-049, PROP-074 (Halmos).",
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "77160d631085bec8",
+      "fingerprint": "07fe53efa58b6595",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/LPOracleReads.sol",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
       "reason": "Oracle freshness, failure, disagreement, grace and checkpoint windows are defined on block.timestamp (SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-019, REQ-ORACLE-034, REQ-ORACLE-088); the shortest window is the 3,600 s cachedWindow and every age limit is thousands of seconds, so a validator's few seconds of drift cannot change an outcome materially. Covered by TEST-040, TEST-042, TEST-044, TEST-159, TEST-250, PROP-049, PROP-074 (Halmos).",
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "095e0b833f922146",
+      "fingerprint": "f44d5e65a3fc3907",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
       "reason": "Oracle freshness, failure, disagreement, grace and checkpoint windows are defined on block.timestamp (SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-019, REQ-ORACLE-034, REQ-ORACLE-088); the shortest window is the 3,600 s cachedWindow and every age limit is thousands of seconds, so a validator's few seconds of drift cannot change an outcome materially. Covered by TEST-040, TEST-042, TEST-044, TEST-159, TEST-250, PROP-049, PROP-074 (Halmos).",
       "approval": "pending review (approved pattern)"
     },
@@ -1182,9 +1182,9 @@
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "82bb36348ecbe0ed",
+      "fingerprint": "bdd096414c811fc1",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
       "reason": "Oracle freshness, failure, disagreement, grace and checkpoint windows are defined on block.timestamp (SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-019, REQ-ORACLE-034, REQ-ORACLE-088); the shortest window is the 3,600 s cachedWindow and every age limit is thousands of seconds, so a validator's few seconds of drift cannot change an outcome materially. Covered by TEST-040, TEST-042, TEST-044, TEST-159, TEST-250, PROP-049, PROP-074 (Halmos).",
       "approval": "pending review (approved pattern)"
     },
@@ -1735,37 +1735,37 @@
       "review": "Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
     },
     {
-      "fingerprint": "93c27d1899bfafc2",
+      "fingerprint": "91ab9943177235f8",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/PriceAge.sol",
-      "function": "PriceAge.age(uint256)",
+      "file": "src/oracle/lp-oracle/LPPriceMath.sol",
+      "function": "LPPriceMath.age(uint256)",
       "reason": "Specified timestamp: the price age block.timestamp - updatedAt, 0 for a source timestamp in the future (REQ-SWAP-008, REQ-LENS-030); it sizes the liquidation-side rule and the revert data and report fields, never a gate on its own. Age limits are minutes to hours, so a validator's seconds of drift cannot matter. Covered by TEST-028 (futureTimestampsAreNeverFresh), TEST-247 (debtLiquidationAgeBoundaryMatchesExecution).",
       "approval": "pending review (approved pattern)",
       "review": "The comparison moved into the shared PriceAge library (execution and the Lens apply the same rule); replaces 44a2a2ead4bfa2ff and f985956d754ee2b8 (RiskModuleBorrowLogic._collateralPrice, _debtPrices), d0641a99eac4dc2b, b6966bf07827a17d and 669ff2be6b33cd00 (LPVaultSwapSettlement._legStale, _checkCollateralPrice, _checkDebtPrice), 59a2517dc1359c7d and 84abc2797015a941 (LensBase). Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
     },
     {
-      "fingerprint": "de18540b3b7bf4ee",
+      "fingerprint": "6e93e5ea41fa9482",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/PriceAge.sol",
-      "function": "PriceAge.borrowFresh(uint256,uint256)",
+      "file": "src/oracle/lp-oracle/LPPriceMath.sol",
+      "function": "LPPriceMath.borrowFresh(uint256,uint256)",
       "reason": "Specified timestamps: the borrow-side age rule of REQ-RISK-061 and REQ-ADAPTER-015, fresh iff updatedAt <= now and now - updatedAt <= maxAge (inclusive); a future timestamp is never fresh (fail closed). Age limits are minutes to hours, so a validator's seconds of drift cannot matter. Covered by TEST-028 (futureTimestampsAreNeverFresh, feedAgeBoundaryPerLeg), TEST-201 (debtPriceAgeBoundary), TEST-019 (feedAgeBoundary, debtPriceAgeBoundary fuzz), TEST-247 (debtBorrowAgeBoundaryMatchesExecution).",
       "approval": "pending review (approved pattern)",
       "review": "The comparison moved into the shared PriceAge library (execution and the Lens apply the same rule); replaces 44a2a2ead4bfa2ff and f985956d754ee2b8 (RiskModuleBorrowLogic._collateralPrice, _debtPrices), d0641a99eac4dc2b, b6966bf07827a17d and 669ff2be6b33cd00 (LPVaultSwapSettlement._legStale, _checkCollateralPrice, _checkDebtPrice), 59a2517dc1359c7d and 84abc2797015a941 (LensBase). Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
     },
     {
-      "fingerprint": "325004943dead96f",
+      "fingerprint": "ed1b3689ddeb73c4",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/PriceAge.sol",
-      "function": "PriceAge.liquidationFresh(uint256,uint256)",
+      "file": "src/oracle/lp-oracle/LPPriceMath.sol",
+      "function": "LPPriceMath.liquidationFresh(uint256,uint256)",
       "reason": "Specified timestamps: LPVaultSwap's leg age rule against liquidationPriceMaxAge (REQ-SWAP-008, REQ-SWAP-091), age <= maxAge with a future timestamp counted as age 0; validator drift of seconds is far below the 88,200 s age bound. Covered by LPVaultSwap.PriceGates.fuzz (leg ages), TEST-247 (debtLiquidationAgeBoundaryMatchesExecution).",
       "approval": "pending review (approved pattern)",
       "review": "The comparison moved into the shared PriceAge library (execution and the Lens apply the same rule); replaces 44a2a2ead4bfa2ff and f985956d754ee2b8 (RiskModuleBorrowLogic._collateralPrice, _debtPrices), d0641a99eac4dc2b, b6966bf07827a17d and 669ff2be6b33cd00 (LPVaultSwapSettlement._legStale, _checkCollateralPrice, _checkDebtPrice), 59a2517dc1359c7d and 84abc2797015a941 (LensBase). Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
     },
     {
-      "fingerprint": "f6f22299563d8bc0",
+      "fingerprint": "d4b789e05fd2278a",
       "check": "timestamp",
-      "file": "src/oracle/lp-oracle/PriceAge.sol",
-      "function": "PriceAge.debtBorrowable(DebtPriceView,uint256)",
+      "file": "src/oracle/lp-oracle/LPPriceMath.sol",
+      "function": "LPPriceMath.debtBorrowable(DebtPriceView,uint256)",
       "reason": "Specified timestamps: the RiskModule's step (6) for a DebtOracle-priced reserve (REQ-RISK-061): Live, the oracle's borrowAllowed and borrowFresh(servedUpdatedAt, borrowPriceMaxAge); the only time comparison is borrowFresh's, which fails closed on a future timestamp. Covered by TEST-201 (debtPriceGatesAccountWide, debtPriceAgeBoundary), TEST-028 (futureTimestampsAreNeverFresh).",
       "approval": "pending review (approved pattern)",
       "review": "The comparison moved into the shared PriceAge library (execution and the Lens apply the same rule); replaces 44a2a2ead4bfa2ff and f985956d754ee2b8 (RiskModuleBorrowLogic._collateralPrice, _debtPrices), d0641a99eac4dc2b, b6966bf07827a17d and 669ff2be6b33cd00 (LPVaultSwapSettlement._legStale, _checkCollateralPrice, _checkDebtPrice), 59a2517dc1359c7d and 84abc2797015a941 (LensBase). Pattern: specified timestamps (age limits and windows of seconds to hours; boundaries fail closed)."
@@ -1870,10 +1870,10 @@
       "review": "Reviewed per call site, group T (assembly word reads of a length-checked buffer): checked 2026-11-11, memory-safe mloads at offsets the length check above bounds; replaces abi.decode, whose revert on malformed data would break the never-revert views."
     },
     {
-      "fingerprint": "e989e436bb525fb7",
+      "fingerprint": "2e4ac760399858e7",
       "check": "assembly",
-      "file": "src/oracle/lp-oracle/LPOracleReads.sol",
-      "function": "LPOracleReads._decodeRound(bool,bytes)",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig._decodeRound(bool,bytes)",
       "reason": "Five mloads of the latestRoundData words of a buffer checked to be at least ROUND_LENGTH (160) bytes on the line before; roundId and answeredInRound are then range-checked to 80 bits (REQ-ORACLE-001, SPEC-ORC-001). Memory-safe. Covered by TEST-038 (malformedAndOversizedReturns), TEST-219.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group T (assembly word reads of a length-checked buffer): checked 2026-11-11, memory-safe mloads at offsets the length check above bounds; replaces abi.decode, whose revert on malformed data would break the never-revert views."

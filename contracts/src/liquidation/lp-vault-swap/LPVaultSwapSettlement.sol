@@ -9,7 +9,7 @@ import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {DebtPriceView} from "../../oracle/debt-oracle/types/DebtPriceView.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {PriceAge} from "../../oracle/lp-oracle/PriceAge.sol";
+import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
@@ -132,7 +132,7 @@ abstract contract LPVaultSwapSettlement is LPVaultSwapStorage {
         uint64 updatedAt
     ) private view returns (bool) {
         if (feed == address(0)) return false;
-        return !PriceAge.liquidationFresh(updatedAt, IParameterStore(_PARAMETER_STORE).liquidationPriceMaxAge(feed));
+        return !LPPriceMath.liquidationFresh(updatedAt, IParameterStore(_PARAMETER_STORE).liquidationPriceMaxAge(feed));
     }
 
     /// @dev The smaller of the AaveOracle price of the collateral reserve and the LPOracle's served price.

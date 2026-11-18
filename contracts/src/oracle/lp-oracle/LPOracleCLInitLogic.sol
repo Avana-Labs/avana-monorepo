@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {OracleConfig} from "../../types/OracleConfig.sol";
+import {ILPOracle} from "./ILPOracle.sol";
 import {ILPOracleLogic} from "./ILPOracleLogic.sol";
-import {ILPOracleRouter} from "./ILPOracleRouter.sol";
 import {LPOracleCLModuleCaller} from "./LPOracleCLModuleCaller.sol";
 import {LPOracleCLPool} from "./LPOracleCLPool.sol";
 import {LPOracleListingLogic} from "./LPOracleListingLogic.sol";
@@ -42,7 +42,7 @@ contract LPOracleCLInitLogic is LPOracleListingLogic, LPOracleCLModuleCaller {
     function _initCheck(
         OracleConfig calldata config
     ) internal override returns (uint256 failed) {
-        address listing = ILPOracleRouter(ERC1967Utils.getImplementation()).LISTING_LOGIC();
+        address listing = ILPOracle(ERC1967Utils.getImplementation()).LISTING_LOGIC();
         // The implementation's own listing logic, changed only by a timelock upgrade; it makes only static calls.
         // forge-lint: disable-start(controlled-delegatecall)
         // solhint-disable-next-line avoid-low-level-calls

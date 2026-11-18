@@ -10,7 +10,7 @@ import {ILPVaultSwapViews} from "../../liquidation/lp-vault-swap/ILPVaultSwapVie
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {DebtPriceView} from "../../oracle/debt-oracle/types/DebtPriceView.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {PriceAge} from "../../oracle/lp-oracle/PriceAge.sol";
+import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
 import {DriftReason} from "../../types/DriftReason.sol";
 import {Market} from "../../types/Market.sol";
 import {PriceState} from "../../types/PriceState.sol";
@@ -166,9 +166,9 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
                 address feed = t.legFeeds[j];
                 if (feed == address(0)) continue;
                 uint256 at = t.legUpdatedAt[j];
-                if (!PriceAge.borrowFresh(at, _store().borrowPriceMaxAge(feed))) {
+                if (!LPPriceMath.borrowFresh(at, _store().borrowPriceMaxAge(feed))) {
                     // forge-lint: disable-next-line(require-revert-in-loop)
-                    revert PriceTooOld(feed, PriceAge.age(at));
+                    revert PriceTooOld(feed, LPPriceMath.age(at));
                 }
             }
             // forge-lint: disable-next-line(require-revert-in-loop)
@@ -204,9 +204,9 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
             if (source != s.defs[i].priceSource) revert UnexpectedDebtPriceSource(r, source);
             if (s.defs[i].fixedPrice) continue;
             DebtPriceView memory dv = IDebtOracle(source).getPriceState();
-            if (!PriceAge.debtBorrowable(dv, IDebtOracle(source).borrowPriceMaxAge())) {
+            if (!LPPriceMath.debtBorrowable(dv, IDebtOracle(source).borrowPriceMaxAge())) {
                 // forge-lint: disable-next-line(require-revert-in-loop)
-                revert DebtPriceTooOld(r, source, PriceAge.age(dv.servedUpdatedAt));
+                revert DebtPriceTooOld(r, source, LPPriceMath.age(dv.servedUpdatedAt));
             }
         }
     }

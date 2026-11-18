@@ -7,9 +7,8 @@ import {OracleConfig} from "../../types/OracleConfig.sol";
 import {PriceState} from "../../types/PriceState.sol";
 import {ILPOracleLogic} from "./ILPOracleLogic.sol";
 import {LPOracleLogicBase} from "./LPOracleLogicBase.sol";
-import {Evaluation, LPOracleCodes} from "./LPOracleTypes.sol";
+import {Evaluation, InitParams, LPOracleCodes} from "./LPOracleTypes.sol";
 import {LPPriceMath} from "./LPPriceMath.sol";
-import {InitParams} from "./types/InitParams.sol";
 
 // Every external call is a static call or a delegatecall into this feed's own logic, so none can reenter.
 // forge-lint: disable-start(reentrancy-events)

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPOracleEvents} from "../../src/oracle/lp-oracle/ILPOracleEvents.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {PriceStateView} from "../../src/types/PriceStateView.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
@@ -57,7 +57,7 @@ contract LPOracleGraceUnitTest is LPOracleFixture {
         vm.roll(block.number + 1);
         _othersAt(STALE_AT + 3600);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.OutageExpiredLatched(1, uint64(STALE_AT), uint64(STALE_AT + 3600));
+        emit ILPOracleBase.OutageExpiredLatched(1, uint64(STALE_AT), uint64(STALE_AT + 3600));
         assertEq(uint8(oracle.poke()), uint8(PriceState.Expired));
         assertTrue(_latched());
     }
@@ -74,7 +74,7 @@ contract LPOracleGraceUnitTest is LPOracleFixture {
         pB.push(int256(ONE), back);
         aB.push(int256(ONE), back);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.GraceStarted(uint64(back), uint64(back + 1800), true);
+        emit ILPOracleBase.GraceStarted(uint64(back), uint64(back + 1800), true);
         assertEq(uint8(oracle.poke()), uint8(PriceState.Live));
         assertFalse(_latched(), "the latch is consumed");
         PriceStateView memory v = _state();
@@ -107,7 +107,7 @@ contract LPOracleGraceUnitTest is LPOracleFixture {
         assertEq(uint8(oracle.poke()), uint8(PriceState.Live));
         Vm.Log[] memory logs = vm.getRecordedLogs();
         for (uint256 i = 0; i < logs.length; ++i) {
-            assertTrue(logs[i].topics[0] != ILPOracleEvents.GraceStarted.selector, "no grace");
+            assertTrue(logs[i].topics[0] != ILPOracleBase.GraceStarted.selector, "no grace");
         }
         (uint64 failedSince,,, uint64 recoveredAt) = oracle.storedTimers();
         assertEq(failedSince, 0, "failure cleared");

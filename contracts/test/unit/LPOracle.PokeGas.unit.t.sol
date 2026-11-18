@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 import {LPOracleHarness, LPOracleHarnessDeployer} from "../utils/harness/LPOracleHarness.sol";
@@ -97,7 +97,7 @@ contract LPOraclePokeGasUnitTest is LPOracleFixture {
                 // delegatecall then reverts FailedCall) or before it (no data).
                 bytes4 sel = bytes4(ret);
                 assertTrue(
-                    ret.length == 0 || sel == ILPOracleErrors.InsufficientGas.selector
+                    ret.length == 0 || sel == ILPOracleBase.InsufficientGas.selector
                         || sel == Errors.FailedCall.selector,
                     "a starved poke reverts InsufficientGas or out of gas"
                 );
@@ -121,7 +121,7 @@ contract LPOraclePokeGasUnitTest is LPOracleFixture {
         Stored memory before = _stored();
         (bool ok, bytes memory ret) = _poke(900_000);
         assertFalse(ok, "exactly the floor at the proxy is not the floor at the entry check");
-        assertEq(bytes4(ret), ILPOracleErrors.InsufficientGas.selector);
+        assertEq(bytes4(ret), ILPOracleBase.InsufficientGas.selector);
         (, uint256 left, uint256 required) = abi.decode(bytes.concat(bytes28(0), ret), (bytes32, uint256, uint256));
         assertEq(required, 900_000, "the check names pokeMinGas");
         assertLt(left, 900_000);

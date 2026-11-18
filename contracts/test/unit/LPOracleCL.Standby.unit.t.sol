@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
-import {ILPOracleEvents} from "../../src/oracle/lp-oracle/ILPOracleEvents.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {PriceStateView} from "../../src/types/PriceStateView.sol";
@@ -63,7 +62,7 @@ contract LPOracleCLStandbyTest is LPOracleCLFixture {
         assertEq(uint8(v.tokens[1].replaced), uint8(RouteSlot.Alternate), "the standby is in force at once");
         assertEq(v.tokens[1].routeVersion, 1);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.PriceRouteVersionObserved(1, 0, 1);
+        emit ILPOracleBase.PriceRouteVersionObserved(1, 0, 1);
         oracle.poke();
         assertEq(_state().disagreeSince, T1 + 1000, "restarted at the observing poke");
         standby.push(int256(ONE), T1 + 1000);
@@ -119,10 +118,10 @@ contract LPOracleCLStandbyTest is LPOracleCLFixture {
         address[3] memory others = [alice, address(oracle), address(store)];
         for (uint256 i = 0; i < others.length; ++i) {
             vm.prank(tl);
-            vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.AdminRoleOnlyTimelock.selector, admin, others[i]));
+            vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.AdminRoleOnlyTimelock.selector, admin, others[i]));
             oracle.grantRole(admin, others[i]);
             vm.prank(tl);
-            vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.AdminRoleOnlyTimelock.selector, root, others[i]));
+            vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.AdminRoleOnlyTimelock.selector, root, others[i]));
             oracle.grantRole(root, others[i]);
         }
         vm.prank(alice);

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPOracleEvents} from "../../src/oracle/lp-oracle/ILPOracleEvents.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {PriceStateView} from "../../src/types/PriceStateView.sol";
@@ -171,13 +171,13 @@ contract LPOracleSecondSourceWordsUnitTest is LPOracleFixture {
         for (uint256 i = 0; i < logs.length; ++i) {
             if (logs[i].emitter != address(oracle)) continue;
             bytes32 t = logs[i].topics[0];
-            assertTrue(t != ILPOracleEvents.FailureRecorded.selector, "FailureRecorded");
-            assertTrue(t != ILPOracleEvents.FailureCleared.selector, "FailureCleared");
-            assertTrue(t != ILPOracleEvents.DisagreementRecorded.selector, "DisagreementRecorded");
-            assertTrue(t != ILPOracleEvents.DisagreementCleared.selector, "DisagreementCleared");
-            assertTrue(t != ILPOracleEvents.OutageExpiredLatched.selector, "OutageExpiredLatched");
-            assertTrue(t != ILPOracleEvents.GraceStarted.selector, "GraceStarted");
-            assertTrue(t != ILPOracleEvents.PriceStateChanged.selector, "PriceStateChanged");
+            assertTrue(t != ILPOracleBase.FailureRecorded.selector, "FailureRecorded");
+            assertTrue(t != ILPOracleBase.FailureCleared.selector, "FailureCleared");
+            assertTrue(t != ILPOracleBase.DisagreementRecorded.selector, "DisagreementRecorded");
+            assertTrue(t != ILPOracleBase.DisagreementCleared.selector, "DisagreementCleared");
+            assertTrue(t != ILPOracleBase.OutageExpiredLatched.selector, "OutageExpiredLatched");
+            assertTrue(t != ILPOracleBase.GraceStarted.selector, "GraceStarted");
+            assertTrue(t != ILPOracleBase.PriceStateChanged.selector, "PriceStateChanged");
         }
     }
 

@@ -10,8 +10,8 @@ import {UniswapV4State} from "../../amm/uniswap-v4/UniswapV4State.sol";
 import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.sol";
 import {LPOracleCLModule} from "./LPOracleCLModule.sol";
 import {LPOracleCalls} from "./LPOracleCalls.sol";
+import {ClPriceStateView} from "./LPOracleTypes.sol";
 import {LPPriceMath} from "./LPPriceMath.sol";
-import {ClPriceStateView} from "./types/ClPriceStateView.sol";
 
 /// @title LPOracleV4Module
 /// @notice Uniswap v4 pricing module of the LPOracle.

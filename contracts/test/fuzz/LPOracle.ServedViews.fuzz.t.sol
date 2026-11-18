@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {PriceStateView} from "../../src/types/PriceStateView.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
@@ -87,6 +87,6 @@ contract LPOracleServedViewsFuzzTest is LPOracleFixture {
         (bool servedOk, bytes memory ret) =
             address(oracle).staticcall{gas: gas}(abi.encodeCall(oracle.latestAnswer, ()));
         if (reportOk) assertTrue(servedOk, "served view reverted where the report did not");
-        if (!servedOk && ret.length >= 4) assertEq(bytes4(ret), ILPOracleErrors.InsufficientGas.selector, "revert");
+        if (!servedOk && ret.length >= 4) assertEq(bytes4(ret), ILPOracleBase.InsufficientGas.selector, "revert");
     }
 }

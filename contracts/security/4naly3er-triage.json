@@ -771,10 +771,10 @@
       "review": "Reviewed per call site, group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if."
     },
     {
-      "fingerprint": "010697bcaf5f54e9",
+      "fingerprint": "05da6e5824c407e6",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
-      "function": "LPOraclePoke._storeAccepted",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
+      "function": "LPOracleViews._storeAccepted",
       "reason": "uint128(e.prices[i]): an accepted evaluation passed LPPriceMath.lpPrice, which refuses any price outside [1, MAX_ROUTE_ANSWER = 10^12] (SPEC-ORC-005, REQ-ORACLE-029), far below 2^128. Covered by TEST-040, TEST-219. forge-lint unsafe-typecast suppression on the line above with the bound.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if."
@@ -798,28 +798,28 @@
       "review": "Reviewed per call site, group R (downcast after an explicit range check or under a stated bound, new code 2026-11-11): checked 2026-11-11, the value is range-checked against the target type before the cast (or bounded as the comment states), so nothing truncates; Aderyn and 4naly3er do not see checks made in assembly or in a separate if."
     },
     {
-      "fingerprint": "6c24f2dcace75778",
+      "fingerprint": "cccab3a1287d7428",
       "check": "Signature use at deadlines should be allowed",
-      "file": "src/oracle/lp-oracle/LPOracleEval.sol",
-      "function": "LPOracleEval._grace",
+      "file": "src/oracle/lp-oracle/LPOracleRecovery.sol",
+      "function": "LPOracleRecovery._grace",
       "reason": "Not a deadline or signature: the recovery grace window is recoveredAt <= now < recoveredAt + graceDuration (REQ-ORACLE-034, REQ-ORACLE-099). Covered by TEST-042 (recoveredAtFirstFreshRound, oneGraceWindowPerOutage), TEST-252.",
       "approval": "approved by pattern (independent review 2026-11-11)",
       "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
     },
     {
-      "fingerprint": "dcab921f9eb066f3",
+      "fingerprint": "17f19c22936a35e1",
       "check": "Signature use at deadlines should be allowed",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
-      "function": "LPOraclePoke._newestLegInUse",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
+      "function": "LPOracleViews._newestLegInUse",
       "reason": "Not a deadline or signature: a newest leg timestamp after now is clamped to now, so a stored time is never in the future (REQ-ORACLE-032 (c)). Covered by TEST-252 (graceAtNewestLegWhenNoInterval), TEST-219.",
       "approval": "approved by pattern (independent review 2026-11-11)",
       "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
     },
     {
-      "fingerprint": "18c9dbd44f9997e9",
+      "fingerprint": "f889cbfbae36d267",
       "check": "Signature use at deadlines should be allowed",
-      "file": "src/oracle/lp-oracle/LPOracleReads.sol",
-      "function": "LPOracleReads._classify",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
+      "function": "LPOracleConfig._classify",
       "reason": "Not a deadline or signature: a leg whose updatedAt is 0 or after now is Invalid (REQ-ORACLE-002, SPEC-ORC-001). Covered by TEST-219, TEST-038.",
       "approval": "approved by pattern (independent review 2026-11-11)",
       "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
@@ -834,10 +834,10 @@
       "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
     },
     {
-      "fingerprint": "9d71b8a1cf1961e4",
+      "fingerprint": "3d03028575cf0101",
       "check": "Signature use at deadlines should be allowed",
-      "file": "src/oracle/lp-oracle/PriceAge.sol",
-      "function": "PriceAge.borrowFresh",
+      "file": "src/oracle/lp-oracle/LPPriceMath.sol",
+      "function": "LPPriceMath.borrowFresh",
       "reason": "Not a deadline or signature: the borrow-side age rule, fresh iff updatedAt <= now and now - updatedAt <= maxAge, so a source timestamp in the future is never fresh (REQ-RISK-061, REQ-ADAPTER-015). Used by the RiskModule's steps (5) and (6) and by the Lens. Covered by TEST-028 (futureTimestampsAreNeverFresh, feedAgeBoundaryPerLeg), TEST-201 (debtPriceAgeBoundary), TEST-247 (debtBorrowAgeBoundaryMatchesExecution).",
       "approval": "pending review (approved pattern)",
       "review": "Replaces 43fd52db3970ae91, 37d3eb10f2c39399 and ec1b62ae3ee3fdd8 (RiskModuleBorrowLogic._collateralPrice and _debtPrices, approved by pattern, independent review 2026-11-11): the same comparison moved into PriceAge.borrowFresh, which both call."
@@ -861,19 +861,19 @@
       "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the comparison is the spec rule named in the reason (same class as the DebtOracle entries approved by pattern on 2026-11-11)."
     },
     {
-      "fingerprint": "8323004a7acb875f",
+      "fingerprint": "c29ea33bcc0fba99",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/oracle/lp-oracle/LPOracleEval.sol",
-      "function": "LPOracleEval._quoteCapped",
+      "file": "src/oracle/lp-oracle/LPOracleRecovery.sol",
+      "function": "LPOracleRecovery._quoteCapped",
       "reason": "The quote-change cap of REQ-ORACLE-103 applies only when the accepted price was stored in the current block ($.acceptedBlock == block.number); on Ethereum and Base (the chains Avana deploys on) block.number is the chain's own block, so the rule is the same-block rule on both. Covered by TEST-219 (test_TEST_219_quoteChangeCapHoldsOneBlock).",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group Y (block.number for a same-block rule): checked 2026-11-11, REQ-ORACLE-103 compares only whether the accepted price was stored in the current block; Avana deploys on Ethereum and Base, where block.number is the chain's own block (Base: the L2 block, 2 s), so the rule means the same block on both. On an Arbitrum-style chain block.number is the L1 block and the window would widen; recheck before any such deployment."
     },
     {
-      "fingerprint": "4bee369298d44c03",
+      "fingerprint": "22897e1a43b380cc",
       "check": "`block.number` means different things on different L2s",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
-      "function": "LPOraclePoke._storeAccepted",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
+      "function": "LPOracleViews._storeAccepted",
       "reason": "Records the block of the accepted price for the same-block quote-change cap of REQ-ORACLE-103; see the LPOracleEval._quoteCapped entry. Covered by TEST-219 (quoteChangeCapHoldsOneBlock).",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group Y (block.number for a same-block rule): checked 2026-11-11, REQ-ORACLE-103 compares only whether the accepted price was stored in the current block; Avana deploys on Ethereum and Base, where block.number is the chain's own block (Base: the L2 block, 2 s), so the rule means the same block on both. On an Arbitrum-style chain block.number is the L1 block and the window would widen; recheck before any such deployment."
@@ -1582,9 +1582,9 @@
       "review": "Pattern: ab1094e12ede19e2 and 010697bcaf5f54e9 (cast after a bound check, approved Josue 2026-11-11)"
     },
     {
-      "fingerprint": "ea295c3211e48480",
+      "fingerprint": "d3fa18dabcddadce",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
       "reason": "Each downcast is of a value bounded on the lines above: the market words of _decodeMarket (pool below 2^160, both ticks inside int24, checked as `shaped`), uint160 of an address (exact), uint24 of the distance of two ticks in [MIN_TICK, MAX_TICK] (below 2^21), uint8 of n <= 2, uint16 and uint160 after LPOracleCalls.uintAt with that type's maximum, int24 after LPOracleCalls.intAt(..., 24) or a mean tick checked inside [MIN_TICK, MAX_TICK], uint128 of a valuation price at most MAX_ROUTE_ANSWER (LPPriceMath.lpPrice checked) and uint128 of an answer saturated at type(uint128).max on the same line. A word outside its type fails the read; nothing truncates. Covered by TEST-040, TEST-219, TEST-305, TEST-306.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: ab1094e12ede19e2 and 010697bcaf5f54e9 (cast after a bound check, approved Josue 2026-11-11)"

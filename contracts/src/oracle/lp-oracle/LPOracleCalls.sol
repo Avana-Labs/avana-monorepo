@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPOracleErrors} from "./ILPOracleErrors.sol";
+import {ILPOracleBase} from "./ILPOracleBase.sol";
 import {LPPriceMath} from "./LPPriceMath.sol";
 
 /// @title LPOracleCalls
@@ -22,7 +22,7 @@ library LPOracleCalls {
         uint256 required = LPPriceMath.gasForCall(callGas);
         // A read that cannot receive its full gas reverts the whole call.
         // forge-lint: disable-next-line(require-revert-in-loop)
-        if (gasleft() < required) revert ILPOracleErrors.InsufficientGas(gasleft(), required);
+        if (gasleft() < required) revert ILPOracleBase.InsufficientGas(gasleft(), required);
         ret = new bytes(maxLength);
         // A bounded static call: Solidity's own call syntax copies the whole return buffer.
         // solhint-disable-next-line no-inline-assembly

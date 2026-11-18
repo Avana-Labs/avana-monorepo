@@ -10,13 +10,11 @@ import {PriceState} from "../../types/PriceState.sol";
 import {PriceStateView} from "../../types/PriceStateView.sol";
 import {ILPOracle} from "./ILPOracle.sol";
 import {ILPOracleLogic} from "./ILPOracleLogic.sol";
-import {ILPOracleRouter} from "./ILPOracleRouter.sol";
 import {LPOracleCalls} from "./LPOracleCalls.sol";
 import {LPOracleListing} from "./LPOracleListing.sol";
 import {LPOracleStorage} from "./LPOracleStorage.sol";
+import {InitParams, LPOracleLogicSet} from "./LPOracleTypes.sol";
 import {LPPriceMath} from "./LPPriceMath.sol";
-import {InitParams} from "./types/InitParams.sol";
-import {LPOracleLogicSet} from "./types/LPOracleLogicSet.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
@@ -27,7 +25,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// @title LPOracle
 /// @notice AMM-neutral price-state core of one market's price feed.
 /// @dev UUPS proxy; only the timelock can upgrade it. Only `initialize` and `poke()` write price state.
-abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeable, UUPSUpgradeable, LPOracleListing {
+abstract contract LPOracle is ILPOracle, AccessControlUpgradeable, UUPSUpgradeable, LPOracleListing {
     address internal immutable _POKE_LOGIC;
     address internal immutable _LISTING_LOGIC;
     address internal immutable _INIT_LOGIC;
@@ -250,22 +248,22 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
         }
     }
 
-    /// @inheritdoc ILPOracleRouter
+    /// @inheritdoc ILPOracle
     function POKE_LOGIC() external view override returns (address logic) {
         logic = _POKE_LOGIC;
     }
 
-    /// @inheritdoc ILPOracleRouter
+    /// @inheritdoc ILPOracle
     function LISTING_LOGIC() external view override returns (address logic) {
         logic = _LISTING_LOGIC;
     }
 
-    /// @inheritdoc ILPOracleRouter
+    /// @inheritdoc ILPOracle
     function INIT_LOGIC() external view override returns (address logic) {
         logic = _INIT_LOGIC;
     }
 
-    /// @inheritdoc ILPOracleRouter
+    /// @inheritdoc ILPOracle
     function VIEW_LOGIC() external view override returns (address logic) {
         logic = _VIEW_LOGIC;
     }

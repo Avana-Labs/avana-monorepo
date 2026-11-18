@@ -7,15 +7,14 @@ import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.
 import {OracleConfig} from "../../types/OracleConfig.sol";
 import {PriceState} from "../../types/PriceState.sol";
 import {PriceStateView} from "../../types/PriceStateView.sol";
-import {ILPOracleErrors} from "./ILPOracleErrors.sol";
-import {ILPOracleEvents} from "./ILPOracleEvents.sol";
-import {InitParams} from "./types/InitParams.sol";
+import {ILPOracleBase} from "./ILPOracleBase.sol";
+import {InitParams} from "./LPOracleTypes.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 /// @title ILPOracle
 /// @notice Price feed for one Avana market: the USD value of one whole vault token, with 8 decimals.
 /// @dev UUPS proxy; only the timelock can upgrade it.
-interface ILPOracle is IAaveV4PriceFeed, IAccessControl, ILPOracleEvents, ILPOracleErrors {
+interface ILPOracle is IAaveV4PriceFeed, IAccessControl, ILPOracleBase {
     /// @notice Initializes the feed, runs the listing checks and seeds the accepted price.
     /// @dev Reverts unless the config passes `checkConfig` and the evaluation is Live.
     function initialize(
@@ -104,4 +103,16 @@ interface ILPOracle is IAaveV4PriceFeed, IAccessControl, ILPOracleEvents, ILPOra
 
     /// @notice The timelock, the only account that may hold `DEFAULT_ADMIN_ROLE` or `APPLICATION_ADMIN`.
     function TIMELOCK() external view returns (address timelock);
+
+    /// @notice The poke logic contract.
+    function POKE_LOGIC() external view returns (address logic);
+
+    /// @notice The listing logic contract.
+    function LISTING_LOGIC() external view returns (address logic);
+
+    /// @notice The initialization logic contract (`initialize`'s market part).
+    function INIT_LOGIC() external view returns (address logic);
+
+    /// @notice The view logic contract.
+    function VIEW_LOGIC() external view returns (address logic);
 }
