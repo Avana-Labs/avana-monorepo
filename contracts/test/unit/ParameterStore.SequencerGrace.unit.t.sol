@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
+import {MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {SecondSource} from "../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
@@ -16,7 +16,7 @@ import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
 /// exact (`window == gracePeriod` passes, one second more is refused `OutOfBounds`).
 contract ParameterStoreSequencerGraceUnitTest is ParameterStoreFixture {
     MockAggregator internal seq;
-    bytes internal oob = abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector);
+    bytes internal oob = abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
 
     function setUp() public {
         _deployStore(true);

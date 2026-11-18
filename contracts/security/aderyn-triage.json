@@ -1147,19 +1147,19 @@
       "review": "Pattern: bounded loops (bounded by MAX_MARKET_COUNT and timelock-set route slots)."
     },
     {
-      "fingerprint": "4973347c39d31818",
+      "fingerprint": "cf3fcd201b98c378",
       "check": "costly-loop",
-      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
-      "function": "ParameterStoreOracle._failures",
+      "file": "src/policy/parameter-store/ParameterStoreRisk.sol",
+      "function": "ParameterStoreRisk._failures",
       "reason": "Loop over the affected markets of a tighten setter that re-runs checkConfig (REQ-PSTORE-009, REQ-PSTORE-029): per market one checkConfig with the recorded second sources and, when a token has a standby on its recorded source, the standby switched in for one more checkConfig and switched back (_switchStandbys), so a tightening never leaves a configuration that fails with a standby in force. Bounded by the registry's market count, which only timelock operations grow, and by MAX_POOL_TOKENS (8) per market; every write is undone in the same call. Covered by TEST-250 (tightenConsistencyChecksTheStandby, tightenToleranceChecksTheStandby, tightenBorrowAgeChecksTheStandby, standbyFailureThatPredatesTheTighteningNeverBlocksIt).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: bounded loops (2026-11-10 list); the storage writes are transient switches undone before return."
     },
     {
-      "fingerprint": "ef56ab2f47e7c23f",
+      "fingerprint": "a2d243a62479c2d7",
       "check": "costly-loop",
-      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
-      "function": "ParameterStoreOracle._switchStandbys",
+      "file": "src/policy/parameter-store/ParameterStoreRisk.sol",
+      "function": "ParameterStoreRisk._switchStandbys",
       "reason": "Writes onStandby for at most MAX_POOL_TOKENS (8) tokens of one market to put each standby in force for one checkConfig, then writes the same slots back (REQ-PSTORE-029, REQ-PSTORE-009); bounded by the market's token count, net state change zero. Covered by TEST-250 (tightenBorrowAgeChecksTheStandby asserts onStandby is false after the call).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: bounded loops (2026-11-10 list), at most 8 iterations."
@@ -2027,37 +2027,37 @@
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
     },
     {
-      "fingerprint": "4ea0e639c02a5a26",
+      "fingerprint": "180530c698463329",
       "check": "delegate-call-unchecked-address",
-      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
-      "function": "ParameterStoreForwardSpeed.tightenMarketSpeedLimits",
+      "file": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+      "function": "ParameterStoreForwardRisk.tightenMarketSpeedLimits",
       "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
     },
     {
-      "fingerprint": "0b129f11f0e49d77",
+      "fingerprint": "d3520d6f3ddd832d",
       "check": "delegate-call-unchecked-address",
-      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
-      "function": "ParameterStoreForwardSpeed.loosenMarketSpeedLimits",
+      "file": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+      "function": "ParameterStoreForwardRisk.loosenMarketSpeedLimits",
       "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
     },
     {
-      "fingerprint": "951bfd95771a4b6d",
+      "fingerprint": "e7b130caa3485dc1",
       "check": "delegate-call-unchecked-address",
-      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
-      "function": "ParameterStoreForwardSpeed.tightenDebtSpeedLimit",
+      "file": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+      "function": "ParameterStoreForwardRisk.tightenDebtSpeedLimit",
       "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
     },
     {
-      "fingerprint": "d2ab20ca0da965e4",
+      "fingerprint": "9f9453946d423489",
       "check": "delegate-call-unchecked-address",
-      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
-      "function": "ParameterStoreForwardSpeed.loosenDebtSpeedLimit",
+      "file": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+      "function": "ParameterStoreForwardRisk.loosenDebtSpeedLimit",
       "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"

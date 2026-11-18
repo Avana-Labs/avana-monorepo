@@ -121,17 +121,17 @@
       "review": "Reviewed per call site, group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
     },
     {
-      "fingerprint": "62b65a65266bc548",
+      "fingerprint": "940c32b116a10262",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
+      "file": "src/policy/parameter-store/ParameterStoreRisk.sol",
       "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: saturated, the cast runs only for count <= type(uint16).max.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
     },
     {
-      "fingerprint": "0d748554afe6ecbd",
+      "fingerprint": "e907e6917d7a56ca",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
+      "file": "src/policy/parameter-store/ParameterStoreRisk.sol",
       "reason": "Explicit downcast at the reviewed forge-lint unsafe-typecast suppression on the line above, whose comment states the bound: saturated, the cast runs only for sum <= type(uint16).max.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group E (explicit downcast at a forge-lint unsafe-typecast suppression Josue approved 2026-11-10): checked 2026-11-11, the bound in the comment holds at this line; not in an approved pattern."
@@ -177,17 +177,17 @@
       "review": "Reviewed per call site, group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
     },
     {
-      "fingerprint": "25c89656ac9fbcc2",
+      "fingerprint": "2c2410ea5e784b5a",
       "check": "Division by zero not prevented",
-      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
+      "file": "src/policy/parameter-store/ParameterStoreRisk.sol",
       "reason": "Division by zero not possible: _BLOCK_TIME is an immutable that the constructor rejects when 0 (OutOfBounds).",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."
     },
     {
-      "fingerprint": "9d6d595c1819108d",
+      "fingerprint": "33cebacfcc4ce387",
       "check": "Division by zero not prevented",
-      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
+      "file": "src/policy/parameter-store/ParameterStoreRisk.sol",
       "reason": "Division by zero not possible: _BLOCK_TIME is an immutable that the constructor rejects when 0 (OutOfBounds).",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group G (division by a non-zero divisor): checked 2026-11-11, the divisor is a constant, a constructor-checked immutable, or excluded by the guard named in the reason (or reverts by specification); not in an approved pattern."

@@ -15,7 +15,7 @@ import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {IAaveAdapterAdmin} from "../../src/policy/aave-adapter/IAaveAdapterAdmin.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
-import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterStoreAdmin.sol";
+import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IRiskModuleAdmin} from "../../src/policy/risk-module/IRiskModuleAdmin.sol";
 import {TimelockFixture} from "../utils/fixtures/TimelockFixture.sol";
@@ -127,9 +127,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
                 address(parameterStore), IParameterStoreTighten.tightenFloorRoundingAllowance.selector
             )
         );
-        assertTrue(
-            timelock.isShortEligible(address(parameterStore), IParameterStoreAdmin.tightenMaxFlashFeeBps.selector)
-        );
+        assertTrue(timelock.isShortEligible(address(parameterStore), IParameterStore.tightenMaxFlashFeeBps.selector));
         // Same selector on another target is not eligible: pairs are keyed by target.
         assertFalse(timelock.isShortEligible(address(other), IParameterStoreTighten.tightenMarketUsdCap.selector));
         assertFalse(timelock.isShortEligible(address(lpVaultSwap), ILPVaultSwapAdmin.addKeeper.selector));
@@ -163,7 +161,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
             IMarketRegistry.setCrossHubLinesEnabled.selector,
             IMarketRegistry.setCrossHubLine.selector,
             IMarketRegistry.initialize.selector,
-            IParameterStoreAdmin.initialize.selector,
+            IParameterStore.initialize.selector,
             IAaveAdapterAdmin.initialize.selector,
             IRiskModuleAdmin.initialize.selector,
             ILPOracle.initialize.selector,

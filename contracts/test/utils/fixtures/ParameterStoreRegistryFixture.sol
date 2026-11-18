@@ -22,16 +22,17 @@ import {
     TokenDef
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
-import {IParameterStoreAdmin} from "../../../src/policy/parameter-store/IParameterStoreAdmin.sol";
 import {ParameterStore} from "../../../src/policy/parameter-store/ParameterStore.sol";
 import {ParameterStoreAdminOracleLogic} from "../../../src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol";
 import {ParameterStoreAdminRiskLogic} from "../../../src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol";
 import {ParameterStoreListingLogic} from "../../../src/policy/parameter-store/ParameterStoreListingLogic.sol";
 import {ParameterStoreLoosenLogic} from "../../../src/policy/parameter-store/ParameterStoreLoosenLogic.sol";
 import {ParameterStoreTightenLogic} from "../../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
-import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
-import {GlobalParams} from "../../../src/policy/parameter-store/types/GlobalParams.sol";
-import {ParameterStoreLogics} from "../../../src/policy/parameter-store/types/ParameterStoreLogics.sol";
+import {
+    FeedDef,
+    GlobalParams,
+    ParameterStoreLogics
+} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {RouteSlot} from "../../../src/types/RouteSlot.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {
@@ -171,7 +172,7 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         store = IParameterStore(
             address(
                 new ERC1967Proxy(
-                    address(storeImpl), abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _globals(), 10_000))
+                    address(storeImpl), abi.encodeCall(IParameterStore.initialize, (tl, _globals(), 10_000))
                 )
             )
         );

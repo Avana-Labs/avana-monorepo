@@ -4,9 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
-import {DebtReserveParams} from "../../src/policy/parameter-store/types/DebtReserveParams.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
+import {DebtReserveParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 
 /// @notice Tighten setters: strictly safer, within hard and liveness bounds, in that order (SPEC-GOV-011).
@@ -20,26 +19,26 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
     function test_TEST_064_hardHealthFloorRaisesWithinBounds() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterTightened("hardHealthFloor", bytes32(M), 0, 1.1e18, address(timelock));
+        emit IParameterStoreBase.ParameterTightened("hardHealthFloor", bytes32(M), 0, 1.1e18, address(timelock));
         store.tightenHardHealthFloor(M, 1.1e18);
         _tl();
         store.tightenHardHealthFloor(M, 1.12e18);
         assertEq(store.hardHealthFloor(M), 1.12e18);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenHardHealthFloor(M, 1.08e18);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.tightenHardHealthFloor(M, 1.3e18);
     }
 
     // TEST-064 verifies: REQ-PSTORE-031, REQ-CONFIG-050
     function test_TEST_064_hardHealthFloorBelowOneRejected() public {
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.tightenHardHealthFloor(M, 0.99e18);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownMarket.selector, 9));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownMarket.selector, 9));
         store.tightenHardHealthFloor(9, 1.1e18);
     }
 
@@ -49,17 +48,17 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         store.tightenSlippageAllowanceBps(M, 30);
         assertEq(store.getMarketParams(M).slippageAllowanceBps, 30);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenSlippageAllowanceBps(M, 30);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenSlippageAllowanceBps(M, 31);
     }
 
     // TEST-064 verifies: REQ-CONFIG-052, SPEC-GOV-009, INV-047, REQ-ACCESS-095, REQ-ACCESS-120
     function test_TEST_064_slippageBelowFloorIsLivenessBound() public {
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.tightenSlippageAllowanceBps(M, 29);
     }
 
@@ -69,12 +68,12 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         store.tightenConsistencyToleranceBps(M, 10);
         assertEq(store.getMarketParams(M).consistencyToleranceBps, 10);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenConsistencyToleranceBps(M, 10);
         _tl();
         store.setConsistencyToleranceBps(M, 50);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.tightenConsistencyToleranceBps(M, 9);
     }
 
@@ -83,9 +82,7 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         // A check the tightening's own write breaks reverts it, naming only that check.
         lpOracle.setFloors(45, 0, 0);
         _tl();
-        vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(lpOracle), 4)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 4));
         store.tightenConsistencyToleranceBps(M, 40);
         // A check that failed before the write is not the tightening's doing and never blocks it.
         lpOracle.setFloors(0, 0, 0);
@@ -108,12 +105,12 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         _tl();
         store.tightenFeedAgreementToleranceBps(usdc, 100);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenFeedAgreementToleranceBps(usdc, 100);
         _tl();
         store.setFeedAgreementToleranceBps(usdc, 150);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.tightenFeedAgreementToleranceBps(usdc, 99);
     }
 
@@ -125,13 +122,13 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         assertEq(store.borrowPriceMaxAge(f), 4200);
         assertEq(store.liquidationPriceMaxAge(f), 88_200);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenBorrowPriceMaxAge(f, 4200);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.tightenBorrowPriceMaxAge(f, 0);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownFeed.selector, alice));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownFeed.selector, alice));
         store.tightenBorrowPriceMaxAge(alice, 1);
     }
 
@@ -140,7 +137,7 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         _tl();
         store.tightenPoolRiskFactor(M, 3500);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.tightenPoolRiskFactor(M, 0);
         _tl();
         store.setDebtAssetParams(gho, _rounding(1e18));
@@ -148,7 +145,7 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         store.tightenFloorRoundingAllowance(gho, 5e17);
         assertEq(store.floorRoundingAllowance(gho), 5e17);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.tightenFloorRoundingAllowance(gho, 0);
     }
 
@@ -156,7 +153,7 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
     function test_TEST_272_capsLowerOnly() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.CapTightened("marketUsdCap", bytes32(M), 5_000_000e8, 4_000_000e8, address(timelock));
+        emit IParameterStoreBase.CapTightened("marketUsdCap", bytes32(M), 5_000_000e8, 4_000_000e8, address(timelock));
         store.tightenMarketUsdCap(M, 4_000_000e8);
         _tl();
         // Below the 500,000 slice: the slice only admits rescue top-ups, which reduce risk.
@@ -167,10 +164,10 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         store.tightenTokenUsdCap(h, usdc, 10_000_000e8);
         assertEq(store.tokenUsdCap(h, usdc), 10_000_000e8);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenTokenUsdCap(h, usdt, 1);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownHub.selector, alice));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownHub.selector, alice));
         store.tightenTokenUsdCap(alice, usdc, 1);
         _tl();
         store.tightenTokenUsdCap(h, usdc, 0);
@@ -189,7 +186,7 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
             assertEq(store.marketUsdCap(M), steps[i]);
         }
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenMarketUsdCap(M, 0);
     }
 
@@ -213,13 +210,13 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         store.tightenPoolShareMaxBpsOf(M, 1000);
         assertEq(store.poolShareMaxBpsOf(key), 1000);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenPoolShareMaxBpsOf(M, 1000);
         _tl();
         store.tightenPoolShareMaxBps(500);
         assertEq(store.poolShareMaxBpsOf(key), 500); // the override never exceeds the default
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.tightenPoolShareMaxBps(0);
     }
 
@@ -227,13 +224,13 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
     function test_TEST_064_minPledgeRaisesWithinBound() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.MinPledgeUsdSet(M, 10e8, 20e8);
+        emit IParameterStoreBase.MinPledgeUsdSet(M, 10e8, 20e8);
         store.tightenMinPledgeUsd(M, 20e8);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenMinPledgeUsd(M, 20e8);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.tightenMinPledgeUsd(M, 100_000e8 + 1);
         _tl();
         store.tightenMinPledgeUsd(M, 100_000e8);
@@ -246,10 +243,10 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         assertEq(store.routeDepthThreshold(M, usdc, gho, 0), 1_000_000e8);
         assertEq(store.routeDepthThreshold(M, usdc, gho, 1), 0);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenRouteDepthThreshold(M, usdc, gho, 0, 1_000_000e8);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.tightenRouteDepthThreshold(M, usdc, gho, 2, 1);
     }
 
@@ -258,34 +255,34 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         _tl();
         store.tightenGateRecoverySeconds(7200);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.tightenGateRecoverySeconds(7201);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenGateRecoverySeconds(7200);
         _tl();
         store.tightenMaxShortfallBps(50);
         assertEq(store.maxShortfallBps(), 50);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenMaxShortfallBps(50);
         _tl();
         store.tightenDebtStressRiseBps(usdc, 500);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.tightenDebtStressRiseBps(usdc, 5001);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.TokenNotListed.selector, alice));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.TokenNotListed.selector, alice));
         store.tightenDebtStressRiseBps(alice, 500);
         _tl();
         store.tightenMaxFlashFeeBps(0);
         assertEq(store.maxFlashFeeBps(), 0);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenMaxFlashFeeBps(0);
         // breakerDeficitMax starts at 0, so only a loosening writes its first value.
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenBreakerDeficitMax(address(hub), gho, 0);
         _tl();
         store.loosenBreakerDeficitMax(address(hub), gho, 10_000e18);

@@ -9,10 +9,7 @@ import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {IAaveAdapterAdmin} from "../../policy/aave-adapter/IAaveAdapterAdmin.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../policy/market-registry/IMarketRegistryRoutes.sol";
-import {IParameterStoreAdmin} from "../../policy/parameter-store/IParameterStoreAdmin.sol";
-import {IParameterStoreBreakers} from "../../policy/parameter-store/IParameterStoreBreakers.sol";
-import {IParameterStoreLiquidation} from "../../policy/parameter-store/IParameterStoreLiquidation.sol";
-import {IParameterStoreSpeed} from "../../policy/parameter-store/IParameterStoreSpeed.sol";
+import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreTighten} from "../../policy/parameter-store/IParameterStoreTighten.sol";
 import {IRiskModuleAdmin} from "../../policy/risk-module/IRiskModuleAdmin.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -99,20 +96,20 @@ library TimelockSelectors {
             || s == IParameterStoreTighten.tightenPoolShareMaxBps.selector
             || s == IParameterStoreTighten.tightenPoolShareMaxBpsOf.selector
             || s == IParameterStoreTighten.tightenMinPledgeUsd.selector
-            || s == IParameterStoreBreakers.tightenBreakerDeficitMax.selector
-            || s == IParameterStoreBreakers.tightenGateRecoverySeconds.selector
-            || s == IParameterStoreLiquidation.tightenMaxShortfallBps.selector
-            || s == IParameterStoreLiquidation.tightenDebtStressRiseBps.selector
-            || s == IParameterStoreAdmin.tightenMaxFlashFeeBps.selector
-            || s == IParameterStoreSpeed.tightenMarketSpeedLimits.selector
-            || s == IParameterStoreSpeed.tightenDebtSpeedLimit.selector;
+            || s == IParameterStore.tightenBreakerDeficitMax.selector
+            || s == IParameterStore.tightenGateRecoverySeconds.selector
+            || s == IParameterStore.tightenMaxShortfallBps.selector
+            || s == IParameterStore.tightenDebtStressRiseBps.selector
+            || s == IParameterStore.tightenMaxFlashFeeBps.selector
+            || s == IParameterStore.tightenMarketSpeedLimits.selector
+            || s == IParameterStore.tightenDebtSpeedLimit.selector;
     }
 
     function _isInitializer(
         bytes4 selector
     ) private pure returns (bool) {
         return selector == IAaveAdapterAdmin.initialize.selector || selector == IRiskModuleAdmin.initialize.selector
-            || selector == IMarketRegistry.initialize.selector || selector == IParameterStoreAdmin.initialize.selector
+            || selector == IMarketRegistry.initialize.selector || selector == IParameterStore.initialize.selector
             || selector == ILPOracle.initialize.selector || selector == IDebtOracle.initialize.selector
             || selector == ILPVaultSwapAdmin.initialize.selector;
     }

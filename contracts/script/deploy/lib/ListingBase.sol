@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
-import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
+import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {OracleLeg} from "../../../src/types/OracleLeg.sol";
 import {OracleRoute} from "../../../src/types/OracleRoute.sol";
 import {SecondSource} from "../../../src/types/SecondSource.sol";

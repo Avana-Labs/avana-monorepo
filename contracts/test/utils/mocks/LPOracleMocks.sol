@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
 import {OracleInputsLayout} from "../../../src/policy/parameter-store/types/OracleInputsLayout.sol";
+import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {Market} from "../../../src/types/Market.sol";
 import {OracleConfig} from "../../../src/types/OracleConfig.sol";
 import {RouteSlot} from "../../../src/types/RouteSlot.sol";

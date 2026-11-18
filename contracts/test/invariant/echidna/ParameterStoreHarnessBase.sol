@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ParameterStoreStorage} from "../../../src/policy/parameter-store/ParameterStoreStorage.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
+import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {OracleConfig} from "../../../src/types/OracleConfig.sol";
 import {SecondSource} from "../../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";

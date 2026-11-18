@@ -7,10 +7,7 @@ import {SelectorPair} from "../../../src/governance/timelock/types/SelectorPair.
 import {ILPVaultSwapAdmin} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../../src/policy/market-registry/IMarketRegistryRoutes.sol";
-import {IParameterStoreAdmin} from "../../../src/policy/parameter-store/IParameterStoreAdmin.sol";
-import {IParameterStoreBreakers} from "../../../src/policy/parameter-store/IParameterStoreBreakers.sol";
-import {IParameterStoreLiquidation} from "../../../src/policy/parameter-store/IParameterStoreLiquidation.sol";
-import {IParameterStoreSpeed} from "../../../src/policy/parameter-store/IParameterStoreSpeed.sol";
+import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreTighten} from "../../../src/policy/parameter-store/IParameterStoreTighten.sol";
 
 /// @title TimelockShortDelayLists
@@ -42,13 +39,13 @@ library TimelockShortDelayLists {
             IParameterStoreTighten.tightenPoolShareMaxBps.selector,
             IParameterStoreTighten.tightenPoolShareMaxBpsOf.selector,
             IParameterStoreTighten.tightenMinPledgeUsd.selector,
-            IParameterStoreBreakers.tightenBreakerDeficitMax.selector,
-            IParameterStoreBreakers.tightenGateRecoverySeconds.selector,
-            IParameterStoreLiquidation.tightenMaxShortfallBps.selector,
-            IParameterStoreLiquidation.tightenDebtStressRiseBps.selector,
-            IParameterStoreAdmin.tightenMaxFlashFeeBps.selector,
-            IParameterStoreSpeed.tightenMarketSpeedLimits.selector,
-            IParameterStoreSpeed.tightenDebtSpeedLimit.selector
+            IParameterStore.tightenBreakerDeficitMax.selector,
+            IParameterStore.tightenGateRecoverySeconds.selector,
+            IParameterStore.tightenMaxShortfallBps.selector,
+            IParameterStore.tightenDebtStressRiseBps.selector,
+            IParameterStore.tightenMaxFlashFeeBps.selector,
+            IParameterStore.tightenMarketSpeedLimits.selector,
+            IParameterStore.tightenDebtSpeedLimit.selector
         ];
         bytes4[11] memory mr = [
             IMarketRegistryRoutes.disableRoute.selector,

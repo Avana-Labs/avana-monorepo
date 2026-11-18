@@ -11,7 +11,7 @@ import {LiquidationParams} from "../../../src/liquidation/lp-vault-swap/types/Li
 import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {RouteMode} from "../../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
 import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
+import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {Market} from "../../../src/types/Market.sol";
 import {PriceState} from "../../../src/types/PriceState.sol";
 

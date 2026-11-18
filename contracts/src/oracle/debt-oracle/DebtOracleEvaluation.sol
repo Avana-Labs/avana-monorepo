@@ -4,9 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
-import {IParameterStoreChain} from "../../policy/parameter-store/IParameterStoreChain.sol";
-import {IParameterStoreLiquidation} from "../../policy/parameter-store/IParameterStoreLiquidation.sol";
-import {IParameterStoreViews} from "../../policy/parameter-store/IParameterStoreViews.sol";
+import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {PriceState} from "../../types/PriceState.sol";
 import {RouteSlot} from "../../types/RouteSlot.sol";
 import {SecondSourceKind} from "../../types/SecondSourceKind.sol";
@@ -51,21 +49,21 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         uint256 v;
         bool r;
         ok = true;
-        (r, v) = _readWord(store, IParameterStoreViews.cachedWindow.selector, type(uint32).max);
+        (r, v) = _readWord(store, IParameterStore.cachedWindow.selector, type(uint32).max);
         ok = ok && r;
         e.cachedWindowRead = r;
         e.cachedWindow = r ? SafeCast.toUint32(v) : $.lastCachedWindow;
-        (r, v) = _readWordOf(store, IParameterStoreLiquidation.debtStressRiseBps.selector, asset, type(uint16).max);
+        (r, v) = _readWordOf(store, IParameterStore.debtStressRiseBps.selector, asset, type(uint16).max);
         ok = ok && r;
         e.stressRiseRead = r;
         e.stressRiseBps = r ? SafeCast.toUint16(Math.min(v, MAX_STRESS_RISE_BPS)) : $.lastStressRiseBps;
-        (r, v) = _readWord(store, IParameterStoreViews.disagreementPauseMax.selector, type(uint32).max);
+        (r, v) = _readWord(store, IParameterStore.disagreementPauseMax.selector, type(uint32).max);
         ok = ok && r;
         e.disagreementPauseMax = SafeCast.toUint32(v);
-        (r, v) = _readWord(store, IParameterStoreViews.graceDuration.selector, type(uint32).max);
+        (r, v) = _readWord(store, IParameterStore.graceDuration.selector, type(uint32).max);
         ok = ok && r;
         e.graceDuration = SafeCast.toUint32(v);
-        (r, v) = _readWordOf(store, IParameterStoreViews.feedAgreementToleranceBps.selector, asset, type(uint16).max);
+        (r, v) = _readWordOf(store, IParameterStore.feedAgreementToleranceBps.selector, asset, type(uint16).max);
         ok = ok && r;
         e.toleranceBps = SafeCast.toUint16(v);
         (r, v) = _readWordOf(registry, IMarketRegistry.priceRouteVersion.selector, asset, type(uint64).max);
@@ -276,8 +274,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         address store,
         DebtEvaluation memory e
     ) internal view {
-        (bool s,, uint256[] memory w) =
-            _call(store, CONFIG_CALL_GAS, abi.encodeCall(IParameterStoreChain.sequencer, ()), 2);
+        (bool s,, uint256[] memory w) = _call(store, CONFIG_CALL_GAS, abi.encodeCall(IParameterStore.sequencer, ()), 2);
         bool up = false;
         bool down = false;
         bool unknown = false;
@@ -321,7 +318,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         DebtEvaluation memory e
     ) internal view {
         address store = $.parameterStore;
-        (bool s,, uint256[] memory w) = _callOf(store, IParameterStoreViews.secondSource.selector, $.asset, 6);
+        (bool s,, uint256[] memory w) = _callOf(store, IParameterStore.secondSource.selector, $.asset, 6);
         bool usable = s && w.length == 6 && w[0] == uint256(SecondSourceKind.OracleNetwork) && w[1] <= type(uint160).max
             && w[3] <= type(uint32).max && w[5] <= type(uint16).max;
         if (usable) {

@@ -3,9 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DebtReserveParams} from "./types/DebtReserveParams.sol";
-import {FeedDef} from "./types/FeedDef.sol";
-import {MarketParams} from "./types/MarketParams.sol";
+import {DebtReserveParams, FeedDef, MarketParams} from "./types/ParameterStoreTypes.sol";
 
 /// @title IParameterStoreListing
 /// @notice Setters the listing batches of markets, tokens and debt reserves use.

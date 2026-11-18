@@ -26,7 +26,7 @@ import {RouteSlot} from "../../types/RouteSlot.sol";
 import {ShapeKind} from "../../types/ShapeKind.sol";
 import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
-import {IParameterStoreViews} from "../parameter-store/IParameterStoreViews.sol";
+import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
 import {IRiskModuleViews} from "../risk-module/IRiskModuleViews.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
@@ -164,7 +164,7 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
             // Only the answer is used: this is a listing-time magnitude check.
             // forge-lint: disable-next-line(unused-return)
             (, int256 answer,,,) = IAggregatorV3(route[i]).latestRoundData();
-            uint8 dec = IParameterStoreViews(_PARAMETER_STORE).getFeed(route[i]).decimals;
+            uint8 dec = IParameterStore(_PARAMETER_STORE).getFeed(route[i]).decimals;
             if (answer <= 0 || answer >= 2 ** 96 || dec > 36) return 0;
             // `0 < answer < 2^96`, so the conversion is exact.
             // forge-lint: disable-next-line(unsafe-typecast)
@@ -230,7 +230,7 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         delete l.standbyCancelledAt[token];
         ++l.priceRouteVersion[token];
         // The checks below read the routes from this registry, so they run after the write.
-        IParameterStoreViews ps = IParameterStoreViews(_PARAMETER_STORE);
+        IParameterStore ps = IParameterStore(_PARAMETER_STORE);
         if (ps.feedAgreementToleranceBps(token) < ps.feedAgreementToleranceMinBps(token)) {
             revert ListingCheckFailed("tolerance");
         }

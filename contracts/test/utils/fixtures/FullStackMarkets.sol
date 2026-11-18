@@ -12,9 +12,11 @@ import {RouteConfig} from "../../../src/liquidation/settlement-routes/types/Rout
 import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../../src/oracle/lp-oracle/LPOracleCL.sol";
 import {InitParams} from "../../../src/oracle/lp-oracle/types/InitParams.sol";
-import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
-import {MarketSpeedLimits} from "../../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
+import {
+    FeedDef,
+    MarketParams,
+    MarketSpeedLimits
+} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketDef} from "../../../src/types/MarketDef.sol";
 import {OracleConfig} from "../../../src/types/OracleConfig.sol";
 import {OracleRoute} from "../../../src/types/OracleRoute.sol";
@@ -235,7 +237,7 @@ abstract contract FullStackMarkets is FullStackFixture {
         vm.startPrank(address(timelock));
         store.setInitialMarketParams(id, p);
         store.setInitialMarketCaps(id, 1_000_000e8, 100_000e8, 1e8);
-        // Default speed limits (IParameterStoreSpeed example): 6-hour window, 25 % per window.
+        // Default speed limits (IParameterStore example): 6-hour window, 25 % per window.
         store.loosenMarketSpeedLimits(
             id, MarketSpeedLimits(21_600, 2500, 2500, 250_000e8, 2_500_000e8, 1_000_000e8, 10_000_000e8)
         );

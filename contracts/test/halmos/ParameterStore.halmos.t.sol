@@ -5,9 +5,6 @@ pragma solidity 0.8.28;
 
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
-import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterStoreAdmin.sol";
-import {IParameterStoreBreakers} from "../../src/policy/parameter-store/IParameterStoreBreakers.sol";
-import {IParameterStoreLiquidation} from "../../src/policy/parameter-store/IParameterStoreLiquidation.sol";
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {ParameterStore} from "../../src/policy/parameter-store/ParameterStore.sol";
@@ -16,9 +13,11 @@ import {ParameterStoreAdminRiskLogic} from "../../src/policy/parameter-store/Par
 import {ParameterStoreListingLogic} from "../../src/policy/parameter-store/ParameterStoreListingLogic.sol";
 import {ParameterStoreLoosenLogic} from "../../src/policy/parameter-store/ParameterStoreLoosenLogic.sol";
 import {ParameterStoreTightenLogic} from "../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
-import {GlobalParams} from "../../src/policy/parameter-store/types/GlobalParams.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
-import {ParameterStoreLogics} from "../../src/policy/parameter-store/types/ParameterStoreLogics.sol";
+import {
+    GlobalParams,
+    MarketParams,
+    ParameterStoreLogics
+} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {MockMarketRegistry} from "../utils/mocks/MockMarketRegistry.sol";
@@ -69,9 +68,7 @@ contract ParameterStoreHalmosTest is Test {
         g.gateRecoverySeconds = 1800;
         g.maxShortfallBps = 1000;
         store = IParameterStore(
-            address(
-                new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (TIMELOCK, g, 10_000)))
-            )
+            address(new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStore.initialize, (TIMELOCK, g, 10_000))))
         );
         MockIntegration integration = new MockIntegration();
         integration.set(false, true, false, ShapeKind.FullPool);
@@ -182,15 +179,12 @@ contract ParameterStoreHalmosTest is Test {
         uint16 share
     ) public {
         assert(
-            _asTimelock(abi.encodeCall(IParameterStoreBreakers.tightenGateRecoverySeconds, (gate)))
+            _asTimelock(abi.encodeCall(IParameterStore.tightenGateRecoverySeconds, (gate)))
                 == (gate > 1800 && gate <= 7200)
         );
         assert(store.gateRecoverySeconds() >= 600 && store.gateRecoverySeconds() <= 7200);
-        assert(
-            _asTimelock(abi.encodeCall(IParameterStoreLiquidation.tightenMaxShortfallBps, (shortfall)))
-                == (shortfall < 1000)
-        );
-        assert(_asTimelock(abi.encodeCall(IParameterStoreAdmin.tightenMaxFlashFeeBps, (flash))) == (flash < 10));
+        assert(_asTimelock(abi.encodeCall(IParameterStore.tightenMaxShortfallBps, (shortfall))) == (shortfall < 1000));
+        assert(_asTimelock(abi.encodeCall(IParameterStore.tightenMaxFlashFeeBps, (flash))) == (flash < 10));
         assert(
             _asTimelock(abi.encodeCall(IParameterStoreTighten.tightenPoolShareMaxBps, (share)))
                 == (share < 10_000 && share != 0)
@@ -203,9 +197,9 @@ contract ParameterStoreHalmosTest is Test {
         uint32 duration,
         uint256 hf
     ) public {
-        bool okD = _asTimelock(abi.encodeCall(IParameterStoreAdmin.setGraceDuration, (duration)));
+        bool okD = _asTimelock(abi.encodeCall(IParameterStore.setGraceDuration, (duration)));
         assert(okD == (duration <= 7200));
-        bool okH = _asTimelock(abi.encodeCall(IParameterStoreAdmin.setGraceHealthFactor, (hf)));
+        bool okH = _asTimelock(abi.encodeCall(IParameterStore.setGraceHealthFactor, (hf)));
         assert(okH == (hf >= 0.9e18 && hf < 1e18));
         assert(store.graceDuration() <= store.graceDurationMax());
         assert(store.graceHealthFactor() >= store.graceHealthFactorMin() && store.graceHealthFactor() < 1e18);
@@ -241,10 +235,10 @@ contract ParameterStoreHalmosTest is Test {
         uint16 first,
         uint16 next
     ) public {
-        bool ok1 = _asTimelock(abi.encodeCall(IParameterStoreLiquidation.tightenDebtStressRiseBps, (TOKEN_A, first)));
+        bool ok1 = _asTimelock(abi.encodeCall(IParameterStore.tightenDebtStressRiseBps, (TOKEN_A, first)));
         assert(ok1 == (first >= 100 && first <= 5000));
         uint16 old = store.debtStressRiseBps(TOKEN_A);
-        bool ok2 = _asTimelock(abi.encodeCall(IParameterStoreLiquidation.tightenDebtStressRiseBps, (TOKEN_A, next)));
+        bool ok2 = _asTimelock(abi.encodeCall(IParameterStore.tightenDebtStressRiseBps, (TOKEN_A, next)));
         assert(ok2 == (next > old && next >= 100 && next <= 5000));
         uint16 stored = store.debtStressRiseBps(TOKEN_A);
         assert(stored == 0 || (stored >= 100 && stored <= 5000));

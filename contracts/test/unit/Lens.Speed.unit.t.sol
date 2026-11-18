@@ -6,8 +6,7 @@ pragma solidity 0.8.28;
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {ILensSpeed} from "../../src/lens/lens/ILensSpeed.sol";
 import {BorrowSpeedView} from "../../src/lens/lens/types/BorrowSpeedView.sol";
-import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "../../src/policy/parameter-store/types/SpeedLimit.sol";
+import {MarketSpeedLimits, SpeedLimit} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {SpeedView} from "../../src/policy/risk-module/types/SpeedView.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 

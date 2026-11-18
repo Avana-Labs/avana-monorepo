@@ -20,11 +20,13 @@ import {
     SpokeDef,
     TokenDef
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {DebtReserveParams} from "../../src/policy/parameter-store/types/DebtReserveParams.sol";
-import {GlobalParams} from "../../src/policy/parameter-store/types/GlobalParams.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
-import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "../../src/policy/parameter-store/types/SpeedLimit.sol";
+import {
+    DebtReserveParams,
+    GlobalParams,
+    MarketParams,
+    MarketSpeedLimits,
+    SpeedLimit
+} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketDef} from "../../src/types/MarketDef.sol";
 import {OracleConfig} from "../../src/types/OracleConfig.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";

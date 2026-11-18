@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ParameterStoreSpeedRules as R} from "../../src/policy/parameter-store/ParameterStoreSpeedRules.sol";
-import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "../../src/policy/parameter-store/types/SpeedLimit.sol";
+import {MarketSpeedLimits, SpeedLimit} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 
 /// @title ParameterStoreSpeedRulesUnitTest

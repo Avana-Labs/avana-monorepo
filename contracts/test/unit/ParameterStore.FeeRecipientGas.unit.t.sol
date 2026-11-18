@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {IParameterStoreLogic} from "../../src/policy/parameter-store/IParameterStoreLogic.sol";
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
 import {ProxyManager} from "../../src/proxy/proxy-manager/ProxyManager.sol";
@@ -141,7 +141,7 @@ contract ParameterStoreFeeRecipientGasUnitTest is ParameterStoreFixture {
         // gas, so refused; under any transaction gas limit the setter either refuses it or runs out of gas, never
         // records it.
         HeavyTimelockCandidate heavy = new HeavyTimelockCandidate(address(timelock), 20_000);
-        bytes memory refused = abi.encodeWithSelector(IParameterStoreErrors.InvalidFeeRecipient.selector, heavy);
+        bytes memory refused = abi.encodeWithSelector(IParameterStoreBase.InvalidFeeRecipient.selector, heavy);
         // An out-of-gas failure of the delegated body reaches the caller as OpenZeppelin's `FailedCall()`.
         bytes memory outOfGas = abi.encodeWithSignature("FailedCall()");
         for (uint256 limit = 20_000; limit <= 200_000; limit += 1000) {

@@ -3,11 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IParameterStoreChain} from "../../../src/policy/parameter-store/IParameterStoreChain.sol";
+import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreListing} from "../../../src/policy/parameter-store/IParameterStoreListing.sol";
 import {ParameterStoreListingLogic} from "../../../src/policy/parameter-store/ParameterStoreListingLogic.sol";
-import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
+import {FeedDef, MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
 import {MockAggregator} from "../../utils/mocks/ParameterStoreMocks.sol";
 import {ParameterStoreHarnessBase} from "./ParameterStoreHarnessBase.sol";
@@ -59,7 +58,7 @@ contract ParameterStoreListingProperties is ParameterStoreHarnessBase {
         uint32 grace
     ) external {
         uint32 window = _s().market[M].twapWindow;
-        bool ok = _call(LISTING, abi.encodeCall(IParameterStoreChain.setSequencer, (address(SEQ), grace)));
+        bool ok = _call(LISTING, abi.encodeCall(IParameterStore.setSequencer, (address(SEQ), grace)));
         bool fits = grace >= window && grace >= SOURCE_WINDOW;
         assert(ok == (grace >= 600 && grace <= 7200 && fits && ORACLE.failed() == 0));
     }

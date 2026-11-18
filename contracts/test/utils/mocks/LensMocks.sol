@@ -7,7 +7,7 @@ import {ClMarketConfig} from "../../../src/amm/types/ClMarketConfig.sol";
 import {RiskStatus} from "../../../src/amm/types/RiskStatus.sol";
 import {DebtPriceView as OracleDebtView} from "../../../src/oracle/debt-oracle/types/DebtPriceView.sol";
 import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
+import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {SpeedView} from "../../../src/policy/risk-module/types/SpeedView.sol";
 import {AccountGateStatus} from "../../../src/types/AccountGateStatus.sol";
 import {Market} from "../../../src/types/Market.sol";

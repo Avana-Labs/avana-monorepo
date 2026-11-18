@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
-import {DebtReserveParams} from "../../src/policy/parameter-store/types/DebtReserveParams.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
+import {DebtReserveParams, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -53,19 +52,19 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
     function test_TEST_061_marketStructuralEvents() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("consistencyToleranceBps", bytes32(M), 50, 75);
+        emit IParameterStoreBase.ParameterSet("consistencyToleranceBps", bytes32(M), 50, 75);
         store.setConsistencyToleranceBps(M, 75);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("twapWindow", bytes32(M), 1800, 3600);
+        emit IParameterStoreBase.ParameterSet("twapWindow", bytes32(M), 1800, 3600);
         store.setTwapWindow(M, 3600);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("poolRiskFactor", bytes32(M), 4000, 2500);
+        emit IParameterStoreBase.ParameterSet("poolRiskFactor", bytes32(M), 4000, 2500);
         store.setPoolRiskFactor(M, 2500);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("slippageAllowanceMinBps", bytes32(M), 30, 60);
+        emit IParameterStoreBase.ParameterSet("slippageAllowanceMinBps", bytes32(M), 30, 60);
         store.setSlippageAllowanceMinBps(M, 60);
     }
 
@@ -73,31 +72,31 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
     function test_TEST_061_chainStructuralEvents() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("cachedWindow", CHAIN, 3600, 1800);
+        emit IParameterStoreBase.ParameterSet("cachedWindow", CHAIN, 3600, 1800);
         store.setCachedWindow(1800);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("disagreementPauseMax", CHAIN, 3600, 600);
+        emit IParameterStoreBase.ParameterSet("disagreementPauseMax", CHAIN, 3600, 600);
         store.setDisagreementPauseMax(600);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("graceDuration", CHAIN, 1800, 3600);
+        emit IParameterStoreBase.ParameterSet("graceDuration", CHAIN, 1800, 3600);
         store.setGraceDuration(3600);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("graceHealthFactor", CHAIN, 0.95e18, 0.92e18);
+        emit IParameterStoreBase.ParameterSet("graceHealthFactor", CHAIN, 0.95e18, 0.92e18);
         store.setGraceHealthFactor(0.92e18);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("feedAgreementMarginBps", CHAIN, 50, 30);
+        emit IParameterStoreBase.ParameterSet("feedAgreementMarginBps", CHAIN, 50, 30);
         store.setFeedAgreementMarginBps(30);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("maxFlashFeeBps", CHAIN, 10, 40);
+        emit IParameterStoreBase.ParameterSet("maxFlashFeeBps", CHAIN, 10, 40);
         store.setMaxFlashFeeBps(40);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("coverageRatioBps", CHAIN, 0, 2000);
+        emit IParameterStoreBase.ParameterSet("coverageRatioBps", CHAIN, 0, 2000);
         store.setCoverageRatioBps(2000);
     }
 
@@ -105,9 +104,9 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
     function test_TEST_061_usdBandEmitsBothLevels() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("usdBandLow", CHAIN, 0.9e8, 0.95e8);
+        emit IParameterStoreBase.ParameterSet("usdBandLow", CHAIN, 0.9e8, 0.95e8);
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("usdBandHigh", CHAIN, 1.02e8, 1.05e8);
+        emit IParameterStoreBase.ParameterSet("usdBandHigh", CHAIN, 1.02e8, 1.05e8);
         store.setUsdBand(0.95e8, 1.05e8);
         assertEq(_logs(abi.encodeCall(store.setUsdBand, (0.9e8, 1.02e8))), 2);
     }
@@ -116,19 +115,19 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
     function test_TEST_061_tokenAndFeeEvents() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("tokenCollateralFactorBps", _a(usdc), 7800, 7000);
+        emit IParameterStoreBase.ParameterSet("tokenCollateralFactorBps", _a(usdc), 7800, 7000);
         store.setTokenCollateralFactorBps(usdc, 7000);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("feedAgreementToleranceBps", _a(usdt), 150, 400);
+        emit IParameterStoreBase.ParameterSet("feedAgreementToleranceBps", _a(usdt), 150, 400);
         store.setFeedAgreementToleranceBps(usdt, 400);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("avanaFeeShareBps", CHAIN, 2000, 0);
+        emit IParameterStoreBase.ParameterSet("avanaFeeShareBps", CHAIN, 2000, 0);
         store.setAvanaFeeShareBps(0);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("feeRecipient", CHAIN, uint160(feeRecipient), uint160(bob));
+        emit IParameterStoreBase.ParameterSet("feeRecipient", CHAIN, uint160(feeRecipient), uint160(bob));
         store.setFeeRecipient(bob);
     }
 
@@ -137,15 +136,15 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         address s = address(spoke);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("aaveTargetHealthFactor", _a(s), 0, 1.1e18);
+        emit IParameterStoreBase.ParameterSet("aaveTargetHealthFactor", _a(s), 0, 1.1e18);
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("minLiquidationBonus", _a(s), 0, 200);
+        emit IParameterStoreBase.ParameterSet("minLiquidationBonus", _a(s), 0, 200);
         store.setLiquidationExpectations(s, 1.1e18, 200);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("aaveTargetHealthFactor", _a(s), 1.1e18, 1.05e18);
+        emit IParameterStoreBase.ParameterSet("aaveTargetHealthFactor", _a(s), 1.1e18, 1.05e18);
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("minLiquidationBonus", _a(s), 200, 300);
+        emit IParameterStoreBase.ParameterSet("minLiquidationBonus", _a(s), 200, 300);
         store.setLiquidationExpectations(s, 1.05e18, 300);
     }
 
@@ -153,9 +152,9 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
     function test_TEST_061_debtAssetParamsEmitsBoth() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("floorRoundingAllowance", _a(gho), 0, 0.5e18);
+        emit IParameterStoreBase.ParameterSet("floorRoundingAllowance", _a(gho), 0, 0.5e18);
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.DebtAssetParamsSet(gho, 0.5e18);
+        emit IParameterStoreBase.DebtAssetParamsSet(gho, 0.5e18);
         store.setDebtAssetParams(gho, DebtReserveParams(0.5e18));
         assertEq(store.debtAssetParams(gho).floorRoundingAllowance, 0.5e18);
         assertEq(_logs(abi.encodeCall(store.setDebtAssetParams, (gho, DebtReserveParams(1e18)))), 2);
@@ -176,19 +175,19 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         bytes32 scope = bytes32(M);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("twapWindow", scope, 1800, 3600);
+        emit IParameterStoreBase.ParameterSet("twapWindow", scope, 1800, 3600);
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("consistencyToleranceBps", scope, 50, 40);
+        emit IParameterStoreBase.ParameterSet("consistencyToleranceBps", scope, 50, 40);
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("slippageAllowanceBps", scope, 100, 90);
+        emit IParameterStoreBase.ParameterSet("slippageAllowanceBps", scope, 100, 90);
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("slippageAllowanceMinBps", scope, 30, 35);
+        emit IParameterStoreBase.ParameterSet("slippageAllowanceMinBps", scope, 30, 35);
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("poolRiskFactor", scope, 4000, 3500);
+        emit IParameterStoreBase.ParameterSet("poolRiskFactor", scope, 4000, 3500);
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("hardHealthFloor", scope, 0, 1.1e18);
+        emit IParameterStoreBase.ParameterSet("hardHealthFloor", scope, 0, 1.1e18);
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.MinPledgeUsdSet(M, 10e8, 20e8);
+        emit IParameterStoreBase.MinPledgeUsdSet(M, 10e8, 20e8);
         store.setInitialMarketParams(M, p);
         MarketParams memory got = store.getMarketParams(M);
         assertEq(got.twapWindow, 3600);
@@ -207,7 +206,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         registry.setHub(hub2, true);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.CapLoosened("tokenUsdCap", _pair(hub2, usdt), 0, 3_000_000e8, address(timelock));
+        emit IParameterStoreBase.CapLoosened("tokenUsdCap", _pair(hub2, usdt), 0, 3_000_000e8, address(timelock));
         store.setInitialTokenCap(hub2, usdt, 3_000_000e8);
     }
 
@@ -215,7 +214,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
     function test_TEST_272_unchangedInitialCapsEmitOnlyTheFloor() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.StressFloorSet(M, 1e8, 1e8);
+        emit IParameterStoreBase.StressFloorSet(M, 1e8, 1e8);
         store.setInitialMarketCaps(M, 5_000_000e8, 500_000e8, 1e8);
         assertEq(_logs(abi.encodeCall(store.setInitialMarketCaps, (M, 5_000_000e8, 500_000e8, 1e8))), 1);
         // A raise of one and a lowering of the other emit one of each.
@@ -229,15 +228,15 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         address tl = address(timelock);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.CapLoosened("marketUsdCap", bytes32(M), 5_000_000e8, 7_500_000e8, tl);
+        emit IParameterStoreBase.CapLoosened("marketUsdCap", bytes32(M), 5_000_000e8, 7_500_000e8, tl);
         store.loosenMarketUsdCap(M, 7_500_000e8);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.CapLoosened("topUpSliceUsd", bytes32(M), 500_000e8, 750_000e8, tl);
+        emit IParameterStoreBase.CapLoosened("topUpSliceUsd", bytes32(M), 500_000e8, 750_000e8, tl);
         store.loosenTopUpSliceUsd(M, 750_000e8);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.CapLoosened("tokenUsdCap", _pair(address(hub), usdc), 20_000_000e8, 30_000_000e8, tl);
+        emit IParameterStoreBase.CapLoosened("tokenUsdCap", _pair(address(hub), usdc), 20_000_000e8, 30_000_000e8, tl);
         store.loosenTokenUsdCap(address(hub), usdc, 30_000_000e8);
     }
 
@@ -251,11 +250,11 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         vm.stopPrank();
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.CapLoosened("poolShareMaxBpsOf", key, 500, 4000, tl);
+        emit IParameterStoreBase.CapLoosened("poolShareMaxBpsOf", key, 500, 4000, tl);
         store.loosenPoolShareMaxBpsOf(M, 4000);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.CapLoosened("poolShareMaxBps", CHAIN, 4000, 10_000, tl);
+        emit IParameterStoreBase.CapLoosened("poolShareMaxBps", CHAIN, 4000, 10_000, tl);
         store.loosenPoolShareMaxBps(10_000);
         // The override (4,000) is now below the default and served as is.
         assertEq(store.poolShareMaxBpsOf(key), 4000);
@@ -272,31 +271,31 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         vm.stopPrank();
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterLoosened("hardHealthFloor", bytes32(M), 1.1e18, 1.08e18, tl);
+        emit IParameterStoreBase.ParameterLoosened("hardHealthFloor", bytes32(M), 1.1e18, 1.08e18, tl);
         store.loosenHardHealthFloor(M, 1.08e18);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterLoosened("slippageAllowanceBps", bytes32(M), 100, 125, tl);
+        emit IParameterStoreBase.ParameterLoosened("slippageAllowanceBps", bytes32(M), 100, 125, tl);
         store.loosenSlippageAllowanceBps(M, 125);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterLoosened("floorRoundingAllowance", _a(gho), 0.5e18, 1e18, tl);
+        emit IParameterStoreBase.ParameterLoosened("floorRoundingAllowance", _a(gho), 0.5e18, 1e18, tl);
         store.loosenFloorRoundingAllowance(gho, 1e18);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterLoosened("maxShortfallBps", CHAIN, 1000, 2000, tl);
+        emit IParameterStoreBase.ParameterLoosened("maxShortfallBps", CHAIN, 1000, 2000, tl);
         store.loosenMaxShortfallBps(2000);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterLoosened("debtStressRiseBps", _a(usdc), 500, 200, tl);
+        emit IParameterStoreBase.ParameterLoosened("debtStressRiseBps", _a(usdc), 500, 200, tl);
         store.loosenDebtStressRiseBps(usdc, 200);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterLoosened("gateRecoverySeconds", CHAIN, 3600, 900, tl);
+        emit IParameterStoreBase.ParameterLoosened("gateRecoverySeconds", CHAIN, 3600, 900, tl);
         store.loosenGateRecoverySeconds(900);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterLoosened("breakerDeficitMax", _pair(address(hub), gho), 0, 10_000e18, tl);
+        emit IParameterStoreBase.ParameterLoosened("breakerDeficitMax", _pair(address(hub), gho), 0, 10_000e18, tl);
         store.loosenBreakerDeficitMax(address(hub), gho, 10_000e18);
     }
 
@@ -304,13 +303,13 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
     function test_TEST_061_pledgeAndRouteDepthEvents() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.MinPledgeUsdSet(M, 10e8, 1e8);
+        emit IParameterStoreBase.MinPledgeUsdSet(M, 10e8, 1e8);
         store.loosenMinPledgeUsd(M, 1e8);
         _tl();
         store.tightenRouteDepthThreshold(M, usdt, gho, 0, 3_000_000e8);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.RouteDepthThresholdSet(M, usdt, gho, 0, 3_000_000e8, 2_000_000e8);
+        emit IParameterStoreBase.RouteDepthThresholdSet(M, usdt, gho, 0, 3_000_000e8, 2_000_000e8);
         store.loosenRouteDepthThreshold(M, usdt, gho, 0, 2_000_000e8);
         assertEq(store.routeDepthThreshold(M, usdt, gho, 0), 2_000_000e8);
     }
@@ -343,7 +342,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
     function test_TEST_272_initialCapLoweringEmitsCaller() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.CapTightened("marketUsdCap", bytes32(M), 5_000_000e8, 4_000_000e8, address(timelock));
+        emit IParameterStoreBase.CapTightened("marketUsdCap", bytes32(M), 5_000_000e8, 4_000_000e8, address(timelock));
         store.setInitialMarketCaps(M, 4_000_000e8, 500_000e8, 1e8);
     }
 
@@ -354,7 +353,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         store.setDebtAssetParams(gho, DebtReserveParams(0.5e18));
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("floorRoundingAllowance", _a(gho), 0.5e18, 1e18);
+        emit IParameterStoreBase.ParameterSet("floorRoundingAllowance", _a(gho), 0.5e18, 1e18);
         store.setDebtAssetParams(gho, DebtReserveParams(1e18));
     }
 
@@ -365,7 +364,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         store.setCoverageRatioBps(2000);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("coverageRatioBps", bytes32(0), 2000, 3000);
+        emit IParameterStoreBase.ParameterSet("coverageRatioBps", bytes32(0), 2000, 3000);
         store.setCoverageRatioBps(3000);
     }
 }

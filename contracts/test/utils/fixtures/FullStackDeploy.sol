@@ -36,15 +36,13 @@ import {
     MarketRegistryLogics
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
-import {IParameterStoreAdmin} from "../../../src/policy/parameter-store/IParameterStoreAdmin.sol";
 import {ParameterStore} from "../../../src/policy/parameter-store/ParameterStore.sol";
 import {ParameterStoreAdminOracleLogic} from "../../../src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol";
 import {ParameterStoreAdminRiskLogic} from "../../../src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol";
 import {ParameterStoreListingLogic} from "../../../src/policy/parameter-store/ParameterStoreListingLogic.sol";
 import {ParameterStoreLoosenLogic} from "../../../src/policy/parameter-store/ParameterStoreLoosenLogic.sol";
 import {ParameterStoreTightenLogic} from "../../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
-import {GlobalParams} from "../../../src/policy/parameter-store/types/GlobalParams.sol";
-import {ParameterStoreLogics} from "../../../src/policy/parameter-store/types/ParameterStoreLogics.sol";
+import {GlobalParams, ParameterStoreLogics} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {RiskModule} from "../../../src/policy/risk-module/RiskModule.sol";
 import {RiskModuleBorrowLogic} from "../../../src/policy/risk-module/RiskModuleBorrowLogic.sol";
 import {RiskModuleBreakerLogic} from "../../../src/policy/risk-module/RiskModuleBreakerLogic.sol";
@@ -384,7 +382,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         ParameterStore impl = new ParameterStore(tl, registryAddr, BLOCK_TIME, false, l);
         AdapterPlaceholder(storeAddr)
             .upgradeToAndCall(
-                address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _globals(), POOL_SHARE_MAX_BPS))
+                address(impl), abi.encodeCall(IParameterStore.initialize, (tl, _globals(), POOL_SHARE_MAX_BPS))
             );
         store = IParameterStore(storeAddr);
     }

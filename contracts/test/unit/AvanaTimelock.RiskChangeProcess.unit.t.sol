@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAvanaTimelockErrors} from "../../src/governance/timelock/IAvanaTimelockErrors.sol";
-import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterStoreAdmin.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
+import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
@@ -118,7 +118,7 @@ contract AvanaTimelockRiskChangeProcessUnitTest is ParameterStoreFixture {
         bytes32 key = keccak256(abi.encode(bytes32("slippageAllowanceBps"), bytes32(M)));
         (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(loosen);
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.LoosenStepTooLarge.selector, key));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.LoosenStepTooLarge.selector, key));
         timelock.executeBatch(t, v, p, bytes32(0), bytes32("loosen"));
         assertEq(store.getMarketParams(M).slippageAllowanceBps, 60, "tightened value kept");
     }
@@ -140,19 +140,19 @@ contract AvanaTimelockRiskChangeProcessUnitTest is ParameterStoreFixture {
         vm.warp(block.timestamp + SHORT_DELAY);
         (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(below);
         vm.prank(attacker);
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         timelock.executeBatch(t, v, p, bytes32(0), bytes32("to19"));
     }
 
     // TEST-225 verifies: REQ-ACCESS-161, Q-246
     function test_TEST_225_bandAndGraceWaitTheNormalDelayBothWays() public {
         bytes[6] memory data = [
-            abi.encodeCall(IParameterStoreAdmin.setUsdBand, (0.95e8, 1.01e8)),
-            abi.encodeCall(IParameterStoreAdmin.setUsdBand, (0.85e8, 1.05e8)),
-            abi.encodeCall(IParameterStoreAdmin.setGraceDuration, (900)),
-            abi.encodeCall(IParameterStoreAdmin.setGraceDuration, (3600)),
-            abi.encodeCall(IParameterStoreAdmin.setGraceHealthFactor, (0.97e18)),
-            abi.encodeCall(IParameterStoreAdmin.setGraceHealthFactor, (0.92e18))
+            abi.encodeCall(IParameterStore.setUsdBand, (0.95e8, 1.01e8)),
+            abi.encodeCall(IParameterStore.setUsdBand, (0.85e8, 1.05e8)),
+            abi.encodeCall(IParameterStore.setGraceDuration, (900)),
+            abi.encodeCall(IParameterStore.setGraceDuration, (3600)),
+            abi.encodeCall(IParameterStore.setGraceHealthFactor, (0.97e18)),
+            abi.encodeCall(IParameterStore.setGraceHealthFactor, (0.92e18))
         ];
         for (uint256 i = 0; i < data.length; ++i) {
             Call[] memory calls = _one(address(store), data[i]);
@@ -180,7 +180,7 @@ contract AvanaTimelockRiskChangeProcessUnitTest is ParameterStoreFixture {
         _run(cut, bytes32("cut"));
         assertEq(store.getMarketParams(M).poolRiskFactor, 3000, "cut applied");
         // A raise goes through the either-direction setter at the normal delay.
-        Call[] memory raise = _one(address(store), abi.encodeCall(IParameterStoreAdmin.setPoolRiskFactor, (M, 4000)));
+        Call[] memory raise = _one(address(store), abi.encodeCall(IParameterStore.setPoolRiskFactor, (M, 4000)));
         assertEq(_required(raise), NORMAL_DELAY, "raise at the normal delay");
         _run(raise, bytes32("raise"));
         assertEq(store.getMarketParams(M).poolRiskFactor, 4000, "raise applied");

@@ -8,7 +8,7 @@ import {IAaveV3FlashLoanReceiver} from "../interfaces/external/aave/IAaveV3Flash
 import {IAaveV3Pool} from "../interfaces/external/aave/IAaveV3Pool.sol";
 import {IAaveV3PoolAddressesProvider} from "../interfaces/external/aave/IAaveV3PoolAddressesProvider.sol";
 import {SettlementMath} from "../liquidation/lp-vault-swap/SettlementMath.sol";
-import {IParameterStoreViews} from "../policy/parameter-store/IParameterStoreViews.sol";
+import {IParameterStore} from "../policy/parameter-store/IParameterStore.sol";
 import {IFlashReceiver} from "./IFlashReceiver.sol";
 import {IFlashSource} from "./IFlashSource.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -177,7 +177,7 @@ contract AaveV3FlashSource is IFlashSource, IAaveV3FlashLoanReceiver {
         uint256 premium,
         uint256 amount
     ) private view {
-        uint256 cap = IParameterStoreViews(PARAMETER_STORE).maxFlashFeeBps();
+        uint256 cap = IParameterStore(PARAMETER_STORE).maxFlashFeeBps();
         if (!SettlementMath.flashPremiumWithinCap(premium, amount, cap)) {
             revert FlashFeeTooHigh(premium, Math.mulDiv(cap, amount, BPS));
         }

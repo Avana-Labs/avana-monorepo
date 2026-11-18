@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {MarketSpeedLimits} from "../../parameter-store/types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "../../parameter-store/types/SpeedLimit.sol";
+import {MarketSpeedLimits, SpeedLimit} from "../../parameter-store/types/ParameterStoreTypes.sol";
 
 /// @notice Inputs of the borrow-speed check of one borrow.
 struct BorrowSpeedInputs {

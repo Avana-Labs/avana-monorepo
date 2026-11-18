@@ -7,7 +7,7 @@ import {ILensMarkets} from "../../src/lens/lens/ILensMarkets.sol";
 import {ILensRisk} from "../../src/lens/lens/ILensRisk.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {TokenDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterStoreAdmin.sol";
+import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
@@ -86,7 +86,7 @@ contract MarketCountGasTest is RealStackFlows, GasCalibration {
         // Alternate the margin so every re-check writes.
         margin = margin == 0 ? 1 : margin - 1;
         r.recheck = _txGas(
-            address(timelock), address(store), abi.encodeCall(IParameterStoreAdmin.setFeedAgreementMarginBps, (margin))
+            address(timelock), address(store), abi.encodeCall(IParameterStore.setFeedAgreementMarginBps, (margin))
         );
         TokenDef memory t = registry.getToken(address(usdc));
         r.priceSource = _txGas(

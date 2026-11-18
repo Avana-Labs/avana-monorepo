@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAggregatorProxy} from "../../interfaces/external/chainlink/IAggregatorProxy.sol";
 import {IAggregatorV3} from "../../interfaces/external/chainlink/IAggregatorV3.sol";
-import {IParameterStoreViews} from "../../policy/parameter-store/IParameterStoreViews.sol";
+import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {LPPriceMath} from "../lp-oracle/LPPriceMath.sol";
 import {DebtOracleStorage} from "./DebtOracleStorage.sol";
 import {IDebtOracleErrors} from "./IDebtOracleErrors.sol";
@@ -84,7 +84,7 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         address store,
         LegRead memory leg
     ) internal view returns (bool ok) {
-        (bool s,, uint256[] memory w) = _callOf(store, IParameterStoreViews.getFeed.selector, leg.feed, 10);
+        (bool s,, uint256[] memory w) = _callOf(store, IParameterStore.getFeed.selector, leg.feed, 10);
         if (!s || w.length < 10 || w[0] == 0 || w[0] > type(uint8).max) return false;
         if (w[3] > type(uint32).max || w[4] > type(uint32).max || w[5] > type(uint32).max) return false;
         if (w[6] > type(uint16).max || w[7] > type(uint16).max) return false;

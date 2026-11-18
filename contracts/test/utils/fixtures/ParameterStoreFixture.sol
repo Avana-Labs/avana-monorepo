@@ -5,17 +5,18 @@ pragma solidity 0.8.28;
 
 import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
-import {IParameterStoreAdmin} from "../../../src/policy/parameter-store/IParameterStoreAdmin.sol";
 import {ParameterStore} from "../../../src/policy/parameter-store/ParameterStore.sol";
 import {ParameterStoreAdminOracleLogic} from "../../../src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol";
 import {ParameterStoreAdminRiskLogic} from "../../../src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol";
 import {ParameterStoreListingLogic} from "../../../src/policy/parameter-store/ParameterStoreListingLogic.sol";
 import {ParameterStoreLoosenLogic} from "../../../src/policy/parameter-store/ParameterStoreLoosenLogic.sol";
 import {ParameterStoreTightenLogic} from "../../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
-import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
-import {GlobalParams} from "../../../src/policy/parameter-store/types/GlobalParams.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
-import {ParameterStoreLogics} from "../../../src/policy/parameter-store/types/ParameterStoreLogics.sol";
+import {
+    FeedDef,
+    GlobalParams,
+    MarketParams,
+    ParameterStoreLogics
+} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {Market} from "../../../src/types/Market.sol";
 import {ShapeKind} from "../../../src/types/ShapeKind.sol";
 import {MockMarketRegistry} from "../mocks/MockMarketRegistry.sol";
@@ -88,7 +89,7 @@ abstract contract ParameterStoreFixture is TimelockFixture {
         });
         implementation = new ParameterStore(tl, address(registry), BLOCK_TIME, hasSequencer, logics);
         ERC1967Proxy proxy = new ERC1967Proxy(
-            address(implementation), abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _defaultGlobals(), 10_000))
+            address(implementation), abi.encodeCall(IParameterStore.initialize, (tl, _defaultGlobals(), 10_000))
         );
         require(address(proxy) == predicted, "prediction");
         store = IParameterStore(address(proxy));

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IParameterStoreAdmin} from "../../../src/policy/parameter-store/IParameterStoreAdmin.sol";
+import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {ParameterStoreAdminOracleLogic} from "../../../src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol";
 import {ParameterStoreHarnessBase} from "./ParameterStoreHarnessBase.sol";
 
@@ -41,7 +41,7 @@ contract ParameterStoreAdminOracleProperties is ParameterStoreHarnessBase {
     function setTwapWindow(
         uint32 window
     ) external {
-        bool ok = _call(ADMIN_ORACLE, abi.encodeCall(IParameterStoreAdmin.setTwapWindow, (M, window)));
+        bool ok = _call(ADMIN_ORACLE, abi.encodeCall(IParameterStore.setTwapWindow, (M, window)));
         assert(ok == (window != 0 && window <= 3600 && ORACLE.failed() == 0));
     }
 
@@ -49,28 +49,28 @@ contract ParameterStoreAdminOracleProperties is ParameterStoreHarnessBase {
         uint256 low,
         uint256 high
     ) external {
-        bool ok = _call(ADMIN_ORACLE, abi.encodeCall(IParameterStoreAdmin.setUsdBand, (low, high)));
+        bool ok = _call(ADMIN_ORACLE, abi.encodeCall(IParameterStore.setUsdBand, (low, high)));
         assert(ok == (low < 1e8 && high > 1e8 && ORACLE.failed() == 0));
     }
 
     function setCachedWindow(
         uint32 value
     ) external {
-        bool ok = _call(ADMIN_ORACLE, abi.encodeCall(IParameterStoreAdmin.setCachedWindow, (value)));
+        bool ok = _call(ADMIN_ORACLE, abi.encodeCall(IParameterStore.setCachedWindow, (value)));
         assert(ok == (value != 0 && ORACLE.failed() == 0));
     }
 
     function setGraceDuration(
         uint32 value
     ) external {
-        bool ok = _call(ADMIN_ORACLE, abi.encodeCall(IParameterStoreAdmin.setGraceDuration, (value)));
+        bool ok = _call(ADMIN_ORACLE, abi.encodeCall(IParameterStore.setGraceDuration, (value)));
         assert(ok == (value <= 7200 && ORACLE.failed() == 0));
     }
 
     function setDisagreementPauseMax(
         uint32 value
     ) external {
-        bool ok = _call(ADMIN_ORACLE, abi.encodeCall(IParameterStoreAdmin.setDisagreementPauseMax, (value)));
+        bool ok = _call(ADMIN_ORACLE, abi.encodeCall(IParameterStore.setDisagreementPauseMax, (value)));
         assert(ok == (value <= 3600 && ORACLE.failed() == 0));
     }
 }

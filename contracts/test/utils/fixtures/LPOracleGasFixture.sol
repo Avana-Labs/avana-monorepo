@@ -9,15 +9,13 @@ import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../../src/oracle/lp-oracle/LPOracleCL.sol";
 import {InitParams} from "../../../src/oracle/lp-oracle/types/InitParams.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
-import {IParameterStoreAdmin} from "../../../src/policy/parameter-store/IParameterStoreAdmin.sol";
 import {ParameterStore} from "../../../src/policy/parameter-store/ParameterStore.sol";
 import {ParameterStoreAdminOracleLogic} from "../../../src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol";
 import {ParameterStoreAdminRiskLogic} from "../../../src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol";
 import {ParameterStoreListingLogic} from "../../../src/policy/parameter-store/ParameterStoreListingLogic.sol";
 import {ParameterStoreLoosenLogic} from "../../../src/policy/parameter-store/ParameterStoreLoosenLogic.sol";
 import {ParameterStoreTightenLogic} from "../../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
-import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
-import {ParameterStoreLogics} from "../../../src/policy/parameter-store/types/ParameterStoreLogics.sol";
+import {FeedDef, ParameterStoreLogics} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {Market} from "../../../src/types/Market.sol";
 import {OracleConfig} from "../../../src/types/OracleConfig.sol";
 import {OracleLeg} from "../../../src/types/OracleLeg.sol";
@@ -232,7 +230,7 @@ abstract contract LPOracleGasFixture is AaveV4Fixture, ParameterStoreFixture, Cl
         });
         implementation = new ParameterStore(t, r, BLOCK_TIME, hasSequencer, logics);
         ERC1967Proxy proxy = new ERC1967Proxy(
-            address(implementation), abi.encodeCall(IParameterStoreAdmin.initialize, (t, _defaultGlobals(), 10_000))
+            address(implementation), abi.encodeCall(IParameterStore.initialize, (t, _defaultGlobals(), 10_000))
         );
         require(address(proxy) == predicted, "prediction");
         store = IParameterStore(address(proxy));

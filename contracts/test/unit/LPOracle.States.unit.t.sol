@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
+import {FeedDef} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {PriceStateView} from "../../src/types/PriceStateView.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";

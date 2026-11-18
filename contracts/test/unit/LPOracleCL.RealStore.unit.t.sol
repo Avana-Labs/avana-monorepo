@@ -8,7 +8,7 @@ import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
 import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {Market} from "../../src/types/Market.sol";
 import {OracleConfig} from "../../src/types/OracleConfig.sol";
 import {OracleLeg} from "../../src/types/OracleLeg.sol";
@@ -182,7 +182,7 @@ contract LPOracleCLRealStoreTest is ParameterStoreFixture {
         _tl();
         vm.expectRevert(
             abi.encodeWithSelector(
-                IParameterStoreErrors.OracleConfigRejected.selector, address(oracle), LPOracleCodes.CHECK_TOLERANCE
+                IParameterStoreBase.OracleConfigRejected.selector, address(oracle), LPOracleCodes.CHECK_TOLERANCE
             )
         );
         store.setFeedAgreementMarginBps(51);

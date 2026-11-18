@@ -4,10 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {DebtReserveDef, MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
+import {FeedDef, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockAggregator, OracleConfigReader, OracleConfigSummary} from "../utils/mocks/ParameterStoreMocks.sol";
 
@@ -23,19 +22,19 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
     }
 
     function _oob() internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector);
+        return abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
     }
 
     function _live() internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IParameterStoreErrors.LivenessBound.selector);
+        return abi.encodeWithSelector(IParameterStoreBase.LivenessBound.selector);
     }
 
     function _notStricter() internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IParameterStoreErrors.NotStricter.selector);
+        return abi.encodeWithSelector(IParameterStoreBase.NotStricter.selector);
     }
 
     function _notLooser() internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IParameterStoreErrors.NotLooser.selector);
+        return abi.encodeWithSelector(IParameterStoreBase.NotLooser.selector);
     }
 
     function _call(
@@ -254,7 +253,7 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
             err = _oob();
         } else if (v > 1000e8 && v * 10_000 > old * 15_000) {
             // At or below USD_CAP_REOPEN_BASE ($1,000) any looser value passes (REQ-PSTORE-017).
-            err = abi.encodeWithSelector(IParameterStoreErrors.LoosenStepTooLarge.selector, key);
+            err = abi.encodeWithSelector(IParameterStoreBase.LoosenStepTooLarge.selector, key);
         }
         _expect(data, err);
     }
@@ -277,7 +276,7 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
             err = _oob();
         } else if (v * 10_000 > base * 15_000) {
             err = abi.encodeWithSelector(
-                IParameterStoreErrors.LoosenStepTooLarge.selector, _key("topUpSliceUsd", bytes32(M))
+                IParameterStoreBase.LoosenStepTooLarge.selector, _key("topUpSliceUsd", bytes32(M))
             );
         }
         _expect(abi.encodeCall(store.loosenTopUpSliceUsd, (M, v)), err);
@@ -299,7 +298,7 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
             err = _notLooser();
         } else if (old - effective > 0.03e18) {
             err = abi.encodeWithSelector(
-                IParameterStoreErrors.LoosenStepTooLarge.selector, _key("hardHealthFloor", bytes32(M))
+                IParameterStoreBase.LoosenStepTooLarge.selector, _key("hardHealthFloor", bytes32(M))
             );
         }
         _expect(abi.encodeCall(store.loosenHardHealthFloor, (M, v)), err);
@@ -319,7 +318,7 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
             err = _oob();
         } else if (v > 125) {
             err = abi.encodeWithSelector(
-                IParameterStoreErrors.LoosenStepTooLarge.selector, _key("slippageAllowanceBps", bytes32(M))
+                IParameterStoreBase.LoosenStepTooLarge.selector, _key("slippageAllowanceBps", bytes32(M))
             );
         }
         _expect(abi.encodeCall(store.loosenSlippageAllowanceBps, (M, v)), err);
@@ -624,14 +623,12 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
         MockAggregator f = new MockAggregator(decimals, minAnswer, type(int192).max);
         bytes memory err;
         if (minAnswer <= 0) {
-            err = abi.encodeWithSelector(IParameterStoreErrors.InvalidFeed.selector, address(f), bytes32("minAnswer"));
+            err = abi.encodeWithSelector(IParameterStoreBase.InvalidFeed.selector, address(f), bytes32("minAnswer"));
         } else {
             uint256 m = uint256(int256(minAnswer));
             uint256 normalised = decimals >= 8 ? (m * 1e8) / 10 ** decimals : m * 10 ** (8 - decimals);
             if (normalised == 0) {
-                err = abi.encodeWithSelector(
-                    IParameterStoreErrors.InvalidFeed.selector, address(f), bytes32("minAnswer")
-                );
+                err = abi.encodeWithSelector(IParameterStoreBase.InvalidFeed.selector, address(f), bytes32("minAnswer"));
             }
         }
         _expect(abi.encodeCall(store.setFeed, (address(f), _feedDef(3600, 600))), err);
@@ -647,7 +644,7 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
         assertTrue(_ok(abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 22_000_000e8))));
         vm.warp(t + gap);
         bytes memory err = gap < NORMAL_DELAY
-            ? abi.encodeWithSelector(IParameterStoreErrors.LoosenTooSoon.selector, key, t + NORMAL_DELAY)
+            ? abi.encodeWithSelector(IParameterStoreBase.LoosenTooSoon.selector, key, t + NORMAL_DELAY)
             : bytes("");
         _expect(abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 24_000_000e8)), err);
         assertEq(store.lastLoosenedAt(key), gap < NORMAL_DELAY ? t : t + gap);

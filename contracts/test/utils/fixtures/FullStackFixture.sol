@@ -16,9 +16,11 @@ import {
     SpokeDef,
     TokenDef
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {DebtReserveParams} from "../../../src/policy/parameter-store/types/DebtReserveParams.sol";
-import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
-import {SpeedLimit} from "../../../src/policy/parameter-store/types/SpeedLimit.sol";
+import {
+    DebtReserveParams,
+    FeedDef,
+    SpeedLimit
+} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {RouteSlot} from "../../../src/types/RouteSlot.sol";
 import {SecondSource} from "../../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
@@ -391,7 +393,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         vm.startPrank(address(timelock));
         registry.enableDebtReserve(aave.cdpSpoke, def);
         store.setDebtAssetParams(def.asset, DebtReserveParams(floorRounding));
-        // Default borrow-speed limit (IParameterStoreSpeed example for GHO), in the asset's units.
+        // Default borrow-speed limit (IParameterStore example for GHO), in the asset's units.
         uint96 unit = uint96(10 ** def.decimals);
         store.loosenDebtSpeedLimit(aave.hub, def.asset, SpeedLimit(2500, 21_600, 500_000 * unit, 5_000_000 * unit));
         vm.stopPrank();

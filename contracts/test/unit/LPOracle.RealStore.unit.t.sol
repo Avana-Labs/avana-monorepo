@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {Market} from "../../src/types/Market.sol";
 import {OracleConfig} from "../../src/types/OracleConfig.sol";
 import {OracleLeg} from "../../src/types/OracleLeg.sol";
@@ -185,7 +185,7 @@ contract LPOracleRealStoreUnitTest is ParameterStoreFixture {
         _tl();
         vm.expectRevert(
             abi.encodeWithSelector(
-                IParameterStoreErrors.OracleConfigRejected.selector, address(oracle), LPOracleCodes.CHECK_SECOND_SOURCE
+                IParameterStoreBase.OracleConfigRejected.selector, address(oracle), LPOracleCodes.CHECK_SECOND_SOURCE
             )
         );
         store.setSecondSource(usdc, _twap(own), empty);
@@ -199,7 +199,7 @@ contract LPOracleRealStoreUnitTest is ParameterStoreFixture {
         _tl();
         vm.expectRevert(
             abi.encodeWithSelector(
-                IParameterStoreErrors.OracleConfigRejected.selector, address(oracle), LPOracleCodes.CHECK_SECOND_SOURCE
+                IParameterStoreBase.OracleConfigRejected.selector, address(oracle), LPOracleCodes.CHECK_SECOND_SOURCE
             )
         );
         store.setSecondSource(usdc, _second(address(ssUsdc)), _twap(own));

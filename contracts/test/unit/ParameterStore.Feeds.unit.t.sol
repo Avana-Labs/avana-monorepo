@@ -4,19 +4,18 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
-import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterStoreAdmin.sol";
-import {IParameterStoreChain} from "../../src/policy/parameter-store/IParameterStoreChain.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {ParameterStore} from "../../src/policy/parameter-store/ParameterStore.sol";
 import {ParameterStoreAdminOracleLogic} from "../../src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol";
 import {ParameterStoreAdminRiskLogic} from "../../src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol";
 import {ParameterStoreListingLogic} from "../../src/policy/parameter-store/ParameterStoreListingLogic.sol";
 import {ParameterStoreLoosenLogic} from "../../src/policy/parameter-store/ParameterStoreLoosenLogic.sol";
 import {ParameterStoreTightenLogic} from "../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
-import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
-import {ParameterStoreLogics} from "../../src/policy/parameter-store/types/ParameterStoreLogics.sol";
+import {
+    FeedDef,
+    MarketParams,
+    ParameterStoreLogics
+} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
@@ -35,7 +34,7 @@ contract RevertingRoundFeed {
 /// listing margin re-run at its exact edge, and the full `FeedConfigured` event.
 contract ParameterStoreFeedsUnitTest is ParameterStoreFixture {
     MockAggregator internal f;
-    bytes internal oob = abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector);
+    bytes internal oob = abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
 
     function setUp() public {
         _deployStore(false);
@@ -55,7 +54,7 @@ contract ParameterStoreFeedsUnitTest is ParameterStoreFixture {
         address feed,
         bytes32 check
     ) internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IParameterStoreErrors.InvalidFeed.selector, feed, check);
+        return abi.encodeWithSelector(IParameterStoreBase.InvalidFeed.selector, feed, check);
     }
 
     // ─── Heartbeat, margin, ages, threshold ───
@@ -312,12 +311,12 @@ contract ParameterStoreFeedsUnitTest is ParameterStoreFixture {
         d.maxAnswerCap = 5e11;
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.FeedConfigured(address(f), 8, 1e6, 5e11, 3600, 600, 4200, 40, 15, 4200, 4200);
+        emit IParameterStoreBase.FeedConfigured(address(f), 8, 1e6, 5e11, 3600, 600, 4200, 40, 15, 4200, 4200);
         store.setFeed(address(f), d);
         // An age setter emits the whole definition again with its new value.
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.FeedConfigured(address(f), 8, 1e6, 5e11, 3600, 600, 4200, 40, 15, 100, 4200);
+        emit IParameterStoreBase.FeedConfigured(address(f), 8, 1e6, 5e11, 3600, 600, 4200, 40, 15, 100, 4200);
         store.setBorrowPriceMaxAge(address(f), 100);
     }
 
@@ -354,7 +353,7 @@ contract ParameterStoreFeedsUnitTest is ParameterStoreFixture {
 /// @notice The sequencer-uptime check on an L2 (REQ-PSTORE-023) at every edge of its feed and grace rules.
 contract ParameterStoreFeedsSequencerUnitTest is ParameterStoreFixture {
     MockAggregator internal seq;
-    bytes internal oob = abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector);
+    bytes internal oob = abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
 
     function setUp() public {
         _deployStore(true);
@@ -373,7 +372,7 @@ contract ParameterStoreFeedsSequencerUnitTest is ParameterStoreFixture {
     function _invalid(
         address feed
     ) internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IParameterStoreChain.InvalidSequencerFeed.selector, feed);
+        return abi.encodeWithSelector(IParameterStore.InvalidSequencerFeed.selector, feed);
     }
 
     // TEST-250 verifies: REQ-PSTORE-023, REQ-CONFIG-050
@@ -389,7 +388,7 @@ contract ParameterStoreFeedsSequencerUnitTest is ParameterStoreFixture {
         assertEq(ret, oob);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreChain.SequencerSet(address(seq), 600);
+        emit IParameterStore.SequencerSet(address(seq), 600);
         store.setSequencer(address(seq), 600);
         (ok,) = _set(address(seq), 7200);
         assertTrue(ok);
@@ -455,7 +454,7 @@ contract ParameterStoreFeedsSequencerUnitTest is ParameterStoreFixture {
         bytes memory ret;
         (ok, ret) = _set(address(seq), 1800);
         assertFalse(ok);
-        assertEq(ret, abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(lpOracle), 1));
+        assertEq(ret, abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 1));
         (, uint32 grace) = store.sequencer();
         assertEq(grace, 3600);
     }
@@ -472,7 +471,7 @@ contract ParameterStoreFeedsSequencerUnitTest is ParameterStoreFixture {
 /// 12-second chain, at the edge of each.
 contract ParameterStoreFeedsTwapUnitTest is ParameterStoreFixture {
     IParameterStore internal base;
-    bytes internal oob = abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector);
+    bytes internal oob = abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
 
     function setUp() public {
         _deployStore(false);
@@ -504,7 +503,7 @@ contract ParameterStoreFeedsTwapUnitTest is ParameterStoreFixture {
         s = IParameterStore(
             address(
                 new ERC1967Proxy(
-                    address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _defaultGlobals(), 10_000))
+                    address(impl), abi.encodeCall(IParameterStore.initialize, (tl, _defaultGlobals(), 10_000))
                 )
             )
         );

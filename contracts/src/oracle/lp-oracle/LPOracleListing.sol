@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IAggregatorProxy} from "../../interfaces/external/chainlink/IAggregatorProxy.sol";
 import {IOffchainAggregator} from "../../interfaces/external/chainlink/IOffchainAggregator.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
-import {IParameterStoreViews} from "../../policy/parameter-store/IParameterStoreViews.sol";
+import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {OracleConfig} from "../../types/OracleConfig.sol";
 import {OracleLeg} from "../../types/OracleLeg.sol";
 import {OracleRoute} from "../../types/OracleRoute.sol";
@@ -166,7 +166,7 @@ abstract contract LPOracleListing is LPOracleViews {
         OracleConfig calldata config
     ) private view returns (uint256 failed) {
         (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
-            _s().parameterStore, CONFIG_CALL_GAS, abi.encodeCall(IParameterStoreViews.feedAgreementMarginBps, ()), WORD
+            _s().parameterStore, CONFIG_CALL_GAS, abi.encodeCall(IParameterStore.feedAgreementMarginBps, ()), WORD
         );
         uint256 margin = 0;
         if (ok) (ok, margin) = LPOracleCalls.uintAt(ret, 0, type(uint16).max);
@@ -202,7 +202,7 @@ abstract contract LPOracleListing is LPOracleViews {
         if (s.kind != SecondSourceKind.OracleNetwork || s.maxAge == 0) return (false, 0);
         bytes memory ret;
         (ok, ret) = LPOracleCalls.staticRead(
-            _s().parameterStore, CONFIG_CALL_GAS, abi.encodeCall(IParameterStoreViews.getFeed, (s.source)), 10 * WORD
+            _s().parameterStore, CONFIG_CALL_GAS, abi.encodeCall(IParameterStore.getFeed, (s.source)), 10 * WORD
         );
         uint256 dec = 0;
         if (ok) (ok, dec) = LPOracleCalls.uintAt(ret, 0, type(uint8).max);

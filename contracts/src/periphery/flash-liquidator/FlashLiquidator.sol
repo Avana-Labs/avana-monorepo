@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IParameterStoreViews} from "../../policy/parameter-store/IParameterStoreViews.sol";
+import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {FlashLiquidatorBase} from "./FlashLiquidatorBase.sol";
 
 /// @title FlashLiquidator
@@ -42,7 +42,7 @@ contract FlashLiquidator is FlashLiquidatorBase {
     /// @notice Anyone may claim; the credit goes to `feeRecipient`.
     /// @dev Reverts `InvalidFeeRecipient` while `feeRecipient` is unset.
     function _claimRecipient() internal view override returns (address recipient) {
-        recipient = IParameterStoreViews(PARAMETER_STORE).feeRecipient();
+        recipient = IParameterStore(PARAMETER_STORE).feeRecipient();
         if (recipient == address(0)) revert InvalidFeeRecipient();
     }
 

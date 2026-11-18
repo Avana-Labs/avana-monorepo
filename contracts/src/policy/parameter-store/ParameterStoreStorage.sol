@@ -9,18 +9,13 @@ import {SecondSource} from "../../types/SecondSource.sol";
 import {SequencerConfig} from "../../types/SequencerConfig.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
-import {IParameterStoreErrors} from "./IParameterStoreErrors.sol";
-import {IParameterStoreEvents} from "./IParameterStoreEvents.sol";
-import {FeedDef} from "./types/FeedDef.sol";
-import {GlobalParams} from "./types/GlobalParams.sol";
-import {MarketParams} from "./types/MarketParams.sol";
-import {MarketSpeedLimits} from "./types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "./types/SpeedLimit.sol";
+import {IParameterStoreBase} from "./IParameterStoreBase.sol";
+import {FeedDef, GlobalParams, MarketParams, MarketSpeedLimits, SpeedLimit} from "./types/ParameterStoreTypes.sol";
 
 /// @title ParameterStoreStorage
 /// @notice Storage layout, immutables, hard bounds and shared checks of the ParameterStore and its logic contracts.
 /// @dev Hard and liveness bounds are constants, so each changes only by an upgrade.
-abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStoreErrors {
+abstract contract ParameterStoreStorage is IParameterStoreBase {
     /// @custom:storage-location erc7201:avana.storage.ParameterStore
     struct Layout {
         GlobalParams g;

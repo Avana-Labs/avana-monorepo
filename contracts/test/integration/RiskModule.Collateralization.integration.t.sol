@@ -10,7 +10,7 @@ import {Lock} from "../../src/lock/lock/Lock.sol";
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {MarketRegistryImmutables} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
+import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {RiskModule} from "../../src/policy/risk-module/RiskModule.sol";
 import {RiskModuleImmutables} from "../../src/policy/risk-module/types/RiskModuleImmutables.sol";

@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
+import {MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {OracleConfig} from "../../src/types/OracleConfig.sol";
 import {SecondSource} from "../../src/types/SecondSource.sol";
@@ -60,7 +60,7 @@ contract StandbyFloorLPOracle {
 contract ParameterStoreSecondSourceFitUnitTest is ParameterStoreFixture {
     uint256 internal constant M2 = 2;
     bytes32 internal constant OTHER_POOL = bytes32(uint256(0xC0FFEE));
-    bytes internal oob = abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector);
+    bytes internal oob = abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
     MockAggregator internal netA;
     MockAggregator internal netB;
     StandbyFloorLPOracle internal floorOracle;
@@ -219,7 +219,7 @@ contract ParameterStoreSecondSourceFitUnitTest is ParameterStoreFixture {
         floorOracle.set(address(netB), 60, 0, 0);
         vm.prank(emergencyGuardian);
         vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(floorOracle), 4)
+            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(floorOracle), 4)
         );
         store.useStandbySecondSource(usdc);
         assertFalse(store.onStandby(usdc));
@@ -238,7 +238,7 @@ contract ParameterStoreSecondSourceFitUnitTest is ParameterStoreFixture {
         assertTrue(ok);
         floorOracle.set(address(netB), 45, 0, 0);
         bytes memory refused =
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(floorOracle), 4);
+            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(floorOracle), 4);
         vm.prank(address(timelock));
         (ok,) = address(store).call(abi.encodeCall(store.tightenConsistencyToleranceBps, (M, 40)));
         assertFalse(ok, "tightening left a configuration the standby fails");
@@ -258,7 +258,7 @@ contract ParameterStoreSecondSourceFitUnitTest is ParameterStoreFixture {
         floorOracle.set(address(netB), 0, 130, 0);
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(floorOracle), 8)
+            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(floorOracle), 8)
         );
         store.tightenFeedAgreementToleranceBps(usdc, 120);
         vm.prank(address(timelock));
@@ -273,7 +273,7 @@ contract ParameterStoreSecondSourceFitUnitTest is ParameterStoreFixture {
         floorOracle.set(address(netB), 0, 0, 85_000);
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(floorOracle), 16)
+            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(floorOracle), 16)
         );
         store.tightenBorrowPriceMaxAge(address(fUsdc), 80_000);
         vm.prank(address(timelock));
@@ -299,7 +299,7 @@ contract ParameterStoreSecondSourceFitUnitTest is ParameterStoreFixture {
         floorOracle.set(address(netB), 35, 0, 0);
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(floorOracle), 4)
+            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(floorOracle), 4)
         );
         store.tightenConsistencyToleranceBps(M, 30);
         assertTrue(store.onStandby(usdc));

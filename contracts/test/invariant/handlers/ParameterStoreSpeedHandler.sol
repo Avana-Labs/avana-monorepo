@@ -4,9 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
-import {IParameterStoreSpeed} from "../../../src/policy/parameter-store/IParameterStoreSpeed.sol";
-import {MarketSpeedLimits} from "../../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "../../../src/policy/parameter-store/types/SpeedLimit.sol";
+import {MarketSpeedLimits, SpeedLimit} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title ParameterStoreSpeedHandler
@@ -179,8 +177,8 @@ contract ParameterStoreSpeedHandler is Test {
         (bool ok,) = address(store)
             .call(
                 loosen
-                    ? abi.encodeCall(IParameterStoreSpeed.loosenMarketSpeedLimits, (marketId, v))
-                    : abi.encodeCall(IParameterStoreSpeed.tightenMarketSpeedLimits, (marketId, v))
+                    ? abi.encodeCall(IParameterStore.loosenMarketSpeedLimits, (marketId, v))
+                    : abi.encodeCall(IParameterStore.tightenMarketSpeedLimits, (marketId, v))
             );
         MarketSpeedLimits memory now_ = store.marketSpeedLimits(marketId);
         if (!_changed(abi.encode(old), abi.encode(now_))) revert Skipped();
@@ -214,8 +212,8 @@ contract ParameterStoreSpeedHandler is Test {
         (bool ok,) = address(store)
             .call(
                 loosen
-                    ? abi.encodeCall(IParameterStoreSpeed.loosenDebtSpeedLimit, (hub, asset, v))
-                    : abi.encodeCall(IParameterStoreSpeed.tightenDebtSpeedLimit, (hub, asset, v))
+                    ? abi.encodeCall(IParameterStore.loosenDebtSpeedLimit, (hub, asset, v))
+                    : abi.encodeCall(IParameterStore.tightenDebtSpeedLimit, (hub, asset, v))
             );
         SpeedLimit memory now_ = store.debtSpeedLimit(hub, asset);
         if (!_changed(abi.encode(old), abi.encode(now_))) revert Skipped();

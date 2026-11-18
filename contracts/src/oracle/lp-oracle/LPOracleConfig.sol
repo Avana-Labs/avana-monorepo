@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequencerUptimeFeed.sol";
-import {IParameterStoreViews} from "../../policy/parameter-store/IParameterStoreViews.sol";
+import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {OracleInputsLayout} from "../../policy/parameter-store/types/OracleInputsLayout.sol";
 import {OracleConfig} from "../../types/OracleConfig.sol";
 import {OracleLeg} from "../../types/OracleLeg.sol";
@@ -55,7 +55,7 @@ abstract contract LPOracleConfig is LPOracleReads {
         (ok, ret) = LPOracleCalls.staticRead(
             $.parameterStore,
             ORACLE_CONFIG_BASE_GAS + n * ORACLE_CONFIG_TOKEN_GAS,
-            abi.encodeCall(IParameterStoreViews.getOracleInputs, (address(this), list, secondSources)),
+            abi.encodeCall(IParameterStore.getOracleInputs, (address(this), list, secondSources)),
             WORD * (2 + count)
         );
         uint256[] memory w;

@@ -16,9 +16,11 @@ import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../../src/oracle/lp-oracle/LPOracleCL.sol";
 import {InitParams} from "../../../src/oracle/lp-oracle/types/InitParams.sol";
 import {DebtReserveDef, RiskTier, SpokeDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
-import {MarketSpeedLimits} from "../../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "../../../src/policy/parameter-store/types/SpeedLimit.sol";
+import {
+    MarketParams,
+    MarketSpeedLimits,
+    SpeedLimit
+} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketDef} from "../../../src/types/MarketDef.sol";
 import {PositionShape} from "../../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../../src/types/ShapeKind.sol";

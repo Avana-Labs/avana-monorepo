@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {GlobalParams} from "../../../src/policy/parameter-store/types/GlobalParams.sol";
+import {GlobalParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 
 /// @notice The chain's governance accounts (2.15 `REQ-ACCESS-027`, 1.4 role table).
 struct GovernanceInputs {

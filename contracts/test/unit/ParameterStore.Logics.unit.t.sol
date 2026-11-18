@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {IParameterStoreLogic} from "../../src/policy/parameter-store/IParameterStoreLogic.sol";
 import {ParameterStore} from "../../src/policy/parameter-store/ParameterStore.sol";
 import {ParameterStoreAdminOracleLogic} from "../../src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol";
@@ -11,7 +11,7 @@ import {ParameterStoreAdminRiskLogic} from "../../src/policy/parameter-store/Par
 import {ParameterStoreListingLogic} from "../../src/policy/parameter-store/ParameterStoreListingLogic.sol";
 import {ParameterStoreLoosenLogic} from "../../src/policy/parameter-store/ParameterStoreLoosenLogic.sol";
 import {ParameterStoreTightenLogic} from "../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
-import {ParameterStoreLogics} from "../../src/policy/parameter-store/types/ParameterStoreLogics.sol";
+import {ParameterStoreLogics} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 
 /// @notice A contract that runs a logic contract's code against its own storage by delegatecall.
@@ -31,7 +31,7 @@ contract ForeignDelegator {
 /// anywhere but through the store's delegatecall either refuses (`NotDelegated`) or acts only on the caller's own
 /// storage.
 contract ParameterStoreLogicsUnitTest is ParameterStoreFixture {
-    bytes internal oob = abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector);
+    bytes internal oob = abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
 
     function setUp() public {
         _deployStore(false);
@@ -154,18 +154,18 @@ contract ParameterStoreLogicsUnitTest is ParameterStoreFixture {
         address tl = address(timelock);
         address reg = address(registry);
         for (uint256 i = 0; i < 5; ++i) {
-            vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+            vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
             this.deployLogic(i, address(0), reg, BLOCK_TIME);
-            vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+            vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
             this.deployLogic(i, tl, address(0), BLOCK_TIME);
-            vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+            vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
             this.deployLogic(i, tl, reg, 0);
         }
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         new ParameterStore(address(0), reg, BLOCK_TIME, false, logics);
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         new ParameterStore(tl, address(0), BLOCK_TIME, false, logics);
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         new ParameterStore(tl, reg, 0, false, logics);
     }
 
@@ -191,7 +191,7 @@ contract ParameterStoreLogicsUnitTest is ParameterStoreFixture {
         ];
         address[6] memory targets =
             [logics.tighten, logics.loosen, logics.listing, logics.adminOracle, logics.adminRisk, logics.adminOracle];
-        bytes memory notDelegated = abi.encodeWithSelector(IParameterStoreErrors.NotDelegated.selector);
+        bytes memory notDelegated = abi.encodeWithSelector(IParameterStoreBase.NotDelegated.selector);
         for (uint256 i = 0; i < calls.length; ++i) {
             vm.prank(address(timelock));
             (bool ok, bytes memory ret) = targets[i].call(calls[i]);
@@ -208,7 +208,7 @@ contract ParameterStoreLogicsUnitTest is ParameterStoreFixture {
         // The logic runs on the delegator's empty storage: its own maxShortfall is 0, so nothing is stricter.
         (bool ok, bytes memory ret) = d.run(logics.tighten, abi.encodeCall(store.tightenMaxShortfallBps, (0)));
         assertFalse(ok);
-        assertEq(ret, abi.encodeWithSelector(IParameterStoreErrors.NotStricter.selector));
+        assertEq(ret, abi.encodeWithSelector(IParameterStoreBase.NotStricter.selector));
         // A write that succeeds there lands in the delegator, never in the store.
         (ok,) = d.run(logics.adminRisk, abi.encodeCall(store.setAvanaFeeShareBps, (4000)));
         assertTrue(ok);

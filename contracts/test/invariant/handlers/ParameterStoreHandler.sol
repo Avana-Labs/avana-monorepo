@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAvanaTimelockViews} from "../../../src/governance/timelock/IAvanaTimelockViews.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
+import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {SecondSource} from "../../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
 import {CommonBase} from "forge-std/Base.sol";

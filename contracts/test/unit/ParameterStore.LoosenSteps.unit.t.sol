@@ -4,10 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
-import {DebtReserveParams} from "../../src/policy/parameter-store/types/DebtReserveParams.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
+import {DebtReserveParams, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 
@@ -72,14 +70,14 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
     function _tooLarge(
         bytes32 key
     ) internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IParameterStoreErrors.LoosenStepTooLarge.selector, key);
+        return abi.encodeWithSelector(IParameterStoreBase.LoosenStepTooLarge.selector, key);
     }
 
     function _tooSoon(
         bytes32 key,
         uint256 nextAt
     ) internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IParameterStoreErrors.LoosenTooSoon.selector, key, nextAt);
+        return abi.encodeWithSelector(IParameterStoreBase.LoosenTooSoon.selector, key, nextAt);
     }
 
     // ─── Step edges, exact integers ───
@@ -111,7 +109,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         // From 1.00, any value below it switches the floor off, and the event carries the stored 0.
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterLoosened("hardHealthFloor", bytes32(M), 1e18, 0, address(timelock));
+        emit IParameterStoreBase.ParameterLoosened("hardHealthFloor", bytes32(M), 1e18, 0, address(timelock));
         store.loosenHardHealthFloor(M, 1e18 - 1);
         assertEq(store.hardHealthFloor(M), 0);
     }
@@ -362,7 +360,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         // Too soon and addCap too small: addCap is reported, so the operation names the real blocker.
         _refuses(
             abi.encodeCall(store.loosenMarketUsdCap, (M, 7_000_000e8)),
-            abi.encodeWithSelector(IParameterStoreErrors.AddCapTooSmall.selector)
+            abi.encodeWithSelector(IParameterStoreBase.AddCapTooSmall.selector)
         );
         hub.setAddCap(type(uint40).max);
         _refuses(
@@ -384,7 +382,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         hub.setAddCap(2_666_666);
         _refuses(
             abi.encodeCall(store.loosenMarketUsdCap, (M, 7_500_000e8)),
-            abi.encodeWithSelector(IParameterStoreErrors.AddCapTooSmall.selector)
+            abi.encodeWithSelector(IParameterStoreBase.AddCapTooSmall.selector)
         );
         hub.setAddCap(2_666_667);
         _accepts(abi.encodeCall(store.loosenMarketUsdCap, (M, 7_500_000e8)));
@@ -397,7 +395,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         hub.setAddCap(5_499_999);
         _refuses(
             abi.encodeCall(store.loosenTopUpSliceUsd, (M, 500_000e8 + 1)),
-            abi.encodeWithSelector(IParameterStoreErrors.AddCapTooSmall.selector)
+            abi.encodeWithSelector(IParameterStoreBase.AddCapTooSmall.selector)
         );
         // Cancelled and Closed markets have no Hub asset to protect.
         registry.setStatus(M, MarketStatus.Cancelled);
@@ -411,7 +409,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         hub.setAddCap(10_999_999);
         _refuses(
             abi.encodeCall(store.setStressFloorUsd, (M, 0.5e8)),
-            abi.encodeWithSelector(IParameterStoreErrors.AddCapTooSmall.selector)
+            abi.encodeWithSelector(IParameterStoreBase.AddCapTooSmall.selector)
         );
         hub.setAddCap(11_000_000);
         _accepts(abi.encodeCall(store.setStressFloorUsd, (M, 0.5e8)));
@@ -419,12 +417,12 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         vaultToken.setSupply(1);
         _refuses(
             abi.encodeCall(store.setStressFloorUsd, (M, 1e8)),
-            abi.encodeWithSelector(IParameterStoreErrors.SupplyNotZero.selector, M)
+            abi.encodeWithSelector(IParameterStoreBase.SupplyNotZero.selector, M)
         );
         vaultToken.setSupply(0);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.StressFloorSet(M, 0.5e8, 1e8);
+        emit IParameterStoreBase.StressFloorSet(M, 0.5e8, 1e8);
         store.setStressFloorUsd(M, 1e8);
         // Setting the same floor again checks neither rule.
         vaultToken.setSupply(1);
@@ -442,7 +440,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         store.loosenBreakerDeficitMax(address(hub), gho, 1e18);
         vm.stopPrank();
         bytes32 key = keccak256(abi.encode(uint32(1), address(pool), bytes32(0)));
-        bytes memory notLooser = abi.encodeWithSelector(IParameterStoreErrors.NotLooser.selector);
+        bytes memory notLooser = abi.encodeWithSelector(IParameterStoreBase.NotLooser.selector);
         bytes[14] memory same = [
             abi.encodeCall(store.loosenHardHealthFloor, (M, 1.1e18)),
             abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 100)),

@@ -17,9 +17,8 @@ import {Market} from "../../types/Market.sol";
 import {PauseReason} from "../../types/PauseReason.sol";
 import {PauseState} from "../../types/PauseState.sol";
 import {PriceState} from "../../types/PriceState.sol";
-import {IParameterStoreCoverage} from "../parameter-store/IParameterStoreCoverage.sol";
-import {IParameterStoreViews} from "../parameter-store/IParameterStoreViews.sol";
-import {FeedDef} from "../parameter-store/types/FeedDef.sol";
+import {IParameterStore} from "../parameter-store/IParameterStore.sol";
+import {FeedDef} from "../parameter-store/types/ParameterStoreTypes.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryBase} from "./IMarketRegistryBase.sol";
 import {BreakerReasons} from "./types/Breaker.sol";
@@ -284,7 +283,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         if (route.length == 0 || route.length > 2) return "routeLength";
         for (uint256 i = 0; i < route.length; ++i) {
             if (route[i] == address(0)) return "feed";
-            FeedDef memory f = IParameterStoreViews(_PARAMETER_STORE).getFeed(route[i]);
+            FeedDef memory f = IParameterStore(_PARAMETER_STORE).getFeed(route[i]);
             if (f.decimals == 0) return "feed";
             if (f.feedHeartbeat == 0) return "heartbeat";
         }
@@ -312,7 +311,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         if (cfLp >= _BPS) return false;
         uint256 err = 0;
         for (uint256 i = 0; i < route.length; ++i) {
-            FeedDef memory f = IParameterStoreViews(_PARAMETER_STORE).getFeed(route[i]);
+            FeedDef memory f = IParameterStore(_PARAMETER_STORE).getFeed(route[i]);
             err += uint256(f.feedDeviationThresholdBps) + uint256(f.heartbeatDriftBps);
         }
         return _BPS - cfLp > err;
@@ -369,8 +368,8 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         if (line == 0) return (0, 0);
         address cs = _s().firstLossReserveOf[hub][asset];
         funded = cs == address(0) ? 0 : IAvanaFirstLossReserve(cs).fundedBalance();
-        uint256 k = 10 ** uint256(IERC20Metadata(asset).decimals())
-            * IParameterStoreCoverage(_PARAMETER_STORE).coverageRatioBps();
+        uint256 k =
+            10 ** uint256(IERC20Metadata(asset).decimals()) * IParameterStore(_PARAMETER_STORE).coverageRatioBps();
         if (k != 0 && line > (type(uint256).max - _BPS) / k) return (type(uint256).max, funded);
         required = (line * k + _BPS - 1) / _BPS;
     }
@@ -421,7 +420,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         address lpOracle
     ) internal view returns (bool) {
         (bool ok, bytes memory cfg) =
-            _PARAMETER_STORE.staticcall(abi.encodeCall(IParameterStoreViews.getOracleConfig, (lpOracle)));
+            _PARAMETER_STORE.staticcall(abi.encodeCall(IParameterStore.getOracleConfig, (lpOracle)));
         if (!ok) return false;
         bytes memory ret;
         (ok, ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector, cfg));

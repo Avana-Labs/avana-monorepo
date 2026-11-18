@@ -14,7 +14,7 @@ import {LPOracleV4} from "../../../src/oracle/lp-oracle/LPOracleV4.sol";
 import {LPOracleV4ModuleLogic} from "../../../src/oracle/lp-oracle/LPOracleV4ModuleLogic.sol";
 import {InitParams} from "../../../src/oracle/lp-oracle/types/InitParams.sol";
 import {LPOracleLogicSet} from "../../../src/oracle/lp-oracle/types/LPOracleLogicSet.sol";
-import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
+import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {OracleConfig} from "../../../src/types/OracleConfig.sol";
 import {OracleLeg} from "../../../src/types/OracleLeg.sol";
 import {OracleRoute} from "../../../src/types/OracleRoute.sol";

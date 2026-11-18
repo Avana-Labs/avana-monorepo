@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {ParameterStoreLoosenLogic} from "../../../src/policy/parameter-store/ParameterStoreLoosenLogic.sol";
 import {ParameterStoreStorage} from "../../../src/policy/parameter-store/ParameterStoreStorage.sol";
 import {ParameterStoreTightenLogic} from "../../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
+import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {HarnessMarketRegistry} from "../../utils/mocks/HarnessMarketRegistry.sol";
 
 /// @title ParameterStoreProperties

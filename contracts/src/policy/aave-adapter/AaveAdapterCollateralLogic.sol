@@ -17,7 +17,7 @@ import {PauseState} from "../../types/PauseState.sol";
 import {PositionRef} from "../../types/PositionRef.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
-import {IParameterStoreChain} from "../parameter-store/IParameterStoreChain.sol";
+import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
 import {IRiskModuleErrors} from "../risk-module/IRiskModuleErrors.sol";
 import {RiskModuleCalls} from "../risk-module/RiskModuleCalls.sol";
@@ -265,7 +265,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
     function _requireSequencerNotDown() private view {
         // The grace period does not stop a repay with collateral, so only the feed is read.
         // forge-lint: disable-next-line(unused-return)
-        (address feed,) = IParameterStoreChain(_PARAMETER_STORE).sequencer();
+        (address feed,) = IParameterStore(_PARAMETER_STORE).sequencer();
         if (feed == address(0)) return;
         (bool ok, bytes memory ret) = RiskModuleCalls.staticRead(
             feed, SEQUENCER_CALL_GAS, abi.encodeCall(ISequencerUptimeFeed.latestRoundData, ()), ROUND_LENGTH + 1

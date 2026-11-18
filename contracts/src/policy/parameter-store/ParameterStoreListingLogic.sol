@@ -10,14 +10,12 @@ import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequenc
 import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
 import {Market} from "../../types/Market.sol";
 import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
-import {IParameterStoreChain} from "./IParameterStoreChain.sol";
+import {IParameterStore} from "./IParameterStore.sol";
 import {IParameterStoreListing} from "./IParameterStoreListing.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
 import {ParameterStoreRisk} from "./ParameterStoreRisk.sol";
 import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";
-import {DebtReserveParams} from "./types/DebtReserveParams.sol";
-import {FeedDef} from "./types/FeedDef.sol";
-import {MarketParams} from "./types/MarketParams.sol";
+import {DebtReserveParams, FeedDef, MarketParams} from "./types/ParameterStoreTypes.sol";
 
 /// @title ParameterStoreListingLogic
 /// @notice Bodies of the listing-batch, Spoke expectation, sequencer and coverage-ratio setters.
@@ -209,7 +207,7 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
         emit DebtAssetParamsSet(asset, p.floorRoundingAllowance);
     }
 
-    /// @notice Body of `IParameterStoreLiquidation.setLiquidationExpectations`.
+    /// @notice Body of `IParameterStore.setLiquidationExpectations`.
     function setLiquidationExpectations(
         address spoke,
         uint256 targetHealthFactor,
@@ -229,24 +227,24 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
         emit ParameterSet("minLiquidationBonus", _a(spoke), oldBonus, minLiquidationBonusBps);
     }
 
-    /// @notice Body of `IParameterStoreChain.setSequencer`.
+    /// @notice Body of `IParameterStore.setSequencer`.
     function setSequencer(
         address feed,
         uint32 gracePeriod
     ) external {
         _onlyDelegated();
         if (_HAS_SEQUENCER) {
-            if (!_sequencerFeedValid(feed)) revert IParameterStoreChain.InvalidSequencerFeed(feed);
+            if (!_sequencerFeedValid(feed)) revert IParameterStore.InvalidSequencerFeed(feed);
             if (gracePeriod < SEQUENCER_GRACE_MIN || gracePeriod > SEQUENCER_GRACE_MAX) revert OutOfBounds();
         } else {
-            if (feed != address(0)) revert IParameterStoreChain.InvalidSequencerFeed(feed);
+            if (feed != address(0)) revert IParameterStore.InvalidSequencerFeed(feed);
             if (gracePeriod != 0) revert OutOfBounds();
         }
         _s().sequencer.feed = feed;
         _s().sequencer.gracePeriod = gracePeriod;
         // Every market's window and every second-source window of its tokens must fit the new grace period.
         _recheck(SCOPE_ALL, address(0), false, true);
-        emit IParameterStoreChain.SequencerSet(feed, gracePeriod);
+        emit IParameterStore.SequencerSet(feed, gracePeriod);
     }
 
     function _sequencerFeedValid(
@@ -262,7 +260,7 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
         }
     }
 
-    /// @notice Body of `IParameterStoreCoverage.setCoverageRatioBps`.
+    /// @notice Body of `IParameterStore.setCoverageRatioBps`.
     function setCoverageRatioBps(
         uint16 value
     ) external {

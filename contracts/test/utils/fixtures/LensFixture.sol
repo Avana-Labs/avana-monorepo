@@ -18,7 +18,7 @@ import {LensRiskModule} from "../../../src/lens/lens/LensRiskModule.sol";
 import {LensSpeedModule} from "../../../src/lens/lens/LensSpeedModule.sol";
 import {PayoutEscrow} from "../../../src/liquidation/payout-escrow/PayoutEscrow.sol";
 import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
+import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
 import {Market} from "../../../src/types/Market.sol";
 import {PauseState} from "../../../src/types/PauseState.sol";

@@ -11,8 +11,7 @@ import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ITetherFee} from "../../interfaces/external/tether/ITetherFee.sol";
 import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
-import {IParameterStoreLiquidation} from "../parameter-store/IParameterStoreLiquidation.sol";
-import {IParameterStoreViews} from "../parameter-store/IParameterStoreViews.sol";
+import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {RiskModuleConstants} from "../risk-module/RiskModuleConstants.sol";
 import {RiskModuleMath} from "../risk-module/RiskModuleMath.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
@@ -81,7 +80,7 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         if (o.ASSET() != def.asset || o.MARKET_REGISTRY() != address(this) || o.PARAMETER_STORE() != _PARAMETER_STORE) {
             revert InvalidDebtReserve("debtOracle");
         }
-        if (IParameterStoreLiquidation(_PARAMETER_STORE).debtStressRiseBps(def.asset) < 100) {
+        if (IParameterStore(_PARAMETER_STORE).debtStressRiseBps(def.asset) < 100) {
             revert InvalidDebtReserve("stressRise");
         }
     }
@@ -110,7 +109,7 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         uint256 available = f.maxFlashLoan(def.asset);
         if (available == 0 || l.hubTier[f.LENDER()] != RiskTier.None) revert InvalidDebtReserve("flash");
         uint256 premium = f.flashPremium(def.asset, available);
-        uint256 maxFee = IParameterStoreViews(_PARAMETER_STORE).maxFlashFeeBps();
+        uint256 maxFee = IParameterStore(_PARAMETER_STORE).maxFlashFeeBps();
         if (premium > type(uint128).max || available > type(uint128).max || premium * _BPS > maxFee * available) {
             revert InvalidDebtReserve("flash");
         }
@@ -143,7 +142,7 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
             if (!_liquidatable(l.markets[id].status)) continue;
             if (
                 !_routesCover(id, asset)
-                    || !IParameterStoreLiquidation(_PARAMETER_STORE).liquidationLivenessHolds(spoke, id, reserveId)
+                    || !IParameterStore(_PARAMETER_STORE).liquidationLivenessHolds(spoke, id, reserveId)
             ) {
                 failed = id;
                 break;

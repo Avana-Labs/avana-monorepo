@@ -11,11 +11,8 @@ import {
     MarketRegistryLogics,
     RiskTier
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {IParameterStoreBreakers} from "../../src/policy/parameter-store/IParameterStoreBreakers.sol";
-import {IParameterStoreCoverage} from "../../src/policy/parameter-store/IParameterStoreCoverage.sol";
-import {IParameterStoreLiquidation} from "../../src/policy/parameter-store/IParameterStoreLiquidation.sol";
+import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
-import {IParameterStoreRiskViews} from "../../src/policy/parameter-store/IParameterStoreRiskViews.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
@@ -241,15 +238,15 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
     // TEST-032 verifies: REQ-CONFIG-014
     function test_TEST_032_noRiskParameterModeAllowlistOrWalletCapSelectors() public {
         bytes4[46] memory params = [
-            IParameterStoreRiskViews.marketUsdCap.selector,
-            IParameterStoreRiskViews.topUpSliceUsd.selector,
-            IParameterStoreRiskViews.stressFloorUsd.selector,
-            IParameterStoreRiskViews.tokenUsdCap.selector,
-            IParameterStoreRiskViews.poolShareMaxBps.selector,
-            IParameterStoreRiskViews.minPledgeUsd.selector,
-            IParameterStoreRiskViews.debtAssetParams.selector,
-            IParameterStoreRiskViews.routeDepthThreshold.selector,
-            IParameterStoreRiskViews.poolShareMaxBpsOf.selector,
+            IParameterStore.marketUsdCap.selector,
+            IParameterStore.topUpSliceUsd.selector,
+            IParameterStore.stressFloorUsd.selector,
+            IParameterStore.tokenUsdCap.selector,
+            IParameterStore.poolShareMaxBps.selector,
+            IParameterStore.minPledgeUsd.selector,
+            IParameterStore.debtAssetParams.selector,
+            IParameterStore.routeDepthThreshold.selector,
+            IParameterStore.poolShareMaxBpsOf.selector,
             IParameterStoreTighten.tightenHardHealthFloor.selector,
             IParameterStoreTighten.tightenSlippageAllowanceBps.selector,
             IParameterStoreTighten.tightenFloorRoundingAllowance.selector,
@@ -274,19 +271,19 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
             IParameterStoreLoosen.loosenPoolShareMaxBps.selector,
             IParameterStoreLoosen.loosenMinPledgeUsd.selector,
             IParameterStoreLoosen.loosenPoolShareMaxBpsOf.selector,
-            IParameterStoreLiquidation.maxShortfallBps.selector,
-            IParameterStoreLiquidation.tightenMaxShortfallBps.selector,
-            IParameterStoreLiquidation.loosenMaxShortfallBps.selector,
-            IParameterStoreLiquidation.debtStressRiseBps.selector,
-            IParameterStoreLiquidation.setLiquidationExpectations.selector,
-            IParameterStoreBreakers.breakerDeficitMax.selector,
-            IParameterStoreBreakers.gateRecoverySeconds.selector,
-            IParameterStoreBreakers.tightenGateRecoverySeconds.selector,
-            IParameterStoreBreakers.loosenGateRecoverySeconds.selector,
-            IParameterStoreBreakers.tightenBreakerDeficitMax.selector,
-            IParameterStoreBreakers.loosenBreakerDeficitMax.selector,
-            IParameterStoreCoverage.coverageRatioBps.selector,
-            IParameterStoreCoverage.setCoverageRatioBps.selector
+            IParameterStore.maxShortfallBps.selector,
+            IParameterStore.tightenMaxShortfallBps.selector,
+            IParameterStore.loosenMaxShortfallBps.selector,
+            IParameterStore.debtStressRiseBps.selector,
+            IParameterStore.setLiquidationExpectations.selector,
+            IParameterStore.breakerDeficitMax.selector,
+            IParameterStore.gateRecoverySeconds.selector,
+            IParameterStore.tightenGateRecoverySeconds.selector,
+            IParameterStore.loosenGateRecoverySeconds.selector,
+            IParameterStore.tightenBreakerDeficitMax.selector,
+            IParameterStore.loosenBreakerDeficitMax.selector,
+            IParameterStore.coverageRatioBps.selector,
+            IParameterStore.setCoverageRatioBps.selector
         ];
         for (uint256 i = 0; i < params.length; ++i) {
             _assertNoFunction(params[i]);

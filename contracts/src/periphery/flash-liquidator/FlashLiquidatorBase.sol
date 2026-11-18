@@ -11,7 +11,7 @@ import {LiquidationResult} from "../../liquidation/lp-vault-swap/types/Liquidati
 import {IPayoutEscrow} from "../../liquidation/payout-escrow/IPayoutEscrow.sol";
 import {ISettlementRoute} from "../../liquidation/settlement-routes/ISettlementRoute.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
-import {IParameterStoreViews} from "../../policy/parameter-store/IParameterStoreViews.sol";
+import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {Market} from "../../types/Market.sol";
 import {FlashLiquidatorLenders} from "./FlashLiquidatorLenders.sol";
 import {IFlashLiquidator} from "./IFlashLiquidator.sol";
@@ -391,7 +391,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         uint256 premium,
         uint256 amount
     ) private view {
-        uint256 cap = IParameterStoreViews(PARAMETER_STORE).maxFlashFeeBps();
+        uint256 cap = IParameterStore(PARAMETER_STORE).maxFlashFeeBps();
         if (!SettlementMath.flashPremiumWithinCap(premium, amount, cap)) {
             revert FlashFeeTooHigh(premium, Math.mulDiv(cap, amount, BPS));
         }

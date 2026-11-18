@@ -43,10 +43,10 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "cfc9ed236e39e223",
+      "fingerprint": "785b3ce3ece6e78d",
       "check": "low-level-calls",
-      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
-      "function": "ParameterStoreOracle._configFailures(address)",
+      "file": "src/policy/parameter-store/ParameterStoreRisk.sol",
+      "function": "ParameterStoreRisk._configFailures(address)",
       "reason": "Two staticcalls: the store's own getOracleConfig view and LPOracle.checkConfig, passing the returned bytes unchanged (the return encoding of getOracleConfig(address) equals the argument encoding of checkConfig(OracleConfig)), which keeps the OracleConfig codec out of the size-limited setter contracts. Both are STATICCALL; a failed or malformed call counts as every check failing (OracleConfigRejected with 2^256-1), so it fails closed (REQ-PSTORE-009). Covered by TEST-064 (tightenRerunsCheckConfig), TEST-250.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
@@ -67,10 +67,10 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "f63409f3ba9dc2b6",
+      "fingerprint": "a6d49526c13e837e",
       "check": "unused-return",
-      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
-      "function": "ParameterStoreOracle._checkTwap(uint256,Market,uint32)",
+      "file": "src/policy/parameter-store/ParameterStoreRisk.sol",
+      "function": "ParameterStoreRisk._checkTwap(uint256,Market,uint32)",
       "reason": "Only observationCardinality of slot0 is compared with twapMinObservations (REQ-PSTORE-027); price, tick and index are not used.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
@@ -80,12 +80,6 @@
       "file": "src/policy/parameter-store/ParameterStoreRouter.sol",
       "function": "ParameterStoreRouter._forward(address)",
       "reason": "Setters return nothing, so the delegatecall's return data is empty by construction; Address.functionDelegateCall already bubbles any revert.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "check": "calls-loop",
-      "files": "src/policy/parameter-store/ParameterStoreOracle.sol",
-      "reason": "View calls in loops over the MarketRegistry's markets and a token's routes, made when a governance setter re-checks every affected LPOracle (REQ-PSTORE-009, REQ-CONFIG-024) or in getOracleConfig. All are STATICCALL to registry, LPOracle and integration views; the loop length is the registry's size, which only timelock operations grow, and a reverting callee only makes the governance call revert (fail closed).",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
@@ -102,7 +96,7 @@
     },
     {
       "check": "calls-loop",
-      "files": "src/policy/parameter-store/ParameterStoreViews.sol",
+      "files": "src/policy/parameter-store/ParameterStore.sol",
       "reason": "getOracleConfig reads each pool token's routes in force from the MarketRegistry in a loop over the market's tokens (at most MAX_POOL_TOKENS = 8), view calls only (REQ-CONFIG-072).",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },

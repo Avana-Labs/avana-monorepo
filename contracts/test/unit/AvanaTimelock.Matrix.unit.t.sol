@@ -16,12 +16,9 @@ import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
-import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterStoreAdmin.sol";
-import {IParameterStoreBreakers} from "../../src/policy/parameter-store/IParameterStoreBreakers.sol";
-import {IParameterStoreLiquidation} from "../../src/policy/parameter-store/IParameterStoreLiquidation.sol";
+import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreListing} from "../../src/policy/parameter-store/IParameterStoreListing.sol";
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
-import {IParameterStoreSpeed} from "../../src/policy/parameter-store/IParameterStoreSpeed.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {TimelockFixture} from "../utils/fixtures/TimelockFixture.sol";
@@ -125,13 +122,13 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStoreTighten.tightenPoolShareMaxBps.selector,
             IParameterStoreTighten.tightenPoolShareMaxBpsOf.selector,
             IParameterStoreTighten.tightenMinPledgeUsd.selector,
-            IParameterStoreBreakers.tightenBreakerDeficitMax.selector,
-            IParameterStoreBreakers.tightenGateRecoverySeconds.selector,
-            IParameterStoreLiquidation.tightenMaxShortfallBps.selector,
-            IParameterStoreLiquidation.tightenDebtStressRiseBps.selector,
-            IParameterStoreAdmin.tightenMaxFlashFeeBps.selector,
-            IParameterStoreSpeed.tightenMarketSpeedLimits.selector,
-            IParameterStoreSpeed.tightenDebtSpeedLimit.selector
+            IParameterStore.tightenBreakerDeficitMax.selector,
+            IParameterStore.tightenGateRecoverySeconds.selector,
+            IParameterStore.tightenMaxShortfallBps.selector,
+            IParameterStore.tightenDebtStressRiseBps.selector,
+            IParameterStore.tightenMaxFlashFeeBps.selector,
+            IParameterStore.tightenMarketSpeedLimits.selector,
+            IParameterStore.tightenDebtSpeedLimit.selector
         ];
         for (uint256 i; i < tighten.length; ++i) {
             rows.push(Row(ps, tighten[i], true, false));
@@ -147,38 +144,38 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStoreLoosen.loosenPoolShareMaxBps.selector,
             IParameterStoreLoosen.loosenMinPledgeUsd.selector,
             IParameterStoreLoosen.loosenPoolShareMaxBpsOf.selector,
-            IParameterStoreBreakers.loosenBreakerDeficitMax.selector,
-            IParameterStoreBreakers.loosenGateRecoverySeconds.selector,
-            IParameterStoreLiquidation.loosenMaxShortfallBps.selector,
-            IParameterStoreLiquidation.loosenDebtStressRiseBps.selector,
-            IParameterStoreSpeed.loosenMarketSpeedLimits.selector,
-            IParameterStoreSpeed.loosenDebtSpeedLimit.selector,
-            IParameterStoreAdmin.setBorrowPriceMaxAge.selector,
-            IParameterStoreAdmin.setConsistencyToleranceBps.selector,
-            IParameterStoreAdmin.setFeedAgreementToleranceBps.selector,
-            IParameterStoreAdmin.setPoolRiskFactor.selector,
-            IParameterStoreAdmin.setAvanaFeeShareBps.selector,
-            IParameterStoreAdmin.setFeeRecipient.selector,
-            IParameterStoreAdmin.setMaxFlashFeeBps.selector,
-            IParameterStoreAdmin.setCachedWindow.selector,
-            IParameterStoreAdmin.setDisagreementPauseMax.selector,
-            IParameterStoreAdmin.setTwapWindow.selector,
-            IParameterStoreAdmin.setUsdBand.selector,
-            IParameterStoreAdmin.setLiquidationPriceMaxAge.selector,
-            IParameterStoreAdmin.setFeedMaxAge.selector,
-            IParameterStoreAdmin.setGraceDuration.selector,
-            IParameterStoreAdmin.setGraceHealthFactor.selector,
-            IParameterStoreAdmin.setFeedAgreementMarginBps.selector,
-            IParameterStoreAdmin.setSlippageAllowanceMinBps.selector,
-            IParameterStoreAdmin.setTokenCollateralFactorBps.selector,
-            IParameterStoreAdmin.setStressFloorUsd.selector,
-            IParameterStoreAdmin.setSecondSource.selector,
-            IParameterStoreAdmin.restoreSecondSource.selector,
+            IParameterStore.loosenBreakerDeficitMax.selector,
+            IParameterStore.loosenGateRecoverySeconds.selector,
+            IParameterStore.loosenMaxShortfallBps.selector,
+            IParameterStore.loosenDebtStressRiseBps.selector,
+            IParameterStore.loosenMarketSpeedLimits.selector,
+            IParameterStore.loosenDebtSpeedLimit.selector,
+            IParameterStore.setBorrowPriceMaxAge.selector,
+            IParameterStore.setConsistencyToleranceBps.selector,
+            IParameterStore.setFeedAgreementToleranceBps.selector,
+            IParameterStore.setPoolRiskFactor.selector,
+            IParameterStore.setAvanaFeeShareBps.selector,
+            IParameterStore.setFeeRecipient.selector,
+            IParameterStore.setMaxFlashFeeBps.selector,
+            IParameterStore.setCachedWindow.selector,
+            IParameterStore.setDisagreementPauseMax.selector,
+            IParameterStore.setTwapWindow.selector,
+            IParameterStore.setUsdBand.selector,
+            IParameterStore.setLiquidationPriceMaxAge.selector,
+            IParameterStore.setFeedMaxAge.selector,
+            IParameterStore.setGraceDuration.selector,
+            IParameterStore.setGraceHealthFactor.selector,
+            IParameterStore.setFeedAgreementMarginBps.selector,
+            IParameterStore.setSlippageAllowanceMinBps.selector,
+            IParameterStore.setTokenCollateralFactorBps.selector,
+            IParameterStore.setStressFloorUsd.selector,
+            IParameterStore.setSecondSource.selector,
+            IParameterStore.restoreSecondSource.selector,
             IParameterStoreListing.setInitialMarketParams.selector,
             IParameterStoreListing.setInitialMarketCaps.selector,
             IParameterStoreListing.setInitialTokenCap.selector,
             IParameterStoreListing.setFeed.selector,
-            IParameterStoreLiquidation.setLiquidationExpectations.selector,
+            IParameterStore.setLiquidationExpectations.selector,
             UUPSUpgradeable.upgradeToAndCall.selector,
             IAccessControl.grantRole.selector,
             IAccessControl.revokeRole.selector,

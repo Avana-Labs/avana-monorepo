@@ -161,7 +161,7 @@ Callers import only the piece they call, for example `IRiskModuleChecks` for `ch
 | Contract | Pieces besides events and errors |
 |---|---|
 | MarketRegistry | `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistryRoutes`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistryBase` |
-| ParameterStore | `IParameterStoreTighten`, `IParameterStoreLoosen`, `IParameterStoreListing`, `IParameterStoreLiquidation`, `IParameterStoreBreakers`, `IParameterStoreChain`, `IParameterStoreAdmin`, `IParameterStoreViews`, `IParameterStoreRiskViews` |
+| ParameterStore | `IParameterStoreTighten`, `IParameterStoreLoosen`, `IParameterStoreListing`, `IParameterStore`, `IParameterStore`, `IParameterStore`, `IParameterStore`, `IParameterStore`, `IParameterStore` |
 | AaveAdapter | `IAaveAdapterUser`, `IAaveAdapterCollateral`, `IAaveAdapterSettlement`, `IAaveAdapterAdmin`, `IAaveAdapterViews` |
 | LPVault | `ILPVault`, which implements `IAmmIntegration` and `IAmmIntegrationHooks` (`src/amm/`) |
 | Collateralization | `ICollateralizationAdapter`, `ICollateralizationSeizure`, `ICollateralizationUser`, `ICollateralizationDebtMark`, `ICollateralizationViews` |

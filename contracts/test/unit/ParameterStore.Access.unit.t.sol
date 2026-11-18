@@ -4,23 +4,20 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterStoreAdmin.sol";
-import {IParameterStoreBreakers} from "../../src/policy/parameter-store/IParameterStoreBreakers.sol";
-import {IParameterStoreChain} from "../../src/policy/parameter-store/IParameterStoreChain.sol";
-import {IParameterStoreCoverage} from "../../src/policy/parameter-store/IParameterStoreCoverage.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
-import {IParameterStoreLiquidation} from "../../src/policy/parameter-store/IParameterStoreLiquidation.sol";
+import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {IParameterStoreListing} from "../../src/policy/parameter-store/IParameterStoreListing.sol";
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {ParameterStore} from "../../src/policy/parameter-store/ParameterStore.sol";
 import {ParameterStoreTightenLogic} from "../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
-import {DebtReserveParams} from "../../src/policy/parameter-store/types/DebtReserveParams.sol";
-import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
-import {GlobalParams} from "../../src/policy/parameter-store/types/GlobalParams.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
-import {ParameterStoreLogics} from "../../src/policy/parameter-store/types/ParameterStoreLogics.sol";
+import {
+    DebtReserveParams,
+    FeedDef,
+    GlobalParams,
+    MarketParams,
+    ParameterStoreLogics
+} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {SecondSource} from "../../src/types/SecondSource.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {
@@ -53,10 +50,10 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         assertEq(store.getRoleAdmin(GUARDIAN), ADMIN);
         address safe = governanceMultisig;
         vm.prank(tl);
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.AdminRoleOnlyTimelock.selector, ADMIN, safe));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.AdminRoleOnlyTimelock.selector, ADMIN, safe));
         store.grantRole(ADMIN, safe);
         vm.prank(tl);
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.AdminRoleOnlyTimelock.selector, bytes32(0), safe));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.AdminRoleOnlyTimelock.selector, bytes32(0), safe));
         store.grantRole(bytes32(0), safe);
         // Granting to the timelock again is allowed and changes nothing.
         vm.prank(tl);
@@ -73,15 +70,15 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         vm.warp(block.timestamp + delay);
         (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(calls);
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.AdminRoleOnlyTimelock.selector, ADMIN, alice));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.AdminRoleOnlyTimelock.selector, ADMIN, alice));
         timelock.executeBatch(t, v, p, bytes32(0), bytes32("grant"));
     }
 
     // TEST-242 verifies: REQ-PSTORE-001, Q-259, REQ-ACCESS-150
     function test_TEST_242_initializeRefusesOtherTimelockAndRunsOnce() public {
         ParameterStore impl = new ParameterStore(address(timelock), address(registry), 12, false, logics);
-        bytes memory bad = abi.encodeCall(IParameterStoreAdmin.initialize, (alice, _defaultGlobals(), 10_000));
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.AdminRoleOnlyTimelock.selector, bytes32(0), alice));
+        bytes memory bad = abi.encodeCall(IParameterStore.initialize, (alice, _defaultGlobals(), 10_000));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.AdminRoleOnlyTimelock.selector, bytes32(0), alice));
         new ERC1967Proxy(address(impl), bad);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         store.initialize(address(timelock), _defaultGlobals(), 10_000);
@@ -94,21 +91,21 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         ParameterStore impl = new ParameterStore(address(timelock), address(registry), 12, false, logics);
         GlobalParams memory g = _defaultGlobals();
         g.gateRecoverySeconds = 599;
-        _expectInitRevert(impl, g, 10_000, IParameterStoreErrors.OutOfBounds.selector);
+        _expectInitRevert(impl, g, 10_000, IParameterStoreBase.OutOfBounds.selector);
         g = _defaultGlobals();
         g.graceHealthFactor = 0.89e18;
-        _expectInitRevert(impl, g, 10_000, IParameterStoreErrors.LivenessBound.selector);
+        _expectInitRevert(impl, g, 10_000, IParameterStoreBase.LivenessBound.selector);
         g = _defaultGlobals();
         g.graceDuration = 7201;
-        _expectInitRevert(impl, g, 10_000, IParameterStoreErrors.LivenessBound.selector);
+        _expectInitRevert(impl, g, 10_000, IParameterStoreBase.LivenessBound.selector);
         g = _defaultGlobals();
         g.maxShortfallBps = 5001;
-        _expectInitRevert(impl, g, 10_000, IParameterStoreErrors.OutOfBounds.selector);
-        _expectInitRevert(impl, _defaultGlobals(), 0, IParameterStoreErrors.OutOfBounds.selector);
+        _expectInitRevert(impl, g, 10_000, IParameterStoreBase.OutOfBounds.selector);
+        _expectInitRevert(impl, _defaultGlobals(), 0, IParameterStoreBase.OutOfBounds.selector);
         g = _defaultGlobals();
         g.feeRecipient = address(0);
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.InvalidFeeRecipient.selector, address(0)));
-        new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), g, 1)));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.InvalidFeeRecipient.selector, address(0)));
+        new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStore.initialize, (address(timelock), g, 1)));
         // Initial values read back.
         assertEq(store.gateRecoverySeconds(), 1800);
         assertEq(store.maxShortfallBps(), 1000);
@@ -126,7 +123,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         bytes4 err
     ) internal {
         vm.expectRevert(err);
-        new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), g, share)));
+        new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStore.initialize, (address(timelock), g, share)));
     }
 
     // TEST-062 verifies: REQ-PSTORE-001, REQ-PSTORE-002, REQ-CONFIG-058, REQ-PSTORE-029, REQ-ACCESS-037, REQ-ACCESS-038, REQ-ACCESS-039, REQ-ACCESS-040, REQ-ACCESS-041, REQ-ACCESS-043, REQ-ACCESS-186, REQ-ACCESS-044, REQ-ACCESS-131, REQ-ACCESS-132, REQ-ACCESS-138, REQ-ACCESS-049, REQ-ACCESS-050, REQ-ACCESS-135, REQ-ACCESS-146, REQ-ACCESS-165, REQ-ACCESS-179, REQ-ACCESS-025, REQ-ACCESS-111
@@ -134,7 +131,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         bytes[] memory calls = _setterCalls();
         for (uint256 i = 0; i < calls.length; ++i) {
             bytes4 sel = bytes4(calls[i]);
-            bytes32 role = sel == IParameterStoreAdmin.useStandbySecondSource.selector ? GUARDIAN : ADMIN;
+            bytes32 role = sel == IParameterStore.useStandbySecondSource.selector ? GUARDIAN : ADMIN;
             vm.prank(attacker);
             (bool ok, bytes memory ret) = address(store).call(calls[i]);
             assertFalse(ok, "setter ran without its role");
@@ -148,7 +145,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         vm.prank(address(timelock));
         store.grantRole(GUARDIAN, emergencyGuardian);
         for (uint256 i = 0; i < calls.length; ++i) {
-            if (bytes4(calls[i]) == IParameterStoreAdmin.useStandbySecondSource.selector) continue;
+            if (bytes4(calls[i]) == IParameterStore.useStandbySecondSource.selector) continue;
             vm.prank(emergencyGuardian);
             (bool ok,) = address(store).call(calls[i]);
             assertFalse(ok, "guardian ran an admin setter");
@@ -177,15 +174,15 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
     function test_TEST_062_constructorChecksLogicContracts() public {
         ParameterStoreLogics memory l = logics;
         (l.tighten, l.loosen) = (l.loosen, l.tighten);
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         new ParameterStore(address(timelock), address(registry), 12, false, l);
         l = logics;
         l.tighten = address(new ParameterStoreTightenLogic(address(timelock), address(registry), 2, false));
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         new ParameterStore(address(timelock), address(registry), 12, false, l);
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         new ParameterStore(address(timelock), address(registry), 12, true, logics);
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         new ParameterStoreTightenLogic(address(0), address(registry), 12, false);
     }
 
@@ -216,12 +213,12 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         ];
         for (uint256 i = 0; i < bad.length; ++i) {
             vm.prank(address(timelock));
-            vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.InvalidFeeRecipient.selector, bad[i]));
+            vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.InvalidFeeRecipient.selector, bad[i]));
             store.setFeeRecipient(bad[i]);
         }
         address h = address(hub);
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.InvalidFeeRecipient.selector, h));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.InvalidFeeRecipient.selector, h));
         store.setFeeRecipient(h);
         vm.prank(address(timelock));
         store.setFeeRecipient(bob);
@@ -240,7 +237,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
             bytes memory unauthorized = abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector,
                 jointSafe,
-                sel == IParameterStoreAdmin.useStandbySecondSource.selector ? GUARDIAN : ADMIN
+                sel == IParameterStore.useStandbySecondSource.selector ? GUARDIAN : ADMIN
             );
             vm.prank(jointSafe);
             (bool ok, bytes memory ret) = address(store).call(calls[i]);
@@ -269,19 +266,19 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         store.grantRole(STEWARD, jointSafe);
         vm.prank(jointSafe);
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.CapTightened("marketUsdCap", bytes32(M), 5_000_000e8, 4_000_000e8, jointSafe);
+        emit IParameterStoreBase.CapTightened("marketUsdCap", bytes32(M), 5_000_000e8, 4_000_000e8, jointSafe);
         store.tightenMarketUsdCap(M, 4_000_000e8);
         assertEq(store.marketUsdCap(M), 4_000_000e8);
         // Strictly safer only, as for the timelock.
         vm.prank(jointSafe);
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenMarketUsdCap(M, 4_000_000e8);
         // Avana's fee share either way within [0, 5,000] bps.
         vm.prank(jointSafe);
         store.setAvanaFeeShareBps(5000);
         assertEq(store.avanaFeeShareBps(), 5000);
         vm.prank(jointSafe);
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setAvanaFeeShareBps(5001);
         vm.prank(jointSafe);
         store.setAvanaFeeShareBps(0);
@@ -300,7 +297,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
     function test_TEST_062_logicContractsRefuseDirectCalls() public {
         bytes[] memory calls = _setterCalls();
         address[5] memory l = [logics.tighten, logics.loosen, logics.listing, logics.adminOracle, logics.adminRisk];
-        bytes memory notDelegated = abi.encodeWithSelector(IParameterStoreErrors.NotDelegated.selector);
+        bytes memory notDelegated = abi.encodeWithSelector(IParameterStoreBase.NotDelegated.selector);
         uint256 refused = 0;
         // Every setter body lives in exactly one logic contract, which refuses a direct call; the others have no such
         // selector and revert with no data.
@@ -316,7 +313,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         assertEq(refused, calls.length - 1);
         GlobalParams memory g = _defaultGlobals();
         (bool done, bytes memory r) =
-            logics.adminRisk.call(abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), g, 10_000)));
+            logics.adminRisk.call(abi.encodeCall(IParameterStore.initialize, (address(timelock), g, 10_000)));
         assertFalse(done);
         assertEq(r, notDelegated);
         (done, r) = logics.adminOracle.call(abi.encodeWithSignature("getOracleConfig(address)", address(lpOracle)));
@@ -350,7 +347,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         ];
         for (uint256 i = 0; i < bad.length; ++i) {
             vm.prank(address(timelock));
-            vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.InvalidFeeRecipient.selector, bad[i]));
+            vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.InvalidFeeRecipient.selector, bad[i]));
             store.setFeeRecipient(bad[i]);
         }
         // Bindings the ProxyManager does not map to the address are not a proxy.
@@ -368,8 +365,8 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
     function _stewardSelector(
         bytes4 sel
     ) internal pure returns (bool) {
-        return sel == IParameterStoreAdmin.setAvanaFeeShareBps.selector
-            || sel == IParameterStoreAdmin.tightenMaxFlashFeeBps.selector
+        return sel == IParameterStore.setAvanaFeeShareBps.selector
+            || sel == IParameterStore.tightenMaxFlashFeeBps.selector
             || sel == IParameterStoreTighten.tightenHardHealthFloor.selector
             || sel == IParameterStoreTighten.tightenSlippageAllowanceBps.selector
             || sel == IParameterStoreTighten.tightenFloorRoundingAllowance.selector
@@ -384,10 +381,10 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
             || sel == IParameterStoreTighten.tightenPoolShareMaxBps.selector
             || sel == IParameterStoreTighten.tightenMinPledgeUsd.selector
             || sel == IParameterStoreTighten.tightenPoolShareMaxBpsOf.selector
-            || sel == IParameterStoreBreakers.tightenGateRecoverySeconds.selector
-            || sel == IParameterStoreBreakers.tightenBreakerDeficitMax.selector
-            || sel == IParameterStoreLiquidation.tightenMaxShortfallBps.selector
-            || sel == IParameterStoreLiquidation.tightenDebtStressRiseBps.selector;
+            || sel == IParameterStore.tightenGateRecoverySeconds.selector
+            || sel == IParameterStore.tightenBreakerDeficitMax.selector
+            || sel == IParameterStore.tightenMaxShortfallBps.selector
+            || sel == IParameterStore.tightenDebtStressRiseBps.selector;
     }
 
     function _setterCalls() internal view returns (bytes[] memory c) {
@@ -421,45 +418,45 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         c[k++] = abi.encodeCall(IParameterStoreLoosen.loosenPoolShareMaxBps, (1));
         c[k++] = abi.encodeCall(IParameterStoreLoosen.loosenMinPledgeUsd, (M, 1));
         c[k++] = abi.encodeCall(IParameterStoreLoosen.loosenPoolShareMaxBpsOf, (M, 1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setBorrowPriceMaxAge, (usdc, 1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setConsistencyToleranceBps, (M, 1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setFeedAgreementToleranceBps, (usdc, 1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setPoolRiskFactor, (M, 1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setAvanaFeeShareBps, (1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setFeeRecipient, (alice));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setMaxFlashFeeBps, (1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.tightenMaxFlashFeeBps, (1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setSecondSource, (usdc, ss, ss));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.useStandbySecondSource, (usdc));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.restoreSecondSource, (usdc));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setCachedWindow, (1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setDisagreementPauseMax, (1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setTwapWindow, (M, 1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setUsdBand, (1, 2));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setLiquidationPriceMaxAge, (usdc, 1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setFeedMaxAge, (usdc, 1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setGraceDuration, (1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setGraceHealthFactor, (1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setFeedAgreementMarginBps, (1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setSlippageAllowanceMinBps, (M, 1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setTokenCollateralFactorBps, (usdc, 1));
-        c[k++] = abi.encodeCall(IParameterStoreAdmin.setStressFloorUsd, (M, 1));
+        c[k++] = abi.encodeCall(IParameterStore.setBorrowPriceMaxAge, (usdc, 1));
+        c[k++] = abi.encodeCall(IParameterStore.setConsistencyToleranceBps, (M, 1));
+        c[k++] = abi.encodeCall(IParameterStore.setFeedAgreementToleranceBps, (usdc, 1));
+        c[k++] = abi.encodeCall(IParameterStore.setPoolRiskFactor, (M, 1));
+        c[k++] = abi.encodeCall(IParameterStore.setAvanaFeeShareBps, (1));
+        c[k++] = abi.encodeCall(IParameterStore.setFeeRecipient, (alice));
+        c[k++] = abi.encodeCall(IParameterStore.setMaxFlashFeeBps, (1));
+        c[k++] = abi.encodeCall(IParameterStore.tightenMaxFlashFeeBps, (1));
+        c[k++] = abi.encodeCall(IParameterStore.setSecondSource, (usdc, ss, ss));
+        c[k++] = abi.encodeCall(IParameterStore.useStandbySecondSource, (usdc));
+        c[k++] = abi.encodeCall(IParameterStore.restoreSecondSource, (usdc));
+        c[k++] = abi.encodeCall(IParameterStore.setCachedWindow, (1));
+        c[k++] = abi.encodeCall(IParameterStore.setDisagreementPauseMax, (1));
+        c[k++] = abi.encodeCall(IParameterStore.setTwapWindow, (M, 1));
+        c[k++] = abi.encodeCall(IParameterStore.setUsdBand, (1, 2));
+        c[k++] = abi.encodeCall(IParameterStore.setLiquidationPriceMaxAge, (usdc, 1));
+        c[k++] = abi.encodeCall(IParameterStore.setFeedMaxAge, (usdc, 1));
+        c[k++] = abi.encodeCall(IParameterStore.setGraceDuration, (1));
+        c[k++] = abi.encodeCall(IParameterStore.setGraceHealthFactor, (1));
+        c[k++] = abi.encodeCall(IParameterStore.setFeedAgreementMarginBps, (1));
+        c[k++] = abi.encodeCall(IParameterStore.setSlippageAllowanceMinBps, (M, 1));
+        c[k++] = abi.encodeCall(IParameterStore.setTokenCollateralFactorBps, (usdc, 1));
+        c[k++] = abi.encodeCall(IParameterStore.setStressFloorUsd, (M, 1));
         c[k++] = abi.encodeCall(IParameterStoreListing.setInitialMarketParams, (M, mp));
         c[k++] = abi.encodeCall(IParameterStoreListing.setInitialMarketCaps, (M, 1, 1, 1));
         c[k++] = abi.encodeCall(IParameterStoreListing.setInitialTokenCap, (address(hub), usdc, 1));
         c[k++] = abi.encodeCall(IParameterStoreListing.setFeed, (usdc, fd));
         c[k++] = abi.encodeCall(IParameterStoreListing.setDebtAssetParams, (gho, dp));
-        c[k++] = abi.encodeCall(IParameterStoreBreakers.tightenGateRecoverySeconds, (1));
-        c[k++] = abi.encodeCall(IParameterStoreBreakers.loosenGateRecoverySeconds, (1));
-        c[k++] = abi.encodeCall(IParameterStoreBreakers.tightenBreakerDeficitMax, (address(hub), gho, 1));
-        c[k++] = abi.encodeCall(IParameterStoreBreakers.loosenBreakerDeficitMax, (address(hub), gho, 1));
-        c[k++] = abi.encodeCall(IParameterStoreLiquidation.tightenMaxShortfallBps, (1));
-        c[k++] = abi.encodeCall(IParameterStoreLiquidation.loosenMaxShortfallBps, (1));
-        c[k++] = abi.encodeCall(IParameterStoreLiquidation.tightenDebtStressRiseBps, (gho, 1));
-        c[k++] = abi.encodeCall(IParameterStoreLiquidation.loosenDebtStressRiseBps, (gho, 1));
-        c[k++] = abi.encodeCall(IParameterStoreLiquidation.setLiquidationExpectations, (address(spoke), 1, 1));
-        c[k++] = abi.encodeCall(IParameterStoreChain.setSequencer, (address(0), 0));
-        c[k++] = abi.encodeCall(IParameterStoreCoverage.setCoverageRatioBps, (1));
+        c[k++] = abi.encodeCall(IParameterStore.tightenGateRecoverySeconds, (1));
+        c[k++] = abi.encodeCall(IParameterStore.loosenGateRecoverySeconds, (1));
+        c[k++] = abi.encodeCall(IParameterStore.tightenBreakerDeficitMax, (address(hub), gho, 1));
+        c[k++] = abi.encodeCall(IParameterStore.loosenBreakerDeficitMax, (address(hub), gho, 1));
+        c[k++] = abi.encodeCall(IParameterStore.tightenMaxShortfallBps, (1));
+        c[k++] = abi.encodeCall(IParameterStore.loosenMaxShortfallBps, (1));
+        c[k++] = abi.encodeCall(IParameterStore.tightenDebtStressRiseBps, (gho, 1));
+        c[k++] = abi.encodeCall(IParameterStore.loosenDebtStressRiseBps, (gho, 1));
+        c[k++] = abi.encodeCall(IParameterStore.setLiquidationExpectations, (address(spoke), 1, 1));
+        c[k++] = abi.encodeCall(IParameterStore.setSequencer, (address(0), 0));
+        c[k++] = abi.encodeCall(IParameterStore.setCoverageRatioBps, (1));
         c[k++] = abi.encodeCall(IAccessControl.grantRole, (GUARDIAN, alice));
         assert(k == c.length);
     }

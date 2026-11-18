@@ -11,7 +11,7 @@ import {IAaveAdapterAdmin} from "../../../src/policy/aave-adapter/IAaveAdapterAd
 import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {IParameterStoreAdmin} from "../../../src/policy/parameter-store/IParameterStoreAdmin.sol";
+import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {IRiskModuleAdmin} from "../../../src/policy/risk-module/IRiskModuleAdmin.sol";
 import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleImmutables.sol";
 import {TimelockShortDelayLists} from "../../../test/utils/fixtures/TimelockShortDelayLists.sol";
@@ -157,7 +157,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         d.proxy = _proxy(
             "ParameterStore",
             d.implementation,
-            abi.encodeCall(IParameterStoreAdmin.initialize, (p.timelock, c.globals, c.initialPoolShareMaxBps))
+            abi.encodeCall(IParameterStore.initialize, (p.timelock, c.globals, c.initialPoolShareMaxBps))
         );
     }
 

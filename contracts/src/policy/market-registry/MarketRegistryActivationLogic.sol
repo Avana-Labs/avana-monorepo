@@ -7,10 +7,8 @@ import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {DriftReason} from "../../types/DriftReason.sol";
 import {Market} from "../../types/Market.sol";
-import {IParameterStoreLiquidation} from "../parameter-store/IParameterStoreLiquidation.sol";
-import {IParameterStoreRiskViews} from "../parameter-store/IParameterStoreRiskViews.sol";
-import {IParameterStoreViews} from "../parameter-store/IParameterStoreViews.sol";
-import {MarketParams} from "../parameter-store/types/MarketParams.sol";
+import {IParameterStore} from "../parameter-store/IParameterStore.sol";
+import {MarketParams} from "../parameter-store/types/ParameterStoreTypes.sol";
 import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
 import {IRiskModuleViews} from "../risk-module/IRiskModuleViews.sol";
 import {IMarketRegistryDriftLogic} from "./IMarketRegistryDriftLogic.sol";
@@ -182,7 +180,7 @@ contract MarketRegistryActivationLogic is MarketRegistryStorage, IMarketRegistry
             revert ActivationCheckFailed(marketId, "liquidityFee");
         }
         IAaveV4Spoke.LiquidationConfig memory lc = s.getLiquidationConfig();
-        IParameterStoreLiquidation ps = IParameterStoreLiquidation(_PARAMETER_STORE);
+        IParameterStore ps = IParameterStore(_PARAMETER_STORE);
         if (lc.targetHealthFactor <= 1e18 || lc.targetHealthFactor != ps.aaveTargetHealthFactor(m.spoke)) {
             revert ActivationCheckFailed(marketId, "liquidationConfig");
         }
@@ -197,8 +195,8 @@ contract MarketRegistryActivationLogic is MarketRegistryStorage, IMarketRegistry
         uint256 marketId,
         uint256 minLb
     ) private view {
-        uint256 s = IParameterStoreViews(_PARAMETER_STORE).getMarketParams(marketId).slippageAllowanceBps;
-        uint256 f = IParameterStoreViews(_PARAMETER_STORE).avanaFeeShareBps();
+        uint256 s = IParameterStore(_PARAMETER_STORE).getMarketParams(marketId).slippageAllowanceBps;
+        uint256 f = IParameterStore(_PARAMETER_STORE).avanaFeeShareBps();
         if (f > _BPS || s * minLb > (_BPS - f) * (minLb - _BPS)) revert ActivationCheckFailed(marketId, "feeBound");
     }
 
@@ -207,9 +205,9 @@ contract MarketRegistryActivationLogic is MarketRegistryStorage, IMarketRegistry
         uint256 marketId,
         Market storage m
     ) private view {
-        MarketParams memory p = IParameterStoreViews(_PARAMETER_STORE).getMarketParams(marketId);
+        MarketParams memory p = IParameterStore(_PARAMETER_STORE).getMarketParams(marketId);
         if (p.poolRiskFactor == 0 || p.minPledgeUsd == 0) revert ActivationCheckFailed(marketId, "params");
-        IParameterStoreRiskViews r = IParameterStoreRiskViews(_PARAMETER_STORE);
+        IParameterStore r = IParameterStore(_PARAMETER_STORE);
         uint256 capUsd = r.marketUsdCap(marketId);
         uint256 floorUsd = r.stressFloorUsd(marketId);
         if (capUsd == 0 || floorUsd == 0) revert ActivationCheckFailed(marketId, "caps");
@@ -252,7 +250,7 @@ contract MarketRegistryActivationLogic is MarketRegistryStorage, IMarketRegistry
         uint256 n = drs.length;
         uint256 at = n;
         for (uint256 i = 0; i < n; ++i) {
-            if (!IParameterStoreLiquidation(_PARAMETER_STORE).liquidationLivenessHolds(spoke, marketId, drs[i])) {
+            if (!IParameterStore(_PARAMETER_STORE).liquidationLivenessHolds(spoke, marketId, drs[i])) {
                 at = i;
                 break;
             }
