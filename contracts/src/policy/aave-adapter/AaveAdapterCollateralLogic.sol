@@ -18,9 +18,9 @@ import {PositionRef} from "../../types/PositionRef.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
-import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../risk-module/IRiskModuleErrors.sol";
-import {RiskModuleCalls} from "../risk-module/RiskModuleCalls.sol";
+import {RiskModuleMath} from "../risk-module/RiskModuleMath.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
@@ -92,8 +92,8 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (debtFree) {
             _cleanup(proxy, account.spoke, reserveId);
         } else {
-            IRiskModuleChecks(_RISK_MODULE).checkRemainingRecord(account.marketId, remaining);
-            hf = IRiskModuleChecks(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
+            IRiskModule(_RISK_MODULE).checkRemainingRecord(account.marketId, remaining);
+            hf = IRiskModule(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
         }
         _checkGap(account.vaultToken, gapBefore);
     }
@@ -267,12 +267,12 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         // forge-lint: disable-next-line(unused-return)
         (address feed,) = IParameterStore(_PARAMETER_STORE).sequencer();
         if (feed == address(0)) return;
-        (bool ok, bytes memory ret) = RiskModuleCalls.staticRead(
+        (bool ok, bytes memory ret) = RiskModuleMath.staticRead(
             feed, SEQUENCER_CALL_GAS, abi.encodeCall(ISequencerUptimeFeed.latestRoundData, ()), ROUND_LENGTH + 1
         );
         ok = ok && ret.length == ROUND_LENGTH;
-        (, uint256 answerWord) = RiskModuleCalls.wordAt(ret, 32);
-        (, uint256 startedAt) = RiskModuleCalls.wordAt(ret, 64);
+        (, uint256 answerWord) = RiskModuleMath.wordAt(ret, 32);
+        (, uint256 startedAt) = RiskModuleMath.wordAt(ret, 64);
         // Two's-complement word read as int256: 0 is up, 1 is down, anything else is unknown.
         // forge-lint: disable-next-line(unsafe-typecast)
         int256 answer = int256(answerWord);

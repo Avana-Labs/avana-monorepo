@@ -16,7 +16,7 @@ import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTo
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {DebtReserveDef} from "../market-registry/types/MarketRegistryTypes.sol";
-import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
@@ -150,10 +150,10 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         uint256 nonce = _s().borrowNonce[proxy];
         if (nonce != expectedNonce) revert BadNonce(nonce, expectedNonce);
         _s().borrowNonce[proxy] = nonce + 1;
-        IRiskModuleChecks(_RISK_MODULE).preBorrowCheck(proxy, debtReserveId, amount);
+        IRiskModule(_RISK_MODULE).preBorrowCheck(proxy, debtReserveId, amount);
         ICollateralizationDebtMark(_COLLATERALIZATION).markIndebted(proxy);
         _borrowStep(proxy, account.spoke, debtReserveId, amount, receiver);
-        uint256 hf = IRiskModuleChecks(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
+        uint256 hf = IRiskModule(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
         emit Borrowed(msg.sender, marketId, debtReserveId, receiver, amount, nonce, hf);
         _release();
         drawn = amount;

@@ -13,7 +13,7 @@ import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {BreakerReasons} from "../../policy/market-registry/types/Breaker.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
-import {IRiskModuleViews} from "../../policy/risk-module/IRiskModuleViews.sol";
+import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {RiskModuleMath} from "../../policy/risk-module/RiskModuleMath.sol";
 import {Market} from "../../types/Market.sol";
 import {PauseReason} from "../../types/PauseReason.sol";
@@ -199,7 +199,7 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
         if (_registry().pauseState(b.m.hub) != PauseState.None) return false;
         if (_registry().pauseState(b.def.fundingHub) != PauseState.None) return false;
         if (_registry().isFrozenAddress(wallet)) return false;
-        try IRiskModuleViews(_RISK_MODULE).checkBorrowGate(b.proxy, b.def.reserveId) {
+        try IRiskModule(_RISK_MODULE).checkBorrowGate(b.proxy, b.def.reserveId) {
             open = true;
         } catch {}
     }
@@ -245,7 +245,7 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
         }
         if (_registry().isFrozenAddress(depositor) || usdCharge < _store().minPledgeUsd(marketId)) return true;
         // forge-lint: disable-next-line(unused-return)
-        (uint32 reasons,) = IRiskModuleViews(_RISK_MODULE).getBreakerStatus(marketId);
+        (uint32 reasons,) = IRiskModule(_RISK_MODULE).getBreakerStatus(marketId);
         if (reasons & ~(BreakerReasons.ORACLE | BreakerReasons.CONFIG_DRIFT) != 0) return true;
         bytes32 key = keccak256(abi.encode(m.integrationId, m.pool, m.poolId));
         uint256 cap = _store().poolShareMaxBpsOf(key);

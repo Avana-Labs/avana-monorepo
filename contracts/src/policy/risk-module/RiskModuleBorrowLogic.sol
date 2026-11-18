@@ -24,7 +24,7 @@ import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 import {RiskModuleBorrowScope} from "./RiskModuleBorrowScope.sol";
 import {RiskModuleMath} from "./RiskModuleMath.sol";
-import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
+import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleBorrowLogic
 /// @notice Bodies of the borrow-side checks and `debtValueUsd`, and the same gates as a view for the account status.

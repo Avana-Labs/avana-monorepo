@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {IRiskModuleViews} from "../../policy/risk-module/IRiskModuleViews.sol";
+import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
 import {Market} from "../../types/Market.sol";
 import {PauseState} from "../../types/PauseState.sol";
@@ -55,7 +55,7 @@ abstract contract LensRemoval is LensAccountMath {
         address wallet,
         address proxy
     ) internal view returns (bool) {
-        AccountGateStatus memory st = IRiskModuleViews(_RISK_MODULE).getAccountGateStatus(proxy);
+        AccountGateStatus memory st = IRiskModule(_RISK_MODULE).getAccountGateStatus(proxy);
         return st.withdrawWithDebtAllowed && st.pauseState != PauseState.Paused && !_registry().isFrozenAddress(wallet);
     }
 

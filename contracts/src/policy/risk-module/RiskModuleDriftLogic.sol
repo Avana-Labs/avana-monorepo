@@ -13,7 +13,7 @@ import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";
 import {RiskModuleMath} from "./RiskModuleMath.sol";
-import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
+import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleDriftLogic
 /// @notice Aave configuration drift of a CDP Spoke and its markets, Hub shares == assets and expected CF.

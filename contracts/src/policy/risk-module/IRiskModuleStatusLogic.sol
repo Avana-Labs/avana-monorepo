@@ -11,7 +11,7 @@ import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 /// @title IRiskModuleStatusLogic
 /// @notice The non-reverting account gate status.
 interface IRiskModuleStatusLogic is IRiskModuleLogic {
-    /// @notice Body of `IRiskModuleViews.getAccountGateStatus`, without the pause fields.
+    /// @notice Body of `IRiskModule.getAccountGateStatus`, without the pause fields.
     function getAccountGateStatus(
         address proxy
     ) external view returns (AccountGateStatus memory status);

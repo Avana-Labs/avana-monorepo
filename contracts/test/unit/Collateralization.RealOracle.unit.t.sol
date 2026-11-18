@@ -9,7 +9,7 @@ import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {VaultToken} from "../../src/vault-token/vault-token/VaultToken.sol";
@@ -136,7 +136,7 @@ contract CollateralizationRealOracleUnitTest is CollateralizationFixture {
         Vm.AccountAccess[] memory acc = vm.stopAndReturnStateDiff();
         (bool poked, uint256 iPoke) = acc.firstCall(address(clOracle), ILPOracle.poke.selector, address(coll), 0);
         (bool checked, uint256 iCheck) =
-            acc.firstCall(address(riskModule), IRiskModuleChecks.checkPledge.selector, address(coll), 0);
+            acc.firstCall(address(riskModule), IRiskModule.checkPledge.selector, address(coll), 0);
         assertTrue(poked, "Collateralization poked the market's LPOracle");
         assertTrue(checked, "checkPledge ran");
         assertLt(iPoke, iCheck, "poke before checkPledge");

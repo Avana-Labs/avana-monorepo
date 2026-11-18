@@ -1494,10 +1494,10 @@
       "review": "Pattern: bounded loops (view calls only; lists that only timelock listings grow, or the market tokens, at most MAX_POOL_TOKENS = 8)."
     },
     {
-      "fingerprint": "246a5405a980cf79",
+      "fingerprint": "f497b4bbf396dd09",
       "check": "calls-loop",
-      "file": "src/policy/risk-module/RiskModulePreview.sol",
-      "function": "RiskModulePreview._rooms(PledgePreview,Market,uint256,PledgeCounters)",
+      "file": "src/policy/risk-module/RiskModulePledgeLogic.sol",
+      "function": "RiskModulePledgeLogic._rooms(PledgePreview,Market,uint256,PledgeCounters)",
       "reason": "ParameterStore.tokenUsdCap view per market token (at most 8) for the preview rooms of REQ-RISK-031. Covered by TEST-034 (previewRoomsFloorAtZero, previewTokenRoomWithoutCounters).",
       "approval": "approved by pattern (independent review 2026-11-11)",
       "review": "Pattern: bounded loops (view calls only; lists that only timelock listings grow, or the market tokens, at most MAX_POOL_TOKENS = 8)."
@@ -1879,28 +1879,28 @@
       "review": "Reviewed per call site, group T (assembly word reads of a length-checked buffer): checked 2026-11-11, memory-safe mloads at offsets the length check above bounds; replaces abi.decode, whose revert on malformed data would break the never-revert views."
     },
     {
-      "fingerprint": "d58178f403177584",
+      "fingerprint": "684751bd28917d4f",
       "check": "assembly",
-      "file": "src/policy/risk-module/RiskModuleCalls.sol",
-      "function": "RiskModuleCalls.wordAt(bytes,uint256)",
+      "file": "src/policy/risk-module/RiskModuleMath.sol",
+      "function": "RiskModuleMath.wordAt(bytes,uint256)",
       "reason": "One mload of the word at a byte offset checked to satisfy offset + 32 <= length (SPEC-BRK-003, REQ-RISK-081); same as LPOracleCalls.wordAt. Memory-safe. Covered by TEST-228, TEST-275.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group T (assembly word reads of a length-checked buffer): checked 2026-11-11, memory-safe mloads at offsets the length check above bounds; replaces abi.decode, whose revert on malformed data would break the never-revert views."
     },
     {
-      "fingerprint": "511a336050dfd45d",
+      "fingerprint": "1da930d265991aac",
       "check": "assembly",
-      "file": "src/policy/risk-module/RiskModuleCalls.sol",
-      "function": "RiskModuleCalls.staticRead(address,uint256,bytes,uint256)",
+      "file": "src/policy/risk-module/RiskModuleMath.sol",
+      "function": "RiskModuleMath.staticRead(address,uint256,bytes,uint256)",
       "reason": "Bounded static read of the sequencer feed (REQ-RISK-081; the issuer probes use the exact-one-word RiskModuleCalls.staticReadWord, a23c2db960165c54): one staticcall with explicit gas after the ceil(64G/63) + POST_CALL_GAS floor, copying at most maxLength bytes into the buffer allocated just before, whose length is only lowered. Same construct as LPOracleCalls.staticRead (c1bc1fda60b7cb8f). Covered by TEST-221 (probeGasFloor), TEST-275 (sequencerRequiresExactRound, oversizedSequencerAnswerBoundedCost). The sequencer call site reads maxLength = ROUND_LENGTH + 1 = 161 and requires ret.length == 160 (decision of 2026-11-11): an answer that is not exactly 160 bytes is down, and at most 161 bytes are copied.",
       "approval": "approved (Josue, 2026-11-11; call site reviewed: RiskModuleBase._sequencerState, latestRoundData() at SEQUENCER_CALL_GAS behind the gas floor, at most 161 bytes copied, exactly 160 required, otherwise down)",
       "review": "Reviewed per call site, group L (bounded-returndata STATICCALL in assembly): checked 2026-11-11, same construct as LPOracleCalls.staticRead and DebtOracleReads._call: memory-safe, copies at most maxLength bytes into the buffer allocated just before and only lowers its length; the gas floor ceil(64G/63) + POST_CALL_GAS precedes the call."
     },
     {
-      "fingerprint": "a23c2db960165c54",
+      "fingerprint": "8ed1c845d90cdb46",
       "check": "assembly",
-      "file": "src/policy/risk-module/RiskModuleCalls.sol",
-      "function": "RiskModuleCalls.staticReadWord(address,uint256,bytes)",
+      "file": "src/policy/risk-module/RiskModuleMath.sol",
+      "function": "RiskModuleMath.staticReadWord(address,uint256,bytes)",
       "reason": "Exact-length static read of each issuer probe (SPEC-BRK-003, REQ-RISK-089), called only by RiskModuleBreakerLogic._readTrips for paused() and basisPointsRate() (each read of UsdtFeeRateAndPaused too). One staticcall with ISSUER_PROBE_GAS after the ceil(64G/63) + POST_CALL_GAS floor, its output area the 32-byte scratch space 0x00-0x1f, so at most 32 bytes are copied whatever the answer's length; ok = success and returndatasize() == 32, checked after the call (a longer answer is refused even when its first word is 0); word = mload(0x00) only when ok, else 0. No free-memory allocation and no returndatacopy. Memory-safe (scratch space only). Solidity's high-level call copies the whole return data and its decoder accepts a longer answer, which SPEC-BRK-003 must trip. Covered by TEST-228 (RiskModule.ProbeAnswer: oneWordZeroAnswerIsClear, answerNotOneWordTrips, oversizedAnswerTripsAtBoundedCost, realAnswerLengths, for PausedFlag, UsdtFeeRate and UsdtFeeRateAndPaused), TEST-221 (probeWordReadsExactlyOneWord, testFuzz probeWordOkOnlyAtThirtyTwoBytes).",
       "approval": "approved (Josue, 2026-11-11; call site reviewed: RiskModuleCalls.staticReadWord, issuer probes paused() and basisPointsRate() at ISSUER_PROBE_GAS behind the REQ-RISK-089 gas floor; at most 32 bytes copied into scratch space, the word read only when exactly 32 bytes arrived)"
     },
@@ -4049,10 +4049,10 @@
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
     },
     {
-      "fingerprint": "45dc60db45a0bf34",
+      "fingerprint": "e84bceb23f5f69da",
       "check": "assembly",
-      "file": "src/policy/risk-module/RiskModuleSpeed.sol",
-      "function": "RiskModuleSpeed._speed()",
+      "file": "src/policy/risk-module/RiskModule.sol",
+      "function": "RiskModule._speed()",
       "reason": "ERC-7201 namespaced storage: assigns a compile-time constant slot (keccak256('avana.storage.RiskModule.speed') formula in the comment) to the storage pointer; no other assembly. Same as the other ERC-7201 assembly entries. The storage-layout check covers the slot.",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"

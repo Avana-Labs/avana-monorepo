@@ -8,8 +8,8 @@ import {ICollateralizationEvents} from "../../src/custody/collateralization/ICol
 import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
 import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
-import {PledgeCharge} from "../../src/policy/risk-module/types/PledgeCharge.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
+import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
@@ -140,7 +140,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         vm.expectCall(
             address(riskModule),
             abi.encodeWithSelector(
-                IRiskModuleChecks.checkPledge.selector, alice, aliceProxy, MARKET_ID, INTEGRATION, KEY42, 5_000_000_000
+                IRiskModule.checkPledge.selector, alice, aliceProxy, MARKET_ID, INTEGRATION, KEY42, 5_000_000_000
             )
         );
         _pledgeAs(alice, aliceProxy, KEY42);
@@ -280,7 +280,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         vm.expectCall(
             address(riskModule),
             abi.encodeCall(
-                IRiskModuleChecks.checkPledge,
+                IRiskModule.checkPledge,
                 (alice, aliceProxy, MARKET_ID, INTEGRATION, KEY7, uint128(4_000_000_000), expected, true)
             )
         );

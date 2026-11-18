@@ -11,7 +11,7 @@ import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol"
 import {IMarketRegistryRoutes} from "../../policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreTighten} from "../../policy/parameter-store/IParameterStoreTighten.sol";
-import {IRiskModuleAdmin} from "../../policy/risk-module/IRiskModuleAdmin.sol";
+import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
@@ -108,7 +108,7 @@ library TimelockSelectors {
     function _isInitializer(
         bytes4 selector
     ) private pure returns (bool) {
-        return selector == IAaveAdapterAdmin.initialize.selector || selector == IRiskModuleAdmin.initialize.selector
+        return selector == IAaveAdapterAdmin.initialize.selector || selector == IRiskModule.initialize.selector
             || selector == IMarketRegistry.initialize.selector || selector == IParameterStore.initialize.selector
             || selector == ILPOracle.initialize.selector || selector == IDebtOracle.initialize.selector
             || selector == ILPVaultSwapAdmin.initialize.selector;

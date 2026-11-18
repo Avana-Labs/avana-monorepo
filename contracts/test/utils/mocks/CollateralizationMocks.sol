@@ -7,7 +7,7 @@ import {IntegrationCapabilities} from "../../../src/amm/types/IntegrationCapabil
 import {PoolKeying} from "../../../src/amm/types/PoolKeying.sol";
 import {ILPVaultErrors} from "../../../src/custody/lp-vault/ILPVaultErrors.sol";
 import {ILock} from "../../../src/lock/lock/ILock.sol";
-import {PledgeCharge} from "../../../src/policy/risk-module/types/PledgeCharge.sol";
+import {PledgeCharge} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PledgeCounters} from "../../../src/types/PledgeCounters.sol";
 import {PositionShape} from "../../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../../src/types/ShapeKind.sol";

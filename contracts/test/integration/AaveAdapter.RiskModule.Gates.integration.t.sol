@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
 import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {DriftReason} from "../../src/types/DriftReason.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
@@ -109,7 +109,7 @@ contract AaveAdapterRiskModuleGatesIntegrationTest is AaveAdapterRiskFixture {
             IAaveAdapterErrors.ApplicationPaused.selector
         ];
         // Over the whole test exactly one `preBorrowCheck` reaches the RiskModule: the final borrow's.
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.preBorrowCheck.selector), 1);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preBorrowCheck.selector), 1);
         for (uint256 i = 0; i < 3; ++i) {
             _pause(states[i], reasons[i]);
             _expectBorrow(abi.encodeWithSelector(errs[i]));
@@ -126,7 +126,7 @@ contract AaveAdapterRiskModuleGatesIntegrationTest is AaveAdapterRiskFixture {
         (bytes32 kb,) = _pledgeAs(bob, MARKET_B, UNITS);
         PauseReason[2] memory reasons = [PauseReason.General, PauseReason.MintPathSuspect];
         // No `preWithdrawCheck` reaches the RiskModule anywhere below.
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.preWithdrawCheck.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
         for (uint256 i = 0; i < 2; ++i) {
             _pause(PauseState.Paused, reasons[i]);
             _expectWithdrawWithDebt(abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector));

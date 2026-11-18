@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {SpeedLimitMath} from "../../src/policy/risk-module/SpeedLimitMath.sol";
-import {SpeedWindow} from "../../src/policy/risk-module/types/SpeedWindow.sol";
+import {SpeedWindow} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title SpeedLimitMathHalmosTest

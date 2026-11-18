@@ -10,7 +10,7 @@ import {IAaveAdapterCollateral} from "../../src/policy/aave-adapter/IAaveAdapter
 import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
 import {IAaveAdapterUser} from "../../src/policy/aave-adapter/IAaveAdapterUser.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {Market} from "../../src/types/Market.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
@@ -76,7 +76,7 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
         vm.expectCall(address(mkt[mB].oracle), abi.encodeWithSelector(ILPOracle.poke.selector), 0);
         vm.expectCall(
             address(riskModule),
-            bytes.concat(IRiskModuleChecks.checkPledge.selector, abi.encode(bob, pB, mA, V3, key, UNITS / 4))
+            bytes.concat(IRiskModule.checkPledge.selector, abi.encode(bob, pB, mA, V3, key, UNITS / 4))
         );
         vm.prank(bob);
         (address proxy, uint256 recordId, uint128 credited) = adapterC.pledge(mA, _ref(key), _deadline());

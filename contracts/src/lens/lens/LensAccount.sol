@@ -12,7 +12,7 @@ import {IPayoutEscrow} from "../../liquidation/payout-escrow/IPayoutEscrow.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {IAaveAdapterViews} from "../../policy/aave-adapter/IAaveAdapterViews.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
-import {IRiskModuleViews} from "../../policy/risk-module/IRiskModuleViews.sol";
+import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {Market} from "../../types/Market.sol";
 import {ILensAccount} from "./ILensAccount.sol";
@@ -102,9 +102,9 @@ abstract contract LensAccount is LensBase, ILensAccount {
         (block.number, block.timestamp, wallet, m.spoke, marketId);
         (a.proxy, a.deployed) = _proxy(wallet, marketId, m.spoke);
         a.walletFrozen = _registry().isFrozenAddress(wallet);
-        a.gateStatus = IRiskModuleViews(_RISK_MODULE).getAccountGateStatus(a.proxy);
+        a.gateStatus = IRiskModule(_RISK_MODULE).getAccountGateStatus(a.proxy);
         // forge-lint: disable-next-line(unused-return)
-        (uint32 reasons,) = IRiskModuleViews(_RISK_MODULE).getBreakerStatus(marketId);
+        (uint32 reasons,) = IRiskModule(_RISK_MODULE).getBreakerStatus(marketId);
         if (a.deployed) {
             a.borrowNonce = IAaveAdapterViews(_ADAPTER).borrowNonce(a.proxy);
             IAaveV4Spoke.UserAccountData memory d = IAaveV4Spoke(m.spoke).getUserAccountData(a.proxy);
@@ -140,7 +140,7 @@ abstract contract LensAccount is LensBase, ILensAccount {
         p.paused = IAaveV4Spoke(spoke).getReserveConfig(reserveId).paused;
         p.priceFresh = _debtView(spoke, def).borrowFresh;
         // forge-lint: disable-next-line(unused-return)
-        (p.breakerReasons,) = IRiskModuleViews(_RISK_MODULE).getDebtBreakerStatus(spoke, reserveId);
+        (p.breakerReasons,) = IRiskModule(_RISK_MODULE).getDebtBreakerStatus(spoke, reserveId);
     }
 
     function _marketPosition(

@@ -18,8 +18,7 @@ import {RiskModuleDriftLogic} from "../../../src/policy/risk-module/RiskModuleDr
 import {RiskModulePledgeLogic} from "../../../src/policy/risk-module/RiskModulePledgeLogic.sol";
 import {RiskModuleSpeedLogic} from "../../../src/policy/risk-module/RiskModuleSpeedLogic.sol";
 import {RiskModuleStatusLogic} from "../../../src/policy/risk-module/RiskModuleStatusLogic.sol";
-import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleImmutables.sol";
-import {RiskModuleLogics} from "../../../src/policy/risk-module/types/RiskModuleLogics.sol";
+import {RiskModuleImmutables, RiskModuleLogics} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {RiskDebtOracleMock, RiskLPOracleMock, RiskLPVaultMock, RiskStoreMock} from "../mocks/RiskModuleMocks.sol";
 import {AaveAdapterFixture} from "./AaveAdapterFixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";

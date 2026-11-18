@@ -8,7 +8,7 @@ import {DriftReason} from "../../types/DriftReason.sol";
 import {Market} from "../../types/Market.sol";
 import {DebtReserveDef, MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";
-import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
+import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleBorrowScope
 /// @notice The account scope of the borrow-side checks, read from the Spoke, and the swap-route halt.

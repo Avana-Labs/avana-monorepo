@@ -11,7 +11,7 @@ import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
-import {IRiskModuleViews} from "../../policy/risk-module/IRiskModuleViews.sol";
+import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {Market} from "../../types/Market.sol";
 import {PledgeCounters} from "../../types/PledgeCounters.sol";
 import {ShapeKind} from "../../types/ShapeKind.sol";
@@ -113,7 +113,7 @@ abstract contract LensMarkets is LensBase, ILensMarkets {
         v.addHeadroom = _addHeadroom(m);
         v.pauseState = _registry().pauseState(m.hub);
         // forge-lint: disable-next-line(unused-return)
-        (v.breakerReasons,) = IRiskModuleViews(_RISK_MODULE).getBreakerStatus(marketId);
+        (v.breakerReasons,) = IRiskModule(_RISK_MODULE).getBreakerStatus(marketId);
         _riskConfig(v, m, marketId);
     }
 
@@ -156,7 +156,7 @@ abstract contract LensMarkets is LensBase, ILensMarkets {
         v.drawCap = IAaveV4Hub(def.fundingHub).getSpokeConfig(def.hubAssetId, spoke).drawCap;
         v.drawHeadroom = _drawHeadroom(spoke, def);
         // forge-lint: disable-next-line(unused-return)
-        (v.breakerReasons,) = IRiskModuleViews(_RISK_MODULE).getDebtBreakerStatus(spoke, def.reserveId);
+        (v.breakerReasons,) = IRiskModule(_RISK_MODULE).getDebtBreakerStatus(spoke, def.reserveId);
         v.pauseState = _registry().pauseState(def.fundingHub);
     }
 

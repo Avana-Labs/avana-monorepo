@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
-import {SpeedView} from "./types/SpeedView.sol";
-import {SpeedWindow} from "./types/SpeedWindow.sol";
+import {SpeedView, SpeedWindow} from "./types/RiskModuleTypes.sol";
 
 /// @title IRiskModuleSpeedLogic
 /// @notice The net-flow borrow-speed and pledge-speed limits: each window after a charge or credit.

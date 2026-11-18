@@ -18,9 +18,11 @@ import {RiskModuleDriftLogic} from "../../../src/policy/risk-module/RiskModuleDr
 import {RiskModulePledgeLogic} from "../../../src/policy/risk-module/RiskModulePledgeLogic.sol";
 import {RiskModuleSpeedLogic} from "../../../src/policy/risk-module/RiskModuleSpeedLogic.sol";
 import {RiskModuleStatusLogic} from "../../../src/policy/risk-module/RiskModuleStatusLogic.sol";
-import {PledgeCharge} from "../../../src/policy/risk-module/types/PledgeCharge.sol";
-import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleImmutables.sol";
-import {RiskModuleLogics} from "../../../src/policy/risk-module/types/RiskModuleLogics.sol";
+import {
+    PledgeCharge,
+    RiskModuleImmutables,
+    RiskModuleLogics
+} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PositionProxy} from "../../../src/proxy/position-proxy/PositionProxy.sol";
 import {MarketDef} from "../../../src/types/MarketDef.sol";
 import {PledgeCounters} from "../../../src/types/PledgeCounters.sol";

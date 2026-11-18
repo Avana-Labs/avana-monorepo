@@ -12,8 +12,8 @@ import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/Aave
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
-import {IRiskModuleAdmin} from "../../../src/policy/risk-module/IRiskModuleAdmin.sol";
-import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleImmutables.sol";
+import {IRiskModule} from "../../../src/policy/risk-module/IRiskModule.sol";
+import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {TimelockShortDelayLists} from "../../../test/utils/fixtures/TimelockShortDelayLists.sol";
 import {DeployBase} from "./DeployBase.sol";
 import {ChainInputs, UpgradeableDeployment} from "./DeployTypes.sol";
@@ -206,7 +206,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2], d.logics[3], d.logics[4], d.logics[5]);
         d.implementation =
             _deploy("RiskModuleImplementation", bytes.concat(_artifact("RiskModule.sol", "RiskModule"), im, logics));
-        d.proxy = _proxy("RiskModule", d.implementation, abi.encodeCall(IRiskModuleAdmin.initialize, (p.timelock)));
+        d.proxy = _proxy("RiskModule", d.implementation, abi.encodeCall(IRiskModule.initialize, (p.timelock)));
     }
 
     /// @notice AaveAdapter: user, exit, collateral and settlement logic, the router, the proxy.

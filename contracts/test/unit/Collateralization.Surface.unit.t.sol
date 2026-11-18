@@ -12,7 +12,7 @@ import {INonfungiblePositionManager} from "../../src/interfaces/external/uniswap
 import {IUniswapV3Pool} from "../../src/interfaces/external/uniswap/IUniswapV3Pool.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {BytecodeInspector} from "../utils/BytecodeInspector.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
@@ -241,7 +241,7 @@ contract CollateralizationSurfaceUnitTest is CollateralizationFixture {
                 assertTrue(a.kind == VmSafe.AccountAccessKind.Call, "the RiskModule reached by a plain call");
                 bytes4 sel = bytes4(a.data);
                 assertTrue(
-                    sel == IRiskModuleChecks.checkPledge.selector || sel == IRiskModuleChecks.creditWithdraw.selector,
+                    sel == IRiskModule.checkPledge.selector || sel == IRiskModule.creditWithdraw.selector,
                     "Collateralization calls only checkPledge and creditWithdraw"
                 );
             }

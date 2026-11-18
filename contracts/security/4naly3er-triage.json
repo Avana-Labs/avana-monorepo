@@ -960,19 +960,19 @@
       "review": "Reviewed per call site, group W (zero address rejected by the constructor's logic check): checked 2026-11-11, _requireLogic(addr, kind) calls addr.logicConfig() before the assignment; a zero or codeless address returns no data, so the decode reverts and the constructor fails (test_TEST_062_logicConstructorsCheckDependencies deploys with address(0) and expects the revert)."
     },
     {
-      "fingerprint": "22b7fbde0629fdb9",
+      "fingerprint": "4dd41bb36fb54c8a",
       "check": "Missing checks for `address(0)` when assigning values to address state variables",
-      "file": "src/policy/risk-module/RiskModulePreview.sol",
-      "function": "RiskModulePreview constructor line 69",
+      "file": "src/policy/risk-module/RiskModulePledgeLogic.sol",
+      "function": "RiskModulePledgeLogic constructor line 69",
       "reason": "The constructor calls _requireLogic on this address before the assignment: logicConfig() on address(0) returns no data and the decode reverts, and a wrong kind or other immutables revert InvalidLogic (REQ-RISK-002). Covered by TEST-062 (logicConstructorsCheckDependencies).",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group W (zero address rejected by the constructor's logic check): checked 2026-11-11, _requireLogic(addr, kind) calls addr.logicConfig() before the assignment; a zero or codeless address returns no data, so the decode reverts and the constructor fails (test_TEST_062_logicConstructorsCheckDependencies deploys with address(0) and expects the revert)."
     },
     {
-      "fingerprint": "9de3e55d1d0960a0",
+      "fingerprint": "cf27f80aba3aa835",
       "check": "Missing checks for `address(0)` when assigning values to address state variables",
-      "file": "src/policy/risk-module/RiskModulePreview.sol",
-      "function": "RiskModulePreview constructor line 70",
+      "file": "src/policy/risk-module/RiskModulePledgeLogic.sol",
+      "function": "RiskModulePledgeLogic constructor line 70",
       "reason": "The constructor calls _requireLogic on this address before the assignment: logicConfig() on address(0) returns no data and the decode reverts, and a wrong kind or other immutables revert InvalidLogic (REQ-RISK-002). Covered by TEST-062 (logicConstructorsCheckDependencies).",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group W (zero address rejected by the constructor's logic check): checked 2026-11-11, _requireLogic(addr, kind) calls addr.logicConfig() before the assignment; a zero or codeless address returns no data, so the decode reverts and the constructor fails (test_TEST_062_logicConstructorsCheckDependencies deploys with address(0) and expects the revert)."

@@ -12,7 +12,6 @@ import {ITetherFee} from "../../interfaces/external/tether/ITetherFee.sol";
 import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
-import {RiskModuleConstants} from "../risk-module/RiskModuleConstants.sol";
 import {RiskModuleMath} from "../risk-module/RiskModuleMath.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
@@ -122,9 +121,9 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
     function _feeRateZero(
         address token
     ) internal view returns (bool zero) {
-        if (gasleft() < RiskModuleMath.gasFloor(RiskModuleConstants.ISSUER_PROBE_GAS)) return false;
+        if (gasleft() < RiskModuleMath.gasFloor(RiskModuleMath.ISSUER_PROBE_GAS)) return false;
         (bool ok, bytes memory ret) = RouteReads._staticRead(
-            token, RiskModuleConstants.ISSUER_PROBE_GAS, abi.encodeCall(ITetherFee.basisPointsRate, ()), 33
+            token, RiskModuleMath.ISSUER_PROBE_GAS, abi.encodeCall(ITetherFee.basisPointsRate, ()), 33
         );
         zero = ok && ret.length == 32 && abi.decode(ret, (uint256)) == 0;
     }

@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
 import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
-import {PledgeCharge} from "../../src/policy/risk-module/types/PledgeCharge.sol";
+import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 import {CollOracleMock, CollRiskModuleMock} from "../utils/mocks/CollateralizationMocks.sol";

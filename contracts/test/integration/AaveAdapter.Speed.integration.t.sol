@@ -8,7 +8,7 @@ import {IAaveV4Oracle} from "../../src/interfaces/external/aave/IAaveV4Oracle.so
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {MarketSpeedLimits, SpeedLimit} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {SpeedView} from "../../src/policy/risk-module/types/SpeedView.sol";
+import {SpeedView} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
 

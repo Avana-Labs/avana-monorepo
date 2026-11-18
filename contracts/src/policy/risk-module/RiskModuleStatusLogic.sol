@@ -20,7 +20,7 @@ import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 import {IRiskModuleStatusLogic} from "./IRiskModuleStatusLogic.sol";
 import {RiskModuleBorrowScope} from "./RiskModuleBorrowScope.sol";
-import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
+import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleStatusLogic
 /// @notice Body of `getAccountGateStatus`: every borrow-side gate outcome of an account, without poking.

@@ -8,7 +8,7 @@ import {ILensRisk} from "../../src/lens/lens/ILensRisk.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {TokenDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
@@ -96,8 +96,7 @@ contract MarketCountGasTest is RealStackFlows, GasCalibration {
                 IMarketRegistry.setPriceSource, (address(usdc), t.primaryRoute, t.alternateRoute, t.standbyRoute)
             )
         );
-        r.pokeConfig =
-            _txGas(keeper, address(riskModule), abi.encodeCall(IRiskModuleChecks.pokeConfig, (aave.cdpSpoke)));
+        r.pokeConfig = _txGas(keeper, address(riskModule), abi.encodeCall(IRiskModule.pokeConfig, (aave.cdpSpoke)));
         r.drift = _txGas(keeper, address(registry), abi.encodeCall(IMarketRegistry.spokeSettingsDrift, (aave.cdpSpoke)));
         r.tailCoverage =
             _txGas(keeper, address(lens), abi.encodeCall(ILensRisk.getTailCoverage, (aave.hub, address(gho))));

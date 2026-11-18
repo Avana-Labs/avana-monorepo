@@ -4,10 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {MarketSpeedLimits, SpeedLimit} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PledgeCharge} from "../../src/policy/risk-module/types/PledgeCharge.sol";
-import {SpeedView} from "../../src/policy/risk-module/types/SpeedView.sol";
+import {PledgeCharge, SpeedView} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
 import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
@@ -313,8 +312,7 @@ contract RiskModuleSpeedUnitTest is RiskModuleFixture {
         (bool ok,) = address(riskModule)
             .staticcall(
                 abi.encodeCall(
-                    IRiskModuleChecks.checkPledge,
-                    (wallet, address(proxy), mid, V3, bytes32(uint256(1)), TEN_K, k, false)
+                    IRiskModule.checkPledge, (wallet, address(proxy), mid, V3, bytes32(uint256(1)), TEN_K, k, false)
                 )
             );
         assertTrue(ok, "a STATICCALL by anyone but Collateralization succeeds");

@@ -6,12 +6,12 @@ pragma solidity 0.8.28;
 import {PledgeCounters} from "../../types/PledgeCounters.sol";
 import {PledgePreview} from "../../types/PledgePreview.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
-import {PledgeCharge} from "./types/PledgeCharge.sol";
+import {PledgeCharge} from "./types/RiskModuleTypes.sol";
 
 /// @title IRiskModulePledgeLogic
 /// @notice The pledge check, its preview, the restore amount and the remaining-record minimum.
 interface IRiskModulePledgeLogic is IRiskModuleLogic {
-    /// @notice Body of `IRiskModuleChecks.checkPledge`.
+    /// @notice Body of `IRiskModule.checkPledge`.
     function checkPledge(
         address depositor,
         address proxy,
@@ -23,19 +23,19 @@ interface IRiskModulePledgeLogic is IRiskModuleLogic {
         bool requireRescue
     ) external view returns (PledgeCharge memory charge);
 
-    /// @notice Body of `IRiskModuleViews.previewPledge`.
+    /// @notice Body of `IRiskModule.previewPledge`.
     function previewPledge(
         address depositor,
         uint256 marketId,
         bytes32 positionKey
     ) external view returns (PledgePreview memory preview);
 
-    /// @notice Body of `IRiskModuleViews.usdToRestore`.
+    /// @notice Body of `IRiskModule.usdToRestore`.
     function usdToRestore(
         address proxy
     ) external view returns (uint256 usd);
 
-    /// @notice Body of `IRiskModuleChecks.checkRemainingRecord`.
+    /// @notice Body of `IRiskModule.checkRemainingRecord`.
     function checkRemainingRecord(
         uint256 marketId,
         uint128 remainingUnits

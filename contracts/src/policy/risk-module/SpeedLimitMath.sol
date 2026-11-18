@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {SpeedView} from "./types/SpeedView.sol";
-import {SpeedWindow} from "./types/SpeedWindow.sol";
+import {SpeedView, SpeedWindow} from "./types/RiskModuleTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title SpeedLimitMath

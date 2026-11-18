@@ -13,9 +13,8 @@ import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {IRiskModuleErrors} from "./IRiskModuleErrors.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
-import {RiskModuleCalls} from "./RiskModuleCalls.sol";
 import {RiskModuleMath} from "./RiskModuleMath.sol";
-import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
+import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleBase
 /// @notice Implementation immutables and the reads shared by the RiskModule and its logic contracts.
@@ -136,12 +135,12 @@ abstract contract RiskModuleBase is IRiskModuleErrors {
     function _sequencerState() internal view returns (uint8 state, uint256 graceEndsAt) {
         (address feed, uint32 gracePeriod) = _store().sequencer();
         if (feed == address(0)) return (SEQUENCER_UP, 0);
-        (bool ok, bytes memory ret) = RiskModuleCalls.staticRead(
+        (bool ok, bytes memory ret) = RiskModuleMath.staticRead(
             feed, SEQUENCER_CALL_GAS, abi.encodeCall(ISequencerUptimeFeed.latestRoundData, ()), ROUND_LENGTH + 1
         );
         ok = ok && ret.length == ROUND_LENGTH;
-        (, uint256 answerWord) = RiskModuleCalls.wordAt(ret, 32);
-        (, uint256 startedAt) = RiskModuleCalls.wordAt(ret, 64);
+        (, uint256 answerWord) = RiskModuleMath.wordAt(ret, 32);
+        (, uint256 startedAt) = RiskModuleMath.wordAt(ret, 64);
         // A two's-complement word read as int256: 0 is up, 1 is down, anything else is unknown.
         // forge-lint: disable-next-line(unsafe-typecast)
         int256 answer = int256(answerWord);

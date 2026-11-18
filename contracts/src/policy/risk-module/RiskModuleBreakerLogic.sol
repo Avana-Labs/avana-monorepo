@@ -20,10 +20,8 @@ import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
 import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";
-import {RiskModuleCalls} from "./RiskModuleCalls.sol";
-import {RiskModuleConstants} from "./RiskModuleConstants.sol";
 import {RiskModuleMath} from "./RiskModuleMath.sol";
-import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
+import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleBreakerLogic
 /// @notice Circuit-breaker conditions and tripped state of markets and debt reserves.
@@ -207,7 +205,7 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
         bytes4 sel
     ) private view returns (bool) {
         (bool ok, uint256 word) =
-            RiskModuleCalls.staticReadWord(token, RiskModuleConstants.ISSUER_PROBE_GAS, abi.encodePacked(sel));
+            RiskModuleMath.staticReadWord(token, RiskModuleMath.ISSUER_PROBE_GAS, abi.encodePacked(sel));
         return !ok || word != 0;
     }
 }

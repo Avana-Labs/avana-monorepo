@@ -11,7 +11,7 @@ import {PauseReason} from "../../types/PauseReason.sol";
 import {PauseState} from "../../types/PauseState.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
-import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {AdapterAccount} from "./types/AdapterAccount.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -82,7 +82,7 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         (PauseState state,) = _pauseOf(IVaultToken(vaultToken).hub());
         if (state == PauseState.Paused) revert ApplicationPaused();
         if (_isFrozen(msg.sender)) revert AddressIsFrozen(msg.sender);
-        IRiskModuleChecks(_RISK_MODULE).preWithdrawCheck(proxy);
+        IRiskModule(_RISK_MODULE).preWithdrawCheck(proxy);
     }
 
     function _backing(
@@ -258,7 +258,7 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         if (left < SPEED_CREDIT_FLOOR) revert InsufficientGas(left, SPEED_CREDIT_FLOOR);
         // A failed credit only leaves the window fuller than the net debt; it must not block the repay.
         // solhint-disable-next-line no-empty-blocks
-        try IRiskModuleChecks(_RISK_MODULE).creditRepay{gas: SPEED_CREDIT_GAS}(proxy, debtReserveId, spent) {} catch {}
+        try IRiskModule(_RISK_MODULE).creditRepay{gas: SPEED_CREDIT_GAS}(proxy, debtReserveId, spent) {} catch {}
     }
 
     /// @dev Moves nothing at zero debt; a repay-all above its cap reverts before any transfer.

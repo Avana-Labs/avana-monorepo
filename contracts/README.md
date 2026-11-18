@@ -81,7 +81,7 @@ contracts/
 │   ├── flash/                      IFlashSource, IFlashReceiver
 │   ├── policy/
 │   │   ├── aave-adapter/           IAaveAdapter: borrower entry points, burnSeized, proxy lookups
-│   │   ├── risk-module/            IRiskModule: pledge and borrow-side checks, previews, RiskModuleConstants
+│   │   ├── risk-module/            IRiskModule: pledge and borrow-side checks, previews, RiskModuleMath
 │   │   ├── market-registry/        IMarketRegistry: Spokes, debt reserves, tokens, markets, routes, in-kind, pause state
 │   │   └── parameter-store/        IParameterStore: risk parameters with tighten, loosen and listing setters
 │   ├── oracle/
@@ -156,7 +156,7 @@ Every contract has one folder, `src/<domain>/<contract>/`, named after the contr
 | `types/<Type>.sol` | One struct or enum of the contract per file, declared at file level. |
 | `<Name>Constants.sol` and other libraries | Constant-only libraries of the contract. |
 
-Callers import only the piece they call, for example `IRiskModuleChecks` for `checkPledge`, `ILPVaultSwapKeeper` for a keeper bot, or `I<Name>Errors` for a revert selector in a test. Structs and enums used by several contracts live in `src/types/`.
+Callers import only the piece they call, for example `IRiskModule` for `checkPledge`, `ILPVaultSwapKeeper` for a keeper bot, or `I<Name>Errors` for a revert selector in a test. Structs and enums used by several contracts live in `src/types/`.
 
 | Contract | Pieces besides events and errors |
 |---|---|
@@ -166,7 +166,7 @@ Callers import only the piece they call, for example `IRiskModuleChecks` for `ch
 | LPVault | `ILPVault`, which implements `IAmmIntegration` and `IAmmIntegrationHooks` (`src/amm/`) |
 | Collateralization | `ICollateralizationAdapter`, `ICollateralizationSeizure`, `ICollateralizationUser`, `ICollateralizationDebtMark`, `ICollateralizationViews` |
 | LPVaultSwap | `ILPVaultSwapKeeper`, `ILPVaultSwapPermissionless`, `ILPVaultSwapDeleverage`, `ILPVaultSwapAdmin`, `ILPVaultSwapViews` |
-| RiskModule | `IRiskModuleChecks`, `IRiskModuleAdmin`, `IRiskModuleViews` |
+| RiskModule | `IRiskModule`, `IRiskModule`, `IRiskModule` |
 | PositionProxy | `IPositionProxy` |
 | AvanaTimelock | `IAvanaTimelockGovernance` (self-call setters, expired-operation clean-up), `IAvanaTimelockViews` |
 | Lens | `ILensAccount`, `ILensMarket`, `ILensLiquidation`, `ILensPreview`, `ILensRisk`; the dependency getters are declared on `ILens` |
@@ -308,7 +308,7 @@ Rules that do not run, and why:
 | Slither | `unindexed-event-address` | Indexed event fields are fixed by the spec's event definitions and the indexer's topic layout. |
 | Slither, Aderyn, solhint, `forge lint` | `src/interfaces/external/` | Minimal mirrors of third-party ABIs; names and layout follow the deployed contracts. |
 | solhint | `not-rely-on-time` | Time-based logic is part of the design; Slither's `timestamp` detector gates each comparison. |
-| solhint | `no-empty-blocks` | Aggregate interfaces (`interface IRiskModule is IRiskModuleChecks, …{}`) have empty bodies by design; Aderyn's `empty-block` checks implementations. |
+| solhint | `no-empty-blocks` | Aggregate interfaces (`interface IRiskModule is IRiskModule, …{}`) have empty bodies by design; Aderyn's `empty-block` checks implementations. |
 | solhint | `import-path-check` | solhint does not read `remappings.txt`; `forge build` fails on any unresolved import. |
 | solhint | `use-natspec`, naming, ordering and `gas-*` rules other than `gas-custom-errors` | Documentation is checked by `trace.py`, naming and ordering are style, and gas is measured by `forge snapshot`. |
 | Mythril | `IntegerArithmetics` (SWC-101) | solc 0.8 reverts on overflow, and its optimizer compiles `x == c` to `SUB` + `ISZERO`, which Mythril reports as an underflow on bytecode; unchecked blocks are covered by Slither, Halmos and the `smt` profile. |

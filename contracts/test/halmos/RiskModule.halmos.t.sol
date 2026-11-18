@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {RiskModuleDriftLogic} from "../../src/policy/risk-module/RiskModuleDriftLogic.sol";
 import {RiskModuleMath} from "../../src/policy/risk-module/RiskModuleMath.sol";
-import {RiskModuleImmutables} from "../../src/policy/risk-module/types/RiskModuleImmutables.sol";
+import {RiskModuleImmutables} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {DriftReason} from "../../src/types/DriftReason.sol";
 import {RiskModuleMathHarness} from "../utils/harness/RiskModuleMathHarness.sol";
 import {Test} from "forge-std/Test.sol";

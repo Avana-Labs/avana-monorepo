@@ -3208,10 +3208,42 @@
     "SpeedLimit": ["REQ-PSTORE-035", "REQ-RISK-092", "SPEC-CAP-012", "Q-411"]
   },
   "contracts/src/policy/risk-module/IRiskModule.sol": {
-    "IRiskModule": ["REQ-RISK-001", "REQ-RISK-002", "REQ-RISK-003", "REQ-RISK-004", "REQ-RISK-005", "REQ-RISK-007", "REQ-RISK-008", "REQ-RISK-039", "REQ-RISK-040", "REQ-RISK-053", "REQ-RISK-054", "REQ-RISK-055", "REQ-RISK-072", "Q-226", "Q-229", "Q-240", "Q-259", "Q-376", "Q-380"]
-  },
-  "contracts/src/policy/risk-module/IRiskModuleAdmin.sol": {
-    "IRiskModuleAdmin.initialize": ["REQ-RISK-002", "Q-226", "Q-228"]
+    "IRiskModule": ["REQ-RISK-001", "REQ-RISK-002", "REQ-RISK-003", "REQ-RISK-004", "REQ-RISK-005", "REQ-RISK-007", "REQ-RISK-008", "REQ-RISK-039", "REQ-RISK-040", "REQ-RISK-053", "REQ-RISK-054", "REQ-RISK-055", "REQ-RISK-072", "Q-226", "Q-229", "Q-240", "Q-259", "Q-376", "Q-380"],
+    "IRiskModule.initialize": ["REQ-RISK-002", "Q-226", "Q-228"],
+    "IRiskModule.ConfigDriftDetected": ["REQ-RISK-090"],
+    "IRiskModule.BreakersPoked": ["REQ-RISK-091", "Q-399"],
+    "IRiskModule.checkPledge": ["REQ-RISK-006", "REQ-RISK-009", "REQ-RISK-010", "REQ-RISK-011", "REQ-RISK-012", "REQ-RISK-013", "REQ-RISK-014", "REQ-RISK-016", "REQ-RISK-017", "REQ-RISK-018", "REQ-RISK-019", "REQ-RISK-020", "REQ-RISK-021", "REQ-RISK-022", "REQ-RISK-023", "REQ-RISK-024", "REQ-RISK-025", "REQ-RISK-026", "REQ-RISK-027", "REQ-RISK-028", "REQ-RISK-029", "REQ-RISK-030", "REQ-RISK-047", "REQ-RISK-057", "REQ-RISK-058", "REQ-RISK-064", "REQ-RISK-065", "REQ-RISK-066", "REQ-RISK-067", "REQ-RISK-073", "REQ-RISK-074", "REQ-RISK-093", "REQ-RISK-095", "REQ-RISK-099", "SPEC-CAP-001", "SPEC-CAP-002", "SPEC-CAP-003", "SPEC-CAP-005", "SPEC-BRK-001", "SPEC-BRK-002", "SPEC-BRK-003", "Q-230", "Q-241", "Q-252", "Q-253", "Q-376", "Q-380"],
+    "IRiskModule.preBorrowCheck": ["REQ-ADAPTER-009", "REQ-ADAPTER-010", "REQ-ADAPTER-011", "REQ-ADAPTER-012", "REQ-ADAPTER-013", "REQ-ADAPTER-014", "REQ-ADAPTER-015", "REQ-ADAPTER-016", "REQ-ADAPTER-018", "REQ-ADAPTER-019", "REQ-ADAPTER-020", "REQ-ADAPTER-021", "REQ-ADAPTER-022", "REQ-ADAPTER-023", "REQ-ADAPTER-024", "REQ-ADAPTER-061", "REQ-RISK-056", "REQ-RISK-061", "REQ-RISK-062", "REQ-RISK-065", "REQ-RISK-069", "REQ-RISK-071", "REQ-ORACLE-099", "REQ-ORACLE-100", "REQ-RISK-092", "REQ-RISK-095", "REQ-RISK-098", "SPEC-CAP-011", "SPEC-CAP-012", "SPEC-CAP-013", "SPEC-PROXY-002", "SPEC-BRK-001", "SPEC-BRK-002", "SPEC-BRK-003", "SPEC-BRK-004", "BOR-006", "BOR-007", "BOR-017", "Q-229", "Q-234", "Q-238", "Q-241", "Q-248", "Q-270", "Q-380"],
+    "IRiskModule.creditRepay": ["REQ-RISK-005", "REQ-RISK-092", "REQ-RISK-095", "SPEC-CAP-011"],
+    "IRiskModule.creditWithdraw": ["REQ-RISK-005", "REQ-RISK-093", "REQ-RISK-095", "SPEC-CAP-011"],
+    "IRiskModule.preWithdrawCheck": ["REQ-ADAPTER-025", "REQ-ADAPTER-009", "REQ-RISK-056", "REQ-RISK-061", "REQ-RISK-062", "REQ-RISK-065", "REQ-RISK-069", "SPEC-PROXY-002", "WDR-007", "Q-229", "Q-241"],
+    "IRiskModule.postHealthCheck": ["REQ-ADAPTER-026", "REQ-ADAPTER-027", "REQ-ADAPTER-059", "REQ-RISK-059", "REQ-RISK-068", "SPEC-PROXY-001", "SPEC-PROXY-006", "SPEC-CF-003", "SPEC-CF-005", "BOR-011", "WDR-011", "INV-082", "Q-253"],
+    "IRiskModule.checkAaveConfig": ["REQ-ADAPTER-028", "REQ-ADAPTER-029", "REQ-ADAPTER-030", "REQ-ADAPTER-031", "REQ-ADAPTER-032", "REQ-ADAPTER-033", "REQ-ADAPTER-034", "REQ-ADAPTER-035", "REQ-ADAPTER-036", "REQ-ADAPTER-063", "REQ-ADAPTER-064", "REQ-RISK-063", "REQ-RISK-069", "REQ-RISK-076", "Q-281", "Q-270", "Q-378"],
+    "IRiskModule.pokeConfig": ["REQ-RISK-090", "REQ-RISK-078", "INV-093"],
+    "IRiskModule.pokeBreakers": ["REQ-RISK-091", "SPEC-BRK-007", "SPEC-BRK-008", "Q-399"],
+    "IRiskModule.isHubSharesEqualAssets": ["REQ-ADAPTER-037", "Q-189"],
+    "IRiskModule.checkRemainingRecord": ["REQ-RISK-070", "REQ-RISK-075", "WDR-031", "Q-254"],
+    "IRiskModule.previewPledge": ["REQ-RISK-031", "REQ-RISK-057"],
+    "IRiskModule.getAccountGateStatus": ["REQ-ADAPTER-038", "REQ-RISK-060"],
+    "IRiskModule.checkBorrowGate": ["REQ-RISK-060", "REQ-RISK-061", "REQ-RISK-062"],
+    "IRiskModule.usdToRestore": ["SPEC-CAP-003"],
+    "IRiskModule.expectedCollateralFactorBps": ["SPEC-CF-001"],
+    "IRiskModule.rescueHealthFactor": ["REQ-RISK-059", "SPEC-PROXY-001", "SPEC-CAP-003", "Q-398"],
+    "IRiskModule.MARKET_REGISTRY": ["REQ-RISK-029", "REQ-RISK-055"],
+    "IRiskModule.PARAMETER_STORE": ["REQ-RISK-055"],
+    "IRiskModule.COLLATERALIZATION": ["REQ-RISK-004", "REQ-RISK-058"],
+    "IRiskModule.ADAPTER": ["REQ-ADAPTER-009", "REQ-RISK-031"],
+    "IRiskModule.getBreakerStatus": ["REQ-RISK-065", "REQ-RISK-078", "SPEC-BRK-001", "SPEC-BRK-002", "SPEC-BRK-003", "SPEC-BRK-007", "Q-241", "Q-399"],
+    "IRiskModule.getDebtBreakerStatus": ["REQ-RISK-065", "SPEC-BRK-003", "SPEC-BRK-004", "SPEC-BRK-007", "Q-241", "Q-399"],
+    "IRiskModule.liveBreakerReasons": ["REQ-MREG-025", "SPEC-BRK-008", "Q-399"],
+    "IRiskModule.liveDebtBreakerReasons": ["REQ-MREG-025", "SPEC-BRK-008", "Q-399"],
+    "IRiskModule.RESCUE_MIN_PLEDGE_USD": ["REQ-RISK-067", "Q-252"],
+    "IRiskModule.LP_VAULT_SWAP": ["REQ-RISK-071"],
+    "IRiskModule.TIMELOCK": ["REQ-RISK-072", "Q-259"],
+    "IRiskModule.debtValueUsd": ["SPEC-CAP-009", "REQ-RISK-077"],
+    "IRiskModule.getBorrowSpeed": ["REQ-RISK-097", "SPEC-CAP-011", "Q-411"],
+    "IRiskModule.getPledgeSpeed": ["REQ-RISK-097", "SPEC-CAP-011", "Q-411"],
+    "IRiskModule.getSpeedWindow": ["REQ-RISK-095", "REQ-RISK-097", "SPEC-CAP-011"]
   },
   "contracts/src/policy/risk-module/IRiskModuleBorrowLogic.sol": {
     "IRiskModuleBorrowLogic.preCheck": ["REQ-RISK-056", "REQ-ADAPTER-024", "REQ-ADAPTER-025"],
@@ -3226,21 +3258,6 @@
     "IRiskModuleBreakerLogic.debtConditions": ["REQ-RISK-091", "SPEC-BRK-003", "SPEC-BRK-004"],
     "IRiskModuleBreakerLogic.marketBreaker": ["REQ-RISK-065", "SPEC-BRK-007", "SPEC-BRK-008"],
     "IRiskModuleBreakerLogic.debtBreaker": ["REQ-RISK-065", "SPEC-BRK-004", "SPEC-BRK-007", "SPEC-BRK-008"]
-  },
-  "contracts/src/policy/risk-module/IRiskModuleChecks.sol": {
-    "IRiskModuleChecks.ConfigDriftDetected": ["REQ-RISK-090"],
-    "IRiskModuleChecks.BreakersPoked": ["REQ-RISK-091", "Q-399"],
-    "IRiskModuleChecks.checkPledge": ["REQ-RISK-006", "REQ-RISK-009", "REQ-RISK-010", "REQ-RISK-011", "REQ-RISK-012", "REQ-RISK-013", "REQ-RISK-014", "REQ-RISK-016", "REQ-RISK-017", "REQ-RISK-018", "REQ-RISK-019", "REQ-RISK-020", "REQ-RISK-021", "REQ-RISK-022", "REQ-RISK-023", "REQ-RISK-024", "REQ-RISK-025", "REQ-RISK-026", "REQ-RISK-027", "REQ-RISK-028", "REQ-RISK-029", "REQ-RISK-030", "REQ-RISK-047", "REQ-RISK-057", "REQ-RISK-058", "REQ-RISK-064", "REQ-RISK-065", "REQ-RISK-066", "REQ-RISK-067", "REQ-RISK-073", "REQ-RISK-074", "REQ-RISK-093", "REQ-RISK-095", "REQ-RISK-099", "SPEC-CAP-001", "SPEC-CAP-002", "SPEC-CAP-003", "SPEC-CAP-005", "SPEC-BRK-001", "SPEC-BRK-002", "SPEC-BRK-003", "Q-230", "Q-241", "Q-252", "Q-253", "Q-376", "Q-380"],
-    "IRiskModuleChecks.preBorrowCheck": ["REQ-ADAPTER-009", "REQ-ADAPTER-010", "REQ-ADAPTER-011", "REQ-ADAPTER-012", "REQ-ADAPTER-013", "REQ-ADAPTER-014", "REQ-ADAPTER-015", "REQ-ADAPTER-016", "REQ-ADAPTER-018", "REQ-ADAPTER-019", "REQ-ADAPTER-020", "REQ-ADAPTER-021", "REQ-ADAPTER-022", "REQ-ADAPTER-023", "REQ-ADAPTER-024", "REQ-ADAPTER-061", "REQ-RISK-056", "REQ-RISK-061", "REQ-RISK-062", "REQ-RISK-065", "REQ-RISK-069", "REQ-RISK-071", "REQ-ORACLE-099", "REQ-ORACLE-100", "REQ-RISK-092", "REQ-RISK-095", "REQ-RISK-098", "SPEC-CAP-011", "SPEC-CAP-012", "SPEC-CAP-013", "SPEC-PROXY-002", "SPEC-BRK-001", "SPEC-BRK-002", "SPEC-BRK-003", "SPEC-BRK-004", "BOR-006", "BOR-007", "BOR-017", "Q-229", "Q-234", "Q-238", "Q-241", "Q-248", "Q-270", "Q-380"],
-    "IRiskModuleChecks.creditRepay": ["REQ-RISK-005", "REQ-RISK-092", "REQ-RISK-095", "SPEC-CAP-011"],
-    "IRiskModuleChecks.creditWithdraw": ["REQ-RISK-005", "REQ-RISK-093", "REQ-RISK-095", "SPEC-CAP-011"],
-    "IRiskModuleChecks.preWithdrawCheck": ["REQ-ADAPTER-025", "REQ-ADAPTER-009", "REQ-RISK-056", "REQ-RISK-061", "REQ-RISK-062", "REQ-RISK-065", "REQ-RISK-069", "SPEC-PROXY-002", "WDR-007", "Q-229", "Q-241"],
-    "IRiskModuleChecks.postHealthCheck": ["REQ-ADAPTER-026", "REQ-ADAPTER-027", "REQ-ADAPTER-059", "REQ-RISK-059", "REQ-RISK-068", "SPEC-PROXY-001", "SPEC-PROXY-006", "SPEC-CF-003", "SPEC-CF-005", "BOR-011", "WDR-011", "INV-082", "Q-253"],
-    "IRiskModuleChecks.checkAaveConfig": ["REQ-ADAPTER-028", "REQ-ADAPTER-029", "REQ-ADAPTER-030", "REQ-ADAPTER-031", "REQ-ADAPTER-032", "REQ-ADAPTER-033", "REQ-ADAPTER-034", "REQ-ADAPTER-035", "REQ-ADAPTER-036", "REQ-ADAPTER-063", "REQ-ADAPTER-064", "REQ-RISK-063", "REQ-RISK-069", "REQ-RISK-076", "Q-281", "Q-270", "Q-378"],
-    "IRiskModuleChecks.pokeConfig": ["REQ-RISK-090", "REQ-RISK-078", "INV-093"],
-    "IRiskModuleChecks.pokeBreakers": ["REQ-RISK-091", "SPEC-BRK-007", "SPEC-BRK-008", "Q-399"],
-    "IRiskModuleChecks.isHubSharesEqualAssets": ["REQ-ADAPTER-037", "Q-189"],
-    "IRiskModuleChecks.checkRemainingRecord": ["REQ-RISK-070", "REQ-RISK-075", "WDR-031", "Q-254"]
   },
   "contracts/src/policy/risk-module/IRiskModuleDriftLogic.sol": {
     "IRiskModuleDriftLogic.driftOf": ["REQ-ADAPTER-028", "REQ-ADAPTER-029", "REQ-ADAPTER-030", "REQ-ADAPTER-031", "REQ-ADAPTER-032", "REQ-ADAPTER-033", "REQ-ADAPTER-034", "REQ-ADAPTER-035", "REQ-ADAPTER-063", "REQ-ADAPTER-064", "REQ-RISK-063", "REQ-RISK-069", "REQ-RISK-088"],
@@ -3319,31 +3336,8 @@
     "IRiskModuleStatusLogic.getAccountGateStatus": ["REQ-ADAPTER-038", "REQ-RISK-060"],
     "IRiskModuleStatusLogic.pauseOf": ["REQ-ADAPTER-038"]
   },
-  "contracts/src/policy/risk-module/IRiskModuleViews.sol": {
-    "IRiskModuleViews.previewPledge": ["REQ-RISK-031", "REQ-RISK-057"],
-    "IRiskModuleViews.getAccountGateStatus": ["REQ-ADAPTER-038", "REQ-RISK-060"],
-    "IRiskModuleViews.checkBorrowGate": ["REQ-RISK-060", "REQ-RISK-061", "REQ-RISK-062"],
-    "IRiskModuleViews.usdToRestore": ["SPEC-CAP-003"],
-    "IRiskModuleViews.expectedCollateralFactorBps": ["SPEC-CF-001"],
-    "IRiskModuleViews.rescueHealthFactor": ["REQ-RISK-059", "SPEC-PROXY-001", "SPEC-CAP-003", "Q-398"],
-    "IRiskModuleViews.MARKET_REGISTRY": ["REQ-RISK-029", "REQ-RISK-055"],
-    "IRiskModuleViews.PARAMETER_STORE": ["REQ-RISK-055"],
-    "IRiskModuleViews.COLLATERALIZATION": ["REQ-RISK-004", "REQ-RISK-058"],
-    "IRiskModuleViews.ADAPTER": ["REQ-ADAPTER-009", "REQ-RISK-031"],
-    "IRiskModuleViews.getBreakerStatus": ["REQ-RISK-065", "REQ-RISK-078", "SPEC-BRK-001", "SPEC-BRK-002", "SPEC-BRK-003", "SPEC-BRK-007", "Q-241", "Q-399"],
-    "IRiskModuleViews.getDebtBreakerStatus": ["REQ-RISK-065", "SPEC-BRK-003", "SPEC-BRK-004", "SPEC-BRK-007", "Q-241", "Q-399"],
-    "IRiskModuleViews.liveBreakerReasons": ["REQ-MREG-025", "SPEC-BRK-008", "Q-399"],
-    "IRiskModuleViews.liveDebtBreakerReasons": ["REQ-MREG-025", "SPEC-BRK-008", "Q-399"],
-    "IRiskModuleViews.RESCUE_MIN_PLEDGE_USD": ["REQ-RISK-067", "Q-252"],
-    "IRiskModuleViews.LP_VAULT_SWAP": ["REQ-RISK-071"],
-    "IRiskModuleViews.TIMELOCK": ["REQ-RISK-072", "Q-259"],
-    "IRiskModuleViews.debtValueUsd": ["SPEC-CAP-009", "REQ-RISK-077"],
-    "IRiskModuleViews.getBorrowSpeed": ["REQ-RISK-097", "SPEC-CAP-011", "Q-411"],
-    "IRiskModuleViews.getPledgeSpeed": ["REQ-RISK-097", "SPEC-CAP-011", "Q-411"],
-    "IRiskModuleViews.getSpeedWindow": ["REQ-RISK-095", "REQ-RISK-097", "SPEC-CAP-011"]
-  },
   "contracts/src/policy/risk-module/RiskModule.sol": {
-    "RiskModule": ["REQ-RISK-001", "REQ-RISK-002", "REQ-RISK-003", "REQ-RISK-004", "REQ-RISK-005", "REQ-RISK-007", "REQ-RISK-008", "REQ-RISK-039", "REQ-RISK-040", "REQ-RISK-053", "REQ-RISK-054", "REQ-RISK-055", "REQ-RISK-072", "REQ-RISK-095", "Q-226", "Q-229", "Q-240", "Q-259", "Q-411"],
+    "RiskModule": ["REQ-RISK-001", "REQ-RISK-002", "REQ-RISK-003", "REQ-RISK-004", "REQ-RISK-005", "REQ-RISK-007", "REQ-RISK-008", "REQ-RISK-039", "REQ-RISK-040", "REQ-RISK-053", "REQ-RISK-054", "REQ-RISK-055", "REQ-RISK-072", "REQ-RISK-095", "Q-226", "Q-229", "Q-240", "Q-259", "Q-411", "REQ-RISK-092", "REQ-RISK-093", "REQ-RISK-097", "SPEC-CAP-011", "SPEC-CAP-012"],
     "RiskModule.constructor": ["REQ-RISK-002"],
     "RiskModule.initialize": ["REQ-RISK-002", "REQ-RISK-072", "Q-226", "Q-228"],
     "RiskModule.checkPledge": ["REQ-RISK-006", "REQ-RISK-009", "REQ-RISK-025", "REQ-RISK-057", "REQ-RISK-058", "REQ-RISK-065", "REQ-RISK-066", "REQ-RISK-067", "REQ-RISK-093", "REQ-RISK-095", "REQ-RISK-099"],
@@ -3409,15 +3403,6 @@
     "RiskModuleBreakerLogic.marketBreaker": ["REQ-RISK-065", "SPEC-BRK-007", "SPEC-BRK-008"],
     "RiskModuleBreakerLogic.debtBreaker": ["REQ-RISK-065", "SPEC-BRK-004", "SPEC-BRK-007", "SPEC-BRK-008"]
   },
-  "contracts/src/policy/risk-module/RiskModuleCalls.sol": {
-    "RiskModuleCalls": ["REQ-RISK-089", "SPEC-BRK-003", "REQ-RISK-081", "SPEC-ORC-023"],
-    "RiskModuleCalls.staticRead": ["REQ-RISK-089"],
-    "RiskModuleCalls.staticReadWord": ["REQ-RISK-089", "SPEC-BRK-003"],
-    "RiskModuleCalls.wordAt": ["REQ-RISK-081"]
-  },
-  "contracts/src/policy/risk-module/RiskModuleConstants.sol": {
-    "RiskModuleConstants": ["REQ-RISK-059", "REQ-RISK-067", "SPEC-PROXY-001", "SPEC-BRK-003", "Q-398", "Q-229", "Q-241", "Q-252"]
-  },
   "contracts/src/policy/risk-module/RiskModuleDriftLogic.sol": {
     "RiskModuleDriftLogic": ["REQ-ADAPTER-028", "REQ-ADAPTER-029", "REQ-ADAPTER-030", "REQ-ADAPTER-031", "REQ-ADAPTER-032", "REQ-ADAPTER-033", "REQ-ADAPTER-034", "REQ-ADAPTER-035", "REQ-ADAPTER-036", "REQ-ADAPTER-037", "REQ-ADAPTER-063", "REQ-ADAPTER-064", "REQ-RISK-063", "REQ-RISK-069", "REQ-RISK-078", "REQ-RISK-088", "SPEC-CF-001", "SPEC-CF-002"],
     "RiskModuleDriftLogic.constructor": ["REQ-RISK-002"],
@@ -3428,7 +3413,7 @@
     "RiskModuleDriftLogic.expectedCollateralFactorBps": ["SPEC-CF-001"]
   },
   "contracts/src/policy/risk-module/RiskModuleMath.sol": {
-    "RiskModuleMath": ["SPEC-CAP-001", "SPEC-CAP-002", "SPEC-CAP-003", "SPEC-CAP-005", "SPEC-CAP-009", "SPEC-CF-001", "SPEC-CF-002", "SPEC-CF-005", "SPEC-BRK-002", "REQ-RISK-066", "REQ-RISK-067", "REQ-RISK-089"],
+    "RiskModuleMath": ["SPEC-CAP-001", "SPEC-CAP-002", "SPEC-CAP-003", "SPEC-CAP-005", "SPEC-CAP-009", "SPEC-CF-001", "SPEC-CF-002", "SPEC-CF-005", "SPEC-BRK-002", "REQ-RISK-066", "REQ-RISK-067", "REQ-RISK-089", "REQ-RISK-059", "SPEC-PROXY-001", "SPEC-BRK-003", "Q-398", "Q-229", "Q-241", "Q-252", "REQ-RISK-081", "SPEC-ORC-023"],
     "RiskModuleMath.pledgeUsd": ["SPEC-CAP-001", "REQ-RISK-057", "REQ-RISK-070"],
     "RiskModuleMath.usdCharge": ["SPEC-CAP-001", "REQ-RISK-021", "REQ-RISK-026"],
     "RiskModuleMath.usdToRestore": ["SPEC-CAP-003"],
@@ -3449,23 +3434,19 @@
     "RiskModuleMath.requiredHealthFactor": ["REQ-RISK-059", "REQ-RISK-068", "SPEC-CF-005"],
     "RiskModuleMath.gasFloor": ["REQ-RISK-089"],
     "RiskModuleMath.rescueMinimum": ["REQ-RISK-067"],
-    "RiskModuleMath.exemption": ["REQ-RISK-023", "REQ-RISK-057", "REQ-RISK-066", "REQ-RISK-073", "REQ-RISK-074"]
+    "RiskModuleMath.exemption": ["REQ-RISK-023", "REQ-RISK-057", "REQ-RISK-066", "REQ-RISK-073", "REQ-RISK-074"],
+    "RiskModuleMath.staticRead": ["REQ-RISK-089"],
+    "RiskModuleMath.staticReadWord": ["REQ-RISK-089", "SPEC-BRK-003"],
+    "RiskModuleMath.wordAt": ["REQ-RISK-081"]
   },
   "contracts/src/policy/risk-module/RiskModulePledgeLogic.sol": {
-    "RiskModulePledgeLogic": ["REQ-RISK-006", "REQ-RISK-009", "REQ-RISK-010", "REQ-RISK-011", "REQ-RISK-012", "REQ-RISK-013", "REQ-RISK-014", "REQ-RISK-016", "REQ-RISK-017", "REQ-RISK-018", "REQ-RISK-019", "REQ-RISK-020", "REQ-RISK-021", "REQ-RISK-022", "REQ-RISK-023", "REQ-RISK-024", "REQ-RISK-025", "REQ-RISK-026", "REQ-RISK-027", "REQ-RISK-028", "REQ-RISK-029", "REQ-RISK-030", "REQ-RISK-047", "REQ-RISK-057", "REQ-RISK-058", "REQ-RISK-066", "REQ-RISK-067", "REQ-RISK-070", "REQ-RISK-073", "REQ-RISK-074", "REQ-RISK-079", "REQ-RISK-081", "SPEC-CAP-001", "SPEC-CAP-002", "SPEC-CAP-003", "SPEC-CAP-005"],
+    "RiskModulePledgeLogic": ["REQ-RISK-006", "REQ-RISK-009", "REQ-RISK-010", "REQ-RISK-011", "REQ-RISK-012", "REQ-RISK-013", "REQ-RISK-014", "REQ-RISK-016", "REQ-RISK-017", "REQ-RISK-018", "REQ-RISK-019", "REQ-RISK-020", "REQ-RISK-021", "REQ-RISK-022", "REQ-RISK-023", "REQ-RISK-024", "REQ-RISK-025", "REQ-RISK-026", "REQ-RISK-027", "REQ-RISK-028", "REQ-RISK-029", "REQ-RISK-030", "REQ-RISK-047", "REQ-RISK-057", "REQ-RISK-058", "REQ-RISK-066", "REQ-RISK-067", "REQ-RISK-070", "REQ-RISK-073", "REQ-RISK-074", "REQ-RISK-079", "REQ-RISK-081", "SPEC-CAP-001", "SPEC-CAP-002", "SPEC-CAP-003", "SPEC-CAP-005", "REQ-RISK-031", "REQ-RISK-008"],
     "RiskModulePledgeLogic.constructor": ["REQ-RISK-002"],
     "RiskModulePledgeLogic.logicConfig": ["REQ-RISK-002"],
     "RiskModulePledgeLogic.checkPledge": ["REQ-RISK-006", "REQ-RISK-025", "REQ-RISK-066"],
     "RiskModulePledgeLogic.usdToRestore": ["SPEC-CAP-003"],
-    "RiskModulePledgeLogic.checkRemainingRecord": ["REQ-RISK-070", "REQ-RISK-075", "WDR-031"]
-  },
-  "contracts/src/policy/risk-module/RiskModulePreview.sol": {
-    "RiskModulePreview": ["REQ-RISK-010", "REQ-RISK-027", "REQ-RISK-031", "REQ-RISK-057", "REQ-RISK-008"],
-    "RiskModulePreview.constructor": ["REQ-RISK-002"],
-    "RiskModulePreview.previewPledge": ["REQ-RISK-031", "REQ-RISK-057", "REQ-RISK-010"]
-  },
-  "contracts/src/policy/risk-module/RiskModuleSpeed.sol": {
-    "RiskModuleSpeed": ["REQ-RISK-092", "REQ-RISK-093", "REQ-RISK-095", "REQ-RISK-097", "SPEC-CAP-011", "SPEC-CAP-012", "Q-411"]
+    "RiskModulePledgeLogic.checkRemainingRecord": ["REQ-RISK-070", "REQ-RISK-075", "WDR-031"],
+    "RiskModulePledgeLogic.previewPledge": ["REQ-RISK-031", "REQ-RISK-057", "REQ-RISK-010"]
   },
   "contracts/src/policy/risk-module/RiskModuleSpeedLogic.sol": {
     "RiskModuleSpeedLogic": ["REQ-RISK-092", "REQ-RISK-093", "REQ-RISK-095", "REQ-RISK-096", "REQ-RISK-097", "SPEC-CAP-011", "SPEC-CAP-012", "SPEC-CAP-013", "Q-411"],
@@ -3497,25 +3478,13 @@
     "SpeedLimitMath.viewOf": ["REQ-RISK-097"],
     "SpeedLimitMath.usdOf": ["SPEC-CAP-013"]
   },
-  "contracts/src/policy/risk-module/types/BorrowSpeedInputs.sol": {
-    "BorrowSpeedInputs": ["REQ-RISK-092", "SPEC-CAP-012", "SPEC-CAP-013", "Q-411"]
-  },
-  "contracts/src/policy/risk-module/types/PledgeCharge.sol": {
-    "PledgeCharge": ["REQ-RISK-025", "REQ-RISK-066", "SPEC-CAP-001", "SPEC-CAP-002", "SPEC-BACK-014", "Q-252", "Q-253"]
-  },
-  "contracts/src/policy/risk-module/types/RiskModuleImmutables.sol": {
-    "RiskModuleImmutables": ["REQ-RISK-002", "REQ-RISK-055", "Q-226", "Q-313"]
-  },
-  "contracts/src/policy/risk-module/types/RiskModuleLogics.sol": {
-    "RiskModuleLogics": ["REQ-RISK-002"]
-  },
-  "contracts/src/policy/risk-module/types/SpeedScope.sol": {
-    "SpeedScope": ["REQ-RISK-092", "REQ-RISK-093", "REQ-RISK-097"]
-  },
-  "contracts/src/policy/risk-module/types/SpeedView.sol": {
-    "SpeedView": ["REQ-RISK-097", "SPEC-CAP-011", "Q-411"]
-  },
-  "contracts/src/policy/risk-module/types/SpeedWindow.sol": {
+  "contracts/src/policy/risk-module/types/RiskModuleTypes.sol": {
+    "BorrowSpeedInputs": ["REQ-RISK-092", "SPEC-CAP-012", "SPEC-CAP-013", "Q-411"],
+    "PledgeCharge": ["REQ-RISK-025", "REQ-RISK-066", "SPEC-CAP-001", "SPEC-CAP-002", "SPEC-BACK-014", "Q-252", "Q-253"],
+    "RiskModuleImmutables": ["REQ-RISK-002", "REQ-RISK-055", "Q-226", "Q-313"],
+    "RiskModuleLogics": ["REQ-RISK-002"],
+    "SpeedScope": ["REQ-RISK-092", "REQ-RISK-093", "REQ-RISK-097"],
+    "SpeedView": ["REQ-RISK-097", "SPEC-CAP-011", "Q-411"],
     "SpeedWindow": ["SPEC-CAP-011", "SPEC-CAP-012", "REQ-RISK-095", "Q-411"]
   },
   "contracts/src/proxy/position-proxy/IPositionProxy.sol": {

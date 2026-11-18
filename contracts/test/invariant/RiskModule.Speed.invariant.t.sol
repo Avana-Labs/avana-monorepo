@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {MarketSpeedLimits, SpeedLimit} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {SpeedView} from "../../src/policy/risk-module/types/SpeedView.sol";
+import {SpeedView} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {RiskModuleSpeedHandler} from "./handlers/RiskModuleSpeedHandler.sol";

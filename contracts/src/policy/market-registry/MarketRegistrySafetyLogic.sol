@@ -7,7 +7,7 @@ import {IFlashSource} from "../../flash/IFlashSource.sol";
 import {PauseReason} from "../../types/PauseReason.sol";
 import {PauseState} from "../../types/PauseState.sol";
 import {IAaveAdapterViews} from "../aave-adapter/IAaveAdapterViews.sol";
-import {IRiskModuleViews} from "../risk-module/IRiskModuleViews.sol";
+import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
@@ -185,7 +185,7 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         bytes32 key = bytes32(marketId);
         uint32 latched = _s().latched[key];
         if (latched == 0) revert NothingToReset();
-        uint32 still = IRiskModuleViews(_RISK_MODULE).liveBreakerReasons(marketId) & latched & BreakerReasons.SECURITY;
+        uint32 still = IRiskModule(_RISK_MODULE).liveBreakerReasons(marketId) & latched & BreakerReasons.SECURITY;
         _reset(BreakerScope.Market, key, still);
     }
 
@@ -197,8 +197,8 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         bytes32 key = _debtKey(spoke, debtReserveId);
         uint32 latched = _s().latched[key];
         if (latched == 0) revert NothingToReset();
-        uint32 still = IRiskModuleViews(_RISK_MODULE).liveDebtBreakerReasons(spoke, debtReserveId) & latched
-            & BreakerReasons.SECURITY;
+        uint32 still =
+            IRiskModule(_RISK_MODULE).liveDebtBreakerReasons(spoke, debtReserveId) & latched & BreakerReasons.SECURITY;
         _reset(BreakerScope.DebtReserve, key, still);
     }
 

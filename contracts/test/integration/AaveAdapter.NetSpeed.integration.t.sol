@@ -6,8 +6,8 @@ pragma solidity 0.8.28;
 import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
 import {IAaveAdapterUser} from "../../src/policy/aave-adapter/IAaveAdapterUser.sol";
 import {MarketSpeedLimits, SpeedLimit} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
-import {SpeedView} from "../../src/policy/risk-module/types/SpeedView.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
+import {SpeedView} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
 
 /// @title AaveAdapterNetSpeedIntegrationTest
@@ -85,7 +85,7 @@ contract AaveAdapterNetSpeedIntegrationTest is AaveAdapterRiskFixture {
     // TEST-326 verifies: REQ-RISK-005, REQ-RISK-092
     function test_TEST_326_aFailingCreditNeverStopsARepay() public {
         _borrowAs(alice, MARKET_ID, debtReserveId, 500e18);
-        vm.mockCallRevert(address(rm), abi.encodeWithSelector(IRiskModuleChecks.creditRepay.selector), "boom");
+        vm.mockCallRevert(address(rm), abi.encodeWithSelector(IRiskModule.creditRepay.selector), "boom");
         _repay(500e18);
         vm.clearMockedCalls();
         (, SpeedView memory d) = _views();

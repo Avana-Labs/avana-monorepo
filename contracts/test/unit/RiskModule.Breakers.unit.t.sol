@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
@@ -33,7 +33,7 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.ISSUER));
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
         vm.expectEmit(address(riskModule));
-        emit IRiskModuleChecks.BreakersPoked(mid, BreakerReasons.ISSUER);
+        emit IRiskModule.BreakersPoked(mid, BreakerReasons.ISSUER);
         assertEq(riskModule.pokeBreakers(mid), BreakerReasons.ISSUER);
         // A reset is refused while the probe still trips.
         vm.prank(emergencyGuardian);

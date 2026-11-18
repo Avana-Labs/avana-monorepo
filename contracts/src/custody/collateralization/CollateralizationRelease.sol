@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {IRiskModuleChecks} from "../../policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {CollateralizationLedger} from "./CollateralizationLedger.sol";
 import {ICollateralizationAdapter} from "./ICollateralizationAdapter.sol";
 import {ICollateralizationUser} from "./ICollateralizationUser.sol";
@@ -153,7 +153,7 @@ abstract contract CollateralizationRelease is
         if (left < SPEED_CREDIT_FLOOR) revert InsufficientGas(left, SPEED_CREDIT_FLOOR);
         // A failed credit only leaves the window fuller than the net pledges; it must not block the exit.
         // solhint-disable-next-line no-empty-blocks
-        try IRiskModuleChecks(_RISK_MODULE).creditWithdraw{gas: SPEED_CREDIT_GAS}(marketId, usd) {} catch {}
+        try IRiskModule(_RISK_MODULE).creditWithdraw{gas: SPEED_CREDIT_GAS}(marketId, usd) {} catch {}
     }
 
     function _depositorRecord(

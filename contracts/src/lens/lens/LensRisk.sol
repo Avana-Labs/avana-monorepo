@@ -9,7 +9,7 @@ import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {DebtReserveDef, MarketStatus} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
-import {IRiskModuleViews} from "../../policy/risk-module/IRiskModuleViews.sol";
+import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {Market} from "../../types/Market.sol";
 import {ILensHubReads} from "./ILensHubReads.sol";
 import {ILensRisk} from "./ILensRisk.sol";
@@ -43,7 +43,7 @@ abstract contract LensRisk is LensBase, ILensRisk {
         uint256 marketId
     ) external view override returns (uint32 reasons, uint64 reopensAt) {
         _unlocked();
-        (reasons, reopensAt) = IRiskModuleViews(_RISK_MODULE).getBreakerStatus(marketId);
+        (reasons, reopensAt) = IRiskModule(_RISK_MODULE).getBreakerStatus(marketId);
     }
 
     /// @inheritdoc ILensRisk
@@ -52,7 +52,7 @@ abstract contract LensRisk is LensBase, ILensRisk {
         uint256 debtReserveId
     ) external view override returns (uint32 reasons, uint64 reopensAt) {
         _unlocked();
-        (reasons, reopensAt) = IRiskModuleViews(_RISK_MODULE).getDebtBreakerStatus(spoke, debtReserveId);
+        (reasons, reopensAt) = IRiskModule(_RISK_MODULE).getDebtBreakerStatus(spoke, debtReserveId);
     }
 
     /// @inheritdoc ILensRisk

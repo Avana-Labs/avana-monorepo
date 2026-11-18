@@ -8,7 +8,7 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
 import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
 import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
@@ -61,11 +61,9 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
     /// consumed nonce and the health factor the RiskModule returned.
     function test_TEST_027_borrowGho() public {
         uint256 amount = 5000e18;
-        vm.expectCall(
-            address(risk), abi.encodeCall(IRiskModuleChecks.preBorrowCheck, (aliceProxy, debtReserveId, amount))
-        );
+        vm.expectCall(address(risk), abi.encodeCall(IRiskModule.preBorrowCheck, (aliceProxy, debtReserveId, amount)));
         vm.expectCall(address(coll), abi.encodeCall(ICollateralizationDebtMark.markIndebted, (aliceProxy)));
-        vm.expectCall(address(risk), abi.encodeCall(IRiskModuleChecks.postHealthCheck, (aliceProxy, 1.5e18)));
+        vm.expectCall(address(risk), abi.encodeCall(IRiskModule.postHealthCheck, (aliceProxy, 1.5e18)));
         // $20,000 of collateral at CF 80% over $5,000 of GHO debt.
         uint256 hfExpected = uint256(16_000e18) * 1e18 / amount;
         vm.expectEmit(adapter);

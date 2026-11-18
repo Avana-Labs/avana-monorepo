@@ -8,7 +8,7 @@ import {ICollateralizationDebtMark} from "../../custody/collateralization/IColla
 import {ICollateralizationUser} from "../../custody/collateralization/ICollateralizationUser.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {PositionRef} from "../../types/PositionRef.sol";
-import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
@@ -107,7 +107,7 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
         ICollateralizationAdapter(_COLLATERALIZATION).release(proxy, account.vaultToken, positionKey, units);
         uint256 hf = type(uint256).max;
         if (debtFree) _cleanup(proxy, account.spoke, reserveId);
-        else hf = IRiskModuleChecks(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
+        else hf = IRiskModule(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
         _checkGap(account.vaultToken, gapBefore);
         emit CollateralWithdrawn(msg.sender, account.marketId, account.vaultToken, positionKey, units, !debtFree, hf);
     }

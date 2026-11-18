@@ -24,7 +24,7 @@ interface IRiskModuleBorrowLogic is IRiskModuleLogic {
         bool borrow
     ) external view;
 
-    /// @notice Body of `IRiskModuleChecks.postHealthCheck`.
+    /// @notice Body of `IRiskModule.postHealthCheck`.
     function postHealthCheck(
         address proxy,
         uint256 minHealthFactor
@@ -37,7 +37,7 @@ interface IRiskModuleBorrowLogic is IRiskModuleLogic {
         address proxy
     ) external view returns (uint256 hf, uint256 hfEx);
 
-    /// @notice Body of `IRiskModuleViews.debtValueUsd`.
+    /// @notice Body of `IRiskModule.debtValueUsd`.
     function debtValueUsd(
         address proxy
     ) external view returns (uint256 usd);

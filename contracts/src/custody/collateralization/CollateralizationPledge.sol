@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {IRiskModuleChecks} from "../../policy/risk-module/IRiskModuleChecks.sol";
-import {PledgeCharge} from "../../policy/risk-module/types/PledgeCharge.sol";
+import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
+import {PledgeCharge} from "../../policy/risk-module/types/RiskModuleTypes.sol";
 import {PledgeCounters} from "../../types/PledgeCounters.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {CollateralizationLedger} from "./CollateralizationLedger.sol";
@@ -200,7 +200,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         ILPOracle(IVaultToken(c.vaultToken).lpOracle()).poke();
         PledgeCounters memory counters = _counters(c);
         counters.accountRecords = seizureList[proxy][c.vaultToken].length + zeroCreditList[proxy][c.vaultToken].length;
-        return IRiskModuleChecks(_RISK_MODULE)
+        return IRiskModule(_RISK_MODULE)
             .checkPledge(depositor, proxy, c.marketId, c.integrationId, positionKey, units, counters, requireRescue);
     }
 

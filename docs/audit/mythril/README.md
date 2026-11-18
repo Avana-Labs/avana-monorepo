@@ -22,7 +22,7 @@ Configuration: `contracts/security/mythril.conf` (modules, `MYTHRIL_TX_COUNT=3`,
 
 ## Scope
 
-Runtime code of AmmConstants, AvanaRoles, BreakerReasons, LensConstants, Lock, LockSlot, RiskModuleConstants (the deployable code at the last run).
+Runtime code of AmmConstants, AvanaRoles, BreakerReasons, LensConstants, Lock, LockSlot, RiskModuleMath (the deployable code at the last run).
 
 ## How often it runs
 

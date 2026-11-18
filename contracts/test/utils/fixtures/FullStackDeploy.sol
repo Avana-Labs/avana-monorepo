@@ -50,8 +50,7 @@ import {RiskModuleDriftLogic} from "../../../src/policy/risk-module/RiskModuleDr
 import {RiskModulePledgeLogic} from "../../../src/policy/risk-module/RiskModulePledgeLogic.sol";
 import {RiskModuleSpeedLogic} from "../../../src/policy/risk-module/RiskModuleSpeedLogic.sol";
 import {RiskModuleStatusLogic} from "../../../src/policy/risk-module/RiskModuleStatusLogic.sol";
-import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleImmutables.sol";
-import {RiskModuleLogics} from "../../../src/policy/risk-module/types/RiskModuleLogics.sol";
+import {RiskModuleImmutables, RiskModuleLogics} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {AdapterPlaceholder} from "../mocks/AaveAdapterMocks.sol";

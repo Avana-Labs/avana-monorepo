@@ -17,7 +17,7 @@ import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
-import {IRiskModuleAdmin} from "../../src/policy/risk-module/IRiskModuleAdmin.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {TimelockFixture} from "../utils/fixtures/TimelockFixture.sol";
 import {TimelockShortDelayLists} from "../utils/fixtures/TimelockShortDelayLists.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -163,7 +163,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
             IMarketRegistry.initialize.selector,
             IParameterStore.initialize.selector,
             IAaveAdapterAdmin.initialize.selector,
-            IRiskModuleAdmin.initialize.selector,
+            IRiskModule.initialize.selector,
             ILPOracle.initialize.selector,
             IDebtOracle.initialize.selector,
             ILPVaultSwapAdmin.initialize.selector

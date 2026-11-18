@@ -8,7 +8,7 @@ import {ICollateralizationEvents} from "../../src/custody/collateralization/ICol
 import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
 import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {PledgeCharge} from "../../src/policy/risk-module/types/PledgeCharge.sol";
+import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";

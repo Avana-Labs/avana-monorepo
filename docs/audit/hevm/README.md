@@ -39,7 +39,7 @@ HEVM_SMT_TIMEOUT=600 script/security-slow.sh build hevm       # nightly budget
 
 ## Scope
 
-Harness entry points of AvanaRoles, Lock and LockSlot; runtime code of AmmConstants, AvanaRoles, BreakerReasons, LensConstants, Lock, LockSlot, RiskModuleConstants. `test/symbolic/` holds no `prove_` function yet.
+Harness entry points of AvanaRoles, Lock and LockSlot; runtime code of AmmConstants, AvanaRoles, BreakerReasons, LensConstants, Lock, LockSlot, RiskModuleMath. `test/symbolic/` holds no `prove_` function yet.
 
 ## How often it runs
 

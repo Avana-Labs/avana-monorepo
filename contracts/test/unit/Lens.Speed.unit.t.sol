@@ -7,7 +7,7 @@ import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {ILensSpeed} from "../../src/lens/lens/ILensSpeed.sol";
 import {BorrowSpeedView} from "../../src/lens/lens/types/BorrowSpeedView.sol";
 import {MarketSpeedLimits, SpeedLimit} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {SpeedView} from "../../src/policy/risk-module/types/SpeedView.sol";
+import {SpeedView} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @notice A Lock stand-in whose state the test sets.

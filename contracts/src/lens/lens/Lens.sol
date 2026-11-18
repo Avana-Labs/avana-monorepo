@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {SpeedView} from "../../policy/risk-module/types/SpeedView.sol";
+import {SpeedView} from "../../policy/risk-module/types/RiskModuleTypes.sol";
 import {CapView} from "../../types/CapView.sol";
 import {PauseState} from "../../types/PauseState.sol";
 import {PendingView} from "../../types/PendingView.sol";

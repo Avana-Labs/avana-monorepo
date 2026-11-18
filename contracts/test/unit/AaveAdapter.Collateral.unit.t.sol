@@ -8,7 +8,7 @@ import {ICollateralizationErrors} from "../../src/custody/collateralization/ICol
 import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
 import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
 import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
@@ -64,8 +64,8 @@ contract AaveAdapterCollateralUnitTest is AaveAdapterFixture {
         expected[0] = uint256(units) * 800_000 / 1e6;
         expected[1] = uint256(units) * 1_250_000 / 1e6;
         vm.expectCall(vt, abi.encodeCall(IVaultToken.burn, (p, units)), 1);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.preWithdrawCheck.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.checkRemainingRecord.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.checkRemainingRecord.selector), 0);
         vm.expectEmit(adapter);
         emit IAaveAdapterEvents.CollateralReduced(alice, MARKET_ID, vt, k1, units, expected, false, type(uint256).max);
         uint256[] memory amounts = _remove(units, 0);
@@ -113,11 +113,11 @@ contract AaveAdapterCollateralUnitTest is AaveAdapterFixture {
         registry.setFrozen(alice, true);
         _expectRemoveRevert(abi.encodeWithSelector(IAaveAdapterErrors.AddressIsFrozen.selector, alice), 1_000_000_000);
         registry.setFrozen(alice, false);
-        vm.expectCall(address(risk), abi.encodeCall(IRiskModuleChecks.preWithdrawCheck, (p)), 1);
+        vm.expectCall(address(risk), abi.encodeCall(IRiskModule.preWithdrawCheck, (p)), 1);
         vm.expectCall(
-            address(risk), abi.encodeCall(IRiskModuleChecks.checkRemainingRecord, (MARKET_ID, UNITS - 1_000_000_000)), 1
+            address(risk), abi.encodeCall(IRiskModule.checkRemainingRecord, (MARKET_ID, UNITS - 1_000_000_000)), 1
         );
-        vm.expectCall(address(risk), abi.encodeCall(IRiskModuleChecks.postHealthCheck, (p, 1.1e18)), 1);
+        vm.expectCall(address(risk), abi.encodeCall(IRiskModule.postHealthCheck, (p, 1.1e18)), 1);
         _remove(1_000_000_000, 1.1e18);
     }
 

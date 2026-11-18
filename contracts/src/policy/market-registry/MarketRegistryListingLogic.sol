@@ -27,8 +27,7 @@ import {ShapeKind} from "../../types/ShapeKind.sol";
 import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
-import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
-import {IRiskModuleViews} from "../risk-module/IRiskModuleViews.sol";
+import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {MarketRegistryRouteChecks} from "./MarketRegistryRouteChecks.sol";
@@ -268,7 +267,7 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
             delete l.latched[bytes32(marketId)];
             _clearBreachTimes(l, bytes32(marketId));
         }
-        try IRiskModuleChecks(_RISK_MODULE).checkAaveConfig(def.spoke, new uint256[](0)) {}
+        try IRiskModule(_RISK_MODULE).checkAaveConfig(def.spoke, new uint256[](0)) {}
         catch {
             revert ActivationCheckFailed(marketId, "aaveConfig");
         }
@@ -390,7 +389,7 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         address lpOracle
     ) private view returns (bytes32 failed) {
         if (!_commonModeHolds(tokens)) return "commonMode";
-        uint256 cfLp = IRiskModuleViews(_RISK_MODULE).expectedCollateralFactorBps(marketId);
+        uint256 cfLp = IRiskModule(_RISK_MODULE).expectedCollateralFactorBps(marketId);
         if (!_listingMarginHolds(cfLp, tokens)) return "listingMargin";
         if (!_oracleConfigPasses(lpOracle)) return "oracleConfig";
     }

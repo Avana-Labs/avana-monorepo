@@ -3,43 +3,178 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {RiskStatus} from "../../amm/types/RiskStatus.sol";
-import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
-import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {DriftReason} from "../../types/DriftReason.sol";
-import {Market} from "../../types/Market.sol";
-import {PledgeCounters} from "../../types/PledgeCounters.sol";
-import {PriceState} from "../../types/PriceState.sol";
-import {PriceStateView} from "../../types/PriceStateView.sol";
-import {BreakerReasons} from "../market-registry/types/Breaker.sol";
-import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
-import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
-import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
-import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
-import {IRiskModulePledgeLogic} from "./IRiskModulePledgeLogic.sol";
-import {RiskModuleConstants} from "./RiskModuleConstants.sol";
-import {RiskModuleMath} from "./RiskModuleMath.sol";
-import {RiskModulePreview} from "./RiskModulePreview.sol";
-import {PledgeCharge} from "./types/PledgeCharge.sol";
-import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
-
 /// @title RiskModulePledgeLogic
 /// @notice Body of `checkPledge`, the restore amount and the remaining-record minimum.
 /// @dev Safe under STATICCALL: makes no call to Collateralization or the LPVault.
 // View calls in loops over the market's pool tokens and the Spoke's reserves, bounded by listings.
-// forge-lint: disable-start(calls-loop)
-contract RiskModulePledgeLogic is RiskModulePreview {
-    bytes32 internal constant CAP_MARKET = "MARKET";
-    bytes32 internal constant CAP_SLICE = "SLICE";
-    bytes32 internal constant CAP_TOKEN = "TOKEN";
 
+import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
+import {RiskStatus} from "../../amm/types/RiskStatus.sol";
+import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
+import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
+import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {AmmConstants} from "../../types/AmmConstants.sol";
+import {DriftReason} from "../../types/DriftReason.sol";
+import {Market} from "../../types/Market.sol";
+import {PledgeCounters} from "../../types/PledgeCounters.sol";
+import {PledgePreview} from "../../types/PledgePreview.sol";
+import {PriceState} from "../../types/PriceState.sol";
+import {PriceStateView} from "../../types/PriceStateView.sol";
+import {IAaveAdapterViews} from "../aave-adapter/IAaveAdapterViews.sol";
+import {BreakerReasons} from "../market-registry/types/Breaker.sol";
+import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
+import {IParameterStore} from "../parameter-store/IParameterStore.sol";
+import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
+import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
+import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
+import {IRiskModulePledgeLogic} from "./IRiskModulePledgeLogic.sol";
+import {RiskModuleBase} from "./RiskModuleBase.sol";
+import {RiskModuleMath} from "./RiskModuleMath.sol";
+import {PledgeCharge, RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+
+// forge-lint: disable-start(calls-loop)
+contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
+    // forge-lint: disable-start(calls-loop)
+    struct Ctx {
+        Market m;
+        uint256 marketId;
+        address proxy;
+        uint128 units;
+        bool topUp;
+        uint256 hf;
+        uint256 debtRay;
+        uint256 minPledge;
+        uint256 pledgeUsd;
+        uint256 charge;
+        bool eligible;
+        uint256 restore;
+        // The market's fresh price from the eligibility read, 0 when failed.
+        uint256 fresh;
+    }
+
+    address internal immutable _DRIFT;
+    address internal immutable _BREAKER;
+
+    // `_requireLogic` checks each logic address, which rejects zero.
+    // forge-lint: disable-next-item(missing-zero-check)
     constructor(
         RiskModuleImmutables memory im,
         address drift,
         address breaker
-    ) RiskModulePreview(im, drift, breaker) {}
+    ) RiskModuleBase(im) {
+        _requireLogic(drift, keccak256("RiskModuleDriftLogic"));
+        _requireLogic(breaker, keccak256("RiskModuleBreakerLogic"));
+        _DRIFT = drift;
+        _BREAKER = breaker;
+    }
+
+    /// @inheritdoc IRiskModulePledgeLogic
+    function previewPledge(
+        address depositor,
+        uint256 marketId,
+        bytes32 positionKey
+    ) external view override returns (PledgePreview memory p) {
+        Market memory m = _market(marketId);
+        address proxy = IAaveAdapterViews(_ADAPTER).proxyOf(depositor, marketId);
+        if (proxy == address(0)) proxy = IAaveAdapterViews(_ADAPTER).predictProxy(depositor, marketId);
+        ICollateralizationViews coll = ICollateralizationViews(_COLLATERALIZATION);
+        PledgeCounters memory k = coll.getCounters(m.vaultToken, depositor);
+        k.accountRecords = coll.getOpenRecordCount(proxy, m.vaultToken);
+        p.isTopUp = _accountData(m.spoke, proxy).borrowCount > 0;
+        _rooms(p, m, marketId, k);
+        uint128 units;
+        (p.reason, units) = _position(m, marketId, depositor, positionKey);
+        if (p.reason != bytes4(0)) return p;
+        p.usdCharge =
+            RiskModuleMath.usdCharge(units, _capPrice(m.lpOracle), _store().stressFloorUsd(marketId), m.decimals);
+        uint256 cap = Math.min(
+            IAmmIntegration(m.integration).maxRecordsPerAccountMarket(), AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET
+        );
+        if (k.accountRecords >= cap) {
+            p.reason = TooManyRecords.selector;
+            return p;
+        }
+        try IRiskModulePledgeLogic(address(this))
+            .checkPledge(depositor, proxy, marketId, m.integrationId, positionKey, units, k, false) returns (
+            PledgeCharge memory ch
+        ) {
+            p.eligible = true;
+            p.usdCharge = ch.usdCharge;
+            p.sliceUsd = ch.sliceUsd;
+        } catch (bytes memory err) {
+            // The revert selector is the first four bytes of the revert data.
+            // forge-lint: disable-next-line(unsafe-typecast)
+            p.reason = bytes4(err);
+        }
+    }
+
+    function _position(
+        Market memory m,
+        uint256 marketId,
+        address depositor,
+        bytes32 positionKey
+    ) internal view returns (bytes4 reason, uint128 units) {
+        IAmmIntegration amm = IAmmIntegration(m.integration);
+        if (amm.positionOwner(positionKey) != depositor) return (NotPositionOwner.selector, 0);
+        try amm.validatePosition(marketId, depositor, positionKey) returns (uint128 u) {
+            units = u;
+        } catch (bytes memory err) {
+            // The revert selector is the first four bytes of the revert data.
+            // forge-lint: disable-next-line(unsafe-typecast)
+            reason = err.length < 4 ? PoolMismatch.selector : bytes4(err);
+        }
+    }
+
+    function _rooms(
+        PledgePreview memory p,
+        Market memory m,
+        uint256 marketId,
+        PledgeCounters memory k
+    ) internal view {
+        IParameterStore ps = _store();
+        p.marketRoomUsd = _room(ps.marketUsdCap(marketId), k.regularUsed);
+        p.sliceRoomUsd = _room(ps.topUpSliceUsd(marketId), k.sliceUsed);
+        p.tokenRoomUsd = new uint256[](m.tokens.length);
+        for (uint256 i = 0; i < m.tokens.length; ++i) {
+            uint256 used = i < k.tokenUsed.length ? k.tokenUsed[i] : 0;
+            p.tokenRoomUsd[i] = _room(ps.tokenUsdCap(m.hub, m.tokens[i]), used);
+        }
+        uint256 open = k.accountRecords;
+        uint256 max = AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET;
+        p.recordRoom = open < max ? max - open : 0;
+        uint256 cap = ps.poolShareMaxBpsOf(_poolKey(m));
+        if (cap >= NO_POOL_SHARE_CAP) {
+            p.poolShareRoomUnits = type(uint256).max;
+        } else {
+            RiskStatus memory rs =
+                IAmmIntegration(m.integration).riskStatus(marketId, ps.getMarketParams(marketId).twapWindow);
+            if (rs.depthAvailable) {
+                p.poolShareRoomUnits = RiskModuleMath.poolShareRoom(k.poolUnits, cap, rs.depthUnits);
+            }
+        }
+    }
+
+    function _room(
+        uint256 cap,
+        uint256 used
+    ) internal pure returns (uint256 room) {
+        room = cap > used ? cap - used : 0;
+    }
+
+    function _mulDivUp(
+        uint256 a,
+        uint256 b,
+        uint256 c
+    ) internal pure returns (uint256) {
+        return Math.mulDiv(a, b, c, Math.Rounding.Ceil);
+    }
+    // forge-lint: disable-end(calls-loop)
+
+    bytes32 internal constant CAP_MARKET = "MARKET";
+    bytes32 internal constant CAP_SLICE = "SLICE";
+    bytes32 internal constant CAP_TOKEN = "TOKEN";
 
     /// @inheritdoc IRiskModuleLogic
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
@@ -165,7 +300,7 @@ contract RiskModulePledgeLogic is RiskModulePreview {
         c.charge = RiskModuleMath.usdCharge(c.units, capPrice8, floorUsd, c.m.decimals);
         uint256 rescueMin = RiskModuleMath.rescueMinimum(c.minPledge);
         if (c.pledgeUsd < rescueMin) revert BelowMinPledge(c.pledgeUsd, rescueMin);
-        c.eligible = c.topUp && c.hf < RiskModuleConstants.RESCUE_HEALTH_FACTOR;
+        c.eligible = c.topUp && c.hf < RiskModuleMath.RESCUE_HEALTH_FACTOR;
         if (c.eligible) {
             uint256 restore = RiskModuleMath.usdToRestore(c.hf, c.debtRay, _latestCf(c.m.spoke, c.m));
             c.restore = RiskModuleMath.restoreBooked(restore, capPrice8, floorUsd, _served(c.m.lpOracle));

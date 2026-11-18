@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
-import {IRiskModuleViews} from "../../policy/risk-module/IRiskModuleViews.sol";
+import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
 import {Market} from "../../types/Market.sol";
 import {PauseState} from "../../types/PauseState.sol";
@@ -57,7 +57,7 @@ abstract contract LensPositions is LensAccountMath, ILensPositions {
     ) external view override returns (PledgePreviewView memory v) {
         _unlocked();
         (v.blockNumber, v.timestamp) = (block.number, block.timestamp);
-        v.preview = IRiskModuleViews(_RISK_MODULE).previewPledge(depositor, marketId, positionKey);
+        v.preview = IRiskModule(_RISK_MODULE).previewPledge(depositor, marketId, positionKey);
     }
 
     /// @inheritdoc ILensPositions
@@ -111,7 +111,7 @@ abstract contract LensPositions is LensAccountMath, ILensPositions {
         uint256 cf,
         uint256 debtRay
     ) internal view returns (bool) {
-        AccountGateStatus memory st = IRiskModuleViews(_RISK_MODULE).getAccountGateStatus(proxy);
+        AccountGateStatus memory st = IRiskModule(_RISK_MODULE).getAccountGateStatus(proxy);
         uint256 e = _rescueAt(m, proxy, cf);
         uint256 h0 = Math.max(_store().hardHealthFloor(marketId), WAD_);
         return st.withdrawWithDebtAllowed && st.pauseState != PauseState.Paused

@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveV4SpokePositionManagers} from "../../src/interfaces/external/aave/IAaveV4SpokePositionManagers.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
@@ -126,7 +126,7 @@ contract AaveAdapterRealAaveUnitTest is AaveAdapterFixture {
         vm.prank(alice);
         adapterC.repay(alice, MARKET_ID, usdcReserveId, 1, true, d);
         assertEq(_borrowCountOf(p), 0, "debt-free");
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.preWithdrawCheck.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
         vm.prank(alice);
         adapterC.withdraw(MARKET_ID, _ref(k1), UNITS, d, 0);
         assertEq(lpVault.ownerOf(k1), alice, "debt-free exit under Paused");

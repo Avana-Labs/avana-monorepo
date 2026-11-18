@@ -5,10 +5,10 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {RiskModule} from "../../src/policy/risk-module/RiskModule.sol";
-import {PledgeCharge} from "../../src/policy/risk-module/types/PledgeCharge.sol";
+import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {VmSafe} from "forge-std/Vm.sol";
@@ -32,7 +32,7 @@ contract RiskModuleScopeUnitTest is RiskModuleFixture {
         PledgeCounters memory k
     ) internal view returns (bytes memory) {
         return abi.encodeCall(
-            IRiskModuleChecks.checkPledge, (wallet, address(proxy), mid, V3, bytes32(uint256(1)), UNITS, k, false)
+            IRiskModule.checkPledge, (wallet, address(proxy), mid, V3, bytes32(uint256(1)), UNITS, k, false)
         );
     }
 
@@ -45,7 +45,7 @@ contract RiskModuleScopeUnitTest is RiskModuleFixture {
     /// fields (the pinned signature and the 128-byte answer), and an upgrade path that moves the RiskModule's address.
     function test_TEST_062_checkPledgeInterfaceStableAcrossUpgrades() public {
         assertEq(
-            IRiskModuleChecks.checkPledge.selector,
+            IRiskModule.checkPledge.selector,
             bytes4(
                 keccak256(
                     "checkPledge(address,address,uint256,uint32,bytes32,uint128,"

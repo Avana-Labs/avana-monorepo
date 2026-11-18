@@ -11,7 +11,7 @@ import {Pending} from "../../src/custody/collateralization/types/Pending.sol";
 import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 import {CollOracleMock} from "../utils/mocks/CollateralizationMocks.sol";
@@ -53,7 +53,7 @@ contract CollateralizationExitUnitTest is CollateralizationFixture {
         _pledge(alice, aliceProxy, KEY7, 4_000_000_000);
         _acquire(adapter);
         _withdrawAndBurn(aliceProxy, 5_000_000_000);
-        vm.expectCall(address(riskModule), abi.encodeWithSelector(IRiskModuleChecks.checkPledge.selector), 0);
+        vm.expectCall(address(riskModule), abi.encodeWithSelector(IRiskModule.checkPledge.selector), 0);
         vm.expectCall(address(oracle), abi.encodeCall(CollOracleMock.poke, ()), 0);
         vm.expectEmit(address(coll));
         emit ICollateralizationEvents.CollateralReleased(1, KEY42, alice, aliceProxy, vt, 5_000_000_000);

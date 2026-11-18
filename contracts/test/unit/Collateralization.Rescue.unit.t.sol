@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
-import {PledgeCharge} from "../../src/policy/risk-module/types/PledgeCharge.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
+import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 
@@ -108,7 +108,7 @@ contract CollateralizationRescueUnitTest is CollateralizationFixture {
             // The head of checkPledge's calldata up to `requireRescue`: the counters struct is dynamic, so its slot holds
             // the offset 8 x 32 = 256 and `requireRescue` follows it.
             abi.encodeWithSelector(
-                IRiskModuleChecks.checkPledge.selector,
+                IRiskModule.checkPledge.selector,
                 alice,
                 aliceProxy,
                 MARKET_ID,

@@ -8,7 +8,7 @@ import {IAmmIntegrationHooks} from "../../amm/IAmmIntegrationHooks.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILock} from "../../lock/lock/ILock.sol";
-import {PledgeCharge} from "../../policy/risk-module/types/PledgeCharge.sol";
+import {PledgeCharge} from "../../policy/risk-module/types/RiskModuleTypes.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";

@@ -11,7 +11,7 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
 import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
@@ -76,8 +76,8 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     function test_TEST_018_debtFreeWithdraw() public {
         vm.expectCall(vt, abi.encodeCall(IVaultToken.burn, (p, UNITS)), 1);
         vm.expectCall(address(coll), abi.encodeCall(ICollateralizationAdapter.release, (p, vt, k1, UNITS)), 1);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.preWithdrawCheck.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.postHealthCheck.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.postHealthCheck.selector), 0);
         vm.expectEmit(adapter);
         emit IAaveAdapterEvents.CollateralWithdrawn(alice, MARKET_ID, vt, k1, UNITS, false, type(uint256).max);
         _withdraw(k1, UNITS, 0);
@@ -197,8 +197,8 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         registry.setFrozen(alice, true);
         _expectWithdrawRevert(abi.encodeWithSelector(IAaveAdapterErrors.AddressIsFrozen.selector, alice), k2, UNITS / 2);
         registry.setFrozen(alice, false);
-        vm.expectCall(address(risk), abi.encodeCall(IRiskModuleChecks.preWithdrawCheck, (p)), 1);
-        vm.expectCall(address(risk), abi.encodeCall(IRiskModuleChecks.postHealthCheck, (p, 1.2e18)), 1);
+        vm.expectCall(address(risk), abi.encodeCall(IRiskModule.preWithdrawCheck, (p)), 1);
+        vm.expectCall(address(risk), abi.encodeCall(IRiskModule.postHealthCheck, (p, 1.2e18)), 1);
         uint256 hfAfter = uint256(16_000e18) * 1e18 / 1000e18; // the remaining $20,000 record at CF 80%
         vm.expectEmit(adapter);
         emit IAaveAdapterEvents.CollateralWithdrawn(alice, MARKET_ID, vt, k2, UNITS / 2, true, hfAfter);
@@ -250,7 +250,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     /// with-debt path.
     function test_TEST_203_oneBaseUnitIsDebt() public {
         _borrowAs(alice, MARKET_ID, usdcReserveId, 1);
-        vm.expectCall(address(risk), abi.encodeCall(IRiskModuleChecks.preWithdrawCheck, (p)), 1);
+        vm.expectCall(address(risk), abi.encodeCall(IRiskModule.preWithdrawCheck, (p)), 1);
         _withdraw(k2, UNITS / 2, 0);
     }
 
@@ -423,14 +423,14 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         caps[0] = g;
         vm.expectCall(address(registry), "", 0);
         // The one RiskModule call an exit makes is the speed credit (REQ-RISK-005); no check is called.
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.preBorrowCheck.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.preWithdrawCheck.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.postHealthCheck.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.checkPledge.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.pokeBreakers.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.pokeConfig.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.checkRemainingRecord.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.checkAaveConfig.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.preBorrowCheck.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.postHealthCheck.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.checkPledge.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.pokeBreakers.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.pokeConfig.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.checkRemainingRecord.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.checkAaveConfig.selector), 0);
         vm.prank(alice);
         adapterC.repayAllAndWithdraw(MARKET_ID, _ref(k1), UNITS, ids, caps, _deadline());
         assertEq(lpVault.ownerOf(k1), alice, "exit completed");

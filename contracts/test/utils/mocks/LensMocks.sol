@@ -8,7 +8,7 @@ import {RiskStatus} from "../../../src/amm/types/RiskStatus.sol";
 import {DebtPriceView as OracleDebtView} from "../../../src/oracle/debt-oracle/types/DebtPriceView.sol";
 import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {SpeedView} from "../../../src/policy/risk-module/types/SpeedView.sol";
+import {SpeedView} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {AccountGateStatus} from "../../../src/types/AccountGateStatus.sol";
 import {Market} from "../../../src/types/Market.sol";
 import {PauseReason} from "../../../src/types/PauseReason.sol";

@@ -13,8 +13,7 @@ import {MarketRegistryImmutables} from "../../src/policy/market-registry/types/M
 import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {RiskModule} from "../../src/policy/risk-module/RiskModule.sol";
-import {RiskModuleImmutables} from "../../src/policy/risk-module/types/RiskModuleImmutables.sol";
-import {SpeedView} from "../../src/policy/risk-module/types/SpeedView.sol";
+import {RiskModuleImmutables, SpeedView} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {VaultTokenFactory} from "../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {RegistrySpokeImplMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
