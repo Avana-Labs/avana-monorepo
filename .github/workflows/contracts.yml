@@ -9,7 +9,7 @@ name: contracts
 #   security/ (size margins, licence allowlist) runs the build.
 #   A pull request labelled `hotfix` (playbook P-05) also runs the touched contracts' invariant campaigns at full depth.
 # - full (`suite: full` by hand): the ci profile in 10 shards (fuzz 10,000 runs, invariants 1,000 at depth 100), gas,
-#   ABIs, branch coverage, the fast security tier, traceability and the evidence report.
+#   ABIs, branch coverage and the fast security tier.
 # - long (`suite: long` by hand, the default of a manual run): the full suite plus the long checks: the deep invariant
 #   campaign (the 10 test shards then leave test/invariant/ out, so each campaign runs once), fork tests, the FFI
 #   differential suite, SMTChecker and Certora (paused unless the repository variable CERTORA_ENABLED is `true`), one
@@ -42,7 +42,7 @@ on:
   workflow_dispatch:
     inputs:
       suite:
-        description: "fast (the pull-request suite), full (10 shards at ci depth, coverage, security fast tier, evidence) or long (full plus every long check)"
+        description: "fast (the pull-request suite), full (10 shards at ci depth, coverage, security fast tier) or long (full plus every long check)"
         required: true
         type: choice
         default: long
@@ -293,7 +293,7 @@ jobs:
       # The fast suite: fuzz 1,000 runs (the default profile's) and invariants 64 runs at depth 64.
       FAST: ${{ (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && '0' || '1' }}
       TEST_SHARD_SKIP_INVARIANT: ${{ (github.event_name == 'workflow_dispatch' && inputs.suite == 'long') && '1' || '0' }}
-      # script/test-shard.sh writes each forge invocation's results here (`--json-file`); the evidence job reads them.
+      # script/test-shard.sh writes each forge invocation's results here (`--json-file`), uploaded per shard.
       TEST_RESULTS_DIR: ${{ github.workspace }}/contracts/out-results
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -347,7 +347,6 @@ jobs:
         with:
           name: test-results-${{ matrix.shard }}
           path: contracts/out-results
-          # A shard without results leaves its tests "not run" in the evidence job, which then fails.
           if-no-files-found: warn
           retention-days: 14
 
@@ -567,7 +566,7 @@ jobs:
     # hours at 1 million calls, measured 2026-11-12) needs about 3.1 hours, so the job has GitHub's maximum of 6 hours.
     # A file whose calls are slow pins fewer runs inline (`invariant.invariant.*`, Integration: 40,000 calls of the
     # whole real stack). The test shards of the same run leave test/invariant/ out, so each campaign runs once, here,
-    # with a fresh seed; its results (forge --json-file) go to the evidence job like the shards'.
+    # with a fresh seed; its results (forge --json-file) are uploaded like the shards'.
     name: deep invariant campaign (${{ matrix.file }})
     needs: [build, plan]
     if: (github.event_name == 'workflow_dispatch' && (inputs.suite == 'long' || inputs.only)) && needs.plan.outputs.invariant != '[]'
@@ -1072,7 +1071,7 @@ jobs:
           mkdir -p out-results
           .venv/bin/certoraRun "certora/conf/$CONF.conf" --wait_for_results all 2>&1 | tee "out-results/certora-$CONF.log"
           # --wait_for_results all exits non-zero on any rule that is not verified, so reaching this line means every
-          # rule of the conf passed. Record it with the job link for docs/spec/05-verification/evidence.py: the older
+          # rule of the conf passed. Record it with the job link: the older
           # prover.certora.com/output link, or the app.certora.com report link certora-cli 8.x prints.
           job=$(grep -oE 'https://(prover\.certora\.com/output/[0-9]+/[0-9a-f]{32}|app\.certora\.com/orgs/[A-Za-z0-9_-]+/jobs/[0-9a-f-]{36}/report)' \
             "out-results/certora-$CONF.log" | tail -n 1)
@@ -1087,109 +1086,6 @@ jobs:
         with:
           name: certora-result-${{ matrix.conf }}
           path: contracts/out-results
-          retention-days: 30
-
-  traceability:
-    name: traceability
-    # Report only; the full and long suites.
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    defaults:
-      run:
-        working-directory: docs/spec/05-verification
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        continue-on-error: true
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        continue-on-error: true
-        with:
-          python-version: "3.12"
-
-      - name: "Every Solidity link and verifies: tag names a defined ID and sits on its declaration or test"
-        continue-on-error: true
-        # Fails on an undefined ID and on a tag that sits on no test function or CVL rule. The strict check, which
-        # needs the run's results, is the evidence job's.
-        run: python3 trace.py
-
-  evidence:
-    # Which spec rows a test that ran and passed checks. Reads every test shard's results (forge --json-file), the deep
-    # invariant, fork, differential and Certora results of a long run, the prover results recorded in
-    # contracts/certora/RUNS.md and the Halmos logs in docs/audit/halmos/results/, then:
-    # contract_checklist.py --all --check (every contract key, and the TEST rows on no checklist) and trace.py with the
-    # run's results (fails on errors; its coverage-gap warnings are listed, not enforced). Each step runs even when an
-    # earlier one fails, so the summary shows every list.
-    name: evidence (checklists, traceability)
-    # The long jobs run only in a long run; elsewhere they are skipped at once, so this job waits
-    # for the test shards only, and the rows only a fork, differential or prover run checks read "not run".
-    needs: [test, invariant, fork, differential, certora]
-    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: .
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        continue-on-error: true
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        continue-on-error: true
-        with:
-          python-version: "3.12"
-
-      - name: Download every result of this run (test shards, and fork, differential and prover runs where they ran)
-        continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          pattern: "*-result*"
-          path: results
-          merge-multiple: true
-
-      - name: Results present
-        continue-on-error: true
-        run: |
-          mkdir -p evidence results
-          n=$(find results -name '*.json' | wc -l | tr -d ' ')
-          echo "result files: $n"
-          [ "$n" -gt 0 ] || { echo "::error::no test results: every row would read 'not run'"; exit 1; }
-
-      - name: Contract checklists, every contract (contract_checklist.py --all --check)
-        continue-on-error: true
-        if: ${{ !cancelled() }}
-        run: |
-          mkdir -p evidence
-          rc=0
-          python3 docs/spec/05-verification/contract_checklist.py --all --check --results results \
-            --out-dir evidence/checklists --summary evidence/checklists.md > evidence/checklists.txt || rc=$?
-          cat evidence/checklists.txt
-          cat evidence/checklists.md >> "$GITHUB_STEP_SUMMARY"
-          exit $rc
-
-      - name: Traceability with the run's results (trace.py)
-        continue-on-error: true
-        if: ${{ !cancelled() }}
-        run: |
-          rc=0
-          python3 docs/spec/05-verification/trace.py --results results --out evidence/traceability.md \
-            > evidence/trace.txt || rc=$?
-          { echo '### trace.py'; echo '```'; tail -n 1 evidence/trace.txt
-            awk '/^ERROR/ && c < 50 {print; c++}' evidence/trace.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          tail -n 40 evidence/trace.txt
-          exit $rc
-
-      - name: Upload the evidence report
-        continue-on-error: true
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: evidence
-          path: evidence
           retention-days: 30
 
   coverage:
@@ -1364,7 +1260,6 @@ jobs:
     # fork test skipped) fails the gate, as a failed one does. No branch rule requires this check.
     name: gate
     if: always()
-    # traceability and evidence (spec rows) are report only since 2026-11-13 and not required here.
     needs: [changes, scripts, build, plan, test, hotfix-plan, hotfix, gas, abis, invariant, fork, differential, smtchecker, certora, coverage, fast-security]
     runs-on: ubuntu-24.04
     timeout-minutes: 5

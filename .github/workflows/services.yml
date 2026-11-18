@@ -3,7 +3,9 @@ name: services
 # The off-chain TypeScript packages: services/common, services/indexer, services/keeper, services/monitor, services/faucet, packages/protocol (the ABIs
 # and ABI hash the services are built against), packages/export (the export client) and packages/rpc (the RPC manager). They form one npm workspace whose root is the repository's
 # package.json, with one package-lock.json beside it. Every pull request (a push to main does not rerun it) that changes one of them, the
-# workspace manifests, deployments/ or this file runs one job per package: refuse an `@avana/` dependency that would come from the
+# workspace manifests, deployments/ or this file runs one job per affected package (the changes job: a package whose
+# files changed, plus every package that links it, directly or through another; a change to the workspace manifests,
+# .nvmrc, deployments/, services/Dockerfile, services/compose*.yaml, .dockerignore or this file runs every package): refuse an `@avana/` dependency that would come from the
 # public registry, install the whole workspace with npm ci from the lock file (lifecycle scripts never run), then Ponder
 # codegen where the package defines it (the indexer), the package's typecheck script (tsc --noEmit) and its test
 # script (vitest run). The `@avana/` scope is not registered on the public registry, so each such dependency must be a
@@ -36,14 +38,79 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    # Lists the packages a pull request affects, and the service images among them (indexer, keeper, monitor). A
+    # manual run lists every package and image.
+    name: changed packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      packages: ${{ steps.sort.outputs.packages }}
+      images: ${{ steps.sort.outputs.images }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Sort the changed files
+        id: sort
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          all=(services/common services/indexer services/keeper services/monitor services/faucet services/convex packages/protocol packages/export packages/rpc)
+          declare -A hit=()
+          if [ "$EVENT" != pull_request ]; then
+            for p in "${all[@]}"; do hit[$p]=1; done
+          else
+            # Listed first, so a failed API call fails the job instead of leaving an empty list that skips the checks.
+            files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
+            [ -n "$files" ] || { echo "::error::the pull request lists no changed files"; exit 1; }
+            while IFS= read -r f; do
+              case "$f" in
+                *.md) ;;
+                package.json|package-lock.json|.nvmrc|.dockerignore|deployments/*|services/Dockerfile|services/compose*.yaml|.github/workflows/services.yml)
+                  for p in "${all[@]}"; do hit[$p]=1; done ;;
+                *)
+                  for p in "${all[@]}"; do case "$f" in "$p"/*) hit[$p]=1 ;; esac; done ;;
+              esac
+            done <<< "$files"
+            # Add every package that links an affected one (file: links in its package.json), until nothing changes.
+            changed=1
+            while [ "$changed" = 1 ]; do
+              changed=0
+              for p in "${all[@]}"; do
+                [ -n "${hit[$p]:-}" ] && continue
+                for link in $(jq -r '[(.dependencies // {}), (.devDependencies // {})] | add | to_entries[]
+                    | select(.key | startswith("@avana/")) | .value | select(startswith("file:")) | ltrimstr("file:")' "$p/package.json"); do
+                  dep=$(realpath -m --relative-to=. "$p/$link")
+                  if [ -n "${hit[$dep]:-}" ]; then hit[$p]=1; changed=1; break; fi
+                done
+              done
+            done
+          fi
+          packages=$(for p in "${all[@]}"; do if [ -n "${hit[$p]:-}" ]; then echo "$p"; fi; done | jq -R . | jq -cs .)
+          images=$(for t in indexer keeper monitor; do if [ -n "${hit[services/$t]:-}" ]; then echo "$t"; fi; done | jq -R . | jq -cs .)
+          echo "packages=$packages" | tee -a "$GITHUB_OUTPUT"
+          echo "images=$images" | tee -a "$GITHUB_OUTPUT"
+          { echo "### Affected packages"; echo "packages: $packages"; echo "images: $images"; } >> "$GITHUB_STEP_SUMMARY"
+
   check:
     name: ${{ matrix.package }}
+    needs: changes
+    if: needs.changes.outputs.packages != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        package: [services/common, services/indexer, services/keeper, services/monitor, services/faucet, services/convex, packages/protocol, packages/export, packages/rpc]
+        package: ${{ fromJSON(needs.changes.outputs.packages) }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -104,12 +171,14 @@ jobs:
     # services/Dockerfile: each long-running service's image builds from the lock file, starts its runtime as the
     # node user, and compose.yaml parses. The base images are pinned by digest in those files.
     name: image ${{ matrix.target }}
+    needs: changes
+    if: needs.changes.outputs.images != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        target: [indexer, keeper, monitor]
+        target: ${{ fromJSON(needs.changes.outputs.images) }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -138,16 +207,17 @@ jobs:
           fi
 
       - name: compose.yaml parses
-        if: matrix.target == 'monitor'
+        if: matrix.target == 'monitor' || strategy.job-index == 0
         run: |
           for s in indexer keeper monitor; do cp "services/$s/.env.example" "services/$s/.env"; done
           POSTGRES_PASSWORD=ci KEEPER_TLS_DIR=/tmp docker compose -f services/compose.yaml config -q
 
   gate:
-    # The one check branch protection requires: it passes only when every package and image job passed.
+    # Passes only when the changes job and every due package and image job passed; a job with nothing to check
+    # (an empty list) is skipped by design.
     name: services-gate
     if: always()
-    needs: [check, image]
+    needs: [changes, check, image]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -155,7 +225,12 @@ jobs:
         working-directory: .
         env:
           RESULTS: ${{ toJSON(needs) }}
+          PACKAGES: ${{ needs.changes.outputs.packages }}
+          IMAGES: ${{ needs.changes.outputs.images }}
         run: |
           echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
-          bad=$(echo "$RESULTS" | jq -r '[to_entries[] | select(.value.result != "success") | .key] | join(", ")')
+          bad=$(echo "$RESULTS" | jq -r '[to_entries[]
+            | select(.value.result != "success")
+            | select((.value.result == "skipped" and ((.key == "check" and env.PACKAGES == "[]") or (.key == "image" and env.IMAGES == "[]"))) | not)
+            | .key] | join(", ")')
           if [ -n "$bad" ]; then echo "::error::not passed: $bad"; exit 1; fi
