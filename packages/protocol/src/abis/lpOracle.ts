@@ -5,11 +5,63 @@
 export const lpOracleAbi = [
   {
     "type": "function",
+    "name": "INIT_LOGIC",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "logic",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "LISTING_LOGIC",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "logic",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "POKE_LOGIC",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "logic",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "TIMELOCK",
     "inputs": [],
     "outputs": [
       {
         "name": "timelock",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "VIEW_LOGIC",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "logic",
         "type": "address",
         "internalType": "address"
       }
