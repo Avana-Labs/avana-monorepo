@@ -7,16 +7,9 @@ import {RouteSlot} from "../../../types/RouteSlot.sol";
 import {IssuerProbe} from "./IssuerProbe.sol";
 
 /// @notice Listed token definition (pool token or debt asset).
-/// @dev `decimals` is read on-chain at listing. The collateral-factor input, the feed-agreement tolerance and each
-/// feed's heartbeat live in the ParameterStore; every feed of the routes must have a ParameterStore feed definition.
-/// The routes in force are `IMarketRegistry.activePriceRoutes(token)`. Empty alternate and standby routes mark a
-/// monitoring-only listing (REQ-CONFIG-021): a fixed-price debt asset whose primary route is its monitoring feed, never
-/// a pool token while its alternate route is empty.
-/// @custom:spec REQ-CONFIG-017, REQ-CONFIG-018, REQ-CONFIG-021, REQ-CONFIG-025, REQ-MREG-027, Q-248
+/// @dev Empty alternate and standby routes mark a monitoring-only listing (a fixed-price debt asset).
 struct TokenDef {
-    // True once listed.
     bool listed;
-    // Token decimals.
     uint8 decimals;
     // Approved USD-pegged stablecoin.
     bool isUsdStable;

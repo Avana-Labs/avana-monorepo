@@ -25,9 +25,9 @@ A tag in contracts/test or contracts/certora counts only when all of these hold:
   5. Exercises the contract (TEST rows naming several contracts, contract_checklist.py). A test counts for contract X
      of such a row only when the code it runs deploys or calls X's real contract (exercises).
 
-`/// @custom:spec` tags in contracts/src stay implementation pointers; on a body-less declaration (an interface, a
-function without a body, an abstract contract that no concrete contract in src/ inherits) they are "declaration only"
-and never count as the implementation of the rule.
+Solidity links (solidity-links.json: src file -> declaration -> rule IDs) stay implementation pointers; on a body-less
+declaration (an interface, a function without a body, an abstract contract that no concrete contract in src/ inherits)
+they are "declaration only" and never count as the implementation of the rule.
 
 Result files (passed to --results; a directory is searched for *.json and *.txt):
   - forge:   `forge test --json-file <file>` (or `--json` stdout): {"<path>:<Contract>": {"test_results": {...}}}
@@ -831,7 +831,7 @@ def tag_stand_in_keys(tag: dict) -> set[str]:
 
 
 # ---------------------------------------------------------------------------------------------------------------------
-# @custom:spec in contracts/src
+# Declarations in contracts/src
 # ---------------------------------------------------------------------------------------------------------------------
 
 @lru_cache(maxsize=None)
@@ -864,7 +864,7 @@ def _has_concrete_heir(name: str) -> bool:
 
 
 def declaration_only(path: Path, line_index: int) -> str:
-    """Why a `@custom:spec` tag at this line of a src file is on a body-less declaration, or "" when it marks code."""
+    """Why the first declaration after this line of a src file is body-less, or "" when it is code."""
     lines = _text(path).splitlines()
     j = line_index + 1
     while j < len(lines) and (not lines[j].strip() or lines[j].strip().startswith(("//", "/*", "*"))):
@@ -900,3 +900,68 @@ def declaration_only(path: Path, line_index: int) -> str:
         if owner and owner["abstract"] and not _has_concrete_heir(owner["name"]):
             return f"abstract contract {owner['name']}, which no concrete contract in src/ inherits"
     return ""
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Solidity links: solidity-links.json
+# ---------------------------------------------------------------------------------------------------------------------
+
+SOL_LINKS = ROOT / "docs" / "spec" / "05-verification" / "solidity-links.json"
+_SOL_DECL = re.compile(
+    r"^\s*(?:(?:abstract\s+)?(?:contract|library|interface)\s+(?P<top>\w+)"
+    r"|(?:function|modifier|event|error|struct|enum)\s+(?P<name>\w+)"
+    r"|(?P<special>constructor|receive|fallback)\s*\("
+    r"|[A-Za-z_][\w.]*(?:\[\d*\])*(?:\s+(?:internal|private|public|constant|immutable|override))+\s+(?P<var>\w+)\s*[=;])")
+
+
+def _code_lines(text: str) -> list[str]:
+    """The text's lines with comments and string contents blanked; line breaks are kept."""
+    out, i, n = [], 0, len(text)
+    while i < n:
+        c = text[i]
+        if c in "\"'":
+            j = i + 1
+            while j < n and text[j] not in (c, "\n"):
+                j += 2 if text[j] == "\\" else 1
+            j = min(j, n)
+            closed = j < n and text[j] == c
+            out.append(c + " " * (j - i - 1) + (c if closed else ""))
+            i = j + 1 if closed else j
+        elif text.startswith("//", i):
+            j = text.find("\n", i)
+            i = n if j < 0 else j
+        elif text.startswith("/*", i):
+            j = text.find("*/", i + 2)
+            j = n if j < 0 else j + 2
+            out.append("".join(ch if ch == "\n" else " " for ch in text[i:j]))
+            i = j
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out).split("\n")
+
+
+def src_declarations(text: str) -> dict[str, int]:
+    """Key -> line index of each declaration a Solidity link can name: `Name` for a file-level contract, interface,
+    library, struct, enum, function or constant, and `Owner.member` for a member directly inside one (function,
+    modifier, event, error, struct, enum, constructor, receive, fallback, constant or state variable). A key that
+    repeats in the file (an overload) is numbered `Key#2`, `Key#3`, ... in file order."""
+    out: dict[str, int] = {}
+    seen: dict[str, int] = defaultdict(int)
+    owner, depth = None, 0
+    for i, line in enumerate(_code_lines(text)):
+        m = _SOL_DECL.match(line) if depth <= 1 else None
+        if m:
+            name = m.group("top") or m.group("name") or m.group("special") or m.group("var")
+            if depth == 0 and m.group("top"):
+                owner = name
+            key = name if depth == 0 else f"{owner}.{name}"
+            seen[key] += 1
+            out[key if seen[key] == 1 else f"{key}#{seen[key]}"] = i
+        depth += line.count("{") - line.count("}")
+    return out
+
+
+def solidity_links() -> dict[str, dict[str, list[str]]]:
+    """solidity-links.json: src file (path from the repo root) -> declaration key (src_declarations) -> rule IDs."""
+    return json.loads(SOL_LINKS.read_text(encoding="utf8")) if SOL_LINKS.is_file() else {}

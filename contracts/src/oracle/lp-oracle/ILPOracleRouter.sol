@@ -5,25 +5,16 @@ pragma solidity 0.8.28;
 
 /// @title ILPOracleRouter
 /// @notice The LPOracle implementation's access to its logic contracts.
-/// @custom:spec REQ-ORACLE-106, REQ-ORACLE-078, REQ-ORACLE-080
 interface ILPOracleRouter {
-    /// @notice The poke logic contract (implementation immutable).
-    /// @return logic Address.
-    /// @custom:spec REQ-ORACLE-080
+    /// @notice The poke logic contract.
     function POKE_LOGIC() external view returns (address logic);
 
-    /// @notice The listing logic contract (implementation immutable).
-    /// @return logic Address.
-    /// @custom:spec REQ-ORACLE-080
+    /// @notice The listing logic contract.
     function LISTING_LOGIC() external view returns (address logic);
 
-    /// @notice The initialization logic contract (implementation immutable): `initialize`'s market part.
-    /// @return logic Address (the listing logic where both fit one contract).
-    /// @custom:spec REQ-ORACLE-080
+    /// @notice The initialization logic contract (`initialize`'s market part).
     function INIT_LOGIC() external view returns (address logic);
 
-    /// @notice The view logic contract (implementation immutable).
-    /// @return logic Address.
-    /// @custom:spec REQ-ORACLE-080
+    /// @notice The view logic contract.
     function VIEW_LOGIC() external view returns (address logic);
 }

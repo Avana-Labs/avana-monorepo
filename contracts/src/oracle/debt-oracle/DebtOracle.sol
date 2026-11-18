@@ -18,28 +18,13 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title DebtOracle
-/// @notice Price source of one debt asset with a market price (USDC, USDT, WETH): the USD price of one whole token with
-/// 8 decimals for the AaveOracle of every CDP Spoke on the chain that lends it, and the price state, timestamps and age
-/// limits the RiskModule and LPVaultSwap enforce their debt gates from. GHO keeps Aave's fixed source.
-/// @dev UUPS implementation behind one ERC-1967 proxy per debt asset per chain; `_authorizeUpgrade` requires
-/// `APPLICATION_ADMIN`, held only by `TIMELOCK`. It applies the LPOracle's leg, route, failover, agreement, freshness,
-/// second-source, sequencer and timer rules to one token, with no pool, band or ceiling. Invariants every function
-/// preserves: solvency (a debt price that cannot be trusted is never below the accepted price and never admits new
-/// debt); `latestAnswer() >= 1` and no revert except `InsufficientGas`; only `poke()` writes price, timer, latch, `seen`
-/// or route-version storage; no role can push a price; no token, ETH or approval moves through it.
-/// Example: USDC accepted at 99,990,000 ($0.9999) with `debtStressRiseBps = 500` serves 99,990,000 while Cached and
-/// 104,989,500 once Expired.
-/// @custom:spec REQ-ORACLE-091, REQ-ORACLE-092, REQ-ORACLE-093, REQ-ORACLE-096, REQ-ORACLE-097, REQ-ORACLE-098, SPEC-ORC-018, INV-087, Q-238, Q-247, Q-248, Q-259
+/// @notice Price source of one debt asset with a market price: the USD price of one whole token, with 8 decimals.
+/// @dev UUPS proxy; only the timelock can upgrade it.
 contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleRecovery, IDebtOracle {
-    /// @dev The chain's AvanaTimelock, the only account that may hold `DEFAULT_ADMIN_ROLE` or `APPLICATION_ADMIN`.
     address internal immutable _TIMELOCK;
 
-    /// @dev The largest `int256`, as an unsigned value.
     uint256 private constant _INT256_MAX = 2 ** 255 - 1;
 
-    /// @notice Fixes `TIMELOCK` and disables initializers on the implementation.
-    /// @param timelock The chain's AvanaTimelock.
-    /// @custom:spec REQ-ORACLE-097, REQ-ORACLE-080
     constructor(
         address timelock
     ) {
@@ -48,12 +33,10 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         _disableInitializers();
     }
 
-    // Every external call of this contract is a gas-guarded static call (REQ-ORACLE-098): no callee can reenter or
-    // change state, so emitting events after those reads cannot be exploited.
+    // Every external call is a gas-guarded static call, so no callee can reenter or change state.
     // forge-lint: disable-start(reentrancy-events)
 
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-091, REQ-ORACLE-097, REQ-ORACLE-031, REQ-ORACLE-058
     function initialize(
         DebtOracleInitParams calldata params
     ) external override initializer {
@@ -84,28 +67,22 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         emit DebtPriceSeeded(e.quote, e.quoteUpdatedAt);
     }
 
-    // ─── Served price ───
-
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-093, SPEC-ORC-018, REQ-ORACLE-060, REQ-ORACLE-061
     function latestAnswer() external view override(IDebtOracle) returns (int256 answer) {
         return _answer(_evaluate().served);
     }
 
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-091, REQ-ORACLE-040
     function decimals() external pure override(IDebtOracle) returns (uint8) {
         return LPPriceMath.DECIMALS;
     }
 
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-091, REQ-ORACLE-040
     function description() external view override(IDebtOracle) returns (string memory) {
         return _s().descriptionText;
     }
 
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-093, REQ-ORACLE-041
     function latestRoundData()
         external
         view
@@ -121,34 +98,27 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
     }
 
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-093, REQ-ORACLE-092, REQ-ORACLE-090, REQ-ORACLE-042, REQ-ORACLE-045
     function getPriceState() external view override returns (DebtPriceView memory report) {
         return _report(_evaluate());
     }
 
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-093, REQ-ORACLE-087
     function lastAcceptedPrice() external view override returns (uint256 price8, uint64 updatedAt) {
         Accepted storage a = _s().accepted;
         return (a.price8, a.updatedAt);
     }
 
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-093, SPEC-ORC-015, REQ-ORACLE-043
     function borrowPriceMaxAge() external view override returns (uint32 age) {
         return _evaluate().borrowPriceMaxAge;
     }
 
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-093, REQ-ORACLE-090, SPEC-ORC-015, REQ-ORACLE-043
     function liquidationPriceMaxAge() external view override returns (uint32 age) {
         return _evaluate().liquidationPriceMaxAge;
     }
 
-    // ─── Writing call ───
-
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-092, REQ-ORACLE-024, REQ-ORACLE-025, REQ-ORACLE-026, REQ-ORACLE-027, REQ-ORACLE-028, REQ-ORACLE-029, REQ-ORACLE-030, REQ-ORACLE-031, REQ-ORACLE-032, REQ-ORACLE-035, REQ-ORACLE-089, REQ-ORACLE-095
     function poke() external override returns (PriceState state) {
         DebtOracleLayout storage $ = _s();
         uint256 minGas = $.pokeMinGas;
@@ -180,10 +150,7 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         return e.state;
     }
 
-    // ─── Governance ───
-
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-098, REQ-ORACLE-038
     function setPokeMinGas(
         uint32 value
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
@@ -195,40 +162,31 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
     }
 
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-098
     function pokeMinGas() external view override returns (uint32 value) {
         return _s().pokeMinGas;
     }
 
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-091
     function ASSET() external view override returns (address asset) {
         return _s().asset;
     }
 
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-091, REQ-ORACLE-094
     function MARKET_REGISTRY() external view override returns (address registry) {
         return _s().marketRegistry;
     }
 
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-091
     function PARAMETER_STORE() external view override returns (address store) {
         return _s().parameterStore;
     }
 
     /// @inheritdoc IDebtOracle
-    /// @custom:spec REQ-ORACLE-097
     function TIMELOCK() external view override returns (address timelock) {
         return _TIMELOCK;
     }
 
-    // ─── Internal ───
-
-    /// @dev `REQ-ORACLE-027` and `REQ-ORACLE-028`'s failure half: set on the first failed poke from the source
-    /// timestamps (never later than now), cleared on the first poke that sees the asset not failed.
-    /// @custom:spec REQ-ORACLE-027, SPEC-ORC-013
+    /// @dev Sets `failedSince` on the first failed poke, never after now; clears it on recovery.
     function _applyFailure(
         DebtOracleLayout storage $,
         DebtEvaluation memory e
@@ -245,9 +203,7 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         }
     }
 
-    /// @dev `REQ-ORACLE-028` with `REQ-ORACLE-095`: the first observation of a disagreement, restarted by a route-version
-    /// change, cleared when the routes agree or the asset is failed.
-    /// @custom:spec REQ-ORACLE-028, REQ-ORACLE-095, REQ-ORACLE-023
+    /// @dev Sets `disagreeSince` on a new disagreement or route-version change; clears it on agreement or failure.
     function _applyDisagreement(
         DebtOracleLayout storage $,
         DebtEvaluation memory e,
@@ -266,9 +222,6 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         }
     }
 
-    /// @dev `REQ-ORACLE-032`: (a) a version change observed while latched starts at now; (b) otherwise the
-    /// source-timestamp evidence; (c) otherwise the newest leg in use, never after now. Clears the latch.
-    /// @custom:spec REQ-ORACLE-032, REQ-ORACLE-033, REQ-ORACLE-065
     function _startGrace(
         DebtOracleLayout storage $,
         DebtEvaluation memory e,
@@ -296,9 +249,6 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         emit DebtGraceStarted(rec, rec + e.graceDuration, fromLatch);
     }
 
-    /// @dev Stores the evaluation's quote and its source timestamp as the accepted price (`REQ-ORACLE-029`); shared by
-    /// `initialize` and `poke()`.
-    /// @custom:spec REQ-ORACLE-029, REQ-ORACLE-091
     function _accept(
         DebtOracleLayout storage $,
         DebtEvaluation memory e
@@ -306,8 +256,6 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         $.accepted = Accepted({price8: SafeCast.toUint128(e.quote), updatedAt: e.quoteUpdatedAt});
     }
 
-    /// @dev Whether the registry returns readable routes in force for `asset` (`initialize`).
-    /// @custom:spec REQ-ORACLE-091
     function _routesReadable(
         address registry,
         address asset
@@ -315,10 +263,7 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         (ok,,) = _readRouteFeeds(registry, asset);
     }
 
-    /// @dev `REQ-ORACLE-031`: every leg whose read decoded records its aggregator, round and timestamp; legs that did
-    /// not decode keep their previous record. When the configuration read failed (`R_CONFIG_UNAVAILABLE`), no leg was
-    /// read, even if the route feeds were, so every record is kept.
-    /// @custom:spec REQ-ORACLE-031
+    /// @dev Records each decoded leg; skipped when the config read failed, since no leg was read.
     function _recordSeen(
         DebtOracleLayout storage $,
         DebtEvaluation memory e
@@ -330,7 +275,6 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         _recordLeg($.seen[1][1], e.routes[1], 1);
     }
 
-    /// @dev Writes one `seen` entry when the leg exists in the route and decoded.
     function _recordLeg(
         Seen storage seen,
         RouteRead memory route,
@@ -344,8 +288,6 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         seen.updatedAt = leg.updatedAt;
     }
 
-    /// @dev `REQ-ORACLE-035`: state and route-used events against the last writing call, then the new values.
-    /// @custom:spec REQ-ORACLE-035
     function _emitStateAndRoute(
         DebtOracleLayout storage $,
         DebtEvaluation memory e
@@ -364,8 +306,6 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
 
     // forge-lint: disable-end(reentrancy-events)
 
-    /// @dev `PokeMinGasOutOfBounds` outside `[POKE_MIN_GAS_FLOOR, POKE_MIN_GAS_CEILING]`.
-    /// @custom:spec REQ-ORACLE-038, REQ-ORACLE-098
     function _checkPokeMinGas(
         uint32 value
     ) internal pure {
@@ -374,16 +314,12 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         }
     }
 
-    /// @dev The served price as Aave's `int256`; it is at most `1.5 * MAX_ROUTE_ANSWER + 1`, and saturation only
-    /// guards the conversion.
     function _answer(
         uint256 served
     ) internal pure returns (int256) {
         return SafeCast.toInt256(Math.min(served, _INT256_MAX));
     }
 
-    /// @dev Builds the `DebtPriceView` of one evaluation.
-    /// @custom:spec REQ-ORACLE-093, REQ-ORACLE-042
     function _report(
         DebtEvaluation memory e
     ) internal view returns (DebtPriceView memory v) {
@@ -421,7 +357,6 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         v.borrowAllowed = e.borrowAllowed;
     }
 
-    /// @dev Feeds, timestamps and age limits of the legs of the served route (`_servedRoute`).
     function _reportLegs(
         DebtPriceView memory v,
         DebtEvaluation memory e
@@ -438,7 +373,7 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         }
     }
 
-    /// @dev A route's value and age, or 0 and `type(uint64).max` when it was not read or a leg did not decode.
+    /// @dev A route's value and age, or 0 and `type(uint64).max` when it was not read.
     function _routeValueAge(
         RouteRead memory route
     ) internal view returns (uint256 value, uint64 age) {
@@ -448,8 +383,7 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         return (route.value, SafeCast.toUint64(block.timestamp - route.updatedAt));
     }
 
-    /// @dev Either admin role can be held only by `TIMELOCK`, through `initialize` or any later grant.
-    /// @custom:spec REQ-ORACLE-097, Q-259
+    /// @dev Either admin role can be held only by `TIMELOCK`.
     function _grantRole(
         bytes32 role,
         address account
@@ -460,8 +394,6 @@ contract DebtOracle is UUPSUpgradeable, AccessControlUpgradeable, DebtOracleReco
         granted = super._grantRole(role, account);
     }
 
-    /// @dev Upgrades require `APPLICATION_ADMIN`, held only by the timelock (normal delay).
-    /// @custom:spec REQ-ORACLE-091, REQ-ORACLE-078
     function _authorizeUpgrade(
         address
     ) internal view override onlyRole(AvanaRoles.APPLICATION_ADMIN) {}

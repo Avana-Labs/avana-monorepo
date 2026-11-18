@@ -16,37 +16,21 @@ import {AaveAdapterImmutables} from "./types/AaveAdapterImmutables.sol";
 import {AdapterAccount} from "./types/AdapterAccount.sol";
 
 /// @title AaveAdapterExitLogic
-/// @notice Bodies of the exits of an account: `withdraw`, `repayAllAndWithdraw`, `collectFees`, `releaseZeroCredit` and
-/// `refreshDebtMark`.
-/// @dev Reached only by `delegatecall` from the AaveAdapter router (`IAaveAdapterLogic`); every body takes the Lock
-/// first and releases it last. Only a withdrawal that leaves debt reads the MarketRegistry (the Hub's pause state and
-/// the caller's freeze) and the RiskModule; the debt-free withdrawal, `repayAllAndWithdraw`, fee collection, zero-credit
-/// release and the debt mark read only the Adapter's own binding, the vault token's immutables and Aave (Q-260).
-/// @custom:spec REQ-ADAPTER-047, REQ-ADAPTER-069, REQ-ADAPTER-071, REQ-ADAPTER-086, REQ-ADAPTER-096, REQ-ADAPTER-097, REQ-ADAPTER-104, REQ-PROXY-033, REQ-PROXY-034, REQ-PROXY-035, REQ-PROXY-036, REQ-PROXY-037, REQ-PROXY-038, REQ-PROXY-039, REQ-PROXY-046, REQ-PROXY-048, REQ-LOCK-007
-// Each function carries the body of a selector declared in an IAaveAdapter piece that the router implements; this
-// contract inherits no piece, since each piece also declares functions another logic contract serves.
+/// @notice Bodies of `withdraw`, `repayAllAndWithdraw`, `collectFees`, `releaseZeroCredit` and `refreshDebtMark`.
+// The router implements the IAaveAdapter pieces; this contract only carries bodies.
 // solhint-disable comprehensive-interface
-// Every call made here runs under the Adapter's Lock, which no callee can take again, so none can re-enter the Adapter
-// between a call and the event that follows it.
+// Every call here runs under the Adapter's Lock, so no callee can re-enter before the following event.
 // forge-lint: disable-start(reentrancy-events)
 contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
-    /// @notice Fixes the implementation immutables; they must equal the router's.
-    /// @param im The chain's dependencies.
-    /// @custom:spec REQ-ADAPTER-004, REQ-ADAPTER-074
     constructor(
         AaveAdapterImmutables memory im
     ) AaveAdapterStorage(im) {}
 
     /// @inheritdoc IAaveAdapterLogic
-    /// @custom:spec REQ-ADAPTER-004
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("AaveAdapterExitLogic"), _IMMUTABLES_HASH);
     }
 
-    // ─── Withdrawals ───
-
-    /// @notice Body of `withdraw` (REQ-PROXY-033).
-    /// @custom:spec REQ-PROXY-033, REQ-PROXY-034, REQ-PROXY-035, REQ-PROXY-036, REQ-PROXY-037, REQ-PROXY-038, REQ-PROXY-039, REQ-ADAPTER-069
     function withdraw(
         uint256 marketId,
         PositionRef calldata position,
@@ -66,9 +50,6 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _release();
     }
 
-    /// @notice Body of `repayAllAndWithdraw` (REQ-ADAPTER-071): repays each named reserve in full, requires the
-    /// account debt-free on Aave, then makes a debt-free withdrawal; reads no MarketRegistry state.
-    /// @custom:spec REQ-ADAPTER-071, REQ-ADAPTER-076, REQ-ADAPTER-085, REQ-PROXY-071, REQ-ADAPTER-047
     function repayAllAndWithdraw(
         uint256 marketId,
         PositionRef calldata position,
@@ -95,8 +76,7 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _release();
     }
 
-    /// @dev `DebtRemaining(r, d)` for the first reserve the Spoke reports borrowed (REQ-PROXY-071); runs only on the
-    /// failure path, bounded by the Spoke's reserve count (REQ-ADAPTER-051).
+    /// @dev Reverts `DebtRemaining` for the first reserve the Spoke reports borrowed; runs only on the failure path.
     function _revertDebtRemaining(
         address proxy,
         address spoke
@@ -105,7 +85,7 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
         uint256 count = sp.getReserveCount();
         uint256 r = 0;
         for (; r < count; ++r) {
-            // Bounded by the Spoke's reserve count, on the failure path only (REQ-ADAPTER-051); only the borrow flag matters.
+            // Bounded by the Spoke's reserve count; only the borrow flag matters.
             // forge-lint: disable-next-line(unused-return, calls-loop)
             (, bool borrowing) = sp.getUserReserveStatus(r, proxy);
             if (borrowing) break;
@@ -113,9 +93,6 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
         revert DebtRemaining(r, r < count ? sp.getUserTotalDebt(r, proxy) : 0);
     }
 
-    /// @dev Withdrawal of one record (REQ-PROXY-037, REQ-PROXY-038): backing gap, withdrawal and burn, Collateralization
-    /// `release` (reconcile, debit, position to the depositor), cleanup when debt-free or the health check with debt,
-    /// backing check, `CollateralWithdrawn`.
     function _withdrawRecord(
         address proxy,
         AdapterAccount memory account,
@@ -135,10 +112,6 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
         emit CollateralWithdrawn(msg.sender, account.marketId, account.vaultToken, positionKey, units, !debtFree, hf);
     }
 
-    // ─── Fees, zero-credit release and the debt mark ───
-
-    /// @notice Body of `collectFees` (REQ-ADAPTER-096).
-    /// @custom:spec REQ-ADAPTER-096, REQ-ADAPTER-101
     function collectFees(
         uint256 marketId,
         PositionRef calldata position,
@@ -151,8 +124,6 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _release();
     }
 
-    /// @notice Body of `releaseZeroCredit` (REQ-ADAPTER-097).
-    /// @custom:spec REQ-ADAPTER-097, REQ-ADAPTER-101
     function releaseZeroCredit(
         uint256 marketId,
         PositionRef calldata position,
@@ -165,8 +136,6 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _release();
     }
 
-    /// @notice Body of `refreshDebtMark` (REQ-ADAPTER-104): anyone, moves nothing, reads no Avana stop.
-    /// @custom:spec REQ-ADAPTER-104, REQ-COLL-040
     function refreshDebtMark(
         address proxy
     ) external {
@@ -176,7 +145,6 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _release();
     }
 
-    /// @dev Deadline, the caller's account for the market and the position's integration; returns its vault token.
     function _depositorToken(
         uint256 marketId,
         PositionRef calldata position,

@@ -19,15 +19,11 @@ import {WithdrawPreview} from "./types/WithdrawPreview.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensPositions
-/// @notice Account risk (liquidation price and borrow rates with the account's risk premium) and the pledge and
-/// withdrawal previews.
-/// @dev Health factors in WAD, Aave values in USD × 1e26, debt values in Aave value × RAY.
-/// @custom:spec REQ-LENS-047, REQ-LENS-048, REQ-LENS-049
-// View calls in loops over the Spoke's enabled debt reserves (REQ-LENS-020).
+/// @notice Account risk (liquidation price and borrow rates) and the pledge and withdrawal previews.
+// Loops over the Spoke's enabled debt reserves.
 // forge-lint: disable-start(calls-loop)
 abstract contract LensPositions is LensAccountMath, ILensPositions {
     /// @inheritdoc ILensPositions
-    /// @custom:spec REQ-LENS-047, REQ-LENS-005, REQ-LENS-006
     function getAccountRisk(
         address wallet,
         uint256 marketId
@@ -54,7 +50,6 @@ abstract contract LensPositions is LensAccountMath, ILensPositions {
     }
 
     /// @inheritdoc ILensPositions
-    /// @custom:spec REQ-LENS-048, REQ-LENS-005, REQ-LENS-006
     function previewPledge(
         address depositor,
         uint256 marketId,
@@ -66,7 +61,6 @@ abstract contract LensPositions is LensAccountMath, ILensPositions {
     }
 
     /// @inheritdoc ILensPositions
-    /// @custom:spec REQ-LENS-049, REQ-LENS-005, REQ-LENS-006, SPEC-CF-005
     function previewWithdraw(
         address wallet,
         uint256 marketId,
@@ -96,9 +90,7 @@ abstract contract LensPositions is LensAccountMath, ILensPositions {
         v.allowed = _withdrawGate(m, marketId, proxy, left, cf, a.totalDebtValueRay);
     }
 
-    // ------------------------------------------------------------------------------------------------------ internal
-
-    /// @dev `⌊totalCollateralValue × CF / 10⁴⌋ − ⌈units × Pc × 10^(18 − d) × CF / 10⁴⌉`, floored at 0 (REQ-LENS-049).
+    /// @dev `⌊totalCollateralValue × CF / 10⁴⌋ − ⌈units × Pc × 10^(18 − d) × CF / 10⁴⌉`, floored at 0.
     function _weightedLeft(
         Market memory m,
         uint256 collateralValue,
@@ -110,8 +102,7 @@ abstract contract LensPositions is LensAccountMath, ILensPositions {
         return w - Math.min(w, removed);
     }
 
-    /// @dev The withdraw-with-debt gate of REQ-LENS-049: the gate status, no `Paused`, and the rescue-excluded health
-    /// factor after at least `max(1e18, hardHealthFloor)`.
+    /// @dev The withdraw-with-debt gate, with the rescue-excluded health factor at or above the floor.
     function _withdrawGate(
         Market memory m,
         uint256 marketId,

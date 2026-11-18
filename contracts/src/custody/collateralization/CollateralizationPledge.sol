@@ -15,30 +15,16 @@ import {BackingRecord} from "./types/BackingRecord.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-// Every external call in this file goes to the market's registered LPVault, the vault token, the VaultTokenFactory, the
-// Aave Hub or Spoke, or (in `pledge` and `recredit`) the RiskModule's view check and the market's LPOracle, while a Lock
-// member holds the Lock, so no other code can re-enter Collateralization; the order of calls, writes and events is the
-// one 2.3 fixes: custody before the credit is read, balance deltas measured around the call that delivers them, and
-// events that report a call's amounts after that call (REQ-VAULT-089, REQ-LOCK-017).
+// External calls go only to known protocol contracts while a Lock member holds the Lock, so nothing can re-enter.
 // forge-lint: disable-start(reentrancy-events)
 // forge-lint: disable-start(reentrancy-no-eth)
-// The ledger's writes happen only inside the Adapter's and LPVaultSwap's entry points, each of which emits its 2.3 event
-// (`CollateralPledged`, `RecordRecredited`, `RecordReduced`, `RecordDebited`, `CollateralReleased`, `SeizureSettled`,
-// `SeizureReconciled`, `PendingSettled`); the internal helpers that write counters are covered by those events.
+// Ledger writes happen only inside entry points that emit their own event.
 // forge-lint: disable-start(missing-events-access-control)
 /// @title CollateralizationPledge
-/// @notice Adapter path, credit side: `pledge` writes a new record for a position the market's LPVault takes into
-/// custody, and `recredit` credits the live units added to a pledged position. Both book the RiskModule's charge and
-/// return the units the AaveAdapter mints.
-/// @dev Collateralization trusts the Adapter for `depositor`, `proxy` and `requireRescue`, and still enforces the
-/// custody limits of REQ-COLL-005 whatever it passes: the depositor is neither the market's LPVault nor this contract,
-/// the LPVault pulls the position from its owner and matches the exact shape, `credited` is the units read after
-/// custody, one record per position, at most the integration's record cap per account-market (16 or fewer,
-/// REQ-AMM-CORE-020), one market per proxy.
-/// @custom:spec REQ-COLL-005, REQ-COLL-015, REQ-COLL-024, REQ-COLL-025, REQ-COLL-026, REQ-COLL-027, REQ-COLL-031, REQ-COLL-037, REQ-VAULT-006, REQ-VAULT-007, REQ-VAULT-012, REQ-VAULT-013, REQ-VAULT-014, REQ-VAULT-015, REQ-VAULT-016, REQ-VAULT-017, REQ-VAULT-018, REQ-VAULT-022, REQ-VAULT-024, REQ-VAULT-025, REQ-VAULT-027, REQ-VAULT-042
+/// @notice Adapter path, credit side: `pledge` records a custodied position and `recredit` credits units added to it.
+/// @dev Trusts the Adapter for `depositor`, `proxy` and `requireRescue`, but still enforces the custody limits.
 abstract contract CollateralizationPledge is CollateralizationLedger, ICollateralizationAdapter {
     /// @inheritdoc ICollateralizationAdapter
-    /// @custom:spec REQ-VAULT-006, REQ-VAULT-007, REQ-VAULT-010, REQ-VAULT-012, REQ-VAULT-013, REQ-VAULT-014, REQ-VAULT-015, REQ-VAULT-016, REQ-VAULT-017, REQ-VAULT-018, REQ-VAULT-019, REQ-VAULT-021, REQ-VAULT-022, REQ-VAULT-025, REQ-VAULT-027, REQ-VAULT-042, REQ-VAULT-106, REQ-VAULT-107, REQ-VAULT-109, REQ-VAULT-110, REQ-COLL-003, REQ-COLL-010, REQ-COLL-013, REQ-COLL-016, REQ-COLL-019, REQ-COLL-024, REQ-COLL-025, REQ-COLL-026, REQ-COLL-027, REQ-COLL-031, REQ-COLL-033, REQ-COLL-034, REQ-COLL-035, SPEC-BACK-002, SPEC-BACK-003, SPEC-BACK-004, SPEC-BACK-006, SPEC-BACK-014
     function pledge(
         address depositor,
         address proxy,
@@ -110,7 +96,6 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
     }
 
     /// @inheritdoc ICollateralizationAdapter
-    /// @custom:spec REQ-COLL-015, REQ-COLL-016, REQ-COLL-021, REQ-COLL-022, REQ-COLL-037, REQ-VAULT-010, REQ-VAULT-024, REQ-VAULT-030, REQ-VAULT-031, REQ-VAULT-032, REQ-VAULT-042, REQ-VAULT-074, REQ-VAULT-107, REQ-VAULT-110, REQ-VAULT-131, SPEC-BACK-004, SPEC-BACK-010, SPEC-BACK-013, SPEC-BACK-014
     function recredit(
         address depositor,
         address proxy,
@@ -127,8 +112,6 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         emit RecordRecredited(id, added, charge.usdCharge, rescueUnits);
     }
 
-    /// @notice The live units of a record's position above its credited units (REQ-COLL-015).
-    /// @custom:spec REQ-COLL-015, REQ-COLL-021, REQ-VAULT-074, REQ-VAULT-107, SPEC-BACK-010
     function _uncredited(
         Ctx memory c,
         BackingRecord storage r,
@@ -143,9 +126,6 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         added = uint128(live - credited);
     }
 
-    /// @notice Checks a re-credit's charge, rebases the record on `credited + added` units and its charge plus the new
-    /// charge (SPEC-BACK-013), and books the totals, counters and rescue units.
-    /// @custom:spec REQ-VAULT-015, REQ-VAULT-030, REQ-VAULT-110, REQ-COLL-016, SPEC-BACK-004, SPEC-BACK-013, SPEC-BACK-014
     function _rebase(
         Ctx memory c,
         BackingRecord storage r,
@@ -172,9 +152,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         _book(c, charge);
     }
 
-    /// @dev The record's `windowedBps` after a re-credit: the pledge window was charged `bps` of the `current` USD still
-    /// booked plus the new charge unless it is a rescue (`REQ-RISK-093`), as a share of the rebased total, rounded
-    /// down so an exit never credits more than was charged (`REQ-RISK-095`).
+    /// @dev The record's `windowedBps` after a re-credit, rounded down so an exit never credits more than was charged.
     function _windowedBps(
         uint256 current,
         uint16 bps,
@@ -187,10 +165,6 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         return SafeCast.toUint16(Math.mulDiv(windowed, WINDOW_BPS, rebased));
     }
 
-    /// @notice Start of `recredit`: caller and lock, vault token, the open record naming `proxy` and `depositor` in
-    /// `vaultToken`'s market, the pool lock, reconciliation with the proxy's supplied shares (REQ-VAULT-131) and the
-    /// fungible-share top-up (REQ-COLL-037).
-    /// @custom:spec REQ-COLL-015, REQ-COLL-022, REQ-COLL-037, REQ-VAULT-010, REQ-VAULT-131, REQ-LOCK-011
     function _prepareRecredit(
         address depositor,
         address proxy,
@@ -207,15 +181,12 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         _checkReadSafe(c);
         _withReserve(c);
         _reconcile(c, proxy, _supplied(c, proxy));
-        // The credit is the live units read next (REQ-COLL-037), not the LPVault's report of the top-up.
+        // The credit is the live units read next, not the LPVault's report of the top-up.
         // forge-lint: disable-next-line(unused-return)
         if (topUp.length != 0) IAmmIntegration(c.lpVault).topUpPosition(positionKey, depositor, topUp);
     }
 
-    /// @notice Pokes the market's LPOracle and asks the RiskModule for the charge of `units` (REQ-VAULT-014).
-    /// @dev The counters are passed as arguments because the ledger's views revert while the Lock is held. The check's
-    /// revert data propagates unchanged.
-    /// @custom:spec REQ-VAULT-014, REQ-VAULT-109, REQ-VAULT-144, REQ-COLL-026, REQ-AMM-CORE-005
+    /// @dev Counters are passed in because the ledger's views revert while the Lock is held.
     function _charge(
         Ctx memory c,
         address depositor,
@@ -224,7 +195,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         uint128 units,
         bool requireRescue
     ) private returns (PledgeCharge memory) {
-        // The poke only stores the first observation (Q-199); the RiskModule reads the price state itself.
+        // The poke only stores the first observation; the RiskModule reads the price state itself.
         // forge-lint: disable-next-line(unused-return)
         ILPOracle(IVaultToken(c.vaultToken).lpOracle()).poke();
         PledgeCounters memory counters = _counters(c);
@@ -233,8 +204,6 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
             .checkPledge(depositor, proxy, c.marketId, c.integrationId, positionKey, units, counters, requireRescue);
     }
 
-    /// @notice Adds `units` and `rescue` units to the account, market and pool totals.
-    /// @custom:spec REQ-VAULT-017, REQ-VAULT-129, REQ-COLL-016, REQ-COLL-026, SPEC-BACK-009, SPEC-BACK-014
     function _credit(
         Ctx memory c,
         address proxy,

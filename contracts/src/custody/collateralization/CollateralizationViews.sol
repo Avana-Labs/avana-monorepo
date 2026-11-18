@@ -13,11 +13,6 @@ import {Pending} from "./types/Pending.sol";
 
 /// @title CollateralizationViews
 /// @notice Read-only views of the backing ledger and the constructor immutables.
-/// @dev Every ledger view reverts with `Locked` while the Lock is held by another address than the caller
-/// (REQ-VAULT-091); `getAccountRescueUnits` and `poolUnits` answer while the Lock is free or held by the AaveAdapter,
-/// the RiskModule's reads inside the Adapter's borrow and withdrawal checks (REQ-COLL-018). The immutable getters and
-/// `lpVaultOf` never revert.
-/// @custom:spec REQ-VAULT-091, REQ-VAULT-128, REQ-VAULT-145, REQ-COLL-002, REQ-COLL-018, REQ-COLL-040, REQ-LOCK-016
 abstract contract CollateralizationViews is CollateralizationLedger, ICollateralizationViews {
     /// @inheritdoc ICollateralizationViews
     function getRecord(
@@ -43,7 +38,6 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
     }
 
     /// @inheritdoc ICollateralizationViews
-    /// @dev The seizure list in list order, followed by the records at 0 credited units.
     function getAccountRecords(
         address proxy,
         address vaultToken,
@@ -151,11 +145,10 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         (uint256 id, BackingRecord storage r, Ctx memory c) = _previewRecord(integrationId, positionKey);
         uint256 credited = _creditedAfterReconcile(c, id, r);
         if (credited == 0) return 0;
-        // A reconciliation removes from the position exactly the units it debits, so the uncredited live units are
-        // `live - credited` before and after it.
+        // Reconciliation removes exactly the units it debits, so `live - credited` is unchanged by it.
         uint256 live = IAmmIntegration(c.lpVault).unitsOf(positionKey);
         uint256 before = r.credited;
-        // Live units cover credit (SPEC-BACK-010) and are below 2^128.
+        // Live units cover credit and are below 2^128.
         // forge-lint: disable-next-line(unsafe-typecast)
         added = live > before ? uint128(live - before) : 0;
     }
@@ -201,16 +194,12 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         vaultTokenFactory = _VAULT_TOKEN_FACTORY;
     }
 
-    /// @notice The two views the RiskModule reads inside the AaveAdapter's call tree (`getAccountRescueUnits` for the
-    /// health check, `poolUnits` for the borrow-side market breaker) answer while the Lock is free or held by the
-    /// AaveAdapter, and revert with `Locked` while LPVaultSwap holds it.
-    /// @custom:spec REQ-COLL-018, REQ-VAULT-091, REQ-LOCK-016
+    /// @notice Lock check for the views the RiskModule reads inside the AaveAdapter's calls: also open to the Adapter.
     function _checkAdapterView() private view {
         address holder = _holder();
         if (holder != address(0) && holder != _ADAPTER) revert Locked();
     }
 
-    /// @notice The open record of a position and its market context, for the previews.
     function _previewRecord(
         uint32 integrationId,
         bytes32 positionKey

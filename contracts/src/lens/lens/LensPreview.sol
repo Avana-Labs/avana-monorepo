@@ -24,19 +24,14 @@ import {LensDeleverage} from "./LensDeleverage.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensPreview
-/// @notice Borrower previews of the Lens, each built to stay valid until inclusion: the protocol maximum borrow and the
-/// recommended borrow, the repay-all spend cap, a re-credit and a repay with collateral.
-/// @dev Health factors in WAD, Aave values in USD × 1e26 and debt values in Aave value × RAY. Every rounding is against
-/// the borrower's expectation: amounts down, the target health factor and the spend cap up.
-/// @custom:spec REQ-LENS-035, REQ-LENS-036, REQ-LENS-038, REQ-LENS-041, REQ-LENS-044, SPEC-CF-005, SPEC-LIQ-020, Q-268, Q-269, Q-398
-// View calls in loops over listings bounded by governance (Spokes, debt reserves, markets, pool tokens), one
-// page of at most LENS_MAX_PAGE records or the caller's own arrays (REQ-LENS-020).
+/// @notice Borrower previews of the Lens, sized to stay valid until the transaction deadline.
+/// @dev Rounds against the borrower: amounts down, the target health factor and the spend cap up.
+// Loops are bounded by governance listings, one page of at most LENS_MAX_PAGE records, or the caller's arrays.
 // forge-lint: disable-start(calls-loop)
 abstract contract LensPreview is LensDeleverage, ILensPreview {
-    /// @dev A pool-share cap of 10,000 bps is no limit (SPEC-CAP-005).
+    /// @dev A pool-share cap of 10,000 bps is no limit.
     uint256 internal constant NO_POOL_SHARE_CAP = 10_000;
 
-    /// @dev One account's borrow inputs.
     struct Borrow {
         Market m;
         DebtReserveDef def;
@@ -49,7 +44,6 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
     }
 
     /// @inheritdoc ILensPreview
-    /// @custom:spec REQ-LENS-035, REQ-LENS-041, REQ-LENS-006
     function previewBorrowMax(
         address wallet,
         uint256 marketId,
@@ -61,7 +55,6 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
     }
 
     /// @inheritdoc ILensPreview
-    /// @custom:spec REQ-LENS-044, REQ-LENS-035, REQ-LENS-006
     function previewBorrowRecommended(
         address wallet,
         uint256 marketId,
@@ -73,7 +66,6 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
     }
 
     /// @inheritdoc ILensPreview
-    /// @custom:spec REQ-LENS-036, REQ-LENS-006
     function quoteRepayAll(
         address borrower,
         uint256 marketId,
@@ -95,7 +87,6 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
     }
 
     /// @inheritdoc ILensPreview
-    /// @custom:spec REQ-LENS-038, SPEC-CAP-001, REQ-RISK-066, REQ-LENS-006
     function previewRecredit(
         uint256 marketId,
         bytes32 positionKey
@@ -107,7 +98,7 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
         if (added == 0) return (0, 0, false);
         // forge-lint: disable-next-line(unused-return)
         (uint256 accepted,) = ILPOracle(m.lpOracle).lastAcceptedPrice();
-        // A re-credit is booked like a pledge, at min(fresh, accepted) (REQ-RISK-026).
+        // A re-credit is booked like a pledge, at min(fresh, accepted).
         int256 fresh = ILPOracle(m.lpOracle).getPriceState().freshAnswer;
         // A positive int256 is cast.
         // forge-lint: disable-next-line(unsafe-typecast)
@@ -119,7 +110,6 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
     }
 
     /// @inheritdoc ILensPreview
-    /// @custom:spec REQ-LENS-038, SPEC-LIQ-020, REQ-LENS-006, REQ-LENS-007
     function previewRepayWithCollateral(
         address wallet,
         uint256 marketId,
@@ -143,15 +133,12 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
         uint256 premium = IFlashSource(_registry().flashSource()).flashPremium(r.def.asset, debtRepaid);
         debtAssetToWallet = value > debtRepaid + premium ? value - debtRepaid - premium : 0;
         uint256 after_ = _healthAt(d, units, debtRepaid);
-        // While debt remains the AaveAdapter refuses a repayment that lowers the health factor, and the withdrawal of
-        // the units is an Aave collateral withdrawal, which refuses a health factor below 1 (`HealthFactorBelowThreshold`).
+        // With debt left, the Adapter refuses a lower health factor and Aave refuses one below 1.
         if (after_ < a.healthFactor || after_ < WAD_) return (0, 0, healthFactorAfter);
         healthFactorAfter = after_;
     }
 
-    // ------------------------------------------------------------------------------------------------------ internal
-
-    /// @dev `(recommended, maximum)` of REQ-LENS-044 and REQ-LENS-035; both 0 when the borrow gate fails.
+    /// @dev `(recommended, maximum)`; both 0 when the borrow gate fails.
     function _borrowPreview(
         address wallet,
         uint256 marketId,
@@ -180,9 +167,7 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
         if (recommended > maximum) recommended = maximum;
     }
 
-    /// @dev `Ht = H0 × (1 + rate × max(0, deadline − now)) × (10⁴ + BORROW_MAX_MARGIN_BPS) / 10⁴`, rounded up, with
-    /// `H0 = max(1e18, hardHealthFloor(marketId))`.
-    /// @custom:spec REQ-LENS-035, Q-398
+    /// @dev Target health factor grown to `deadline` plus the margin, rounded up.
     function _targetHealthFactor(
         Borrow memory b,
         uint256 riskPremium,
@@ -196,7 +181,6 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
     }
 
     /// @dev `⌊max(0, weighted × WAD / target − debtValue) / unitValue⌋`, capped by the draw-cap headroom.
-    /// @custom:spec REQ-LENS-035, REQ-LENS-044
     function _capacity(
         Borrow memory b,
         uint256 target
@@ -207,12 +191,7 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
         if (amount > b.headroom) amount = b.headroom;
     }
 
-    /// @dev The borrow's gates as the AaveAdapter applies them: the market's Hub and the reserve's funding Hub in None,
-    /// the wallet not frozen, then the RiskModule's gates of this borrow (`checkBorrowGate`): the gates of
-    /// `preBorrowCheck` on the stored oracle state with the borrowed reserve in the debt scope, so its record, pause,
-    /// price, routes, debt breaker and cross-Hub line are checked as execution checks them, and its asset counts as a
-    /// debt asset of the account for the route rule (REQ-RISK-061, REQ-RISK-062, REQ-RISK-082).
-    /// @custom:spec REQ-LENS-035, REQ-RISK-060, REQ-RISK-061, REQ-RISK-062, REQ-RISK-082
+    /// @dev The AaveAdapter's borrow gates: both Hubs in None, wallet not frozen, `checkBorrowGate` passes.
     function _borrowGate(
         Borrow memory b,
         address wallet
@@ -225,8 +204,7 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
         } catch {}
     }
 
-    /// @dev SPEC-CF-005 rescue exclusion `E` of the account, Aave value units.
-    /// @custom:spec SPEC-CF-005, Q-253
+    /// @dev Rescue exclusion `E` of the account, Aave value units.
     function _rescueExclusion(
         Borrow memory b
     ) internal view returns (uint256 e) {
@@ -253,10 +231,7 @@ abstract contract LensPreview is LensDeleverage, ILensPreview {
         }
     }
 
-    /// @dev Whether a regular top-up would be refused, so the re-credit books only as a rescue top-up: `Paused(General)`,
-    /// a frozen depositor, a market breaker other than `ORACLE` and `CONFIG_DRIFT`, the pool-share gate, or a charge
-    /// below `minPledgeUsd`.
-    /// @custom:spec REQ-LENS-038, REQ-RISK-066, SPEC-CAP-005
+    /// @dev Whether a regular top-up would be refused, so the re-credit books only as a rescue top-up.
     function _rescueOnly(
         uint256 marketId,
         Market memory m,

@@ -25,18 +25,11 @@ import {MarketPosition} from "./types/MarketPosition.sol";
 import {RecordView} from "./types/RecordView.sol";
 
 /// @title LensAccount
-/// @notice Account views of the Lens: a wallet's proxy per market, its account (Aave account data, every debt
-/// reserve, the one collateral market, gates, breakers and freeze), its records with the units a withdrawal uses, and
-/// payouts held by the PayoutEscrow.
-/// @dev Bounded by the Spoke's enabled debt reserves, the 16 open records of an account-market and the caller's
-/// arrays; no loop over a market's records.
-/// @custom:spec REQ-LENS-008, REQ-LENS-009, REQ-LENS-010, REQ-LENS-011, REQ-LENS-023, REQ-LENS-024, REQ-LENS-027, REQ-LENS-040
-// View calls in loops over listings bounded by governance (Spokes, debt reserves, markets, pool tokens), one
-// page of at most LENS_MAX_PAGE records or the caller's own arrays (REQ-LENS-020).
+/// @notice Account views of the Lens: proxy address, account state, records and escrowed payouts.
+// Loops are bounded by governance listings, one page of at most LENS_MAX_PAGE records, or the caller's arrays.
 // forge-lint: disable-start(calls-loop)
 abstract contract LensAccount is LensBase, ILensAccount {
     /// @inheritdoc ILensAccount
-    /// @custom:spec REQ-LENS-008, REQ-LENS-006
     function predictProxy(
         address wallet,
         uint256 marketId
@@ -46,7 +39,6 @@ abstract contract LensAccount is LensBase, ILensAccount {
     }
 
     /// @inheritdoc ILensAccount
-    /// @custom:spec REQ-LENS-009, REQ-LENS-010, REQ-LENS-037, REQ-LENS-005, REQ-LENS-006
     function getAccount(
         address wallet,
         uint256 marketId
@@ -56,7 +48,6 @@ abstract contract LensAccount is LensBase, ILensAccount {
     }
 
     /// @inheritdoc ILensAccount
-    /// @custom:spec REQ-LENS-040, REQ-LENS-006
     function getAccounts(
         address wallet,
         uint256[] calldata marketIds
@@ -69,7 +60,6 @@ abstract contract LensAccount is LensBase, ILensAccount {
     }
 
     /// @inheritdoc ILensAccount
-    /// @custom:spec REQ-LENS-011, REQ-LENS-023, REQ-LENS-024, REQ-LENS-005, REQ-LENS-006
     function getRecords(
         address proxy,
         uint256 offset,
@@ -92,7 +82,6 @@ abstract contract LensAccount is LensBase, ILensAccount {
     }
 
     /// @inheritdoc ILensAccount
-    /// @custom:spec REQ-LENS-027, REQ-LENS-006
     function getEscrowClaimable(
         address account,
         address[] calldata tokens
@@ -104,9 +93,6 @@ abstract contract LensAccount is LensBase, ILensAccount {
         }
     }
 
-    // ------------------------------------------------------------------------------------------------------ internal
-
-    /// @dev The account view of REQ-LENS-009 for `(wallet, marketId)`.
     function _account(
         address wallet,
         uint256 marketId
@@ -157,7 +143,6 @@ abstract contract LensAccount is LensBase, ILensAccount {
         (p.breakerReasons,) = IRiskModuleViews(_RISK_MODULE).getDebtBreakerStatus(spoke, reserveId);
     }
 
-    /// @dev The account's one collateral market.
     function _marketPosition(
         address proxy,
         Market memory m,
@@ -177,10 +162,7 @@ abstract contract LensAccount is LensBase, ILensAccount {
         p.rescueUnits = coll.getAccountRescueUnits(proxy, m.vaultToken);
     }
 
-    /// @dev Credited units of the seizure-list records (the leading `inList` entries) after Collateralization reconciles the account-market's
-    /// shortfall: the shortfall is debited from the head of the seizure list, each record losing
-    /// `min(credited, remaining)`; nothing is debited while the Hub's added shares differ from its added assets.
-    /// @custom:spec REQ-LENS-011, SPEC-BACK-011
+    /// @dev Credited units after the shortfall is debited from the head of the seizure list.
     function _creditedAfterReconcile(
         address proxy,
         address vaultToken,
@@ -202,7 +184,6 @@ abstract contract LensAccount is LensBase, ILensAccount {
         }
     }
 
-    /// @dev One entry of `getRecords`.
     function _recordView(
         uint256 recordId,
         BackingRecord memory r,
@@ -214,7 +195,6 @@ abstract contract LensAccount is LensBase, ILensAccount {
         v.liveUnits = _liveUnits(r.integrationId, r.positionKey);
     }
 
-    /// @dev Whether the Hub asset of a Spoke reserve has added shares equal to added assets.
     function _sharesEqualAssetsOf(
         address spoke,
         uint256 reserveId
@@ -223,9 +203,7 @@ abstract contract LensAccount is LensBase, ILensAccount {
         return IAaveV4Hub(r.hub).getAddedShares(r.assetId) == IAaveV4Hub(r.hub).getAddedAssets(r.assetId);
     }
 
-    /// @dev Live units of a position as its AMM integration reports them; 0 when it is not in custody (no depositor of
-    /// record, the LPVault's `isInCustody`), where `unitsOf` would revert.
-    /// @custom:spec REQ-LENS-011, REQ-LENS-014
+    /// @dev Live units of a position per its AMM integration; 0 when not in custody, where `unitsOf` would revert.
     function _liveUnits(
         uint32 integrationId,
         bytes32 positionKey

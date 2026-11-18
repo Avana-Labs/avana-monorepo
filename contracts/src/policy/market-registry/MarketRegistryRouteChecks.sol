@@ -12,31 +12,21 @@ import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
 import {IERC1820Registry} from "@openzeppelin/contracts/interfaces/IERC1820Registry.sol";
 
 /// @title MarketRegistryRouteChecks
-/// @notice The route-type and token checks `setRoute` and `restoreRoute` run on a swap route (2.12 REQ-ROUTE-002,
-/// REQ-ROUTE-005, REQ-ROUTE-019): the route type is admitted in the slot, a GSM route fills only a backup slot and only
-/// while its GSM is live (Q-341), and no token the route holds has an ERC-1820 `ERC777Token` implementer (Q-342).
-/// @dev Every read is a static call through `RouteReads._staticRead` that forwards the gas left and copies at most one
-/// byte more than the answer it expects; only an answer of exactly that length counts. A revert, an address without
-/// code, a shorter or longer answer, or a word outside its type's range refuses the route (fail closed). Example: a
-/// GSM answering `getIsFrozen()` with 64 bytes is refused even when its first word is `false`.
-/// @custom:spec REQ-ROUTE-002, REQ-ROUTE-005, REQ-ROUTE-019, REQ-ROUTE-030, Q-341, Q-342
+/// @notice The route-type and ERC-777 checks `setRoute` and `restoreRoute` run on a swap route.
+/// @dev Every read is a static call; only an answer of exactly the expected length counts, else the route is refused.
 // The ERC-777 check reads the ERC-1820 registry once per token the route holds; static calls only.
 // forge-lint: disable-start(calls-loop)
 abstract contract MarketRegistryRouteChecks is MarketRegistryStorage {
-    /// @dev The ERC-1820 registry, at the same address on every chain (deployed by a keyless transaction).
+    /// @dev The ERC-1820 registry, at the same address on every chain.
     address internal constant _ERC1820_REGISTRY = 0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24;
 
-    /// @dev The ERC-1820 interface hash an ERC-777 token registers for itself: `keccak256("ERC777Token")`.
     bytes32 internal constant _ERC777_TOKEN_HASH = keccak256("ERC777Token");
 
-    /// @dev Route type of a `PegModule` route, and the highest route type (2, `WrapperThenDex`).
+    /// @dev Route type of a `PegModule` route, and the highest route type (`WrapperThenDex`).
     uint256 internal constant _PEG_MODULE_ROUTE = 0;
     uint256 internal constant _MAX_ROUTE_TYPE = 2;
 
-    /// @dev REQ-ROUTE-002 and REQ-ROUTE-005: true when `route.routeType()` is 0, 1 or 2 and admitted in slot `kind`.
-    /// A `DexPath` or `WrapperThenDex` route is admitted in either slot. A `PegModule` route must name, through
-    /// `pegModule()`, a kind of `Gsm` or `LitePsm` and a module listed in its `dependencies()`; a LitePSM route is
-    /// admitted in either slot, a GSM route only in the backup slot and only while the GSM is live (`_gsmLive`, Q-341).
+    /// @dev True when the route type is admitted in slot `kind`; a GSM route only as a live backup.
     function _routeTypeAdmitted(
         address route,
         uint8 kind,
@@ -54,13 +44,10 @@ abstract contract MarketRegistryRouteChecks is MarketRegistryStorage {
         (, address module) = abi.decode(ret, (uint256, address));
         if (!_listed(deps, module)) return false;
         if (pegKind == uint256(PegModuleKind.LitePsm)) return true;
-        // The GSM is never a primary route (REQ-ROUTE-002).
         if (kind != _BACKUP) return false;
         return _gsmLive(module);
     }
 
-    /// @dev Q-341: true when the GSM answers `getIsSeized() == false`, `getIsFrozen() == false` and
-    /// `getExposureCap() > 0`, each with exactly one word in its type's range. A cap of 0 means the GSM takes no input.
     function _gsmLive(
         address gsm
     ) internal view returns (bool) {
@@ -72,10 +59,6 @@ abstract contract MarketRegistryRouteChecks is MarketRegistryStorage {
         return okCap && cap != 0 && cap <= type(uint128).max;
     }
 
-    /// @dev Q-342 and REQ-ROUTE-005: true when none of `token`, `debtAsset` and the route's `intermediates` has an
-    /// ERC-1820 `ERC777Token` implementer. A chain without the ERC-1820 registry has none: an ERC-777 token registers
-    /// that implementer in its own constructor, so it cannot be deployed there. A registry read that fails or returns
-    /// anything but exactly one zero word counts as an implementer.
     function _noErc777(
         address token,
         address debtAsset,
@@ -89,16 +72,13 @@ abstract contract MarketRegistryRouteChecks is MarketRegistryStorage {
         return true;
     }
 
-    /// @dev Q-342 for `listToken`: true when the chain has the ERC-1820 registry and `token` has an `ERC777Token`
-    /// implementer there (or the read fails); false on a chain without the registry, where no ERC-777 token can exist.
     function _isErc777Token(
         address token
     ) internal view returns (bool) {
         return _ERC1820_REGISTRY.code.length != 0 && _hasErc777Implementer(token);
     }
 
-    /// @dev True unless the ERC-1820 registry answers `getInterfaceImplementer(token, keccak256("ERC777Token"))` with
-    /// exactly one zero word.
+    /// @dev Fails closed: a failed read counts as an implementer.
     function _hasErc777Implementer(
         address token
     ) private view returns (bool) {
@@ -108,8 +88,6 @@ abstract contract MarketRegistryRouteChecks is MarketRegistryStorage {
         return !ok || implementer != 0;
     }
 
-    /// @dev One word read by a static call that forwards the gas left and copies at most 33 bytes; `ok` only for an
-    /// answer of exactly 32 bytes. A read starved of gas fails, which refuses the route.
     function _readWord(
         address target,
         bytes memory data
@@ -120,7 +98,6 @@ abstract contract MarketRegistryRouteChecks is MarketRegistryStorage {
         word = abi.decode(ret, (uint256));
     }
 
-    /// @dev True when `list` holds the non-zero address `a`.
     function _listed(
         address[] memory list,
         address a

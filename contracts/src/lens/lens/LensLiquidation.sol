@@ -27,26 +27,18 @@ import {RouteStatus} from "./types/RouteStatus.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensLiquidation
-/// @notice The liquidation preview: every gate as LPVaultSwap evaluates it, Aave's own sizing of the repayment and the
-/// seizure, ready-to-send `LiquidationParams` with the inclusion margin, and the expected recovery floor, payout and
-/// caller loss in the debt asset.
-/// @dev Advisory: LPVaultSwap recomputes and enforces every check on execution and Aave sizes the seizure inside
-/// `liquidationCall`. Gates read fresh prices only for the seized market and the repaid reserve.
-/// @custom:spec REQ-LENS-016, REQ-LENS-017, REQ-LENS-028, REQ-LENS-029, REQ-LENS-032, REQ-LENS-033, Q-232, Q-247, Q-268, Q-404
-// View calls in loops over listings bounded by governance (Spokes, debt reserves, markets, pool tokens), one
-// page of at most LENS_MAX_PAGE records or the caller's own arrays (REQ-LENS-020).
+/// @notice Liquidation preview: LPVaultSwap's gates, Aave's sizing and ready-to-send `LiquidationParams`.
+// Loops are bounded by governance listings, one page of at most LENS_MAX_PAGE records, or the caller's arrays.
 // forge-lint: disable-start(calls-loop)
 abstract contract LensLiquidation is LensBase {
     /// @dev Aave's `HEALTH_FACTOR_LIQUIDATION_THRESHOLD`, WAD.
     uint256 internal constant LIQUIDATION_THRESHOLD = 1e18;
 
-    /// @dev Aave's `DUST_LIQUIDATION_THRESHOLD`, $1,000 in Aave value units (USD × 1e26).
+    /// @dev Aave's `DUST_LIQUIDATION_THRESHOLD`, in Aave value units.
     uint256 internal constant DUST_LIQUIDATION_THRESHOLD = 1000e26;
 
-    /// @dev `LensAaveSizing`: Aave's pinned liquidation sizing, built with Aave's settings.
     address internal immutable _AAVE_SIZING;
 
-    /// @dev Everything the preview reads about the account once.
     struct Ctx {
         Market m;
         DebtReserveDef def;
@@ -56,9 +48,6 @@ abstract contract LensLiquidation is LensBase {
         uint8 debtDecimals;
     }
 
-    /// @notice Fixes the Aave sizing contract.
-    /// @param sizing `LensAaveSizing`.
-    /// @custom:spec REQ-LENS-017
     constructor(
         address sizing
     ) {
@@ -66,16 +55,10 @@ abstract contract LensLiquidation is LensBase {
         _AAVE_SIZING = sizing;
     }
 
-    /// @notice Returns `LensAaveSizing`, the pinned Aave V4 liquidation sizing the preview calls.
-    /// @return sizing Constructor immutable.
-    /// @custom:spec REQ-LENS-017
     function AAVE_SIZING() external view returns (address sizing) {
         sizing = _AAVE_SIZING;
     }
 
-    /// @notice `ILensLiquidation.previewLiquidation`: every liquidation gate, Aave's sizing and ready-to-send
-    /// `LiquidationParams` for one account and debt reserve, with the expected seizure, floor, payouts and caller loss.
-    /// @custom:spec REQ-LENS-016, REQ-LENS-017, REQ-LENS-028, REQ-LENS-029, REQ-LENS-032, REQ-LENS-033, REQ-LENS-005, REQ-LENS-006, REQ-LENS-007
     function previewLiquidation(
         address proxy,
         uint256 debtReserveId,
@@ -93,10 +76,6 @@ abstract contract LensLiquidation is LensBase {
         _expected(p, c);
     }
 
-    // ------------------------------------------------------------------------------------------------------ internal
-
-    /// @dev Resolves the proxy's market and the debt reserve and fills the identity and Aave account fields.
-    /// @custom:spec REQ-LENS-016, REQ-LENS-032, REQ-LENS-033
     function _context(
         LiquidationPreview memory p,
         address proxy,
@@ -113,8 +92,7 @@ abstract contract LensLiquidation is LensBase {
         (p.reserveId, p.debtReserveId, p.debtAsset) = (c.m.reserveId, debtReserveId, c.def.asset);
         p.healthFactor = IAaveV4Spoke(spoke).getUserAccountData(proxy).healthFactor;
         p.aaveLiquidatable = p.healthFactor < LIQUIDATION_THRESHOLD;
-        // Aave's bonus curve is defined below 1e18; an account it cannot liquidate reports the bonus at the threshold,
-        // the smallest one Aave pays.
+        // Aave's bonus curve is defined below 1e18; a non-liquidatable account reports the smallest bonus.
         uint256 bonusHf = p.aaveLiquidatable ? p.healthFactor : LIQUIDATION_THRESHOLD;
         p.bonusBps = IAaveV4Spoke(spoke).getLiquidationBonus(c.m.reserveId, proxy, bonusHf);
         IAaveV4Spoke.LiquidationConfig memory lc = IAaveV4Spoke(spoke).getLiquidationConfig();
@@ -126,9 +104,7 @@ abstract contract LensLiquidation is LensBase {
         c.debtDecimals = IAaveV4Spoke(spoke).getReserve(debtReserveId).decimals;
     }
 
-    /// @dev Gates that do not read a price: Hub shares, routes, committed operators, Aave paused flags, the pause state
-    /// (informational) and the effective slippage.
-    /// @custom:spec REQ-LENS-016, SPEC-LIQ-001, SPEC-LIQ-003
+    /// @dev Gates that do not read a price, plus the pause state (informational) and effective slippage.
     function _accountGates(
         LiquidationPreview memory p,
         Ctx memory c
@@ -146,9 +122,7 @@ abstract contract LensLiquidation is LensBase {
         p.slippageBps = SettlementMath.effectiveSlippage(SettlementMath.netBonus(p.bonusBps, lf), allowance);
     }
 
-    /// @dev Price gates of the seized market and the repaid reserve only, and the stress valuation of every other debt
-    /// reserve of the account, which never blocks.
-    /// @custom:spec REQ-LENS-016, REQ-SWAP-008, REQ-SWAP-009, Q-247
+    /// @dev Price gates of the seized market and repaid reserve; other reserves' stress valuation never blocks.
     function _priceGates(
         LiquidationPreview memory p,
         Ctx memory c
@@ -167,8 +141,6 @@ abstract contract LensLiquidation is LensBase {
         p.stressValued = _stressValued(c.spoke, p.proxy, p.debtReserveId);
     }
 
-    /// @dev Whether another debt reserve with debt is served above its DebtOracle's accepted price.
-    /// @custom:spec REQ-LENS-016, REQ-LENS-030
     function _stressValued(
         address spoke,
         address proxy,
@@ -186,8 +158,6 @@ abstract contract LensLiquidation is LensBase {
         }
     }
 
-    /// @dev One `RouteStatus` per (pool token other than the debt asset, primary and backup slot).
-    /// @custom:spec REQ-LENS-016, Q-379
     function _routes(
         uint256 marketId,
         address[] memory tokens,
@@ -209,10 +179,7 @@ abstract contract LensLiquidation is LensBase {
         }
     }
 
-    /// @dev REQ-LENS-028: `PrimaryThenBackup` whenever every token has a usable primary or backup route, since
-    /// LPVaultSwap skips an unusable primary and falls back to the backup in that mode, so it settles every case
-    /// `BackupOnly` settles and more. Only when some token has no usable route at all (the liquidation cannot settle in
-    /// either mode) does the earlier rule apply: `BackupOnly` when any primary is unusable.
+    /// @dev `PrimaryThenBackup` when every token has a usable route, else `BackupOnly` if any primary is unusable.
     function _routeMode(
         RouteStatus[] memory routes
     ) internal pure returns (RouteMode) {
@@ -224,7 +191,6 @@ abstract contract LensLiquidation is LensBase {
         return RouteMode.PrimaryThenBackup;
     }
 
-    /// @dev Whether `token` has a usable primary or backup route in `routes`.
     function _hasUsableRoute(
         RouteStatus[] memory routes,
         address token
@@ -235,7 +201,6 @@ abstract contract LensLiquidation is LensBase {
         return false;
     }
 
-    /// @dev Whether any primary route in `routes` is unusable.
     function _anyPrimaryDown(
         RouteStatus[] memory routes
     ) private pure returns (bool) {
@@ -245,10 +210,7 @@ abstract contract LensLiquidation is LensBase {
         return false;
     }
 
-    /// @dev Ready-to-send parameters: the margined whole debt when the repayment is the whole debt, seizes every
-    /// supplied share, or leaves a remainder within the margin of Aave's dust threshold; Aave's repayment otherwise.
-    /// Every amount is 0 at a health factor of at least 1e18.
-    /// @custom:spec REQ-LENS-028, Q-235, Q-251, Q-268, Q-404
+    /// @dev Margined whole debt when Aave's dust rule could apply, else Aave's repayment; 0 when not liquidatable.
     function _params(
         LiquidationPreview memory p,
         Ctx memory c,
@@ -272,10 +234,7 @@ abstract contract LensLiquidation is LensBase {
         }
     }
 
-    /// @dev Expected amounts at the oracle value: the recovery floor, the payout for caller funding
-    /// `params.debtToCover` with every route at the oracle value, Avana's fee, the borrower surplus, the net payout and
-    /// the loss the caller may bear, plus the floor of one whole vault token.
-    /// @custom:spec REQ-LENS-029, SPEC-LIQ-004, SPEC-LIQ-005, SPEC-LIQ-008, SPEC-LIQ-009, SPEC-LIQ-010, SPEC-LIQ-022, Q-345, Q-397
+    /// @dev Expected amounts with every route at the oracle value, for caller funding of `params.debtToCover`.
     function _expected(
         LiquidationPreview memory p,
         Ctx memory c
@@ -305,8 +264,7 @@ abstract contract LensLiquidation is LensBase {
         p.expectedCallerLoss = d > rv ? d - rv : 0;
     }
 
-    /// @dev `U` of SPEC-LIQ-005: one raw unit of each pool token in the debt asset, rounded up; the debt asset counts 1.
-    /// @custom:spec SPEC-LIQ-005
+    /// @dev `U`: one raw unit of each pool token in the debt asset, rounded up; the debt asset counts 1.
     function _unitValues(
         Ctx memory c,
         uint256[] memory prices,
@@ -321,9 +279,7 @@ abstract contract LensLiquidation is LensBase {
         }
     }
 
-    /// @dev `Rv`: the oracle value of the unwound amounts in the debt asset, each leg rounded down. The unwound amounts
-    /// are the fair composition of `units` at the oracle price vector, floored, then one raw unit less per token.
-    /// @custom:spec REQ-LENS-029, SPEC-LIQ-018
+    /// @dev `Rv`: oracle value of the unwound amounts (fair composition less one raw unit per token), rounded down.
     function _unwoundValue(
         uint256 marketId,
         Ctx memory c,

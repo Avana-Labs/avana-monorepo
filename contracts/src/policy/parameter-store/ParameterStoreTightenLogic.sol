@@ -17,24 +17,14 @@ import {MarketSpeedLimits} from "./types/MarketSpeedLimits.sol";
 import {SpeedLimit} from "./types/SpeedLimit.sol";
 
 /// @title ParameterStoreTightenLogic
-/// @notice Bodies of every tighten setter: each moves one value strictly in its safer direction, within its hard and liveness bounds; all are on the timelock's short-delay list (12 hours).
-/// @dev Predicate (SPEC-GOV-011): strictly safer than the stored value at execution, else `NotStricter`; within the 1.5 hard bounds, else `OutOfBounds`; within the liveness bound, else `LivenessBound`; checked in that order. No step or spacing limit applies to a tightening. A tightening that re-runs `checkConfig` reverts `OracleConfigRejected` only for a check its own write breaks (a check that already failed never blocks it). Callers: the timelock (short delay) or the `APPLICATION_RISK_STEWARD` holder (immediate). Reached only by delegatecall from the ParameterStore, which checks the caller's role; see
-/// `IParameterStoreLogic`.
-/// @custom:spec REQ-CONFIG-049, REQ-CONFIG-050, REQ-CONFIG-051, REQ-CONFIG-052, REQ-RISK-042, REQ-RISK-044, REQ-PSTORE-002, REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-024, REQ-PSTORE-029, REQ-PSTORE-030, SPEC-GOV-009, SPEC-GOV-011
-// Each function here carries the body of a selector declared in an IParameterStore piece, which the ParameterStore
-// itself implements; this contract inherits only a piece it implements in full, since each other piece also declares
-// functions another contract serves.
+/// @notice Bodies of every tighten setter: each moves one value strictly in its safer direction.
+/// @dev Runs only by delegatecall from the ParameterStore, which checks the caller's role.
+// Bodies of selectors the ParameterStore declares; only fully implemented pieces are inherited.
 // solhint-disable comprehensive-interface
-// Every external call made by these setters is a view (STATICCALL), so none can re-enter the store or reorder its
-// events; the events follow the checks that need those reads.
+// Every external call here is a view (STATICCALL), so none can re-enter the store or reorder its events.
 // forge-lint: disable-start(reentrancy-events)
 contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighten, IParameterStoreLogic {
     /// @notice Fixes the implementation immutables; they must equal the ParameterStore's.
-    /// @param timelock The chain's AvanaTimelock.
-    /// @param marketRegistry The chain's MarketRegistry proxy.
-    /// @param chainBlockTime Seconds per block.
-    /// @param hasSequencer Whether the chain runs an L2 sequencer.
-    /// @custom:spec REQ-PSTORE-001
     constructor(
         address timelock,
         address marketRegistry,
@@ -43,7 +33,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     ) ParameterStoreStorage(timelock, marketRegistry, chainBlockTime, hasSequencer) {}
 
     /// @inheritdoc IParameterStoreLogic
-    /// @custom:spec REQ-PSTORE-001
     function logicConfig()
         external
         view
@@ -54,7 +43,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-PSTORE-031, REQ-CONFIG-050, REQ-CONFIG-051, Q-398
     function tightenHardHealthFloor(
         uint256 marketId,
         uint256 value
@@ -70,7 +58,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-CONFIG-052, REQ-PSTORE-015, SPEC-GOV-011
     function tightenSlippageAllowanceBps(
         uint256 marketId,
         uint16 value
@@ -86,7 +73,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-CONFIG-050, REQ-CONFIG-051, Q-380
     function tightenFloorRoundingAllowance(
         address asset,
         uint256 value
@@ -100,7 +86,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-CONFIG-023, REQ-PSTORE-009, REQ-PSTORE-029, Q-182
     function tightenBorrowPriceMaxAge(
         address feed,
         uint32 value
@@ -109,7 +94,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         FeedDef storage d = _feed(feed);
         if (value >= d.borrowPriceMaxAge) revert NotStricter();
         if (value == 0) revert OutOfBounds();
-        // A lower borrow age cannot move a tolerance bound; only checks the write itself breaks can revert it.
         // The second value (a tolerance bound) is not computed here.
         // forge-lint: disable-next-line(unused-return)
         (address[] memory oracles,,) = _affected(SCOPE_FEED, feed, false, false);
@@ -120,7 +104,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-CONFIG-052, REQ-PSTORE-009, REQ-PSTORE-029, SPEC-GOV-009
     function tightenConsistencyToleranceBps(
         uint256 marketId,
         uint16 value
@@ -141,7 +124,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-CONFIG-024, REQ-CONFIG-052, REQ-PSTORE-009, REQ-PSTORE-029, SPEC-GOV-009
     function tightenFeedAgreementToleranceBps(
         address token,
         uint16 value
@@ -150,7 +132,7 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         uint16 old = _s().feedAgreementToleranceBps[token];
         if (value >= old) revert NotStricter();
         if (value < _toleranceMin(token)) revert LivenessBound();
-        // The second value (a tolerance bound) is not computed here; the line above checks the new value against it.
+        // The second value (a tolerance bound) is not computed here; the line above checks against it.
         // forge-lint: disable-next-line(unused-return)
         (address[] memory oracles,,) = _affected(SCOPE_TOKEN, token, false, false);
         uint256[] memory before = _failures(oracles);
@@ -160,7 +142,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-CONFIG-015, REQ-CONFIG-049
     function tightenPoolRiskFactor(
         uint256 marketId,
         uint16 value
@@ -176,7 +157,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-CONFIG-070, Q-379
     function tightenRouteDepthThreshold(
         uint256 marketId,
         address token,
@@ -195,7 +175,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-RISK-042, REQ-RISK-044
     function tightenMarketUsdCap(
         uint256 marketId,
         uint256 value
@@ -203,15 +182,12 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         _onlyDelegated();
         _requireMarket(marketId);
         uint256 old = _s().marketUsdCap[marketId];
-        // Any lower value, 0 included: a zero cap stops regular pledges and leaves every exit, repay, liquidation and
-        // the rescue top-ups the slice admits open (REQ-RISK-042).
         if (value >= old) revert NotStricter();
         _s().marketUsdCap[marketId] = value;
         emit CapTightened("marketUsdCap", bytes32(marketId), old, value, msg.sender);
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-RISK-042, REQ-RISK-044
     function tightenTopUpSliceUsd(
         uint256 marketId,
         uint256 value
@@ -225,7 +201,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-RISK-042, REQ-RISK-044, REQ-PSTORE-026
     function tightenTokenUsdCap(
         address hub,
         address token,
@@ -234,14 +209,12 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         _onlyDelegated();
         _requireHub(hub);
         uint256 old = _s().tokenUsdCap[hub][token];
-        // Any lower value, 0 included (REQ-RISK-042).
         if (value >= old) revert NotStricter();
         _s().tokenUsdCap[hub][token] = value;
         emit CapTightened("tokenUsdCap", _pair(hub, token), old, value, msg.sender);
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-RISK-042, REQ-RISK-044, Q-399, Q-403
     function tightenPoolShareMaxBps(
         uint16 value
     ) external override {
@@ -254,7 +227,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-PSTORE-005, Q-230
     function tightenMinPledgeUsd(
         uint256 marketId,
         uint256 value
@@ -270,7 +242,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    /// @custom:spec REQ-RISK-042, SPEC-CAP-005, Q-383, Q-399
     function tightenPoolShareMaxBpsOf(
         uint256 marketId,
         uint16 value
@@ -284,8 +255,7 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         emit CapTightened("poolShareMaxBpsOf", poolKey, old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreLiquidation.tightenMaxShortfallBps`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-018, REQ-CONFIG-051
+    /// @notice Body of `IParameterStoreLiquidation.tightenMaxShortfallBps`.
     function tightenMaxShortfallBps(
         uint16 value
     ) external {
@@ -296,8 +266,7 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         emit ParameterTightened("maxShortfallBps", bytes32(0), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreLiquidation.tightenDebtStressRiseBps`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-020, REQ-CONFIG-051
+    /// @notice Body of `IParameterStoreLiquidation.tightenDebtStressRiseBps`.
     function tightenDebtStressRiseBps(
         address asset,
         uint16 value
@@ -313,8 +282,7 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         emit ParameterTightened("debtStressRiseBps", _a(asset), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreBreakers.tightenGateRecoverySeconds`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-030, REQ-ACCESS-165
+    /// @notice Body of `IParameterStoreBreakers.tightenGateRecoverySeconds`.
     function tightenGateRecoverySeconds(
         uint64 value
     ) external {
@@ -326,8 +294,7 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         emit ParameterTightened("gateRecoverySeconds", bytes32(0), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreBreakers.tightenBreakerDeficitMax`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-016, REQ-CONFIG-051
+    /// @notice Body of `IParameterStoreBreakers.tightenBreakerDeficitMax`.
     function tightenBreakerDeficitMax(
         address hub,
         address asset,
@@ -341,8 +308,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         emit ParameterTightened("breakerDeficitMax", _pair(hub, asset), old, value, msg.sender);
     }
 
-    /// @dev Whether the token's recorded or standby second source is a `PoolTwap`.
-    /// @custom:spec REQ-PSTORE-028, REQ-PSTORE-020
     function _hasPoolTwap(
         address token
     ) private view returns (bool) {
@@ -350,8 +315,7 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
             || _s().standby[token].kind == SecondSourceKind.PoolTwap;
     }
 
-    /// @notice Body of `IParameterStoreAdmin.tightenMaxFlashFeeBps`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-024, REQ-CONFIG-051, Q-335
+    /// @notice Body of `IParameterStoreAdmin.tightenMaxFlashFeeBps`.
     function tightenMaxFlashFeeBps(
         uint16 value
     ) external {
@@ -362,8 +326,7 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         emit ParameterTightened("maxFlashFeeBps", bytes32(0), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreSpeed.tightenMarketSpeedLimits`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-035, REQ-PSTORE-036, Q-411
+    /// @notice Body of `IParameterStoreSpeed.tightenMarketSpeedLimits`.
     function tightenMarketSpeedLimits(
         uint256 marketId,
         MarketSpeedLimits calldata limits
@@ -378,8 +341,7 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         emit IParameterStoreSpeed.MarketSpeedLimitsSet(marketId, old, limits, true);
     }
 
-    /// @notice Body of `IParameterStoreSpeed.tightenDebtSpeedLimit`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-035, REQ-PSTORE-036, Q-411
+    /// @notice Body of `IParameterStoreSpeed.tightenDebtSpeedLimit`.
     function tightenDebtSpeedLimit(
         address hub,
         address asset,

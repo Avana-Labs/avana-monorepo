@@ -8,30 +8,17 @@ import {LPOracleRecovery} from "./LPOracleRecovery.sol";
 import {Evaluation, LPOracleCodes, LegEval, RouteEval, TokenEval} from "./LPOracleTypes.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-// Every external call of the LPOracle is a static call (STATICCALL, or a delegatecall into its own logic, which makes
-// only static calls), so no call can reenter and reorder the events emitted after it (REQ-ORACLE-025).
+// Every external call is a static call or a delegatecall into this feed's own logic, so none can reenter.
 // forge-lint: disable-start(reentrancy-events)
 /// @title LPOraclePoke
-/// @notice The writing call: `poke()` evaluates the market with the code of every view, verifies the token decimals
-/// (`REQ-ORACLE-107`) and stores, in the order of `REQ-ORACLE-026`, the decimals result, the route versions, the failure
-/// and disagreement timers, the accepted price, the outage latch, the `seen` rounds, the grace window and the
-/// checkpoint, emitting an event for each write.
-/// @dev Makes only static calls, takes no lock and is permissionless. Reverts `InsufficientGas(gasleft(), pokeMinGas)`
-/// at the implementation's entry before any call or write (`LPOracle.poke`); every read inside follows the pre-call
-/// gas check, so a call starved of gas reverts and commits no failure, timer or latch (`REQ-ORACLE-024`). Example: a
-/// market Cached since
-/// `failedSince = 1,762,650,000` keeps that timer across a standby switch; the poke that observes the switch restarts
-/// `disagreeSince` at `now` if a token disagrees on the new routes and emits `PriceRouteVersionObserved`.
-/// @custom:spec REQ-ORACLE-107, REQ-ORACLE-024, REQ-ORACLE-025, REQ-ORACLE-026, REQ-ORACLE-027, REQ-ORACLE-028, REQ-ORACLE-029, REQ-ORACLE-030, REQ-ORACLE-031, REQ-ORACLE-032, REQ-ORACLE-033, REQ-ORACLE-035, REQ-ORACLE-062, REQ-ORACLE-065, REQ-ORACLE-066, REQ-ORACLE-088, REQ-ORACLE-095, REQ-ORACLE-103
+/// @notice The writing call: `poke()` evaluates the market and stores price state, timers, latch and checkpoint.
+/// @dev A call starved of gas reverts, so it never commits a failure, timer or latch.
 abstract contract LPOraclePoke is LPOracleRecovery {
-    /// @dev `poke()`: evaluate, then write in the specified order. The caller checks `pokeMinGas` at entry.
-    /// @custom:spec REQ-ORACLE-026
+    /// @dev The caller checks `pokeMinGas` at entry.
     function _poke() internal returns (PriceState) {
         Layout storage $ = _s();
         Evaluation memory e = _evaluatePoke();
-        // A poke made while the pool's reentrancy lock is held (from inside a swap, flash, mint or burn callback) learns
-        // nothing about the feeds: it reports the failed state and writes nothing, so a caller cannot start or clear a
-        // failure, disagreement or latch timer from inside a callback (REQ-ORACLE-027).
+        // Inside a pool callback, write nothing, so a caller cannot move a timer from inside a callback.
         if ((e.reasons & LPOracleCodes.POOL_REENTRANCY_LOCKED) != 0) return e.state;
         // Recovery evidence reads the `seen` rounds before this poke overwrites them.
         bool evidence = false;
@@ -53,9 +40,7 @@ abstract contract LPOraclePoke is LPOracleRecovery {
         return e.state;
     }
 
-    /// @dev `REQ-ORACLE-107`: a verified poke stores `decimalsCheckedAt = now` and clears a stored mismatch
-    /// (`TokenDecimalsRestored`); a failed verification marks the configuration invalid (`TokenDecimalsMismatch` when it
-    /// was valid) and keeps the time of the last successful one. The stored decimals are never replaced.
+    /// @dev A failed verification keeps the time of the last successful one.
     function _writeDecimals(
         Evaluation memory e
     ) internal {
@@ -73,8 +58,7 @@ abstract contract LPOraclePoke is LPOracleRecovery {
         emit TokenDecimalsMismatch(i, $.tokenDecimals[i], e.decimalsRead, e.decimalsReadable);
     }
 
-    /// @dev `REQ-ORACLE-095`: on a route-version change, `disagreeSince = now` if some token disagrees and 0
-    /// otherwise, the new versions stored and `PriceRouteVersionObserved` emitted per changed token.
+    /// @dev On a route-version change, stores the versions and restarts or clears `disagreeSince`.
     function _writeVersions(
         Evaluation memory e
     ) internal {
@@ -98,7 +82,7 @@ abstract contract LPOraclePoke is LPOracleRecovery {
         }
     }
 
-    /// @dev `REQ-ORACLE-027`: failed with no recorded start → `failedSince = min(S_ts, now)`; not failed → 0.
+    /// @dev Sets `failedSince` on a new failure (from the stale start, never after now); clears it on recovery.
     function _writeFailure(
         Evaluation memory e
     ) internal {
@@ -115,7 +99,6 @@ abstract contract LPOraclePoke is LPOracleRecovery {
         }
     }
 
-    /// @dev `REQ-ORACLE-028`: a new disagreement stores `now`; agreement (or a failed market) clears it.
     function _writeDisagreement(
         Evaluation memory e
     ) internal {
@@ -130,7 +113,6 @@ abstract contract LPOraclePoke is LPOracleRecovery {
         }
     }
 
-    /// @dev `DisagreementRecorded(now, primary values, alternate values)`.
     function _emitDisagreement(
         Evaluation memory e
     ) private {
@@ -144,11 +126,7 @@ abstract contract LPOraclePoke is LPOracleRecovery {
         emit DisagreementRecorded(_now64(), primary, alternate);
     }
 
-    /// @dev `REQ-ORACLE-029`: store `{price8, min t_i, v}` when Live and either the oldest leg in use advanced or, at the
-    /// same oldest timestamp, a faster leg published a round that moved the price. The second case keeps the accepted
-    /// price (the borrow bound of `REQ-RISK-059` and the booking price of `REQ-RISK-026`) within one round of the fastest
-    /// feed instead of one round of the slowest (a day for a USD stable leg). The timestamp stays `min t_i`, so it never
-    /// decreases and re-reading the same rounds never refreshes it.
+    /// @dev Stores the fresh price when Live and the served timestamp advanced, or the price moved at the same one.
     function _writeAccepted(
         Evaluation memory e
     ) private {
@@ -156,35 +134,32 @@ abstract contract LPOraclePoke is LPOracleRecovery {
         if (e.state != PriceState.Live) return;
         uint64 at = $.accepted.updatedAt;
         if (e.servedUpdatedAt < at) return;
-        // fresh < 2^255 (SPEC-ORC-008 bounds), so the signed comparison is exact.
+        // fresh < 2^255, so the signed comparison is exact.
         // forge-lint: disable-next-line(unsafe-typecast)
         if (e.servedUpdatedAt == at && int256(e.fresh) == $.accepted.answer) return;
         _storeAccepted(e);
         emit PriceAccepted(SafeCast.toInt256(e.fresh), e.servedUpdatedAt, e.prices);
     }
 
-    /// @dev Stores the evaluation's fresh price, timestamp and valuation vector as the accepted price.
-    /// @custom:spec REQ-ORACLE-029, REQ-ORACLE-059, REQ-ORACLE-103
     function _storeAccepted(
         Evaluation memory e
     ) internal {
         Layout storage $ = _s();
-        // fresh < 2^255 (SPEC-ORC-008 bounds), so the signed value is exact.
+        // fresh < 2^255, so the signed value is exact.
         // forge-lint: disable-next-line(unsafe-typecast)
         $.accepted.answer = int256(e.fresh);
         $.accepted.updatedAt = e.servedUpdatedAt;
         uint256 n = e.prices.length;
         delete $.accepted.prices;
         for (uint256 i = 0; i < n; ++i) {
-            // Valuation prices are route values of at most MAX_ROUTE_ANSWER = 10^18 < 2^128 (LPPriceMath.lpPrice checked).
+            // Valuation prices are at most MAX_ROUTE_ANSWER < 2^128.
             // forge-lint: disable-next-line(unsafe-typecast)
             $.accepted.prices.push(uint128(e.prices[i]));
         }
         $.acceptedBlock = SafeCast.toUint64(block.number);
     }
 
-    /// @dev `REQ-ORACLE-030`: latch only when a failed token has both routes `Stale` and `now >= staleAt_i +
-    /// cachedWindow`; never from a caught error, a failed configuration read or `failedSince`.
+    /// @dev Latches only from source timestamps: a token with both routes stale for `cachedWindow`.
     function _writeLatch(
         Evaluation memory e
     ) private {
@@ -200,7 +175,6 @@ abstract contract LPOraclePoke is LPOracleRecovery {
         }
     }
 
-    /// @dev `REQ-ORACLE-031`: every leg read with decodable data records its aggregator, round and timestamp.
     function _writeSeen(
         Evaluation memory e
     ) internal {
@@ -212,14 +186,12 @@ abstract contract LPOraclePoke is LPOracleRecovery {
                 for (uint256 l = 0; l < route.legCount; ++l) {
                     LegEval memory leg = route.legs[l];
                     if (!leg.decoded) continue;
-                    // One record per leg in force; the loop is bounded by 8 tokens x 2 routes x 2 legs.
                     $.seen[i][r][l] = Seen({feed: leg.feed, roundId: leg.roundId, updatedAt: leg.updatedAt});
                 }
             }
         }
     }
 
-    /// @dev `REQ-ORACLE-032`: start one grace window, clear the latch and emit `GraceStarted`.
     function _startGrace(
         Evaluation memory e,
         bool wasLatched,
@@ -236,7 +208,6 @@ abstract contract LPOraclePoke is LPOracleRecovery {
         emit GraceStarted(at, at + e.cfg.graceDuration, wasLatched);
     }
 
-    /// @dev `min(max over every leg of the quote routes of updatedAt, now)` (`REQ-ORACLE-032` (c)).
     function _newestLegInUse(
         Evaluation memory e
     ) private view returns (uint64 newest) {
@@ -251,28 +222,22 @@ abstract contract LPOraclePoke is LPOracleRecovery {
         if (newest > block.timestamp) newest = _now64();
     }
 
-    /// @dev `REQ-ORACLE-088`: copy the accepted price once `now >= checkpoint.at + CHECKPOINT_INTERVAL`.
     function _writeCheckpoint() private {
         Layout storage $ = _s();
         if (block.timestamp < uint256($.checkpoint.at) + CHECKPOINT_INTERVAL) return;
         _storeCheckpoint();
     }
 
-    /// @dev Copies the accepted price with the block time and emits `PriceCheckpointed`.
-    /// @custom:spec REQ-ORACLE-088, REQ-ORACLE-059
     function _storeCheckpoint() internal {
         Layout storage $ = _s();
-        // The accepted price is a positive price8; one above 2^128 - 1 (a whole vault token worth more than 3.4 * 10^30
-        // USD, beyond any listing) is stored saturated rather than truncated.
+        // A price above 2^128 - 1 is stored saturated rather than truncated.
         uint256 answer = SafeCast.toUint256($.accepted.answer);
-        // Saturated at type(uint128).max on the line itself.
         // forge-lint: disable-next-line(unsafe-typecast)
         uint128 price8 = uint128(answer > type(uint128).max ? type(uint128).max : answer);
         $.checkpoint = Checkpoint({price8: price8, at: _now64()});
         emit PriceCheckpointed(price8, _now64());
     }
 
-    /// @dev `REQ-ORACLE-035`: `PriceStateChanged` and `RouteChanged`, then the stored last state and routes.
     function _writeEvents(
         Evaluation memory e
     ) private {

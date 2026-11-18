@@ -17,48 +17,23 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /// @title PegModuleRoute
-/// @notice Swap route type 0 (`PegModule`, 2.12): a token into the debt asset through the peg module of the pair. A GSM
-/// route (Ethereum, backup slot of a GHO debt reserve only) turns USDC or USDT into GHO through the token's static
-/// aToken and its GSM; a LitePSM route turns DAI, or USDS through the DAI/USDS converter, into USDC.
-/// @dev GSM legs: (1) approve the static aToken for exactly the input and `deposit(amount, route)`; (2) approve the GSM
-/// for exactly the shares minted and `sellAsset(shares, LP_VAULT_SWAP)`, which pays GHO to LPVaultSwap; (3) unsold
-/// shares and any input the vault did not take go back to LPVaultSwap. LitePSM legs: (1) for USDS, approve the converter
-/// for exactly the input and `usdsToDai(route, amount)`; (2) `gemAmt = RouteMath.litePsmGemAmt(dai, tout, c)`, approve
-/// the LitePSM for exactly the DAI held and `buyGem(LP_VAULT_SWAP, gemAmt)`; (3) the DAI below one gem unit goes back
-/// to LPVaultSwap. A seized or frozen GSM, a full exposure cap, a paused static aToken or a halted LitePSM makes the call
-/// revert (the module reverts, or `gemAmt = 0` leaves no output and `MinOutNotMet` follows); LPVaultSwap then uses the
-/// other slot. The module pays LPVaultSwap directly; `minOut` is checked on LPVaultSwap's balance delta.
-/// @custom:spec REQ-ROUTE-002, REQ-ROUTE-003, REQ-ROUTE-009, REQ-ROUTE-010, REQ-ROUTE-011, REQ-ROUTE-012, REQ-ROUTE-016, REQ-ROUTE-026, REQ-ROUTE-042, Q-062, Q-084, Q-250, Q-341
+/// @notice Swap route type 0 (`PegModule`): a token into the debt asset through a GSM or the Sky LitePSM.
+/// @dev The module pays LPVaultSwap directly.
 contract PegModuleRoute is SwapRouteBase, IPegModuleRoute {
-    /// @notice Route type of `PegModule`.
     uint8 internal constant ROUTE_TYPE = 0;
 
-    /// @dev Peg module kind.
     PegModuleKind private immutable _KIND;
 
-    /// @dev The GSM or the LitePSM.
     address private immutable _MODULE;
 
-    /// @dev The static aToken (GSM) or the DAI/USDS converter (USDS input); zero for a LitePSM route with DAI input.
     address private immutable _WRAPPER;
 
-    /// @dev Token held between legs: the static aToken (GSM) or DAI (USDS input); zero for DAI input.
     address private immutable _INTERMEDIATE;
 
     /// @dev LitePSM `to18ConversionFactor`, `10^(18 − decimals(TOKEN_OUT))`; 0 for a GSM route.
     uint256 private immutable _GEM_CONVERSION;
 
-    /// @notice Fixes the route; reverts `InvalidRouteConfig` on any failed check of `SwapRouteBase` or of the legs
-    /// (`PegModuleStep`): for a GSM route, the static aToken's `asset()` is the input token, the GSM's
-    /// `UNDERLYING_ASSET()` is the static aToken and its `GHO_TOKEN()` the output token, and the input has no
-    /// transfer-fee switch (the static aToken supplies the amount it pulled to the Aave Pool, so a fee would revert the
-    /// deposit); for a LitePSM route, the LitePSM's `gem()` is the output token, its `dai()` is the DAI the route spends
-    /// (the input, or the intermediate after the converter), its `to18ConversionFactor()` is `10^(18 − decimals)`, and a
-    /// converter's `usds()` and `dai()` are the input and the intermediate. A contract that does not answer a read fails
-    /// the check.
-    /// @param config Shared constructor arguments.
-    /// @param step The peg-module legs.
-    /// @custom:spec REQ-ROUTE-008, REQ-ROUTE-011, REQ-ROUTE-012, REQ-ROUTE-045
+    /// @notice Fixes the route; reverts `InvalidRouteConfig` on any failed check of the shared config or the legs.
     constructor(
         RouteConfig memory config,
         PegModuleStep memory step
@@ -72,8 +47,7 @@ contract PegModuleRoute is SwapRouteBase, IPegModuleRoute {
             (valid, gemConversion) = _litePsmLegs(config, step);
             if (!valid) revert InvalidRouteConfig();
         }
-        // The tokens, the module and the wrapper are distinct; a LitePSM route's DAI differs from all of them (a GSM's
-        // static aToken is both the wrapper and the intermediate by design).
+        // Named addresses are distinct; a GSM's static aToken is both wrapper and intermediate by design.
         address[4] memory named = [config.tokenIn, config.tokenOut, step.module, step.wrapper];
         bool clash = false;
         for (uint256 a = 0; a < named.length; ++a) {
@@ -94,20 +68,17 @@ contract PegModuleRoute is SwapRouteBase, IPegModuleRoute {
     }
 
     /// @inheritdoc ISettlementRoute
-    /// @custom:spec REQ-ROUTE-002, REQ-ROUTE-005
     function routeType() external pure override returns (uint8 typeId) {
         typeId = ROUTE_TYPE;
     }
 
     /// @inheritdoc IPegModuleRoute
-    /// @custom:spec REQ-ROUTE-002, REQ-ROUTE-005, Q-341
     function pegModule() external view override returns (PegModuleKind kind, address module) {
         (kind, module) = (_KIND, _MODULE);
     }
 
     /// @inheritdoc ISettlementRoute
     /// @dev GSM: `[staticAToken, gsm]`; LitePSM with USDS input: `[converter, litePsm]`; with DAI input: `[litePsm]`.
-    /// @custom:spec REQ-ROUTE-003, REQ-ROUTE-005
     function dependencies() external view override returns (address[] memory contracts) {
         if (_WRAPPER == address(0)) {
             contracts = new address[](1);
@@ -120,9 +91,6 @@ contract PegModuleRoute is SwapRouteBase, IPegModuleRoute {
     }
 
     /// @inheritdoc ISettlementRoute
-    /// @dev A GSM route's input, which the static aToken pulls and supplies to the Aave Pool in full; none for a
-    /// LitePSM route (DAI and USDS have no transfer-fee switch, and the converter and the LitePSM pull what they pay for).
-    /// @custom:spec REQ-ROUTE-003, REQ-ROUTE-005, REQ-ROUTE-008
     function exactAmountInputs() external view override returns (address[] memory tokens) {
         if (_KIND == PegModuleKind.Gsm) {
             tokens = new address[](1);
@@ -132,15 +100,13 @@ contract PegModuleRoute is SwapRouteBase, IPegModuleRoute {
         }
     }
 
-    /// @custom:spec REQ-ROUTE-008, REQ-ROUTE-010, REQ-ROUTE-011, REQ-ROUTE-012
     function _runLegs(
         uint256 amount
     ) internal override {
         if (_KIND == PegModuleKind.Gsm) {
             uint256 sharesBefore = _balance(_WRAPPER);
             _approve(_TOKEN_IN, _WRAPPER, amount);
-            // Shares are measured as the route's balance rise, never taken from the vault's return value (REQ-ROUTE-011,
-            // REQ-ROUTE-015).
+            // Shares are measured as the route's balance rise, not taken from the return value.
             // forge-lint: disable-next-line(unused-return)
             IERC4626(_WRAPPER).deposit(amount, address(this));
             _approve(_TOKEN_IN, _WRAPPER, 0);
@@ -148,8 +114,7 @@ contract PegModuleRoute is SwapRouteBase, IPegModuleRoute {
             // No shares: no sale, and the final check reverts `MinOutNotMet(0, minOut)`.
             if (shares != 0) {
                 _approve(_WRAPPER, _MODULE, shares);
-                // The GHO output is LPVaultSwap's measured balance rise and unsold shares are the route's measured
-                // residue (REQ-ROUTE-009, REQ-ROUTE-011), so the GSM's returned amounts are not used.
+                // Output and residue are measured as balance changes, so the returned amounts are not used.
                 // forge-lint: disable-next-line(unused-return)
                 IGsm(_MODULE).sellAsset(shares, _LP_VAULT_SWAP);
                 _approve(_WRAPPER, _MODULE, 0);
@@ -166,12 +131,10 @@ contract PegModuleRoute is SwapRouteBase, IPegModuleRoute {
                 daiAmount = _rise(dai, daiBefore);
             }
             uint256 gemAmt = RouteMath.litePsmGemAmt(daiAmount, ILitePsm(_MODULE).tout(), _GEM_CONVERSION);
-            // No gem unit affordable (or a halted LitePSM): no call, and the final check reverts `MinOutNotMet(0, minOut)`
-            // (REQ-ROUTE-012).
+            // No gem unit affordable (or a halted LitePSM): no call, and the final check reverts `MinOutNotMet`.
             if (gemAmt != 0) {
                 _approve(dai, _MODULE, daiAmount);
-                // The USDC output is LPVaultSwap's measured balance rise and unspent DAI is the route's measured residue
-                // (REQ-ROUTE-009, REQ-ROUTE-015), so the DAI cost the LitePSM returns is not used.
+                // Output and residue are measured as balance changes, so the returned cost is not used.
                 // forge-lint: disable-next-line(unused-return)
                 ILitePsm(_MODULE).buyGem(_LP_VAULT_SWAP, gemAmt);
                 _approve(dai, _MODULE, 0);
@@ -179,8 +142,6 @@ contract PegModuleRoute is SwapRouteBase, IPegModuleRoute {
         }
     }
 
-    /// @notice The GSM checks of the constructor: the static aToken wraps the input, the GSM sells that static aToken
-    /// for the output token, and the input has no transfer-fee switch (REQ-ROUTE-008, REQ-ROUTE-011, REQ-ROUTE-045).
     function _gsmLegsValid(
         RouteConfig memory config,
         PegModuleStep memory step
@@ -192,11 +153,6 @@ contract PegModuleRoute is SwapRouteBase, IPegModuleRoute {
             && !RouteReads.hasFeeSwitch(config.tokenIn);
     }
 
-    /// @notice The LitePSM checks of the constructor: the converter and DAI named together or neither, the output's
-    /// decimals at most 18, the LitePSM's gem, DAI and conversion factor, and the converter's tokens (REQ-ROUTE-012,
-    /// REQ-ROUTE-045).
-    /// @return valid Every check passed.
-    /// @return gemConversion `10^(18 − decimals(TOKEN_OUT))`, used only when `valid` is true.
     function _litePsmLegs(
         RouteConfig memory config,
         PegModuleStep memory step
@@ -218,7 +174,6 @@ contract PegModuleRoute is SwapRouteBase, IPegModuleRoute {
         }
     }
 
-    /// @notice Whether `target` answers the address read `data` with `expected`.
     function _answers(
         address target,
         bytes memory data,
@@ -228,7 +183,6 @@ contract PegModuleRoute is SwapRouteBase, IPegModuleRoute {
         return ok && value == expected;
     }
 
-    /// @custom:spec REQ-ROUTE-003
     function _intermediates() internal view override returns (address[] memory tokens) {
         if (_INTERMEDIATE == address(0)) {
             tokens = new address[](0);

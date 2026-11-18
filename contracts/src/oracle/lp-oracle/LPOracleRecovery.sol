@@ -11,18 +11,8 @@ import {Evaluation, LPOracleCodes, LegEval, RouteEval} from "./LPOracleTypes.sol
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title LPOracleRecovery
-/// @notice Recovery evidence from Chainlink source timestamps (`SPEC-ORC-014`, `REQ-ORACLE-089`): whether an outage
-/// that started and ended between two pokes reached Expired, and when it ended.
-/// @dev Run by `poke()` only, when the market is not failed, before `seen` is overwritten. For each leg whose `seen`
-/// aggregator is the leg in force, whose round changed and whose new round is more than `feedMaxAge` after the
-/// recorded one, the previous round is read (`getRoundData(roundId - 1)`, or on the first round of a phase the last
-/// round of the previous phase, then the recorded timestamp); the leg's gap is `[prev + feedMaxAge + 1, updatedAt)`.
-/// A valid route's stale interval is the union of its legs' gaps when they overlap, else the later gap; a Stale
-/// route's is `[staleFrom, now)`; an `Invalid` or `Error` route or an unusable lookup gives the token no evidence.
-/// Token i's both-stale interval is the intersection of its two routes' intervals. Example: primary gap
-/// `[1,084,601, 1,200,000)` and alternate gap `[1,134,201, 1,190,000)` give `B = [1,134,201, 1,190,000)`, 55,799 s,
-/// so with `cachedWindow = 3,600` the outage reached Expired and `recoveredAt = 1,190,000`.
-/// @custom:spec SPEC-ORC-014, REQ-ORACLE-032, REQ-ORACLE-033, REQ-ORACLE-065, REQ-ORACLE-075, REQ-ORACLE-089, Q-129, Q-154, Q-272
+/// @notice Recovery evidence from source timestamps: whether an outage between two pokes reached Expired.
+/// @dev Run by `poke()` only, before `seen` is overwritten.
 abstract contract LPOracleRecovery is LPOracleEval {
     /// @dev A half-open interval `[start, end)`; `any` is false for an empty one.
     struct Span {
@@ -31,9 +21,7 @@ abstract contract LPOracleRecovery is LPOracleEval {
         uint64 end;
     }
 
-    /// @dev Whether some token's both-stale interval lasts at least `cachedWindow` and ends after the stored
-    /// `recoveredAt`, and then `recoveredAt_new`: the latest such end over every token, capped at `now`.
-    /// @custom:spec SPEC-ORC-014, REQ-ORACLE-032, REQ-ORACLE-033
+    /// @dev Whether some token's both-stale interval lasted `cachedWindow` and ended after the stored `recoveredAt`.
     function _recoveryEvidence(
         Evaluation memory e
     ) internal view returns (bool found, uint64 recovered) {
@@ -50,7 +38,6 @@ abstract contract LPOracleRecovery is LPOracleEval {
         recovered = latest < block.timestamp ? latest : _now64();
     }
 
-    /// @dev `B_i = S_primary ∩ S_alternate`; empty when either route gives no evidence.
     function _bothStale(
         RouteEval[2] memory routes,
         uint256 i
@@ -64,7 +51,7 @@ abstract contract LPOracleRecovery is LPOracleEval {
         b.any = b.start < b.end;
     }
 
-    /// @dev `S_r` of one route; `usable` is false for an `Invalid` or `Error` route or an unusable lookup.
+    /// @dev Stale interval of one route; `usable` is false for an `Invalid` or `Error` route or a failed lookup.
     function _routeSpan(
         RouteEval memory route,
         uint256 i,
@@ -88,7 +75,6 @@ abstract contract LPOracleRecovery is LPOracleEval {
         return (true, _union(g0, g1));
     }
 
-    /// @dev The union of two gaps when they overlap, else the gap with the later end.
     function _union(
         Span memory a,
         Span memory b
@@ -103,7 +89,7 @@ abstract contract LPOracleRecovery is LPOracleEval {
         return a.end > b.end ? a : b;
     }
 
-    /// @dev The leg's last gap `[prev + feedMaxAge + 1, updatedAt)`; no gap for a leg not looked up.
+    /// @dev The leg's last gap `[prev + feedMaxAge + 1, updatedAt)`.
     function _legGap(
         LegEval memory leg,
         Seen storage seen
@@ -122,15 +108,13 @@ abstract contract LPOracleRecovery is LPOracleEval {
         }
     }
 
-    /// @dev The previous round's timestamp (`SPEC-ORC-014`, `REQ-ORACLE-089`): `getRoundData(roundId - 1)`; on the
-    /// first round of a phase, the previous phase aggregator's `latestRoundData()`, then the recorded `seen` time.
-    /// @custom:spec SPEC-ORC-014, REQ-ORACLE-089, REQ-ORACLE-075
+    /// @dev The previous round's timestamp; on a phase's first round, the previous phase's latest, then `seen`.
     function _previousRound(
         LegEval memory leg,
         uint64 seenAt
     ) private view returns (bool usable, uint64 prev) {
         uint80 id = leg.roundId;
-        // A proxy round id is phaseId << 64 | aggregatorRoundId (REQ-ORACLE-089): the truncations select the parts.
+        // A proxy round id is phaseId << 64 | aggregatorRoundId; the truncations select the parts.
         // forge-lint: disable-next-line(unsafe-typecast)
         if (uint64(id) == 1) {
             // forge-lint: disable-next-line(unsafe-typecast)
@@ -154,7 +138,7 @@ abstract contract LPOracleRecovery is LPOracleEval {
         prev = SafeCast.toUint64(updatedAt);
     }
 
-    /// @dev `latestRoundData().updatedAt` of the proxy's aggregator of `phase`; `usable` false on any failed read.
+    /// @dev `latestRoundData().updatedAt` of the proxy's aggregator of `phase`.
     function _previousPhase(
         address proxy,
         uint16 phase

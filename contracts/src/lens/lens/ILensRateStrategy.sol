@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 /// @title ILensRateStrategy
-/// @notice The Aave V4 asset interest-rate strategy view the Lens reads (same ABI as the pinned release, a3ef63e).
-/// @custom:spec REQ-LENS-046
+/// @notice Aave V4 interest-rate strategy view the Lens reads.
 interface ILensRateStrategy {
     /// @notice Rate-curve parameters of one asset, bps.
     struct InterestRateData {

@@ -24,14 +24,11 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title TimelockSelectors
-/// @notice The selectors the AvanaTimelock classifies by name: the role selectors that make an operation a role
-/// change, and the selectors that may never take the short delay or sit in the DAO-only cancel set.
-/// @dev Every selector is taken from the interface that declares it, so a signature change fails to compile here
-/// rather than silently changing the class of a call.
-/// @custom:spec REQ-ACCESS-142, REQ-ACCESS-143, REQ-ACCESS-155, REQ-ACCESS-156, REQ-ACCESS-181, SPEC-GOV-005
+/// @notice Selectors the AvanaTimelock classifies: role changes, never-short selectors, the short-delay list and
+/// the DAO-only cancel set.
+/// @dev Selectors come from their declaring interfaces, so a signature change fails to compile here.
 library TimelockSelectors {
     /// @notice Whether `selector` is `grantRole`, `revokeRole` or `renounceRole`.
-    /// @custom:spec REQ-ACCESS-019, REQ-ACCESS-143, SPEC-GOV-005
     function isRoleSelector(
         bytes4 selector
     ) internal pure returns (bool) {
@@ -39,10 +36,7 @@ library TimelockSelectors {
             || selector == IAccessControl.renounceRole.selector;
     }
 
-    /// @notice Whether `selector` may never be on the short-delay list or in the DAO-only cancel set: role changes,
-    /// upgrades, the flash-source replacement, the three deployment operations, cross-Hub enablement and every
-    /// Avana `initialize`.
-    /// @custom:spec REQ-ACCESS-142, REQ-ACCESS-181
+    /// @notice Whether `selector` may never be on the short-delay list or in the DAO-only cancel set.
     function isNeverShort(
         bytes4 selector
     ) internal pure returns (bool) {
@@ -55,9 +49,7 @@ library TimelockSelectors {
             || selector == IMarketRegistryHubs.setCrossHubLine.selector || _isInitializer(selector);
     }
 
-    /// @notice Whether `selector` is one of the 34 selectors of the fixed short-delay list (`REQ-ACCESS-155`): the
-    /// 22 ParameterStore tighten setters, the 11 MarketRegistry stops and repairs, and LPVaultSwap `removeKeeper`.
-    /// @custom:spec REQ-ACCESS-142, REQ-ACCESS-155
+    /// @notice Whether `selector` is on the fixed short-delay list.
     function isShortDelayListSelector(
         bytes4 selector
     ) internal pure returns (bool) {
@@ -74,8 +66,7 @@ library TimelockSelectors {
             || selector == ILPVaultSwapAdmin.removeKeeper.selector;
     }
 
-    /// @notice Whether `selector` is one of the four of the DAO-only cancel set (`REQ-ACCESS-156`).
-    /// @custom:spec REQ-ACCESS-156, REQ-ACCESS-181
+    /// @notice Whether `selector` is in the DAO-only cancel set.
     function isDaoCancelSelector(
         bytes4 selector
     ) internal pure returns (bool) {
@@ -85,9 +76,8 @@ library TimelockSelectors {
             || selector == ILPVaultSwapAdmin.addKeeper.selector;
     }
 
-    /// @notice The contract a short-eligible or DAO-only selector belongs to: 1 the ParameterStore (`tighten*`), 2 the
-    /// MarketRegistry (stops, repairs and `unfreezeAddress`), 3 LPVaultSwap (`removeKeeper`, `addKeeper`), 0 none.
-    /// @custom:spec REQ-ACCESS-155, REQ-ACCESS-156
+    /// @notice Owner of a short-eligible or DAO-only selector: 1 ParameterStore, 2 MarketRegistry, 3 LPVaultSwap,
+    /// 0 none.
     function ownerKind(
         bytes4 selector
     ) internal pure returns (uint8) {

@@ -3,14 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-/// @notice One net-flow speed window: the current bucket `[start, start + window)`, the bucket before it, and the
-/// scope's window-start base.
-/// @dev Two storage slots. Amounts are 8-decimal USD for market and pledge windows and asset base units for (Hub, asset)
-/// windows; `prev + curr` never exceeds the scope's `max`, which fits `uint96`. `prev` and `curr` are net: a charge adds
-/// to `curr`, a credit (a repay or a withdrawal) takes from `curr` and then `prev`, and neither goes below zero. `base`
-/// and `opened` are written when a charge opens the bucket starting at `start`: the scope's base at that moment less
-/// `prev`, the base when the window began (capped at `2^248 − 1`, far above any limit's `max`).
-/// @custom:spec SPEC-CAP-011, SPEC-CAP-012, REQ-RISK-095, Q-411
+/// @notice One net-flow speed window: the bucket `[start, start + window)`, the one before it, and its base.
+/// @dev Two storage slots; `prev + curr` never exceeds the scope's `max`, which fits `uint96`.
 struct SpeedWindow {
     // Start of the current bucket, seconds.
     uint64 start;

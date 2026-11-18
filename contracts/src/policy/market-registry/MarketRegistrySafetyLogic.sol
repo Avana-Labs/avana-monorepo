@@ -18,32 +18,21 @@ import {RiskTier} from "./types/RiskTier.sol";
 
 /// @title MarketRegistrySafetyLogic
 /// @notice Bodies of the per-Hub pause state and reason, the address freeze and the breaker writes.
-/// @dev Reached only by delegatecall from the MarketRegistry, which checks the caller's role first (guardians
-/// immediate, `APPLICATION_ADMIN` through the timelock, `recordBreach` the RiskModule); see `IMarketRegistryLogic`.
-/// None of this state is read by repay, debt-free exits, fee collection, zero-credit release, pending settlement or
-/// liquidation (INV-081). Every external call is a view.
-/// @custom:spec REQ-MREG-001, REQ-MREG-003, REQ-MREG-004, REQ-MREG-017, REQ-MREG-019, REQ-MREG-020, REQ-MREG-021, REQ-MREG-022, REQ-MREG-024, REQ-MREG-025, REQ-MREG-026, REQ-CONFIG-082, INV-049, INV-081, INV-085, Q-227, Q-241, Q-242, Q-252, Q-399, Q-400
-// Each function carries the body of a selector declared in an IMarketRegistry piece that the MarketRegistry itself
-// implements; this contract inherits no piece, since each piece also declares functions another contract serves.
+/// @dev Runs only by delegatecall from the MarketRegistry, which checks the caller's role first.
+// Bodies of IMarketRegistry selectors; this contract inherits no interface piece.
 // solhint-disable comprehensive-interface
-// Every external call made here is a view (STATICCALL), so none can re-enter the registry or reorder its events.
+// Every external call here is a view, so none can re-enter the registry.
 // forge-lint: disable-start(reentrancy-events)
 contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogic {
-    /// @notice Fixes the implementation immutables; they must equal the MarketRegistry's.
-    /// @param im The per-chain Avana addresses.
-    /// @custom:spec REQ-CONFIG-005
     constructor(
         MarketRegistryImmutables memory im
     ) MarketRegistryStorage(im) {}
 
     /// @inheritdoc IMarketRegistryLogic
-    /// @custom:spec REQ-CONFIG-005
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("MarketRegistrySafetyLogic"), _IMMUTABLES_HASH);
     }
 
-    /// @notice Body of `freeze`: None → Frozen.
-    /// @custom:spec REQ-MREG-001, REQ-MREG-017
     function freeze(
         address hub
     ) external {
@@ -54,8 +43,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         _setState(hub, st, PauseState.Frozen);
     }
 
-    /// @notice Body of `freezeAll`: None → Frozen on every recorded Hub; `AlreadyFrozen` when none changes.
-    /// @custom:spec REQ-MREG-001, REQ-CONFIG-082
     function freezeAll() external {
         _onlyDelegated();
         address[] storage hubs = _s().hubList;
@@ -69,8 +56,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         if (!changed) revert AlreadyFrozen();
     }
 
-    /// @notice Body of `pause`: None or Frozen → Paused(reason), or Paused(r) → Paused(reason ≠ r).
-    /// @custom:spec REQ-MREG-001, REQ-MREG-017, REQ-MREG-024
     function pause(
         address hub,
         PauseReason reason
@@ -82,8 +67,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         _pauseOne(hub, st, reason);
     }
 
-    /// @notice Body of `pauseAll`; `AlreadyPaused` when no Hub changes.
-    /// @custom:spec REQ-MREG-001, REQ-MREG-024, REQ-CONFIG-082
     function pauseAll(
         PauseReason reason
     ) external {
@@ -101,8 +84,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         if (!changed) revert AlreadyPaused();
     }
 
-    /// @notice Body of `unfreeze`: Frozen → None.
-    /// @custom:spec REQ-MREG-001, REQ-MREG-017
     function unfreeze(
         address hub
     ) external {
@@ -113,8 +94,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         _setState(hub, st, PauseState.None);
     }
 
-    /// @notice Body of `unpause`: Paused → None, reason cleared.
-    /// @custom:spec REQ-MREG-001, REQ-MREG-017, REQ-MREG-024
     function unpause(
         address hub
     ) external {
@@ -127,8 +106,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         emit PauseReasonChanged(hub, prev, PauseReason.None, msg.sender);
     }
 
-    /// @notice Body of `freezeAddress`.
-    /// @custom:spec REQ-MREG-019, REQ-MREG-020, REQ-MREG-021, INV-085, Q-242, Q-400, Q-404
     function freezeAddress(
         address account
     ) external {
@@ -145,8 +122,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         emit AddressFrozen(account, msg.sender);
     }
 
-    /// @notice Body of `unfreezeAddress`.
-    /// @custom:spec REQ-MREG-022, Q-263
     function unfreezeAddress(
         address account
     ) external {
@@ -156,8 +131,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         emit AddressUnfrozen(account);
     }
 
-    /// @notice Body of `recordBreach`.
-    /// @custom:spec REQ-MREG-026, REQ-MREG-025, SPEC-BRK-007, SPEC-BRK-008, Q-399
     function recordBreach(
         bytes32 key,
         uint32 reasons
@@ -190,8 +163,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         }
     }
 
-    /// @notice Body of `tripMarketBreaker`.
-    /// @custom:spec REQ-MREG-025, Q-241
     function tripMarketBreaker(
         uint256 marketId
     ) external {
@@ -200,8 +171,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         _trip(BreakerScope.Market, bytes32(marketId));
     }
 
-    /// @notice Body of `tripDebtBreaker`.
-    /// @custom:spec REQ-MREG-025, Q-241
     function tripDebtBreaker(
         address spoke,
         uint256 debtReserveId
@@ -211,8 +180,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         _trip(BreakerScope.DebtReserve, _debtKey(spoke, debtReserveId));
     }
 
-    /// @notice Body of `resetMarketBreaker`.
-    /// @custom:spec REQ-MREG-025, Q-241
     function resetMarketBreaker(
         uint256 marketId
     ) external {
@@ -224,8 +191,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         _reset(BreakerScope.Market, key, still);
     }
 
-    /// @notice Body of `resetDebtBreaker`.
-    /// @custom:spec REQ-MREG-025, Q-241
     function resetDebtBreaker(
         address spoke,
         uint256 debtReserveId
@@ -239,7 +204,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         _reset(BreakerScope.DebtReserve, key, still);
     }
 
-    /// @dev The Hub's state; `InvalidHub` for a Hub not recorded.
     function _stateOf(
         address hub
     ) private view returns (PauseState) {
@@ -247,7 +211,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         return _s().pauseState[hub];
     }
 
-    /// @dev Writes a state change and emits `PauseStateChanged`.
     function _setState(
         address hub,
         PauseState previous,
@@ -257,7 +220,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         emit PauseStateChanged(hub, previous, current, msg.sender);
     }
 
-    /// @dev Moves one Hub to Paused(reason), emitting the state change only when the state changes.
     function _pauseOne(
         address hub,
         PauseState st,
@@ -269,7 +231,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         emit PauseReasonChanged(hub, prev, reason, msg.sender);
     }
 
-    /// @dev Adds `MANUAL` and emits `BreakerLatched` with the bits after the call.
     function _trip(
         BreakerScope scope,
         bytes32 key
@@ -279,7 +240,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         emit BreakerLatched(scope, key, next);
     }
 
-    /// @dev Clears the latch unless a latched security condition still holds.
     function _reset(
         BreakerScope scope,
         bytes32 key,
@@ -290,14 +250,14 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         emit BreakerReset(scope, key, msg.sender);
     }
 
-    /// @dev A market key is `bytes32(marketId)` with `marketId < 2^32` (REQ-CONFIG-006); a debt key is a hash.
+    /// @dev A market key is `bytes32(marketId)` with `marketId < 2^32`; a debt key is a hash.
     function _scopeOf(
         bytes32 key
     ) private pure returns (BreakerScope) {
         return uint256(key) <= type(uint32).max ? BreakerScope.Market : BreakerScope.DebtReserve;
     }
 
-    /// @dev The lender behind a flash source (`IFlashSource.LENDER()`), or address(0) for no source or a failed read.
+    /// @dev address(0) for no source or a failed read.
     function _lenderOf(
         address fs
     ) private view returns (address lender) {
@@ -309,8 +269,7 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         }
     }
 
-    /// @dev REQ-MREG-020: the protected set. The flash source's lender (the Aave V3 Pool behind it) is read live, so
-    /// a new source moves the protection with it; a source whose `LENDER()` cannot be read protects only itself.
+    /// @dev The flash source's lender is read live, so protection follows a new source.
     function _isProtected(
         address a
     ) private view returns (bool) {

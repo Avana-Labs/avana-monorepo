@@ -13,36 +13,18 @@ import {WrapperKind, WrapperStep} from "./types/WrapperStep.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
 /// @title WrapperThenDexRoute
-/// @notice Swap route type 2 (`WrapperThenDex`, 2.12): a wrapped or rate token into an enabled debt asset, by one unwrap
-/// or redeem step (an ERC-4626 vault such as a static aToken or a savings-rate token, or the Sky DAI/USDS converter)
-/// followed by up to three fixed DEX hops.
-/// @dev Legs: (1) `IERC4626(TOKEN_IN).redeem(amount, route, route)` (no allowance: the route redeems its own shares) or
-/// `usdsToDai(route, amount)` after approving the converter for exactly `amount`; (2) the hops of `DexHops` on the
-/// step's measured output. `dependencies()` lists the wrapper first, then every hop pool; `intermediates()` lists the
-/// step's output (unless it is the debt asset), then every hop output but the last. Example: sUSDS → USDC redeems
-/// sUSDS for USDS, then hops through a USDS/USDC pool.
-/// @custom:spec REQ-ROUTE-002, REQ-ROUTE-003, REQ-ROUTE-004, REQ-ROUTE-009, REQ-ROUTE-010, REQ-ROUTE-016, REQ-ROUTE-042, REQ-ROUTE-043, Q-062, Q-339
+/// @notice Swap route type 2 (`WrapperThenDex`): one unwrap or redeem step, then up to three fixed DEX hops.
 contract WrapperThenDexRoute is DexHops {
-    /// @notice Route type of `WrapperThenDex`.
     uint8 internal constant ROUTE_TYPE = 2;
 
-    /// @dev Unwrap step kind.
     WrapperKind private immutable _WRAPPER_KIND;
 
-    /// @dev Contract the step calls: the ERC-4626 vault (`TOKEN_IN` itself) or the DAI/USDS converter.
     address private immutable _WRAPPER;
 
-    /// @dev Token the step yields: the vault's asset, or DAI; the hops' path start.
     address private immutable _UNDERLYING;
 
-    /// @notice Fixes the route; reverts `InvalidRouteConfig` on any failed check of `SwapRouteBase`, `DexHops` or the
-    /// step (`WrapperStep`: an ERC-4626 step's `asset()` is the step's output; a converter's `usds()` and `dai()` are the
-    /// input and the step's output; a contract that does not answer a read fails), or when the wrapper is one of the hop
-    /// pools.
-    /// @param config Shared constructor arguments.
-    /// @param step The unwrap step.
+    /// @notice Fixes the route; reverts `InvalidRouteConfig` on any failed check, or when the wrapper is a hop pool.
     /// @param hops Up to three hops from `step.underlying` to `config.tokenOut` (none when the step yields it).
-    /// @custom:spec REQ-ROUTE-043, REQ-ROUTE-045
     constructor(
         RouteConfig memory config,
         WrapperStep memory step,
@@ -71,13 +53,11 @@ contract WrapperThenDexRoute is DexHops {
     }
 
     /// @inheritdoc ISettlementRoute
-    /// @custom:spec REQ-ROUTE-002, REQ-ROUTE-005
     function routeType() external pure override returns (uint8 typeId) {
         typeId = ROUTE_TYPE;
     }
 
     /// @inheritdoc ISettlementRoute
-    /// @custom:spec REQ-ROUTE-003, REQ-ROUTE-004, REQ-ROUTE-043
     function dependencies() external view override returns (address[] memory contracts) {
         address[] memory pools = _hopPools();
         contracts = new address[](pools.length + 1);
@@ -87,14 +67,12 @@ contract WrapperThenDexRoute is DexHops {
         }
     }
 
-    /// @custom:spec REQ-ROUTE-008, REQ-ROUTE-009, REQ-ROUTE-010
     function _runLegs(
         uint256 amount
     ) internal override {
         uint256 before = _balance(_UNDERLYING);
         if (_WRAPPER_KIND == WrapperKind.Erc4626Redeem) {
-            // The assets are measured as the route's balance rise below, never taken from the vault's return value
-            // (REQ-ROUTE-008, REQ-ROUTE-015).
+            // The assets are measured as the route's balance rise below, not taken from the return value.
             // forge-lint: disable-next-line(unused-return)
             IERC4626(_WRAPPER).redeem(amount, address(this), address(this));
         } else {
@@ -106,7 +84,6 @@ contract WrapperThenDexRoute is DexHops {
         if (unwrapped != 0) _runHops(unwrapped);
     }
 
-    /// @custom:spec REQ-ROUTE-003
     function _intermediates() internal view override returns (address[] memory tokens) {
         address[] memory hopTokens = _hopIntermediates();
         // The step's output is held between legs unless it is the debt asset itself (a route with no hops).

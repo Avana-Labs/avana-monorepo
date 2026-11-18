@@ -12,21 +12,14 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title FlashLiquidatorLenders
-/// @notice The flash liquidation helper's one lender (2.11 `REQ-HELPER-002`, `REQ-HELPER-009`, `REQ-HELPER-015`): the
-/// chain's Aave V3 Pool lends every debt asset, GHO included. Fixes it at deployment, quotes what it can lend and
-/// charges, and starts the loan.
-/// @dev The Pool is an immutable checked at construction: nothing in the request, the MarketRegistry or the
-/// ParameterStore can redirect a loan, and it may not be a recorded Hub. External calls: the Pool (`flashLoan`,
-/// `getConfiguration`, `getReserveAToken`, `getVirtualUnderlyingBalance`, `FLASHLOAN_PREMIUM_TOTAL`,
-/// `ADDRESSES_PROVIDER`), the PoolAddressesProvider (`getACLManager`), the ACLManager (`isFlashBorrower`), the
-/// MarketRegistry (`isRecordedHub`) and the debt asset (`balanceOf`).
-/// @custom:spec REQ-HELPER-001, REQ-HELPER-002, REQ-HELPER-004, REQ-HELPER-009, REQ-HELPER-015, REQ-FLASH-010, Q-334, Q-335
+/// @notice The flash liquidation helper's one lender, the chain's Aave V3 Pool: quotes what it can lend and charges,
+/// and starts the loan.
+/// @dev The Pool is immutable and may not be a recorded Hub, so nothing can redirect a loan.
 abstract contract FlashLiquidatorLenders is IFlashLiquidator {
     /// @notice Basis-point denominator.
     uint256 internal constant BPS = 10_000;
 
-    /// @notice Aave V3 `ReserveConfigurationMap` bits read by `maxFlashLoan`: active (56), paused (60), flash-loan
-    /// enabled (63). A frozen reserve (57) can still be flash-loaned.
+    /// @notice Aave V3 `ReserveConfigurationMap` bits read by `maxFlashLoan`; a frozen reserve can still lend.
     uint256 private constant ACTIVE_BIT = 1 << 56;
     uint256 private constant PAUSED_BIT = 1 << 60;
     uint256 private constant FLASHLOAN_ENABLED_BIT = 1 << 63;
@@ -38,11 +31,7 @@ abstract contract FlashLiquidatorLenders is IFlashLiquidator {
     address public immutable override MARKET_REGISTRY;
 
     /// @notice Fixes the chain's Aave V3 Pool and MarketRegistry.
-    /// @dev Reverts `ZeroAddress` for a zero Pool or MarketRegistry and `FlashSourceIsHub` if the MarketRegistry
-    /// records the Pool as a Hub.
-    /// @param pool The chain's Aave V3 Pool.
-    /// @param marketRegistry The chain's MarketRegistry.
-    /// @custom:spec REQ-HELPER-001, REQ-HELPER-002, REQ-HELPER-015
+    /// @dev Reverts `FlashSourceIsHub` if the MarketRegistry records the Pool as a Hub.
     constructor(
         address pool,
         address marketRegistry
@@ -54,7 +43,6 @@ abstract contract FlashLiquidatorLenders is IFlashLiquidator {
     }
 
     /// @inheritdoc IFlashLiquidator
-    /// @custom:spec REQ-HELPER-009, REQ-HELPER-015
     function maxFlashLoan(
         address asset
     ) public view override returns (uint256 available) {
@@ -68,7 +56,6 @@ abstract contract FlashLiquidatorLenders is IFlashLiquidator {
     }
 
     /// @inheritdoc IFlashLiquidator
-    /// @custom:spec REQ-HELPER-009, REQ-HELPER-015
     function flashPremium(
         address, /* asset: the Pool charges every asset the same premium */
         uint256 amount
@@ -79,12 +66,7 @@ abstract contract FlashLiquidatorLenders is IFlashLiquidator {
         premium = Math.mulDiv(amount, IAaveV3Pool(POOL).FLASHLOAN_PREMIUM_TOTAL(), BPS, Math.Rounding.Ceil);
     }
 
-    /// @notice Borrows `amount` of `asset` from `POOL` with this helper as receiver and `data` bound to the context:
-    /// `POOL.flashLoan(this, [asset], [amount], [0], this, data, 0)` (interest-rate mode 0, never opens debt).
-    /// @param asset `T`.
-    /// @param amount `F`.
-    /// @param data `abi.encode(params)`.
-    /// @custom:spec REQ-HELPER-004, REQ-HELPER-015
+    /// @notice Borrows `amount` of `asset` from `POOL` with interest-rate mode 0, so it never opens debt.
     function _borrow(
         address asset,
         uint256 amount,

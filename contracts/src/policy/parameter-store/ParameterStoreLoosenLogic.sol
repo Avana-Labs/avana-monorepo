@@ -15,24 +15,14 @@ import {MarketSpeedLimits} from "./types/MarketSpeedLimits.sol";
 import {SpeedLimit} from "./types/SpeedLimit.sol";
 
 /// @title ParameterStoreLoosenLogic
-/// @notice Bodies of every loosen setter: each moves one risk parameter in its riskier direction, at the normal delay; none is short-eligible.
-/// @dev Order of checks: strictly looser (`NotLooser`), hard bounds (`OutOfBounds`), one step (`LoosenStepTooLarge`), the Hub `addCap` (`AddCapTooSmall`, market caps only), then spacing (`LoosenTooSoon`). The step-limited parameters are `hardHealthFloor`, the four USD caps and `slippageAllowanceBps`; each scope has its own key `keccak256(abi.encode(name, scope))`, recorded in `lastLoosenedAt` on success. Reached only by delegatecall from the ParameterStore, which checks the caller's role; see
-/// `IParameterStoreLogic`.
-/// @custom:spec REQ-CONFIG-053, REQ-RISK-043, REQ-RISK-044, REQ-PSTORE-016, REQ-PSTORE-017, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-030, REQ-CONFIG-071, SPEC-GOV-011
-// Each function here carries the body of a selector declared in an IParameterStore piece, which the ParameterStore
-// itself implements; this contract inherits only a piece it implements in full, since each other piece also declares
-// functions another contract serves.
+/// @notice Bodies of every loosen setter: each moves one risk parameter in its riskier direction.
+/// @dev Reached only by delegatecall from the ParameterStore, which checks the caller's role.
+// Bodies of selectors the ParameterStore declares; only fully implemented pieces are inherited.
 // solhint-disable comprehensive-interface
-// Every external call made by these setters is a view (STATICCALL), so none can re-enter the store or reorder its
-// events; the events follow the checks that need those reads.
+// Every external call here is a view (STATICCALL), so none can re-enter the store or reorder its events.
 // forge-lint: disable-start(reentrancy-events)
 contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen, IParameterStoreLogic {
     /// @notice Fixes the implementation immutables; they must equal the ParameterStore's.
-    /// @param timelock The chain's AvanaTimelock.
-    /// @param marketRegistry The chain's MarketRegistry proxy.
-    /// @param chainBlockTime Seconds per block.
-    /// @param hasSequencer Whether the chain runs an L2 sequencer.
-    /// @custom:spec REQ-PSTORE-001
     constructor(
         address timelock,
         address marketRegistry,
@@ -41,7 +31,6 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
     ) ParameterStoreStorage(timelock, marketRegistry, chainBlockTime, hasSequencer) {}
 
     /// @inheritdoc IParameterStoreLogic
-    /// @custom:spec REQ-PSTORE-001
     function logicConfig()
         external
         view
@@ -52,7 +41,6 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
     }
 
     /// @inheritdoc IParameterStoreLoosen
-    /// @custom:spec REQ-PSTORE-017, REQ-PSTORE-031, SPEC-GOV-011, Q-398
     function loosenHardHealthFloor(
         uint256 marketId,
         uint256 value
@@ -71,7 +59,6 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
     }
 
     /// @inheritdoc IParameterStoreLoosen
-    /// @custom:spec REQ-PSTORE-017, REQ-CONFIG-071, SPEC-GOV-011
     function loosenSlippageAllowanceBps(
         uint256 marketId,
         uint16 value
@@ -83,7 +70,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         if (value <= old) revert NotLooser();
         if (value >= BPS) revert OutOfBounds();
         Market memory m = _REGISTRY.getMarket(marketId);
-        // LIQ-I1: an active market keeps the Avana fee intact at its smallest bonus (MarketRegistry activation bound).
+        // A live market must keep the Avana fee intact at its smallest bonus.
         if (_live(m.status) && !_feeBoundHolds(_minLb(m), value, _s().g.avanaFeeShareBps)) revert OutOfBounds();
         _step(value <= uint256(old) + SLIPPAGE_STEP_BPS, "slippageAllowanceBps", bytes32(marketId));
         _spaceLoosening("slippageAllowanceBps", bytes32(marketId));
@@ -92,7 +79,6 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
     }
 
     /// @inheritdoc IParameterStoreLoosen
-    /// @custom:spec REQ-CONFIG-050, REQ-CONFIG-053, Q-380, Q-397
     function loosenFloorRoundingAllowance(
         address asset,
         uint256 value
@@ -106,7 +92,6 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
     }
 
     /// @inheritdoc IParameterStoreLoosen
-    /// @custom:spec REQ-CONFIG-070, Q-379
     function loosenRouteDepthThreshold(
         uint256 marketId,
         address token,
@@ -124,9 +109,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         emit RouteDepthThresholdSet(marketId, token, debtAsset, kind, old, depthThreshold);
     }
 
-    /// @dev One loosening step of a USD cap (REQ-RISK-043): at most ×1.5 of the old value, or up to
-    /// `USD_CAP_REOPEN_BASE` ($1,000) whatever the old value, so a cap tightened to 0 can reopen. Example: from 0 the
-    /// first loosening reaches at most $1,000, the next at most $1,500.
+    /// @dev One step: at most ×1.5 of the old value, or up to `USD_CAP_REOPEN_BASE` so a zero cap can reopen.
     function _capStepOk(
         uint256 old,
         uint256 value
@@ -135,7 +118,6 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
     }
 
     /// @inheritdoc IParameterStoreLoosen
-    /// @custom:spec REQ-RISK-043, REQ-RISK-044, REQ-PSTORE-017, SPEC-CAP-006
     function loosenMarketUsdCap(
         uint256 marketId,
         uint256 value
@@ -153,7 +135,6 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
     }
 
     /// @inheritdoc IParameterStoreLoosen
-    /// @custom:spec REQ-RISK-043, REQ-RISK-044, REQ-PSTORE-017, SPEC-CAP-006
     function loosenTopUpSliceUsd(
         uint256 marketId,
         uint256 value
@@ -173,7 +154,6 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
     }
 
     /// @inheritdoc IParameterStoreLoosen
-    /// @custom:spec REQ-RISK-043, REQ-RISK-044, REQ-PSTORE-017, REQ-PSTORE-026
     function loosenTokenUsdCap(
         address hub,
         address token,
@@ -185,7 +165,6 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         bytes32 scope = _pair(hub, token);
         if (value <= old) revert NotLooser();
         if (value > USD_CAP_MAX) revert OutOfBounds();
-        // A pair whose cap was never set by its listing has no cap to loosen (REQ-PSTORE-026).
         _step(_s().tokenCapSet[hub][token] && _capStepOk(old, value), "tokenUsdCap", scope);
         _spaceLoosening("tokenUsdCap", scope);
         _s().tokenUsdCap[hub][token] = value;
@@ -193,7 +172,6 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
     }
 
     /// @inheritdoc IParameterStoreLoosen
-    /// @custom:spec REQ-RISK-043, REQ-RISK-044, Q-399, Q-403
     function loosenPoolShareMaxBps(
         uint16 value
     ) external override {
@@ -206,7 +184,6 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
     }
 
     /// @inheritdoc IParameterStoreLoosen
-    /// @custom:spec REQ-PSTORE-005, Q-230
     function loosenMinPledgeUsd(
         uint256 marketId,
         uint256 value
@@ -221,7 +198,6 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
     }
 
     /// @inheritdoc IParameterStoreLoosen
-    /// @custom:spec REQ-RISK-043, SPEC-CAP-005, Q-383, Q-399
     function loosenPoolShareMaxBpsOf(
         uint256 marketId,
         uint16 value
@@ -235,8 +211,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         emit CapLoosened("poolShareMaxBpsOf", poolKey, old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreLiquidation.loosenMaxShortfallBps`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-018, REQ-CONFIG-053
+    /// @notice Body of `IParameterStoreLiquidation.loosenMaxShortfallBps`.
     function loosenMaxShortfallBps(
         uint16 value
     ) external {
@@ -248,8 +223,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         emit ParameterLoosened("maxShortfallBps", bytes32(0), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreLiquidation.loosenDebtStressRiseBps`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-020, REQ-CONFIG-053
+    /// @notice Body of `IParameterStoreLiquidation.loosenDebtStressRiseBps`.
     function loosenDebtStressRiseBps(
         address asset,
         uint16 value
@@ -262,8 +236,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         emit ParameterLoosened("debtStressRiseBps", _a(asset), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreBreakers.loosenGateRecoverySeconds`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-030, REQ-ACCESS-165
+    /// @notice Body of `IParameterStoreBreakers.loosenGateRecoverySeconds`.
     function loosenGateRecoverySeconds(
         uint64 value
     ) external {
@@ -275,8 +248,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         emit ParameterLoosened("gateRecoverySeconds", bytes32(0), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreBreakers.loosenBreakerDeficitMax`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-016, REQ-CONFIG-053, Q-402
+    /// @notice Body of `IParameterStoreBreakers.loosenBreakerDeficitMax`.
     function loosenBreakerDeficitMax(
         address hub,
         address asset,
@@ -293,9 +265,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         emit ParameterLoosened("breakerDeficitMax", _pair(hub, asset), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreSpeed.loosenMarketSpeedLimits`, which also writes a market's first value; the
-    /// ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-035, REQ-PSTORE-036, Q-411
+    /// @notice Body of `IParameterStoreSpeed.loosenMarketSpeedLimits`.
     function loosenMarketSpeedLimits(
         uint256 marketId,
         MarketSpeedLimits calldata limits
@@ -310,9 +280,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         emit IParameterStoreSpeed.MarketSpeedLimitsSet(marketId, old, limits, false);
     }
 
-    /// @notice Body of `IParameterStoreSpeed.loosenDebtSpeedLimit`, which also writes a pair's first value; the
-    /// ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-035, REQ-PSTORE-036, Q-411
+    /// @notice Body of `IParameterStoreSpeed.loosenDebtSpeedLimit`.
     function loosenDebtSpeedLimit(
         address hub,
         address asset,

@@ -26,17 +26,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensMarket
-/// @notice Market views of the Lens: the backing and standard-configuration check, record backing by page, the
-/// pending-settlement balance and Avana and Aave cap headroom.
-/// @dev Loops only over the Spokes listed on the vault-token asset, the reserve's dynamic configuration keys, one page
-/// of records, the market's pool tokens and the Spoke's enabled debt reserves.
-/// @custom:spec REQ-LENS-012, REQ-LENS-013, REQ-LENS-014, REQ-LENS-018, REQ-LENS-019, REQ-LENS-023, REQ-LENS-024, REQ-LENS-026
-// View calls in loops over listings bounded by governance (Spokes, debt reserves, markets, pool tokens), one
-// page of at most LENS_MAX_PAGE records or the caller's own arrays (REQ-LENS-020).
+/// @notice Market views of the Lens: backing check, record backing, pending settlement and cap headroom.
+// Loops are bounded by governance listings, one page of at most LENS_MAX_PAGE records, or the caller's arrays.
 // forge-lint: disable-start(calls-loop)
 abstract contract LensMarket is LensBase, ILensMarket {
     /// @inheritdoc ILensMarket
-    /// @custom:spec REQ-LENS-012, REQ-LENS-013, REQ-LENS-005, REQ-LENS-006
     function checkBacking(
         address vaultToken
     ) external view override returns (BackingView memory b) {
@@ -69,7 +63,6 @@ abstract contract LensMarket is LensBase, ILensMarket {
     }
 
     /// @inheritdoc ILensMarket
-    /// @custom:spec REQ-LENS-014, REQ-LENS-023, REQ-LENS-024, REQ-LENS-005, REQ-LENS-006
     function checkRecordBacking(
         address vaultToken,
         uint256 offset,
@@ -91,7 +84,6 @@ abstract contract LensMarket is LensBase, ILensMarket {
     }
 
     /// @inheritdoc ILensMarket
-    /// @custom:spec REQ-LENS-026, REQ-LENS-005, REQ-LENS-006
     function getPendingSettlement(
         address vaultToken
     ) external view override returns (PendingView memory v) {
@@ -110,7 +102,6 @@ abstract contract LensMarket is LensBase, ILensMarket {
     }
 
     /// @inheritdoc ILensMarket
-    /// @custom:spec REQ-LENS-018, REQ-LENS-019, REQ-LENS-005, REQ-LENS-006
     function getCapHeadroom(
         address vaultToken,
         address depositor
@@ -133,8 +124,7 @@ abstract contract LensMarket is LensBase, ILensMarket {
         c.poolShareBps = _poolShareBps(marketId, m.integration, k.poolUnits);
         // forge-lint: disable-next-line(unused-return)
         (uint256 accepted,) = ILPOracle(m.lpOracle).lastAcceptedPrice();
-        // A pledge's cap charge is booked at the fresh price (REQ-RISK-026); a failed market's fresh price is 0 and
-        // keeps the accepted price.
+        // Cap charges are booked at the fresh price; a failed market's fresh price is 0 and keeps the accepted one.
         int256 fresh = ILPOracle(m.lpOracle).getPriceState().freshAnswer;
         // A positive int256 is cast.
         // forge-lint: disable-next-line(unsafe-typecast)
@@ -145,11 +135,7 @@ abstract contract LensMarket is LensBase, ILensMarket {
         c.drawHeadroom = _drawHeadrooms(m.spoke);
     }
 
-    // ------------------------------------------------------------------------------------------------------ internal
-
-    /// @dev `noDrawCap` (every Spoke on the asset has `drawCap == 0`) and `singleBorrowSpoke` (the Spokes are exactly the
-    /// CDP Spoke and the fee receiver, whose `addCap` is 0).
-    /// @custom:spec REQ-LENS-012, REQ-LENS-013
+    /// @dev `noDrawCap` (no Spoke can draw) and `singleBorrowSpoke` (only the CDP Spoke and the fee receiver).
     function _spokeChecks(
         IAaveV4Hub hub,
         uint256 assetId,
@@ -172,9 +158,7 @@ abstract contract LensMarket is LensBase, ILensMarket {
         single = cdpSeen && feeSeen && !other;
     }
 
-    /// @dev The three standard-Spoke settings of the vault-token reserve: not borrowable, `receiveSharesEnabled` off,
-    /// and `liquidationFee == 0` on every dynamic configuration key up to the reserve's latest.
-    /// @custom:spec REQ-LENS-012, REQ-LENS-013
+    /// @dev Standard-Spoke settings of the vault-token reserve: not borrowable, no receive-shares, no liquidation fee.
     function _standardReserve(
         address spoke,
         uint256 reserveId
@@ -188,9 +172,7 @@ abstract contract LensMarket is LensBase, ILensMarket {
         }
     }
 
-    /// @dev One record of `checkRecordBacking`: in custody when the LPVault names a depositor of record (its
-    /// `isInCustody`); a position out of custody reports 0 live units and is not backed.
-    /// @custom:spec REQ-LENS-014
+    /// @dev One record of `checkRecordBacking`; a position out of custody reports 0 live units and is not backed.
     function _recordBacking(
         address integration,
         uint256 recordId,
@@ -203,10 +185,7 @@ abstract contract LensMarket is LensBase, ILensMarket {
         v.backed = v.inCustody && v.liveUnits >= v.credited;
     }
 
-    /// @dev Avana's share of the pool's time-weighted depth, bps rounded up: the pool's credited units over the depth
-    /// the market's AMM integration reports for the market's TWAP window; `type(uint256).max` when units are credited
-    /// and the depth is unavailable or 0.
-    /// @custom:spec REQ-LENS-018, SPEC-CAP-005
+    /// @dev Avana's share of the pool's TWAP depth, bps rounded up; max when units are credited and depth is 0.
     function _poolShareBps(
         uint256 marketId,
         address integration,
@@ -219,9 +198,7 @@ abstract contract LensMarket is LensBase, ILensMarket {
         bps = Math.mulDiv(poolUnits, SettlementMath.BPS, rs.depthUnits, Math.Rounding.Ceil);
     }
 
-    /// @dev One `drawCap` headroom per enabled debt reserve of the Spoke, on the funding Hub and asset its definition
-    /// names: `max(0, drawCap × 10^d − totalOwed − ⌈deficitRay / 1e27⌉)`; unlimited for Aave's maximum cap.
-    /// @custom:spec REQ-LENS-019
+    /// @dev One `drawCap` headroom per enabled debt reserve of the Spoke; unlimited for Aave's maximum cap.
     function _drawHeadrooms(
         address spoke
     ) internal view returns (DrawHeadroom[] memory out) {

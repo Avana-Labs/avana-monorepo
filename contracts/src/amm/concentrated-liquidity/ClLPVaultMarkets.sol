@@ -15,17 +15,9 @@ import {IClPoolObservations} from "./IClPoolObservations.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /// @title ClLPVaultMarkets
-/// @notice Market storage at binding, composition at the clamped oracle price and the AMM-neutral views and hooks of a
-/// concentrated-liquidity LPVault. Binding, risk metadata, depth, the read guard and the consistency read name the
-/// AMM protocol's pool layout and live in the integration layer (`ClNfpmLPVault`, `UniswapV4Integration`).
-/// @dev Every function here is a view that never reverts on the Lock. `composition` reads no pool state: only the
-/// stored range, the token decimals, `units` and the price vector.
-/// @custom:spec REQ-AMM-CORE-003, REQ-AMM-CORE-004, REQ-AMM-CORE-012, REQ-AMM-CORE-013, REQ-AMM-CORE-017, REQ-VAULT-166, REQ-AMM-V3-002, REQ-AMM-V3-005, REQ-AMM-V3-006, REQ-AMM-V3-008, SPEC-AMM-CORE-001, SPEC-AMM-V3-001, SPEC-BACK-001
+/// @notice Market storage, composition at the clamped oracle price and AMM-neutral views of a CL LPVault.
 abstract contract ClLPVaultMarkets is ClLPVaultBase {
-    // ─── Binding ───
-
     /// @inheritdoc IClIntegration
-    /// @custom:spec SPEC-UNIT-002, SPEC-ORC-005
     function unitExponent(
         uint256 marketId
     ) external view override returns (uint8) {
@@ -33,7 +25,6 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
     }
 
     /// @inheritdoc IClIntegration
-    /// @custom:spec REQ-AMM-V3-002, REQ-AMM-SLIP-002
     function clMarket(
         uint256 marketId
     ) external view override returns (ClMarketConfig memory) {
@@ -41,19 +32,14 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
     }
 
     /// @inheritdoc IClIntegration
-    /// @custom:spec REQ-AMM-V3-001, REQ-AMM-SLIP-001, SPEC-AMM-CORE-002
     function tokenIdOf(
         bytes32 positionKey
     ) external pure override returns (uint256) {
         return _tokenId(positionKey);
     }
 
-    // ─── Composition ───
-
     /// @inheritdoc IAmmIntegration
-    /// @dev `SPEC-AMM-V3-001`: the amounts of `SPEC-ORC-006` of `units * 10^k` liquidity at the oracle square-root
-    /// price clamped to the range, each then reduced by 1 raw unit when positive. Always exact.
-    /// @custom:spec REQ-AMM-CORE-006, REQ-AMM-CORE-012, REQ-AMM-V3-005, SPEC-AMM-CORE-001, SPEC-AMM-V3-001, SPEC-ORC-006, SPEC-ORC-007
+    /// @dev Each amount is reduced by 1 raw unit when positive, so rounding never overvalues.
     function composition(
         uint256 marketId,
         uint256 units,
@@ -65,7 +51,6 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
         exact = true;
     }
 
-    /// @dev Raw amounts `liquidity` holds on the market's range at the oracle square-root price of `prices`.
     function _oracleAmounts(
         Market storage m,
         uint256 liquidity,
@@ -77,8 +62,7 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
     }
 
     /// @inheritdoc IClIntegration
-    /// @dev `clamped` is true when `SPEC-ORC-009` moved the price to a bound or the range clamp changed it.
-    /// @custom:spec REQ-AMM-V3-005, SPEC-ORC-009, SPEC-ORC-006, REQ-ORACLE-104
+    /// @dev `clamped` is true when the price hit a math bound or the range clamp changed it.
     function oracleSqrtPrice(
         uint256 marketId,
         uint256[] calldata prices
@@ -93,7 +77,6 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
     }
 
     /// @inheritdoc IAmmIntegrationHooks
-    /// @custom:spec REQ-AMM-CORE-010
     function rateProviders(
         uint256 marketId
     ) external view override returns (address[] memory providers) {
@@ -102,7 +85,6 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
     }
 
     /// @inheritdoc IAmmIntegrationHooks
-    /// @custom:spec REQ-AMM-CORE-012
     function effectiveSupply(
         uint256 marketId
     ) external view override returns (uint256) {
@@ -110,14 +92,7 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
         return 0;
     }
 
-    // ─── Internal ───
-
-    /// @dev `SPEC-ORC-005` over this market's raw composition (`ClUnitMath`). The unit exponent `k` is the pool's stored
-    /// one, or, at the pool's first binding, `ClUnitMath.firstBindingExponent`: `max(0, e + UNIT_EXP_HEADROOM − 18)` with
-    /// `e` the smallest exponent in `[6, 34]` whose `10^e` liquidity on the pool's reference range (one tick spacing,
-    /// holding the listing price) is worth at least $1. Then `d` is the smallest in `[6, 18]` with
-    /// `price8(10^(d + k)) >= 10^8` on this market's range. `InvalidPool` when no `e` or `d` passes or a listing price is
-    /// outside `[1, MAX_ROUTE_ANSWER]`; `k <= ClUnitMath.MAX_UNIT_EXP` by the bound on `e`.
+    /// @dev Unit decimals `d` and the pool's exponent `k`, chosen at the pool's first binding.
     function _unitDecimals(
         bytes32 poolRef,
         ClMarketConfig memory cfg,
@@ -140,8 +115,7 @@ abstract contract ClLPVaultMarkets is ClLPVaultBase {
         if (!found) revert InvalidPool();
     }
 
-    /// @dev Reads the token decimals, finds `d` and the pool's `k` (`_unitDecimals`), writes the market with its pool
-    /// reference and, at the pool's first binding, the pool's exponent; returns `d`.
+    /// @dev Writes the market and, at the pool's first binding, the pool's exponent; returns `d`.
     function _storeMarket(
         uint256 marketId,
         bytes32 poolRef,

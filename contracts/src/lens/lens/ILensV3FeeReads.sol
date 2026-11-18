@@ -6,10 +6,7 @@ pragma solidity 0.8.28;
 import {LensClPosition, LensV3Tick} from "./types/LensClReads.sol";
 
 /// @title ILensV3FeeReads
-/// @notice The Uniswap v3 pool and NonfungiblePositionManager views the Lens's fee reader decodes (same ABI as
-/// v3-core 5ea68a7 and v3-periphery 24ccf01): the 7-field `slot0`, the 8-field `ticks`, the fee growth globals and the
-/// 12-field `positions` with `uint24 fee` in field 5.
-/// @custom:spec REQ-LENS-050
+/// @notice Uniswap v3 pool and NonfungiblePositionManager views used by the Lens fee reader.
 interface ILensV3FeeReads {
     /// @notice Pool price state; the Lens reads the current tick (field 2).
     function slot0() external view returns (uint160, int24, uint16, uint16, uint16, uint8, bool);

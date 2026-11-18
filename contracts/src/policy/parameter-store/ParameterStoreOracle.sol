@@ -18,20 +18,14 @@ import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";
 import {FeedDef} from "./types/FeedDef.sol";
 
 /// @title ParameterStoreOracle
-/// @notice The oracle configuration each LPOracle reads, the feed-agreement tolerance lower bound, the observation
-/// count the chain's block time requires, and the re-checks every oracle-configuration change runs at execution.
-/// @dev Every external call here is a view. A setter writes first and then re-checks with the stored values, so the
-/// checked configuration is exactly the one the change gives each affected LPOracle; a failed check reverts the
-/// whole operation.
-/// @custom:spec REQ-CONFIG-072, REQ-CONFIG-024, REQ-PSTORE-009, REQ-PSTORE-013, REQ-PSTORE-027, REQ-PSTORE-028, REQ-PSTORE-034, SPEC-CF-004
-// The loops below walk the MarketRegistry's markets, Spokes and debt reserves with view calls at execution of a
-// governance setter (or in a view); their length is the registry's size, which only timelock operations grow.
+/// @notice Oracle-configuration helpers and the re-checks every oracle-configuration change runs.
+/// @dev Setters write first and then re-check the stored values, so the checked configuration is the one served.
+// Loop lengths are the registry's size, which only timelock operations grow.
 // forge-lint: disable-start(calls-loop)
 // _emitFeed emits after view calls only (STATICCALL), which cannot re-enter or reorder events.
 // forge-lint: disable-start(reentrancy-events)
 abstract contract ParameterStoreOracle is ParameterStoreStorage {
     /// @dev `⌈window / CHAIN_BLOCK_TIME⌉ + 1`, 0 for no window, saturated at `type(uint16).max`.
-    /// @custom:spec REQ-PSTORE-027, SPEC-ORC-022
     function _twapMinObservations(
         uint32 window
     ) internal view returns (uint16) {
@@ -42,12 +36,7 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         return count > type(uint16).max ? type(uint16).max : uint16(count);
     }
 
-    /// @dev The lower bound of REQ-CONFIG-024 over every pair of routes the token can have in force: the recorded
-    /// primary and alternate, the standby in place of the primary, and the standby in place of the alternate, so a
-    /// guardian's standby switch never leaves the stored tolerance below its bound. `max(dP + dA, dS + dA, dP + dS) +
-    /// feedAgreementMarginBps` with `d` the summed `feedDeviationThresholdBps` of a recorded route, saturated at
-    /// `type(uint16).max` (no stored tolerance then meets it, so every tolerance setter fails closed).
-    /// @custom:spec REQ-CONFIG-024, REQ-MREG-027
+    /// @dev Covers every route pair a standby switch can put in force; saturates at `type(uint16).max` (fails closed).
     function _toleranceMin(
         address token
     ) internal view returns (uint16) {
@@ -64,7 +53,6 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         return sum > type(uint16).max ? type(uint16).max : uint16(sum);
     }
 
-    /// @dev Sum over a route's feeds of `feedDeviationThresholdBps`, plus `heartbeatDriftBps` when `drift`.
     function _sum(
         address[] memory feeds,
         bool drift
@@ -76,18 +64,12 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         }
     }
 
-    /// @custom:spec REQ-CONFIG-024, REQ-CONFIG-052
     function _toleranceHolds(
         address token
     ) internal view returns (bool) {
         return _s().feedAgreementToleranceBps[token] >= _toleranceMin(token);
     }
 
-    /// @dev Runs `LPOracle.checkConfig` on the configuration the store now serves to `lpOracle`. The configuration is
-    /// read through this store's own `getOracleConfig` and passed on as raw ABI bytes: the return encoding of
-    /// `getOracleConfig(address)` is exactly the argument encoding of `checkConfig(OracleConfig)`. A failed call
-    /// counts as every check failing.
-    /// @custom:spec REQ-PSTORE-009, REQ-PSTORE-013, REQ-CONFIG-072
     function _checkLpOracle(
         address lpOracle
     ) internal view {
@@ -112,11 +94,7 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         }
     }
 
-    /// @dev Re-checks every Registered, Active or Offboarding market the change affects: all of them (`SCOPE_ALL`),
-    /// those holding `key` (`SCOPE_TOKEN`), or those with a token whose recorded routes or second sources use the feed
-    /// `key` (`SCOPE_FEED`). With `tolerance`, each affected token's tolerance must still meet its lower bound
-    /// (`LivenessBound`); then every affected LPOracle's `checkConfig` must return 0 (`OracleConfigRejected`).
-    /// @custom:spec REQ-PSTORE-009, REQ-PSTORE-013, REQ-CONFIG-024
+    /// @dev Reverts `LivenessBound` for a tolerance below its bound, then `OracleConfigRejected` for a failed check.
     function _recheck(
         uint8 scope,
         address key,
@@ -125,9 +103,7 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         _recheck(scope, key, tolerance, false);
     }
 
-    /// @dev `_recheck`, and with `fit` every affected market must also fit its tokens' second sources and the
-    /// sequencer grace (`_marketFits`, `OutOfBounds`), checked before any LPOracle is called.
-    /// @custom:spec REQ-PSTORE-009, REQ-PSTORE-013, REQ-PSTORE-028, REQ-PSTORE-034, REQ-CONFIG-024
+    /// @dev `_recheck`; with `fit`, every affected market must also pass `_marketFits` (`OutOfBounds`).
     function _recheck(
         uint8 scope,
         address key,
@@ -147,9 +123,7 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         if (rejected != address(0)) revert OracleConfigRejected(rejected, rejectedChecks);
     }
 
-    /// @dev The LPOracles a change of `scope` and `key` affects, one slot per market identifier (`address(0)` for a
-    /// market it does not affect), whether a token it affects has a tolerance below its lower bound (only computed
-    /// with `tolerance`) and whether a market it affects does not fit (`_marketFits`, only computed with `fit`).
+    /// @dev The affected LPOracles, one slot per market identifier, plus tolerance and fit failures when requested.
     function _affected(
         uint8 scope,
         address key,
@@ -173,7 +147,6 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         }
     }
 
-    /// @dev Whether a change of `scope` and `key` affects `token`.
     function _tokenHit(
         address token,
         uint8 scope,
@@ -184,11 +157,7 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
                 || (scope == SCOPE_FEED && _usesFeed(token, key));
     }
 
-    /// @dev `checkConfig` of each LPOracle in `oracles` (0 for an empty slot; slot `i` is market `i + 1`, as
-    /// `_affected` lays them out), before a tighten setter writes: entry `i` with the recorded second sources, entry
-    /// `n + i` with the standby second source of every token of market `i + 1` in force, as guardians can switch them
-    /// (0 for a market with no standby to switch in). The switches are undone before the function returns.
-    /// @custom:spec REQ-PSTORE-009, REQ-PSTORE-029, REQ-CONFIG-051
+    /// @dev Entry `i` uses the recorded second sources, entry `n + i` the standbys; switches are undone before return.
     function _failures(
         address[] memory oracles
     ) internal returns (uint256[] memory failed) {
@@ -201,14 +170,11 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
             uint256 switched = _switchStandbys(tokens, 0);
             if (switched == 0) continue;
             failed[n + i] = _configFailures(oracles[i]);
-            // Switching back returns the same mask.
             switched = _switchStandbys(tokens, switched);
         }
     }
 
-    /// @dev With `undo == 0`, puts in force the standby of every token in `tokens` that has one and runs on its
-    /// recorded source, returning a mask of the tokens it switched (bit `j` for `tokens[j]`; a market holds at most
-    /// `MAX_POOL_TOKENS` = 8); otherwise switches back the tokens `undo` marks and returns `undo`.
+    /// @dev With `undo == 0`, switches each token with a standby onto it and returns the mask; else switches back.
     function _switchStandbys(
         address[] memory tokens,
         uint256 undo
@@ -224,12 +190,7 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         }
     }
 
-    /// @dev After a tighten setter writes: reverts `OracleConfigRejected(lpOracle, added)` for the first LPOracle whose
-    /// `checkConfig` now fails a check it passed before the write (`added = after & ~before`), with the recorded
-    /// second sources first, then with the standbys in force (`_failures`). A check that already failed is not the
-    /// tightening's doing, so it never blocks one: a tightening can only make a value safer, and never leaves a
-    /// configuration that fails once a guardian switches a standby in.
-    /// @custom:spec REQ-PSTORE-009, REQ-PSTORE-029, REQ-CONFIG-051, SPEC-GOV-011
+    /// @dev Only a check that passed before the write and fails after it reverts (`OracleConfigRejected`).
     function _requireNoNewFailures(
         address[] memory oracles,
         uint256[] memory before
@@ -247,20 +208,13 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         if (rejected != address(0)) revert OracleConfigRejected(rejected, added);
     }
 
-    /// @dev Whether a TWAP window of `window` seconds fits the chain's sequencer grace period: on a chain with a
-    /// sequencer, `window ≤ gracePeriod`, so once borrowing reopens after a restart every window read lies after the
-    /// restart; always on a chain without one.
-    /// @custom:spec REQ-PSTORE-034
+    /// @dev `window ≤ gracePeriod` on a chain with a sequencer, so post-restart reads lie after the restart.
     function _withinGrace(
         uint32 window
     ) internal view returns (bool) {
         return !_HAS_SEQUENCER || window <= _s().sequencer.gracePeriod;
     }
 
-    /// @dev Whether market `m` with TWAP window `twapWindow` fits: the window is within the sequencer grace, and the
-    /// recorded and standby second source of each of its tokens is not a `PoolTwap` of the market's own pool and has
-    /// a window within the grace.
-    /// @custom:spec REQ-PSTORE-028, REQ-PSTORE-034
     function _marketFits(
         Market memory m,
         uint32 twapWindow
@@ -273,9 +227,7 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         }
     }
 
-    /// @dev Whether second source `s` of a token of market `m` fits it: anything but a `PoolTwap`, or a `PoolTwap`
-    /// whose pool reference is neither the market's pool address nor its pool identifier and whose window is within
-    /// the sequencer grace.
+    /// @dev A `PoolTwap` source must not read the market's own pool and its window must fit the sequencer grace.
     function _sourceFits(
         Market memory m,
         SecondSource storage s
@@ -287,8 +239,6 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         return !ownPool && _withinGrace(s.twapWindow);
     }
 
-    /// @dev Whether `feed` is in one of the token's recorded routes (primary, alternate, standby; the routes in force
-    /// are always among them) or is the source of its recorded or standby `OracleNetwork` second source.
     function _usesFeed(
         address token,
         address feed
@@ -317,11 +267,7 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         }
     }
 
-    /// @dev The time-weighted price over `window`: 0 exactly when the AMM protocol has none; otherwise the pool's
-    /// observation buffer (concentrated liquidity) holds `twapMinObservations` slots and the integration's read over
-    /// the window succeeds, and the window fits the sequencer grace period (`_withinGrace`). Any failure reverts
-    /// `OutOfBounds`.
-    /// @custom:spec REQ-PSTORE-004, REQ-PSTORE-027, REQ-PSTORE-034, REQ-CONFIG-038
+    /// @dev `window` must be 0 exactly when the AMM protocol has no TWAP; reverts `OutOfBounds`.
     function _checkTwap(
         uint256 marketId,
         Market memory m,
@@ -349,10 +295,7 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         }
     }
 
-    /// @dev SPEC-CF-004 with `CF_LP = ⌊min_i CF_i × poolRiskFactor / 10⁴⌋`: for every recorded route (primary,
-    /// alternate, standby) of every pool token, `10⁴ − CF_LP > dev(r) + drift(r)`; every token's collateral factor must
-    /// be set (> 0). Reverts `OutOfBounds`.
-    /// @custom:spec SPEC-CF-004, SPEC-CF-001, REQ-CONFIG-020, REQ-PSTORE-004
+    /// @dev Reverts `OutOfBounds` unless `10⁴ − CF_LP > dev(r) + drift(r)` for every recorded route.
     function _checkListingMargin(
         Market memory m,
         uint16 poolRiskFactor
@@ -360,8 +303,6 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         if (!_marginHolds(m, poolRiskFactor)) revert OutOfBounds();
     }
 
-    /// @dev Whether SPEC-CF-004 holds for market `m` at `poolRiskFactor`: every token's collateral factor is set and
-    /// every recorded route of every token keeps its error below the margin.
     function _marginHolds(
         Market memory m,
         uint16 poolRiskFactor
@@ -383,10 +324,6 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         }
     }
 
-    /// @dev SPEC-CF-004 again for every Registered, Active or Offboarding market whose parameters are written
-    /// (`poolRiskFactor > 0`) and that holds `key` (`SCOPE_TOKEN`) or has a token whose recorded routes or second
-    /// sources use the feed `key` (`SCOPE_FEED`), with that market's stored `poolRiskFactor`. Reverts `OutOfBounds`.
-    /// @custom:spec SPEC-CF-004, REQ-CONFIG-020, REQ-PSTORE-004
     function _recheckMargins(
         uint8 scope,
         address key
@@ -407,16 +344,12 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
         if (!holds) revert OutOfBounds();
     }
 
-    /// @dev `Σ (feedDeviationThresholdBps + heartbeatDriftBps)` of one feed, the feed's share of every SPEC-CF-004
-    /// route error.
     function _feedError(
         FeedDef storage d
     ) internal view returns (uint256) {
         return uint256(d.feedDeviationThresholdBps) + d.heartbeatDriftBps;
     }
 
-    /// @dev Emits `FeedConfigured` with the stored definition.
-    /// @custom:spec REQ-PSTORE-009, REQ-CONFIG-022, REQ-CONFIG-023
     function _emitFeed(
         address feed,
         FeedDef storage d
@@ -427,7 +360,7 @@ abstract contract ParameterStoreOracle is ParameterStoreStorage {
             d.minAnswer,
             d.maxAnswer,
             d.feedHeartbeat,
-            // Every stored margin is at most MAX_HEARTBEAT_MARGIN (3,600), which setFeed checks.
+            // Every stored margin is at most MAX_HEARTBEAT_MARGIN, which setFeed checks.
             // forge-lint: disable-next-line(unsafe-typecast)
             uint16(d.heartbeatMargin),
             d.feedMaxAge,

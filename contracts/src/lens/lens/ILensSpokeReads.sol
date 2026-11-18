@@ -4,9 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 /// @title ILensSpokeReads
-/// @notice The Aave V4 Spoke views the Lens reads beyond Avana's minimal `IAaveV4Spoke` (same ABI as the pinned
-/// release, a3ef63e).
-/// @custom:spec REQ-LENS-009, REQ-LENS-017
+/// @notice Aave V4 Spoke views the Lens reads beyond Avana's minimal `IAaveV4Spoke`.
 interface ILensSpokeReads {
     /// @notice Drawn debt and premium debt of `user` on `reserveId`, asset base units (premium rounded up).
     function getUserDebt(

@@ -11,21 +11,10 @@ import {LPPriceMath} from "./LPPriceMath.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title LPOracleEval
-/// @notice The valuation pipeline every view and `poke()` runs in the same order (2.10 Valuation pipeline): quote per
-/// token with failover and agreement, the stable ceiling, the fresh price from the pricing module's composition, the
-/// USD band, the consistency check, the lower-route price of a disagreement, the second sources, then the state,
-/// timers, served price, age limits and gates.
-/// @dev Pure of storage writes. A failed read never reverts: it moves the market to a stricter state. The state is
-/// computed on every read from current data plus the stored timers (`REQ-ORACLE-016`): failed → Cached until
-/// `failureStart + cachedWindow`, then Expired (`SPEC-ORC-013`); not failed → Drifting on any of reason bits 2 to 6,
-/// else Live, and Cached for the block when the quote-change cap refuses the fair price (`REQ-ORACLE-103`).
-/// @custom:spec REQ-ORACLE-005, REQ-ORACLE-006, REQ-ORACLE-008, REQ-ORACLE-009, REQ-ORACLE-011, REQ-ORACLE-015, REQ-ORACLE-016, REQ-ORACLE-017, REQ-ORACLE-018, REQ-ORACLE-019, REQ-ORACLE-020, REQ-ORACLE-022, REQ-ORACLE-034, REQ-ORACLE-090, REQ-ORACLE-095, REQ-ORACLE-099, REQ-ORACLE-100, REQ-ORACLE-103, SPEC-ORC-012, SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-017
+/// @notice The valuation pipeline every view and `poke()` runs, from quotes to state, served price and gates.
+/// @dev Writes no storage. A failed read never reverts; it moves the market to a stricter state.
 abstract contract LPOracleEval is LPOracleConfig {
-    /// @dev Evaluation of the market with the live configuration and routes in force. `secondSources` false skips the
-    /// second sources, which change only reason bit 16, the token bits 4 and 5 and `borrowAllowed` (`REQ-ORACLE-100`):
-    /// the served-price views (`latestAnswer`, `latestRoundData`, `getTokenPrices` and the two age views) return
-    /// nothing those fields reach, so they skip them; `getPriceState` and `poke()` evaluate them.
-    /// @custom:spec REQ-ORACLE-026, REQ-ORACLE-042, REQ-ORACLE-045, REQ-ORACLE-100
+    /// @dev Evaluation with the live configuration; second sources never change the served price or state.
     function _evaluate(
         bool secondSources
     ) internal view returns (Evaluation memory e) {
@@ -35,9 +24,7 @@ abstract contract LPOracleEval is LPOracleConfig {
         _complete(e, secondSources);
     }
 
-    /// @dev The evaluation of `poke()`: the evaluation of `getPriceState()` with the token decimals verified by reading
-    /// them (`_verifyDecimals`) in place of the stored result of the last `poke()` (`REQ-ORACLE-107`).
-    /// @custom:spec REQ-ORACLE-026, REQ-ORACLE-107
+    /// @dev The evaluation of `poke()`: reads the token decimals instead of using the stored result.
     function _evaluatePoke() internal view returns (Evaluation memory e) {
         _allocate(e);
         _loadLive(e, true);
@@ -45,9 +32,7 @@ abstract contract LPOracleEval is LPOracleConfig {
         _complete(e, true);
     }
 
-    /// @dev The token-decimals result of the last `poke()` (`REQ-ORACLE-107`): its verification time, and reason bit 1
-    /// with a failed market while it found a token's decimals changed or unreadable.
-    /// @custom:spec REQ-ORACLE-107
+    /// @dev Applies the stored token-decimals result; fails the market while it is invalid.
     function _storedDecimals(
         Evaluation memory e
     ) internal view {
@@ -57,10 +42,7 @@ abstract contract LPOracleEval is LPOracleConfig {
         _failRead(e);
     }
 
-    /// @dev Evaluation of the market with `config` as configuration and routes (`initialize`). Second sources are not
-    /// read: they never change the state (`REQ-ORACLE-100`), the seed needs only a Live state, and `checkConfig` checks
-    /// them.
-    /// @custom:spec REQ-ORACLE-058, REQ-ORACLE-059
+    /// @dev Evaluation with `config` as configuration (`initialize`); skips second sources.
     function _evaluateSeed(
         OracleConfig calldata config
     ) internal view returns (Evaluation memory e) {
@@ -69,7 +51,6 @@ abstract contract LPOracleEval is LPOracleConfig {
         _complete(e, false);
     }
 
-    /// @dev Allocates the per-token arrays.
     function _allocate(
         Evaluation memory e
     ) internal view {
@@ -79,8 +60,6 @@ abstract contract LPOracleEval is LPOracleConfig {
         e.prices = new uint256[](n);
     }
 
-    /// @dev The pipeline after the inputs are loaded; `secondSources` false skips the second sources (the seed and the
-    /// served-price views).
     function _complete(
         Evaluation memory e,
         bool secondSources
@@ -91,11 +70,7 @@ abstract contract LPOracleEval is LPOracleConfig {
         _decide(e);
     }
 
-    // ─── Quotes ───
-
-    /// @dev Quote per token (`REQ-ORACLE-005`), agreement (`REQ-ORACLE-008`, `SPEC-ORC-003`), valuation price
-    /// (`SPEC-ORC-004`), the failure start from source timestamps (`SPEC-ORC-013`) and the token reason bits.
-    /// @custom:spec REQ-ORACLE-005, REQ-ORACLE-006, REQ-ORACLE-008, REQ-ORACLE-009, REQ-ORACLE-019, SPEC-ORC-013
+    /// @dev Quote per token with failover, route agreement, valuation price and the token reason bits.
     function _selectQuotes(
         Evaluation memory e
     ) internal view {
@@ -128,7 +103,7 @@ abstract contract LPOracleEval is LPOracleConfig {
         }
     }
 
-    /// @dev A token with no valid route fails the market; if both its routes are `Stale`, `staleAt_i` feeds `S_ts`.
+    /// @dev A token with no valid route fails the market; if both routes are stale, records the stale start.
     function _noRoute(
         Evaluation memory e,
         TokenEval memory t
@@ -146,10 +121,6 @@ abstract contract LPOracleEval is LPOracleConfig {
         e.reasons |= LPOracleCodes.SOURCE_TIMESTAMP_FAILURE;
     }
 
-    // ─── Value ───
-
-    /// @dev Pool lock, fresh price, USD band and level, consistency, disagreement and the lower-route price.
-    /// @custom:spec REQ-ORACLE-011, REQ-ORACLE-015, REQ-ORACLE-018, REQ-ORACLE-086, REQ-ORACLE-103, SPEC-ORC-011, SPEC-ORC-017
     function _valueMarket(
         Evaluation memory e
     ) internal view {
@@ -190,8 +161,6 @@ abstract contract LPOracleEval is LPOracleConfig {
         }
     }
 
-    /// @dev `price8` at `prices` from the pricing module's composition of one whole vault token (`SPEC-ORC-008`).
-    /// @custom:spec SPEC-ORC-008, REQ-ORACLE-011, REQ-ORACLE-103
     function _price(
         uint256[] memory prices
     ) internal view returns (bool ok, uint256 price8) {
@@ -202,7 +171,6 @@ abstract contract LPOracleEval is LPOracleConfig {
         (ok, price8) = LPPriceMath.lpPrice(amounts, prices, $.tokenDecimals);
     }
 
-    /// @dev Reason bits 4, 5 and 6 from the pricing module's consistency check (`REQ-ORACLE-014`, `REQ-ORACLE-104`).
     function _consistencyBits(
         Evaluation memory e,
         PoolCheck memory poolCheck
@@ -213,9 +181,7 @@ abstract contract LPOracleEval is LPOracleConfig {
         if (poolCheck.clamped) e.reasons |= LPOracleCodes.PRICE_CLAMPED;
     }
 
-    /// @dev The route serving each token (`SPEC-ORC-017`): during a disagreement, the lower of two valid routes (the
-    /// primary on a tie) with `w_i = ceil_i(min(p_i, b_i))`; otherwise the quote route with `w_i = v_i`.
-    /// @custom:spec SPEC-ORC-017, REQ-ORACLE-086
+    /// @dev The route serving each token: during a disagreement the lower valid route (primary on a tie).
     function _chooseRoutes(
         Evaluation memory e
     ) private view {
@@ -237,8 +203,6 @@ abstract contract LPOracleEval is LPOracleConfig {
         }
     }
 
-    /// @dev Second-source confirmation of every token (`SPEC-ORC-020`); reason bit 16 when some token is not confirmed.
-    /// @custom:spec SPEC-ORC-020, REQ-ORACLE-100
     function _secondSources(
         Evaluation memory e
     ) internal view {
@@ -255,13 +219,6 @@ abstract contract LPOracleEval is LPOracleConfig {
         }
     }
 
-    // ─── State ───
-
-    /// @dev State, failure start, disagreement windows, served price and timestamp, age limits, grace and gates.
-    /// `borrowAllowed` also requires, on an L2, a served timestamp newer than the sequencer's restart (`SPEC-ORC-021`),
-    /// every token confirmed (`REQ-ORACLE-100`) and the token decimals verified within
-    /// `DECIMALS_CHECK_MAX_AGE` (reason bit 19, `REQ-ORACLE-107`); neither changes the state, the served price or a timer.
-    /// @custom:spec REQ-ORACLE-016, REQ-ORACLE-017, REQ-ORACLE-018, REQ-ORACLE-020, REQ-ORACLE-022, REQ-ORACLE-034, REQ-ORACLE-084, REQ-ORACLE-090, REQ-ORACLE-095, REQ-ORACLE-099, REQ-ORACLE-100, REQ-ORACLE-103, REQ-ORACLE-107, SPEC-ORC-013, SPEC-ORC-016, SPEC-ORC-017, SPEC-ORC-021
     function _decide(
         Evaluation memory e
     ) internal view {
@@ -279,15 +236,13 @@ abstract contract LPOracleEval is LPOracleConfig {
         if (block.timestamp - e.decimalsCheckedAt > DECIMALS_CHECK_MAX_AGE) {
             e.reasons |= LPOracleCodes.DECIMALS_UNVERIFIED;
         }
-        // On an L2 the served price must also come from rounds newer than the sequencer's restart (`SPEC-ORC-021`):
-        // `servedUpdatedAt` is the oldest leg in use, and `seq.startedAt` is 0 without a feed or while not up.
+        // On an L2 the served price must come from rounds newer than the sequencer's restart.
         e.borrowAllowed = e.state == PriceState.Live && e.seq.ready
             && (e.reasons & (LPOracleCodes.SECOND_SOURCE_DISAGREE | LPOracleCodes.DECIMALS_UNVERIFIED)) == 0
             && block.timestamp - e.servedUpdatedAt <= e.borrowMaxAge && e.servedUpdatedAt > e.seq.startedAt;
     }
 
-    /// @dev A failed market: `failureStart = min(S_ts, failedSince, now)`, Cached before `failureStart +
-    /// cachedWindow`, Expired from then on (`SPEC-ORC-013`); served at the accepted timestamp with age limits 0.
+    /// @dev A failed market: Cached until `failureStart + cachedWindow`, then Expired.
     function _decideFailed(
         Evaluation memory e
     ) private view {
@@ -304,9 +259,7 @@ abstract contract LPOracleEval is LPOracleConfig {
         e.servedUpdatedAt = $.accepted.updatedAt;
     }
 
-    /// @dev A market that is not failed: Drifting or Live, the quote-change cap, the disagreement windows of
-    /// `SPEC-ORC-016` measured from `disagreeSince` (0 after a route-version change, `REQ-ORACLE-095`), the served
-    /// timestamp and the age limits of the routes in use.
+    /// @dev A market that is not failed: Drifting or Live, quote-change cap, disagreement windows and age limits.
     function _decideLive(
         Evaluation memory e
     ) private view {
@@ -329,9 +282,7 @@ abstract contract LPOracleEval is LPOracleConfig {
         _ages(e);
     }
 
-    /// @dev The quote-change cap (`REQ-ORACLE-103`): the accepted price was stored in this block and the fair price
-    /// differs from it by more than `maxQuoteChangeBps`: `|price8 - A| * 10^4 > maxQuoteChangeBps * A`.
-    /// @custom:spec REQ-ORACLE-103, REQ-AMM-CORE-014
+    /// @dev The accepted price was stored in this block and the fair price differs from it by more than the cap.
     function _quoteCapped(
         uint256 fresh,
         uint16 maxQuoteChangeBps
@@ -343,8 +294,6 @@ abstract contract LPOracleEval is LPOracleConfig {
         return diff * LPPriceMath.BPS > uint256(maxQuoteChangeBps) * accepted;
     }
 
-    /// @dev Served timestamp and age limits over the legs of each token's route in use (`SPEC-ORC-012`,
-    /// `SPEC-ORC-015`), and reason bit 12 when an alternate leg in use is past its borrow age (`REQ-ORACLE-090`).
     function _ages(
         Evaluation memory e
     ) private view {
@@ -377,9 +326,6 @@ abstract contract LPOracleEval is LPOracleConfig {
         if (e.alternatePastBorrowAge) e.reasons |= LPOracleCodes.ALTERNATE_PAST_BORROW_AGE;
     }
 
-    /// @dev `inGrace` and `graceEndsAt` from the recovery window and the sequencer grace (`REQ-ORACLE-034`,
-    /// `REQ-ORACLE-099`).
-    /// @custom:spec REQ-ORACLE-034, REQ-ORACLE-099
     function _grace(
         Evaluation memory e
     ) private view {

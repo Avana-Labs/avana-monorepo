@@ -7,27 +7,12 @@ import {ILPOracleErrors} from "./ILPOracleErrors.sol";
 import {LPPriceMath} from "./LPPriceMath.sol";
 
 /// @title LPOracleCalls
-/// @notice The gas-guarded static read of every LPOracle external call and the bounded word reader that decodes its
-/// return data (`SPEC-ORC-023`, `REQ-ORACLE-001`).
-/// @dev `staticRead` requires `gasleft() >= ceil(64 * G / 63) + POST_CALL_GAS` before the call and otherwise reverts
-/// `InsufficientGas`, so the call receives its full `G` whatever gas limit the caller chose; it copies at most
-/// `maxLength` bytes of return data, so a source returning a huge buffer cannot make the caller pay for it. A revert,
-/// a call to an address without code or a short return is reported as `ok = false` or a short buffer; it never
-/// reverts. `wordAt` reads one 32-byte word at a byte offset with a bounds check, and `wordArray` checks a whole
-/// `uint256[]` encoding once and exposes its words in place, so a malformed encoding is a failed read and never an
-/// out-of-bounds read or a decoder revert. Example: a 50,000-gas feed read needs 55,794 gas left.
-/// @custom:spec SPEC-ORC-023, REQ-ORACLE-001, REQ-ORACLE-039, REQ-ORACLE-061, REQ-ORACLE-102
+/// @notice Gas-guarded static reads and bounded word decoding for every LPOracle external call.
+/// @dev A malformed return is a failed read, never a revert; only a read short of its gas reverts.
 library LPOracleCalls {
     /// @notice Static call with explicit gas `callGas`, copying at most `maxLength` bytes of return data.
-    /// @dev Reverts `InsufficientGas(gasleft(), required)` before the call when less than `gasForCall(callGas)` is
-    /// left. `ret.length` is `min(returndatasize, maxLength)`.
-    /// @param target Contract read.
-    /// @param callGas Explicit gas `G_k` of the read.
-    /// @param data Calldata.
+    /// @dev Reverts `InsufficientGas` before the call unless the full `callGas` can be forwarded.
     /// @param maxLength ABI length of the expected return data.
-    /// @return ok The call did not revert.
-    /// @return ret Return data, truncated to `maxLength`.
-    /// @custom:spec SPEC-ORC-023, REQ-ORACLE-001, REQ-ORACLE-102
     function staticRead(
         address target,
         uint256 callGas,
@@ -35,7 +20,7 @@ library LPOracleCalls {
         uint256 maxLength
     ) internal view returns (bool ok, bytes memory ret) {
         uint256 required = LPPriceMath.gasForCall(callGas);
-        // The pre-call gas check of SPEC-ORC-023: a read that cannot receive its full gas reverts the whole call.
+        // A read that cannot receive its full gas reverts the whole call.
         // forge-lint: disable-next-line(require-revert-in-loop)
         if (gasleft() < required) revert ILPOracleErrors.InsufficientGas(gasleft(), required);
         ret = new bytes(maxLength);
@@ -49,10 +34,7 @@ library LPOracleCalls {
         }
     }
 
-    /// @notice The 32-byte word at byte `offset` of `b`.
-    /// @return ok `offset + 32 <= b.length`.
-    /// @return word The word (0 when out of bounds).
-    /// @custom:spec REQ-ORACLE-001, REQ-ORACLE-061
+    /// @notice The 32-byte word at byte `offset` of `b`; `ok` false when out of bounds.
     function wordAt(
         bytes memory b,
         uint256 offset
@@ -67,7 +49,6 @@ library LPOracleCalls {
     }
 
     /// @notice The word at byte `offset` of `b` when it is at most `max`.
-    /// @custom:spec REQ-ORACLE-001, REQ-ORACLE-061
     function uintAt(
         bytes memory b,
         uint256 offset,
@@ -77,9 +58,7 @@ library LPOracleCalls {
         if (!ok || value > max) return (false, 0);
     }
 
-    /// @notice The word at byte `offset` of `b` read as a signed value of `bits` bits (`bits` in `[8, 256]`): for
-    /// fewer than 256 bits the word must be a valid sign extension.
-    /// @custom:spec REQ-ORACLE-001, REQ-ORACLE-061
+    /// @notice The word at byte `offset` of `b` as a signed `bits`-bit value; it must be a valid sign extension.
     function intAt(
         bytes memory b,
         uint256 offset,
@@ -96,10 +75,7 @@ library LPOracleCalls {
         if (value < -bound || value >= bound) return (false, 0);
     }
 
-    /// @notice The ABI encoding of a `uint256[]` of exactly `count` words in `b`, as a view of its words (no copy).
-    /// @return ok `b` is exactly `[0x20, count, w_0, ..., w_{count-1}]`.
-    /// @return values The words, sharing `b`'s memory (empty when `ok` is false).
-    /// @custom:spec REQ-ORACLE-001, REQ-ORACLE-061
+    /// @notice A `uint256[]` encoding of exactly `count` words in `b`, as a view of its words (no copy).
     function wordArray(
         bytes memory b,
         uint256 count

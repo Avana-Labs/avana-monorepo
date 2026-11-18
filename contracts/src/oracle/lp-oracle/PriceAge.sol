@@ -7,11 +7,8 @@ import {PriceState} from "../../types/PriceState.sol";
 import {DebtPriceView} from "../debt-oracle/types/DebtPriceView.sol";
 
 /// @title PriceAge
-/// @notice The price-age rules execution applies, shared with the Lens so its freshness flags are the same test.
-/// @dev Borrow side (the RiskModule's steps (5) and (6)): a source timestamp in the future fails, otherwise
-/// `timestamp − updatedAt ≤ maxAge` passes. Liquidation side (LPVaultSwap's price rules): a timestamp in the future
-/// counts age 0, otherwise the same inclusive bound. Both bounds are inclusive: age == maxAge passes, maxAge + 1 fails.
-/// @custom:spec REQ-RISK-061, REQ-SWAP-008, REQ-SWAP-091, REQ-LENS-015, REQ-LENS-030
+/// @notice The price-age rules execution applies, shared with the Lens so its freshness flags match.
+/// @dev Both bounds are inclusive: age == maxAge passes.
 library PriceAge {
     /// @notice `timestamp − updatedAt`, 0 for a timestamp in the future.
     function age(
@@ -20,7 +17,7 @@ library PriceAge {
         return block.timestamp > updatedAt ? block.timestamp - updatedAt : 0;
     }
 
-    /// @notice The borrow-side age rule: not in the future and `age ≤ maxAge`.
+    /// @notice Borrow-side age rule: not in the future and `age ≤ maxAge`.
     function borrowFresh(
         uint256 updatedAt,
         uint256 maxAge
@@ -28,7 +25,7 @@ library PriceAge {
         return updatedAt <= block.timestamp && block.timestamp - updatedAt <= maxAge;
     }
 
-    /// @notice The liquidation-side age rule: `age ≤ maxAge`, with a timestamp in the future counted as age 0.
+    /// @notice Liquidation-side age rule: `age ≤ maxAge`, with a future timestamp counted as age 0.
     function liquidationFresh(
         uint256 updatedAt,
         uint256 maxAge
@@ -36,9 +33,7 @@ library PriceAge {
         return age(updatedAt) <= maxAge;
     }
 
-    /// @notice The RiskModule's debt-price rule for one DebtOracle-priced reserve (step (6), REQ-RISK-061): Live, the
-    /// oracle's own `borrowAllowed`, and its served route's timestamp within `maxAge`, the DebtOracle's
-    /// `borrowPriceMaxAge()`.
+    /// @notice The RiskModule's debt-price rule: Live, `borrowAllowed`, and the served timestamp within `maxAge`.
     function debtBorrowable(
         DebtPriceView memory v,
         uint256 maxAge

@@ -11,19 +11,14 @@ pragma solidity 0.8.28;
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title ClTickMath
-/// @notice Square-root prices of ticks of size 1.0001 and back: `sqrt(1.0001^tick)` as Q64.96 fixed point, for prices
-/// between `2^-128` and `2^128`. Uniswap v4-core `TickMath` (MIT), with the same constants and results.
-/// @dev Internal pure functions only. `ClPriceMath` wraps them for Avana's concentrated-liquidity code.
-/// @custom:spec SPEC-ORC-006, SPEC-ORC-010, SPEC-AMM-V3-001
+/// @notice Uniswap v4-core `TickMath`: Q64.96 square-root prices of ticks and back, same constants and results.
 library ClTickMath {
     /// @notice A tick outside `[MIN_TICK, MAX_TICK]` (v4-core `InvalidTick`).
     error TickOutOfRange(int24 tick);
     /// @notice A square-root price outside `[MIN_SQRT_PRICE, MAX_SQRT_PRICE)` (v4-core `InvalidSqrtPrice`).
     error SqrtRatioOutOfRange(uint160 sqrtPriceX96);
 
-    /// @dev The minimum tick that may be passed to `getSqrtPriceAtTick`, computed from log base 1.0001 of 2^-128.
-    /// If MIN_TICK and MAX_TICK were ever not centred on 0, the absolute-tick step of `getSqrtPriceAtTick` would not
-    /// hold.
+    /// @dev The minimum tick that may be passed to `getSqrtPriceAtTick`; must stay `-MAX_TICK`.
     int24 internal constant MIN_TICK = -887_272;
     /// @dev The maximum tick that may be passed to `getSqrtPriceAtTick`, computed from log base 1.0001 of 2^128.
     int24 internal constant MAX_TICK = 887_272;
@@ -38,10 +33,7 @@ library ClTickMath {
 
     /// @notice Calculates `sqrt(1.0001^tick) * 2^96`.
     /// @dev Reverts `TickOutOfRange` if `|tick| > MAX_TICK`.
-    /// @param tick The input tick for the above formula.
-    /// @return sqrtPriceX96 A Q64.96 fixed-point number, the square root of the price of the two assets
-    /// (currency1/currency0) at the given tick.
-    /// @custom:spec SPEC-ORC-006, SPEC-AMM-V3-001
+    /// @return sqrtPriceX96 Q64.96 square root of the currency1/currency0 price at `tick`.
     // One branch per bit of |tick| over v4-core's constant table, kept as written so it can be compared line by line.
     // forge-lint: disable-next-line(cyclomatic-complexity)
     function getSqrtPriceAtTick(
@@ -55,9 +47,7 @@ library ClTickMath {
             // forge-lint: disable-next-line(unsafe-typecast)
             if (absTick > uint256(int256(MAX_TICK))) revert TickOutOfRange(tick);
 
-            // The tick is decomposed into bits, and for each bit with index i that is set, the product of
-            // 1/sqrt(1.0001^(2^i)) is calculated (using Q128.128). The constants used for this calculation are rounded
-            // to the nearest integer.
+            // Product of 1/sqrt(1.0001^(2^i)) over the set bits i of |tick|, in Q128.128.
             uint256 price = absTick & 0x1 != 0 ? 0xfffcb933bd6fad37aa2d162d1a594001 : 1 << 128;
             if (absTick & 0x2 != 0) price = (price * 0xfff97272373d413259a46990580e213a) >> 128;
             if (absTick & 0x4 != 0) price = (price * 0xfff2e50f5f656932ef12357cf3c7fdcc) >> 128;
@@ -81,9 +71,7 @@ library ClTickMath {
 
             if (tick > 0) price = type(uint256).max / price;
 
-            // This divides by 1 << 32 rounding up to go from a Q128.128 to a Q128.96, then downcasts: the result always
-            // fits within 160 bits for a tick in range. Rounding up keeps getTickAtSqrtPrice of the output consistent.
-            // `price + type(uint32).max` does not overflow because `price` fits in 192 bits.
+            // Q128.128 to Q64.96, rounding up so getTickAtSqrtPrice of the output is consistent; fits 160 bits.
             // forge-lint: disable-next-line(unsafe-typecast)
             sqrtPriceX96 = uint160((price + type(uint32).max) >> 32);
         }
@@ -91,16 +79,11 @@ library ClTickMath {
 
     /// @notice Calculates the greatest tick value such that `getSqrtPriceAtTick(tick) <= sqrtPriceX96`.
     /// @dev Reverts `SqrtRatioOutOfRange` if `sqrtPriceX96 < MIN_SQRT_PRICE` or `sqrtPriceX96 >= MAX_SQRT_PRICE`.
-    /// @param sqrtPriceX96 The square-root price for which to compute the tick, as a Q64.96.
-    /// @return tick The greatest tick for which `getSqrtPriceAtTick(tick)` is at most `sqrtPriceX96`.
-    /// @custom:spec SPEC-ORC-010
     function getTickAtSqrtPrice(
         uint160 sqrtPriceX96
     ) internal pure returns (int24 tick) {
         unchecked {
-            // Equivalent to `sqrtPriceX96 < MIN_SQRT_PRICE || sqrtPriceX96 >= MAX_SQRT_PRICE`: below MIN_SQRT_PRICE
-            // the uint160 subtraction wraps above the threshold. The upper test is >= because the price can never
-            // reach the price at the max tick.
+            // `sqrtPriceX96 < MIN_SQRT_PRICE || >= MAX_SQRT_PRICE` in one test: below MIN the subtraction wraps.
             if ((sqrtPriceX96 - MIN_SQRT_PRICE) > MAX_SQRT_PRICE_MINUS_MIN_SQRT_PRICE_MINUS_ONE) {
                 revert SqrtRatioOutOfRange(sqrtPriceX96);
             }
@@ -133,9 +116,7 @@ library ClTickMath {
             // forge-lint: disable-next-line(unsafe-typecast)
             int24 tickLow = int24((logSqrt10001 - 3_402_992_956_809_132_418_596_140_100_660_247_210) >> 128);
 
-            // The magic number is the minimum error when approximating log_sqrt10001(x) for a square-root price in
-            // (2^-64, 2^64). This holds because MIN_SQRT_PRICE is above 2^-64; a different MIN_SQRT_PRICE may need a
-            // different number.
+            // The magic number is the minimum approximation error for a square-root price in (2^-64, 2^64).
             // forge-lint: disable-next-line(unsafe-typecast)
             int24 tickHi = int24((logSqrt10001 + 291_339_464_771_989_622_907_027_621_153_398_088_495) >> 128);
 

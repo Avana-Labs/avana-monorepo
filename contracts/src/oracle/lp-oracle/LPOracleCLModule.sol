@@ -19,55 +19,30 @@ import {ClPriceStateView} from "./types/ClPriceStateView.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LPOracleCLModule
-/// @notice The concentrated-liquidity pricing module of the LPOracle (2.10 Concentrated-liquidity pricing): the
-/// composition at the oracle square-root price clamped to the market's range (`SPEC-ORC-006`, `SPEC-ORC-009`), the TWAP
-/// consistency check (`SPEC-ORC-010`), the pool's reentrancy lock, the `PoolTwap` second source, the own-pool test, the
-/// listing checks (`REQ-ORACLE-105`), the market check of `initialize` and the report of `getClPriceState()`
-/// (`REQ-ORACLE-104`).
-/// @dev Compiled into `LPOracleCL` (for `initialize`) and into `LPOracleCLModuleLogic`, the one module contract per
-/// implementation that the poke, listing and view logic contracts reach by delegatecall (2.10 Upgrade rules), so every
-/// hook runs in the proxy's storage. The composition reads no pool state: only the stored range and unit exponent, the
-/// token decimals, `units` and the price vector, so moving the pool's spot price cannot move it (`SPEC-ORC-007`). It returns the floored
-/// amounts of `LiquidityAmounts.getAmountsForLiquidity`; `LPPriceMath.lpPrice` then takes one raw unit off each
-/// (`SPEC-ORC-008`), so the deduction is made once. Every hook is a view that never reverts except `InsufficientGas`.
-/// Example: full-range USDC/USDT (spacing 1, both at $1, `d = 6`) composes `10^6` units to `(999,999, 999,999)`,
-/// priced at `199,999,600`.
-/// @custom:spec REQ-ORACLE-011, REQ-ORACLE-012, REQ-ORACLE-014, REQ-ORACLE-048, REQ-ORACLE-055, REQ-ORACLE-100, REQ-ORACLE-103, REQ-ORACLE-104, REQ-ORACLE-105, SPEC-ORC-006, SPEC-ORC-009, SPEC-ORC-010, SPEC-ORC-020, SPEC-ORC-022, REQ-AMM-V3-005, REQ-AMM-SLIP-005, REQ-AMM-CORE-004
+/// @notice Concentrated-liquidity pricing module of the LPOracle.
+/// @dev The composition reads no pool state, so the pool's spot price cannot move it.
 abstract contract LPOracleCLModule is LPOracleCLPool {
-    /// @notice Listing bit of the module, shifted to `MODULE_CHECKS_SHIFT` by the base: the range is misaligned,
-    /// inverted or outside the usable ticks of the pool's spacing read now (`REQ-ORACLE-105`).
+    /// @notice Listing bit: the range is not usable at the pool's current tick spacing.
     uint256 internal constant CL_CHECK_RANGE = 1 << 0;
-    /// @notice `twapWindow == 0`, `twapToleranceTicks < TWAP_TOLERANCE_MIN_TICKS` or `twapMinObservations` other than
-    /// `SPEC-ORC-022` at the chain's block time (`REQ-ORACLE-055`).
+    /// @notice Listing bit: the TWAP window, tolerance or minimum observations are invalid.
     uint256 internal constant CL_CHECK_TWAP_CONFIG = 1 << 1;
-    /// @notice The pool's observation cardinality is below `twapMinObservations`, or `slot0` cannot be read.
+    /// @notice Listing bit: the pool's observation cardinality is too low, or `slot0` cannot be read.
     uint256 internal constant CL_CHECK_CARDINALITY = 1 << 2;
-    /// @notice `observe([twapWindow, 0])` fails.
+    /// @notice Listing bit: `observe([twapWindow, 0])` fails.
     uint256 internal constant CL_CHECK_OBSERVE = 1 << 3;
-    /// @notice At a shocked price vector the raw ratio is not below `2^128` (`num < 2^128 * den` fails, `SPEC-ORC-009`).
+    /// @notice Listing bit: at a shocked price vector the raw price ratio is not below `2^128`.
     uint256 internal constant CL_CHECK_SHOCK_SQRT = 1 << 4;
-    /// @notice A `PoolTwap` second source names a pool that does not pair its token with the market's other token.
+    /// @notice Listing bit: a `PoolTwap` second source's pool does not pair the market's tokens.
     uint256 internal constant CL_CHECK_POOL_TWAP = 1 << 5;
-    /// @notice The integration reports a rate provider for a token (`REQ-AMM-CORE-004`): the concentrated-liquidity
-    /// module values every token at its Chainlink USD price and has no rate-feed path, so a rate token is refused.
+    /// @notice Listing bit: the integration reports a rate provider; this module has no rate-feed path.
     uint256 internal constant CL_CHECK_RATE_TOKEN = 1 << 6;
-    /// @notice The integration's unit exponent of the market (`IClIntegration.unitExponent`) is not the `k` stored at
-    /// `initialize` (`SPEC-ORC-005`): the feed would price `10^d` units of another size than the vault token's.
+    /// @notice Listing bit: the integration's unit exponent differs from the stored one.
     uint256 internal constant CL_CHECK_UNIT_EXP = 1 << 7;
-    /// @notice Smallest consistency tolerance a market may carry, ticks (`twapToleranceMinTicks`, `REQ-ORACLE-055`).
+    /// @notice Smallest consistency tolerance a market may carry, ticks.
     uint16 internal constant TWAP_TOLERANCE_MIN_TICKS = 10;
-    /// @dev Largest token decimals the module prices: `p * 10^d` must fit with `p <= MAX_ROUTE_ANSWER`.
     uint8 internal constant CL_MAX_TOKEN_DECIMALS = 18;
 
-    // ─── Market (REQ-ORACLE-058) ───
-
-    /// @dev `market = abi.encode(pool, tickLower, tickUpper, unitExp)`: the pool's `token0()` and `token1()` must be
-    /// `tokens` in that order, both tokens at most 18 decimals, the range usable at the pool's `tickSpacing()`
-    /// (`SPEC-BACK-001`) and `unitExp` the pool's unit exponent `k <= MAX_UNIT_EXP` (`SPEC-ORC-005`: the pool's stored
-    /// one, or `ClUnitMath.firstBindingExponent` at the listing prices for the pool's first market). Stores the pool,
-    /// range, spacing, the range's square-root ratios and `k`; `CL_CHECK_UNIT_EXP` requires the integration's `k` to
-    /// equal it once the market is bound.
-    /// @custom:spec REQ-ORACLE-048, REQ-ORACLE-058, REQ-ORACLE-103, REQ-ORACLE-105
+    /// @dev Decodes `abi.encode(pool, tickLower, tickUpper, unitExp)`, checks it against the pool and stores it.
     function _initMarket(
         bytes calldata market,
         address[] memory tokens
@@ -86,7 +61,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         ClLayout storage c = _cl();
         (c.pool, c.tickLower, c.tickUpper, c.tickSpacing) = (pool, lower, upper, spacing);
         (c.sqrtLower, c.sqrtUpper) = (ClPriceMath.sqrtRatioAtTick(lower), ClPriceMath.sqrtRatioAtTick(upper));
-        // At most MAX_UNIT_EXP = 18, checked above.
+        // At most MAX_UNIT_EXP, checked above.
         // forge-lint: disable-next-line(unsafe-typecast)
         c.unitExp = uint8(unitExp);
         return true;
@@ -110,12 +85,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         (pool, lower, upper) = (address(uint160(word)), int24(lo), int24(hi));
     }
 
-    // ─── Pricing hooks (REQ-ORACLE-103) ───
-
-    /// @dev `SPEC-ORC-006`: the amounts `units` vault-token units, `units * 10^k` liquidity (`SPEC-ORC-005`), hold at
-    /// `s = clamp(SPEC-ORC-009(p0, p1), s_a, s_b)`, each floored; `ok` false for a vector of another length, a price
-    /// outside `[1, MAX_ROUTE_ANSWER]`, `units >= 2^128` or `units * 10^k >= 2^128`.
-    /// @custom:spec SPEC-ORC-006, SPEC-ORC-009, REQ-ORACLE-011, REQ-ORACLE-012, REQ-ORACLE-103, REQ-AMM-V3-005
+    /// @dev Token amounts `units` vault-token units hold at the oracle sqrt price clamped to the range, floored.
     function _composition(
         uint256 units,
         uint256[] memory prices
@@ -132,13 +102,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         ok = true;
     }
 
-    /// @dev `slot0()` of the market's pool, read once: `locked` while the pool is inside a swap, flash, mint, burn or
-    /// collect (reason bit 17), `readOk` false for a failed or malformed read (reason bit 1); then, when the pool is
-    /// readable and unlocked, `SPEC-ORC-010` on the uncapped quotes with the observation cardinality of the same read,
-    /// and the clamp of `REQ-ORACLE-104` on the valuation prices. Unavailable (reason bit 5) for a zero window, a
-    /// cardinality below `SPEC-ORC-022`, a failed `observe` or a quote outside `[1, MAX_ROUTE_ANSWER]`;
-    /// `deviationBps` is `|meanTick - tickRef|` in ticks (one tick is about 1 bp).
-    /// @custom:spec REQ-ORACLE-103, REQ-AMM-V3-003, REQ-AMM-SLIP-003, SPEC-ORC-010, SPEC-ORC-022, REQ-ORACLE-014, REQ-ORACLE-104
+    /// @dev Reads `slot0()` once, then compares the pool's TWAP tick with the oracle tick; deviation is in ticks.
     function _poolCheck(
         uint256[] memory quotes,
         uint256[] memory prices,
@@ -157,17 +121,13 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         int24 meanTick;
         (p.available, meanTick) = _meanTick(_cl().pool, window);
         if (!p.available) return p;
-        // The quotes equal the valuation prices unless a stable is above its ceiling: the root is then reused.
+        // The quotes equal the valuation prices unless a stable is above its ceiling; reuse the root then.
         uint160 sQ = quotes[0] == prices[0] && quotes[1] == prices[1] ? sV : _oracleSqrt(quotes);
         p.deviationBps = _tickDistance(meanTick, ClPriceMath.tickAtSqrtRatio(sQ));
         p.pass = p.deviationBps <= toleranceBps;
     }
 
-    /// @dev `SPEC-ORC-020` `PoolTwap`: the deep pool `poolRef` must pair token `index` with the market's other token
-    /// `j`; its mean tick over `twapWindow` gives the amount of token `j` one whole token `index` buys (Uniswap
-    /// `OracleLibrary.getQuoteAtTick`), valued at `q_j`. `ok` false for an unreadable or mispaired pool or a buffer that
-    /// does not cover the window.
-    /// @custom:spec SPEC-ORC-020, REQ-ORACLE-100
+    /// @dev `PoolTwap` second source: token `index` priced through a deep pool's TWAP and the other token's quote.
     function _poolTwapPrice(
         uint256 index,
         SecondSource memory source,
@@ -185,16 +145,13 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         value = Math.mulDiv(other, quotes[j], 10 ** uint256(decs[j]));
     }
 
-    /// @dev True when `poolRef` is `bytes32(uint256(uint160(pool)))` of the market's pool (`REQ-ORACLE-100`).
-    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-100, REQ-ORACLE-103
     function _isOwnPool(
         bytes32 poolRef
     ) internal view virtual override returns (bool own) {
         own = poolRef == bytes32(uint256(uint160(_cl().pool)));
     }
 
-    /// @dev Never runs: listing checks run only delegated, via `LPOracleCLModuleCaller`. Fails closed if reached.
-    /// @custom:spec REQ-ORACLE-105
+    /// @dev Never runs: listing checks run only delegated. Fails closed if reached.
     function _listingChecks(
         OracleConfig calldata,
         uint256[] memory
@@ -202,11 +159,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         return type(uint256).max;
     }
 
-    /// @dev `REQ-ORACLE-105` and `REQ-ORACLE-055` on the pool and the configuration words `x`, `SPEC-ORC-009`'s lower
-    /// branch at the prices `quotes` shocked by `LISTING_SHOCK_FACTOR` each way (the base passes the current quotes at
-    /// listing and the listing prices once the market is registered), the `PoolTwap` pairing, the rate-token check and
-    /// the unit-exponent check.
-    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-048, REQ-ORACLE-055, REQ-ORACLE-105, SPEC-ORC-022, REQ-AMM-CORE-004
+    /// @dev The module's listing checks; returns a bitmap of `CL_CHECK_*` failures.
     function _clListingChecks(
         ClListingInputs memory x,
         uint256[] memory quotes
@@ -231,18 +184,13 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         if (!_unitExpMatches()) failed |= CL_CHECK_UNIT_EXP;
     }
 
-    /// @dev `CL_CHECK_RANGE`: the pool's `tickSpacing()` read now differs from the stored one, or the range is not usable
-    /// at it.
     function _rangeFails() internal view virtual returns (bool) {
         ClLayout storage c = _cl();
         (bool okS, int24 spacing) = _tickSpacing(c.pool);
         return !okS || spacing != c.tickSpacing || !ClPriceMath.isUsableRange(c.tickLower, c.tickUpper, spacing);
     }
 
-    /// @dev `integration.unitExponent(marketId)` equals the stored `k` (`SPEC-ORC-005`). Before the integration binds the
-    /// market (at `initialize`, which precedes the listing batch) the read reverts and is not counted; from the
-    /// MarketRegistry's registration on, a failed or malformed read or another exponent fails the check.
-    /// @custom:spec SPEC-ORC-005, REQ-ORACLE-046, REQ-ORACLE-105
+    /// @dev The integration's unit exponent equals the stored one; a failed read passes only before registration.
     function _unitExpMatches() internal view returns (bool) {
         Layout storage $ = _s();
         (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
@@ -252,10 +200,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         return ret.length == 32 && _wordIs(ret, 0, _cl().unitExp);
     }
 
-    /// @dev `integration.rateProviders(marketId)` is two zero addresses (`REQ-AMM-CORE-004`). Before the integration
-    /// binds the market (at `initialize`, which precedes the listing batch) the read reverts and is not counted; from
-    /// the MarketRegistry's registration on, a failed or malformed read or any non-zero provider fails the check.
-    /// @custom:spec REQ-AMM-CORE-004, REQ-ORACLE-046
+    /// @dev The integration reports no rate providers; a failed read passes only before registration.
     function _noRateTokens() internal view returns (bool) {
         Layout storage $ = _s();
         (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
@@ -266,7 +211,6 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
             && _wordIs(ret, 96, 0);
     }
 
-    /// @dev The word at byte `offset` of `ret` exists and equals `value`.
     function _wordIs(
         bytes memory ret,
         uint256 offset,
@@ -276,7 +220,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         return ok && word == value;
     }
 
-    /// @dev Whether the MarketRegistry has registered this feed (`marketOfLpOracle != 0`), or the read fails.
+    /// @dev Whether the MarketRegistry has registered this feed, or the read fails.
     function _bound() internal view returns (bool) {
         (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
             _s().marketRegistry,
@@ -288,11 +232,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         return !ok || !okW || id != 0;
     }
 
-    // ─── Report (REQ-ORACLE-104) ───
-
-    /// @dev `getClPriceState()` from one evaluation's quotes and valuation prices (`priced` false when the market is
-    /// failed: the range, tolerance and cardinality are reported and every price field is 0).
-    /// @custom:spec REQ-ORACLE-042, REQ-ORACLE-104
+    /// @dev `getClPriceState()` from one evaluation; price fields are 0 when not `priced`.
     function _clReport(
         bool priced,
         uint256[] memory quotes,
@@ -318,9 +258,6 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         r.tickDeviation = uint24(_tickDistance(r.meanTick, r.tickRef));
     }
 
-    // ─── Internal ───
-
-    /// @dev `SPEC-ORC-009` at `x` with the stored token decimals.
     function _oracleSqrt(
         uint256[] memory x
     ) internal view returns (uint160) {
@@ -328,7 +265,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         return ClPriceMath.oracleSqrtPrice(x[0], x[1], decs[0], decs[1]);
     }
 
-    /// @dev Whether `SPEC-ORC-009` clamped at `prices` or the range clamp of `SPEC-ORC-006` changes the price.
+    /// @dev Whether the oracle sqrt price at `prices` is clamped, by its own bounds or the range.
     function _clampedAt(
         uint256[] memory prices
     ) internal view returns (bool) {
@@ -336,8 +273,6 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         return _clampedFrom(_oracleSqrt(prices), prices);
     }
 
-    /// @dev `_clampedAt` with the oracle square-root price `s` of `prices` already computed: `SPEC-ORC-009` clamps only
-    /// to `MIN_SQRT_RATIO` or `MAX_SQRT_RATIO - 1`, so its own test runs only at those two values.
     function _clampedFrom(
         uint160 s,
         uint256[] memory prices
@@ -350,7 +285,6 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         return s < c.sqrtLower || s > c.sqrtUpper;
     }
 
-    /// @dev `|a - b|` of two ticks.
     function _tickDistance(
         int24 a,
         int24 b
@@ -361,7 +295,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         return d < 0 ? uint256(-d) : uint256(d);
     }
 
-    /// @dev Every entry in `[1, MAX_ROUTE_ANSWER]`, the bound under which `SPEC-ORC-009` cannot overflow.
+    /// @dev Every entry in `[1, MAX_ROUTE_ANSWER]`, the bound under which the sqrt price cannot overflow.
     function _pricesOk(
         uint256[] memory x
     ) internal pure returns (bool) {
@@ -371,10 +305,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         return true;
     }
 
-    /// @dev `num < 2^128 * den` of `SPEC-ORC-009` (the sqrt price is exact to `2^-96` relative and not clamped) with
-    /// token0 raised and token1 lowered by `LISTING_SHOCK_FACTOR`, and the reverse, each shocked price kept in
-    /// `[1, MAX_ROUTE_ANSWER]` (`REQ-ORACLE-105`). Tested as `num >> 128 < den`, which cannot overflow. The former
-    /// `2^64` bound refused WBTC as token0 against an 18-decimal stable above about $184,467 (INTEG-04).
+    /// @dev The raw price ratio stays below `2^128` with the quotes shocked by `LISTING_SHOCK_FACTOR` each way.
     function _shockSqrtHolds(
         uint256[] memory quotes
     ) internal view returns (bool) {
@@ -402,8 +333,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         return Math.max(q / LISTING_SHOCK_FACTOR, 1);
     }
 
-    /// @dev The deep pool of a `PoolTwap` reference: an address-keyed pool whose `token0`/`token1` are the market's
-    /// token `index` and its other token, in either order; `baseIsToken0` when token `index` is the pool's `token0`.
+    /// @dev The deep pool of a `PoolTwap` reference; `paired` when it holds token `index` and the other market token.
     function _deepPool(
         uint256 index,
         bytes32 poolRef
@@ -419,8 +349,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         baseIsToken0 = t0 == base;
     }
 
-    /// @dev Uniswap `OracleLibrary.getQuoteAtTick`: raw units of the other token `baseAmount` raw units of the base
-    /// token buy at `tick` (token1 per token0 is `1.0001^tick`), rounded down.
+    /// @dev Uniswap `OracleLibrary.getQuoteAtTick`, rounded down.
     function _quoteAtTick(
         int24 tick,
         uint256 baseAmount,

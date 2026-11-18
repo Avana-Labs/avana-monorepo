@@ -30,44 +30,26 @@ import {AdapterAccount} from "./types/AdapterAccount.sol";
 import {RepayWithCollateralParams} from "./types/RepayWithCollateralParams.sol";
 
 /// @title AaveAdapterCollateralLogic
-/// @notice Bodies of the entry points that change a pledged record in place: `removeLiquidity`, `recredit` and
-/// `repayWithCollateral`.
-/// @dev Reached only by `delegatecall` from the AaveAdapter router (`IAaveAdapterLogic`); every body takes the Lock
-/// first and releases it last and keeps the market's backing gap unchanged (SPEC-PROXY-008). `repayWithCollateral`
-/// holds the Lock across LPVaultSwap's `deleverage` and the two callbacks it makes into the Adapter, which run in the
-/// transient session opened here and closed before the Lock is released.
-/// @custom:spec REQ-ADAPTER-069, REQ-ADAPTER-078, REQ-ADAPTER-079, REQ-ADAPTER-080, REQ-ADAPTER-082, REQ-ADAPTER-083, REQ-ADAPTER-086, SPEC-PROXY-008, SPEC-PROXY-009, REQ-PROXY-048, REQ-LOCK-007, REQ-LOCK-030
-// Each function carries the body of a selector declared in an IAaveAdapter piece that the router implements; this
-// contract inherits no piece, since each piece also declares functions another logic contract serves.
+/// @notice Bodies of `removeLiquidity`, `recredit` and `repayWithCollateral`.
+// The router implements the IAaveAdapter pieces; this contract only carries bodies.
 // solhint-disable comprehensive-interface
-// Every call made here runs under the Adapter's Lock, which no callee can take again, so none can re-enter the Adapter
-// between a call and the event that follows it.
+// Every call here runs under the Adapter's Lock, so no callee can re-enter before the following event.
 // forge-lint: disable-start(reentrancy-events)
-// The router implements IAaveAdapterCollateral; this logic contract carries its bodies only (see above).
 // forge-lint: disable-next-line(missing-inheritance)
 contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
-    /// @dev Gas given to the sequencer-uptime read, as the RiskModule's and the LPOracle's.
     uint256 internal constant SEQUENCER_CALL_GAS = 50_000;
     /// @dev ABI length of `latestRoundData()`: five words.
     uint256 internal constant ROUND_LENGTH = 160;
 
-    /// @notice Fixes the implementation immutables; they must equal the router's.
-    /// @param im The chain's dependencies.
-    /// @custom:spec REQ-ADAPTER-004, REQ-ADAPTER-074
     constructor(
         AaveAdapterImmutables memory im
     ) AaveAdapterStorage(im) {}
 
     /// @inheritdoc IAaveAdapterLogic
-    /// @custom:spec REQ-ADAPTER-004
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("AaveAdapterCollateralLogic"), _IMMUTABLES_HASH);
     }
 
-    // ─── Partial removal ───
-
-    /// @notice Body of `removeLiquidity` (REQ-ADAPTER-078).
-    /// @custom:spec REQ-ADAPTER-078, REQ-ADAPTER-089, REQ-RISK-070
     function removeLiquidity(
         uint256 marketId,
         PositionRef calldata position,
@@ -92,9 +74,6 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _release();
     }
 
-    /// @dev Body of a partial removal after its gates: backing gap, withdrawal and burn, Collateralization
-    /// `releasePartial` (length, reconcile, `0 < units < credited`, debit, unwind to the depositor), then the cleanup
-    /// when debt-free or the remaining-record and health checks with debt, then the backing check.
     function _reduce(
         address proxy,
         AdapterAccount memory account,
@@ -120,10 +99,6 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _checkGap(account.vaultToken, gapBefore);
     }
 
-    // ─── Re-credit ───
-
-    /// @notice Body of `recredit` (REQ-ADAPTER-079).
-    /// @custom:spec REQ-ADAPTER-079, REQ-ADAPTER-083, REQ-ADAPTER-090
     function recredit(
         uint256 marketId,
         PositionRef calldata position,
@@ -147,8 +122,6 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _release();
     }
 
-    /// @dev Body of a re-credit after its gates: backing gap, Collateralization `recredit`, mint of exactly `added`,
-    /// supply step, backing check.
     function _credit(
         address proxy,
         AdapterAccount memory account,
@@ -166,9 +139,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _checkGap(account.vaultToken, gapBefore);
     }
 
-    /// @dev REQ-ADAPTER-083 for a re-credit: `ApplicationPaused` under `Paused(MintPathSuspect)`, `ApplicationFrozen`
-    /// under Frozen for an account with no debt; a rescue top-up is required under `Paused(General)` or for a frozen
-    /// caller.
+    /// @dev Requires a rescue top-up under `Paused(General)` or for a frozen caller.
     function _mintGate(
         address hub,
         address spoke,
@@ -180,10 +151,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         requireRescue = state == PauseState.Paused || _isFrozen(msg.sender);
     }
 
-    // ─── Repay with collateral ───
-
-    /// @dev The account and the values a repay with collateral reads before it calls LPVaultSwap; `healthFactor` is the
-    /// session's `hfBefore`, which `deleverageRepay` reads after LPVaultSwap's pokes.
+    /// @dev Values a repay with collateral reads before calling LPVaultSwap; `healthFactor` is filled in afterwards.
     struct Before {
         address proxy;
         address spoke;
@@ -194,8 +162,6 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         uint256 shares;
     }
 
-    /// @notice Body of `repayWithCollateral` (REQ-ADAPTER-080).
-    /// @custom:spec REQ-ADAPTER-080, REQ-ADAPTER-067, REQ-ADAPTER-091, SPEC-PROXY-009, REQ-COLL-040
     function repayWithCollateral(
         RepayWithCollateralParams calldata p
     ) external returns (uint256 debtRepaid, uint256 debtAssetToWallet) {
@@ -219,11 +185,8 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
                 })
             );
         uint256 hfAfter = _afterDeleverage(b, p.units, p.minHealthFactor);
-        // The borrower's own bound on what the call pays it (REQ-ADAPTER-080): each swap leg may fill anywhere above
-        // its oracle minimum, so without it a sandwich could take up to the slippage allowance out of the leftover.
+        // Each swap leg may fill anywhere above its oracle minimum, so this bounds a sandwich on the leftover.
         if (debtAssetToWallet < p.minAssetOut) revert AssetOutBelowMinimum(debtAssetToWallet, p.minAssetOut);
-        // REQ-COLL-040: a repay with collateral that leaves no Aave borrow clears the indebted mark, and, as after every
-        // other debt-free exit, the collateral cleanup runs (REQ-PROXY-089, REQ-PROXY-046).
         if (hfAfter == type(uint256).max) {
             ICollateralizationDebtMark(_COLLATERALIZATION).markDebtFree(b.proxy);
             _cleanup(b.proxy, b.spoke, b.reserveId);
@@ -244,9 +207,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _release();
     }
 
-    /// @dev The hash the session binds for the unwind minimums: of `p.minAmounts`, or of one zero per market token when
-    /// it is empty, the array LPVaultSwap passes to `deleverageRelease` in that case (REQ-SWAP-106), so both sides hash
-    /// the same normalised array.
+    /// @dev Hash of the unwind minimums; an empty array hashes as one zero per market token, as LPVaultSwap passes it.
     function _minsHash(
         RepayWithCollateralParams calldata p
     ) private view returns (bytes32) {
@@ -255,10 +216,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         return keccak256(abi.encode(new uint256[](n)));
     }
 
-    /// @dev The gates of a repay with collateral in the order of REQ-ADAPTER-080, then the reads before the session:
-    /// backing gap and supplied shares. Reads no breaker and no freeze. The health factor before is not read here: a
-    /// poke by LPVaultSwap can move the price Aave reads within the block (the LPOracle verifies token decimals only in
-    /// `poke()`, REQ-ORACLE-107), so `deleverageRepay` reads it after the pokes, at the prices `hfAfter` is read at.
+    /// @dev The health factor before is read later, in `deleverageRepay`, after LPVaultSwap's oracle pokes.
     function _repayWithCollateralGates(
         RepayWithCollateralParams calldata p
     ) private view returns (Before memory b) {
@@ -281,10 +239,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         b.shares = sp.getUserSuppliedShares(b.reserveId, b.proxy);
     }
 
-    /// @dev After LPVaultSwap returns: both session steps ran (`NoDeleverageSession`), the supplied shares fell by
-    /// exactly `units` (`UnitsMismatch`), while debt remains Aave's health factor is at least `max(hfBefore,
-    /// minHealthFactor)` (`HealthFactorNotImproved`, SPEC-PROXY-009), and the backing gap is unchanged. Returns the
-    /// health factor after, `type(uint256).max` once debt-free.
+    /// @dev Returns the health factor after, `type(uint256).max` once debt-free.
     function _afterDeleverage(
         Before memory b,
         uint256 units,
@@ -307,9 +262,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _checkGap(b.vaultToken, b.gap);
     }
 
-    /// @dev `SequencerDown()` while the chain's sequencer gate is Down (REQ-ADAPTER-080): the feed reports down, cannot
-    /// be read or answers other than exactly one `latestRoundData` round. The grace period after a restart does not
-    /// stop a repay with collateral. A chain without a feed is always Up.
+    /// @dev Reverts `SequencerDown()` while the feed reports down or cannot be read; no feed means up.
     function _requireSequencerNotDown() private view {
         // The grace period does not stop a repay with collateral, so only the feed is read.
         // forge-lint: disable-next-line(unused-return)
@@ -321,7 +274,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         ok = ok && ret.length == ROUND_LENGTH;
         (, uint256 answerWord) = RiskModuleCalls.wordAt(ret, 32);
         (, uint256 startedAt) = RiskModuleCalls.wordAt(ret, 64);
-        // A two's-complement word read as int256: 0 is up, 1 is down, anything else is unknown.
+        // Two's-complement word read as int256: 0 is up, 1 is down, anything else is unknown.
         // forge-lint: disable-next-line(unsafe-typecast)
         int256 answer = int256(answerWord);
         (bool up,,,,) = LPPriceMath.sequencerStatus(true, ok, answer, startedAt, block.timestamp, 0);

@@ -9,30 +9,14 @@ import {BackingRecord} from "./types/BackingRecord.sol";
 import {Pending} from "./types/Pending.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-// Every external call in this file goes to the market's registered LPVault, the vault token, the VaultTokenFactory, the
-// Aave Hub or Spoke, or (in `pledge` and `recredit`) the RiskModule's view check and the market's LPOracle, while a Lock
-// member holds the Lock, so no other code can re-enter Collateralization; the order of calls, writes and events is the
-// one 2.3 fixes: custody before the credit is read, balance deltas measured around the call that delivers them, and
-// events that report a call's amounts after that call (REQ-VAULT-089, REQ-LOCK-017).
+// External calls go only to known protocol contracts while a Lock member holds the Lock, so nothing can re-enter.
 // forge-lint: disable-start(reentrancy-events)
 // forge-lint: disable-start(reentrancy-no-eth)
-// The ledger's writes happen only inside the Adapter's and LPVaultSwap's entry points, each of which emits its 2.3 event
-// (`CollateralPledged`, `RecordRecredited`, `RecordReduced`, `RecordDebited`, `CollateralReleased`, `SeizureSettled`,
-// `SeizureReconciled`, `PendingSettled`); the internal helpers that write counters are covered by those events.
+// Ledger writes happen only inside entry points that emit their own event.
 // forge-lint: disable-start(missing-events-access-control)
 /// @title CollateralizationLedger
-/// @notice The record side of Collateralization: record lookup for the Adapter-driven paths, the largest-first seizure
-/// list and its debit walk, the zero-credit list, closing a record, the market's record index and reconcile on exit.
-/// @dev Every walk is over one account-market's lists, at most `MAX_RECORDS_PER_ACCOUNT_MARKET` = 16 entries in all
-/// (SPEC-BACK-016). Reconciliation finishes every record, total and `pending.units` update before its LPVault calls and
-/// books the pending amounts from the balance deltas measured around them (REQ-VAULT-089).
-/// @custom:spec REQ-VAULT-033, REQ-VAULT-054, REQ-VAULT-074, REQ-VAULT-129, REQ-VAULT-130, REQ-VAULT-134, REQ-VAULT-135, REQ-VAULT-136, REQ-VAULT-140, SPEC-BACK-006, SPEC-BACK-011, SPEC-BACK-014, SPEC-BACK-015
+/// @notice Record side of Collateralization: lookup, seizure and zero-credit lists, debits, closing and reconcile.
 abstract contract CollateralizationLedger is CollateralizationBase {
-    // ─── Record lookup ───
-
-    /// @notice The open record of `positionKey` in the vault token's integration, which must belong to `vaultToken`.
-    /// @dev A proxy's market is fixed at its first pledge, so `proxyMarket[record.proxy]` is the record's vault token.
-    /// @custom:spec REQ-VAULT-068, REQ-VAULT-119, REQ-VAULT-102, REQ-LOCK-011
     function _record(
         Ctx memory c,
         bytes32 positionKey
@@ -42,7 +26,6 @@ abstract contract CollateralizationLedger is CollateralizationBase {
         r = records[id];
     }
 
-    /// @custom:spec REQ-VAULT-068, REQ-VAULT-102
     function _checkMarket(
         Ctx memory c,
         BackingRecord storage r
@@ -50,10 +33,7 @@ abstract contract CollateralizationLedger is CollateralizationBase {
         if (proxyMarket[r.proxy] != c.vaultToken) revert InvalidVaultToken();
     }
 
-    // ─── Seizure list ───
-
-    /// @notice Inserts a record before the first entry with fewer credited units, or at the tail (SPEC-BACK-006).
-    /// @custom:spec REQ-VAULT-016, SPEC-BACK-006, INV-015
+    /// @notice Inserts a record before the first entry with fewer credited units, or at the tail.
     function _insert(
         uint256[] storage list,
         uint256 id,
@@ -69,15 +49,13 @@ abstract contract CollateralizationLedger is CollateralizationBase {
         }
         list.push(id);
         for (uint256 j = len; j > pos; --j) {
-            // Inherent: shifting at most 15 entries one place toward the tail.
+            // Shifts at most 15 entries one place toward the tail.
             // forge-lint: disable-next-line(costly-loop)
             list[j] = list[j - 1];
         }
         if (pos != len) list[pos] = id;
     }
 
-    /// @notice Removes `id` from `list`, keeping the order of the others.
-    /// @custom:spec REQ-VAULT-033, SPEC-BACK-006
     function _remove(
         uint256[] storage list,
         uint256 id
@@ -93,17 +71,15 @@ abstract contract CollateralizationLedger is CollateralizationBase {
         // An open record sits in exactly one of its account-market's two lists.
         assert(pos < len);
         for (uint256 j = pos + 1; j < len; ++j) {
-            // Inherent: shifting at most 15 entries one place toward the head.
+            // Shifts at most 15 entries one place toward the head.
             // forge-lint: disable-next-line(costly-loop)
             list[j - 1] = list[j];
         }
         list.pop();
     }
 
-    /// @notice Debits `units` from the account-market's seizure list, head first (SPEC-BACK-006), releasing each
-    /// debited record's exposure (SPEC-BACK-005) and capping its rescue units (SPEC-BACK-014). Records debited to 0
-    /// move to the zero-credit list and stay open. Subtracts `units` from the account, market and pool totals.
-    /// @custom:spec REQ-VAULT-031, REQ-VAULT-043, REQ-VAULT-054, REQ-VAULT-055, REQ-VAULT-056, REQ-VAULT-074, REQ-VAULT-117, REQ-COLL-016, SPEC-BACK-005, SPEC-BACK-006, SPEC-BACK-014, INV-015
+    /// @notice Debits `units` from the account-market's seizure list, head first, releasing each record's exposure.
+    /// @dev Records debited to 0 move to the zero-credit list and stay open.
     function _debit(
         Ctx memory c,
         address proxy,
@@ -159,7 +135,7 @@ abstract contract CollateralizationLedger is CollateralizationBase {
     ) private {
         uint256 len = list.length;
         for (uint256 j = k; j < len; ++j) {
-            // Inherent: at most 15 entries move toward the head.
+            // At most 15 entries move toward the head.
             // forge-lint: disable-next-line(costly-loop)
             list[j - k] = list[j];
         }
@@ -168,8 +144,6 @@ abstract contract CollateralizationLedger is CollateralizationBase {
         }
     }
 
-    /// @notice `rescueUnits = min(rescueUnits, credited)`, with the account sum moved by the same delta.
-    /// @custom:spec REQ-COLL-016, SPEC-BACK-014, INV-082
     function _capRescue(
         BackingRecord storage r,
         address proxy,
@@ -183,9 +157,6 @@ abstract contract CollateralizationLedger is CollateralizationBase {
         }
     }
 
-    /// @notice Debits `units` from one record in place (partial removal, deleverage release); the record keeps its
-    /// list position, or moves to the zero-credit list when emptied.
-    /// @custom:spec REQ-COLL-014, REQ-COLL-017, SPEC-BACK-005, SPEC-BACK-014
     function _debitRecord(
         Ctx memory c,
         BackingRecord storage r,
@@ -203,11 +174,7 @@ abstract contract CollateralizationLedger is CollateralizationBase {
         _poolUnits[c.poolKey] -= units;
     }
 
-    // ─── Closing and the market index ───
-
-    /// @notice Closes a record: removes it from its list and the market index, drops its rescue units and deletes it
-    /// and its position index. The caller returns the position afterwards (REQ-VAULT-033).
-    /// @custom:spec REQ-VAULT-033, REQ-COLL-006, REQ-COLL-016
+    /// @dev The caller returns the position afterwards.
     function _close(
         Ctx memory c,
         uint256 id,
@@ -232,13 +199,8 @@ abstract contract CollateralizationLedger is CollateralizationBase {
         delete records[id];
     }
 
-    // ─── Reconcile on exit ───
-
-    /// @notice Reconciles the account-market against `supplied` shares (SPEC-BACK-011): debits the shortfall
-    /// largest-first, moves its units into `pending.units`, removes them from the positions to this contract and books
-    /// the principal received (`min(received, removed)`, SPEC-BACK-015). Skipped while Hub added assets differ from
-    /// added shares (REQ-VAULT-130). `c` must carry the reserve (`_withReserve`).
-    /// @custom:spec REQ-VAULT-129, REQ-VAULT-130, REQ-VAULT-133, REQ-VAULT-134, REQ-VAULT-135, REQ-VAULT-136, REQ-VAULT-140, REQ-VAULT-143, REQ-VAULT-146, SPEC-BACK-011, SPEC-BACK-015, INV-058
+    /// @notice Debits the account-market's shortfall against `supplied` shares into pending settlement.
+    /// @dev Skipped while Hub added assets differ from added shares. `c` must carry the reserve (`_withReserve`).
     function _reconcile(
         Ctx memory c,
         address proxy,
@@ -264,16 +226,14 @@ abstract contract CollateralizationLedger is CollateralizationBase {
             emit RecordDebited(d.recordId, d.positionKey, proxy, vt, d.take, d.creditedAfter, booked, d.capReleased);
         }
         for (uint256 i = 0; i < n; ++i) {
-            // Inherent: one pending amount per market token, at most 8.
+            // One pending amount per market token, at most 8.
             // forge-lint: disable-next-line(costly-loop)
             if (total[i] != 0) p.amounts[i] += total[i];
         }
         emit SeizureReconciled(proxy, vt, shortfall, total);
     }
 
-    /// @notice Has the LPVault remove one debited record's units to this contract and returns, per token,
-    /// `min(received, removed)` measured by this contract's balance delta (REQ-VAULT-135).
-    /// @custom:spec REQ-VAULT-088, REQ-VAULT-135, SPEC-BACK-015, Q-271
+    /// @notice Unwinds one debited record's units to this contract; returns `min(received, removed)` per token.
     function _unwindToSelf(
         Ctx memory c,
         Debit memory d,
@@ -289,7 +249,6 @@ abstract contract CollateralizationLedger is CollateralizationBase {
     }
 
     /// @notice The units `positionKey`'s record would keep after reconciling the account-market's current shortfall.
-    /// @custom:spec REQ-VAULT-128, REQ-COLL-018, SPEC-BACK-011
     function _creditedAfterReconcile(
         Ctx memory c,
         uint256 id,
@@ -313,7 +272,6 @@ abstract contract CollateralizationLedger is CollateralizationBase {
     }
 
     /// @notice The exposure counters of a pledge into the context's market, `accountRecords` left 0.
-    /// @custom:spec REQ-VAULT-014, REQ-VAULT-034, REQ-COLL-026, SPEC-BACK-004
     function _counters(
         Ctx memory c
     ) internal view returns (PledgeCounters memory counters) {

@@ -10,11 +10,7 @@ import {AaveAdapterImmutables} from "./types/AaveAdapterImmutables.sol";
 import {AdapterAccount} from "./types/AdapterAccount.sol";
 
 /// @title AaveAdapterStorage
-/// @notice The AaveAdapter's ERC-7201 namespace, its implementation immutables, the Lock steps and the transient
-/// repay-with-collateral session, shared by the router and its three logic contracts.
-/// @dev The router and every logic contract are built with the same `AaveAdapterImmutables`; a logic contract runs
-/// only by `delegatecall` from the router, so `address(this)` and the storage are always the Adapter proxy's.
-/// @custom:spec REQ-ADAPTER-004, REQ-ADAPTER-050, REQ-ADAPTER-074, REQ-ADAPTER-081, REQ-PROXY-048, REQ-PROXY-053, REQ-LOCK-007, REQ-LOCK-030
+/// @notice Storage, immutables, Lock steps and transient session shared by the AaveAdapter and its logic contracts.
 abstract contract AaveAdapterStorage is IAaveAdapterEvents, IAaveAdapterErrors {
     /// @custom:storage-location erc7201:avana.storage.AaveAdapter
     struct Layout {
@@ -27,22 +23,15 @@ abstract contract AaveAdapterStorage is IAaveAdapterEvents, IAaveAdapterErrors {
     /// @dev `keccak256(abi.encode(uint256(keccak256("avana.storage.AaveAdapter")) - 1)) & ~bytes32(uint256(0xff))`.
     bytes32 internal constant STORAGE_SLOT = 0x2072e6d03f11061b0cb3832feb372a04fa53d710ed44fa8554d505a1e2dbd700;
 
-    /// @dev First of the eight transient slots of the repay-with-collateral session, `keccak256(
-    /// "avana.transient.AaveAdapter.session")`: proxy, market, position key, units, debt reserve, hash of the per-token
-    /// minimums, step flags, health factor before. EIP-1153 clears them at the end of every transaction.
+    /// @dev First of eight transient slots holding the repay-with-collateral session.
     bytes32 internal constant SESSION_SLOT = 0x0db5971807d1207a74b49bb675c29f58fab52360e24e9e8ddf89f8f844ac41b9;
 
-    /// @dev Session flag: `deleverageRepay` ran.
     uint256 internal constant STEP_REPAID = 1;
-    /// @dev Session flag: `deleverageRelease` ran.
     uint256 internal constant STEP_RELEASED = 2;
 
-    /// @dev Gas given to the RiskModule's `creditRepay` after a repay step (REQ-RISK-092). Measured at about 104,000 to
-    /// 128,000 on the full stack, cold, depending on the build profile (test/gas/RiskModule.SpeedCredit.gas.t.sol); the
-    /// stipend is about twice that.
+    /// @dev Gas given to the RiskModule's `creditRepay` after a repay step, about twice the measured cost.
     uint256 internal constant SPEED_CREDIT_GAS = 250_000;
-    /// @dev Gas a repay step must hold before the credit call: the stipend after the 63/64 rule plus the call's own
-    /// cost, so the credit always receives its full stipend and a gas estimate cannot skip it.
+    /// @dev Gas a repay step must hold before the credit call, so the credit always gets its full stipend.
     uint256 internal constant SPEED_CREDIT_FLOOR = SPEED_CREDIT_GAS + SPEED_CREDIT_GAS / 63 + 10_000;
 
     address internal immutable _PROXY_MANAGER;
@@ -56,12 +45,9 @@ abstract contract AaveAdapterStorage is IAaveAdapterEvents, IAaveAdapterErrors {
     address internal immutable _TIMELOCK;
     /// @dev `keccak256(abi.encode(immutables))`, compared between the router and each logic contract.
     bytes32 internal immutable _IMMUTABLES_HASH;
-    /// @dev This contract's own address: a logic contract refuses every body unless delegatecalled.
+    /// @dev This contract's own address, used to refuse direct calls to a logic contract.
     address internal immutable _SELF;
 
-    /// @notice Fixes the implementation immutables; every address must be non-zero.
-    /// @param im The chain's dependencies.
-    /// @custom:spec REQ-ADAPTER-074
     constructor(
         AaveAdapterImmutables memory im
     ) {
@@ -83,7 +69,6 @@ abstract contract AaveAdapterStorage is IAaveAdapterEvents, IAaveAdapterErrors {
         _SELF = address(this);
     }
 
-    /// @dev The Adapter's ERC-7201 storage.
     function _s() internal pure returns (Layout storage l) {
         bytes32 slot = STORAGE_SLOT;
         // Reason: binding a storage pointer to the fixed ERC-7201 slot needs one assignment of `.slot`.
@@ -93,24 +78,20 @@ abstract contract AaveAdapterStorage is IAaveAdapterEvents, IAaveAdapterErrors {
         }
     }
 
-    /// @dev Reverts when a logic contract is called directly instead of by the Adapter's delegatecall.
     function _onlyDelegated() internal view {
         if (address(this) == _SELF) revert NotDelegated();
     }
 
-    /// @dev Takes the Lock: the first external call of every user entry point (REQ-PROXY-048, REQ-LOCK-007).
+    /// @dev Takes the Lock: the first external call of every user entry point.
     function _acquire() internal {
         ILock(_LOCK).acquire();
     }
 
-    /// @dev Frees the Lock: the last step of every user entry point, never of an inner callee (REQ-LOCK-030).
+    /// @dev Frees the Lock: the last step of every user entry point, never of an inner callee.
     function _release() internal {
         ILock(_LOCK).release();
     }
 
-    // ─── Repay-with-collateral session (transient) ───
-
-    /// @dev Opens the session of one repay with collateral; its step flags start at 0.
     function _openSession(
         address proxy,
         uint256 marketId,
@@ -162,7 +143,6 @@ abstract contract AaveAdapterStorage is IAaveAdapterEvents, IAaveAdapterErrors {
         }
     }
 
-    /// @dev Records that a session step ran.
     function _markStep(
         uint256 step
     ) internal {
@@ -187,7 +167,6 @@ abstract contract AaveAdapterStorage is IAaveAdapterEvents, IAaveAdapterErrors {
         }
     }
 
-    /// @dev The session's health factor before.
     function _hfBefore() internal view returns (uint256 hf) {
         bytes32 slot = SESSION_SLOT;
         // Reason: the session lives in EIP-1153 transient storage, which Solidity reaches only through TLOAD.

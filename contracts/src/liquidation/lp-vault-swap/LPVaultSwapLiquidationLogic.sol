@@ -27,27 +27,15 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-// LiquidationSettled, BorrowerSurplusPaid and ResidueReturned report amounts known only after the transfers; the
-// whole body runs under the Lock (REQ-SWAP-002), so no Avana entry point can re-enter and reorder them.
+// The events report amounts known only after the transfers; the whole body runs under the Lock.
 // forge-lint: disable-start(reentrancy-events)
 /// @title LPVaultSwapLiquidationLogic
-/// @notice Body of `liquidate`, the one liquidation entry point, run by delegatecall from the LPVaultSwap
-/// implementation in the proxy's storage: entry checks, the caller's funding, Aave's seizure, burn and unwind, the
-/// swap legs, the recovery floor with the caller's top-up and the waterfall.
-/// @dev Order (2.11): deadline, caller freeze, Lock; amounts, market, proxy, debt reserve, HF, Hub shares, the
-/// LPOracle `poke()` and collateral price rule, the debt price rule, grace; funding `Kf` by balance delta; bonus and
-/// prices; `beginSeizure`; `liquidationCall` with `Kf` as Aave's bound; `D` and `c` by delta; `burnSeized` and
-/// `settleSeizure`; legs at their minimums; `R`; floor, gap, shortfall pull; `keeperOut`, `minPayout`; `A`, `B`,
-/// `keeperOut`, residues; `LiquidationSettled`; `markDebtFree`; Lock release. Reads no pause state, breaker or committed-operator
-/// registry and takes no flash loan.
-/// @custom:spec REQ-SWAP-001, REQ-SWAP-002, REQ-SWAP-003, REQ-SWAP-005, REQ-SWAP-006, REQ-SWAP-009, REQ-SWAP-011, REQ-SWAP-012, REQ-SWAP-015, REQ-SWAP-016, REQ-SWAP-017, REQ-SWAP-020, REQ-SWAP-025, REQ-SWAP-026, REQ-SWAP-028, REQ-SWAP-072, REQ-SWAP-074, REQ-SWAP-075, REQ-SWAP-105, SPEC-LIQ-006, SPEC-LIQ-010, SPEC-LIQ-019
-// Each function carries the body of a selector LPVaultSwap declares and delegates here; this contract inherits no
-// LPVaultSwap interface piece, since each piece also declares functions another logic contract serves.
+/// @notice Body of `liquidate`, run by delegatecall from the LPVaultSwap implementation in the proxy's storage.
+// Inherits no LPVaultSwap interface piece: each piece also declares functions another logic contract serves.
 // solhint-disable comprehensive-interface
 contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
     using SafeERC20 for IERC20;
 
-    /// @dev Working values of one liquidation, in memory (REQ-SWAP-019: per-call deltas and snapshots only).
     struct Liq {
         Market m;
         DebtReserveDef d;
@@ -76,21 +64,16 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
     }
 
     /// @notice Fixes the implementation immutables; they must equal the implementation's.
-    /// @param im The per-chain addresses and the keeper floor.
-    /// @custom:spec REQ-SWAP-040
     constructor(
         LPVaultSwapImmutables memory im
     ) LPVaultSwapStorage(im) {}
 
     /// @inheritdoc ILPVaultSwapLogic
-    /// @custom:spec REQ-SWAP-040
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("LPVaultSwapLiquidationLogic"), _IMMUTABLES_HASH);
     }
 
     /// @notice Body of `liquidate`.
-    /// @dev See `ILPVaultSwapLiquidation.liquidate`; the implementation forwards its calldata unchanged.
-    /// @custom:spec REQ-SWAP-001, REQ-SWAP-002, REQ-SWAP-072, REQ-SWAP-073, REQ-SWAP-074, REQ-SWAP-105, REQ-SWAP-041, REQ-SWAP-093, REQ-COLL-040
     function liquidate(
         LiquidationParams calldata p
     ) external returns (LiquidationResult memory result) {
@@ -103,17 +86,12 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         _seize(c, p);
         _unwindAndSwap(c, p);
         result = _waterfall(c, p);
-        // REQ-COLL-040: a liquidation that leaves the account with no Aave borrow (its last debt repaid, or the rest
-        // reported as deficit) clears its indebted mark; Collateralization reads `borrowCount` itself.
+        // Clears the indebted mark if the account has no Aave borrow left; Collateralization checks it itself.
         ICollateralization(_COLLATERALIZATION).markDebtFree(p.proxy);
         ILock(_LOCK).release();
     }
 
-    /// @dev Amounts, market, proxy, debt reserve, Hub shares, the two price rules, then HF and grace. The health factor
-    /// is read after both pokes: a poke can move the price Aave reads in the same block (the LPOracle's token-decimals
-    /// check runs only in `poke()`), and the HF checked here, the grace check and the bonus `_seize` reads must be the
-    /// one Aave applies in `liquidationCall`.
-    /// @custom:spec REQ-SWAP-004, REQ-SWAP-005, REQ-SWAP-006, REQ-SWAP-007, REQ-SWAP-008, REQ-SWAP-009, REQ-SWAP-087, REQ-SWAP-091
+    /// @dev HF is read after both pokes so it matches the one Aave applies in `liquidationCall`.
     function _entryChecks(
         LiquidationParams calldata p
     ) private returns (Liq memory c) {
@@ -131,15 +109,12 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         c.hf = account.healthFactor;
         // Debt in more than one reserve; nothing before `liquidationCall` changes it (the Lock is held).
         c.otherDebt = account.borrowCount > 1;
-        // The account's values before the call, for the underwater test in `_seize` (REQ-SWAP-027).
         c.collateralValue = account.totalCollateralValue;
         c.debtValueRay = account.totalDebtValueRay;
         if (c.hf >= _HF_ONE) revert NotLiquidatable();
         if (inGrace && c.hf >= IParameterStore(_PARAMETER_STORE).graceHealthFactor()) revert GraceHealthFactor();
     }
 
-    /// @dev Pulls `X` from `msg.sender` and measures `Kf` (`FundingMismatch` unless `0 < Kf <= X`).
-    /// @custom:spec REQ-SWAP-011, REQ-SWAP-088, REQ-SWAP-098, REQ-SWAP-108
     function _fund(
         Liq memory c,
         LiquidationParams calldata p
@@ -152,14 +127,6 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         c.kf = afterFunding - before;
     }
 
-    /// @dev Bonus, fee and prices; `beginSeizure`; `liquidationCall(collateral, debt, proxy, Kf, false)` with an exact
-    /// allowance reset to 0; `D` and `c` as deltas (`NothingSeized` if `c == 0`).
-    /// Also records whether the account was underwater before the call (its collateral value below its debt value
-    /// times the bonus this call applies, so liquidating it to the end leaves a deficit) and whether the call booked a
-    /// deficit: the funding Hub's deficit of the repaid asset for the Spoke rose over it, or an account with debt in
-    /// several reserves has none left, which only a deficit clears (a liquidation repays one reserve). Either sends the
-    /// borrower surplus to the First-Loss Reserve (REQ-SWAP-027).
-    /// @custom:spec REQ-SWAP-015, REQ-SWAP-016, REQ-SWAP-017, REQ-SWAP-027, REQ-SWAP-090, SPEC-LIQ-001, SPEC-LIQ-004
     function _seize(
         Liq memory c,
         LiquidationParams calldata p
@@ -177,8 +144,7 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         IERC20 vt = IERC20(c.m.vaultToken);
         uint256 units0 = vt.balanceOf(address(this));
         uint256 debt0 = asset.balanceOf(address(this));
-        // Aave reports a deficit on every remaining debt when the call empties the account's last collateral while
-        // debt remains (LiquidationLogic `_evaluateDeficit`); under the Lock only this call can raise it (L-01).
+        // Under the Lock only this call can raise the Spoke's deficit.
         c.deficitBefore = _spokeDeficit(c.d, address(spoke));
         asset.forceApprove(address(spoke), c.kf);
         spoke.liquidationCall(collateralReserve, p.debtReserveId, p.proxy, c.kf, false);
@@ -192,11 +158,7 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
             || (c.otherDebt && spoke.getUserAccountData(p.proxy).borrowCount == 0);
     }
 
-    /// @dev Whether an account with Aave collateral value `collateralValue` and debt value `debtValueRay` (value × RAY,
-    /// both from `getUserAccountData`) is underwater at liquidation bonus `bonus` (BPS): Aave seizes collateral worth
-    /// the repaid debt times the bonus, so below `debt × bonus` the collateral runs out before the debt and the last
-    /// call books the rest as deficit. Exact: `collateralValue × 10⁴ < ⌈debtValueRay × bonus / RAY⌉`.
-    /// @custom:spec REQ-SWAP-027, SPEC-LIQ-022
+    /// @dev Collateral value below debt value times the bonus, so the collateral runs out first.
     function _underwater(
         uint256 collateralValue,
         uint256 debtValueRay,
@@ -206,7 +168,6 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
     }
 
     /// @dev The Spoke's deficit of the debt asset on its funding Hub (ray).
-    /// @custom:spec REQ-SWAP-027
     function _spokeDeficit(
         DebtReserveDef memory d,
         address spoke
@@ -214,9 +175,6 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         return IAaveV4Hub(d.fundingHub).getSpokeDeficitRay(d.hubAssetId, spoke);
     }
 
-    /// @dev `burnSeized` and `settleSeizure` measured as deltas, then the legs and `R` over the burn, the release and
-    /// the route calls only.
-    /// @custom:spec REQ-SWAP-020, REQ-SWAP-021, REQ-SWAP-044, REQ-SWAP-045, REQ-SWAP-092, SPEC-LIQ-003, SPEC-LIQ-005, SPEC-LIQ-006
     function _unwindAndSwap(
         Liq memory c,
         LiquidationParams calldata p
@@ -227,7 +185,7 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         uint256 r0 = asset.balanceOf(address(this));
         IAaveAdapter(_AAVE_ADAPTER).burnSeized(p.marketId, c.m.vaultToken, c.units);
         uint256[] memory mins = p.minAmounts.length == 0 ? new uint256[](n) : p.minAmounts;
-        // R and the released amounts are measured as LPVaultSwap balance changes (REQ-SWAP-108), never read from returns.
+        // The released amounts are measured as balance changes, never read from returns.
         // forge-lint: disable-next-line(unused-return)
         ICollateralization(_COLLATERALIZATION).settleSeizure(p.proxy, c.m.vaultToken, c.units, mins);
         c.amounts = _released(c.t, n);
@@ -242,14 +200,13 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         c.recovered = r1 > r0 ? r1 - r0 : 0;
     }
 
-    /// @dev The leg inputs: leg prices after `poke()`, `ε`, and `s` from the net bonus and the market's allowance.
     function _legArgs(
         Liq memory c,
         LiquidationParams calldata p
     ) private view returns (LegArgs memory l) {
         IParameterStore ps = IParameterStore(_PARAMETER_STORE);
         c.s = SettlementMath.effectiveSlippage(c.bNet, ps.getMarketParams(p.marketId).slippageAllowanceBps);
-        // Only the leg prices are used; the decimals come from the market record, the timestamp from getPriceState.
+        // Only the leg prices are used; the decimals come from the market record.
         // forge-lint: disable-next-line(unused-return)
         (uint256[] memory prices,,) = ILPOracle(c.m.lpOracle).getTokenPrices();
         l = LegArgs({
@@ -267,18 +224,7 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         });
     }
 
-    /// @dev A liquidation of an account that was underwater before the call, or that booked a deficit, pays its borrower
-    /// surplus `B` into the First-Loss Reserve of the debt asset's funding Hub (`c.d.firstLossReserve`, the MarketRegistry's `firstLossReserveOf(fundingHub, asset)`, which
-    /// it accepts only for a reserve whose `HUB`, `ASSET` and `ASSET_ID` match and never changes) rather than to the
-    /// defaulted borrower (REQ-SWAP-027): exact allowance, `fund(amount)`, allowance reset to 0. Records in `c.funded`
-    /// the fall of LPVaultSwap's balance over the call, at most `amount` (0 when no reserve is recorded, the address
-    /// holds no code, `fund` reverts or the reserve takes nothing), and in `c.fundedShares` the reserve shares `fund`
-    /// reports. The caller pays `amount - c.funded` to the borrower as for any liquidation and emits the event, so
-    /// nothing stays in LPVaultSwap. Only the 32-byte shares word is read from the return (via-IR, this file's release
-    /// pipeline, copies no more of a larger return) and the revert data is not decoded, so a revert inside `fund`
-    /// cannot revert the liquidation. A return shorter than 32 bytes fails decoding in this frame, outside the `catch`,
-    /// and does revert it; the recorded AvanaFirstLossReserve always returns a `uint256`.
-    /// @custom:spec REQ-SWAP-027, SPEC-LIQ-022
+    /// @dev A revert in `fund` is caught; a return shorter than 32 bytes still reverts the liquidation.
     function _fundReserve(
         Liq memory c,
         uint256 amount
@@ -296,8 +242,6 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         if (balance < before) c.funded = before - balance > amount ? amount : before - balance;
     }
 
-    /// @dev Floor, gap and shortfall pull; `keeperOut` and `minPayout`; payouts in order; the event.
-    /// @custom:spec REQ-SWAP-025, REQ-SWAP-026, REQ-SWAP-027, REQ-SWAP-028, REQ-SWAP-075, REQ-SWAP-101, REQ-SWAP-112, SPEC-LIQ-008, SPEC-LIQ-009, SPEC-LIQ-010, SPEC-LIQ-019, SPEC-LIQ-022
     function _waterfall(
         Liq memory c,
         LiquidationParams calldata p
@@ -314,7 +258,7 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         if (shortfall != 0) {
             uint256 before = asset.balanceOf(address(this));
             asset.safeTransferFrom(msg.sender, address(this), shortfall);
-            // Exact balance-delta check of the shortfall pull (REQ-SWAP-112): any other arrival is FundingMismatch.
+            // Exact balance-delta check of the shortfall pull.
             // forge-lint: disable-next-line(incorrect-strict-equality)
             if (asset.balanceOf(address(this)) != before + shortfall) revert FundingMismatch();
         }
@@ -361,8 +305,6 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         _emitSettled(c, p, pay, res);
     }
 
-    /// @dev `LiquidationSettled` with the full settlement report.
-    /// @custom:spec REQ-SWAP-026, REQ-SWAP-104
     function _emitSettled(
         Liq memory c,
         LiquidationParams calldata p,

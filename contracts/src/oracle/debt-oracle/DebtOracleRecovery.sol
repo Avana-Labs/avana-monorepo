@@ -9,15 +9,7 @@ import {DebtEvaluation, LegRead, ReadStatus, RouteRead} from "./types/DebtEvalua
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title DebtOracleRecovery
-/// @notice Recovery evidence from Chainlink source timestamps (`SPEC-ORC-014`) with the phase rule
-/// (`REQ-ORACLE-089`), evaluated by `poke()` before it records the rounds it read.
-/// @dev Only the latest gap of each leg is examined. A leg whose `seen` record names another aggregator, has the same
-/// round, or advanced by at most its `feedMaxAge` has no gap. A lookup that reverts, does not decode, returns
-/// `updatedAt = 0` or a value not before the current round is unusable and gives the asset no evidence; on the first
-/// round of a phase the previous phase's last round is read through the proxy, and when that read is unusable the gap
-/// starts at the stored `seen.updatedAt`, which only lengthens the measured gap. Every lookup is a gas-guarded static
-/// call, and no caught error ever produces evidence.
-/// @custom:spec SPEC-ORC-014, REQ-ORACLE-089, REQ-ORACLE-075, REQ-ORACLE-065, REQ-ORACLE-033
+/// @notice Recovery evidence from Chainlink source timestamps, evaluated by `poke()` before it records its rounds.
 abstract contract DebtOracleRecovery is DebtOracleEvaluation {
     /// @dev A half-open interval `[start, end)`; `exists` is false for an empty or absent one.
     struct Span {
@@ -26,9 +18,7 @@ abstract contract DebtOracleRecovery is DebtOracleEvaluation {
         uint64 end;
     }
 
-    /// @dev `recoveredAt_new` of `SPEC-ORC-014` when the both-stale interval lasted at least `cachedWindow` and ended
-    /// after the stored `recoveredAt`, capped at `now`.
-    /// @custom:spec SPEC-ORC-014, REQ-ORACLE-033
+    /// @dev The new `recoveredAt` when the both-stale interval lasted `cachedWindow` and ended after the stored one.
     function _evidence(
         DebtEvaluation memory e
     ) internal view returns (bool found, uint64 recoveredAtNew) {
@@ -43,10 +33,7 @@ abstract contract DebtOracleRecovery is DebtOracleEvaluation {
         return (true, recoveredAtNew);
     }
 
-    /// @dev The stale interval `S_r` of one route: `[staleFrom, now]` for a `Stale` route; for a valid route the union
-    /// of its legs' gaps when they overlap, else the gap with the later end; no evidence (`ok = false`) for an invalid
-    /// route or an unusable lookup.
-    /// @custom:spec SPEC-ORC-014
+    /// @dev The stale interval of one route; `ok` false for an invalid route or an unusable lookup.
     function _routeSpan(
         RouteRead memory route,
         uint256 r
@@ -63,8 +50,6 @@ abstract contract DebtOracleRecovery is DebtOracleEvaluation {
         return (true, _merge(g0, g1));
     }
 
-    /// @dev The union of two leg gaps when they overlap, else the one with the later end; an absent gap yields the other.
-    /// @custom:spec SPEC-ORC-014
     function _merge(
         Span memory g0,
         Span memory g1
@@ -80,7 +65,6 @@ abstract contract DebtOracleRecovery is DebtOracleEvaluation {
     }
 
     /// @dev The last gap `[prev + feedMaxAge + 1, updatedAt)` of one valid leg, or none.
-    /// @custom:spec SPEC-ORC-014, REQ-ORACLE-089, REQ-ORACLE-031
     function _legGap(
         LegRead memory leg,
         uint256 r,
@@ -100,10 +84,7 @@ abstract contract DebtOracleRecovery is DebtOracleEvaluation {
         return (true, Span({exists: true, start: SafeCast.toUint64(start), end: leg.updatedAt}));
     }
 
-    /// @dev `updatedAt` of the round before the leg's current one: `getRoundData(roundId - 1)`, or on the first round
-    /// of a phase (`uint64(roundId) == 1`) the previous phase's last round through the proxy, falling back to the
-    /// stored `seen.updatedAt`. Unusable when it is 0 or not before the current round.
-    /// @custom:spec SPEC-ORC-014, REQ-ORACLE-089, REQ-ORACLE-075
+    /// @dev `updatedAt` of the previous round; on a phase's first round, the previous phase's last, else `seen`.
     function _previousRound(
         LegRead memory leg,
         uint64 seenAt
@@ -121,9 +102,6 @@ abstract contract DebtOracleRecovery is DebtOracleEvaluation {
         usable = prev != 0 && prev < leg.updatedAt;
     }
 
-    /// @dev `phaseAggregators(phaseId - 1).latestRoundData().updatedAt`, usable only when the phase is above 1, the
-    /// aggregator is non-zero and its round is non-zero and before the current one.
-    /// @custom:spec REQ-ORACLE-089
     function _previousPhaseLast(
         LegRead memory leg,
         uint16 phaseId

@@ -12,21 +12,14 @@ import {RiskModuleBase} from "./RiskModuleBase.sol";
 import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
 
 /// @title RiskModuleBorrowScope
-/// @notice The account scope of the borrow-side checks, read from the Spoke and never from the caller, and the
-/// swap-route liquidation halt (REQ-ADAPTER-011 to REQ-ADAPTER-014, REQ-ADAPTER-022, REQ-RISK-062).
-/// @dev The collateral scope is the account's market reserve: every reserve the Spoke reports as collateral for the
-/// proxy must map to the proxy's market, which must be Active or Offboarding on the proxy's Spoke (`UnknownCollateral`).
-/// The debt scope is every reserve the Spoke reports as borrowed plus, for a borrow, the reserve borrowed; each must be
-/// an enabled debt reserve of the Spoke (`ConfigDrift(0, BorrowedUnapprovedReserve)`) whose Aave reserve matches its
-/// definition (`ConfigDrift(0, DebtReserveMismatch)`).
-/// @custom:spec REQ-ADAPTER-011, REQ-ADAPTER-012, REQ-ADAPTER-013, REQ-ADAPTER-014, REQ-ADAPTER-022, REQ-ADAPTER-010, REQ-RISK-062
+/// @notice The account scope of the borrow-side checks, read from the Spoke, and the swap-route halt.
+/// @dev Every collateral reserve must map to the proxy's market; every debt reserve must match its definition.
 // View calls in loops over the Spoke's reserves and the market's tokens, bounded by listings.
 // forge-lint: disable-start(calls-loop)
 abstract contract RiskModuleBorrowScope is RiskModuleBase {
     /// @dev No reserve borrowed (a withdraw-with-debt or a status read).
     uint256 internal constant NO_RESERVE = type(uint256).max;
 
-    /// @dev The account and its scope.
     struct Scope {
         address proxy;
         address spoke;
@@ -37,17 +30,10 @@ abstract contract RiskModuleBorrowScope is RiskModuleBase {
         DebtReserveDef[] defs;
     }
 
-    /// @dev The drift logic.
     address internal immutable _DRIFT;
-    /// @dev The breaker logic.
     address internal immutable _BREAKER;
 
-    /// @notice Fixes the implementation immutables and the drift and breaker logic.
-    /// @param im The per-chain Avana addresses.
-    /// @param drift The drift logic built with `im`.
-    /// @param breaker The breaker logic built with `im`.
-    /// @custom:spec REQ-RISK-002
-    // `_requireLogic` checks each logic address, which rejects zero (REQ-RISK-002).
+    // `_requireLogic` checks each logic address, which rejects zero.
     // forge-lint: disable-next-item(missing-zero-check)
     constructor(
         RiskModuleImmutables memory im,
@@ -60,7 +46,6 @@ abstract contract RiskModuleBorrowScope is RiskModuleBase {
         _BREAKER = breaker;
     }
 
-    /// @dev Steps (1) to (3): approved Spoke, scope from the Spoke, collateral mapping and debt definitions.
     function _scope(
         address proxy,
         uint256 debtReserveId,
@@ -125,8 +110,7 @@ abstract contract RiskModuleBorrowScope is RiskModuleBase {
         }
     }
 
-    /// @dev REQ-RISK-062: the first debt reserve into whose asset some pool token of the market, other than a debt
-    /// asset of the account, has neither a usable primary nor a usable backup swap route.
+    /// @dev The first debt reserve into whose asset some non-debt pool token has no usable swap route.
     function _routeHalt(
         Scope memory s
     ) internal view returns (bool halted, uint256 reserveId) {
@@ -147,7 +131,6 @@ abstract contract RiskModuleBorrowScope is RiskModuleBase {
         }
     }
 
-    /// @dev True when `token` is the asset of a debt reserve in scope.
     function _isDebtAsset(
         Scope memory s,
         address token

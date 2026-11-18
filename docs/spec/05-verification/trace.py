@@ -34,7 +34,8 @@ ID kinds
   may also cite a defined check, e.g. "Checked by: MATH-AR-03", which links it to that rule):
     MATH-* (Z3)  SYM-* (SymPy)  QNT-* (Quint)  HYP-* (Hypothesis)  SIM-* (simulation)
     TEST-* (Foundry)  PROP-* (Certora / Halmos / SMTChecker)
-    Solidity: `/// @custom:spec REQ-VAULT-001, INV-003` in contracts/src.
+    Solidity: solidity-links.json maps each contracts/src file's declarations (`Contract`, `Contract.member`) to
+    the rule IDs they implement, e.g. {"contracts/src/x/Vault.sol": {"Vault.deposit": ["REQ-VAULT-001"]}}.
   ATTACK-* entries name their checks in the `| Checks |` row under their heading.
 
 Implementation evidence (evidence.py). A TEST-*/PROP-* tag counts for a row only when it sits in the comment block
@@ -47,7 +48,7 @@ contract whose spec page defines the row. Each row's implementation state is one
   Failed     a counting check ran and failed
   Not run    counting checks exist, none has a result (no --results, skipped, timed out, or no prover job)
   Unlinked   no counting check
-A `@custom:spec` tag on a body-less declaration (an interface, a function without a body, an abstract contract no
+A Solidity link on a body-less declaration (an interface, a function without a body, an abstract contract no
 concrete src/ contract inherits) is shown as "(decl.)" and is not an implementation link.
 
 Without --results the matrix is written to traceability.md (committed): every Foundry row is then "Not run", since
@@ -91,6 +92,9 @@ TARGET = rf"(?:{REQ_ID})"
 TAG = re.compile(rf"({CHECK_ID})\s+verifies:\s*((?:{TARGET})(?:\s*,\s*{TARGET})*)")
 SOL_TAG = re.compile(rf"@custom:spec\s+((?:{REQ_ID})(?:\s*,\s*{REQ_ID})*)")
 SPLIT = re.compile(TARGET)
+SOL_LINKS_REL = ev.SOL_LINKS.relative_to(ROOT).as_posix()
+SOL_ERRORS: list[str] = []    # solidity-links.json entries whose declaration is gone
+SOL_WARNINGS: list[str] = []  # @custom:spec tags left in contracts/src (ignored)
 
 REQ_DIRS = ["01-architecture", "02-contracts", "03-operations", "04-security"]
 CHECK_GLOBS = ["docs/spec/05-verification/**/*.py", "docs/spec/05-verification/**/*.qnt",
@@ -166,8 +170,10 @@ def collect_links() -> tuple[dict[str, list[dict]], dict[str, set]]:
     Spec-stage models link through any `verifies:` tag in their file. Tags under contracts/test and contracts/certora
     link only from the comment block directly above a test function or CVL rule (evidence.scan_tags); each such link
     carries its tag, so its state and stand-ins can be read. Loose tags still name their IDs in `check_targets` (an
-    undefined ID fails), but link nothing; main() reports them as errors. `@custom:spec` links in contracts/src carry
-    `decl`: why the tag is on a body-less declaration, or ""."""
+    undefined ID fails), but link nothing; main() reports them as errors. Solidity links come from
+    solidity-links.json (src file -> declaration -> IDs) and carry `decl`: why the declaration is body-less, or ""; a
+    declaration the file no longer has is an error (SOL_ERRORS), and a `@custom:spec` tag left in contracts/src is
+    ignored with a warning (SOL_WARNINGS)."""
     links: dict[str, list[dict]] = defaultdict(list)
     check_targets: dict[str, set] = defaultdict(set)
     impl_roots = ("contracts/test/", "contracts/certora/")
@@ -186,10 +192,25 @@ def collect_links() -> tuple[dict[str, list[dict]], dict[str, set]]:
                             links[rid].append({"id": cid, "kind": kind, "where": f"{rel}:{n}"})
                             check_targets[cid].add(rid)
                 for m in SOL_TAG.finditer(line):
-                    decl = ev.declaration_only(path, n - 1) if in_src else ""
+                    if in_src:
+                        SOL_WARNINGS.append(f"{rel}:{n}: @custom:spec is ignored in contracts/src; add the link to "
+                                            f"{SOL_LINKS_REL}")
+                        continue
                     for rid in SPLIT.findall(m.group(1)):
                         links[rid].append({"id": Path(rel).stem, "kind": "Solidity", "where": f"{rel}:{n}",
-                                           "decl": decl})
+                                           "decl": ""})
+    for rel, decls in ev.solidity_links().items():
+        path = ROOT / rel
+        found = ev.src_declarations(ev._text(path)) if path.is_file() else {}
+        for key, ids in decls.items():
+            if key not in found:
+                SOL_ERRORS.append(f"{SOL_LINKS_REL}: {rel} has no declaration `{key}`; move or remove the link")
+                continue
+            line = found[key]
+            decl = ev.declaration_only(path, line - 1)
+            for rid in ids:
+                links[rid].append({"id": Path(rel).stem, "kind": "Solidity", "where": f"{rel}:{line + 1}",
+                                   "decl": decl})
     on, loose = ev.scan_tags(TARGET)
     for tag in on:
         for rid in tag["targets"]:
@@ -343,6 +364,8 @@ def main() -> int:
     warnings: list[str] = []
     reqs = collect_requirements(errors)
     links, check_targets = collect_links()
+    errors.extend(SOL_ERRORS)
+    warnings.extend(SOL_WARNINGS)
     # Spec rules may also cite the checks that verify them ("Checked by: MATH-AR-03, QNT-07").
     # Such a citation links the check to the rule, provided the check is defined in a model file.
     # A lowercase suffix names one case of a check ("MATH-UO-39a") and cites the check itself.
@@ -417,7 +440,7 @@ def main() -> int:
                 warnings.append(f"{rid}: no counting check ran and passed in the results given")
             sol = [c for c in checks if c["kind"] == "Solidity"]
             if not sol:
-                warnings.append(f"{rid} has no Solidity link (@custom:spec)")
+                warnings.append(f"{rid} has no Solidity link ({SOL_LINKS_REL})")
             elif all(c.get("decl") for c in sol):
                 warnings.append(f"{rid} has only declaration links in contracts/src ({sol[0]['decl']})")
 
@@ -454,7 +477,7 @@ def main() -> int:
         "Requirements: `REQ-*`, `INV-*`, `SPEC-*` (formulas), `ATTACK-*`, flow steps (`DEP-001` …), and design decisions "
         "`Q-*` until they are drafted into requirements. Checks: `MATH-*` Z3, `SYM-*` SymPy, `QNT-*` Quint, `HYP-*` "
         "Hypothesis, `SIM-*` simulation, `TEST-*` Foundry, `PROP-*` Certora/Halmos/SMTChecker. Link with "
-        "`<CHECK-ID> verifies: <REQ-ID>, …`; Solidity with `/// @custom:spec <REQ-ID>`. AMM integration rules use "
+        "`<CHECK-ID> verifies: <REQ-ID>, …`; Solidity in `solidity-links.json` (file → declaration → IDs). AMM integration rules use "
         "`REQ-AMM-CORE-*` and `REQ-/SPEC-/INV-/ATTACK-AMM-<P>-*`; flash-source and per-chain rules `REQ-FLASH-*`, "
         "`REQ-CHAIN-*`.\n\n"
         "Status is the row's implementation state: **Verified** (a counting test or property ran and passed), "
@@ -463,7 +486,7 @@ def main() -> int:
         "directly above it, carries its own row, and its test uses no stand-in (harness or mock) for a contract whose "
         "page defines the row. In the Impl. column, ° marks a check without a result, ✗ a failed one and ‡ one that "
         "does not count (stand-in or a tag on another row's test); in the Solidity column, (decl.) marks a "
-        "`@custom:spec` tag on a body-less declaration, which is not an implementation link.\n\n"
+        "Solidity link on a body-less declaration, which is not an implementation link.\n\n"
         + run + "\n\n"
         f"**{len(reqs)} requirements · " + " · ".join(f"{tally[k]} {k.lower()}" for k in
                                                   ("Verified", "Failed", "Not run", "Unlinked", "Changed — re-verify"))

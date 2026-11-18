@@ -21,23 +21,14 @@ import {PriceInput} from "./types/PriceInput.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensDeleverage
-/// @notice The repay-with-collateral arithmetic shared by its preview and its inverse sizing: the gates, the repayment
-/// `x` of SPEC-LIQ-020 for a number of units, and the account's health factor after, plus the borrow-rate growth the
-/// spend-cap quotes use.
-/// @dev The inputs are read once (`_deleverageInputs`), so the inverse sizing evaluates `x` and the health factor for
-/// many unit counts without further calls. The health factor after follows the Adapter's order (the debt is repaid,
-/// then the units are withdrawn, which refreshes the account to the reserve's latest collateral factor) and Aave's
-/// repay arithmetic (`LensAccountMath._restRay`).
-/// @custom:spec REQ-LENS-038, REQ-LENS-055, SPEC-LIQ-020, REQ-LENS-035, REQ-LENS-036
-// View calls in a loop over a market's pool tokens and price inputs (REQ-LENS-020).
+/// @notice Repay-with-collateral arithmetic shared by its preview and inverse sizing, plus borrow-rate growth.
+// Loops over a market's pool tokens and price inputs.
 // forge-lint: disable-start(calls-loop)
 abstract contract LensDeleverage is LensAccountMath {
-    /// @dev RAY.
     uint256 internal constant RAY_UNIT = 1e27;
     /// @dev Aave's year for rates (`MathUtils.SECONDS_PER_YEAR`).
     uint256 internal constant SECONDS_PER_YEAR = 365 days;
 
-    /// @dev One repay-with-collateral request.
     struct Repay {
         Market m;
         DebtReserveDef def;
@@ -48,14 +39,13 @@ abstract contract LensDeleverage is LensAccountMath {
         uint256 units;
     }
 
-    /// @dev The reads a repay with collateral is sized from, for any number of units.
     struct Delev {
-        // SPEC-LIQ-004 prices (collateral the lower, debt the higher of Aave's and the oracle's) and decimals.
+        // Prices (collateral the lower, debt the higher of Aave's and the oracle's) and decimals.
         uint256 pc;
         uint256 pd;
         uint8 vaultDecimals;
         uint8 debtDecimals;
-        // SPEC-LIQ-020 terms: slippage allowance, `U`, `ε`, `maxFlashFeeBps`.
+        // Sizing terms: slippage allowance, `U`, `ε`, `maxFlashFeeBps`.
         uint256 slippageBps;
         uint256 u;
         uint256 eps;
@@ -75,7 +65,6 @@ abstract contract LensDeleverage is LensAccountMath {
     }
 
     /// @dev The account's borrow rate on a reserve: the drawn rate plus its risk-premium share, RAY per year.
-    /// @custom:spec REQ-LENS-035, REQ-LENS-036
     function _rate(
         DebtReserveDef memory def,
         uint256 riskPremium
@@ -93,11 +82,7 @@ abstract contract LensDeleverage is LensAccountMath {
         return RAY_UNIT + Math.mulDiv(rate, dt, SECONDS_PER_YEAR, Math.Rounding.Ceil);
     }
 
-    /// @dev Whether `repayWithCollateral` would pass its checks: liquidation-grade prices on the market and the debt
-    /// reserve, Hub shares equal to assets, the Hub not `Paused(MintPathSuspect)`, the record is the account's and `units`
-    /// is within its credited units after reconciliation, and the account owes on the reserve. `Paused(General)`, Frozen
-    /// and a frozen wallet leave it open, as at the Adapter, because it only reduces debt (REQ-ADAPTER-080, Q-356).
-    /// @custom:spec REQ-LENS-038, SPEC-LIQ-020, REQ-ADAPTER-080, REQ-ADAPTER-082
+    /// @dev Whether `repayWithCollateral` would pass; `Paused(General)` and freezes leave it open.
     function _deleverageOpen(
         Repay memory r
     ) internal view returns (bool) {
@@ -105,9 +90,7 @@ abstract contract LensDeleverage is LensAccountMath {
         return r.units <= _deleverageLimit(r);
     }
 
-    /// @dev The most units of the record a repay with collateral can use: its credited units after reconciliation, or 0
-    /// when any other check of `_deleverageOpen` fails.
-    /// @custom:spec REQ-LENS-038, REQ-LENS-055
+    /// @dev Most units of the record a repay with collateral can use; 0 when another `_deleverageOpen` check fails.
     function _deleverageLimit(
         Repay memory r
     ) internal view returns (uint256) {
@@ -125,8 +108,7 @@ abstract contract LensDeleverage is LensAccountMath {
         return coll.previewRelease(m.integrationId, r.positionKey);
     }
 
-    /// @dev The market's collateral price rule (REQ-SWAP-008): not liquidation-paused and every input within its
-    /// `liquidationPriceMaxAge`.
+    /// @dev Collateral price rule: not liquidation-paused and every input within its `liquidationPriceMaxAge`.
     function _marketPriceUsable(
         Market memory m
     ) internal view returns (bool) {
@@ -139,8 +121,6 @@ abstract contract LensDeleverage is LensAccountMath {
         return true;
     }
 
-    /// @dev Reads every input of the sizing once.
-    /// @custom:spec SPEC-LIQ-020, SPEC-LIQ-004, REQ-LENS-055
     function _deleverageInputs(
         Repay memory r
     ) internal view returns (Delev memory d) {
@@ -162,8 +142,7 @@ abstract contract LensDeleverage is LensAccountMath {
         d.otherDebtRay = all > own ? all - own : 0;
     }
 
-    /// @dev `U` of SPEC-LIQ-005 in the debt asset: one base unit per pool token that is the debt asset, the value of one
-    /// raw unit (rounded up) for every other priced token.
+    /// @dev `U` in the debt asset: one raw unit's value per pool token, rounded up.
     function _unwindAllowance(
         Market memory m,
         DebtReserveDef memory def,
@@ -177,9 +156,7 @@ abstract contract LensDeleverage is LensAccountMath {
         }
     }
 
-    /// @dev SPEC-LIQ-020 for `units`: `V`, `cap = deleverageCap(V, s, U, ε, maxFlashFeeBps)` and `x = min(debt, cap)`;
-    /// `(0, 0)` while a price is 0.
-    /// @custom:spec SPEC-LIQ-020, SPEC-LIQ-004
+    /// @dev Repayment `x = min(debt, deleverageCap(...))` for `units`; `(0, 0)` while a price is 0.
     function _sizeAt(
         Delev memory d,
         uint256 units
@@ -190,9 +167,7 @@ abstract contract LensDeleverage is LensAccountMath {
         x = d.total < cap ? d.total : cap;
     }
 
-    /// @dev Aave's health factor after repaying `x` and withdrawing `units`: the reserve's debt follows Aave's repay
-    /// (`_restRay`), the collateral is `assets − units` at the served price and the latest collateral factor.
-    /// @custom:spec REQ-LENS-038, REQ-LENS-055
+    /// @dev Aave's health factor after repaying `x` and withdrawing `units`, at the latest collateral factor.
     function _healthAt(
         Delev memory d,
         uint256 units,

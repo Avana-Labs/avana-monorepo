@@ -20,23 +20,15 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title AaveAdapterSteps
-/// @notice The account steps the Adapter runs through a proxy's `execute` (supply, borrow, repay, withdrawal and
-/// collateral cleanup), the backing-gap reads and the shared gates, used by the three logic contracts.
-/// @dev Every amount is checked as a balance delta of the proxy within the step (REQ-PROXY-013), never as an absolute
-/// balance, so a token donated to a proxy blocks and changes nothing. Every approval is exact and reset to 0 in the same
-/// step. The fixed target and selector set (REQ-PROXY-008): on the Spoke `supply`, `setUsingAsCollateral`, `borrow`,
-/// `repay` and `withdraw`; on the vault token and the debt asset `approve(spoke, x)` and `transfer`.
-/// @custom:spec REQ-ADAPTER-006, REQ-ADAPTER-007, REQ-ADAPTER-069, REQ-ADAPTER-099, REQ-PROXY-008, REQ-PROXY-010, REQ-PROXY-013, REQ-PROXY-042, REQ-PROXY-043, REQ-PROXY-046, REQ-PROXY-047, REQ-PROXY-087, REQ-PROXY-088, REQ-PROXY-089, SPEC-PROXY-004, SPEC-PROXY-008
-// The repay steps run once per debt reserve named in `repayAllAndWithdraw`, a list bounded by the caller and by the
-// Spoke's per-account reserve limit (REQ-ADAPTER-051), so any call or revert below may sit inside that loop.
+/// @notice Account steps the Adapter runs through a proxy's `execute`, the backing-gap reads and the shared gates.
+/// @dev Amounts are checked as balance deltas within each step; every approval is exact and reset to 0.
+// The repay steps may run inside `repayAllAndWithdraw`'s loop, bounded by the caller and the Spoke's reserve limit.
 // forge-lint: disable-start(calls-loop, require-revert-in-loop)
-// Every call made here runs under the Adapter's Lock, which no callee can take again (REQ-LOCK-007), so none can
-// re-enter the Adapter between a call and the event that follows it.
+// Every call here runs under the Adapter's Lock, so no callee can re-enter before the following event.
 // forge-lint: disable-start(reentrancy-events)
 abstract contract AaveAdapterSteps is AaveAdapterStorage {
     using SafeERC20 for IERC20;
 
-    /// @dev The caller's account for a market, or `NoProxy(wallet, marketId)`.
     function _accountOf(
         address wallet,
         uint256 marketId
@@ -46,7 +38,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         account = _s().accountOf[proxy];
     }
 
-    /// @dev `IntegrationMismatch` unless the position names the vault token's own AMM integration.
     function _checkIntegration(
         uint256 marketId,
         address vaultToken,
@@ -57,7 +48,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         }
     }
 
-    /// @dev The vault token's reserve on its Spoke, derived from the token's immutables and Aave (REQ-ADAPTER-068).
     function _reserveIdOf(
         address vaultToken
     ) internal view returns (uint256 reserveId) {
@@ -66,7 +56,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
             IAaveV4Spoke(IVaultToken(vaultToken).spoke()).getReserveId(hub, IAaveV4Hub(hub).getAssetId(vaultToken));
     }
 
-    /// @dev Aave's debt-free test: the account borrows no reserve (REQ-PROXY-034).
     function _borrowCount(
         address spoke,
         address proxy
@@ -74,7 +63,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         count = IAaveV4Spoke(spoke).getUserAccountData(proxy).borrowCount;
     }
 
-    /// @dev The pause state of a Hub and, only when Paused, its reason.
     function _pauseOf(
         address hub
     ) internal view returns (PauseState state, PauseReason reason) {
@@ -82,15 +70,12 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         if (state == PauseState.Paused) reason = IMarketRegistryPause(_MARKET_REGISTRY).pauseReason(hub);
     }
 
-    /// @dev True for a frozen address.
     function _isFrozen(
         address account
     ) internal view returns (bool frozen) {
         frozen = IMarketRegistryFreeze(_MARKET_REGISTRY).isFrozenAddress(account);
     }
 
-    /// @dev Gates of a withdrawal or removal that leaves debt (REQ-PROXY-036): `ApplicationPaused` while the market's
-    /// Hub is Paused for either reason, `AddressIsFrozen` for a frozen caller, then the RiskModule's pre-check.
     function _withDebtGates(
         address vaultToken,
         address proxy
@@ -101,9 +86,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         IRiskModuleChecks(_RISK_MODULE).preWithdrawCheck(proxy);
     }
 
-    // ─── Backing gap (SPEC-PROXY-008) ───
-
-    /// @dev `totalSupply`, `totalCredited` and `pending.units` of a market.
     function _backing(
         address vaultToken
     ) internal view returns (uint256 supply, uint256 credited, uint256 pending) {
@@ -121,7 +103,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         gap = SafeCast.toInt256(credited) + SafeCast.toInt256(pending) - SafeCast.toInt256(supply);
     }
 
-    /// @dev `BackingMismatch` unless `totalSupply <= totalCredited + pending.units` and the gap is unchanged.
     function _checkGap(
         address vaultToken,
         int256 gapBefore
@@ -133,9 +114,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         ) revert BackingMismatch(supply, credited, pending);
     }
 
-    // ─── Account steps through `execute` ───
-
-    /// @dev One call the proxy makes.
     function _exec(
         address proxy,
         address target,
@@ -144,7 +122,7 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         result = IPositionProxy(proxy).execute(target, data);
     }
 
-    /// @dev A token call the proxy makes, with SafeERC20's return-value rule (the proxy checks the target has code).
+    /// @dev A token call the proxy makes, with SafeERC20's return-value rule.
     function _tokenCall(
         address proxy,
         address token,
@@ -154,9 +132,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         if (ret.length != 0 && !abi.decode(ret, (bool))) revert SafeERC20.SafeERC20FailedOperation(token);
     }
 
-    /// @dev Supply step (REQ-PROXY-042, REQ-PROXY-043, REQ-PROXY-047): approve exactly `units`, supply, reset the
-    /// approval, check the proxy's vault-token balance fell by `units` with no allowance left, the supplied shares rose
-    /// by exactly `units`, and the reserve is enabled as collateral.
     function _supply(
         address proxy,
         address spoke,
@@ -182,9 +157,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         emit CollateralSupplied(proxy, marketId, units, shares);
     }
 
-    /// @dev Approve exactly `units`, supply them on the proxy's own account, reset the approval; `BalanceDeltaMismatch`
-    /// unless the proxy's vault-token balance fell by exactly `units` and no allowance is left. Returns the shares the
-    /// Spoke reports.
     function _supplyExact(
         address proxy,
         address spoke,
@@ -204,8 +176,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         (shares,) = abi.decode(ret, (uint256, uint256));
     }
 
-    /// @dev Withdrawal step (REQ-PROXY-089, REQ-PROXY-037): the Spoke pays `units` to the proxy, checked as both the
-    /// returned amount and the proxy's balance delta, and the Adapter burns exactly those units from the proxy.
     function _withdrawAndBurn(
         address proxy,
         address spoke,
@@ -223,8 +193,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         IVaultToken(vaultToken).burn(proxy, units);
     }
 
-    /// @dev Collateral cleanup (REQ-PROXY-046) of a debt-free account: once its supplied shares are 0 and the reserve
-    /// is not paused, disable the reserve as collateral.
     function _cleanup(
         address proxy,
         address spoke,
@@ -240,8 +208,7 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         emit CollateralDisabled(proxy, reserveId);
     }
 
-    /// @dev Moves `amount` of `asset` from `payer` to the proxy and returns what arrived (`UnitsMismatch` if nothing or
-    /// more than `amount`), so a fee switched on later repays what arrived (Q-271).
+    /// @dev Returns what arrived, so a fee-charging asset repays what arrived.
     function _pull(
         address asset,
         address payer,
@@ -249,7 +216,7 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         uint256 amount
     ) internal returns (uint256 received) {
         uint256 balanceBefore = IERC20(asset).balanceOf(proxy);
-        // `payer` is the repay's `msg.sender` or, in `deleverageRepay`, LP_VAULT_SWAP itself; never a third party.
+        // `payer` is the repay's `msg.sender` or LPVaultSwap itself, never a third party.
         // forge-lint: disable-next-line(arbitrary-send-erc20)
         IERC20(asset).safeTransferFrom(payer, proxy, amount);
         uint256 balanceAfter = IERC20(asset).balanceOf(proxy);
@@ -257,8 +224,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         if (received == 0 || received > amount) revert UnitsMismatch(amount, received);
     }
 
-    /// @dev Repay step (REQ-PROXY-088): approve exactly `amount`, repay on the proxy's own account, reset the approval,
-    /// refund `amount - spent` to the payer when non-zero, and check the proxy ends `amount` below its start.
     function _repayStep(
         address proxy,
         address spoke,
@@ -276,7 +241,7 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         _tokenCall(proxy, asset, abi.encodeCall(IERC20.approve, (spoke, 0)));
         uint256 refund = amount - spent;
         if (refund != 0) _tokenCall(proxy, asset, abi.encodeCall(IERC20.transfer, (payer, refund)));
-        // The exact balance and a zero allowance are the step's postcondition (REQ-PROXY-088), not a value a donation sets.
+        // Exact end balance and zero allowance are the step's postcondition.
         // forge-lint: disable-next-line(incorrect-strict-equality)
         if (IERC20(asset).balanceOf(proxy) != start - amount || IERC20(asset).allowance(proxy, spoke) != 0) {
             revert BalanceDeltaMismatch();
@@ -284,9 +249,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         _creditSpeed(proxy, debtReserveId, spent);
     }
 
-    /// @dev Gives the repaid amount back to the RiskModule's borrow-speed windows (REQ-RISK-092). The call has a fixed
-    /// stipend behind `SPEED_CREDIT_FLOOR` and its failure is ignored, so the RiskModule can never stop a repay
-    /// (REQ-RISK-005); only a caller who sends too little gas for the stipend is refused (`InsufficientGas`).
     function _creditSpeed(
         address proxy,
         uint256 debtReserveId,
@@ -300,9 +262,7 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         try IRiskModuleChecks(_RISK_MODULE).creditRepay{gas: SPEED_CREDIT_GAS}(proxy, debtReserveId, spent) {} catch {}
     }
 
-    /// @dev Repay steps of `repay` and `repayAllAndWithdraw` (SPEC-PROXY-003, SPEC-PROXY-007): reads the live debt `D`;
-    /// returns with nothing moved at `D == 0`; a repay-all above its cap reverts before any transfer and otherwise pulls
-    /// the cap; a partial repay pulls `min(cap, D)`; Aave takes at most the live debt and the rest returns to `payer`.
+    /// @dev Moves nothing at zero debt; a repay-all above its cap reverts before any transfer.
     function _repayDebt(
         address payer,
         address proxy,
@@ -321,7 +281,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         moved = true;
     }
 
-    /// @dev Pulls `amount` of the reserve's asset from `payer` to the proxy and runs the repay step with what arrived.
     function _pullAndRepay(
         address payer,
         address proxy,

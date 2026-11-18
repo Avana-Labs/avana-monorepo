@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 /// @title ILensHubReads
-/// @notice The Aave V4 Hub views the Lens reads beyond Avana's minimal `IAaveV4Hub` (same ABI as the pinned release).
-/// @custom:spec REQ-LENS-017, REQ-LENS-035, REQ-LENS-036, REQ-LENS-052, REQ-LENS-058, REQ-LENS-059
+/// @notice Aave V4 Hub views the Lens reads beyond Avana's minimal `IAaveV4Hub`.
 interface ILensHubReads {
     /// @notice Current drawn index of `assetId`, RAY.
     function getAssetDrawnIndex(

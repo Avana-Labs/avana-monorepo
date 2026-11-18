@@ -12,19 +12,12 @@ import {LensBase} from "./LensBase.sol";
 import {DebtPriceView} from "./types/DebtPriceView.sol";
 
 /// @title LensPrice
-/// @notice Price and pause views of the Lens: a market's price state with served and accepted prices and every
-/// input's age against both age limits, a debt reserve's price state, and each Hub's pause state and reason.
-/// @dev Price states never make these views revert: the LPOracle and DebtOracle views never revert on a state, and the
-/// Lens adds no check that could.
-/// @custom:spec REQ-LENS-007, REQ-LENS-015, REQ-LENS-030, REQ-LENS-031, REQ-LENS-032
+/// @notice Price and pause views of the Lens: market and debt-reserve price states, and each Hub's pause state.
+/// @dev Price states never make these views revert.
 abstract contract LensPrice is LensBase {
-    /// @dev LPOracle market reason bit 12, ALTERNATE_PAST_BORROW_AGE: a serving alternate leg older than its
-    /// `borrowPriceMaxAge`, which LPVaultSwap treats as Cached.
+    /// @dev LPOracle reason bit ALTERNATE_PAST_BORROW_AGE, which LPVaultSwap treats as Cached.
     uint256 internal constant ALTERNATE_PAST_BORROW_AGE = 1 << 12;
 
-    /// @notice `ILensLiquidation.getPriceState`: a market's price state report, served and accepted prices and every
-    /// input against both age limits.
-    /// @custom:spec REQ-LENS-015, REQ-LENS-007, REQ-LENS-005, REQ-LENS-006
     function getPriceState(
         address vaultToken
     ) external view returns (PriceView memory v) {
@@ -48,9 +41,6 @@ abstract contract LensPrice is LensBase {
         v.borrowAllowed = ps.borrowAllowed;
     }
 
-    /// @notice `ILensLiquidation.getDebtPriceState`: a debt reserve's Aave price source, price and freshness;
-    /// `UnknownDebtReserve` outside the MarketRegistry's enabled set.
-    /// @custom:spec REQ-LENS-030, REQ-LENS-032, REQ-LENS-007, REQ-LENS-005, REQ-LENS-006
     function getDebtPriceState(
         address spoke,
         uint256 debtReserveId
@@ -60,8 +50,6 @@ abstract contract LensPrice is LensBase {
         (v.blockNumber, v.timestamp) = (block.number, block.timestamp);
     }
 
-    /// @notice `ILensLiquidation.getApplicationState`: a Hub's pause state held by the MarketRegistry.
-    /// @custom:spec REQ-LENS-031, REQ-LENS-006
     function getApplicationState(
         address hub
     ) external view returns (PauseState state) {
@@ -69,8 +57,6 @@ abstract contract LensPrice is LensBase {
         state = _registry().pauseState(hub);
     }
 
-    /// @notice `ILensLiquidation.getPauseReason`: a Hub's pause reason as its `PauseReason` ordinal.
-    /// @custom:spec REQ-LENS-031, REQ-LENS-006
     function getPauseReason(
         address hub
     ) external view returns (uint8 reason) {
@@ -78,9 +64,6 @@ abstract contract LensPrice is LensBase {
         reason = uint8(_registry().pauseReason(hub));
     }
 
-    // ------------------------------------------------------------------------------------------------------ internal
-
-    /// @dev The vault token's market and its LPOracle.
     function _lpOracleOf(
         address vaultToken
     ) internal view returns (uint256 marketId, address lpOracle) {
@@ -88,10 +71,7 @@ abstract contract LensPrice is LensBase {
         lpOracle = _market(marketId).lpOracle;
     }
 
-    /// @dev The state LPVaultSwap applies when the market is seized: Expired once a disagreement has passed
-    /// `disagreementPauseMax`, Cached when a serving alternate leg is older than its `borrowPriceMaxAge`, Drifting while
-    /// a disagreement pause holds a Live market, else the price state.
-    /// @custom:spec REQ-LENS-015, REQ-SWAP-008, REQ-ORACLE-090
+    /// @dev The state LPVaultSwap applies when the market is seized (Expired, Cached or Drifting override the state).
     function _liquidationState(
         PriceStateView memory ps
     ) internal pure returns (PriceState s) {
