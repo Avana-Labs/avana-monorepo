@@ -162,7 +162,7 @@ Callers import only the piece they call, for example `IRiskModule` for `checkPle
 |---|---|
 | MarketRegistry | `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistryRoutes`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistryBase` |
 | ParameterStore | `IParameterStoreTighten`, `IParameterStoreLoosen`, `IParameterStoreListing`, `IParameterStore`, `IParameterStore`, `IParameterStore`, `IParameterStore`, `IParameterStore`, `IParameterStore` |
-| AaveAdapter | `IAaveAdapterUser`, `IAaveAdapterCollateral`, `IAaveAdapterSettlement`, `IAaveAdapterAdmin`, `IAaveAdapterViews` |
+| AaveAdapter | `IAaveAdapter`, `IAaveAdapter`, `IAaveAdapter`, `IAaveAdapter`, `IAaveAdapter` |
 | LPVault | `ILPVault`, which implements `IAmmIntegration` and `IAmmIntegrationHooks` (`src/amm/`) |
 | Collateralization | `ICollateralizationAdapter`, `ICollateralizationSeizure`, `ICollateralizationUser`, `ICollateralizationDebtMark`, `ICollateralizationViews` |
 | LPVaultSwap | `ILPVaultSwapKeeper`, `ILPVaultSwapPermissionless`, `ILPVaultSwapDeleverage`, `ILPVaultSwapAdmin`, `ILPVaultSwapViews` |

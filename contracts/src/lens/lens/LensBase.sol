@@ -12,7 +12,7 @@ import {ILock} from "../../lock/lock/ILock.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {DebtPriceView as OracleDebtView} from "../../oracle/debt-oracle/types/DebtPriceView.sol";
 import {PriceAge} from "../../oracle/lp-oracle/PriceAge.sol";
-import {IAaveAdapterViews} from "../../policy/aave-adapter/IAaveAdapterViews.sol";
+import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryBase} from "../../policy/market-registry/IMarketRegistryBase.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
@@ -131,7 +131,7 @@ abstract contract LensBase is ILensErrors {
         uint256 marketId,
         address spoke
     ) internal view returns (address proxy, bool deployed) {
-        proxy = IAaveAdapterViews(_ADAPTER).proxyOf(wallet, marketId);
+        proxy = IAaveAdapter(_ADAPTER).proxyOf(wallet, marketId);
         deployed = proxy != address(0);
         if (!deployed) proxy = IProxyManager(_PROXY_MANAGER).predictProxy(wallet, spoke, marketId);
     }

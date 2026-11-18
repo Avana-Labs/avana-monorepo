@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralizationAdapter} from "../../src/custody/collateralization/ICollateralizationAdapter.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 
@@ -131,7 +131,7 @@ contract AaveAdapterExamplesUnitTest is AaveAdapterFixture {
         _setCf(vtReserveId, 3120);
         (, address proxy) = _pledgeAs(alice, MARKET_ID, L_A);
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.InvalidReceiver.selector, address(usdcDebt)));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.InvalidReceiver.selector, address(usdcDebt)));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, usdcReserveId, 10_000_000_000, address(usdcDebt), d, 1.5e18, 0);
         assertEq(adapterC.borrowNonce(proxy), 0, "nonce unchanged");
@@ -194,7 +194,7 @@ contract AaveAdapterExamplesUnitTest is AaveAdapterFixture {
         uint256[] memory onlyGhoCap = new uint256[](1);
         onlyGhoCap[0] = 8040e18;
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.DebtRemaining.selector, usdcReserveId, u));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.DebtRemaining.selector, usdcReserveId, u));
         vm.prank(alice);
         adapterC.repayAllAndWithdraw(MARKET_B, _ref(k12), L_B_HALF, onlyGho, onlyGhoCap, d);
         assertEq(debt.balanceOf(alice), ghoBefore, "nothing moved");
@@ -277,7 +277,7 @@ contract AaveAdapterExamplesUnitTest is AaveAdapterFixture {
         uint256 pending = coll.getPending(vt).units;
         uint256 d = _deadline();
         vm.expectRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.BackingMismatch.selector, supplyAfter, credited, pending)
+            abi.encodeWithSelector(IAaveAdapterBase.BackingMismatch.selector, supplyAfter, credited, pending)
         );
         vm.prank(carol);
         adapterC.pledge(MARKET_ID, _ref(key), d);

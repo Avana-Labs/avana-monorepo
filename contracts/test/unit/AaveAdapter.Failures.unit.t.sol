@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {AaveAdapter} from "../../src/policy/aave-adapter/AaveAdapter.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {BrokenAdapter} from "../utils/mocks/BrokenAdapter.sol";
@@ -51,7 +51,7 @@ contract AaveAdapterFailuresUnitTest is AaveAdapterFixture {
             abi.encode(false, false)
         );
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.CollateralNotEnabled.selector, vtReserveId));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.CollateralNotEnabled.selector, vtReserveId));
         vm.prank(bob);
         adapterC.pledge(MARKET_ID, _ref(key), d);
         assertEq(lpVault.ownerOf(key), bob, "no custody");
@@ -76,7 +76,7 @@ contract AaveAdapterFailuresUnitTest is AaveAdapterFixture {
         lpVault.mintPosition(key, alice, MARKET_ID, UNITS);
         vm.mockCall(vt, abi.encodeCall(IERC20.allowance, (p, aave.cdpSpoke)), abi.encode(uint256(1)));
         uint256 d = _deadline();
-        vm.expectRevert(IAaveAdapterErrors.BalanceDeltaMismatch.selector);
+        vm.expectRevert(IAaveAdapterBase.BalanceDeltaMismatch.selector);
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key), d);
     }
@@ -93,7 +93,7 @@ contract AaveAdapterFailuresUnitTest is AaveAdapterFixture {
             abi.encode(uint256(UNITS))
         );
         uint256 d = _deadline();
-        vm.expectRevert(IAaveAdapterErrors.SupplyIncomplete.selector);
+        vm.expectRevert(IAaveAdapterBase.SupplyIncomplete.selector);
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key), d);
     }
@@ -107,11 +107,11 @@ contract AaveAdapterFailuresUnitTest is AaveAdapterFixture {
         bytes memory call = abi.encodeCall(IAaveV4Spoke.withdraw, (vtReserveId, UNITS, p));
         vm.mockCall(aave.cdpSpoke, call, abi.encode(uint256(UNITS), uint256(UNITS - 1)));
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnitsMismatch.selector, UNITS, UNITS - 1));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnitsMismatch.selector, UNITS, UNITS - 1));
         vm.prank(alice);
         adapterC.withdraw(MARKET_ID, _ref(k1), UNITS, d, 0);
         vm.mockCall(aave.cdpSpoke, call, abi.encode(uint256(UNITS), uint256(UNITS)));
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnitsMismatch.selector, UNITS, 0));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnitsMismatch.selector, UNITS, 0));
         vm.prank(alice);
         adapterC.withdraw(MARKET_ID, _ref(k1), UNITS, d, 0);
         vm.clearMockedCalls();
@@ -141,7 +141,7 @@ contract AaveAdapterFailuresUnitTest is AaveAdapterFixture {
         _fund(alice, debtReserveId, 50e18);
         vm.mockCall(address(debt), abi.encodeCall(IERC20.allowance, (p, aave.cdpSpoke)), abi.encode(uint256(1)));
         uint256 d = _deadline();
-        vm.expectRevert(IAaveAdapterErrors.BalanceDeltaMismatch.selector);
+        vm.expectRevert(IAaveAdapterBase.BalanceDeltaMismatch.selector);
         vm.prank(alice);
         adapterC.repay(alice, MARKET_ID, debtReserveId, 50e18, false, d);
         vm.clearMockedCalls();
@@ -240,7 +240,7 @@ contract AaveAdapterFailuresUnitTest is AaveAdapterFixture {
         lpVault.mintPosition(key, bob, MARKET_ID, UNITS);
         uint256 d = _deadline();
         vm.expectRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.BackingMismatch.selector, 2 * UNITS + 777, 2 * UNITS, 0)
+            abi.encodeWithSelector(IAaveAdapterBase.BackingMismatch.selector, 2 * UNITS + 777, 2 * UNITS, 0)
         );
         vm.prank(bob);
         adapterC.pledge(MARKET_ID, _ref(key), d);

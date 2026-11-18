@@ -9,7 +9,7 @@ import {GovernedTargets} from "../../src/governance/timelock/types/GovernedTarge
 import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {IProxyManager} from "../../src/proxy/proxy-manager/IProxyManager.sol";
@@ -326,16 +326,16 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
         assertGe(_hf(pA), 1e18, "Aave HF >= 1");
         uint256 cap = uint256(IAaveV4Hub(aave.hub).getSpokeConfig(ghoAssetId, aave.cdpSpoke).drawCap) * 1e18;
         assertLe(IAaveV4Hub(aave.hub).getSpokeTotalOwed(ghoAssetId, aave.cdpSpoke), cap, "drawCap");
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.BadNonce.selector, 3, 0));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.BadNonce.selector, 3, 0));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1e18, alice, d, 0, 0);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.DeadlineExpired.selector, block.timestamp - 1));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.DeadlineExpired.selector, block.timestamp - 1));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1e18, alice, block.timestamp - 1, 0, 3);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.InvalidReceiver.selector, pAB));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.InvalidReceiver.selector, pAB));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1e18, pAB, d, 0, 3);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.NoProxy.selector, attacker, MARKET_ID));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.NoProxy.selector, attacker, MARKET_ID));
         vm.prank(attacker);
         adapterC.borrow(MARKET_ID, debtReserveId, 1e18, attacker, d, 0, 0);
     }
@@ -418,7 +418,7 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
         registry.setDebtReserve(aave.cdpSpoke, usdcReserveId, def2);
         uint256 d = _deadline();
         vm.expectRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.UnknownDebtReserve.selector, aave.cdpSpoke, debtReserveId)
+            abi.encodeWithSelector(IAaveAdapterBase.UnknownDebtReserve.selector, aave.cdpSpoke, debtReserveId)
         );
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1e18, alice, d, 0, 2);

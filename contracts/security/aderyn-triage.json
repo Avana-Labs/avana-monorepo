@@ -1663,9 +1663,9 @@
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "e6e914ac551ec6ec",
+      "fingerprint": "a9dc7f4b894e6b68",
       "check": "unused-error",
-      "file": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+      "file": "src/policy/aave-adapter/IAaveAdapterBase.sol",
       "reason": "`LockHeld` is raised by the Lock's acquire and propagates through every entry point; it is declared on the Adapter so the app decodes it from the Adapter's ABI (REQ-PROXY-076). Covered by the LockHeld tests of AaveAdapter.Lock.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: errors declared for the ABI (as the ILPVaultSwapErrors LockHeld entry)."

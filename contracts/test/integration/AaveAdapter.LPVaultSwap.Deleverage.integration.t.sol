@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {AdapterSwapFixture} from "../utils/fixtures/AdapterSwapFixture.sol";
 
 interface IBorrowableSwitch {
@@ -93,7 +93,7 @@ contract AaveAdapterLPVaultSwapDeleverageIntegrationTest is AdapterSwapFixture {
         RepayWithCollateralParams memory p = _params(units, new uint256[](0));
         p.minAssetOut = sandwiched + 1;
         vm.expectRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.AssetOutBelowMinimum.selector, sandwiched, sandwiched + 1)
+            abi.encodeWithSelector(IAaveAdapterBase.AssetOutBelowMinimum.selector, sandwiched, sandwiched + 1)
         );
         vm.prank(alice);
         adapterC.repayWithCollateral(p);

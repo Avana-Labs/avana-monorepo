@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {ILPVaultSwapAdmin} from "../../liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {IAaveAdapterAdmin} from "../../policy/aave-adapter/IAaveAdapterAdmin.sol";
+import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
@@ -108,7 +108,7 @@ library TimelockSelectors {
     function _isInitializer(
         bytes4 selector
     ) private pure returns (bool) {
-        return selector == IAaveAdapterAdmin.initialize.selector || selector == IRiskModule.initialize.selector
+        return selector == IAaveAdapter.initialize.selector || selector == IRiskModule.initialize.selector
             || selector == IMarketRegistry.initialize.selector || selector == IParameterStore.initialize.selector
             || selector == ILPOracle.initialize.selector || selector == IDebtOracle.initialize.selector
             || selector == ILPVaultSwapAdmin.initialize.selector;

@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {ILensHubReads} from "../../src/lens/lens/ILensHubReads.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
 
@@ -137,7 +137,7 @@ contract AaveAdapterFuzzTest is AaveAdapterFixture {
         _fund(carol, reserve, cap);
         if (all && cap < debtNow) {
             uint256 d = _deadline();
-            vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.RepayExceedsMax.selector, debtNow, cap));
+            vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.RepayExceedsMax.selector, debtNow, cap));
             vm.prank(carol);
             adapterC.repay(alice, MARKET_ID, reserve, cap, true, d);
             return;
@@ -234,7 +234,7 @@ contract AaveAdapterFuzzTest is AaveAdapterFixture {
             uint256 amount = reserve == debtReserveId ? 1e18 : 1e6;
             uint256 d = _deadline();
             if (expected != current) {
-                vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.BadNonce.selector, current, expected));
+                vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.BadNonce.selector, current, expected));
             } else {
                 ++successes;
             }
@@ -344,7 +344,7 @@ contract AaveAdapterFuzzTest is AaveAdapterFixture {
         uint256 nonce = adapterC.borrowNonce(p);
         uint256 d = _deadline();
         uint256 before = debt.balanceOf(receiver);
-        if (refused) vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.InvalidReceiver.selector, receiver));
+        if (refused) vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.InvalidReceiver.selector, receiver));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 10e18, receiver, d, 0, nonce);
         if (!refused) assertEq(debt.balanceOf(receiver) - before, 10e18, "receiver paid exactly");

@@ -13,7 +13,7 @@ import {LiquidationParams} from "../../liquidation/lp-vault-swap/types/Liquidati
 import {RouteMode} from "../../liquidation/lp-vault-swap/types/RouteMode.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {IAaveAdapterViews} from "../../policy/aave-adapter/IAaveAdapterViews.sol";
+import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../types/Market.sol";
 import {PriceStateView} from "../../types/PriceStateView.sol";
@@ -82,7 +82,7 @@ abstract contract LensLiquidation is LensBase {
         uint256 debtReserveId
     ) internal view returns (Ctx memory c) {
         // forge-lint: disable-next-line(unused-return)
-        (address spoke, uint256 marketId, address vaultToken,) = IAaveAdapterViews(_ADAPTER).accountOf(proxy);
+        (address spoke, uint256 marketId, address vaultToken,) = IAaveAdapter(_ADAPTER).accountOf(proxy);
         if (vaultToken == address(0) || !IVaultToken(vaultToken).isValidProxy(proxy)) revert UnknownProxy(proxy);
         c.spoke = spoke;
         c.def = _debtReserve(spoke, debtReserveId);

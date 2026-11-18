@@ -8,10 +8,9 @@ import {ICollateralizationViews} from "../../src/custody/collateralization/IColl
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {DeleverageRequest} from "../../src/liquidation/lp-vault-swap/types/DeleverageRequest.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
-import {IAaveAdapterSettlement} from "../../src/policy/aave-adapter/IAaveAdapterSettlement.sol";
-import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
@@ -75,7 +74,7 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
             1
         );
         vm.expectEmit(adapter);
-        emit IAaveAdapterEvents.RepaidWithCollateral(
+        emit IAaveAdapterBase.RepaidWithCollateral(
             alice, MARKET_ID, vt, k1, RELEASE, debtReserveId, 3000e18, 0, hfBefore, hfAfter
         );
         (uint256 repaid, uint256 out) = _rwcAs(alice, params);
@@ -106,7 +105,7 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
         RepayWithCollateralParams memory params = _rwc(MARKET_ID, k1, 5_000_000_000, debtReserveId);
         uint256 hfBefore = _hf(p);
         vm.expectEmit(adapter);
-        emit IAaveAdapterEvents.RepaidWithCollateral(
+        emit IAaveAdapterBase.RepaidWithCollateral(
             alice, MARKET_ID, vt, k1, 5_000_000_000, debtReserveId, 10_000e18, 500e18, hfBefore, type(uint256).max
         );
         _rwcAs(alice, params);
@@ -122,7 +121,7 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
         RepayWithCollateralParams memory params = _rwc(MARKET_ID, k1, 5_000_000_000, debtReserveId);
         params.minAssetOut = 500e18 + 1;
         _expectRwcRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.AssetOutBelowMinimum.selector, 500e18, 500e18 + 1), params
+            abi.encodeWithSelector(IAaveAdapterBase.AssetOutBelowMinimum.selector, 500e18, 500e18 + 1), params
         );
         params.minAssetOut = 500e18;
         (, uint256 out) = _rwcAs(alice, params);
@@ -152,14 +151,14 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
         uint256 before = _hf(p);
         uint256 afterHf = uint256(12_800e18) * 1e18 / 9900e18;
         _expectRwcRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.HealthFactorNotImproved.selector, before, afterHf), params
+            abi.encodeWithSelector(IAaveAdapterBase.HealthFactorNotImproved.selector, before, afterHf), params
         );
         swap.setDeleverage(3000e18, 2e12, 0);
         params = _rwc(MARKET_ID, k1, RELEASE, debtReserveId);
         params.minHealthFactor = 3e18;
         uint256 good = uint256((UNITS - RELEASE) * 2 * 8000 / 10_000) * 1e12 * 1e18 / 7000e18;
         _expectRwcRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.HealthFactorNotImproved.selector, before, good), params
+            abi.encodeWithSelector(IAaveAdapterBase.HealthFactorNotImproved.selector, before, good), params
         );
     }
 
@@ -169,24 +168,24 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
         RepayWithCollateralParams memory params = _rwc(MARKET_ID, k1, 0, usdcReserveId);
         params.position = PositionRef(9, k1);
         params.deadline = block.timestamp - 1;
-        _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterErrors.DeadlineExpired.selector, params.deadline), params);
+        _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterBase.DeadlineExpired.selector, params.deadline), params);
         params.deadline = _deadline();
-        _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterErrors.ZeroAmount.selector), params);
+        _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterBase.ZeroAmount.selector), params);
         params.units = RELEASE;
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.NoProxy.selector, bob, MARKET_ID));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.NoProxy.selector, bob, MARKET_ID));
         vm.prank(bob);
         adapterC.repayWithCollateral(params);
         _pause(PauseState.Paused, PauseReason.MintPathSuspect);
-        _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector), params);
+        _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector), params);
         _pause(PauseState.None, PauseReason.None);
-        _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterErrors.IntegrationMismatch.selector, MARKET_ID, 9), params);
+        _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterBase.IntegrationMismatch.selector, MARKET_ID, 9), params);
         params.position = _ref(k1);
         params.debtReserveId = vtReserveId;
         _expectRwcRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.UnknownDebtReserve.selector, aave.cdpSpoke, vtReserveId), params
+            abi.encodeWithSelector(IAaveAdapterBase.UnknownDebtReserve.selector, aave.cdpSpoke, vtReserveId), params
         );
         params.debtReserveId = usdcReserveId;
-        _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterErrors.NothingToRepay.selector, usdcReserveId), params);
+        _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterBase.NothingToRepay.selector, usdcReserveId), params);
     }
 
     // TEST-192 verifies: REQ-ADAPTER-080, REQ-ADAPTER-045, REQ-ADAPTER-046, REQ-ADAPTER-082, REQ-ADAPTER-086, Q-356
@@ -202,7 +201,7 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
         _rwcAs(alice, _rwc(MARKET_ID, k1, 500_000_000, debtReserveId));
         _pause(PauseState.Paused, PauseReason.MintPathSuspect);
         _expectRwcRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector),
+            abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector),
             _rwc(MARKET_ID, k1, 500_000_000, debtReserveId)
         );
     }
@@ -276,12 +275,12 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
         params.minAmounts[0] = 1;
         for (uint256 i = 0; i < modes.length; ++i) {
             swap.setMode(modes[i]);
-            _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterErrors.NoDeleverageSession.selector), params);
+            _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterBase.NoDeleverageSession.selector), params);
         }
         swap.setMode(LPVaultSwapMock.Mode.ReleaseOtherProxy);
-        _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterErrors.NoDeleverageSession.selector), params);
+        _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterBase.NoDeleverageSession.selector), params);
         swap.setMode(LPVaultSwapMock.Mode.ZeroRepay);
-        _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterErrors.ZeroAmount.selector), params);
+        _expectRwcRevert(abi.encodeWithSelector(IAaveAdapterBase.ZeroAmount.selector), params);
         swap.setMode(LPVaultSwapMock.Mode.Normal);
         _rwcAs(alice, params);
         assertEq(_sharesOf(bobProxy, vtReserveId), UNITS, "bob untouched");
@@ -291,20 +290,19 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
     /// @notice The callbacks answer only LPVaultSwap while the Adapter holds the Lock: any other caller, LPVaultSwap
     /// with no Lock, and LPVaultSwap holding the Lock itself get `NotLPVaultSwap`.
     function test_TEST_060_callbacksOutsideSession() public {
-        bytes memory repayCall = abi.encodeCall(IAaveAdapterSettlement.deleverageRepay, (p, debtReserveId, 1e18));
-        bytes memory releaseCall =
-            abi.encodeCall(IAaveAdapterSettlement.deleverageRelease, (p, _ref(k1), RELEASE, _mins()));
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        bytes memory repayCall = abi.encodeCall(IAaveAdapter.deleverageRepay, (p, debtReserveId, 1e18));
+        bytes memory releaseCall = abi.encodeCall(IAaveAdapter.deleverageRelease, (p, _ref(k1), RELEASE, _mins()));
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         vm.prank(attacker);
-        IAaveAdapterSettlement(adapter).deleverageRepay(p, debtReserveId, 1e18);
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        IAaveAdapter(adapter).deleverageRepay(p, debtReserveId, 1e18);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         vm.prank(alice);
-        IAaveAdapterSettlement(adapter).deleverageRelease(p, _ref(k1), RELEASE, _mins());
+        IAaveAdapter(adapter).deleverageRelease(p, _ref(k1), RELEASE, _mins());
         (bool ok, bytes memory ret) = swap.callUnlocked(adapter, repayCall);
         assertFalse(ok, "unlocked repay");
-        assertEq(ret, abi.encodeWithSelector(IAaveAdapterErrors.NotLPVaultSwap.selector), "NotLPVaultSwap");
+        assertEq(ret, abi.encodeWithSelector(IAaveAdapterBase.NotLPVaultSwap.selector), "NotLPVaultSwap");
         bytes memory err = swap.callUnderLock(adapter, releaseCall);
-        assertEq(err, abi.encodeWithSelector(IAaveAdapterErrors.NotLPVaultSwap.selector), "LPVaultSwap's own lock");
+        assertEq(err, abi.encodeWithSelector(IAaveAdapterBase.NotLPVaultSwap.selector), "LPVaultSwap's own lock");
     }
 
     // TEST-060 verifies: REQ-LOCK-007, REQ-LOCK-030, REQ-ADAPTER-050, ATTACK-092
@@ -328,7 +326,7 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
         );
         // The mock's swap needs no tokens: its recovery is minted.
         _expectRwcRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.BackingMismatch.selector, UNITS - RELEASE, UNITS, 0),
+            abi.encodeWithSelector(IAaveAdapterBase.BackingMismatch.selector, UNITS - RELEASE, UNITS, 0),
             _rwc(MARKET_ID, k1, RELEASE, debtReserveId)
         );
     }
@@ -359,26 +357,26 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
     /// another holder has the Lock; `UnknownMarket` for a token outside the factory or naming another market;
     /// `ZeroAmount` for 0 units.
     function test_TEST_208_burnSeizedRefusals() public {
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         vm.prank(attacker);
-        IAaveAdapterSettlement(adapter).burnSeized(MARKET_ID, vt, 1);
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        IAaveAdapter(adapter).burnSeized(MARKET_ID, vt, 1);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         swap.burnWithoutLock(MARKET_ID, vt, 1);
         vm.mockCall(address(lock), abi.encodeCall(ILock.holder, ()), abi.encode(address(swap)));
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         vm.prank(attacker);
-        IAaveAdapterSettlement(adapter).burnSeized(MARKET_ID, vt, 1);
+        IAaveAdapter(adapter).burnSeized(MARKET_ID, vt, 1);
         vm.clearMockedCalls();
         vm.mockCall(address(lock), abi.encodeCall(ILock.holder, ()), abi.encode(adapter));
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         vm.prank(address(swap));
-        IAaveAdapterSettlement(adapter).burnSeized(MARKET_ID, vt, 1);
+        IAaveAdapter(adapter).burnSeized(MARKET_ID, vt, 1);
         vm.clearMockedCalls();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnknownMarket.selector, MARKET_B));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnknownMarket.selector, MARKET_B));
         swap.burnUnderLock(MARKET_B, vt, 1);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnknownMarket.selector, MARKET_ID));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnknownMarket.selector, MARKET_ID));
         swap.burnUnderLock(MARKET_ID, address(usdc), 1);
-        vm.expectRevert(IAaveAdapterErrors.ZeroAmount.selector);
+        vm.expectRevert(IAaveAdapterBase.ZeroAmount.selector);
         swap.burnUnderLock(MARKET_ID, vt, 0);
     }
 

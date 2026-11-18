@@ -7,7 +7,7 @@ import {Pending} from "../../../src/custody/collateralization/types/Pending.sol"
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
 import {AaveAdapterStorage} from "../../../src/policy/aave-adapter/AaveAdapterStorage.sol";
-import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
+import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {DebtReserveDef, SpokeDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {RiskModuleMath} from "../../../src/policy/risk-module/RiskModuleMath.sol";
 import {PositionProxy} from "../../../src/proxy/position-proxy/PositionProxy.sol";

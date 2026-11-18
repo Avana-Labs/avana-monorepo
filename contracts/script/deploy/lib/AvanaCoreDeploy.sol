@@ -7,8 +7,8 @@ import {GovernedTargets} from "../../../src/governance/timelock/types/GovernedTa
 import {SelectorPair} from "../../../src/governance/timelock/types/SelectorPair.sol";
 import {ILPVaultSwapAdmin} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
 import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
-import {IAaveAdapterAdmin} from "../../../src/policy/aave-adapter/IAaveAdapterAdmin.sol";
-import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
+import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
@@ -235,7 +235,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2], d.logics[3]);
         d.implementation =
             _deploy("AaveAdapterImplementation", bytes.concat(_artifact("AaveAdapter.sol", "AaveAdapter"), im, logics));
-        d.proxy = _proxy("AaveAdapter", d.implementation, abi.encodeCall(IAaveAdapterAdmin.initialize, (p.timelock)));
+        d.proxy = _proxy("AaveAdapter", d.implementation, abi.encodeCall(IAaveAdapter.initialize, (p.timelock)));
     }
 
     /// @notice LPVaultSwap: liquidation, pending and deleverage logic, the router, the proxy with the keepers.

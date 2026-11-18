@@ -7,10 +7,8 @@ import {ICollateralizationErrors} from "../../src/custody/collateralization/ICol
 import {ICollateralizationUser} from "../../src/custody/collateralization/ICollateralizationUser.sol";
 import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
-import {IAaveAdapterCollateral} from "../../src/policy/aave-adapter/IAaveAdapterCollateral.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IAaveAdapterSettlement} from "../../src/policy/aave-adapter/IAaveAdapterSettlement.sol";
-import {IAaveAdapterUser} from "../../src/policy/aave-adapter/IAaveAdapterUser.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -45,19 +43,19 @@ contract AaveAdapterLockUnitTest is AaveAdapterFixture {
     function _entryPoints() internal view returns (bytes[] memory calls) {
         uint256 past = block.timestamp - 1;
         calls = new bytes[](11);
-        calls[0] = abi.encodeCall(IAaveAdapterUser.pledge, (99, _ref(kA), past));
-        calls[1] = abi.encodeCall(IAaveAdapterUser.borrow, (99, 0, 0, address(0), past, 0, 7));
-        calls[2] = abi.encodeCall(IAaveAdapterUser.repay, (attacker, 99, 0, 0, false, past));
-        calls[3] = abi.encodeCall(IAaveAdapterUser.withdraw, (99, _ref(kA), 0, past, 0));
+        calls[0] = abi.encodeCall(IAaveAdapter.pledge, (99, _ref(kA), past));
+        calls[1] = abi.encodeCall(IAaveAdapter.borrow, (99, 0, 0, address(0), past, 0, 7));
+        calls[2] = abi.encodeCall(IAaveAdapter.repay, (attacker, 99, 0, 0, false, past));
+        calls[3] = abi.encodeCall(IAaveAdapter.withdraw, (99, _ref(kA), 0, past, 0));
         calls[4] = abi.encodeCall(
-            IAaveAdapterUser.repayAllAndWithdraw, (99, _ref(kA), 0, new uint256[](1), new uint256[](2), past)
+            IAaveAdapter.repayAllAndWithdraw, (99, _ref(kA), 0, new uint256[](1), new uint256[](2), past)
         );
-        calls[5] = abi.encodeCall(IAaveAdapterUser.collectFees, (99, _ref(kA), past));
-        calls[6] = abi.encodeCall(IAaveAdapterUser.releaseZeroCredit, (99, _ref(kA), past));
-        calls[7] = abi.encodeCall(IAaveAdapterUser.refreshDebtMark, (pA));
-        calls[8] = abi.encodeCall(IAaveAdapterCollateral.removeLiquidity, (99, _ref(kA), 0, _mins(), past, 0));
-        calls[9] = abi.encodeCall(IAaveAdapterCollateral.recredit, (99, _ref(kA), "", past));
-        calls[10] = abi.encodeCall(IAaveAdapterCollateral.repayWithCollateral, (_rwc(99, kA, 0, debtReserveId)));
+        calls[5] = abi.encodeCall(IAaveAdapter.collectFees, (99, _ref(kA), past));
+        calls[6] = abi.encodeCall(IAaveAdapter.releaseZeroCredit, (99, _ref(kA), past));
+        calls[7] = abi.encodeCall(IAaveAdapter.refreshDebtMark, (pA));
+        calls[8] = abi.encodeCall(IAaveAdapter.removeLiquidity, (99, _ref(kA), 0, _mins(), past, 0));
+        calls[9] = abi.encodeCall(IAaveAdapter.recredit, (99, _ref(kA), "", past));
+        calls[10] = abi.encodeCall(IAaveAdapter.repayWithCollateral, (_rwc(99, kA, 0, debtReserveId)));
     }
 
     // TEST-060 verifies: REQ-PROXY-048, REQ-PROXY-076, REQ-LOCK-007, REQ-ADAPTER-050, INV-054, INV-091
@@ -157,21 +155,21 @@ contract AaveAdapterLockUnitTest is AaveAdapterFixture {
         bytes32 keyC = _newKey();
         lpVault.mintPosition(keyC, bob, MARKET_ID, UNITS);
         bytes memory lockHeld = abi.encodeWithSelector(ILock.LockHeld.selector, adapter);
-        lpVault.armReceiveHook(adapter, abi.encodeCall(IAaveAdapterUser.pledge, (MARKET_ID, _ref(keyC), _deadline())));
+        lpVault.armReceiveHook(adapter, abi.encodeCall(IAaveAdapter.pledge, (MARKET_ID, _ref(keyC), _deadline())));
         vm.prank(bob);
         adapterC.pledge(MARKET_ID, _ref(keyB), _deadline());
         assertFalse(lpVault.receiveHookSucceeded(), "re-entered pledge refused");
         assertEq(lpVault.receiveHookReturn(), lockHeld, "LockHeld during pledge");
         assertEq(lpVault.ownerOf(keyC), bob, "re-entry moved nothing");
 
-        debt.armHook(adapter, abi.encodeCall(IAaveAdapterUser.withdraw, (MARKET_ID, _ref(kA), UNITS, _deadline(), 0)));
+        debt.armHook(adapter, abi.encodeCall(IAaveAdapter.withdraw, (MARKET_ID, _ref(kA), UNITS, _deadline(), 0)));
         vm.prank(alice);
         adapterC.repay(alice, MARKET_ID, debtReserveId, 5e18, false, _deadline());
         assertTrue(debt.hookFired() && !debt.hookSucceeded(), "re-entered withdraw refused");
         assertEq(debt.hookReturn(), lockHeld, "LockHeld during repay");
 
         usdc.armHook(
-            adapter, abi.encodeCall(IAaveAdapterUser.borrow, (MARKET_ID, debtReserveId, 1e18, alice, _deadline(), 0, 1))
+            adapter, abi.encodeCall(IAaveAdapter.borrow, (MARKET_ID, debtReserveId, 1e18, alice, _deadline(), 0, 1))
         );
         vm.prank(alice);
         adapterC.removeLiquidity(MARKET_ID, _ref(kA), 1_000_000_000, _mins(), _deadline(), 0);
@@ -220,18 +218,17 @@ contract AaveAdapterLockUnitTest is AaveAdapterFixture {
     /// @notice The inner callees answer only under the right holder: `burnSeized` only LPVaultSwap under its own Lock,
     /// the deleverage callbacks only LPVaultSwap under the Adapter's Lock.
     function test_TEST_270_innerCalleesCheckHolder() public {
-        bytes memory notSwap = abi.encodeWithSelector(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        bytes memory notSwap = abi.encodeWithSelector(IAaveAdapterBase.NotLPVaultSwap.selector);
         (bool ok, bytes memory ret) =
-            swap.callUnlocked(adapter, abi.encodeCall(IAaveAdapterSettlement.burnSeized, (MARKET_ID, vt, 1)));
+            swap.callUnlocked(adapter, abi.encodeCall(IAaveAdapter.burnSeized, (MARKET_ID, vt, 1)));
         assertFalse(ok, "burnSeized without the Lock");
         assertEq(ret, notSwap, "NotLPVaultSwap");
-        bytes memory err = swap.callUnderLock(
-            adapter, abi.encodeCall(IAaveAdapterSettlement.deleverageRepay, (pA, debtReserveId, 1e18))
-        );
+        bytes memory err =
+            swap.callUnderLock(adapter, abi.encodeCall(IAaveAdapter.deleverageRepay, (pA, debtReserveId, 1e18)));
         assertEq(err, notSwap, "callback under LPVaultSwap's Lock");
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         vm.prank(alice);
-        IAaveAdapterSettlement(adapter).burnSeized(MARKET_ID, vt, 1);
+        IAaveAdapter(adapter).burnSeized(MARKET_ID, vt, 1);
     }
 
     // TEST-060 verifies: REQ-LOCK-030, REQ-ADAPTER-081, REQ-PROXY-048

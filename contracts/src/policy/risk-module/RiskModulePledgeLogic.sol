@@ -21,7 +21,7 @@ import {PledgeCounters} from "../../types/PledgeCounters.sol";
 import {PledgePreview} from "../../types/PledgePreview.sol";
 import {PriceState} from "../../types/PriceState.sol";
 import {PriceStateView} from "../../types/PriceStateView.sol";
-import {IAaveAdapterViews} from "../aave-adapter/IAaveAdapterViews.sol";
+import {IAaveAdapter} from "../aave-adapter/IAaveAdapter.sol";
 import {BreakerReasons} from "../market-registry/types/Breaker.sol";
 import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
@@ -77,8 +77,8 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         bytes32 positionKey
     ) external view override returns (PledgePreview memory p) {
         Market memory m = _market(marketId);
-        address proxy = IAaveAdapterViews(_ADAPTER).proxyOf(depositor, marketId);
-        if (proxy == address(0)) proxy = IAaveAdapterViews(_ADAPTER).predictProxy(depositor, marketId);
+        address proxy = IAaveAdapter(_ADAPTER).proxyOf(depositor, marketId);
+        if (proxy == address(0)) proxy = IAaveAdapter(_ADAPTER).predictProxy(depositor, marketId);
         ICollateralizationViews coll = ICollateralizationViews(_COLLATERALIZATION);
         PledgeCounters memory k = coll.getCounters(m.vaultToken, depositor);
         k.accountRecords = coll.getOpenRecordCount(proxy, m.vaultToken);

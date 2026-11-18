@@ -24,9 +24,7 @@ import {RiskModuleMath} from "../risk-module/RiskModuleMath.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
-import {AaveAdapterImmutables} from "./types/AaveAdapterImmutables.sol";
-import {AdapterAccount} from "./types/AdapterAccount.sol";
-import {RepayWithCollateralParams} from "./types/RepayWithCollateralParams.sol";
+import {AaveAdapterImmutables, AdapterAccount, RepayWithCollateralParams} from "./types/AaveAdapterTypes.sol";
 
 /// @title AaveAdapterCollateralLogic
 /// @notice Bodies of `removeLiquidity`, `recredit` and `repayWithCollateral`.

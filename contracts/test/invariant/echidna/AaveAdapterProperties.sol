@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {Pending} from "../../../src/custody/collateralization/types/Pending.sol";
 import {AaveAdapterSteps} from "../../../src/policy/aave-adapter/AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "../../../src/policy/aave-adapter/AaveAdapterStorage.sol";
-import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
+import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 
 /// @notice The two Collateralization views the backing gap reads, with balances the harness sets.
 contract AdapterBackingLedger {

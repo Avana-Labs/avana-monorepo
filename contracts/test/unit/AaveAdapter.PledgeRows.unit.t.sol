@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
 import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
@@ -29,18 +29,18 @@ contract AaveAdapterPledgeRowsUnitTest is AaveAdapterFixture {
         bytes32 key = _newKey();
         lpVault.mintPosition(key, alice, MARKET_ID, UNITS);
         uint256 past = block.timestamp - 1;
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.DeadlineExpired.selector, past));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.DeadlineExpired.selector, past));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key), past);
 
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnknownMarket.selector, 99));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnknownMarket.selector, 99));
         vm.prank(alice);
         adapterC.pledge(99, _ref(key), d);
 
         // The registry names another Spoke than the vault token's own `spoke()`.
         registry.setMarketSpoke(MARKET_ID, aave.lendSpoke);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnknownMarket.selector, MARKET_ID));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnknownMarket.selector, MARKET_ID));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key), d);
         registry.setMarketSpoke(MARKET_ID, aave.cdpSpoke);
@@ -48,7 +48,7 @@ contract AaveAdapterPledgeRowsUnitTest is AaveAdapterFixture {
         registry.setSpoke(
             aave.cdpSpoke, SpokeDef(false, aave.hub, INTEGRATION, RiskTier.Stable, address(0), address(0))
         );
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnknownSpoke.selector, aave.cdpSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnknownSpoke.selector, aave.cdpSpoke));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key), d);
 

@@ -29,14 +29,14 @@ sequenceDiagram
 Setup (Base market 3 on Spoke `S`, Carol's first pledge, 3.1 `DEP-029`).
 
 1. **App → Lens [`predictProxy`](../../lens/lens/ILensAccount.sol#L14)`(Carol, 3)`**, backed by [`predictProxy`](ProxyManager.sol#L59)`(Carol, S, 3)`: `Create2.computeAddress(keccak256(abi.encode(Carol, S, 3)), keccak256(type(PositionProxy).creationCode ‖ abi.encode(ADAPTER, Carol, S, 3)))`, built by [`_salt`](ProxyManager.sol#L92) and [`_initCode`](ProxyManager.sol#L100), the only two places the key `(wallet, spoke, marketId)` is encoded. The app shows this address before Carol signs; it never changes because the ProxyManager is immutable. A zero wallet, Spoke or market reverts [`ZeroAddress`](IProxyManager.sol#L24): no such proxy can exist.
-2. **Carol → AaveAdapter [`pledge`](../../policy/aave-adapter/IAaveAdapterUser.sol#L13)`(3, …)`** with no proxy for market 3.
+2. **Carol → AaveAdapter [`pledge`](../../policy/aave-adapter/IAaveAdapter.sol#L78)`(3, …)`** with no proxy for market 3.
 3. **AaveAdapter → [`deployProxy`](ProxyManager.sol#L39)`(Carol, S, 3)`** creates `P` with CREATE2 from the same salt and init-code bytes the prediction hashed; [`PROXY_CREATION_CODE_HASH`](ProxyManager.sol#L69) is the manifest's record of the creation code. Event: [`ProxyDeployed`](IProxyManager.sol#L12)`(Carol, S, 3, P)`, then the Adapter's `UserProxyCreated` and VaultToken `ProxyAdded(P)`. Errors: [`OnlyAdapter`](IProxyManager.sol#L15), [`ZeroAddress`](IProxyManager.sol#L24), [`ProxyExists`](IProxyManager.sol#L18), [`AddressIsFrozen`](IProxyManager.sol#L21) (a frozen wallet gets no new account), in that order of checks (freeze last, after `ProxyExists`); OpenZeppelin's `FailedDeployment()` if the predicted address already has a nonce or storage (only through an address collision, `REQ-PROXY-055`); [`ProxyAddressMismatch`](IProxyManager.sol#L28) guards the CREATE2 result and cannot fire while the EVM rule holds.
 4. **Carol's second pledge to market 3** finds `proxyOf[Carol][3] = P` and does not call the ProxyManager.
 5. **Carol pledges to market B on the same Spoke**: a second proxy `P_B` at `predictProxy(Carol, S, m_B)`. A liquidation of `P_B` never seizes market 3's collateral.
 
 ## What the UI reads and calls
 
-- Lens: [`predictProxy`](../../lens/lens/ILensAccount.sol#L14); AaveAdapter [`proxyOf`](../../policy/aave-adapter/IAaveAdapterViews.sol#L11).
+- Lens: [`predictProxy`](../../lens/lens/ILensAccount.sol#L14); AaveAdapter [`proxyOf`](../../policy/aave-adapter/IAaveAdapter.sol#L158).
 - Events to index: [`ProxyDeployed`](IProxyManager.sol#L12).
 - User calls: none.
 

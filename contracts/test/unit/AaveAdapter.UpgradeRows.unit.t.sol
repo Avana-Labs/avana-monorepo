@@ -12,7 +12,7 @@ import {AaveAdapterCollateralLogic} from "../../src/policy/aave-adapter/AaveAdap
 import {AaveAdapterExitLogic} from "../../src/policy/aave-adapter/AaveAdapterExitLogic.sol";
 import {AaveAdapterSettlementLogic} from "../../src/policy/aave-adapter/AaveAdapterSettlementLogic.sol";
 import {AaveAdapterUserLogic} from "../../src/policy/aave-adapter/AaveAdapterUserLogic.sol";
-import {AaveAdapterLogics} from "../../src/policy/aave-adapter/types/AaveAdapterLogics.sol";
+import {AaveAdapterLogics} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";

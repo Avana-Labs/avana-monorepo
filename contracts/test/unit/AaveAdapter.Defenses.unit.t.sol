@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -56,7 +55,7 @@ contract AaveAdapterDefensesUnitTest is AaveAdapterFixture {
     function test_TEST_027_forwardLegCreditRefused() public {
         _creditProxyOnSecondTransfer(debt, 1);
         uint256 d = _deadline();
-        vm.expectRevert(IAaveAdapterErrors.BalanceDeltaMismatch.selector);
+        vm.expectRevert(IAaveAdapterBase.BalanceDeltaMismatch.selector);
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1000e18, alice, d, 0, 0);
         assertEq(_debtOf(p, debtReserveId), 0, "no debt");
@@ -67,7 +66,7 @@ contract AaveAdapterDefensesUnitTest is AaveAdapterFixture {
     function test_TEST_027_nothingDrawnRefused() public {
         vm.mockCall(address(debt), abi.encodeCall(debt.balanceOf, (p)), abi.encode(uint256(0)));
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnitsMismatch.selector, 1000e18, 0));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnitsMismatch.selector, 1000e18, 0));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1000e18, alice, d, 0, 0);
     }
@@ -80,7 +79,7 @@ contract AaveAdapterDefensesUnitTest is AaveAdapterFixture {
         _fund(bob, debtReserveId, 500e18);
         _creditProxyOnSecondTransfer(debt, 600e18);
         uint256 d = _deadline();
-        vm.expectRevert(IAaveAdapterErrors.BalanceDeltaMismatch.selector);
+        vm.expectRevert(IAaveAdapterBase.BalanceDeltaMismatch.selector);
         vm.prank(bob);
         adapterC.repay(alice, MARKET_ID, debtReserveId, 500e18, false, d);
         assertEq(_debtOf(p, debtReserveId), 1000e18, "nothing repaid");
@@ -98,7 +97,7 @@ contract AaveAdapterDefensesUnitTest is AaveAdapterFixture {
         );
         _fund(alice, debtReserveId, 1000e18);
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.DebtRemaining.selector, debtReserveId, 1000e18));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.DebtRemaining.selector, debtReserveId, 1000e18));
         vm.prank(alice);
         adapterC.repay(alice, MARKET_ID, debtReserveId, 1000e18, true, d);
     }
@@ -112,7 +111,7 @@ contract AaveAdapterDefensesUnitTest is AaveAdapterFixture {
         vm.mockCall(aave.cdpSpoke, abi.encodeCall(IAaveV4Spoke.getUserAccountData, (p)), abi.encode(data));
         uint256 count = IAaveV4Spoke(aave.cdpSpoke).getReserveCount();
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.DebtRemaining.selector, count, 0));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.DebtRemaining.selector, count, 0));
         vm.prank(alice);
         adapterC.repayAllAndWithdraw(MARKET_ID, _ref(k1), UNITS, new uint256[](0), new uint256[](0), d);
         assertEq(lpVault.depositorOf(k1), alice, "still in custody");
@@ -130,7 +129,7 @@ contract AaveAdapterDefensesUnitTest is AaveAdapterFixture {
         adapterC.withdraw(MARKET_ID, _ref(k1), UNITS, _deadline(), 0);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         for (uint256 i = 0; i < logs.length; ++i) {
-            assertTrue(logs[i].topics[0] != IAaveAdapterEvents.CollateralDisabled.selector, "no cleanup");
+            assertTrue(logs[i].topics[0] != IAaveAdapterBase.CollateralDisabled.selector, "no cleanup");
         }
         (bool enabled,) = IAaveV4Spoke(aave.cdpSpoke).getUserReserveStatus(vtReserveId, p);
         assertTrue(enabled, "still enabled");
@@ -148,7 +147,7 @@ contract AaveAdapterDefensesUnitTest is AaveAdapterFixture {
             abi.encodeCall(IAaveV4Spoke.getUserSuppliedShares, (vtReserveId, p)),
             abi.encode(uint256(UNITS))
         );
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnitsMismatch.selector, 500_000_000, 0));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnitsMismatch.selector, 500_000_000, 0));
         vm.prank(alice);
         adapterC.repayWithCollateral(_rwc(MARKET_ID, k1, 500_000_000, debtReserveId));
     }

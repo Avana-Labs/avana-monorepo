@@ -7,7 +7,7 @@ import {ICollateralizationErrors} from "../../src/custody/collateralization/ICol
 import {ICollateralizationSeizure} from "../../src/custody/collateralization/ICollateralizationSeizure.sol";
 import {Pending} from "../../src/custody/collateralization/types/Pending.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 
@@ -149,9 +149,9 @@ contract AaveAdapterSeizureRowsUnitTest is AaveAdapterFixture {
         // The Adapter burns only from LPVaultSwap, which holds nothing yet, and only under its Lock.
         vm.expectRevert();
         swap.burnUnderLock(MARKET_ID, vt, 1);
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         swap.burnWithoutLock(MARKET_ID, vt, 1);
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         vm.prank(alice);
         adapterC.burnSeized(MARKET_ID, vt, 1);
         vm.expectRevert();
@@ -199,12 +199,12 @@ contract AaveAdapterSeizureRowsUnitTest is AaveAdapterFixture {
             swap.callUnderLock(address(coll), abi.encodeCall(ICollateralizationSeizure.settlePending, (vt, kept)));
         assertEq(bytes4(err), ICollateralizationErrors.SupplyDropMismatch.selector, "settlement without the burn");
         // Burn callers and markets.
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         vm.prank(alice);
         adapterC.burnSeized(MARKET_ID, vt, kept);
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         swap.burnWithoutLock(MARKET_ID, vt, kept);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnknownMarket.selector, MARKET_B));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnknownMarket.selector, MARKET_B));
         swap.burnUnderLock(MARKET_B, vt, kept);
         // More than pending.
         err = swap.callUnderLock(address(coll), abi.encodeCall(ICollateralizationSeizure.settlePending, (vt, kept + 1)));

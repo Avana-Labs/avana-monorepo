@@ -12,8 +12,7 @@ import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
-import {AaveAdapterImmutables} from "./types/AaveAdapterImmutables.sol";
-import {AdapterAccount} from "./types/AdapterAccount.sol";
+import {AaveAdapterImmutables, AdapterAccount} from "./types/AaveAdapterTypes.sol";
 
 /// @title AaveAdapterExitLogic
 /// @notice Bodies of `withdraw`, `repayAllAndWithdraw`, `collectFees`, `releaseZeroCredit` and `refreshDebtMark`.

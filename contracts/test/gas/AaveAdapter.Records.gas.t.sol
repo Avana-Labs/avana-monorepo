@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -182,9 +182,9 @@ contract AaveAdapterRecordsGasTest is AaveAdapterFixture {
     /// a liquidation's burn `SeizedUnitsBurned`; a last debt-free withdrawal `CollateralDisabled`,
     /// `CollateralWithdrawn`; fee collection and a zero-debt repay none.
     function test_TEST_061_eventInventory() public {
-        bytes32 created = IAaveAdapterEvents.UserProxyCreated.selector;
-        bytes32 supplied = IAaveAdapterEvents.CollateralSupplied.selector;
-        bytes32 added = IAaveAdapterEvents.CollateralAdded.selector;
+        bytes32 created = IAaveAdapterBase.UserProxyCreated.selector;
+        bytes32 supplied = IAaveAdapterBase.CollateralSupplied.selector;
+        bytes32 added = IAaveAdapterBase.CollateralAdded.selector;
         vm.recordLogs();
         (bytes32 k1, address proxy) = _pledgeAs(alice, MARKET_ID, UNITS);
         _assertEvents(_list(created, supplied, added), "first pledge");
@@ -193,12 +193,12 @@ contract AaveAdapterRecordsGasTest is AaveAdapterFixture {
         _assertEvents(_list(supplied, added), "top-up");
         vm.recordLogs();
         _borrowAs(alice, MARKET_ID, debtReserveId, 5000e18);
-        _assertEvents(_list(IAaveAdapterEvents.Borrowed.selector), "borrow");
+        _assertEvents(_list(IAaveAdapterBase.Borrowed.selector), "borrow");
         _fund(bob, debtReserveId, 100e18);
         vm.recordLogs();
         vm.prank(bob);
         adapterC.repay(alice, MARKET_ID, debtReserveId, 100e18, false, _deadline());
-        _assertEvents(_list(IAaveAdapterEvents.Repaid.selector), "repay");
+        _assertEvents(_list(IAaveAdapterBase.Repaid.selector), "repay");
         vm.recordLogs();
         vm.prank(bob);
         adapterC.repay(alice, MARKET_ID, usdcReserveId, 1, false, _deadline());
@@ -207,16 +207,16 @@ contract AaveAdapterRecordsGasTest is AaveAdapterFixture {
         vm.recordLogs();
         vm.prank(alice);
         adapterC.recredit(MARKET_ID, _ref(k2), "", _deadline());
-        _assertEvents(_list(supplied, IAaveAdapterEvents.CollateralRecredited.selector), "recredit");
+        _assertEvents(_list(supplied, IAaveAdapterBase.CollateralRecredited.selector), "recredit");
         vm.recordLogs();
         vm.prank(alice);
         adapterC.removeLiquidity(MARKET_ID, _ref(k2), 1_000_000_000, _mins(), _deadline(), 0);
-        _assertEvents(_list(IAaveAdapterEvents.CollateralReduced.selector), "removal");
+        _assertEvents(_list(IAaveAdapterBase.CollateralReduced.selector), "removal");
         swap.setDeleverage(1000e18, 2e12, 0);
         vm.recordLogs();
         vm.prank(alice);
         adapterC.repayWithCollateral(_rwc(MARKET_ID, k2, 500_000_000, debtReserveId));
-        _assertEvents(_list(IAaveAdapterEvents.RepaidWithCollateral.selector), "repay with collateral");
+        _assertEvents(_list(IAaveAdapterBase.RepaidWithCollateral.selector), "repay with collateral");
         lpVault.accrueFees(k1, 5);
         vm.recordLogs();
         vm.prank(alice);
@@ -233,7 +233,7 @@ contract AaveAdapterRecordsGasTest is AaveAdapterFixture {
         vm.prank(alice);
         adapterC.withdraw(MARKET_ID, _ref(k2), left, _deadline(), 0);
         _assertEvents(
-            _list(IAaveAdapterEvents.CollateralDisabled.selector, IAaveAdapterEvents.CollateralWithdrawn.selector),
+            _list(IAaveAdapterBase.CollateralDisabled.selector, IAaveAdapterBase.CollateralWithdrawn.selector),
             "last withdrawal"
         );
         (, address bp) = _pledgeAs(bob, MARKET_ID, UNITS);
@@ -241,6 +241,6 @@ contract AaveAdapterRecordsGasTest is AaveAdapterFixture {
         vtPrice.set(1.5e8);
         vm.recordLogs();
         swap.liquidate(aave.cdpSpoke, MARKET_ID, vt, vtReserveId, debtReserveId, bp, 2000e18, 2);
-        _assertEvents(_list(IAaveAdapterEvents.SeizedUnitsBurned.selector), "liquidation burn");
+        _assertEvents(_list(IAaveAdapterBase.SeizedUnitsBurned.selector), "liquidation burn");
     }
 }

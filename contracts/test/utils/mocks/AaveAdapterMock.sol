@@ -8,8 +8,7 @@ import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.s
 import {ILPVaultSwapDeleverage} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapDeleverage.sol";
 import {DeleverageRequest} from "../../../src/liquidation/lp-vault-swap/types/DeleverageRequest.sol";
 import {ILock} from "../../../src/lock/lock/ILock.sol";
-import {IAaveAdapterErrors} from "../../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IAaveAdapterEvents} from "../../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
+import {IAaveAdapterBase} from "../../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {PositionProxy} from "../../../src/proxy/position-proxy/PositionProxy.sol";
 import {PositionRef} from "../../../src/types/PositionRef.sol";
 import {IVaultToken} from "../../../src/vault-token/vault-token/IVaultToken.sol";
@@ -17,8 +16,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title AaveAdapterMock
-/// @notice A stand-in for the chain's AaveAdapter (2.6) in the LPVaultSwap suites, built from `IAaveAdapterSettlement`
-/// and `IAaveAdapterViews`: the vault token's `adapter()` and the Lock's AaveAdapter member. It creates real
+/// @notice A stand-in for the chain's AaveAdapter (2.6) in the LPVaultSwap suites, built from `IAaveAdapter`
+/// and `IAaveAdapter`: the vault token's `adapter()` and the Lock's AaveAdapter member. It creates real
 /// PositionProxies, pledges through the real Collateralization (credit, mint, supply on the real CDP Spoke), borrows
 /// through the proxy, burns seized units for LPVaultSwap (`burnSeized`), runs the two deleverage steps LPVaultSwap
 /// calls back (`deleverageRepay`, `deleverageRelease`) inside a transient-style session, and drives
@@ -29,7 +28,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /// is the expected member, `ZeroAmount` for zero units or amounts, `UnknownMarket` for a vault token the mock did not
 /// bind to the market, `NoDeleverageSession` outside an open session, out of order, or for a release whose position,
 /// units or minimums differ from the session's (the real Adapter's `_checkReleaseSession`).
-contract AaveAdapterMock is IAaveAdapterErrors, IAaveAdapterEvents {
+contract AaveAdapterMock is IAaveAdapterBase {
     using SafeERC20 for IERC20;
 
     struct Binding {
@@ -142,7 +141,7 @@ contract AaveAdapterMock is IAaveAdapterErrors, IAaveAdapterEvents {
         ILock(lock).release();
     }
 
-    // ─── IAaveAdapterViews ───
+    // ─── IAaveAdapter ───
 
     function walletOf(
         address proxy
@@ -150,7 +149,7 @@ contract AaveAdapterMock is IAaveAdapterErrors, IAaveAdapterEvents {
         wallet = _binding[proxy].wallet;
     }
 
-    // ─── IAaveAdapterSettlement ───
+    // ─── IAaveAdapter ───
 
     function burnSeized(
         uint256 marketId,

@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {DebtReserveDef, MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
@@ -73,18 +73,18 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
     function test_TEST_027_adapterBoundsPrecedeRiskGates() public {
         _stopEverythingTheRiskModuleReads();
         _pause(PauseState.Frozen, PauseReason.None);
-        _borrowExpect(abi.encodeWithSelector(IAaveAdapterErrors.ApplicationFrozen.selector));
+        _borrowExpect(abi.encodeWithSelector(IAaveAdapterBase.ApplicationFrozen.selector));
         _pause(PauseState.Paused, PauseReason.General);
-        _borrowExpect(abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector));
+        _borrowExpect(abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector));
         _pause(PauseState.None, PauseReason.None);
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.InvalidReceiver.selector, vt));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.InvalidReceiver.selector, vt));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1e18, vt, d, 0, 2);
         registry.setFrozen(alice, true);
-        _borrowExpect(abi.encodeWithSelector(IAaveAdapterErrors.AddressIsFrozen.selector, alice));
+        _borrowExpect(abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, alice));
         registry.setFrozen(alice, false);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.BadNonce.selector, 2, 9));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.BadNonce.selector, 2, 9));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1e18, alice, d, 0, 9);
         _borrowExpect(abi.encodeWithSelector(IRiskModuleErrors.SequencerDown.selector));
@@ -96,11 +96,11 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
     function test_TEST_019_withDebtPrecedence() public {
         lpOracleA.setState(PriceState.Expired, 0, false);
         _pause(PauseState.Paused, PauseReason.General);
-        _withdrawExpect(abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector));
+        _withdrawExpect(abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector));
         _pause(PauseState.Frozen, PauseReason.None);
         _withdrawExpect(abi.encodeWithSelector(IRiskModuleErrors.PriceNotLive.selector, MARKET_ID, PriceState.Expired));
         registry.setFrozen(alice, true);
-        _withdrawExpect(abi.encodeWithSelector(IAaveAdapterErrors.AddressIsFrozen.selector, alice));
+        _withdrawExpect(abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, alice));
         registry.setFrozen(alice, false);
         lpOracleA.setState(PriceState.Live, 0, true);
         vm.prank(alice);
@@ -183,7 +183,7 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
         _withdrawExpect(drift);
         uint256 d = _deadline();
         vm.expectRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.UnknownDebtReserve.selector, aave.cdpSpoke, usdcReserveId)
+            abi.encodeWithSelector(IAaveAdapterBase.UnknownDebtReserve.selector, aave.cdpSpoke, usdcReserveId)
         );
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, usdcReserveId, 1e6, alice, d, 0, 2);

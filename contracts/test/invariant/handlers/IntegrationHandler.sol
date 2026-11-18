@@ -15,8 +15,8 @@ import {IPayoutEscrow} from "../../../src/liquidation/payout-escrow/IPayoutEscro
 import {IFlashLiquidator} from "../../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {FlashLiquidationRequest} from "../../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {IAaveAdapterErrors} from "../../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
+import {IAaveAdapterBase} from "../../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PauseReason} from "../../../src/types/PauseReason.sol";
@@ -181,10 +181,10 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
             if (state != PauseState.None || frozen) ++gateBreaks;
         } catch (bytes memory err) {
             bytes4 s = bytes4(err);
-            if (state == PauseState.Frozen && !frozen && s != IAaveAdapterErrors.ApplicationFrozen.selector) {
+            if (state == PauseState.Frozen && !frozen && s != IAaveAdapterBase.ApplicationFrozen.selector) {
                 ++gateBreaks;
             }
-            if (state == PauseState.Paused && !frozen && s != IAaveAdapterErrors.ApplicationPaused.selector) {
+            if (state == PauseState.Paused && !frozen && s != IAaveAdapterBase.ApplicationPaused.selector) {
                 ++gateBreaks;
             }
         }
@@ -589,8 +589,8 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
     ) internal {
         bytes4 s = bytes4(err);
         if (
-            s == IAaveAdapterErrors.ApplicationFrozen.selector || s == IAaveAdapterErrors.ApplicationPaused.selector
-                || s == IAaveAdapterErrors.AddressIsFrozen.selector || s == IRiskModuleErrors.BreakerTripped.selector
+            s == IAaveAdapterBase.ApplicationFrozen.selector || s == IAaveAdapterBase.ApplicationPaused.selector
+                || s == IAaveAdapterBase.AddressIsFrozen.selector || s == IRiskModuleErrors.BreakerTripped.selector
                 || s == IRiskModuleErrors.DebtBreakerTripped.selector
         ) ++exitBlockedByStop;
         ++exitFailures;

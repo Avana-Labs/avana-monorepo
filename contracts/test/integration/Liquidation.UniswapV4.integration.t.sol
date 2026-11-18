@@ -7,7 +7,7 @@ import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.s
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
 import {ClTestToken} from "../utils/fixtures/ClPoolFixture.sol";
@@ -96,7 +96,7 @@ contract LiquidationUniswapV4IntegrationTest is RealStackUniswapV4Journeys {
     ) internal view returns (uint256 burns) {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         for (uint256 k = 0; k < logs.length; ++k) {
-            if (logs[k].emitter != adapter || logs[k].topics[0] != IAaveAdapterEvents.SeizedUnitsBurned.selector) {
+            if (logs[k].emitter != adapter || logs[k].topics[0] != IAaveAdapterBase.SeizedUnitsBurned.selector) {
                 continue;
             }
             ++burns;

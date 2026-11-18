@@ -20,8 +20,7 @@ import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
-import {AaveAdapterImmutables} from "./types/AaveAdapterImmutables.sol";
-import {AdapterAccount} from "./types/AdapterAccount.sol";
+import {AaveAdapterImmutables, AdapterAccount} from "./types/AaveAdapterTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title AaveAdapterUserLogic

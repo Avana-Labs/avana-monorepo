@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
@@ -48,7 +48,7 @@ contract AaveAdapterNoRestrictionUnitTest is AaveAdapterFixture {
         _pause(PauseState.Paused, PauseReason.General);
         uint256 nonce = adapterC.borrowNonce(p);
         uint256 d = _deadline();
-        vm.expectRevert(IAaveAdapterErrors.ApplicationPaused.selector);
+        vm.expectRevert(IAaveAdapterBase.ApplicationPaused.selector);
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1e18, alice, d, 0, nonce);
         _pause(PauseState.None, PauseReason.None);

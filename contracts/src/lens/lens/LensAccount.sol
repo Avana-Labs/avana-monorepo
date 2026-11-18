@@ -10,7 +10,7 @@ import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IPayoutEscrow} from "../../liquidation/payout-escrow/IPayoutEscrow.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {IAaveAdapterViews} from "../../policy/aave-adapter/IAaveAdapterViews.sol";
+import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
@@ -68,7 +68,7 @@ abstract contract LensAccount is LensBase, ILensAccount {
         _unlocked();
         if (_emptyPage(limit)) return records;
         // forge-lint: disable-next-line(unused-return)
-        (address spoke,, address vaultToken, uint256 reserveId) = IAaveAdapterViews(_ADAPTER).accountOf(proxy);
+        (address spoke,, address vaultToken, uint256 reserveId) = IAaveAdapter(_ADAPTER).accountOf(proxy);
         if (spoke == address(0)) revert UnknownProxy(proxy);
         (uint256[] memory ids, BackingRecord[] memory all) = ICollateralizationViews(_COLLATERALIZATION)
             .getAccountRecords(proxy, vaultToken, 0, AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET);
@@ -106,7 +106,7 @@ abstract contract LensAccount is LensBase, ILensAccount {
         // forge-lint: disable-next-line(unused-return)
         (uint32 reasons,) = IRiskModule(_RISK_MODULE).getBreakerStatus(marketId);
         if (a.deployed) {
-            a.borrowNonce = IAaveAdapterViews(_ADAPTER).borrowNonce(a.proxy);
+            a.borrowNonce = IAaveAdapter(_ADAPTER).borrowNonce(a.proxy);
             IAaveV4Spoke.UserAccountData memory d = IAaveV4Spoke(m.spoke).getUserAccountData(a.proxy);
             (a.healthFactor, a.totalCollateralValue, a.totalDebtValueRay) =
             (d.healthFactor, d.totalCollateralValue, d.totalDebtValueRay);

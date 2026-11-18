@@ -9,7 +9,7 @@ import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/Liqui
 import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {OperatorFlashLiquidator} from "../../src/periphery/flash-liquidator/OperatorFlashLiquidator.sol";
 import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
-import {IAaveAdapterUser} from "../../src/policy/aave-adapter/IAaveAdapterUser.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
@@ -100,7 +100,7 @@ contract MaintenanceGasTest is RealStackFlows, GasCalibration {
         assertEq(_debtOf(proxy, ghoReserveId), 0, "debt repaid");
         assertFalse(coll.getMarketDebtFree(vt), "the mark was kept");
         _nextBlock();
-        uint256 used = _txGas(anyone, adapter, abi.encodeCall(IAaveAdapterUser.refreshDebtMark, (proxy)));
+        uint256 used = _txGas(anyone, adapter, abi.encodeCall(IAaveAdapter.refreshDebtMark, (proxy)));
         assertTrue(coll.getMarketDebtFree(vt), "the refresh cleared it");
         vm.snapshotValue("Maintenance", "refreshDebtMark_clears", used);
         emit log_named_uint("refreshDebtMark (clears the mark)", used);

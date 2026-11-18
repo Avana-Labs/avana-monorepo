@@ -22,8 +22,7 @@ import {AaveAdapterExitLogic} from "../../../src/policy/aave-adapter/AaveAdapter
 import {AaveAdapterSettlementLogic} from "../../../src/policy/aave-adapter/AaveAdapterSettlementLogic.sol";
 import {AaveAdapterUserLogic} from "../../../src/policy/aave-adapter/AaveAdapterUserLogic.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
-import {AaveAdapterLogics} from "../../../src/policy/aave-adapter/types/AaveAdapterLogics.sol";
+import {AaveAdapterImmutables, AaveAdapterLogics} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {MarketRegistryActivationLogic} from "../../../src/policy/market-registry/MarketRegistryActivationLogic.sol";
 import {MarketRegistryHubsLogic} from "../../../src/policy/market-registry/MarketRegistryHubsLogic.sol";

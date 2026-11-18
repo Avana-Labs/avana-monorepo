@@ -4,14 +4,12 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILock} from "../../lock/lock/ILock.sol";
-import {IAaveAdapterErrors} from "./IAaveAdapterErrors.sol";
-import {IAaveAdapterEvents} from "./IAaveAdapterEvents.sol";
-import {AaveAdapterImmutables} from "./types/AaveAdapterImmutables.sol";
-import {AdapterAccount} from "./types/AdapterAccount.sol";
+import {IAaveAdapterBase} from "./IAaveAdapterBase.sol";
+import {AaveAdapterImmutables, AdapterAccount} from "./types/AaveAdapterTypes.sol";
 
 /// @title AaveAdapterStorage
 /// @notice Storage, immutables, Lock steps and transient session shared by the AaveAdapter and its logic contracts.
-abstract contract AaveAdapterStorage is IAaveAdapterEvents, IAaveAdapterErrors {
+abstract contract AaveAdapterStorage is IAaveAdapterBase {
     /// @custom:storage-location erc7201:avana.storage.AaveAdapter
     struct Layout {
         mapping(address wallet => mapping(uint256 marketId => address proxy)) proxyOf;

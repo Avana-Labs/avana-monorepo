@@ -7,8 +7,8 @@ import {Pending} from "../../src/custody/collateralization/types/Pending.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {AaveAdapterSteps} from "../../src/policy/aave-adapter/AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "../../src/policy/aave-adapter/AaveAdapterStorage.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {AaveAdapterImmutables} from "../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {AaveAdapterImmutables} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @notice Token stand-in for the vault token and a debt asset: plain balances, allowances and supply, `burn` and
@@ -354,7 +354,7 @@ contract AaveAdapterHalmosTest is Test {
         } catch (bytes memory reason) {
             assert(returned != units || delivered != units);
             bytes4 s = bytes4(reason);
-            assert(s == IAaveAdapterErrors.UnitsMismatch.selector);
+            assert(s == IAaveAdapterBase.UnitsMismatch.selector);
         }
     }
 
@@ -391,7 +391,7 @@ contract AaveAdapterHalmosTest is Test {
         } catch (bytes memory reason) {
             // A repay that moved debt refuses only a caller who left too little gas for the RiskModule's credit
             // stipend (REQ-RISK-005); Halmos leaves the gas left free, so that refusal is a feasible path here.
-            if (bytes4(reason) == IAaveAdapterErrors.InsufficientGas.selector) {
+            if (bytes4(reason) == IAaveAdapterBase.InsufficientGas.selector) {
                 assert(d != 0 && (!repayAll || d <= cap) && reason.length == 68);
                 uint256 left;
                 uint256 required;
@@ -406,7 +406,7 @@ contract AaveAdapterHalmosTest is Test {
             assert(repayAll && d > cap);
             assert(
                 keccak256(reason)
-                    == keccak256(abi.encodeWithSelector(IAaveAdapterErrors.RepayExceedsMax.selector, d, cap))
+                    == keccak256(abi.encodeWithSelector(IAaveAdapterBase.RepayExceedsMax.selector, d, cap))
             );
         }
     }
@@ -431,7 +431,7 @@ contract AaveAdapterHalmosTest is Test {
             assert(
                 keccak256(reason)
                     == keccak256(
-                        abi.encodeWithSelector(IAaveAdapterErrors.BackingMismatch.selector, supply, credited, pending)
+                        abi.encodeWithSelector(IAaveAdapterBase.BackingMismatch.selector, supply, credited, pending)
                     )
             );
         }

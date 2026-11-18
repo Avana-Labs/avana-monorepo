@@ -6,9 +6,8 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {IAaveAdapterCollateral} from "../../src/policy/aave-adapter/IAaveAdapterCollateral.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IAaveAdapterUser} from "../../src/policy/aave-adapter/IAaveAdapterUser.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
@@ -172,7 +171,7 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
         vm.prank(bob);
         adapterC.collectFees(mA, _ref(kB), _deadline());
         vm.prank(bob);
-        IAaveAdapterCollateral(adapter).removeLiquidity(mA, _ref(kB), UNITS / 10, _mins(), _deadline(), 0);
+        IAaveAdapter(adapter).removeLiquidity(mA, _ref(kB), UNITS / 10, _mins(), _deadline(), 0);
         uint128 creditedB = _credited(kB);
         vm.prank(bob);
         adapterC.withdraw(mA, _ref(kB), creditedB, _deadline(), 0);
@@ -211,30 +210,30 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
             bytes32 key = _newKey();
             lpVault.mintPosition(key, who, mA, UNITS / 4);
             vm.prank(who);
-            return adapter.call(abi.encodeCall(IAaveAdapterUser.pledge, (mA, _ref(key), d)));
+            return adapter.call(abi.encodeCall(IAaveAdapter.pledge, (mA, _ref(key), d)));
         }
         if (a == 2) {
             uint256 n = adapterC.borrowNonce(pA);
             vm.prank(alice);
-            return adapter.call(abi.encodeCall(IAaveAdapterUser.borrow, (mA, ghoReserveId, 1e18, alice, d, 0, n)));
+            return adapter.call(abi.encodeCall(IAaveAdapter.borrow, (mA, ghoReserveId, 1e18, alice, d, 0, n)));
         }
         if (a == 3) {
             vm.prank(carol);
-            return adapter.call(abi.encodeCall(IAaveAdapterUser.repay, (alice, mA, ghoReserveId, 100e18, false, d)));
+            return adapter.call(abi.encodeCall(IAaveAdapter.repay, (alice, mA, ghoReserveId, 100e18, false, d)));
         }
         if (a == 4) {
             uint128 units = _credited(kB);
             vm.prank(bob);
-            return adapter.call(abi.encodeCall(IAaveAdapterUser.withdraw, (mA, _ref(kB), units, d, 0)));
+            return adapter.call(abi.encodeCall(IAaveAdapter.withdraw, (mA, _ref(kB), units, d, 0)));
         }
         if (a == 5) {
             uint128 units = _credited(kA2);
             vm.prank(alice);
-            return adapter.call(abi.encodeCall(IAaveAdapterUser.withdraw, (mA, _ref(kA2), units, d, 0)));
+            return adapter.call(abi.encodeCall(IAaveAdapter.withdraw, (mA, _ref(kA2), units, d, 0)));
         }
         lpVault.accrueFees(kB, 1000);
         vm.prank(bob);
-        return adapter.call(abi.encodeCall(IAaveAdapterUser.collectFees, (mA, _ref(kB), d)));
+        return adapter.call(abi.encodeCall(IAaveAdapter.collectFees, (mA, _ref(kB), d)));
     }
 
     /// @notice The pause matrix on the real MarketRegistry, each state set by the Emergency Guardian: None allows every
@@ -245,8 +244,8 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
     /// Paused(MintPathSuspect) reverts `ApplicationPaused` for every pledge.
     // TEST-192 verifies: REQ-MREG-002, REQ-ADAPTER-080, REQ-ADAPTER-045, REQ-ADAPTER-046, REQ-ADAPTER-082, REQ-ADAPTER-086, Q-356
     function test_TEST_192_pauseMatrixOnTheRealRegistry() public {
-        bytes memory frozen = abi.encodeWithSelector(IAaveAdapterErrors.ApplicationFrozen.selector);
-        bytes memory paused = abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector);
+        bytes memory frozen = abi.encodeWithSelector(IAaveAdapterBase.ApplicationFrozen.selector);
+        bytes memory paused = abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector);
         // Actions: 0 new-account pledge, 1 indebted top-up, 2 borrow, 3 third-party repay, 4 debt-free withdrawal,
         // 5 withdraw with debt, 6 fee collection.
         for (uint8 s = 0; s < 4; ++s) {

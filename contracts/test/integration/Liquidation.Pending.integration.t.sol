@@ -10,7 +10,7 @@ import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.s
 import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
 import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
 import {PendingView} from "../../src/types/PendingView.sol";
@@ -115,7 +115,7 @@ contract LiquidationPendingIntegrationTest is RealStackFlows {
         uint256 supplyBefore = IERC20(vt).totalSupply();
         uint256 fundedBefore = IAvanaFirstLossReserve(reserve).fundedBalance();
         vm.expectEmit(true, true, false, true, adapter);
-        emit IAaveAdapterEvents.SeizedUnitsBurned(mA, vt, kept);
+        emit IAaveAdapterBase.SeizedUnitsBurned(mA, vt, kept);
         vm.prank(makeAddr("anyone"));
         (uint256 units,, uint256 added) = lvs.settlePending(mA, settleReserve);
         assertEq(units, kept, "every pending unit settled");

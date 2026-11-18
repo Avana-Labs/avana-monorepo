@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
-import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
+import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {PositionRef} from "../../src/types/PositionRef.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 

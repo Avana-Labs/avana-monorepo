@@ -11,7 +11,7 @@ import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/Liqui
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
-import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
@@ -120,7 +120,7 @@ contract LiquidationCallerFundedIntegrationTest is RealStackFlows {
         LiquidationParams memory p = _liqParams(proxy, mA, usdcReserveId, x);
         _fundCaller(keeper, p);
         vm.expectEmit(true, true, false, true, adapter);
-        emit IAaveAdapterEvents.SeizedUnitsBurned(mA, vt, c);
+        emit IAaveAdapterBase.SeizedUnitsBurned(mA, vt, c);
         vm.prank(keeper);
         LiquidationResult memory r = lvs.liquidate(p);
         assertEq(r.debtRepaid, x, "D: Aave pulled the whole repayment");
@@ -150,7 +150,7 @@ contract LiquidationCallerFundedIntegrationTest is RealStackFlows {
         LiquidationParams memory p = _liqParams(proxy, mA, ghoReserveId, x);
         _fundCaller(keeper, p);
         vm.expectEmit(true, true, false, true, adapter);
-        emit IAaveAdapterEvents.SeizedUnitsBurned(mA, vt, c);
+        emit IAaveAdapterBase.SeizedUnitsBurned(mA, vt, c);
         vm.prank(keeper);
         LiquidationResult memory r = lvs.liquidate(p);
         assertEq(r.debtRepaid, x, "D in GHO, all of the Lens's close amount");

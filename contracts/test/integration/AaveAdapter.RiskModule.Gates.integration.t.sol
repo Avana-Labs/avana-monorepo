@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {DriftReason} from "../../src/types/DriftReason.sol";
@@ -104,9 +104,9 @@ contract AaveAdapterRiskModuleGatesIntegrationTest is AaveAdapterRiskFixture {
         PauseState[3] memory states = [PauseState.Frozen, PauseState.Paused, PauseState.Paused];
         PauseReason[3] memory reasons = [PauseReason.None, PauseReason.General, PauseReason.MintPathSuspect];
         bytes4[3] memory errs = [
-            IAaveAdapterErrors.ApplicationFrozen.selector,
-            IAaveAdapterErrors.ApplicationPaused.selector,
-            IAaveAdapterErrors.ApplicationPaused.selector
+            IAaveAdapterBase.ApplicationFrozen.selector,
+            IAaveAdapterBase.ApplicationPaused.selector,
+            IAaveAdapterBase.ApplicationPaused.selector
         ];
         // Over the whole test exactly one `preBorrowCheck` reaches the RiskModule: the final borrow's.
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preBorrowCheck.selector), 1);
@@ -129,7 +129,7 @@ contract AaveAdapterRiskModuleGatesIntegrationTest is AaveAdapterRiskFixture {
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
         for (uint256 i = 0; i < 2; ++i) {
             _pause(PauseState.Paused, reasons[i]);
-            _expectWithdrawWithDebt(abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector));
+            _expectWithdrawWithDebt(abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector));
         }
         vm.prank(bob);
         adapterC.withdraw(MARKET_B, _ref(kb), UNITS, _deadline(), 0);

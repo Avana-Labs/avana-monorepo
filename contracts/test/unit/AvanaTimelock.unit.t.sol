@@ -12,7 +12,7 @@ import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol
 import {ILPVaultSwapAdmin} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {IAaveAdapterAdmin} from "../../src/policy/aave-adapter/IAaveAdapterAdmin.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
@@ -162,7 +162,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
             IMarketRegistry.setCrossHubLine.selector,
             IMarketRegistry.initialize.selector,
             IParameterStore.initialize.selector,
-            IAaveAdapterAdmin.initialize.selector,
+            IAaveAdapter.initialize.selector,
             IRiskModule.initialize.selector,
             ILPOracle.initialize.selector,
             IDebtOracle.initialize.selector,

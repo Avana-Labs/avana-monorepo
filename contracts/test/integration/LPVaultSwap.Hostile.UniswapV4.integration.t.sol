@@ -8,7 +8,7 @@ import {ICollateralizationErrors} from "../../src/custody/collateralization/ICol
 import {ICollateralizationSeizure} from "../../src/custody/collateralization/ICollateralizationSeizure.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
-import {IAaveAdapterSettlement} from "../../src/policy/aave-adapter/IAaveAdapterSettlement.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {RealStackUniswapV4Journeys} from "../utils/fixtures/RealStackUniswapV4Journeys.sol";
 import {HostileLiquidatorImpl} from "./LPVaultSwap.Hostile.integration.t.sol";
@@ -88,8 +88,8 @@ contract LPVaultSwapHostileUniswapV4IntegrationTest is RealStackUniswapV4Journey
         uint256 c = _seizeAndKeep(bobProxy, 500e6);
         assertGt(c, 0, "bob seized");
         vm.expectRevert();
-        _run(adapter, abi.encodeCall(IAaveAdapterSettlement.burnSeized, (mS, vtS, c + 1)));
-        _run(adapter, abi.encodeCall(IAaveAdapterSettlement.burnSeized, (mS, vtS, c)));
+        _run(adapter, abi.encodeCall(IAaveAdapter.burnSeized, (mS, vtS, c + 1)));
+        _run(adapter, abi.encodeCall(IAaveAdapter.burnSeized, (mS, vtS, c)));
         vm.expectRevert(ICollateralizationErrors.SeizureMismatch.selector);
         _run(
             address(coll), abi.encodeCall(ICollateralizationSeizure.settleSeizure, (bobProxy, vtS, c, new uint256[](0)))

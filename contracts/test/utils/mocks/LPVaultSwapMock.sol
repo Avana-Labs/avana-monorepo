@@ -8,7 +8,7 @@ import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.s
 import {ILPVaultSwapErrors} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
 import {DeleverageRequest} from "../../../src/liquidation/lp-vault-swap/types/DeleverageRequest.sol";
 import {ILock} from "../../../src/lock/lock/ILock.sol";
-import {IAaveAdapterSettlement} from "../../../src/policy/aave-adapter/IAaveAdapterSettlement.sol";
+import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {PositionRef} from "../../../src/types/PositionRef.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -180,22 +180,21 @@ contract LPVaultSwapMock is ILPVaultSwapErrors {
         address proxy = mode == Mode.WrongProxy ? otherProxy : r.proxy;
         uint256 reserve = mode == Mode.WrongReserve ? r.debtReserveId + 1 : r.debtReserveId;
         uint256 amount = mode == Mode.ZeroRepay ? 0 : flash;
-        spent = IAaveAdapterSettlement(ADAPTER).deleverageRepay(proxy, reserve, amount);
+        spent = IAaveAdapter(ADAPTER).deleverageRepay(proxy, reserve, amount);
     }
 
     function _release(
         DeleverageRequest calldata r
     ) internal {
         if (mode == Mode.CustomRelease) {
-            IAaveAdapterSettlement(ADAPTER)
-                .deleverageRelease(relProxy, PositionRef(relIntegration, relKey), relUnits, _relMins);
+            IAaveAdapter(ADAPTER).deleverageRelease(relProxy, PositionRef(relIntegration, relKey), relUnits, _relMins);
             return;
         }
         address proxy = mode == Mode.ReleaseOtherProxy ? otherProxy : r.proxy;
         uint128 units = mode == Mode.WrongUnits ? r.units - 1 : r.units;
         uint256[] memory mins = r.minAmounts;
         if (mode == Mode.WeakMinimums) mins = new uint256[](r.minAmounts.length);
-        IAaveAdapterSettlement(ADAPTER).deleverageRelease(proxy, r.position, units, mins);
+        IAaveAdapter(ADAPTER).deleverageRelease(proxy, r.position, units, mins);
     }
 
     // ─── Liquidation steps (2.11) ───
@@ -215,7 +214,7 @@ contract LPVaultSwapMock is ILPVaultSwapErrors {
         ILock(lock).acquire();
         ICollateralizationSeizure(collateralization).beginSeizure(proxy, vaultToken);
         seized = _seize(spoke, collateralReserveId, debtReserveId, proxy, debtToCover, vaultToken);
-        if (seized != 0) IAaveAdapterSettlement(ADAPTER).burnSeized(marketId, vaultToken, seized);
+        if (seized != 0) IAaveAdapter(ADAPTER).burnSeized(marketId, vaultToken, seized);
         ICollateralizationSeizure(collateralization).settleSeizure(proxy, vaultToken, seized, new uint256[](tokenCount));
         ILock(lock).release();
     }
@@ -239,7 +238,7 @@ contract LPVaultSwapMock is ILPVaultSwapErrors {
         uint256 units
     ) external {
         ILock(lock).acquire();
-        IAaveAdapterSettlement(ADAPTER).burnSeized(marketId, vaultToken, units);
+        IAaveAdapter(ADAPTER).burnSeized(marketId, vaultToken, units);
         ILock(lock).release();
     }
 
@@ -249,7 +248,7 @@ contract LPVaultSwapMock is ILPVaultSwapErrors {
         address vaultToken,
         uint256 units
     ) external {
-        IAaveAdapterSettlement(ADAPTER).burnSeized(marketId, vaultToken, units);
+        IAaveAdapter(ADAPTER).burnSeized(marketId, vaultToken, units);
     }
 
     /// @notice Pending settlement: Lock, `burnSeized`, Collateralization `settlePending`, release.
@@ -259,7 +258,7 @@ contract LPVaultSwapMock is ILPVaultSwapErrors {
         uint256 units
     ) external {
         ILock(lock).acquire();
-        IAaveAdapterSettlement(ADAPTER).burnSeized(marketId, vaultToken, units);
+        IAaveAdapter(ADAPTER).burnSeized(marketId, vaultToken, units);
         ICollateralizationSeizure(collateralization).settlePending(vaultToken, units);
         ILock(lock).release();
     }

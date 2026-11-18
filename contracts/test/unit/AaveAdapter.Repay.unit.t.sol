@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralizationDebtMark} from "../../src/custody/collateralization/ICollateralizationDebtMark.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
@@ -50,7 +49,7 @@ contract AaveAdapterRepayUnitTest is AaveAdapterFixture {
     function _countRepaid() internal view returns (uint256 n) {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         for (uint256 i = 0; i < logs.length; ++i) {
-            if (logs[i].emitter == adapter && logs[i].topics[0] == IAaveAdapterEvents.Repaid.selector) ++n;
+            if (logs[i].emitter == adapter && logs[i].topics[0] == IAaveAdapterBase.Repaid.selector) ++n;
         }
     }
 
@@ -66,7 +65,7 @@ contract AaveAdapterRepayUnitTest is AaveAdapterFixture {
         vm.expectCall(address(debt), abi.encodeCall(IERC20.transferFrom, (alice, p, 2000e18)), 1);
         vm.expectCall(address(debt), abi.encodeCall(IERC20.approve, (aave.cdpSpoke, 2000e18)), 1);
         vm.expectEmit(adapter);
-        emit IAaveAdapterEvents.Repaid(alice, alice, MARKET_ID, debtReserveId, 2000e18, debtBefore - 2000e18, false);
+        emit IAaveAdapterBase.Repaid(alice, alice, MARKET_ID, debtReserveId, 2000e18, debtBefore - 2000e18, false);
         uint256 spent = _repay(alice, debtReserveId, 2000e18, false);
         assertEq(spent, 2000e18, "spent");
         assertEq(debt.balanceOf(alice), 0, "payer paid");
@@ -139,7 +138,7 @@ contract AaveAdapterRepayUnitTest is AaveAdapterFixture {
         _fund(alice, usdcReserveId, live - 1);
         uint256 d = _deadline();
         vm.expectCall(address(usdcDebt), abi.encodeWithSelector(IERC20.transferFrom.selector), 0);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.RepayExceedsMax.selector, live, live - 1));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.RepayExceedsMax.selector, live, live - 1));
         vm.prank(alice);
         adapterC.repay(alice, MARKET_ID, usdcReserveId, live - 1, true, d);
     }
@@ -179,7 +178,7 @@ contract AaveAdapterRepayUnitTest is AaveAdapterFixture {
         usdcDebt.setFeeBps(10_000);
         _fund(alice, usdcReserveId, 1000e6);
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnitsMismatch.selector, 1000e6, 0));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnitsMismatch.selector, 1000e6, 0));
         vm.prank(alice);
         adapterC.repay(alice, MARKET_ID, usdcReserveId, 1000e6, false, d);
     }
@@ -215,17 +214,15 @@ contract AaveAdapterRepayUnitTest is AaveAdapterFixture {
     function test_TEST_165_zeroCapPartial() public {
         _pledgeAs(bob, MARKET_ID, UNITS);
         uint256 d = _deadline();
-        vm.expectRevert(IAaveAdapterErrors.ZeroAmount.selector);
+        vm.expectRevert(IAaveAdapterBase.ZeroAmount.selector);
         vm.prank(carol);
         adapterC.repay(bob, MARKET_ID, debtReserveId, 0, false, d);
-        vm.expectRevert(IAaveAdapterErrors.ZeroAmount.selector);
+        vm.expectRevert(IAaveAdapterBase.ZeroAmount.selector);
         vm.prank(alice);
         adapterC.repay(alice, MARKET_ID, debtReserveId, 0, false, d);
         vm.prank(carol);
         assertEq(adapterC.repay(bob, MARKET_ID, debtReserveId, 0, true, d), 0, "repay-all at zero debt");
-        vm.expectRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.RepayExceedsMax.selector, _debtOf(p, debtReserveId), 0)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.RepayExceedsMax.selector, _debtOf(p, debtReserveId), 0));
         vm.prank(alice);
         adapterC.repay(alice, MARKET_ID, debtReserveId, 0, true, d);
     }
@@ -241,7 +238,7 @@ contract AaveAdapterRepayUnitTest is AaveAdapterFixture {
         _fund(carol, debtReserveId, 3000e18);
         debt.mint(alice, 1e30);
         vm.expectEmit(adapter);
-        emit IAaveAdapterEvents.Repaid(carol, alice, MARKET_ID, debtReserveId, 3000e18, live - 3000e18, false);
+        emit IAaveAdapterBase.Repaid(carol, alice, MARKET_ID, debtReserveId, 3000e18, live - 3000e18, false);
         uint256 d = _deadline();
         vm.prank(carol);
         adapterC.repay(alice, MARKET_ID, debtReserveId, 3000e18, false, d);
@@ -355,11 +352,11 @@ contract AaveAdapterRepayUnitTest is AaveAdapterFixture {
     // TEST-029 verifies: REQ-PROXY-027, REQ-PROXY-057, REQ-PROXY-058
     function test_TEST_029_noProxyAndDeadline() public {
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.NoProxy.selector, bob, MARKET_ID));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.NoProxy.selector, bob, MARKET_ID));
         vm.prank(carol);
         adapterC.repay(bob, MARKET_ID, debtReserveId, 1, false, d);
         uint256 past = block.timestamp - 1;
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.DeadlineExpired.selector, past));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.DeadlineExpired.selector, past));
         vm.prank(carol);
         adapterC.repay(alice, MARKET_ID, debtReserveId, 1, false, past);
     }

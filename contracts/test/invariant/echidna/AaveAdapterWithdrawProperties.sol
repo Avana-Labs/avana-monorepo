@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AaveAdapterExitLogic} from "../../../src/policy/aave-adapter/AaveAdapterExitLogic.sol";
-import {AdapterAccount} from "../../../src/policy/aave-adapter/types/AdapterAccount.sol";
+import {AdapterAccount} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {PauseState} from "../../../src/types/PauseState.sol";
 import {PositionRef} from "../../../src/types/PositionRef.sol";
 import {AaveAdapterPathHarness} from "./AaveAdapterPathStandIns.sol";

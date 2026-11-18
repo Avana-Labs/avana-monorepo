@@ -9,7 +9,7 @@ import {AaveAdapterCollateralLogic} from "../../../src/policy/aave-adapter/AaveA
 import {AaveAdapterExitLogic} from "../../../src/policy/aave-adapter/AaveAdapterExitLogic.sol";
 import {AaveAdapterSettlementLogic} from "../../../src/policy/aave-adapter/AaveAdapterSettlementLogic.sol";
 import {AaveAdapterUserLogic} from "../../../src/policy/aave-adapter/AaveAdapterUserLogic.sol";
-import {AaveAdapterLogics} from "../../../src/policy/aave-adapter/types/AaveAdapterLogics.sol";
+import {AaveAdapterLogics} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {RiskModule} from "../../../src/policy/risk-module/RiskModule.sol";
 import {RiskModuleBorrowLogic} from "../../../src/policy/risk-module/RiskModuleBorrowLogic.sol";

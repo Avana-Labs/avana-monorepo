@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IFlashSource} from "../../flash/IFlashSource.sol";
 import {PauseReason} from "../../types/PauseReason.sol";
 import {PauseState} from "../../types/PauseState.sol";
-import {IAaveAdapterViews} from "../aave-adapter/IAaveAdapterViews.sol";
+import {IAaveAdapter} from "../aave-adapter/IAaveAdapter.sol";
 import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
@@ -291,6 +291,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
                 || l.knownPriceSource[a] || l.isDebtAsset[a] || l.integrationIdOf[a] != 0 || l.isPricing[a]
                 || l.knownRoute[a]
         ) return true;
-        return IAaveAdapterViews(_AAVE_ADAPTER).walletOf(a) != address(0);
+        return IAaveAdapter(_AAVE_ADAPTER).walletOf(a) != address(0);
     }
 }

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 
@@ -77,7 +77,7 @@ contract AaveAdapterLifecycleUnitTest is AaveAdapterFixture {
         adapterC.withdraw(MARKET_ID, _ref(key1), L1, d, 0);
         vm.revertToState(snap);
         vm.expectEmit(adapter);
-        emit IAaveAdapterEvents.CollateralWithdrawn(carol, MARKET_ID, vt, keyB, LB, true, hf2);
+        emit IAaveAdapterBase.CollateralWithdrawn(carol, MARKET_ID, vt, keyB, LB, true, hf2);
         vm.prank(carol);
         adapterC.withdraw(MARKET_ID, _ref(keyB), LB, d, 1.2e18);
         assertEq(_hf(proxy), hf2, "step 5: back to 1.2481");

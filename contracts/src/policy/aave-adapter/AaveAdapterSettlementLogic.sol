@@ -12,8 +12,7 @@ import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
-import {AaveAdapterImmutables} from "./types/AaveAdapterImmutables.sol";
-import {AdapterAccount} from "./types/AdapterAccount.sol";
+import {AaveAdapterImmutables, AdapterAccount} from "./types/AaveAdapterTypes.sol";
 
 /// @title AaveAdapterSettlementLogic
 /// @notice Bodies of the LPVaultSwap steps `burnSeized`, `deleverageRepay` and `deleverageRelease`.

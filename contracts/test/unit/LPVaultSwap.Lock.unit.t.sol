@@ -8,7 +8,7 @@ import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVa
 import {DeleverageRequest} from "../../src/liquidation/lp-vault-swap/types/DeleverageRequest.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {LVSLyingRoute} from "../utils/mocks/LPVaultSwapMocks.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 
@@ -130,10 +130,10 @@ contract LPVaultSwapLockUnitTest is LPVaultSwapUnitBase {
     function test_TEST_060_deleverageStepsOnlyInOrderUnderAdapterLock() public {
         (address aliceProxy, bytes32 key) = _openAccount(alice, 10_000e6, 15_000e6, 250_000_000);
         vm.prank(attacker);
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         adapter.deleverageRepay(aliceProxy, usdcReserveId, 1);
         vm.prank(address(lvs));
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         adapter.deleverageRelease(aliceProxy, _position(key), 1, new uint256[](0));
         uint256 repays = adapter.repayCalls();
         uint256 releases = adapter.releaseCalls();

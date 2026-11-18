@@ -11,9 +11,11 @@ import {AaveAdapterExitLogic} from "../../../src/policy/aave-adapter/AaveAdapter
 import {AaveAdapterSettlementLogic} from "../../../src/policy/aave-adapter/AaveAdapterSettlementLogic.sol";
 import {AaveAdapterUserLogic} from "../../../src/policy/aave-adapter/AaveAdapterUserLogic.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
-import {AaveAdapterLogics} from "../../../src/policy/aave-adapter/types/AaveAdapterLogics.sol";
-import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
+import {
+    AaveAdapterImmutables,
+    AaveAdapterLogics,
+    RepayWithCollateralParams
+} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {
     DebtReserveDef,
     MarketStatus,

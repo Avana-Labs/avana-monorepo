@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
@@ -76,7 +76,7 @@ contract AaveAdapterHostileRegistryRowsUnitTest is AaveAdapterFixture {
         bytes32 k2 = _newKey();
         lpVault.mintPosition(k2, carol, MARKET_ID, UNITS);
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnknownMarket.selector, MARKET_ID));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnknownMarket.selector, MARKET_ID));
         vm.prank(carol);
         adapterC.pledge(MARKET_ID, _ref(k2), d);
         assertEq(token.totalSupply(), supply0, "no mint in market A");

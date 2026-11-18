@@ -8,7 +8,7 @@ import {BackingRecord} from "../../src/custody/collateralization/types/BackingRe
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {IAaveAdapterCollateral} from "../../src/policy/aave-adapter/IAaveAdapterCollateral.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
@@ -259,26 +259,26 @@ contract FullStackPolicyIntegrationTest is FullStackMarkets {
         lpVault.addUnits(kB, added);
         vm.prank(carol);
         vm.expectRevert();
-        IAaveAdapterCollateral(adapter).recredit(mA, _ref(kB), "", _deadline());
+        IAaveAdapter(adapter).recredit(mA, _ref(kB), "", _deadline());
         uint256 supply = ERC20(vtA).totalSupply();
         uint256 shares = _sharesOf(pB, mkt[mA].reserveId);
         uint256 usedBefore = coll.getCounters(vtA, bob).regularUsed;
         vm.prank(bob);
-        uint128 got = IAaveAdapterCollateral(adapter).recredit(mA, _ref(kB), "", _deadline());
+        uint128 got = IAaveAdapter(adapter).recredit(mA, _ref(kB), "", _deadline());
         assertEq(got, added, "the added liquidity is credited");
         assertEq(ERC20(vtA).totalSupply(), supply + added, "and minted");
         assertGt(_sharesOf(pB, mkt[mA].reserveId), shares, "and supplied for Bob's proxy");
         assertEq(coll.getCounters(vtA, bob).regularUsed - usedBefore, _charge(added), "charged at the LPOracle price");
         vm.prank(bob);
         vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.NothingToRecredit.selector, kB));
-        IAaveAdapterCollateral(adapter).recredit(mA, _ref(kB), "", _deadline());
+        IAaveAdapter(adapter).recredit(mA, _ref(kB), "", _deadline());
         uint256 used = coll.getCounters(vtA, bob).regularUsed;
         _govern(address(store), _sliceTo(1e8));
         _govern(address(store), abi.encodeCall(IParameterStoreTighten.tightenMarketUsdCap, (mA, used)));
         lpVault.addUnits(kB, added);
         vm.prank(bob);
         vm.expectRevert(_capError("MARKET"));
-        IAaveAdapterCollateral(adapter).recredit(mA, _ref(kB), "", _deadline());
+        IAaveAdapter(adapter).recredit(mA, _ref(kB), "", _deadline());
     }
 
     // ─── TEST-163: the borrow checks poke the real oracles ───
