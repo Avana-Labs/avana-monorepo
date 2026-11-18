@@ -59,17 +59,14 @@ contract Lens is ILens {
     address private immutable _POSITIONS_MODULE;
     address private immutable _SPEED_MODULE;
     address private immutable _COLLATERALIZATION;
-    address private immutable _PROXY_MANAGER;
     address private immutable _ADAPTER;
     address private immutable _LOCK;
     address private immutable _MARKET_REGISTRY;
     address private immutable _PARAMETER_STORE;
-    address private immutable _RISK_MODULE;
     address private immutable _LP_VAULT_SWAP;
-    address private immutable _PAYOUT_ESCROW;
 
     /// @notice Fixes the nine modules; their core addresses must agree.
-    /// @param modules The nine modules, in `MODULES()` order.
+    /// @param modules The Account, Market, Price, Liquidation, Risk, Preview, Markets, Positions and Speed modules.
     constructor(
         address[9] memory modules
     ) {
@@ -83,9 +80,8 @@ contract Lens is ILens {
         (_LIQUIDATION_MODULE, _RISK_MODULE_LENS, _PREVIEW_MODULE) = (modules[3], modules[4], modules[5]);
         (_MARKETS_MODULE, _POSITIONS_MODULE, _SPEED_MODULE) = (modules[6], modules[7], modules[8]);
         LensBase m = LensBase(modules[0]);
-        (_COLLATERALIZATION, _PROXY_MANAGER, _ADAPTER) = (m.COLLATERALIZATION(), m.PROXY_MANAGER(), m.ADAPTER());
+        (_COLLATERALIZATION, _ADAPTER, _LP_VAULT_SWAP) = (m.COLLATERALIZATION(), m.ADAPTER(), m.LP_VAULT_SWAP());
         (_LOCK, _MARKET_REGISTRY, _PARAMETER_STORE) = (m.LOCK(), m.MARKET_REGISTRY(), m.PARAMETER_STORE());
-        (_RISK_MODULE, _LP_VAULT_SWAP, _PAYOUT_ESCROW) = (m.RISK_MODULE(), m.LP_VAULT_SWAP(), m.PAYOUT_ESCROW());
     }
 
     /// @inheritdoc ILensAccount
@@ -501,38 +497,13 @@ contract Lens is ILens {
     }
 
     /// @inheritdoc ILens
-    function MODULES() external view override returns (address[9] memory modules) {
-        modules = [
-            _ACCOUNT_MODULE,
-            _MARKET_MODULE,
-            _PRICE_MODULE,
-            _LIQUIDATION_MODULE,
-            _RISK_MODULE_LENS,
-            _PREVIEW_MODULE,
-            _MARKETS_MODULE,
-            _POSITIONS_MODULE,
-            _SPEED_MODULE
-        ];
-    }
-
-    /// @inheritdoc ILens
     function LENS_MAX_PAGE() external pure override returns (uint256 maxPage) {
         maxPage = LensConstants.LENS_MAX_PAGE;
     }
 
     /// @inheritdoc ILens
-    function LENS_DUST_MARGIN_BPS() external pure override returns (uint256 marginBps) {
-        marginBps = LensConstants.LENS_DUST_MARGIN_BPS;
-    }
-
-    /// @inheritdoc ILens
     function COLLATERALIZATION() external view override returns (address collateralization) {
         collateralization = _COLLATERALIZATION;
-    }
-
-    /// @inheritdoc ILens
-    function PROXY_MANAGER() external view override returns (address proxyManager) {
-        proxyManager = _PROXY_MANAGER;
     }
 
     /// @inheritdoc ILens
@@ -556,18 +527,8 @@ contract Lens is ILens {
     }
 
     /// @inheritdoc ILens
-    function RISK_MODULE() external view override returns (address riskModule) {
-        riskModule = _RISK_MODULE;
-    }
-
-    /// @inheritdoc ILens
     function LP_VAULT_SWAP() external view override returns (address lpVaultSwap) {
         lpVaultSwap = _LP_VAULT_SWAP;
-    }
-
-    /// @inheritdoc ILens
-    function PAYOUT_ESCROW() external view override returns (address payoutEscrow) {
-        payoutEscrow = _PAYOUT_ESCROW;
     }
 
     function _core(

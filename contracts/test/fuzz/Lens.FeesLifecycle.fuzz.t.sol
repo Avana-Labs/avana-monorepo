@@ -49,8 +49,7 @@ contract LensFeesLifecycleFuzzTest is LensFeesV3Fixture {
             uint256(growth[1]) * Q128 / 3 + uint256(growth[3]) * Q128
         );
         PositionFeesView memory f = lens.getPositionFees(M1, key);
-        (bool ok, bytes memory direct) =
-            lens.MODULES()[6].staticcall(abi.encodeCall(ILensFees.getPositionFees, (M1, key)));
+        (bool ok, bytes memory direct) = lensModules[6].staticcall(abi.encodeCall(ILensFees.getPositionFees, (M1, key)));
         assertTrue(ok, "the module answers");
         assertEq(keccak256(direct), keccak256(abi.encode(f)), "the entry point returns the module's bytes");
         (uint256 a0, uint256 a1) = _collect(key);

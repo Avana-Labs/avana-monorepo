@@ -77,6 +77,5 @@ contract LensRoutingStubsUnitTest is Test {
             p.checkRouteAdded(which, uint256(which) * 104_729);
         }
         assertTrue(p.property_coreAndModules(), "core and modules");
-        assertEq(ILens(address(lens)).MODULES().length, 9, "nine modules");
     }
 }

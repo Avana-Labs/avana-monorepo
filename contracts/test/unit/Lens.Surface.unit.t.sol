@@ -91,19 +91,14 @@ contract LensSurfaceUnitTest is LensFixture {
     // TEST-247 verifies: REQ-LENS-001, REQ-LENS-002, REQ-LENS-040
     function test_TEST_247_gettersAndModules() public view {
         assertEq(lens.COLLATERALIZATION(), address(coll), "Collateralization");
-        assertEq(lens.PROXY_MANAGER(), address(proxyManager), "ProxyManager");
         assertEq(lens.ADAPTER(), adapter, "AaveAdapter");
         assertEq(lens.LOCK(), address(lock), "Lock");
         assertEq(lens.MARKET_REGISTRY(), address(reg), "MarketRegistry");
         assertEq(lens.PARAMETER_STORE(), address(store), "ParameterStore");
-        assertEq(lens.RISK_MODULE(), address(rm), "RiskModule");
         assertEq(lens.LP_VAULT_SWAP(), lpVaultSwap, "LPVaultSwap");
-        assertEq(lens.PAYOUT_ESCROW(), address(escrow), "PayoutEscrow");
         assertEq(lens.LENS_MAX_PAGE(), 200, "page limit");
-        assertEq(lens.LENS_DUST_MARGIN_BPS(), 500, "dust margin");
-        address[9] memory m = lens.MODULES();
+        address[9] memory m = modules;
         for (uint256 i = 0; i < 9; ++i) {
-            assertEq(m[i], modules[i], "module order");
             LensBase b = LensBase(m[i]);
             assertEq(b.COLLATERALIZATION(), address(coll), "module core");
             assertEq(b.PAYOUT_ESCROW(), address(escrow), "module core");
@@ -267,7 +262,6 @@ contract LensSurfaceUnitTest is LensFixture {
     function test_TEST_060_gettersAnswerWhileLocked() public {
         _holdLock();
         assertEq(lens.LOCK(), address(lock), "immutable getters read no state");
-        assertEq(lens.MODULES()[0], modules[0], "modules");
         _releaseLock();
     }
 

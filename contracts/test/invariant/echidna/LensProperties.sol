@@ -103,11 +103,10 @@ contract LensProperties {
             && LensConstants.RECOMMENDED_HEALTH_FACTOR == 1.1e18;
     }
 
-    /// @notice The entry point reports the modules' core addresses and the modules in order.
+    /// @notice The entry point reports the modules' core addresses.
     function property_coreAndModules() external view returns (bool) {
-        address[9] memory m = LENS.MODULES();
-        return LENS.COLLATERALIZATION() == address(1) && LENS.ADAPTER() == address(3)
-            && LENS.PAYOUT_ESCROW() == address(9) && m[0] != m[5] && m[0] != address(0);
+        return
+            LENS.COLLATERALIZATION() == address(1) && LENS.ADAPTER() == address(3) && LENS.LP_VAULT_SWAP() != address(0);
     }
 
     /// @notice Routing: view `which` (one of six representatives, one per module) with argument `x` answers from the
