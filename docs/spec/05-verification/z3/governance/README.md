@@ -4,6 +4,8 @@ Z3 models of the AvanaTimelock's delays and windows, the MarketRegistry's market
 
 Run one script with `../../.venv/bin/python <file>.py`, or every model with `../../run_all.sh`. Each check asserts the negation of a property and prints `PROVED` (the negation is unsat), `COUNTEREXAMPLE` (the model is printed) or `TIMEOUT`; the script exits 1 only when a result differs from the one recorded beside the check. Every check carries a `# MATH-GOV-NN verifies: …` tag that `../../trace.py` reads.
 
+**Removed features.** The contracts no longer have the per-(Hub, asset) credit line (`recordCreditLine`, `syncDrawCap`, `creditLine`), cross-Hub credit lines, the per-market `hardHealthFloor` or the pool-share cap (`poolShareMaxBps`, the `POOL_SHARE` breaker reason, Collateralization's `poolUnits` counter). First-loss coverage is now checked on the summed live Aave draw caps of every CDP Spoke drawing an asset on a Hub (`MarketRegistry.drawCapCoverage`, [2.8](../../../02-contracts/08-market-registry.md) `REQ-CONFIG-081`), at `enableDebtReserve` and on every borrow of the asset; the health check after a borrow or a withdrawal that keeps debt is `max(1, minHealthFactor)`; the pool-depth gate stays. The model files were not changed: `tightenHardHealthFloor` and `tightenPoolShareMaxBps` in the short-delay allowlist and the hard-floor loosening step of `MATH-GOV-20c` describe setters that no longer exist.
+
 ## What is modelled
 
 Integer seconds (`block.timestamp`), no rounding. Batches of up to 6 calls, each with a payload length and a short-list flag; state sequences of up to 4 calls (5 for allowlist changes); every subset of the guardian roles.

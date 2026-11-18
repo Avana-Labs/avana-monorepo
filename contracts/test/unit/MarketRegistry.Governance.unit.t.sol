@@ -56,8 +56,9 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
     // TEST-063 verifies: REQ-MREG-004, REQ-CONFIG-002
     // A scheduled registry write that a guardian cancels never runs.
     function test_TEST_063_guardianCancelsAScheduledWrite() public {
-        Call[] memory calls = _one(address(registry), abi.encodeCall(registry.setCrossHubLinesEnabled, (true)));
-        bytes32 salt = keccak256("crossHub");
+        Call[] memory calls =
+            _one(address(registry), abi.encodeCall(registry.approveSpokeCodeHash, (keccak256("cancelled"))));
+        bytes32 salt = keccak256("codeHash");
         bytes32 id = _schedule(governanceMultisig, calls, NORMAL_DELAY, salt);
         vm.prank(emergencyGuardian);
         timelock.cancel(id);
@@ -66,7 +67,7 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
         vm.prank(attacker);
         vm.expectRevert();
         timelock.executeBatch(t, v, d, bytes32(0), salt);
-        assertFalse(registry.crossHubLinesEnabled());
+        assertFalse(registry.isApprovedSpokeCodeHash(keccak256("cancelled")));
     }
 
     // TEST-063 verifies: REQ-MREG-004, REQ-MREG-022, Q-263
@@ -106,8 +107,8 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
     function _slotsDigest() internal view returns (bytes32) {
         (address r0, bool u0) = registry.getRoute(marketId, address(usdc), address(gho), 0);
         (address r1, bool u1) = registry.getRoute(marketId, address(usdt), address(gho), 1);
-        (uint256 line, uint256 sum) = registry.creditLine(address(hub), address(gho));
-        return keccak256(abi.encode(r0, u0, r1, u1, line, sum));
+        (uint256 sum, uint256 required, uint256 funded) = registry.drawCapCoverage(address(hub), address(gho));
+        return keccak256(abi.encode(r0, u0, r1, u1, sum, required, funded));
     }
 
     function _stopsDigest() internal view returns (bytes32) {
@@ -132,7 +133,7 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
         );
         bytes memory b = abi.encode(
             registry.flashSource(),
-            registry.crossHubLinesEnabled(),
+            registry.isApprovedSpokeCodeHash(keccak256("fill")),
             registry.firstLossReserveOf(address(hub), address(gho)),
             registry.marketOfVaultToken(vt),
             registry.activeMarketCount(address(spoke))
@@ -141,7 +142,7 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
     }
 
     /// @dev Fills every family of records: pause and reason, a frozen address, latches and breach times, a disabled
-    /// route, a standby switch cancelled by the DAO, cross-Hub lines on, an offboarding market with one ramp step.
+    /// route, a standby switch cancelled by the DAO, an approved Spoke code hash, an offboarding market with one ramp step.
     function _fill() internal {
         vm.startPrank(emergencyGuardian);
         registry.pause(address(hub), PauseReason.MintPathSuspect);
@@ -155,7 +156,7 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
         registry.recordBreach(bytes32(marketId), BreakerReasons.ISSUER | BreakerReasons.ORACLE);
         vm.startPrank(address(timelock));
         registry.disableRoute(marketId, address(usdt), address(gho), 1);
-        registry.setCrossHubLinesEnabled(true);
+        registry.approveSpokeCodeHash(keccak256("fill"));
         registry.setMarketOffboarding(marketId);
         vm.stopPrank();
         vm.warp(block.timestamp + 7 days);
@@ -214,8 +215,8 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
         assertTrue(registry.hasRole(APP_ADMIN, newTimelock));
         assertFalse(registry.hasRole(APP_ADMIN, address(timelock)));
         vm.prank(newTimelock);
-        registry.setCrossHubLinesEnabled(true);
-        assertTrue(registry.crossHubLinesEnabled());
+        registry.approveSpokeCodeHash(keccak256("new timelock"));
+        assertTrue(registry.isApprovedSpokeCodeHash(keccak256("new timelock")));
     }
 
     // TEST-168 verifies: REQ-CONFIG-001, REQ-CONFIG-002

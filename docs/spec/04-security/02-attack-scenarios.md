@@ -481,7 +481,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Affected steps | `BOR` |
 | Prerequisites | Hostile AaveAdapter implementation executed after the 5-day normal timelock delay without cancellation |
 | Attack approach | The hostile Adapter calls `proxy.borrow(debtReserveId, amount, attacker)` for every proxy and every debt reserve; any other upgradeable contract tries the same; a proxy cannot be given new code, because it has no upgrade path |
-| Impact | Every debt reserve's credit line drained up to each CDP Spoke drawCap |
+| Impact | Every debt reserve drained up to each CDP Spoke drawCap |
 | Expected protection | `INV-018`, `INV-057`, `INV-063`, `INV-065`, `INV-068`: the RiskModule, MarketRegistry, ParameterStore, LPOracle and LPVaultSwap cannot call a proxy (`OnlyAdapter`); Adapter upgrades are `APPLICATION_ADMIN` operations at the 5-day normal delay, visible in the queue and cancellable by the governance multisig, the Emergency Guardian, the Aave Protocol Guardian and the Aave governance executor; repay and debt-free withdrawal are never paused, so borrowers can leave inside the delay; the drawCap of each debt reserve bounds what can be drawn (Source: Q-092, Q-093, Q-126, Q-223, Q-225, Q-226, Q-228) |
 | Result | Accepted risk — owner: Avana governance (the reviewed Adapter implementation) together with the cancellers; bound: the 5-day delay with cancellation and each debt reserve's drawCap |
 | Checks | TEST-130, TEST-195, TEST-210, FINDING-099, FINDING-100 |
@@ -505,7 +505,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Field | Value |
 |---|---|
 | Target | RiskModule, AaveAdapter |
-| Objective | Borrow, or withdraw with debt, in Drifting or frozen markets, with stale collateral or debt prices, during a liquidation halt or below a market's `hardHealthFloor` where one is set |
+| Objective | Borrow, or withdraw with debt, in Drifting or frozen markets, with stale collateral or debt prices, during a liquidation halt or below Aave's HF 1 or the caller's `minHealthFactor` |
 | Affected steps | `BOR`, `WDR` |
 | Prerequisites | Hostile RiskModule implementation executed after the 5-day normal timelock delay without cancellation |
 | Attack approach | The RiskModule passes every `preBorrowCheck`, `preWithdrawCheck` and `postHealthCheck`; a borrower who knows a token depegged borrows against the served price |
@@ -596,7 +596,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Prerequisites | Flash loan |
 | Attack approach | Move the pool's spot price before a borrow |
 | Impact | Overvalued borrowing |
-| Expected protection | `INV-055`: the price uses only Chainlink-validated prices; no `slot0`, `observe`, reserve or position read in the price path for Uniswap v3 and Slipstream markets; the price is the fair composition `value = Σ amountᵢ × priceᵢ` of one unit of the market's exact range at the oracle price vector, with the oracle ratio clamped to the range (`INV-078`), so a spot move does not change it; and pool reads appear only in Avana's gates (TWAP guard, pool-share cap), never in the price Aave reads (Source: Q-028, Q-079, Q-085, Q-128, Q-363) |
+| Expected protection | `INV-055`: the price uses only Chainlink-validated prices; no `slot0`, `observe`, reserve or position read in the price path for Uniswap v3 and Slipstream markets; the price is the fair composition `value = Σ amountᵢ × priceᵢ` of one unit of the market's exact range at the oracle price vector, with the oracle ratio clamped to the range (`INV-078`), so a spot move does not change it; and pool reads appear only in Avana's gates (TWAP guard, pool-depth check), never in the price Aave reads (Source: Q-028, Q-079, Q-085, Q-128, Q-363) |
 | Result | Mitigated |
 | Checks | None |
 
@@ -721,7 +721,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Affected steps | `MKT` |
 | Prerequisites | Governance compromise on either side |
 | Attack approach | Change a feed definition in the ParameterStore, a debt reserve's recorded price source in the MarketRegistry, or the LPOracle implementation; or call `Spoke.updateReservePriceSource` |
-| Impact | Credit-line exploit |
+| Impact | Debt-reserve drain up to the draw caps |
 | Expected protection | `INV-029`, `INV-051`, `INV-068`: every Avana feed, price-source and LPOracle change is an `APPLICATION_ADMIN` operation at the 5-day normal delay, cancellable by the governance multisig, the Emergency Guardian, the Aave Protocol Guardian and the Aave governance executor; the RiskModule's drift check compares the Spoke oracle's source for every vault-token reserve and every debt reserve with the recorded one on every new-account pledge and borrow (`ConfigDrift`), so an Aave-side change closes new risk; fork reruns of the oracle checks follow every change (Source: Q-080, Q-091, Q-172, Q-228, Q-238) |
 | Result | Accepted risk — owner: Aave DAO for Spoke price-source changes outside Avana's timelock; bound: the drift check blocks new pledges and borrows while the Spoke's price source differs from the recorded one |
 | Checks | None |
@@ -1268,14 +1268,14 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 
 | Field | Value |
 |---|---|
-| Target | RiskModule pool-share cap |
-| Objective | Pledge past `poolShareMaxBps`, or deny others' pledges, by moving in-range liquidity in the same transaction |
+| Target | RiskModule pool-share cap (removed) |
+| Objective | Pledge past the pool-share cap, or deny others' pledges, by moving in-range liquidity in the same transaction |
 | Affected steps | `DEP` |
 | Prerequisites | Flash loan; JIT liquidity |
 | Attack approach | Add or remove in-range liquidity or move the price around a pledge |
-| Impact | Cap bypass or pledge denial |
-| Expected protection | `INV-028`: the denominator is time-weighted in-range liquidity from `observe()`, never same-transaction pool state. The cap binds only on a pool whose listing sets one; the chain default is 10,000 bps, no limit (Source: Q-055, Q-113, Q-119, Q-403) |
-| Result | Mitigated |
+| Impact | None: there is no pool-share cap to bypass or fill |
+| Expected protection | `INV-028`: the on-chain pool-share cap was removed on 2026-11-18 (`Q-403`); it was 10,000 bps (off) in practice. The pool-depth check stays and reads time-weighted in-range liquidity from `observe()`, never same-transaction pool state (Source: Q-055, Q-113, Q-119, Q-403) |
+| Result | Not applicable (control removed) |
 | Checks | None |
 
 ### ATTACK-089: Cross-Spoke or cross-asset liquidity exhaustion and hidden deficit
@@ -1286,9 +1286,9 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Objective | Exhaust shared liquidity of a debt asset from one Spoke, or let deficits sit unseen in a share price |
 | Affected steps | `BOR`, `DEF` |
 | Prerequisites | Several CDP Spokes, or several debt reserves funded from one Hub |
-| Attack approach | Borrow the whole line of one asset on the riskiest tier; leave deficits uncovered |
+| Attack approach | Borrow to the draw caps of one asset on the riskiest tier; leave deficits uncovered |
 | Impact | Capacity and losses decided by the riskiest tier |
-| Expected protection | `INV-041`, `INV-042`, `INV-057`, `INV-071`: at launch a Stable LP Hub on Ethereum and on Base, each with its CDP Spokes; DAO-set `drawCap` per (Hub, asset, Spoke), and no draw completes that leaves a Spoke above it; credit lines are draw caps on the funding Hub's Lend Spoke supply (public and DAO), and a cross-Hub line is capped by the funding Hub (`INV-094`, off at launch); deficits are recorded per debt reserve in its own asset on the Hub that funded it, alert, and are covered from that asset's First-Loss Reserve; only a First-Loss Reserve calls `eliminateDeficit`, so coverage spends reserve capital only (Source: Q-032, Q-070, Q-071, Q-095, Q-101, Q-233, Q-236, Q-239, Q-363) |
+| Expected protection | `INV-041`, `INV-042`, `INV-057`, `INV-071`: at launch a Stable LP Hub on Ethereum and on Base, each with its CDP Spokes; DAO-set `drawCap` per (Hub, asset, Spoke), and no draw completes that leaves a Spoke above it; the draw caps bound borrowing of the Hub's Lend Spoke supply (public and DAO), every debt reserve is funded by its CDP Spoke's home Hub, and no borrow of an asset completes while the summed draw caps exceed first-loss coverage (`INV-094`); deficits are recorded per debt reserve in its own asset on the Hub that funded it, alert, and are covered from that asset's First-Loss Reserve; only a First-Loss Reserve calls `eliminateDeficit`, so coverage spends reserve capital only (Source: Q-032, Q-070, Q-071, Q-095, Q-101, Q-233, Q-236, Q-239, Q-363) |
 | Result | Mitigated |
 | Checks | TEST-199 |
 
@@ -1418,7 +1418,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Prerequisites | Compromise of a pause-guardian Safe (Emergency Guardian or Aave Protocol Guardian), optionally a keeper key |
 | Attack approach | The application is paused during a depeg; the compromised guardian calls `unpause()` and the attacker borrows at a stale peg in the same bundle; or uses the unpaused state to liquidate through a route that governance had queued for disabling |
 | Impact | Borrowing that the pause was meant to stop |
-| Expected protection | `INV-023`, `INV-024`, `INV-034`, `INV-049`, `INV-050`: `unpause` and `unfreeze` restore only the application state; every borrow still passes the RiskModule's gates (every collateral market Live, every price within `borrowPriceMaxAge`, no Aave reserve frozen or paused, no `Offboarding` market, no drift, HF ≥ max(1, the market's `hardHealthFloor` where set, caller's minimum)), and those gates are not guardian-controlled; Aave's own reserve freezes and pauses are a separate source the Avana guardians cannot lift; no parameter, route or keeper can be loosened outside the normal delay, and a restored route (`restoreRoute`) must be one previously approved, runs at the short delay, can be cancelled only by the Aave governance executor, and is still bound by the recovery floor and the per-leg minimums; the circuit breakers keep blocking borrowing against a tripped market after an unpause; the other guardian or `APPLICATION_ADMIN` can pause again at once (Source: Q-151, Q-227, Q-228, Q-229, Q-241, Q-263) |
+| Expected protection | `INV-023`, `INV-024`, `INV-034`, `INV-049`, `INV-050`: `unpause` and `unfreeze` restore only the application state; every borrow still passes the RiskModule's gates (every collateral market Live, every price within `borrowPriceMaxAge`, no Aave reserve frozen or paused, no `Offboarding` market, no drift, HF ≥ max(1, caller's minimum)), and those gates are not guardian-controlled; Aave's own reserve freezes and pauses are a separate source the Avana guardians cannot lift; no parameter, route or keeper can be loosened outside the normal delay, and a restored route (`restoreRoute`) must be one previously approved, runs at the short delay, can be cancelled only by the Aave governance executor, and is still bound by the recovery floor and the per-leg minimums; the circuit breakers keep blocking borrowing against a tripped market after an unpause; the other guardian or `APPLICATION_ADMIN` can pause again at once (Source: Q-151, Q-227, Q-228, Q-229, Q-241, Q-263) |
 | Result | Accepted risk — owner: Avana Labs (Emergency Guardian signers) and the Aave Protocol Guardian; bound: borrowing reopened by an unpause is still limited by every RiskModule gate, the Aave HF and the `drawCap` of each debt reserve, and lasts until either guardian or `APPLICATION_ADMIN` pauses again |
 | Checks | TEST-192, FINDING-079 |
 
@@ -1460,7 +1460,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Prerequisites | Compromise of the Emergency Guardian (pause guardian and canceller) |
 | Attack approach | Call `pause(General)`, trip the market breaker and freeze the borrower's address; when that fails, call `pause(MintPathSuspect)`; re-pause after every unpause; cancel each scheduled `unpause` and the operations that revoke its roles |
 | Impact | Under `Paused(General)`, a breaker or an address freeze: none, rescue top-ups stay open. Under `Paused(MintPathSuspect)`: indebted borrowers cannot add collateral; they can still repay any debt reserve, and their positions are liquidated under the normal rules |
-| Expected protection | `INV-026`, `INV-043`, `INV-050`, `INV-067`, `INV-068`, `INV-081`: a rescue top-up (an indebted account below `rescueHealthFactor` (1.10), charge at most the amount that restores it, value at least `min(minPledgeUsd, $10)`) passes `Paused(General)`, every breaker, the pool-share cap and the address freeze (`REQ-RISK-066`, `REQ-RISK-067`); only `Paused(MintPathSuspect)` refuses it, because that reason means minting itself may be unsafe; Frozen leaves top-ups of indebted accounts open; repay never reads the pause state, so a borrower can always restore HF by repaying; the Aave Protocol Guardian also holds `APPLICATION_PAUSE_GUARDIAN` and unpauses at once; an operation that only revokes roles is cancellable only by the Aave governance executor, so the rogue guardian cannot block its own removal (Source: Q-164, Q-227, Q-228, Q-241, Q-242, Q-252) |
+| Expected protection | `INV-026`, `INV-043`, `INV-050`, `INV-067`, `INV-068`, `INV-081`: a rescue top-up (an indebted account below `rescueHealthFactor` (1.10), charge at most the amount that restores it, value at least `min(minPledgeUsd, $10)`) passes `Paused(General)`, every breaker and the address freeze (`REQ-RISK-066`, `REQ-RISK-067`); only `Paused(MintPathSuspect)` refuses it, because that reason means minting itself may be unsafe; Frozen leaves top-ups of indebted accounts open; repay never reads the pause state, so a borrower can always restore HF by repaying; the Aave Protocol Guardian also holds `APPLICATION_PAUSE_GUARDIAN` and unpauses at once; an operation that only revokes roles is cancellable only by the Aave governance executor, so the rogue guardian cannot block its own removal (Source: Q-164, Q-227, Q-228, Q-241, Q-242, Q-252) |
 | Result | Accepted risk — owner: Aave Protocol Guardian and Aave governance (unpause and revocation); bound: rescue top-ups blocked only under `Paused(MintPathSuspect)`, at most until the Aave Protocol Guardian unpauses or the revocation executes after the normal delay (5 days); no solvency effect, since liquidation, repay and debt-free withdrawal stay open |
 | Checks | TEST-192, TEST-194, TEST-235, FINDING-091 |
 
@@ -1501,7 +1501,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Affected steps | `MKT` listing |
 | Prerequisites | A listing proposal |
 | Attack approach | Wire the LPOracle to another pool or an attacker feed; record a debt reserve with a wrong Hub, price source, First-Loss Reserve, funding Hub or swap route |
-| Impact | Credit-line exploit through governance |
+| Impact | Debt-reserve drain through governance |
 | Expected protection | `INV-005`, `INV-051`, `INV-068`, `INV-073`: the Avana half of a listing is one normal-delay batch (5 days) — `deployVaultToken`, `listToken`, `listCollateralMarket`, the initial caps and `minPledgeUsd`, routes, and for a debt reserve `enableDebtReserve` and its swap routes — visible in the queue and cancellable by any canceller; a registered market can be cancelled with `cancelRegistration` (short delay); `activateMarket` (short delay, 12 hours) succeeds only when the on-chain match check against the executed Aave listing payload passes (vault token, factory-derived pool, Spoke reserve, Hub asset, feeds and routes all belong to one market; the debt-reserve set equals the Spoke's), plus the off-chain live-config check (Source: Q-043, Q-091, Q-114, Q-119, Q-128, Q-228, Q-233, Q-281) |
 | Result | Launch condition — on-chain match check and live-config check pass for every market and debt reserve before activation |
 | Checks | TEST-204 |
@@ -1990,7 +1990,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Prerequisites | Own accounts in market m below HF 1; its own `liquidate` call; capital to push the primary route's pool |
 | Attack approach | Liquidate its own accounts until the seized units in one hour exceed 20% of the market; or push the primary sell route off price before each of its own liquidations so the backup settles and the primary counts as failed, 3 times in one hour; or withdraw and re-pledge in volume |
 | Impact | None on-chain: these signals raise monitoring alerts and trip nothing; repay, debt-free withdrawal and removal, fee collection, rescue top-ups, repay with collateral, liquidation and new borrowing continue |
-| Expected protection | `INV-081`, `INV-046`, `INV-067`: the seizure-surge and route-failure breakers are not on-chain trip conditions (`Q-399`). A seizure above 20% of a market in 1 hour and 3 swap-route failures in 1 hour are monitoring alerts only, because reverted calls cannot persist counts and an on-chain counter can be gamed by self-liquidation; new borrowing in a market is frozen for route failure only by a guardian action (`tripMarketBreaker`) once monitoring confirms the approved routes cannot settle valid liquidations at the required size. The on-chain gates that remain (oracle and stablecoin band breach, the pool-share concentration gate `poolShareMaxBpsOf(poolKey)` where a pool's listing sets a cap (`Q-403`), and the deficit freeze at `breakerDeficitMax`) are not moved by self-liquidation of a solvent position, and a temporary price or depth gate clears after 30 minutes of healthy observations, a provisional launch setting (Source: Q-241, Q-399) |
+| Expected protection | `INV-081`, `INV-046`, `INV-067`: the seizure-surge and route-failure breakers are not on-chain trip conditions (`Q-399`). A seizure above 20% of a market in 1 hour and 3 swap-route failures in 1 hour are monitoring alerts only, because reverted calls cannot persist counts and an on-chain counter can be gamed by self-liquidation; new borrowing in a market is frozen for route failure only by a guardian action (`tripMarketBreaker`) once monitoring confirms the approved routes cannot settle valid liquidations at the required size. The on-chain gates that remain (oracle and stablecoin band breach, the pool-depth gate, and the deficit freeze at `breakerDeficitMax`; the pool-share gate is removed, `Q-403`) are not moved by self-liquidation of a solvent position, and a temporary price or depth gate clears after 30 minutes of healthy observations, a provisional launch setting (Source: Q-241, Q-399) |
 | Result | Mitigated: self-liquidation trips no on-chain breaker; a false alert costs the attacker its own liquidated collateral or repeated pool pushes and changes nothing for other users |
 | Checks | TEST-228, TEST-215, PROP-066 |
 
@@ -2060,7 +2060,7 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Prerequisites | Any address can call `increaseLiquidity` on the AMM protocol's position manager for any position |
 | Attack approach | Call `increaseLiquidity` on a victim's pledged NFT and then `recredit` for it, filling `marketUsdCap` or `tokenUsdCap` so other users cannot pledge; or donate to its own NFT and re-credit while the market is near its caps or Paused; or re-credit and withdraw in pieces to release more cap than was booked |
 | Impact | None: a donation stays uncredited until its depositor re-credits it through every top-up check |
-| Expected protection | `INV-002`, `INV-027`, `INV-028`, `INV-088`: only the record's depositor can re-credit (`NotDepositor`), and the added units are the position's liquidity read through the AMM integration minus `credited`, reconciled first; a re-credit runs every top-up check (price state, Offboarding, exposure caps and slice, Hub `addCap`, pool share, `minPledgeUsd`, breakers) and books its charge, and `credited + added ≤ MAX_CREDITED_LIQUIDITY`; under `Paused(General)`, a breaker or an address freeze it is admitted only as a rescue top-up, and under `Paused(MintPathSuspect)` never; the record is rebased so `charge(U0') = C0'` and `charge(0) = 0` (`SPEC-BACK-013`), so exits across any split release exactly what was booked; the mint equals the credit and the backing gap is unchanged (Source: Q-157, Q-252, Q-254, Q-257) |
+| Expected protection | `INV-002`, `INV-027`, `INV-028`, `INV-088`: only the record's depositor can re-credit (`NotDepositor`), and the added units are the position's liquidity read through the AMM integration minus `credited`, reconciled first; a re-credit runs every top-up check (price state, Offboarding, exposure caps and slice, Hub `addCap`, `minPledgeUsd`, breakers) and books its charge, and `credited + added ≤ MAX_CREDITED_LIQUIDITY`; under `Paused(General)`, a breaker or an address freeze it is admitted only as a rescue top-up, and under `Paused(MintPathSuspect)` never; the record is rebased so `charge(U0') = C0'` and `charge(0) = 0` (`SPEC-BACK-013`), so exits across any split release exactly what was booked; the mint equals the credit and the backing gap is unchanged (Source: Q-157, Q-252, Q-254, Q-257) |
 | Result | Mitigated |
 | Checks | TEST-238, TEST-016, TEST-097, PROP-065 |
 
@@ -2097,12 +2097,12 @@ Attacks against Avana and the protection that blocks or bounds each one (decisio
 | Field | Value |
 |---|---|
 | Target | RiskModule rescue top-ups, `postHealthCheck` |
-| Objective | Use rescue top-ups, which pass the pool-share cap, the breakers, the address freeze and `Paused(General)`, and slice top-ups, whose slice part sits outside the token caps, as a route to borrow more than the caps allow |
+| Objective | Use rescue top-ups, which pass the breakers, the address freeze and `Paused(General)`, and slice top-ups, whose slice part sits outside the token caps, as a route to borrow more than the caps allow |
 | Affected steps | `DEP` rescue top-up; `BOR`; `WDR` |
 | Prerequisites | An indebted account below `rescueHealthFactor` (1.10) |
 | Attack approach | Top up from the slice to restore HF 1.10, borrow back down to HF 1, repeat; or withdraw a regular record with debt after a rescue top-up |
 | Impact | None: rescue units never support new debt |
-| Expected protection | `INV-082`, `INV-025`: Collateralization books rescue units per record (whole for an exempt rescue, the slice part otherwise) and caps them at the record's credited units after every debit; `postHealthCheck` subtracts their collateral value from HF and requires the rescue-excluded `hfEx ≥ max(1, hardHealthFloor, minHealthFactor)` after every borrow, withdraw-with-debt and with-debt removal (`SPEC-CF-005`), where `hardHealthFloor` is the market's optional hard floor, off (0) by default (`Q-398`). Example: debt $10,000 at HF 1.08, so regular weighted collateral is $10,800; a top-up of $641 from the slice at collateral factor 0.312 adds `E` = $200 of rescue value and restores HF 1.10; borrowing back is checked on `hfEx`, which starts at 1.08 and must stay at least 1, so the account can borrow at most $800 (to a debt of $10,800) against its regular collateral, and a borrow toward the $11,000 that HF with rescue units would allow reverts `HealthFactorTooLow` (Source: Q-157, Q-252, Q-253, Q-398) |
+| Expected protection | `INV-082`, `INV-025`: Collateralization books rescue units per record (whole for an exempt rescue, the slice part otherwise) and caps them at the record's credited units after every debit; `postHealthCheck` subtracts their collateral value from HF and requires the rescue-excluded `hfEx ≥ max(1, minHealthFactor)` after every borrow, withdraw-with-debt and with-debt removal (`SPEC-CF-005`; no per-market floor, `Q-398`). Example: debt $10,000 at HF 1.08, so regular weighted collateral is $10,800; a top-up of $641 from the slice at collateral factor 0.312 adds `E` = $200 of rescue value and restores HF 1.10; borrowing back is checked on `hfEx`, which starts at 1.08 and must stay at least 1, so the account can borrow at most $800 (to a debt of $10,800) against its regular collateral, and a borrow toward the $11,000 that HF with rescue units would allow reverts `HealthFactorTooLow` (Source: Q-157, Q-252, Q-253, Q-398) |
 | Result | Mitigated |
 | Checks | TEST-236, TEST-235, PROP-067 |
 
@@ -2258,9 +2258,9 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Objective | Push a Hub's exposure to one token or pool above its cap by spreading pledges over several Spokes and markets |
 | Affected steps | `DEP` cap checks, top-up, re-credit |
 | Prerequisites | Several CDP Spokes or markets on one Hub sharing a token, for example USDC/USDT, USDT/DAI and USDT/GHO |
-| Attack approach | With `tokenUsdCap[USDT]` = $10M, pledge $10M of USDT exposure in each of three markets, or list one pool twice with two ranges to double the pool-share cap |
+| Attack approach | With `tokenUsdCap[USDT]` = $10M, pledge $10M of USDT exposure in each of three markets |
 | Impact | None: the fourth $10M is refused |
-| Expected protection | `INV-092`, `INV-027`, `INV-028`: the token counters live in the one per-chain ledger, keyed by Hub, and every pledge, top-up, re-credit and debit in every market of the Hub updates the same counter; the pool-share counter is keyed by pool and sums every market (every range or shape) of that pool on the chain, so k ranges of one pool share one `poolShareMaxBps` cap; token exposure is counted per funding Hub over every Spoke that draws from it; adding Spokes or markets never adds cap room (Source: Q-174, Q-363, Q-383) |
+| Expected protection | `INV-092`, `INV-027`, `INV-028`: the token counters live in the one per-chain ledger, keyed by Hub, and every pledge, top-up, re-credit and debit in every market of the Hub updates the same counter; there is no pool-share cap to multiply (removed, `Q-383`); token exposure is counted per funding Hub over every Spoke that draws from it; adding Spokes or markets never adds cap room (Source: Q-174, Q-363, Q-383) |
 | Result | Mitigated |
 | Checks | TEST-272, PROP-077, FINDING-205 |
 
@@ -2338,13 +2338,13 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 
 | Field | Value |
 |---|---|
-| Target | MarketRegistry, cross-Hub credit-line registry, First-Loss Reserves |
-| Objective | Draw a funding Hub's asset from Spokes homed on other Hubs beyond what the funding Hub approved, and leave the resulting deficit uncovered |
+| Target | MarketRegistry first-loss coverage check, First-Loss Reserves |
+| Objective | Draw a Hub's asset from Spokes homed on other Hubs, or from more Spokes than the First-Loss Reserve covers, and leave the resulting deficit uncovered |
 | Affected steps | `BOR`, `DEF`, `MKT` `enableDebtReserve` |
-| Prerequisites | A debt reserve whose funding Hub differs from the Spoke's home Hub |
-| Attack approach | Have each Hub's registry approve its own Spokes up to the line, so the sum over Hubs exceeds the funding Hub's line; let a Volatile Spoke default on Stable Hub USDC, where the Stable Hub's First-Loss Reserve does not recognise the foreign Spoke |
-| Impact | None: the cap that binds is the funding Hub's |
-| Expected protection | `INV-094`, `INV-057`, `INV-071`: the funding Hub owns the cross-Hub cap; one registry sums every line per (funding Hub, asset) over every drawing Spoke on every Hub, and `enableDebtReserve` and every draw check the sum against that cap, which is at most the funding Hub's first-loss coverage; a pause of the funding Hub stops the line; each debt reserve records its funding Hub and its First-Loss Reserve is the one of (funding Hub, asset); cross-Hub lines are off at launch (cap 0) (Source: Q-233, Q-363) |
+| Prerequisites | A debt reserve whose funding Hub differs from the Spoke's home Hub, or several CDP Spokes drawing one (Hub, asset) |
+| Attack approach | Enable a Volatile Spoke's reserve funded by the Stable Hub's USDC; or enable several Spokes on one (Hub, asset) whose draw caps together exceed what the First-Loss Reserve covers |
+| Impact | None: the cross-Hub reserve is refused and borrowing stops at the cover |
+| Expected protection | `INV-094`, `INV-057`, `INV-071`: cross-Hub lines are removed, so `enableDebtReserve` reverts `InvalidDebtReserve("fundingHub")` unless the funding Hub is the Spoke's home Hub; the MarketRegistry sums the live draw caps of every CDP Spoke with an enabled reserve of the (Hub, asset), and `enableDebtReserve` and every borrow of the asset revert `CoverageBelowRatio` while that sum is above the First-Loss Reserve's cover; each debt reserve's First-Loss Reserve is the one of (funding Hub, asset) (Source: Q-233, Q-283, Q-363) |
 | Result | Mitigated |
 | Checks | TEST-273, PROP-079, FINDING-211 |
 
@@ -2483,8 +2483,8 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Affected steps | `BOR`, `LIQ`, `DEF`, `MKT` `enableDebtReserve` |
 | Prerequisites | A cross-Hub debt reserve |
 | Attack approach | Enable a Volatile Spoke's USDC reserve funded by the Stable Hub, borrow to the cap, and let the volatile collateral fall |
-| Impact | None at launch: cross-Hub lines are off; when on, bounded by the funding Hub's cap |
-| Expected protection | `INV-094`, `INV-071`, `INV-042`: each debt reserve records its funding Hub; the funding Hub owns the cross-Hub cap, one registry sums lines per (funding Hub, asset), and the cap is at most that Hub's first-loss coverage; a deficit is covered only by the First-Loss Reserve of (funding Hub, asset); pending settlement sends recovered value to the First-Loss Reserve of the market's (Hub, debt asset) (Source: Q-233, Q-236, Q-363) |
+| Impact | None: a cross-Hub debt reserve cannot be enabled |
+| Expected protection | `INV-094`, `INV-071`, `INV-042`: cross-Hub lines are removed (`Q-283`), so each debt reserve's funding Hub is its CDP Spoke's home Hub and `enableDebtReserve` reverts `InvalidDebtReserve("fundingHub")` otherwise; a deficit is covered only by the First-Loss Reserve of (funding Hub, asset); pending settlement sends recovered value to the First-Loss Reserve of the market's (Hub, debt asset) (Source: Q-233, Q-236, Q-363) |
 | Result | Mitigated |
 | Checks | TEST-273, TEST-280, PROP-079, FINDING-221 |
 
@@ -2493,12 +2493,12 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Field | Value |
 |---|---|
 | Target | `drawCap` configuration across Hubs |
-| Objective | Raise one Spoke's `drawCap` through a separate AIP so the sum across Hubs exceeds the asset's credit line |
+| Objective | Raise one Spoke's `drawCap` through a separate AIP so the summed draw caps exceed the asset's first-loss cover |
 | Affected steps | `BOR`, `MKT` |
-| Prerequisites | A mistaken or hostile cap change |
-| Attack approach | Raise a foreign Spoke's `drawCap` on the funding Hub's asset |
-| Impact | None: the borrow is refused |
-| Expected protection | `INV-094`, `INV-057`: the registry's sum per (funding Hub, asset) is read on-chain at every draw; a draw that would leave the sum of drawn amounts above the funding Hub's cap reverts, and no draw completes that leaves a Spoke above its `drawCap` (Source: Q-363) |
+| Prerequisites | A mistaken or hostile cap change on the Hub, made without Avana |
+| Attack approach | Raise a CDP Spoke's `drawCap` on the Hub's asset past what the First-Loss Reserve covers |
+| Impact | None: new borrows of the asset are refused |
+| Expected protection | `INV-094`, `INV-057`: the MarketRegistry reads the live draw caps of every CDP Spoke drawing the (Hub, asset) on every borrow of the asset (`drawCapCoverage`), so after the raise every new borrow of that asset reverts `CoverageBelowRatio(hub, asset, required, funded)`, while repay, withdrawal and liquidation stay open; cutting the cap back within the cover or funding the First-Loss Reserve reopens borrowing; no draw completes that leaves a Spoke above its `drawCap` (Source: Q-353, Q-363) |
 | Result | Mitigated |
 | Checks | TEST-273, TEST-274, PROP-079, PROP-081, FINDING-222 |
 
@@ -2520,13 +2520,13 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 
 | Field | Value |
 |---|---|
-| Target | LPOracle, cap counters, pool-share check |
-| Objective | Profit from value per unit, shocks, collateral factor or pool-share checks derived for full range on a market with a bounded range |
+| Target | LPOracle, cap counters |
+| Objective | Profit from value per unit, shocks or collateral factor derived for full range on a market with a bounded range |
 | Affected steps | `DEP`, `BOR`, `LIQ` |
 | Prerequisites | A bounded-range market |
 | Attack approach | Pledge positions in a bounded market while a depeg pushes it out of range |
 | Impact | None: every formula uses the market's exact range |
-| Expected protection | `INV-078`, `INV-005`: the composition at the oracle price vector is computed for the market's exact `[tickLower, tickUpper]` with the oracle ratio clamped to the range; the pool-share check counts the market's own range; caps and the collateral factor are set at `listCollateralMarket` from the range's single-token composition at each edge (Source: Q-363) |
+| Expected protection | `INV-078`, `INV-005`: the composition at the oracle price vector is computed for the market's exact `[tickLower, tickUpper]` with the oracle ratio clamped to the range; caps and the collateral factor are set at `listCollateralMarket` from the range's single-token composition at each edge (Source: Q-363) |
 | Result | Mitigated |
 | Checks | TEST-279, TEST-266, PROP-083, FINDING-224 |
 
@@ -2623,8 +2623,8 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Affected steps | `DEF`, Lend Spoke withdraw |
 | Prerequisites | A deficit larger than the Avana Umbrella and the DAO deficit offset of that (Hub, asset) together |
 | Attack approach | Watch for deficit reports and withdraw first |
-| Impact | Bounded by the residual beyond both loss layers, which the credit lines and the caps sized against the layers keep to losses above `coverageRatioBps` of the line plus the DAO offset (`ATTACK-198`) |
-| Expected protection | `INV-042`, `INV-074`, `INV-094`: each (Hub, debt asset) has its own First-Loss Reserve and every credit line is capped at the coverage behind it (`DEF-019`); deficits and coverage per drawing Spoke and Hub are readable on-chain and in the Lens (`uncoveredDeficit`, the backed value per share, `getHubAssetExposure`), so no lender has an information advantage; the moment `uncoveredDeficit > 0`, P-18 sets the drawing Spokes' `drawCap`s to 0 and the Aave Protocol Guardian freezes the Lend Spoke reserve of that (Hub, asset), which stops new supply while withdrawals stay open, and the app's Lend page builds no supply into it (`REQ-ARCH-211`); the DAO deficit offset covers after the Avana Umbrella before any residual exists (`DEF-024`) (Source: Q-236, Q-353, Q-363, Q-407, Q-410) |
+| Impact | Bounded by the residual beyond both loss layers, which the draw caps, covered by the First-Loss Reserve on every borrow, and the caps sized against the layers keep to losses above `coverageRatioBps` of the summed draw caps plus the DAO offset (`ATTACK-198`) |
+| Expected protection | `INV-042`, `INV-074`, `INV-094`: each (Hub, debt asset) has its own First-Loss Reserve and no borrow of the asset completes while the summed draw caps exceed the coverage behind them (`DEF-019`); deficits and coverage per drawing Spoke and Hub are readable on-chain and in the Lens (`uncoveredDeficit`, the backed value per share, `getHubAssetExposure`), so no lender has an information advantage; the moment `uncoveredDeficit > 0`, P-18 sets the drawing Spokes' `drawCap`s to 0 and the Aave Protocol Guardian freezes the Lend Spoke reserve of that (Hub, asset), which stops new supply while withdrawals stay open, and the app's Lend page builds no supply into it (`REQ-ARCH-211`); the DAO deficit offset covers after the Avana Umbrella before any residual exists (`DEF-024`) (Source: Q-236, Q-353, Q-363, Q-407, Q-410) |
 | Result | Accepted risk — owner: Aave DAO and every Lend Spoke lender, public lenders included; bound: deficits beyond both loss layers, which the caps size against; Aave V4 has no write-down, so a lender who withdraws first is paid in full and the residual stays with the lenders who remain last (`DEF-014`, `Q-410`) |
 | Checks | TEST-273, TEST-297, TEST-299, FINDING-231 |
 
@@ -2633,12 +2633,12 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Field | Value |
 |---|---|
 | Target | Cap counters |
-| Objective | Fill `marketUsdCap`, `tokenUsdCap` or the pool share with debt-free pledges, or pledges carrying a token borrow, so borrowers cannot open accounts |
+| Objective | Fill `marketUsdCap` or `tokenUsdCap` with debt-free pledges, or pledges carrying a token borrow, so borrowers cannot open accounts |
 | Affected steps | `DEP` |
 | Prerequisites | Capital |
 | Attack approach | Pledge debt-free up to the caps and keep earning fees |
 | Impact | Bounded: denial of new pledges in that market until the attacker leaves or governance raises the cap; no loss of funds |
-| Expected protection | `INV-028`, `INV-092`: caps are counted per Hub in one ledger and charged at pledge; there is no idle-collateral mechanism (`Q-396`), so a debt-free position keeps its charge in the market's cap for as long as it stays pledged. This is the accepted risk AMMN-FLOW-16: caps are set at listing (`marketUsdCap`, `tokenUsdCap`, `poolShareMaxBps`), monitoring reports each market's cap use by debt-free positions, the attacker carries the full price risk of its positions while pledged, and governance can raise a market's cap through the timelock (Source: Q-157, Q-363, Q-384, Q-396) |
+| Expected protection | `INV-028`, `INV-092`: caps are counted per Hub in one ledger and charged at pledge; there is no idle-collateral mechanism (`Q-396`), so a debt-free position keeps its charge in the market's cap for as long as it stays pledged. This is the accepted risk AMMN-FLOW-16: caps are set at listing (`marketUsdCap`, `tokenUsdCap`), monitoring reports each market's cap use by debt-free positions, the attacker carries the full price risk of its positions while pledged, and governance can raise a market's cap through the timelock (Source: Q-157, Q-363, Q-384, Q-396) |
 | Result | Accepted risk (AMMN-FLOW-16, `Q-396`) — owner: Avana governance (cap sizing at listing and monitoring); bound: a liveness loss for new pledges in one market, no loss of funds |
 | Checks | TEST-272, FINDING-232 |
 
@@ -2834,7 +2834,7 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Prerequisites | A deficit above the Avana Umbrella plus the DAO deficit offset of that (Hub, asset), for example a pool token failing beyond the modelled tail |
 | Attack approach | Watch `ReportDeficit` and the layers' balances, then withdraw first while liquidity lasts; Aave V4's `eliminateDeficit` burns only the calling Spoke's own shares and no governance action writes the residual down, so the share price never falls and every early withdrawal is paid in full |
 | Impact | The residual `r = max(0, d − F_A − F_D)` lands on whoever withdraws last, up to each one's whole claim; liquidity falls short of claims by `r` once every borrower has repaid; the residual also keeps occupying the CDP Spokes' draw caps |
-| Expected protection | `INV-100`, `INV-042`, `INV-094`: the two loss layers come first, the Avana Umbrella and then the DAO deficit offset, which the coverage caller spends in one batch within the 72-hour window (`REQ-FLR-048`, `SPEC-FLR-006`); caps and credit lines are sized so the modelled incident and tail needs stay within `firstLossReserveMinimum + daoDeficitOffset` (`SPEC-FLR-004`, `SPEC-FLR-005`), and the Avana Umbrella alone covers `coverageRatioBps` of each line on-chain (`DEF-019`); the moment `uncoveredDeficit > 0`, P-18 sets the drawing Spokes' `drawCap`s to 0, the Aave Protocol Guardian freezes the Lend Spoke reserve and the Lend page builds no supply, so no new lender enters a claim the asset does not back; the Lens and the Lend page publish the uncovered figure and the backed value per share, so no lender has an information advantage; a top-up of either layer clears the residual through `coverDeficit`; the listing ARFC discloses the first-come outcome (Source: Q-353, Q-407, Q-408, Q-410) |
+| Expected protection | `INV-100`, `INV-042`, `INV-094`: the two loss layers come first, the Avana Umbrella and then the DAO deficit offset, which the coverage caller spends in one batch within the 72-hour window (`REQ-FLR-048`, `SPEC-FLR-006`); caps and draw caps are sized so the modelled incident and tail needs stay within `firstLossReserveMinimum + daoDeficitOffset` (`SPEC-FLR-004`, `SPEC-FLR-005`), and the Avana Umbrella alone covers `coverageRatioBps` of the summed draw caps of each (Hub, asset), checked on-chain on every borrow (`DEF-019`); the moment `uncoveredDeficit > 0`, P-18 sets the drawing Spokes' `drawCap`s to 0, the Aave Protocol Guardian freezes the Lend Spoke reserve and the Lend page builds no supply, so no new lender enters a claim the asset does not back; the Lens and the Lend page publish the uncovered figure and the backed value per share, so no lender has an information advantage; a top-up of either layer clears the residual through `coverDeficit`; the listing ARFC discloses the first-come outcome (Source: Q-353, Q-407, Q-408, Q-410) |
 | Result | Accepted risk, disclosed — owner: the Aave DAO and every Lend Spoke lender; bound: the residual beyond both layers, which the caps keep to losses past the modelled tail; withdrawals stay open, so the first-mover advantage Aave's share accounting gives remains and is stated rather than hidden |
 | Checks | TEST-299, TEST-298, TEST-297 |
 
@@ -2951,7 +2951,7 @@ Scenarios against the shared core that serves several AMM protocols, debt assets
 | Attack approach | Call `Spoke.liquidationCall(vtReserve, debtReserve, proxy, debtToCover, true)`: the seized shares move to the caller's position inside the Spoke; the caller then holds collateral no Avana record names, which it can borrow against on the CDP Spoke as an ordinary Spoke user |
 | Impact | The seized shares cannot be withdrawn (the vault token refuses the Hub's transfer to any address but LPVaultSwap and registered proxies), and LPVaultSwap cannot liquidate the caller's own position (it is not a registered proxy); a loan the caller takes against them is backed only by shares nobody can redeem, so it becomes a deficit on the funding Hub |
 | Expected protection | `INV-011`, `INV-029`: the drift check refuses new activity on every market of the Spoke while `receiveSharesEnabled` is on (`REQ-ADAPTER-029`, `REQ-RISK-086`); monitoring alarms on the setting in its block; the account whose shares were taken is reconciled by Collateralization's shortfall rule at its next Avana call (`SPEC-BACK-011`) |
-| Result | Accepted risk — owner: Aave DAO; bound: the accounts liquidatable while the setting is on and what their liquidators borrow against the shares taken, which the debt reserves' caps and credit lines limit |
+| Result | Accepted risk — owner: Aave DAO; bound: the accounts liquidatable while the setting is on and what their liquidators borrow against the shares taken, which the debt reserves' draw caps limit |
 | Checks | TEST-055 |
 
 ## Keeper gas

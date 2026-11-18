@@ -8,7 +8,7 @@ import {Market} from "../../types/MarketTypes.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
-import {DebtReserveDef, MarketRegistryImmutables, MarketStatus, RiskTier} from "./types/MarketRegistryTypes.sol";
+import {MarketRegistryImmutables, MarketStatus} from "./types/MarketRegistryTypes.sol";
 
 /// @title MarketRegistryWindDownLogic
 /// @notice Bodies of `closeMarket`, `setSettlementReserve`, `recordCreditLine` and `syncDrawCap`.
@@ -53,38 +53,5 @@ contract MarketRegistryWindDownLogic is MarketRegistryStorage, IMarketRegistryLo
         if (!l.debtReserves[m.spoke][debtReserveId].approved) revert UnknownDebtReserve(m.spoke, debtReserveId);
         l.settlementReserve[marketId] = debtReserveId;
         emit IMarketRegistry.SettlementReserveSet(marketId, debtReserveId);
-    }
-
-    function recordCreditLine(
-        address fundingHub,
-        address asset,
-        uint256 line
-    ) external {
-        _onlyDelegated();
-        Layout storage l = _s();
-        if (l.hubTier[fundingHub] == RiskTier.None) revert IMarketRegistry.InvalidHub(fundingHub);
-        CreditLine storage cl = l.creditLines[fundingHub][asset];
-        uint256 sum = cl.drawCapSum;
-        if (sum > line) revert IMarketRegistry.CreditLineExceeded(fundingHub, asset, sum, line);
-        _requireCovered(fundingHub, asset, line);
-        cl.line = line;
-        emit IMarketRegistry.CreditLineSet(fundingHub, asset, line, sum);
-    }
-
-    function syncDrawCap(
-        address spoke,
-        uint256 debtReserveId
-    ) external {
-        _onlyDelegated();
-        Layout storage l = _s();
-        DebtReserveDef storage d = l.debtReserves[spoke][debtReserveId];
-        if (!d.approved) revert UnknownDebtReserve(spoke, debtReserveId);
-        uint256 cap = _drawCapOf(d.fundingHub, d.hubAssetId, spoke);
-        uint256 old = l.recordedDrawCap[spoke][debtReserveId];
-        CreditLine storage cl = l.creditLines[d.fundingHub][d.asset];
-        uint256 sum = cl.drawCapSum - old + cap;
-        l.recordedDrawCap[spoke][debtReserveId] = cap;
-        cl.drawCapSum = sum;
-        emit IMarketRegistry.CreditLineRecorded(d.fundingHub, d.asset, spoke, cap, sum);
     }
 }

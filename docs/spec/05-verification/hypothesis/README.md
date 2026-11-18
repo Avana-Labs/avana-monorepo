@@ -11,6 +11,8 @@ AVANA_HYP_SCALE=5 .venv/bin/python -m pytest -q hypothesis    # deeper search: 5
 
 No dependencies beyond `requirements.txt` (hypothesis 6.112.5, pytest 8.3.3). The example database is off, so runs write no files; a failure prints a `@reproduce_failure` blob. `AVANA_HYP_NOSHRINK=1` skips shrinking for quick triage.
 
+**Removed features.** The contracts no longer have the per-(Hub, asset) credit line (`recordCreditLine`, `syncDrawCap`, `creditLine`), cross-Hub credit lines, the per-market `hardHealthFloor` or the pool-share cap (`poolShareMaxBps`, the `POOL_SHARE` breaker reason, Collateralization's `poolUnits` counter). First-loss coverage is now checked on the summed live Aave draw caps of every CDP Spoke drawing an asset on a Hub (`MarketRegistry.drawCapCoverage`, [2.8](../../02-contracts/08-market-registry.md) `REQ-CONFIG-081`), at `enableDebtReserve` and on every borrow of the asset; the health check after a borrow or a withdrawal that keeps debt is `max(1, minHealthFactor)`; the pool-depth gate stays. The model files were not changed: the model's credit lines stand for the summed draw caps a First-Loss Reserve covers, its optional hard floor is off (which matches the contracts), and the pool-share breaker of `HYP-80` and the `poolShareMaxBps` parameter describe the former rule.
+
 ## Model
 
 | File | Contents | Source mirrored |

@@ -11,7 +11,7 @@ Created: 2026-11-04 · Updated: 2026-11-17
 | What Avana is | Contracts that let liquidity providers borrow stablecoins such as GHO against AMM positions without removing their liquidity from the pool. Avana holds the position and issues a transfer-restricted vault token for it, which is the collateral on a standard, unmodified Aave V4 Spoke owned by the Aave DAO. |
 | Deployment | Ethereum (Uniswap v3 and v4) and Base (Aero Slipstream) together, with one Avana Hub on each chain: "Avana Ethereum Hub" and "Avana Base Hub", both tier 3. Each Hub holds one Lend Spoke, every CDP Spoke on its chain, and an Avana First-Loss Reserve and a DAO Deficit Offset per debt asset. CDP Spokes are grouped by risk tier: Stable, Correlated, Blue-chip, Gov/DeFi and Stocks. The approved set is 10 Spokes and 43 markets on real pools. |
 | Lending | Public from day one, beside the Aave DAO's bootstrap supply. Lenders earn the Hub supply rate, set by Aave V4's standard utilization curve. |
-| Borrowing | Stable debt assets the Aave DAO approves (for example GHO, USDC, USDT), each with its own line, draw cap, price source, swap routes and Avana First-Loss Reserve. For GHO, a proposed 2M GHO line on Ethereum to start; every other line is set in the funding ARFC. |
+| Borrowing | Stable debt assets the Aave DAO approves (for example GHO, USDC, USDT), each with its own draw caps, price source, swap routes and Avana First-Loss Reserve. For GHO, proposed draw caps summing to 2M GHO on Ethereum to start; every other asset's draw caps are set in the funding ARFC. |
 | Collateral factor | Lowest Core Hub collateral factor among the pool's tokens × a pool risk factor of at most 90%. Avana proposes LP collateral factors from 80% (Stable) to 65% (Stocks); the DAO sets every one. |
 | Liquidation | Aave's standard `liquidationCall`, always partial. Only the seized share of the position is unwound and sold, in one transaction, and the debt is repaid in the debt asset. |
 | Avana's revenue | No share of interest. The Avana app charges 10 bps on every app action (ceiling 25 bps without a new ARFC), and Avana's contracts take 20% of each liquidation's surplus. Both go to one timelocked fee recipient; neither changes an interest rate or the Aave DAO's revenue. |
@@ -22,7 +22,7 @@ Created: 2026-11-04 · Updated: 2026-11-17
 ## What this ARFC asks
 
 1. Support for a technical and risk assessment of Avana with Aave DAO service providers on Ethereum and Base: custody, valuation, liquidation, Aave V4 integration, governance roles, loss allocation and economic terms.
-2. Support for preparing capped credit line requests for the stable debt assets the Aave DAO chooses to list (for example GHO, USDC, USDT), each within that asset's flash liquidity in the chain's Aave V3 Pool and the depth of its swap routes. For GHO, a proposed 2M GHO on Ethereum to start, growing toward 10M GHO only as live performance criteria are met.
+2. Support for preparing capped borrowing requests (draw caps) for the stable debt assets the Aave DAO chooses to list (for example GHO, USDC, USDT), each within that asset's flash liquidity in the chain's Aave V3 Pool and the depth of its swap routes. For GHO, a proposed 2M GHO on Ethereum to start, growing toward 10M GHO only as live performance criteria are met.
 
 If this ARFC passes, two follow-up ARFCs would ask the Aave DAO for the following.
 
@@ -34,10 +34,10 @@ If this ARFC passes, two follow-up ARFCs would ask the Aave DAO for the followin
 - Let the Aave Protocol Guardian freeze Lend Spoke reserves as well as CDP Spoke reserves. A freeze stops new supply and never stops withdrawals; unfreezing stays with the DAO.
 
 **Funding ARFC**, per chain
-- Which stable assets are listed and borrowable, and each one's credit line and draw caps (for example a proposed 2M GHO on Ethereum), each within flash liquidity, route depth and the coverage bound.
+- Which stable assets are listed and borrowable, and each one's draw caps (for example a proposed 2M GHO in total on Ethereum), each within flash liquidity, route depth and the coverage bound.
 - The Lend Spoke supply caps and the DAO's bootstrap supply.
 - Each Avana First-Loss Reserve's coverage ratio and minimum.
-- Each DAO Deficit Offset's size per Hub and debt asset, funded from the DAO treasury. Caps and credit lines are sized so the modelled tail loss fits within the First-Loss Reserve's minimum plus this offset; Avana proposes no fixed figure, because the offset is the part of that need the DAO chooses to carry above Avana's reserve.
+- Each DAO Deficit Offset's size per Hub and debt asset, funded from the DAO treasury. Caps are sized so the modelled tail loss fits within the First-Loss Reserve's minimum plus this offset; Avana proposes no fixed figure, because the offset is the part of that need the DAO chooses to carry above Avana's reserve.
 - Each lend asset's utilization curve, Aave V4's standard kinked interest-rate strategy; for GHO the DAO may keep the curve's base rate at or above the Core Hub GHO base rate.
 
 Mainnet deployment follows the internal audit, the external audit that opens after it, and governance approval.
@@ -90,7 +90,7 @@ Public lending is open from day one. Anyone can supply a listed asset through th
 - **What lenders risk:** a deficit beyond both loss layers, the Avana First-Loss Reserve and then the DAO Deficit Offset. Aave V4 has no way to write such a residual down across suppliers: it stays on the Hub, the supply share price does not fall, and withdrawals are paid in full, first come first served, while liquidity lasts. Once every borrower has repaid, the lenders who withdraw last hold claims with nothing behind them until either layer is topped up and covers the residual. While a residual is outstanding, new supply into that asset stops (the app builds none and the Aave Protocol Guardian freezes the Lend Spoke reserve), withdrawals stay open, and the app shows every lender the residual and the backed value per share before each withdrawal. Example: lenders supply 2,000,000 GHO, the First-Loss Reserve holds 100,000 GHO and the DAO offset 150,000 GHO; a 300,000 GHO loss is covered 100,000 then 150,000; the remaining 50,000 GHO means the first 1,950,000 GHO withdrawn is paid in full and the last 50,000 GHO of claims waits for a top-up. Caps are sized so that this needs a loss beyond the modelled tail.
 - **Withdrawals:** a lender can withdraw only idle liquidity. At high utilization, a withdrawal waits until borrowers repay or are liquidated. Example: the DAO supplies 1,000,000 GHO, a public lender 500,000 GHO and the First-Loss Reserve 300,000 GHO, and 1,600,000 GHO is borrowed. The public lender can withdraw at most the 200,000 GHO that is idle now, and the rest as borrowers repay.
 
-Borrowing is bounded by the CDP Spokes' draw caps, which the DAO sets, and by the liquidity lenders have supplied. The Lend Spoke's supply cap, also set by the DAO, bounds total supply; it is separate from the credit line.
+Borrowing is bounded by the CDP Spokes' draw caps, which the DAO sets, and by the liquidity lenders have supplied. The Lend Spoke's supply cap, also set by the DAO, bounds total supply; it is separate from the draw caps.
 
 ## GHO opportunity
 
@@ -109,11 +109,11 @@ Avana commits to a ceiling of 25 bps on the app fee: the app never charges more 
 
 | Phase | Proposed capacity | Conditions for expansion |
 |---|---|---|
-| Launch | Proposed 2M GHO on Ethereum; Base line set in the funding ARFC | Audits complete; oracle, borrowing and liquidation-route performance reported to governance |
+| Launch | Proposed 2M GHO on Ethereum; Base draw caps set in the funding ARFC | Audits complete; oracle, borrowing and liquidation-route performance reported to governance |
 | Initial target | Up to 10M GHO | Demonstrated demand, acceptable concentration and execution costs, and a risk reviewer recommendation |
 | Expansion | 50M GHO or more | Operation within approved limits and further governance approval |
 
-The funding ARFC defines the thresholds and who can adjust capacity. At every phase, each chain's draw caps stay within its flash liquidity, and the first-loss reserve must satisfy `fundedBalance × 10⁴ ≥ coverageRatioBps × credit line`. The funding ARFC sets the coverage ratio and reserve minimum with Aave's service providers. As an illustration only, a 20% ratio on a 2M GHO line requires a 400,000 GHO reserve.
+The funding ARFC defines the thresholds and who can adjust capacity. At every phase, each chain's draw caps stay within its flash liquidity, and the first-loss reserve must cover the summed Spoke draw caps: `fundedBalance × 10⁴ ≥ coverageRatioBps × Σ drawCap`. The funding ARFC sets the coverage ratio and reserve minimum with Aave's service providers. As an illustration only, a 20% ratio on 2M GHO of draw caps requires a 400,000 GHO reserve.
 
 ### Revenue scenarios
 
@@ -159,7 +159,7 @@ Valuation and borrowing limits are set separately:
 
 CFᵢ is each pool token's Aave V4 Core Hub collateral factor; a GHO leg uses an explicit factor set at listing. The pool risk factor, at most 90%, reflects the position's range, pool depth and expected liquidation costs. The DAO sets each reserve's factor at or below this value, and Avana stops new borrowing if it is set higher. Gauntlet's analysis of LP collateral recommends conservative starting factors, as low as 0.25× the lower underlying factor when the borrowed asset is not one of the pool's tokens. Final factors are calibrated per market with service providers.
 
-**Proposed values by risk tier.** Avana proposes these values for the listing AIP. The Aave DAO sets every cap, credit line, collateral factor, bonus, rate model and reserve amount.
+**Proposed values by risk tier.** Avana proposes these values for the listing AIP. The Aave DAO sets every cap, collateral factor, bonus, rate model and reserve amount.
 
 | Risk tier | LP collateral factor | Maximum liquidation bonus | Collateral risk |
 |---|---:|---:|---:|
@@ -225,7 +225,7 @@ Each new market is listed through the chain's Avana timelock at the normal delay
 
 Governance is per chain. Ethereum and Base each have their own timelock, a 4-of-7 governance Safe and a 3-of-5 Emergency Guardian Safe, and nothing on one chain can act on the other.
 
-- **Aave DAO:** owns and configures every Avana Hub and Spoke and holds every Aave-side control: caps, credit lines, reserve freeze and pause, and Hub halt. Avana owns no Aave contract and has no authority over any cap or rate.
+- **Aave DAO:** owns and configures every Avana Hub and Spoke and holds every Aave-side control: caps, reserve freeze and pause, and Hub halt. Avana owns no Aave contract and has no authority over any cap or rate.
 - **Avana timelock:** every upgrade, parameter change, market listing and role change to Avana's contracts goes through it, with a 5-day delay (never less than 4), or 12 hours when every call only reduces risk. A ready operation can be executed within a 14-day window. The governance Safe and the Aave governance executor can propose; both, and both guardians, can cancel. Only the Aave governance executor can cancel a role change or an operation that restores liquidation.
 - **Guardians:** the Emergency Guardian and the Aave Protocol Guardian can each act at once to freeze or pause Hubs, freeze an address, trip or reset a breaker, switch a token to its pre-approved standby price route, and cancel queued operations. They cannot upgrade contracts, change parameters or move collateral. The Aave Protocol Guardian can also freeze or pause Avana's CDP Spoke reserves on the Aave side, so Avana's markets can be stopped without Avana Labs, and freeze Lend Spoke reserves, which stops new supply and never stops withdrawals.
 - **Signers:** at most 3 of the 7 governance Safe signers come from Avana Labs, across at least three organisations and three jurisdictions. The three Safes share no signers. Named signers will be agreed with service providers.
@@ -261,14 +261,14 @@ Exits are never throttled: repayment, repay with collateral, withdrawal, fee col
 
 If a liquidation empties an account's collateral while debt remains, Aave records the remainder as a deficit on the Hub, in the debt asset. The Avana First-Loss Reserve of that Hub and asset, then the DAO Deficit Offset behind it, eliminates a recorded deficit within 72 hours. These are the only on-chain loss layers at launch, and a deficit is never covered with another asset's, Hub's or chain's reserve. Rounding gaps in small liquidations come out of the liquidator's payout, never from the reserve.
 
-The First-Loss Reserve must satisfy `fundedBalance × 10⁴ ≥ coverageRatioBps × credit line`, checked when the line is recorded, when a debt reserve is enabled and on every recorded draw-cap raise; a later shortfall raises an alert, and Avana Labs tops the First-Loss Reserve up.
+First-loss coverage is checked on the summed Spoke draw caps. The First-Loss Reserve must satisfy `fundedBalance × 10⁴ ≥ coverageRatioBps × Σ drawCap`, where `Σ drawCap` is the sum of the live Aave draw caps of every Avana CDP Spoke with an enabled debt reserve of that asset on that Hub. Avana's MarketRegistry checks it when a debt reserve is enabled, and the RiskModule checks it again on every borrow of the asset. The Aave DAO can raise a draw cap on the Hub without Avana; if a raise takes the sum past the cover, new borrows of that asset revert until Avana Labs tops the First-Loss Reserve up or the cap is cut, while repayment, withdrawal and liquidation stay open. A shortfall also raises an alert.
 
 **Loss order.** A recorded deficit is covered, per Hub and debt asset:
 
 1. by the Avana First-Loss Reserve, funded by Avana Labs;
 2. then by the DAO Deficit Offset, funded by the Aave DAO treasury. It refuses to pay while the First-Loss Reserve is active and holds any funds, so the guardians cover from both in one transaction. If the DAO has deactivated the First-Loss Reserve, which then cannot pay, the offset pays at once, so DAO money can be spent before Avana's for as long as the DAO keeps the First-Loss Reserve deactivated. Its size is a DAO parameter per Hub and debt asset, set in the funding ARFC, funded and refilled from the treasury, and withdrawable only through its own 14-day queue;
 
-Aave V4 only lets a Spoke burn its own supply to clear a deficit, which is why each layer is its own Spoke and why nothing writes a loss down across suppliers. Risk service providers size caps and credit lines so the modelled tail loss of each asset fits within the First-Loss Reserve's minimum plus the DAO offset.
+Aave V4 only lets a Spoke burn its own supply to clear a deficit, which is why each layer is its own Spoke and why nothing writes a loss down across suppliers. Risk service providers size caps so the modelled tail loss of each asset fits within the First-Loss Reserve's minimum plus the DAO offset.
 
 **Residual risk.** A deficit larger than both layers stays recorded on the Hub. Every draw cap on that asset is set to 0 through the Aave Guardian, new supply stops (the app builds none and the Aave Protocol Guardian freezes the Lend Spoke reserve), and withdrawals stay open. Aave pays withdrawals in full while liquidity lasts, so lenders who withdraw first are paid and the last lenders, the DAO's bootstrap supply and public lenders alike, hold the unbacked claims until Avana Labs or the DAO tops up a layer and the guardians cover the rest. The app and the public views show the residual and the backed value per share before every withdrawal.
 
@@ -342,17 +342,17 @@ sequenceDiagram
    - it is held as the reserve's own Hub shares and earns supply interest like any lender's;
    - Avana Labs cannot take it back on its own: a withdrawal needs the DAO's approval and waits 14 days.
 
-4. **The credit line is capped by the reserve, in code.** Umbrella's targets are set apart from borrow caps. Avana's MarketRegistry refuses any credit line or draw-cap raise that would put the summed draw caps above `fundedBalance × 10⁴ / coverageRatioBps`. Borrowing cannot outgrow its first-loss cover. The ratio is set in the funding ARFC with the risk service providers, from each asset's exposure, stress loss, concentration and a risk premium.
+4. **Borrowing is capped by the reserve, in code.** Umbrella's targets are set apart from borrow caps. Avana reads the live draw caps of its CDP Spokes from the Hub and refuses to enable a debt reserve, and refuses every new borrow of the asset, while the summed draw caps are above `fundedBalance × 10⁴ / coverageRatioBps`. A draw-cap raise the DAO makes past the cover therefore stops new borrowing of that asset instead of extending it. Borrowing cannot outgrow its first-loss cover. The ratio is set in the funding ARFC with the risk service providers, from each asset's exposure, stress loss, concentration and a risk premium.
 
 5. **The order between two payers is enforced in code.** Umbrella's layers are both Aave's, and the coverage manager calls them in order. Avana's layers belong to two different payers, so the order is not left to procedure. The DAO Deficit Offset refuses to pay while Avana's reserve is active and holds funds. The only exception is when the DAO itself has deactivated Avana's reserve.
 
 6. **No ongoing cost to the DAO.** There are no staker emissions and no reward program. The DAO Deficit Offset's size is the DAO's own choice per Hub and asset, and it can be 0 until the DAO funds it. Avana's coverage costs the DAO nothing unless it chooses to stand behind Avana.
 
-In short: Avana uses the coverage mechanism Aave V4 and Umbrella already define, and applies TokenLogic's principle that the market's owner takes the first loss. For a protocol that brings its own collateral to its own Hub, that owner is Avana. The first layer is therefore Avana's money, funded up front, locked under DAO control and sized to the credit line, and the DAO's offset stands behind it.
+In short: Avana uses the coverage mechanism Aave V4 and Umbrella already define, and applies TokenLogic's principle that the market's owner takes the first loss. For a protocol that brings its own collateral to its own Hub, that owner is Avana. The first layer is therefore Avana's money, funded up front, locked under DAO control and sized to the summed draw caps, and the DAO's offset stands behind it.
 
 ### Reporting and offboarding
 
-Avana Labs publishes weekly usage and monthly revenue reports per chain: debt and collateral by market, concentration, health factors, liquidations, first-loss reserve usage, bad debt, oracle incidents, pauses, breaker trips and alerts, credit-line and supply usage, and fees earned. Each quarter it also reports frontend-fee revenue per chain, separately from the liquidation fee share.
+Avana Labs publishes weekly usage and monthly revenue reports per chain: debt and collateral by market, concentration, health factors, liquidations, first-loss reserve usage, bad debt, oracle incidents, pauses, breaker trips and alerts, draw-cap and supply usage, and fees earned. Each quarter it also reports frontend-fee revenue per chain, separately from the liquidation fee share.
 
 To offboard a market, a 12-hour timelock operation and an Aave reserve freeze stop new pledges and borrowing at once. Avana publishes the target liquidation threshold, half the market's threshold at that moment, and the earliest date, five days later. After that public notice, an Aave DAO payload lowers the market's liquidation threshold once, to the target; remaining borrowers have the five days to repay or add collateral. Debt is never cancelled and there is no force-close; repayment, withdrawal and liquidation stay open.
 
@@ -409,7 +409,6 @@ Every survivor is classified with a reason in `contracts/security/slither-mutate
 | Survivor | Test that now kills it |
 |---|---|
 | `SM-115`, LPVaultSwap deleverage: no test recovered exactly the amount owed, so the shortfall check at equality (`recovered <= owed`) survived | `test_TEST_239_recoveryExactlyOwed` |
-| `SM-304`, MarketRegistry: the funding Hub's consent check made always true, which refuses every cross-Hub debt reserve | `test_TEST_273_crossHubDrawCapWithinItsLine` |
 | `SM-305`, MarketRegistry: oracle activation went on to `checkConfig` after the ParameterStore's configuration read failed | `test_TEST_138_failedConfigReadRefusedWhateverTheOracleAnswers` |
 
 The triage also found one contract defect, `MUT-01`: a DebtOracle poke whose feed-definition read failed overwrote every leg record. It is fixed in code, and `test/unit/DebtOracle.SeenRecords.unit.t.sol` fails without the fix.
@@ -448,7 +447,7 @@ Avana turns active AMM liquidity into collateral and borrowing demand for Aave V
 
 ## Disclaimer
 
-Avana Labs is the author of this proposal. We have not been compensated by any third party to publish it. This ARFC gathers community feedback on Avana and a potential GHO credit line ahead of the planned mainnet launch. Nothing here is legal, financial, tax or professional advice.
+Avana Labs is the author of this proposal. We have not been compensated by any third party to publish it. This ARFC gathers community feedback on Avana and potential GHO borrowing capacity ahead of the planned mainnet launch. Nothing here is legal, financial, tax or professional advice.
 
 ## References
 

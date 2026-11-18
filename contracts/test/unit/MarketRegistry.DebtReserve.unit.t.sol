@@ -49,7 +49,6 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         ps.setStressRise(address(usdc), 500);
         vm.startPrank(address(timelock));
         registry.setAvanaFirstLossReserve(address(hub), address(usdc), address(usdcCoverage));
-        registry.recordCreditLine(address(hub), address(usdc), 1_000_000);
         vm.stopPrank();
     }
 
@@ -63,7 +62,6 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
             priceSource: address(usdcOracle),
             fixedPrice: false,
             firstLossReserve: address(usdcCoverage),
-            crossHub: false,
             approved: false
         });
     }
@@ -99,8 +97,6 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
             address(usdcOracle),
             address(usdcCoverage)
         );
-        vm.expectEmit(address(registry));
-        emit IMarketRegistry.CreditLineRecorded(address(hub), address(usdc), address(spoke), 500_000, 500_000);
         _enable(_usdcDef());
         assertTrue(registry.isApprovedDebtReserve(address(spoke), USDC_RESERVE));
         uint256[] memory ids = registry.getDebtReserveIds(address(spoke));
@@ -109,9 +105,8 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         DebtReserveDef memory rec = registry.getDebtReserve(address(spoke), USDC_RESERVE);
         assertTrue(rec.approved);
         assertEq(rec.firstLossReserve, address(usdcCoverage));
-        (uint256 line, uint256 sum) = registry.creditLine(address(hub), address(usdc));
-        assertEq(line, 1_000_000);
-        assertEq(sum, 500_000);
+        (uint256 sum,,) = registry.drawCapCoverage(address(hub), address(usdc));
+        assertEq(sum, 500_000, "the Spoke's draw cap is covered");
         // The DebtOracle and the First-Loss Reserve are now protected from the address freeze.
         vm.prank(emergencyGuardian);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, address(usdcOracle)));
@@ -142,7 +137,6 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
             priceSource: address(fixedSource),
             fixedPrice: true,
             firstLossReserve: address(0),
-            crossHub: false,
             approved: false
         });
         vm.prank(address(timelock));
@@ -151,36 +145,6 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         // GHO, the fixture's fixed-price reserve, was enabled only after its listing with an issuer probe.
         assertTrue(registry.getToken(address(gho)).listed);
         assertTrue(registry.getToken(address(gho)).issuerProbe == IssuerProbe.None);
-    }
-
-    // TEST-273 verifies: REQ-CONFIG-081
-    // Sources: MarketRegistry review 2026-11-10 finding 9 (an event for the new credit line)
-    function test_TEST_273_recordCreditLineEmitsTheLine() public {
-        vm.expectEmit(address(registry));
-        emit IMarketRegistry.CreditLineSet(address(hub), address(gho), 15_000_000, 1_000_000);
-        vm.prank(address(timelock));
-        registry.recordCreditLine(address(hub), address(gho), 15_000_000);
-        (uint256 line,) = registry.creditLine(address(hub), address(gho));
-        assertEq(line, 15_000_000);
-        // 15,000,000 GHO at 2,000 bps requires 3e24 base units; the fixture funds 4e24.
-        (uint256 required, uint256 funded) = registry.creditLineCoverage(address(hub), address(gho));
-        assertEq(required, 3e24);
-        assertEq(funded, 4e24);
-        // A pair with no line needs nothing.
-        (required, funded) = registry.creditLineCoverage(address(hub), address(usdt));
-        assertEq(required, 0);
-        assertEq(funded, 0);
-        // The USDC line of 1,000,000 at 2,000 bps requires 2e11 base units (6 decimals).
-        (required,) = registry.creditLineCoverage(address(hub), address(usdc));
-        assertEq(required, 2e11);
-        // A line too large for 256-bit arithmetic requires the maximum, so the test fails closed.
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(gho), type(uint256).max, 4e24
-            )
-        );
-        registry.recordCreditLine(address(hub), address(gho), type(uint256).max / 1e18);
     }
 
     // TEST-185 verifies: REQ-MREG-006, REQ-CONFIG-081, REQ-MREG-009
@@ -277,211 +241,28 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         _enable(_usdcDef());
     }
 
-    // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010, ATTACK-163, Q-353, Q-391, REQ-ACCESS-145
-    // Sources: 5.1 TEST-273, MATH-CAP-10
-    function test_TEST_273_creditLineSumAndCoverage() public {
-        _setRoute(marketId, address(usdt), address(usdc), 0, "dexE");
-        _setRoute(marketId, address(usdt), address(usdc), 1, "dexF");
-        // Draw cap above the line.
-        hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 1_000_001);
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IMarketRegistry.CreditLineExceeded.selector, address(hub), address(usdc), 1_000_001, 1_000_000
-            )
-        );
-        registry.enableDebtReserve(address(spoke), _usdcDef());
-        // MAX_ALLOWED_SPOKE_CAP counts as unbounded.
-        hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, type(uint40).max);
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IMarketRegistry.CreditLineExceeded.selector, address(hub), address(usdc), 2 ** 128, 1_000_000
-            )
-        );
-        registry.enableDebtReserve(address(spoke), _usdcDef());
-        hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 400_000);
-        _enable(_usdcDef());
-        // A line below the recorded sum is refused.
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IMarketRegistry.CreditLineExceeded.selector, address(hub), address(usdc), 400_000, 399_999
-            )
-        );
-        registry.recordCreditLine(address(hub), address(usdc), 399_999);
-        // Coverage: 2e12 base units at 2,000 bps covers a 10,000,000 USDC line exactly.
-        vm.prank(address(timelock));
-        registry.recordCreditLine(address(hub), address(usdc), 10_000_000);
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(usdc), 2.0000002e12, 2e12
-            )
-        );
-        registry.recordCreditLine(address(hub), address(usdc), 10_000_001);
-        // A raised draw cap is always synced; the sum may then exceed the line and is recorded.
-        vm.prank(address(timelock));
-        registry.recordCreditLine(address(hub), address(usdc), 500_000);
-        hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 600_000);
-        vm.expectEmit(address(registry));
-        emit IMarketRegistry.CreditLineRecorded(address(hub), address(usdc), address(spoke), 600_000, 600_000);
-        vm.prank(keeper);
-        registry.syncDrawCap(address(spoke), USDC_RESERVE);
-        (, uint256 sum) = registry.creditLine(address(hub), address(usdc));
-        assertEq(sum, 600_000);
-        // A raise while coverage is short is recorded too (never hidden); the coverage view reports the shortfall,
-        // which the borrow gate reads separately.
-        usdcCoverage.setFunded(1, false);
-        hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 700_000);
-        vm.prank(keeper);
-        registry.syncDrawCap(address(spoke), USDC_RESERVE);
-        (, sum) = registry.creditLine(address(hub), address(usdc));
-        assertEq(sum, 700_000);
-        (uint256 required, uint256 funded) = registry.creditLineCoverage(address(hub), address(usdc));
-        assertEq(required, 1e11);
-        assertEq(funded, 1);
-        // A cut is always recorded.
-        hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 100_000);
-        registry.syncDrawCap(address(spoke), USDC_RESERVE);
-        (, sum) = registry.creditLine(address(hub), address(usdc));
-        assertEq(sum, 100_000);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownDebtReserve.selector, address(spoke), 9));
-        registry.syncDrawCap(address(spoke), 9);
-    }
-
-    // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010, Q-378
-    // Two CDP Spokes draw on the Hub's one USDC credit line (the second through a cross-Hub line): a sync replaces only
-    // the synced reserve's share of the recorded sum.
-    function test_TEST_273_syncReplacesOnlyItsOwnShareOfTheLine() public {
-        _setRoute(marketId, address(usdt), address(usdc), 0, "dexE");
-        _setRoute(marketId, address(usdt), address(usdc), 1, "dexF");
-        RegistryHubMock hub2 = new RegistryHubMock();
-        RegistrySpokeMock spoke2 = new RegistrySpokeMock();
-        RegistryAaveOracleMock oracle2 = new RegistryAaveOracleMock();
-        spoke2.setOracle(address(oracle2));
-        spoke2.setImplementation(address(spokeImpl));
-        oracle2.setSpoke(address(spoke2));
-        vm.startPrank(address(timelock));
-        registry.recordHub(address(hub2), RiskTier.Correlated);
-        registry.deployCdpSpoke(
-            SpokeDef(false, address(hub2), V3, RiskTier.Correlated, address(spokeImpl), address(oracle2))
-        );
-        registry.setCrossHubLinesEnabled(true);
-        registry.setCrossHubLine(address(hub), address(usdc), address(spoke2), 300_000e6);
-        vm.stopPrank();
-        IAaveV4Spoke.Reserve memory r;
-        (r.underlying, r.hub, r.assetId, r.decimals) = (address(usdc), address(hub), uint16(USDC_ASSET), 6);
-        IAaveV4Spoke.ReserveConfig memory c;
-        c.borrowable = true;
-        IAaveV4Spoke.DynamicReserveConfig memory d;
-        spoke2.setReserve(USDC_RESERVE, r, c, d);
-        oracle2.setSource(USDC_RESERVE, address(usdcOracle));
-        hub.setSpokeConfig(USDC_ASSET, address(spoke2), 0, 200_000);
-        _enable(_usdcDef());
-        DebtReserveDef memory cross = _usdcDef();
-        cross.crossHub = true;
-        vm.prank(address(timelock));
-        registry.enableDebtReserve(address(spoke2), cross);
-        (, uint256 sum) = registry.creditLine(address(hub), address(usdc));
-        assertEq(sum, 700_000);
-        hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 600_000);
-        registry.syncDrawCap(address(spoke), USDC_RESERVE);
-        (, sum) = registry.creditLine(address(hub), address(usdc));
-        assertEq(sum, 800_000, "700,000 - 500,000 + 600,000");
-        hub.setSpokeConfig(USDC_ASSET, address(spoke2), 0, 50_000);
-        registry.syncDrawCap(address(spoke2), USDC_RESERVE);
-        (, sum) = registry.creditLine(address(hub), address(usdc));
-        assertEq(sum, 650_000, "800,000 - 200,000 + 50,000");
-    }
-
     // TEST-273 verifies: REQ-CONFIG-081
     function test_TEST_273_specExampleCoverageRatio() public {
-        // 20,000,000 GHO at 2,000 bps needs 4,000,000 GHO; 3,900,000 GHO reverts with the spec's numbers.
-        ghoCoverage.setFunded(3.9e24, false);
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(gho), 4e24, 3.9e24
-            )
-        );
-        registry.recordCreditLine(address(hub), address(gho), 20_000_000);
-        vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidHub.selector, alice));
-        registry.recordCreditLine(alice, address(gho), 1);
-    }
-
-    // TEST-273 verifies: REQ-CONFIG-081, REQ-MREG-009, Q-378, REQ-ACCESS-145
-    function test_TEST_273_crossHubReserveNeedsLineAndConsent() public {
-        RegistryHubMock hub2 = new RegistryHubMock();
-        RegistrySpokeMock spoke2 = new RegistrySpokeMock();
-        RegistryAaveOracleMock oracle2 = new RegistryAaveOracleMock();
-        spoke2.setOracle(address(oracle2));
-        spoke2.setImplementation(address(spokeImpl));
-        oracle2.setSpoke(address(spoke2));
-        vm.startPrank(address(timelock));
-        registry.recordHub(address(hub2), RiskTier.Correlated);
-        registry.deployCdpSpoke(
-            SpokeDef(false, address(hub2), V3, RiskTier.Correlated, address(spokeImpl), address(oracle2))
-        );
-        vm.stopPrank();
-        DebtReserveDef memory d = _ghoDef();
-        d.crossHub = true;
-        vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistry.CrossHubLinesDisabled.selector);
-        registry.enableDebtReserve(address(spoke2), d);
-        vm.prank(address(timelock));
-        registry.setCrossHubLinesEnabled(true);
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IMarketRegistry.CrossHubLineClosed.selector, address(hub), address(gho), address(spoke2)
-            )
-        );
-        registry.enableDebtReserve(address(spoke2), d);
-        d.crossHub = false;
-        vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidDebtReserve.selector, bytes32("crossHub")));
-        registry.enableDebtReserve(address(spoke2), d);
-    }
-
-    // TEST-273 verifies: REQ-HUB-103, REQ-CONFIG-081, Q-378
-    // A foreign Spoke's draw cap (whole units) must fit its cross-Hub line (base units): one unit above the line
-    // reverts CrossHubCapExceeded(drawCap in base units, line); exactly the line passes.
-    function test_TEST_273_crossHubDrawCapWithinItsLine() public {
-        RegistryHubMock hub2 = new RegistryHubMock();
-        RegistrySpokeMock spoke2 = new RegistrySpokeMock();
-        RegistryAaveOracleMock oracle2 = new RegistryAaveOracleMock();
-        spoke2.setOracle(address(oracle2));
-        spoke2.setImplementation(address(spokeImpl));
-        oracle2.setSpoke(address(spoke2));
-        IAaveV4Spoke.Reserve memory r;
-        (r.underlying, r.hub, r.assetId, r.decimals) = (address(usdc), address(hub), uint16(USDC_ASSET), 6);
-        IAaveV4Spoke.ReserveConfig memory c;
-        c.borrowable = true;
-        IAaveV4Spoke.DynamicReserveConfig memory dyn;
-        spoke2.setReserve(USDC_RESERVE, r, c, dyn);
-        oracle2.setSource(USDC_RESERVE, address(usdcOracle));
-        vm.startPrank(address(timelock));
-        registry.recordHub(address(hub2), RiskTier.Correlated);
-        registry.deployCdpSpoke(
-            SpokeDef(false, address(hub2), V3, RiskTier.Correlated, address(spokeImpl), address(oracle2))
-        );
-        registry.setCrossHubLinesEnabled(true);
-        registry.setCrossHubLine(address(hub), address(usdc), address(spoke2), 400_000e6);
-        vm.stopPrank();
+        // 20,000,000 USDC of draw caps at 2,000 bps needs 4,000,000 USDC: 3,900,000 USDC reverts, 4,000,000 enables.
+        ps.setCoverageRatioBps(2000);
+        hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 20_000_000);
+        usdcCoverage.setFunded(3.9e12, false);
+        _setRoute(marketId, address(usdt), address(usdc), 0, "dexE");
+        _setRoute(marketId, address(usdt), address(usdc), 1, "dexF");
         DebtReserveDef memory d = _usdcDef();
-        d.crossHub = true;
-        hub.setSpokeConfig(USDC_ASSET, address(spoke2), 0, 400_001);
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistry.CrossHubCapExceeded.selector, uint256(400_001e6), uint256(400_000e6))
+            abi.encodeWithSelector(
+                IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(usdc), 4e12, 3.9e12
+            )
         );
-        registry.enableDebtReserve(address(spoke2), d);
-        hub.setSpokeConfig(USDC_ASSET, address(spoke2), 0, 400_000);
-        vm.prank(address(timelock));
-        registry.enableDebtReserve(address(spoke2), d);
-        assertTrue(registry.isApprovedDebtReserve(address(spoke2), USDC_RESERVE));
+        registry.enableDebtReserve(address(spoke), d);
+        usdcCoverage.setFunded(4e12, false);
+        _enable(d);
+        (uint256 sum, uint256 required, uint256 funded) = registry.drawCapCoverage(address(hub), address(usdc));
+        assertEq(sum, 20_000_000, "draw cap sum");
+        assertEq(required, 4e12, "required");
+        assertEq(funded, 4e12, "funded");
     }
 
     // TEST-213 verifies: REQ-MREG-010, REQ-MREG-033, ATTACK-136, Q-233, Q-397, REQ-ACCESS-145
@@ -524,23 +305,27 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         assertEq(ids[0], GHO_RESERVE);
         (uint32 latched,) = registry.debtBreaker(address(spoke), USDC_RESERVE);
         assertEq(latched, 0);
-        (, uint256 sum) = registry.creditLine(address(hub), address(usdc));
-        assertEq(sum, 0);
+        (uint256 sum,,) = registry.drawCapCoverage(address(hub), address(usdc));
+        assertEq(sum, 0, "the removed reserve's Spoke no longer counts");
     }
 
     // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010
+    // Enabling is refused exactly when the Spoke's draw cap at the ratio needs more than the First-Loss Reserve holds.
     function testFuzz_TEST_273_coverageTestIsExact(
-        uint64 line,
+        uint40 cap,
         uint128 funded,
         uint16 ratio
     ) public {
         ratio = uint16(bound(ratio, 1, 10_000));
-        line = uint64(bound(line, 1, 1e12));
+        cap = uint40(bound(cap, 1, 1e12));
         ps.setCoverageRatioBps(ratio);
         usdcCoverage.setFunded(funded, false);
-        bool covers = uint256(line) * 1e6 * ratio <= uint256(funded) * 1e4;
-        vm.prank(address(timelock));
+        hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, cap);
+        _setRoute(marketId, address(usdt), address(usdc), 0, "dexE");
+        _setRoute(marketId, address(usdt), address(usdc), 1, "dexF");
+        bool covers = uint256(cap) * 1e6 * ratio <= uint256(funded) * 1e4;
         if (!covers) vm.expectPartialRevert(IMarketRegistry.CoverageBelowRatio.selector);
-        registry.recordCreditLine(address(hub), address(usdc), line);
+        _enable(_usdcDef());
+        assertEq(registry.isApprovedDebtReserve(address(spoke), USDC_RESERVE), covers);
     }
 }

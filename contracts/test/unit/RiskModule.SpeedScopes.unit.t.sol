@@ -10,11 +10,11 @@ import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @title RiskModuleSpeedScopesUnitTest
-/// @notice The keys and bases of the speed windows (2.7 REQ-RISK-092, REQ-RISK-093, REQ-RISK-095): a cross-Hub debt
-/// reserve has its own (funding Hub, asset) window and base while sharing the market window; the market base sums the
+/// @notice The keys and bases of the speed windows (2.7 REQ-RISK-092, REQ-RISK-093, REQ-RISK-095): a second debt
+/// reserve has its own (Hub, asset) window and base while sharing the market window; the market base sums the
 /// Spoke's debt over every funding Hub; windows of other markets and assets stay untouched; the pledge base counts the
 /// slice; a re-credit is charged like a pledge.
-/// @dev World: the RiskModule fixture with DAI enabled as a cross-Hub reserve funded by `hub2`; the Spoke owes 600,000
+/// @dev World: the RiskModule fixture with DAI enabled as a second reserve on the home Hub (`hub2`); the Spoke owes 600,000
 /// GHO to the home Hub and 400,000 DAI to `hub2`, both at $1.00, so the market base is $1,000,000.
 contract RiskModuleSpeedScopesUnitTest is RiskModuleFixture {
     uint256 internal constant TAU = 21_600;
@@ -23,7 +23,7 @@ contract RiskModuleSpeedScopesUnitTest is RiskModuleFixture {
 
     function setUp() public {
         _deployRiskWorld();
-        _enableCrossHubDebt();
+        _enableDaiDebt();
         _debt(1.5e18, 1000);
         rHub.setSpokeListed(GHO_ASSET, address(spoke), true);
         hub2.setSpokeListed(DAI_ASSET, address(spoke), true);
@@ -51,37 +51,6 @@ contract RiskModuleSpeedScopesUnitTest is RiskModuleFixture {
         assertEq(m.limit, 500_000 * E8, "50 % of $600,000 GHO + $400,000 DAI");
         assertEq(g.limit, 300_000e18, "50 % of the GHO the Spoke owes the home Hub");
         assertEq(d.limit, 200_000e18, "50 % of the DAI the Spoke owes hub2");
-    }
-
-    // TEST-321 verifies: REQ-RISK-092, REQ-RISK-095
-    function test_TEST_321_crossHubReserveHasItsOwnDebtWindow() public {
-        _borrow(DAI_RESERVE, 150_000e18);
-        (SpeedView memory m, SpeedView memory g) = riskModule.getBorrowSpeed(mid, GHO_RESERVE);
-        (, SpeedView memory d) = riskModule.getBorrowSpeed(mid, DAI_RESERVE);
-        assertEq(m.used, 150_000 * E8, "the market window counts every reserve");
-        assertEq(d.used, 150_000e18, "the (hub2, DAI) window is charged");
-        assertEq(g.used, 0, "the (home Hub, GHO) window is not");
-        // DAI room left: 50 % of the window-start base 400,000 = 200,000 limit, 150,000 used: 50,000.
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IRiskModuleErrors.DebtSpeedExceeded.selector,
-                address(hub2),
-                address(tDai),
-                uint256(50_000e18),
-                uint64(block.timestamp + 2 * TAU)
-            )
-        );
-        _borrow(DAI_RESERVE, 50_001e18);
-        // GHO still has its own room under the shared market window.
-        _borrow(GHO_RESERVE, 100_000e18);
-    }
-
-    // TEST-321 verifies: REQ-RISK-092
-    function test_TEST_321_debtBaseCountsOnlyTheFundingHub() public {
-        // The Spoke also owes GHO on hub2 (an unrelated asset id there): the (home Hub, GHO) base is unchanged.
-        hub2.setOwed(GHO_ASSET, address(spoke), 9_000_000e18, 0);
-        (, SpeedView memory g) = riskModule.getBorrowSpeed(mid, GHO_RESERVE);
-        assertEq(g.limit, 300_000e18);
     }
 
     // TEST-321 verifies: REQ-RISK-092, REQ-RISK-097

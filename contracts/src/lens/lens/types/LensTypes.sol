@@ -252,7 +252,8 @@ struct HubAssetExposureView {
     address asset;
     address firstLossReserve;
     uint256 fundedBalance;
-    uint256 line;
+    // Summed live Aave draw caps of every CDP Spoke with an enabled debt reserve of the pair, whole tokens.
+    uint256 drawCapSum;
     bool coverageBoundHolds;
     uint256 uncovered;
     uint256 priceAdj;

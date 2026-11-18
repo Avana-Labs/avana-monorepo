@@ -36,7 +36,6 @@ contract MarketRegistryDebtDefinitionUnitTest is MarketRegistryFixture {
         ps.setStressRise(address(usdc), 500);
         vm.startPrank(address(timelock));
         registry.setAvanaFirstLossReserve(address(hub), address(usdc), address(usdcCoverage));
-        registry.recordCreditLine(address(hub), address(usdc), 1_000_000);
         vm.stopPrank();
     }
 
@@ -70,7 +69,6 @@ contract MarketRegistryDebtDefinitionUnitTest is MarketRegistryFixture {
             priceSource: address(usdcOracle),
             fixedPrice: false,
             firstLossReserve: address(usdcCoverage),
-            crossHub: false,
             approved: false
         });
     }
@@ -191,9 +189,6 @@ contract MarketRegistryDebtDefinitionUnitTest is MarketRegistryFixture {
         registry.enableDebtReserve(alice, d);
         _expect(d, _invalid("fundingHub"));
         d.fundingHub = address(hub);
-        d.crossHub = true;
-        _expect(d, _invalid("crossHub"));
-        d.crossHub = false;
         d.hubAssetId = 8;
         _expect(d, _invalid("reserve"));
         d.hubAssetId = USDC_ASSET;
@@ -210,16 +205,10 @@ contract MarketRegistryDebtDefinitionUnitTest is MarketRegistryFixture {
         hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 2_000_000);
         _expect(d, _invalid("flash"));
         flash.setLiquidity(1e30, 5);
-        _expect(
-            d,
-            abi.encodeWithSelector(
-                IMarketRegistry.CreditLineExceeded.selector, address(hub), address(usdc), 2_000_000, 1_000_000
-            )
-        );
         hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 500_000);
         usdcCoverage.setFunded(1, false);
         _expect(
-            d, abi.encodeWithSelector(IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(usdc), 2e11, 1)
+            d, abi.encodeWithSelector(IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(usdc), 1e11, 1)
         );
         usdcCoverage.setFunded(2e12, false);
         _enable(d);

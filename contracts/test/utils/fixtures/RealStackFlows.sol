@@ -145,7 +145,6 @@ abstract contract RealStackFlows is FullStackMarkets {
                 priceSource: address(oracle),
                 fixedPrice: false,
                 firstLossReserve: cs,
-                crossHub: false,
                 approved: false
             }),
             floorRounding

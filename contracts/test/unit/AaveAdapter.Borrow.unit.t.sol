@@ -189,26 +189,6 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
         assertEq(adapterC.borrowNonce(aliceProxy), 1, "None borrows");
     }
 
-    // TEST-273 verifies: REQ-PROXY-015, REQ-ADAPTER-044, Q-378
-    /// @notice A cross-Hub reserve also needs its funding Hub at None: a pause of the funding Hub alone refuses the
-    /// borrow, and a pause of an unrelated Hub does not.
-    function test_TEST_273_fundingHubPauseRefuses() public {
-        address funding = makeAddr("fundingHub");
-        DebtReserveDef memory def = _debtDef(debtReserveId, address(debt), 18, ghoAssetId);
-        def.fundingHub = funding;
-        def.crossHub = true;
-        registry.setDebtReserve(aave.cdpSpoke, debtReserveId, def);
-        registry.setPause(makeAddr("unrelated"), PauseState.Paused, PauseReason.General);
-        registry.setPause(funding, PauseState.Frozen, PauseReason.None);
-        _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterBase.ApplicationFrozen.selector), debtReserveId, 1, alice, 0
-        );
-        registry.setPause(funding, PauseState.Paused, PauseReason.General);
-        _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector), debtReserveId, 1, alice, 0
-        );
-    }
-
     // ─── Debt reserve, receiver and freeze ───
 
     // TEST-030 verifies: REQ-ADAPTER-067, REQ-PROXY-009, REQ-PROXY-062, INV-073

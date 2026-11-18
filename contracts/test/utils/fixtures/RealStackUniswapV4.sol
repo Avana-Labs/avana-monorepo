@@ -203,7 +203,6 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
                 priceSource: source,
                 fixedPrice: fixedPrice,
                 firstLossReserve: cs,
-                crossHub: false,
                 approved: false
             })
         );

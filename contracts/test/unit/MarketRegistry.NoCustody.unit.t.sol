@@ -60,7 +60,7 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
     // TEST-168 verifies: REQ-CONFIG-003, REQ-CONFIG-004, REQ-MREG-028, Q-067, Q-104, Q-124, Q-248
     // Sources: 5.1 TEST-168
     // Every kind of write in one recorded sequence: listing (one bindMarket), routes, activation, the debt-reserve
-    // and credit-line records, the pause state, the address freeze, breakers, the standby switch, offboarding, the
+    // record, the pause state, the address freeze, breakers, the standby switch, offboarding, the
     // wind-down and the close.
     function test_TEST_168_onlyBindMarketChangesAnotherContract() public {
         vm.startStateDiffRecording();
@@ -68,12 +68,9 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
         _prepareActivation(id, vt);
         vm.startPrank(address(timelock));
         registry.activateMarket(id);
-        registry.recordCreditLine(address(hub), address(gho), 20_000_000);
         registry.setSettlementReserve(id, GHO_RESERVE);
-        registry.setCrossHubLinesEnabled(true);
         registry.disableRoute(id, address(usdc), address(gho), 1);
         vm.stopPrank();
-        registry.syncDrawCap(address(spoke), GHO_RESERVE);
         vm.startPrank(emergencyGuardian);
         registry.pause(address(hub), PauseReason.General);
         registry.unpause(address(hub));

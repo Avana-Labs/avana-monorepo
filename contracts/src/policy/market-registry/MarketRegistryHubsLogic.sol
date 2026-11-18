@@ -93,39 +93,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         emit IMarketRegistry.AvanaFirstLossReserveSet(hub, asset, firstLossReserve);
     }
 
-    function setCrossHubLine(
-        address fundingHub,
-        address asset,
-        address spoke,
-        uint256 cap
-    ) external {
-        _onlyDelegated();
-        Layout storage l = _s();
-        if (!l.crossHubLinesEnabled && cap > 0) revert IMarketRegistry.CrossHubLinesDisabled();
-        if (!l.spokes[spoke].approved) revert InvalidSpoke(spoke);
-        if (l.hubTier[fundingHub] == RiskTier.None || l.spokes[spoke].hub == fundingHub) {
-            revert IMarketRegistry.InvalidHub(fundingHub);
-        }
-        uint256 old = l.crossHubLineCap[fundingHub][asset][spoke];
-        uint256 total = l.crossHubLineTotal[fundingHub][asset] - old + cap;
-        if (cap > old) {
-            address cs = l.firstLossReserveOf[fundingHub][asset];
-            uint256 coverage = cs == address(0) ? 0 : IAvanaFirstLossReserve(cs).fundedBalance();
-            if (total > coverage) revert IMarketRegistry.CrossHubCapExceeded(total, coverage);
-        }
-        l.crossHubLineCap[fundingHub][asset][spoke] = cap;
-        l.crossHubLineTotal[fundingHub][asset] = total;
-        emit IMarketRegistry.CrossHubLineSet(fundingHub, asset, spoke, cap, total);
-    }
-
-    function setCrossHubLinesEnabled(
-        bool enabled
-    ) external {
-        _onlyDelegated();
-        _s().crossHubLinesEnabled = enabled;
-        emit IMarketRegistry.CrossHubLinesEnabledSet(enabled);
-    }
-
     function setFlashSource(
         address newSource
     ) external {
@@ -199,24 +166,11 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         if (!sp.approved) revert InvalidSpoke(spoke);
         if (l.hubTier[def.fundingHub] == RiskTier.None) revert InvalidDebtReserve("fundingHub");
         if (l.debtReserves[spoke][def.reserveId].approved) revert InvalidDebtReserve("enabled");
-        _checkFunding(spoke, sp.hub, def);
+        _checkFunding(sp.hub, def);
         _checkAaveReserve(spoke, def);
         _checkPriceSource(spoke, def);
         _checkAvanaFirstLossReserve(def);
         _checkFlashAndFee(def);
-        uint256 cap = _drawCapOf(def.fundingHub, def.hubAssetId, spoke);
-        // A cross-Hub draw cap (whole units) must fit its line (base units); 2^128 * 10^18 cannot overflow.
-        if (def.crossHub) {
-            uint256 capBase = cap * 10 ** uint256(def.decimals);
-            uint256 lineCap = l.crossHubLineCap[def.fundingHub][def.asset][spoke];
-            if (capBase > lineCap) revert IMarketRegistry.CrossHubCapExceeded(capBase, lineCap);
-        }
-        CreditLine storage cl = l.creditLines[def.fundingHub][def.asset];
-        uint256 sum = cl.drawCapSum + cap;
-        if (sum > cl.line) {
-            revert IMarketRegistry.CreditLineExceeded(def.fundingHub, def.asset, sum, cl.line);
-        }
-        _requireCovered(def.fundingHub, def.asset, cl.line);
         DebtReserveDef storage rec = l.debtReserves[spoke][def.reserveId];
         rec.reserveId = def.reserveId;
         rec.asset = def.asset;
@@ -226,20 +180,22 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         rec.priceSource = def.priceSource;
         rec.fixedPrice = def.fixedPrice;
         rec.firstLossReserve = def.firstLossReserve;
-        rec.crossHub = def.crossHub;
         rec.approved = true;
         l.debtReserveIds[spoke].push(def.reserveId);
         l.knownAvanaFirstLossReserve[def.firstLossReserve] = true;
         l.knownPriceSource[def.priceSource] = true;
         l.isDebtAsset[def.asset] = true;
-        l.recordedDrawCap[spoke][def.reserveId] = cap;
-        cl.drawCapSum = sum;
+        if (l.coverageRefs[def.fundingHub][def.asset][spoke]++ == 0) {
+            l.coverageSpokes[def.fundingHub][def.asset].push(spoke);
+        }
+        l.coverageAssetId[def.fundingHub][def.asset] = def.hubAssetId;
+        // The First-Loss Reserve covers every Spoke's draw cap on the pair, this one included.
+        _requireCovered(def.fundingHub, def.asset);
         // Runs after the record is written: the ParameterStore accepts only an enabled reserve.
         _checkMarketsLive(spoke, def.reserveId, def.asset);
         emit DebtReserveApproved(
             spoke, def.reserveId, def.asset, def.fundingHub, def.hubAssetId, def.priceSource, def.firstLossReserve
         );
-        emit IMarketRegistry.CreditLineRecorded(def.fundingHub, def.asset, spoke, cap, sum);
     }
 
     function removeDebtReserve(
@@ -260,9 +216,9 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
             settles || hub.getSpokeTotalOwed(rec.hubAssetId, spoke) != 0
                 || hub.getSpokeDeficitRay(rec.hubAssetId, spoke) != 0
         ) revert DebtReserveInUse(spoke, reserveId);
-        CreditLine storage cl = l.creditLines[rec.fundingHub][rec.asset];
-        cl.drawCapSum -= l.recordedDrawCap[spoke][reserveId];
-        delete l.recordedDrawCap[spoke][reserveId];
+        if (--l.coverageRefs[rec.fundingHub][rec.asset][spoke] == 0) {
+            _removeAddress(l.coverageSpokes[rec.fundingHub][rec.asset], spoke);
+        }
         bytes32 key = _debtKey(spoke, reserveId);
         delete l.latched[key];
         _clearBreachTimes(l, key);
@@ -313,5 +269,20 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
             ids[i] = ids[i + 1];
         }
         ids.pop();
+    }
+
+    /// @dev Removes `a` from an unordered list (the last entry takes its place).
+    function _removeAddress(
+        address[] storage list,
+        address a
+    ) private {
+        uint256 n = list.length;
+        for (uint256 i = 0; i < n; ++i) {
+            if (list[i] == a) {
+                list[i] = list[n - 1];
+                list.pop();
+                return;
+            }
+        }
     }
 }

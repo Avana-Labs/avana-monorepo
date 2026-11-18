@@ -14,7 +14,7 @@ docs/spec/
 │   ├── 04-permissions-and-roles.md    1.4  Roles (REQ-ROLE-…), permissions, delay classes
 │   └── 05-parameters.md               1.5  Every parameter: unit, hard bounds, launch value, storage, authority, per-chain values
 ├── 02-contracts/                      One page per contract (REQ-<CONTRACT>-…, SPEC-<AREA>-…)
-│   ├── 01-avana-hub-and-spokes.md     2.1  Avana Hubs, CDP, Lend and First-Loss Reserves, credit lines (Aave V4)
+│   ├── 01-avana-hub-and-spokes.md     2.1  Avana Hubs, CDP, Lend and First-Loss Reserves, draw caps (Aave V4)
 │   ├── 02-lp-vault.md                 2.2  LPVault (position custody per AMM protocol)
 │   ├── 03-collateralization.md        2.3  Collateralization (backing records, credit, seizure, pending settlement)
 │   ├── 04-vault-tokens.md             2.4  Vault tokens and VaultTokenFactory

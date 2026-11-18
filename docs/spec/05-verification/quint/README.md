@@ -8,6 +8,8 @@
 | `avana_tests.qnt` | 50 deterministic scenarios `QNT-T01` … `QNT-T44` |
 | `run.sh` | One `quint run --invariant=…` per property, 8 combined runs and 30 reachability (witness) runs, in parallel |
 
+**Removed features.** The contracts no longer have the per-(Hub, asset) credit line (`recordCreditLine`, `syncDrawCap`, `creditLine`), cross-Hub credit lines, the per-market `hardHealthFloor` or the pool-share cap (`poolShareMaxBps`, the `POOL_SHARE` breaker reason, Collateralization's `poolUnits` counter). First-loss coverage is now checked on the summed live Aave draw caps of every CDP Spoke drawing an asset on a Hub (`MarketRegistry.drawCapCoverage`, [2.8](../../02-contracts/08-market-registry.md) `REQ-CONFIG-081`), at `enableDebtReserve` and on every borrow of the asset; the health check after a borrow or a withdrawal that keeps debt is `max(1, minHealthFactor)`; the pool-depth gate stays. The model files were not changed: its credit lines stand for the summed draw caps, the optional hard floor of `QNT-20` and `QNT-T19` is off (which matches the contracts), the pool-share breaker condition describes the former rule, and the cross-Hub lines and funding-Hub pause of `topology.qnt` model a feature that no longer exists.
+
 ## Run
 
 ```bash

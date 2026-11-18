@@ -371,7 +371,7 @@ contract FullStackHandler is CommonBase, StdUtils {
                     cap
                 )
             );
-        if (ok) w.registry.syncDrawCap(address(w.spoke), w.debtReserves[r]);
+        ok;
     }
 
     /// @notice The timelock tightens the market's `topUpSliceUsd` by a little at the short delay.

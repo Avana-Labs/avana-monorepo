@@ -41,7 +41,7 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
     function _bodies() internal view returns (Body[] memory b) {
         address[] memory one = new address[](1);
         one[0] = address(gho);
-        b = new Body[](38);
+        b = new Body[](34);
         uint256 k = 0;
         // Hubs logic.
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.recordHub, (alice, RiskTier.Stable)));
@@ -49,9 +49,6 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
         b[k++] = Body(
             logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.setAvanaFirstLossReserve, (address(hub), alice, bob))
         );
-        b[k++] =
-            Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.setCrossHubLine, (address(hub), alice, bob, 0)));
-        b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.setCrossHubLinesEnabled, (true)));
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.setFlashSource, (address(flash))));
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.approveSpokeCodeHash, (keccak256("h"))));
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.deployCdpSpoke, (_spokeDef())));
@@ -105,11 +102,6 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
         b[k++] = Body(logics.safety, abi.encodeCall(MarketRegistrySafetyLogic.tripDebtBreaker, (address(spoke), 0)));
         // Wind-down logic.
         b[k++] = Body(logics.windDown, abi.encodeCall(MarketRegistryWindDownLogic.closeMarket, (1)));
-        b[k++] = Body(
-            logics.windDown,
-            abi.encodeCall(MarketRegistryWindDownLogic.recordCreditLine, (address(hub), address(gho), 20_000_000))
-        );
-        b[k++] = Body(logics.windDown, abi.encodeCall(MarketRegistryWindDownLogic.syncDrawCap, (address(spoke), 0)));
         assert(k == b.length);
     }
 
@@ -292,8 +284,6 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
         impl.initialize(address(timelock));
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.MarketNotOffboarding.selector, 1));
         impl.closeMarket(1);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownDebtReserve.selector, address(spoke), 0));
-        impl.syncDrawCap(address(spoke), 0);
         vm.prank(address(rm));
         impl.recordBreach(bytes32(uint256(1)), 8);
         (uint32 latched,) = impl.marketBreaker(1);

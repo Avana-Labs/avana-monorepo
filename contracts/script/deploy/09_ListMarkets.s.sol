@@ -183,7 +183,7 @@ contract ListMarkets is ListingBase {
         _listTokens(op);
         _listDebtAssets(op);
         _recordSpokes(op);
-        _coverageAndLines(op);
+        _firstLossReserves(op);
     }
 
     /// @notice The pool tokens: feeds, `listToken`, then the settings that need a listed token.
@@ -351,9 +351,9 @@ contract ListMarkets is ListingBase {
         }
     }
 
-    /// @notice Each (Hub, debt asset) of the debt reserves: its First-Loss Reserve and the Hub's credit line, which bounds
-    /// the CDP Spokes' draw caps on the asset.
-    function _coverageAndLines(
+    /// @notice Each (Hub, debt asset) of the debt reserves: its First-Loss Reserve, which must cover the summed draw caps
+    /// Aave records for the asset's CDP Spokes (checked by `enableDebtReserve` and on every borrow).
+    function _firstLossReserves(
         Operation memory op
     ) private view {
         string memory coverage = vm.readFile(_outputPath("coverage"));
@@ -364,33 +364,14 @@ contract ListMarkets is ListingBase {
             string memory sym = _str(string.concat(k, ".symbol"));
             string memory hubLabel = _hubOfSpoke(_str(string.concat(k, ".spoke")));
             address hub = _hub(hubLabel);
+            if (registry.firstLossReserveOf(hub, _token(sym)) != address(0)) continue;
             address cs =
                 vm.parseJsonAddress(coverage, string.concat("$['AvanaFirstLossReserve.", hubLabel, ".", sym, "']"));
-            uint256 line = _debtAssetUint(sym, "creditLineWhole", ".listing");
-            if (registry.firstLossReserveOf(hub, _token(sym)) != address(0)) {
-                // A later release adds CDP Spokes whose draw caps the recorded line must still bound: raise it.
-                (uint256 recorded,) = registry.creditLine(hub, _token(sym));
-                if (recorded < line) {
-                    _add(
-                        op,
-                        address(registry),
-                        abi.encodeCall(registry.recordCreditLine, (hub, _token(sym), line)),
-                        "MR.recordCreditLine"
-                    );
-                }
-                continue;
-            }
             _add(
                 op,
                 address(registry),
                 abi.encodeCall(registry.setAvanaFirstLossReserve, (hub, _token(sym), cs)),
                 "MR.setAvanaFirstLossReserve"
-            );
-            _add(
-                op,
-                address(registry),
-                abi.encodeCall(registry.recordCreditLine, (hub, _token(sym), line)),
-                "MR.recordCreditLine"
             );
         }
     }

@@ -48,12 +48,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         bool finalized;
     }
 
-    /// @dev A credit line of (funding Hub, asset), in whole tokens.
-    struct CreditLine {
-        uint256 line;
-        uint256 drawCapSum;
-    }
-
     /// @custom:storage-location erc7201:avana.storage.MarketRegistry
     struct Layout {
         uint256 marketCount;
@@ -84,11 +78,12 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         mapping(address priceSource => bool) knownPriceSource;
         mapping(address asset => bool) isDebtAsset;
         mapping(address hub => mapping(address asset => address)) firstLossReserveOf;
-        mapping(address hub => mapping(address asset => CreditLine)) creditLines;
-        mapping(address spoke => mapping(uint256 reserveId => uint256)) recordedDrawCap;
-        mapping(address hub => mapping(address asset => mapping(address spoke => uint256))) crossHubLineCap;
-        mapping(address hub => mapping(address asset => uint256)) crossHubLineTotal;
-        bool crossHubLinesEnabled;
+        /// @dev Unused (the recorded credit lines and cross-Hub lines); kept for storage layout.
+        mapping(address hub => mapping(address asset => uint256[2])) unusedCreditLines;
+        mapping(address spoke => mapping(uint256 reserveId => uint256)) unusedRecordedDrawCap;
+        mapping(address hub => mapping(address asset => mapping(address spoke => uint256))) unusedCrossHubLineCap;
+        mapping(address hub => mapping(address asset => uint256)) unusedCrossHubLineTotal;
+        bool unusedCrossHubLinesEnabled;
         mapping(address token => TokenDef) tokens;
         mapping(address token => uint64) priceRouteVersion;
         mapping(bytes32 slotKey => RouteRecord) routes;
@@ -110,6 +105,11 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         mapping(uint32 integrationId => IntegrationRecord) integrationRecords;
         mapping(uint256 marketId => RouteSlotRef[]) routeSlots;
         mapping(bytes32 slotId => bool) routeSlotListed;
+        // The CDP Spokes with an enabled debt reserve of `asset` on `hub`, whose Aave draw caps the First-Loss Reserve
+        // must cover; `coverageRefs` counts each Spoke's enabled reserves of the pair.
+        mapping(address hub => mapping(address asset => address[])) coverageSpokes;
+        mapping(address hub => mapping(address asset => mapping(address spoke => uint256))) coverageRefs;
+        mapping(address hub => mapping(address asset => uint256)) coverageAssetId;
     }
 
     /// @dev `keccak256(abi.encode(uint256(keccak256("avana.storage.MarketRegistry")) - 1)) & ~bytes32(uint256(0xff))`.
@@ -356,27 +356,41 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         cap = raw == hub.MAX_ALLOWED_SPOKE_CAP() ? _UNBOUNDED_DRAW_CAP : uint256(raw);
     }
 
-    /// @dev Coverage of a line: `required` rounds up; on overflow it is `type(uint256).max`, so the check fails closed.
+    /// @dev Sum of the live Aave draw caps of every CDP Spoke with an enabled debt reserve of `asset` on `hub`, whole
+    /// tokens; an unbounded cap counts `_UNBOUNDED_DRAW_CAP`, which no First-Loss Reserve covers.
+    function _drawCapSum(
+        address hub,
+        address asset
+    ) internal view returns (uint256 sum) {
+        Layout storage l = _s();
+        address[] storage spokes = l.coverageSpokes[hub][asset];
+        uint256 assetId = l.coverageAssetId[hub][asset];
+        for (uint256 i = 0; i < spokes.length; ++i) {
+            sum += _drawCapOf(hub, assetId, spokes[i]);
+        }
+    }
+
+    /// @dev Coverage of the summed draw caps: `required` rounds up; on overflow it is `type(uint256).max`, so the
+    /// check fails closed.
     function _coverage(
         address hub,
-        address asset,
-        uint256 line
-    ) internal view returns (uint256 required, uint256 funded) {
-        if (line == 0) return (0, 0);
+        address asset
+    ) internal view returns (uint256 drawCapSum, uint256 required, uint256 funded) {
+        drawCapSum = _drawCapSum(hub, asset);
+        if (drawCapSum == 0) return (0, 0, 0);
         address cs = _s().firstLossReserveOf[hub][asset];
         funded = cs == address(0) ? 0 : IAvanaFirstLossReserve(cs).fundedBalance();
         uint256 k =
             10 ** uint256(IERC20Metadata(asset).decimals()) * IParameterStore(_PARAMETER_STORE).coverageRatioBps();
-        if (k != 0 && line > (type(uint256).max - _BPS) / k) return (type(uint256).max, funded);
-        required = (line * k + _BPS - 1) / _BPS;
+        if (k != 0 && drawCapSum > (type(uint256).max - _BPS) / k) return (drawCapSum, type(uint256).max, funded);
+        required = (drawCapSum * k + _BPS - 1) / _BPS;
     }
 
     function _requireCovered(
         address hub,
-        address asset,
-        uint256 line
+        address asset
     ) internal view {
-        (uint256 required, uint256 funded) = _coverage(hub, asset, line);
+        (, uint256 required, uint256 funded) = _coverage(hub, asset);
         if (required > funded) revert IMarketRegistry.CoverageBelowRatio(hub, asset, required, funded);
     }
 

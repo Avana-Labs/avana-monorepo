@@ -139,11 +139,11 @@ contract AvanaTimelockUnitTest is TimelockFixture {
         );
     }
 
-    /// @notice No pair whose target is the timelock, and no role, upgrade, flash-source, deployment, cross-Hub or
-    /// initializer selector, can be made short-eligible or DAO-only at construction.
+    /// @notice No pair whose target is the timelock, and no role, upgrade, flash-source, deployment or initializer
+    /// selector, can be made short-eligible or DAO-only at construction.
     // TEST-244 verifies: REQ-ACCESS-142, REQ-ACCESS-152, REQ-ACCESS-181, INV-090
     function test_TEST_244_constructorRefusesForbiddenPairs() public {
-        bytes4[15] memory forbidden = [
+        bytes4[13] memory forbidden = [
             IAccessControl.grantRole.selector,
             IAccessControl.revokeRole.selector,
             IAccessControl.renounceRole.selector,
@@ -152,8 +152,6 @@ contract AvanaTimelockUnitTest is TimelockFixture {
             IMarketRegistry.deployCdpSpoke.selector,
             IMarketRegistry.listCollateralMarket.selector,
             IMarketRegistry.enableDebtReserve.selector,
-            IMarketRegistry.setCrossHubLinesEnabled.selector,
-            IMarketRegistry.setCrossHubLine.selector,
             IMarketRegistry.initialize.selector,
             IParameterStore.initialize.selector,
             IAaveAdapter.initialize.selector,

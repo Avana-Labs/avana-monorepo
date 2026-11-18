@@ -48,7 +48,6 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
         registry.deployCdpSpoke(_spokeDef());
         hub.setAsset(address(gho), GHO_ASSET);
         registry.setAvanaFirstLossReserve(address(hub), address(gho), address(ghoCoverage));
-        registry.recordCreditLine(address(hub), address(gho), 20_000_000);
         vm.stopPrank();
         _setGhoReserve();
         _listTokenWithProbe(address(gho), "gho", IssuerProbe.None);
@@ -63,79 +62,6 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
         registry.enableDebtReserve(address(spoke), _ghoDef());
         vm.stopPrank();
         assertTrue(registry.isApprovedDebtReserve(address(spoke), GHO_RESERVE));
-    }
-
-    // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010, REQ-MREG-009
-    // Sources: 5.1 TEST-273
-    // A line on an asset with no First-Loss Reserve counts as unfunded: any line above 0 is refused with funded 0; a line
-    // of 0 needs nothing.
-    function test_TEST_273_lineWithoutAvanaFirstLossReserveIsUnfunded() public {
-        _setUpWorld();
-        // ceil(1 x 10^6 x 2,000 / 10^4) = 200,000 base units required, none funded.
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(usdt), 200_000, 0)
-        );
-        registry.recordCreditLine(address(hub), address(usdt), 1);
-        vm.prank(address(timelock));
-        registry.recordCreditLine(address(hub), address(usdt), 0);
-        (uint256 required, uint256 funded) = registry.creditLineCoverage(address(hub), address(usdt));
-        assertEq(required + funded, 0);
-    }
-
-    // TEST-273 verifies: REQ-CONFIG-081, REQ-MREG-009, ATTACK-163, Q-378
-    // A cross-Hub reserve needs the funding Hub's own credit line for the asset, even when the line to the Spoke is
-    // open: FundingHubConsentMissing(fundingHub, asset).
-    function test_TEST_273_crossHubReserveWithoutFundingHubLine() public {
-        _setUpWorld();
-        RegistryHubMock hub2 = new RegistryHubMock();
-        RegistrySpokeMock spoke2 = new RegistrySpokeMock();
-        RegistryAaveOracleMock oracle2 = new RegistryAaveOracleMock();
-        spoke2.setOracle(address(oracle2));
-        spoke2.setImplementation(address(spokeImpl));
-        oracle2.setSpoke(address(spoke2));
-        RegistryTokenMock dai = new RegistryTokenMock(18);
-        _listToken(address(dai), "dai");
-        hub.setAsset(address(dai), 4);
-        RegistryAvanaFirstLossReserveMock daiCoverage =
-            new RegistryAvanaFirstLossReserveMock(address(hub), address(dai), 4);
-        daiCoverage.setFunded(1e30, false);
-        vm.startPrank(address(timelock));
-        registry.recordHub(address(hub2), RiskTier.Correlated);
-        registry.deployCdpSpoke(
-            SpokeDef(false, address(hub2), V3, RiskTier.Correlated, address(spokeImpl), address(oracle2))
-        );
-        registry.setAvanaFirstLossReserve(address(hub), address(dai), address(daiCoverage));
-        registry.setCrossHubLinesEnabled(true);
-        registry.setCrossHubLine(address(hub), address(dai), address(spoke2), 1e24);
-        vm.stopPrank();
-        DebtReserveDef memory d = DebtReserveDef({
-            reserveId: 3,
-            asset: address(dai),
-            decimals: 18,
-            fundingHub: address(hub),
-            hubAssetId: 4,
-            priceSource: address(ghoSource),
-            fixedPrice: true,
-            firstLossReserve: address(daiCoverage),
-            crossHub: true,
-            approved: false
-        });
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistry.FundingHubConsentMissing.selector, address(hub), address(dai))
-        );
-        registry.enableDebtReserve(address(spoke2), d);
-        // The closed line is reported before the missing consent.
-        vm.prank(address(timelock));
-        registry.setCrossHubLine(address(hub), address(dai), address(spoke2), 0);
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IMarketRegistry.CrossHubLineClosed.selector, address(hub), address(dai), address(spoke2)
-            )
-        );
-        registry.enableDebtReserve(address(spoke2), d);
     }
 
     // TEST-139 verifies: REQ-CONFIG-035

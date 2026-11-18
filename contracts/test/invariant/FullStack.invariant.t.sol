@@ -236,14 +236,9 @@ contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
 
     // TEST-274 verifies: INV-057, INV-094
     /// @notice No borrow completed that left the CDP Spoke's owed amount of the asset above its draw cap, whatever the
-    /// Aave DAO's cuts; the MarketRegistry's recorded draw-cap sum of each credit line never exceeds the line.
-    function invariant_TEST_274_drawGateAndCapSum() public view {
+    /// Aave DAO's cuts.
+    function invariant_TEST_274_drawGate() public view {
         assertEq(handler.drawCapViolations(), 0, "a borrow above the draw cap");
-        address[2] memory assets = [address(gho), address(usdc)];
-        for (uint256 i = 0; i < 2; ++i) {
-            (uint256 line, uint256 sum) = registry.creditLine(aave.hub, assets[i]);
-            assertLe(sum, line, "cap sum within the line");
-        }
     }
 
     // TEST-274 verifies: INV-057, INV-094

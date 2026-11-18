@@ -46,7 +46,6 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         ps.setStressRise(address(dai), 500);
         vm.startPrank(address(timelock));
         registry.setAvanaFirstLossReserve(address(hub), address(dai), address(daiCoverage));
-        registry.recordCreditLine(address(hub), address(dai), 2_000_000);
         vm.stopPrank();
     }
 
@@ -60,7 +59,6 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
             priceSource: address(daiOracle),
             fixedPrice: false,
             firstLossReserve: address(daiCoverage),
-            crossHub: false,
             approved: false
         });
     }
@@ -151,11 +149,10 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         ps.setStressRise(address(usdc), 500);
         vm.startPrank(address(timelock));
         registry.setAvanaFirstLossReserve(address(hub), address(usdc), address(usdcCoverage));
-        registry.recordCreditLine(address(hub), address(usdc), 1_000_000);
         registry.enableDebtReserve(
             address(spoke),
             DebtReserveDef(
-                5, address(usdc), 6, address(hub), 2, address(usdcOracle), false, address(usdcCoverage), false, false
+                5, address(usdc), 6, address(hub), 2, address(usdcOracle), false, address(usdcCoverage), false
             )
         );
         vm.stopPrank();

@@ -199,43 +199,11 @@ abstract contract MarketRegistryViews is MarketRegistryStorage, IMarketRegistry 
     }
 
     /// @inheritdoc IMarketRegistry
-    function crossHubLineCap(
-        address fundingHub,
-        address asset,
-        address spoke
-    ) external view override returns (uint256 cap) {
-        cap = _s().crossHubLineCap[fundingHub][asset][spoke];
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function crossHubLineTotal(
-        address fundingHub,
+    function drawCapCoverage(
+        address hub,
         address asset
-    ) external view override returns (uint256 total) {
-        total = _s().crossHubLineTotal[fundingHub][asset];
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function crossHubLinesEnabled() external view override returns (bool enabled) {
-        enabled = _s().crossHubLinesEnabled;
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function creditLine(
-        address fundingHub,
-        address asset
-    ) external view override returns (uint256 line, uint256 drawCapSum) {
-        CreditLine storage cl = _s().creditLines[fundingHub][asset];
-        line = cl.line;
-        drawCapSum = cl.drawCapSum;
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function creditLineCoverage(
-        address fundingHub,
-        address asset
-    ) external view override returns (uint256 required, uint256 funded) {
-        (required, funded) = _coverage(fundingHub, asset, _s().creditLines[fundingHub][asset].line);
+    ) external view override returns (uint256 drawCapSum, uint256 required, uint256 funded) {
+        (drawCapSum, required, funded) = _coverage(hub, asset);
     }
 
     /// @inheritdoc IMarketRegistry

@@ -313,130 +313,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "creditLine",
-    "inputs": [
-      {
-        "name": "fundingHub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "line",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "drawCapSum",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "creditLineCoverage",
-    "inputs": [
-      {
-        "name": "fundingHub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "required",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "funded",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "crossHubLineCap",
-    "inputs": [
-      {
-        "name": "fundingHub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "spoke",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "cap",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "crossHubLineTotal",
-    "inputs": [
-      {
-        "name": "fundingHub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "total",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "crossHubLinesEnabled",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "enabled",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "debtBreaker",
     "inputs": [
       {
@@ -545,6 +421,40 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "drawCapCoverage",
+    "inputs": [
+      {
+        "name": "hub",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "asset",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "drawCapSum",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "required",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "funded",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "enableDebtReserve",
     "inputs": [
       {
@@ -596,11 +506,6 @@ export const marketRegistryAbi = [
             "name": "firstLossReserve",
             "type": "address",
             "internalType": "address"
-          },
-          {
-            "name": "crossHub",
-            "type": "bool",
-            "internalType": "bool"
           },
           {
             "name": "approved",
@@ -775,11 +680,6 @@ export const marketRegistryAbi = [
             "name": "firstLossReserve",
             "type": "address",
             "internalType": "address"
-          },
-          {
-            "name": "crossHub",
-            "type": "bool",
-            "internalType": "bool"
           },
           {
             "name": "approved",
@@ -1811,29 +1711,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "recordCreditLine",
-    "inputs": [
-      {
-        "name": "fundingHub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "line",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "recordHub",
     "inputs": [
       {
@@ -2047,47 +1924,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "setCrossHubLine",
-    "inputs": [
-      {
-        "name": "fundingHub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "spoke",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "cap",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setCrossHubLinesEnabled",
-    "inputs": [
-      {
-        "name": "enabled",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "setFlashSource",
     "inputs": [
       {
@@ -2281,24 +2117,6 @@ export const marketRegistryAbi = [
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "syncDrawCap",
-    "inputs": [
-      {
-        "name": "spoke",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -2532,124 +2350,6 @@ export const marketRegistryAbi = [
         "type": "address",
         "indexed": true,
         "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CreditLineRecorded",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "spoke",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "drawCap",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "sum",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CreditLineSet",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "line",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "sum",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CrossHubLineSet",
-    "inputs": [
-      {
-        "name": "fundingHub",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "spoke",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "cap",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "total",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CrossHubLinesEnabledSet",
-    "inputs": [
-      {
-        "name": "enabled",
-        "type": "bool",
-        "indexed": false,
-        "internalType": "bool"
       }
     ],
     "anonymous": false
@@ -3610,74 +3310,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "error",
-    "name": "CreditLineExceeded",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "sum",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "line",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "CrossHubCapExceeded",
-    "inputs": [
-      {
-        "name": "total",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "coverage",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "CrossHubLineClosed",
-    "inputs": [
-      {
-        "name": "fundingHub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "spoke",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "CrossHubLinesDisabled",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "DebtReserveInUse",
     "inputs": [
       {
@@ -3703,22 +3335,6 @@ export const marketRegistryAbi = [
     "inputs": [
       {
         "name": "caller",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "FundingHubConsentMissing",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
         "type": "address",
         "internalType": "address"
       }

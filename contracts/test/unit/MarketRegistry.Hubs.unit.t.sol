@@ -137,41 +137,6 @@ contract MarketRegistryHubsUnitTest is MarketRegistryFixture {
         assertEq(registry.firstLossReserveOf(address(hub), address(gho)), address(ghoCoverage));
     }
 
-    // TEST-273 verifies: REQ-CONFIG-081, REQ-MREG-009, REQ-FLR-043, ATTACK-163, Q-378, REQ-ACCESS-175
-    // Sources: 5.1 TEST-273
-    function test_TEST_273_crossHubLines() public {
-        vm.startPrank(address(timelock));
-        registry.recordHub(address(hub2), RiskTier.Correlated);
-        registry.deployCdpSpoke(_spoke2Def());
-        vm.expectRevert(IMarketRegistry.CrossHubLinesDisabled.selector);
-        registry.setCrossHubLine(address(hub), address(gho), address(spoke2), 1);
-        // A cap of 0 is always accepted.
-        registry.setCrossHubLine(address(hub), address(gho), address(spoke2), 0);
-        registry.setCrossHubLinesEnabled(true);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidHub.selector, address(hub2)));
-        registry.setCrossHubLine(address(hub2), address(gho), address(spoke2), 1);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, alice));
-        registry.setCrossHubLine(address(hub), address(gho), alice, 1);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.CrossHubCapExceeded.selector, 4e24 + 1, 4e24));
-        registry.setCrossHubLine(address(hub), address(gho), address(spoke2), 4e24 + 1);
-        vm.expectEmit(address(registry));
-        emit IMarketRegistry.CrossHubLineSet(address(hub), address(gho), address(spoke2), 3e24, 3e24);
-        registry.setCrossHubLine(address(hub), address(gho), address(spoke2), 3e24);
-        vm.stopPrank();
-        assertEq(registry.crossHubLineCap(address(hub), address(gho), address(spoke2)), 3e24);
-        assertEq(registry.crossHubLineTotal(address(hub), address(gho)), 3e24);
-        // Coverage falls: a cut still passes, a raise does not.
-        ghoCoverage.setFunded(1e24, false);
-        vm.startPrank(address(timelock));
-        registry.setCrossHubLine(address(hub), address(gho), address(spoke2), 2e24);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.CrossHubCapExceeded.selector, 2.5e24, 1e24));
-        registry.setCrossHubLine(address(hub), address(gho), address(spoke2), 2.5e24);
-        registry.setCrossHubLinesEnabled(false);
-        vm.stopPrank();
-        assertFalse(registry.crossHubLinesEnabled());
-        assertEq(registry.crossHubLineTotal(address(hub), address(gho)), 2e24);
-    }
-
     // TEST-185 verifies: REQ-CONFIG-077, REQ-CONFIG-074, REQ-CONFIG-083, REQ-CONFIG-016, ATTACK-121, Q-312, REQ-ACCESS-133
     // Sources: 5.1 TEST-185
     function test_TEST_185_deployCdpSpokeChecks() public {

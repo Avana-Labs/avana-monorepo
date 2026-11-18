@@ -214,23 +214,6 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
     }
 
     /// @inheritdoc IMarketRegistry
-    function setCrossHubLine(
-        address,
-        address,
-        address,
-        uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_HUBS_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function setCrossHubLinesEnabled(
-        bool
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_HUBS_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
     function setFlashSource(
         address
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
@@ -507,23 +490,6 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
         uint256,
         uint256
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_WIND_DOWN_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function recordCreditLine(
-        address,
-        address,
-        uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_WIND_DOWN_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function syncDrawCap(
-        address,
-        uint256
-    ) external override {
         _forward(_WIND_DOWN_LOGIC);
     }
 

@@ -57,7 +57,6 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
         ps.setStressRise(token, 500);
         vm.startPrank(address(timelock));
         registry.setAvanaFirstLossReserve(address(hub), token, address(cs));
-        registry.recordCreditLine(address(hub), token, 1_000_000);
         vm.stopPrank();
     }
 
@@ -77,7 +76,6 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
             priceSource: oracle,
             fixedPrice: false,
             firstLossReserve: cs,
-            crossHub: false,
             approved: false
         });
     }
@@ -171,7 +169,6 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
         assertEq(rec.priceSource, address(usdtOracle));
         assertFalse(rec.fixedPrice);
         assertEq(rec.firstLossReserve, address(usdtCoverage));
-        assertFalse(rec.crossHub);
         assertTrue(rec.approved);
         rec = registry.getDebtReserve(address(spoke), USDC_RESERVE);
         assertEq(rec.reserveId, USDC_RESERVE);
@@ -187,22 +184,6 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
         assertFalse(registry.isApprovedDebtReserve(address(spoke), 77));
         assertFalse(registry.isApprovedDebtReserve(alice, GHO_RESERVE), "another Spoke");
         _assertIds(_three(GHO_RESERVE, USDC_RESERVE, USDT_RESERVE));
-    }
-
-    // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010
-    // Each enablement records the Spoke's draw cap against its own (Hub, asset) line and emits it.
-    function test_TEST_273_eachReserveRecordsItsOwnDrawCap() public {
-        vm.expectEmit(address(registry));
-        emit IMarketRegistry.CreditLineRecorded(address(hub), address(usdt), address(spoke), 300_000, 300_000);
-        _enable(_usdtDef());
-        _enable(_usdcDef());
-        (uint256 line, uint256 sum) = registry.creditLine(address(hub), address(usdt));
-        assertEq(line, 1_000_000);
-        assertEq(sum, 300_000);
-        (, sum) = registry.creditLine(address(hub), address(usdc));
-        assertEq(sum, 500_000);
-        (, sum) = registry.creditLine(address(hub), address(gho));
-        assertEq(sum, 1_000_000, "GHO's own line is untouched");
     }
 
     // TEST-185 verifies: REQ-MREG-006
@@ -251,12 +232,12 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
     function test_TEST_213_reEnableAppendsAtTheEnd() public {
         _enableBoth();
         _remove(USDC_RESERVE);
-        (, uint256 sum) = registry.creditLine(address(hub), address(usdc));
-        assertEq(sum, 0, "draw cap subtracted at removal");
+        (uint256 sum,,) = registry.drawCapCoverage(address(hub), address(usdc));
+        assertEq(sum, 0, "the Spoke leaves the coverage sum at removal");
         _enable(_usdcDef());
         _assertIds(_three(GHO_RESERVE, USDT_RESERVE, USDC_RESERVE));
-        (, sum) = registry.creditLine(address(hub), address(usdc));
-        assertEq(sum, 500_000);
+        (sum,,) = registry.drawCapCoverage(address(hub), address(usdc));
+        assertEq(sum, 500_000, "and joins it again");
     }
 
     // TEST-213 verifies: REQ-MREG-010
@@ -424,68 +405,5 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
         _expectInvalid(_usdcDef(), "flash");
         flash.setLender(aaveV3Pool);
         _enable(_usdcDef());
-    }
-
-    // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010
-    // The draw-cap sum may reach the line exactly; one more unit is refused with the sum and the line.
-    function test_TEST_273_drawCapSumReachesTheLineExactly() public {
-        hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 1_000_001);
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IMarketRegistry.CreditLineExceeded.selector, address(hub), address(usdc), 1_000_001, 1_000_000
-            )
-        );
-        registry.enableDebtReserve(address(spoke), _usdcDef());
-        hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 1_000_000);
-        _enable(_usdcDef());
-        (uint256 line, uint256 sum) = registry.creditLine(address(hub), address(usdc));
-        assertEq(sum, line);
-    }
-
-    // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010
-    // Coverage of the line at enablement: ceil(10^6 x 10^6 x 2,000 / 10^4) = 2 x 10^11 funded passes, one unit less
-    // reverts with the required and funded amounts.
-    function test_TEST_273_coverageAtEnablementIsInclusive() public {
-        usdcCoverage.setFunded(2e11 - 1, false);
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(usdc), 2e11, 2e11 - 1
-            )
-        );
-        registry.enableDebtReserve(address(spoke), _usdcDef());
-        usdcCoverage.setFunded(2e11, false);
-        _enable(_usdcDef());
-        (uint256 required, uint256 funded) = registry.creditLineCoverage(address(hub), address(usdc));
-        assertEq(required, 2e11);
-        assertEq(funded, 2e11);
-    }
-
-    // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010
-    // syncDrawCap records the live cap and the new sum whatever the line: a raise above the line is recorded, a cut
-    // lowers the sum, and the unbounded Aave cap counts as 2^128.
-    function test_TEST_273_syncRecordsRaisesCutsAndTheUnboundedCap() public {
-        _enable(_usdcDef());
-        hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 1_500_000);
-        vm.expectEmit(address(registry));
-        emit IMarketRegistry.CreditLineRecorded(address(hub), address(usdc), address(spoke), 1_500_000, 1_500_000);
-        registry.syncDrawCap(address(spoke), USDC_RESERVE);
-        hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 200_000);
-        registry.syncDrawCap(address(spoke), USDC_RESERVE);
-        (, uint256 sum) = registry.creditLine(address(hub), address(usdc));
-        assertEq(sum, 200_000);
-        hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, type(uint40).max);
-        registry.syncDrawCap(address(spoke), USDC_RESERVE);
-        (, sum) = registry.creditLine(address(hub), address(usdc));
-        assertEq(sum, 2 ** 128);
-        // A recorded sum above the line blocks a lower line, never the record itself.
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IMarketRegistry.CreditLineExceeded.selector, address(hub), address(usdc), 2 ** 128, 2_000_000
-            )
-        );
-        registry.recordCreditLine(address(hub), address(usdc), 2_000_000);
     }
 }

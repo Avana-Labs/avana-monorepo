@@ -25,7 +25,7 @@ No single person signs on two Safes of the same chain, no signer key is shared b
 **Holds:** ownership and configuration of each chain's Avana Stable LP Hub and its CDP, Lend and First-Loss Reserves. On the AvanaTimelock, its executor holds `PROPOSER_ROLE`, `CANCELLER_ROLE` and `DAO_CANCELLER_ROLE`. On each First-Loss Reserve, the DAO executor holds `RESERVE_ADMIN_ROLE` and is the admin of `COVERAGE_ROLE`.
 
 **Does:**
-- Deploys and upgrades each standard CDP Spoke and its AaveOracle; sets collateral factors, caps, reserve flags, the bonus curve, target health factor, collateral risk, each lend asset's utilization curve, which stable assets are listed and borrowable, credit lines and draw caps.
+- Deploys and upgrades each standard CDP Spoke and its AaveOracle; sets collateral factors, caps, reserve flags, the bonus curve, target health factor, collateral risk, each lend asset's utilization curve, which stable assets are listed and borrowable, and draw caps.
 - Sets the three required settings on every Avana collateral reserve: `receiveSharesEnabled = false`, `liquidationFee = 0`, no reinvestment controller (`REQ-HUB-092`).
 - Grants the `FLASH_BORROWER` role on the Aave V3 Pool.
 - On each First-Loss Reserve: sets the allowlisted CDP Spokes and `firstLossReserveMinimum`, requests, cancels and executes reserve withdrawals (14-day delay, and never while a covered Spoke has an open deficit), and grants `COVERAGE_ROLE`; the same on each DAO deficit offset, where it also sets `daoDeficitOffset` and funds and refills the offset from the DAO treasury.
@@ -94,7 +94,7 @@ No single person signs on two Safes of the same chain, no signer key is shared b
 **Holds:** `APPLICATION_RISK_STEWARD` on the ParameterStore (`REQ-ROLE-117`); `APPLICATION_PAUSE_GUARDIAN` and `APPLICATION_FREEZE_GUARDIAN` on the MarketRegistry.
 
 **Does, immediately:**
-- Calls the 20 ParameterStore tighten setters. Each one only moves a limit in the safe direction (for example a lower cap, a shorter price age, a higher hard floor), and each keeps its own bounds.
+- Calls the 18 ParameterStore tighten setters. Each one only moves a limit in the safe direction (for example a lower cap, a shorter price age, a higher route-depth threshold), and each keeps its own bounds.
 - Sets Avana's fee share of a liquidation's oracle gain (`avanaFeeShareBps`) within its on-chain bound of 0–5,000 bps (`SPEC-LIQ-009`).
 - Everything the two MarketRegistry guardian roles allow, with the same limits as the guardians: freeze, pause, unfreeze, unpause, address freezes, breaker trips and resets, and the standby route switch.
 
@@ -124,7 +124,7 @@ No single person signs on two Safes of the same chain, no signer key is shared b
 
 **Who:** The Aave DAO's risk service providers.
 
-**Does:** sizes each listing package (pool risk factors, USD caps, `minPledgeUsd`, per-pool `poolShareMaxBps`) with its cap-sizing calculation, the deficit-breaker materiality of each non-GHO debt reserve, and, with the Aave DAO, the credit lines, draw caps and each First-Loss Reserve's coverage ratio and minimum. Changes reach Avana through the governance Safe and the timelock. An independent risk provider also holds one seat on the Emergency Guardian and one on the Joint Configuration Safe.
+**Does:** sizes each listing package (pool risk factors, USD caps, `minPledgeUsd`) with its cap-sizing calculation, the deficit-breaker materiality of each non-GHO debt reserve, and, with the Aave DAO, the draw caps and each First-Loss Reserve's coverage ratio and minimum. Changes reach Avana through the governance Safe and the timelock. An independent risk provider also holds one seat on the Emergency Guardian and one on the Joint Configuration Safe.
 
 ## Contracts that act on each other
 

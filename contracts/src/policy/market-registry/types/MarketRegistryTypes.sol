@@ -24,8 +24,6 @@ struct DebtReserveDef {
     bool fixedPrice;
     // First-Loss Reserve of (fundingHub, asset).
     address firstLossReserve;
-    // True when fundingHub differs from the Spoke's home Hub.
-    bool crossHub;
     bool approved;
 }
 

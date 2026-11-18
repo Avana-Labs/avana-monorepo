@@ -244,15 +244,12 @@ contract MarketRegistryMarketsHalmosTest is Test {
         );
         registry.setFlashSource(address(new RegistryFlashSourceMock(AAVE_POOL, LP_VAULT_SWAP)));
         registry.setAvanaFirstLossReserve(address(hub), address(gho), address(ghoCoverage));
-        registry.recordCreditLine(address(hub), address(gho), 20_000_000);
         vm.stopPrank();
         _listToken(address(gho), IssuerProbe.None);
         vm.prank(TIMELOCK);
         registry.enableDebtReserve(
             address(spoke),
-            DebtReserveDef(
-                0, address(gho), 18, address(hub), 0, address(ghoSource), true, address(ghoCoverage), false, false
-            )
+            DebtReserveDef(0, address(gho), 18, address(hub), 0, address(ghoSource), true, address(ghoCoverage), false)
         );
         _listToken(address(usdc), IssuerProbe.PausedFlag);
         _listToken(address(usdt), IssuerProbe.PausedFlag);

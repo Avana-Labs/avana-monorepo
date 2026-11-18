@@ -106,12 +106,12 @@ contract LensRiskModule is LensBase, ILensRisk, ILensHubAssets {
         uint256 assetId;
         (assetId, v.uncovered, v.firstLossReserve, v.fundedBalance, v.deficitOffset, v.offsetFunded) =
             _exposure(hub, asset);
-        // forge-lint: disable-next-line(unused-return)
-        (v.line,) = _registry().creditLine(hub, asset);
+        uint256 required;
+        uint256 funded;
+        (v.drawCapSum, required, funded) = _registry().drawCapCoverage(hub, asset);
+        v.coverageBoundHolds = required <= funded;
         // forge-lint: disable-next-line(unused-return)
         (, uint8 decimals) = IAaveV4Hub(hub).getAssetUnderlyingAndDecimals(assetId);
-        uint256 ratio = _store().coverageRatioBps();
-        v.coverageBoundHolds = v.line * 10 ** decimals * ratio <= v.fundedBalance * 1e4;
         uint256 shares = IAaveV4Hub(hub).getAddedShares(assetId);
         uint256 assets = IAaveV4Hub(hub).getAddedAssets(assetId);
         if (shares != 0 && assets > v.uncovered) {

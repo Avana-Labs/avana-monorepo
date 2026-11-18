@@ -208,7 +208,6 @@ abstract contract RealStackVolatile is RealStackFlows {
                 priceSource: source,
                 fixedPrice: fixedPrice,
                 firstLossReserve: cs,
-                crossHub: false,
                 approved: false
             })
         );
@@ -284,7 +283,6 @@ abstract contract RealStackVolatile is RealStackFlows {
         vm.label(cs, string.concat(asset.symbol(), " AvanaFirstLossReserve (Volatile Hub)"));
         vm.startPrank(address(timelock));
         registry.setAvanaFirstLossReserve(hubV, address(asset), cs);
-        registry.recordCreditLine(hubV, address(asset), CREDIT_LINE);
         vm.stopPrank();
     }
 

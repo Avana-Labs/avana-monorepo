@@ -202,7 +202,7 @@ abstract contract LensFixture is CollateralizationFixture {
         reg.setFlashSource(address(flash));
         reg.setAvanaFirstLossReserve(aave.hub, address(debt), address(ghoCov));
         reg.setAvanaFirstLossReserve(aave.hub, address(usdc), address(usdcCov));
-        reg.setCreditLine(aave.hub, address(debt), 2_000_000, 1_000_000, 0, 0);
+        reg.setCoverage(aave.hub, address(debt), 2_000_000, 200_000e18, 100_000e18);
         for (uint8 k = 0; k < 2; ++k) {
             reg.setRoute(MARKET_ID, address(usdc), address(debt), k, makeAddr("routeUsdcGho"), true);
             reg.setRoute(MARKET_ID, address(usdt), address(debt), k, makeAddr("routeUsdtGho"), true);

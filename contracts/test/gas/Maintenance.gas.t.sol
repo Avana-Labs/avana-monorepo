@@ -105,29 +105,6 @@ contract MaintenanceGasTest is RealStackFlows, GasCalibration {
         emit log_named_uint("refreshDebtMark (clears the mark)", used);
     }
 
-    // TEST-337 verifies: REQ-CONFIG-081, SPEC-CAP-010
-    /// @notice `syncDrawCap` after the Aave DAO raised the CDP Spoke's GHO draw cap.
-    function test_TEST_337_syncDrawCapGas() public {
-        vm.prank(aaveDao);
-        (bool ok,) = aave.hubConfigurator
-            .call(
-                abi.encodeWithSignature(
-                    "updateSpokeDrawCap(address,uint256,address,uint256)",
-                    aave.hub,
-                    ghoAssetId,
-                    aave.cdpSpoke,
-                    uint256(DEBT_DRAW_CAP) + 500_000
-                )
-            );
-        assertTrue(ok, "the Aave DAO raised the draw cap");
-        _nextBlock();
-        uint256 used = _txGas(
-            anyone, address(registry), abi.encodeCall(IMarketRegistry.syncDrawCap, (aave.cdpSpoke, ghoReserveId))
-        );
-        vm.snapshotValue("Maintenance", "syncDrawCap_raise", used);
-        emit log_named_uint("syncDrawCap (raised cap)", used);
-    }
-
     // TEST-337 verifies: REQ-HELPER-011, REQ-HELPER-003
     /// @notice The operator flash liquidation over a plain `liquidate` of the same account from the same state.
     function test_TEST_337_flashLiquidateOverheadGas() public {

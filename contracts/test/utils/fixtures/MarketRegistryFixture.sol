@@ -206,7 +206,6 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         registry.setFlashSource(address(flash));
         hub.setAsset(address(gho), GHO_ASSET);
         registry.setAvanaFirstLossReserve(address(hub), address(gho), address(ghoCoverage));
-        registry.recordCreditLine(address(hub), address(gho), 20_000_000);
         vm.stopPrank();
         _setGhoReserve();
         // Every debt asset is a listed token with its issuer probe, a fixed-price one included (REQ-MREG-006).
@@ -283,7 +282,6 @@ abstract contract MarketRegistryFixture is TimelockFixture {
             priceSource: address(ghoSource),
             fixedPrice: true,
             firstLossReserve: address(ghoCoverage),
-            crossHub: false,
             approved: false
         });
     }

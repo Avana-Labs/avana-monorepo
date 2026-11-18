@@ -211,7 +211,7 @@ contract LensRiskUnitTest is LensFixture {
         assertEq(v.asset, address(debt), "asset");
         assertEq(v.firstLossReserve, address(ghoCov), "First-Loss Reserve");
         assertEq(v.fundedBalance, 100_000e18, "funded");
-        assertEq(v.line, 2_000_000, "credit line");
+        assertEq(v.drawCapSum, 2_000_000, "summed draw caps");
         assertFalse(v.coverageBoundHolds, "2,000,000 x 10 % > 100,000");
         assertEq(v.uncovered, 0, "no deficit");
         uint256 n = IAaveV4Hub(aave.hub).getSpokeCount(ghoAssetId);
@@ -230,8 +230,10 @@ contract LensRiskUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-043, REQ-CONFIG-081
     function test_TEST_247_hubAssetExposureBoundAndPrice() public {
-        ghoCov.set(200_000e18, 100_000e18);
+        reg.setCoverage(aave.hub, address(debt), 2_000_000, 100_000e18, 100_000e18);
         assertTrue(lens.getHubAssetExposure(aave.hub, address(debt)).coverageBoundHolds, "exactly at the bound");
+        reg.setCoverage(aave.hub, address(debt), 2_000_000, 100_000e18 + 1, 100_000e18);
+        assertFalse(lens.getHubAssetExposure(aave.hub, address(debt)).coverageBoundHolds, "one wei over the bound");
         ghoCov.set(4_000_000, 100_000e18);
         _deficit(aave.cdpSpoke, 1_500_000.4e27);
         _deficit(aave.lendSpoke, 2_800_000e27);

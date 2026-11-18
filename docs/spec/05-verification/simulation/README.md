@@ -4,6 +4,8 @@ Python stress simulations of Avana at launch: the Stable LP Hub with full-range 
 
 Standard library only (Python 3.9); `requirements.txt` is unchanged. Every script is seeded (seeds 11/22/33 unless stated) and reproducible (`SIM-00B`).
 
+**Removed features.** The contracts no longer have the per-(Hub, asset) credit line (`recordCreditLine`, `syncDrawCap`, `creditLine`), cross-Hub credit lines, the per-market `hardHealthFloor` or the pool-share cap (`poolShareMaxBps`, the `POOL_SHARE` breaker reason, Collateralization's `poolUnits` counter). First-loss coverage is now checked on the summed live Aave draw caps of every CDP Spoke drawing an asset on a Hub (`MarketRegistry.drawCapCoverage`, [2.8](../../02-contracts/08-market-registry.md) `REQ-CONFIG-081`), at `enableDebtReserve` and on every borrow of the asset; the health check after a borrow or a withdrawal that keeps debt is `max(1, minHealthFactor)`; the pool-depth gate stays. The model files were not changed: the 2M GHO credit line stands for 2M GHO of summed draw caps.
+
 ## Run
 
 ```bash
@@ -48,7 +50,7 @@ Each script prints its result tables, then one line per property: `Holds` or `Co
 | Breakers and pause | Price-drop (300 bps below the hourly checkpoint), route-failure (3 per hour, 6h latch), seizure-surge (20% per hour, 6h latch), deficit (> 1,000 GHO) and manual trips; `Paused(General)` and `Paused(MintPathSuspect)`; all of them stop only new borrowing and non-rescue top-ups, never liquidation or repay | `Q-227`, `Q-241`, `Q-252` |
 | Deficits | Recorded deficit drawn from the First-Loss Reserve of its asset up to its balance; the remainder is uncovered | `Q-101`, `Q-236` |
 
-Outside the engine: Hub share/asset drift, risk-premium refresh (`Q-145`), the pool-share and issuer-action breakers (no pool-liquidity or issuer model), address freezes, keeper GHO price impact when buying GHO, gas-limit competition and the timelock's own operations other than in-kind enabling.
+Outside the engine: Hub share/asset drift, risk-premium refresh (`Q-145`), the pool-depth and issuer-action breakers (no pool-liquidity or issuer model), address freezes, keeper GHO price impact when buying GHO, gas-limit competition and the timelock's own operations other than in-kind enabling.
 
 ## Assumptions (all scenarios)
 

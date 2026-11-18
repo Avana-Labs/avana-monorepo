@@ -34,8 +34,7 @@ contract LensRegistryMock {
     mapping(address => bool) public isFrozenAddress;
     address[] internal _spokes;
     mapping(address => mapping(address => address)) public firstLossReserveOf;
-    mapping(address => mapping(address => uint256[4])) internal _lines;
-    bool public crossHubLinesEnabled;
+    mapping(address => mapping(address => uint256[3])) internal _coverage;
     mapping(uint256 => uint256) public settlementReserve;
     address public flashSource;
     mapping(address => address) public hubOf;
@@ -124,21 +123,14 @@ contract LensRegistryMock {
         firstLossReserveOf[hub][asset] = spoke;
     }
 
-    function setCreditLine(
+    function setCoverage(
         address hub,
         address asset,
-        uint256 line,
-        uint256 sum,
+        uint256 drawCapSum,
         uint256 required,
         uint256 funded
     ) external {
-        _lines[hub][asset] = [line, sum, required, funded];
-    }
-
-    function setCrossHubLinesEnabled(
-        bool on
-    ) external {
-        crossHubLinesEnabled = on;
+        _coverage[hub][asset] = [drawCapSum, required, funded];
     }
 
     function setSettlementReserve(
@@ -194,18 +186,12 @@ contract LensRegistryMock {
         return _spokes;
     }
 
-    function creditLine(
+    function drawCapCoverage(
         address hub,
         address asset
-    ) external view returns (uint256 line, uint256 drawCapSum) {
-        (line, drawCapSum) = (_lines[hub][asset][0], _lines[hub][asset][1]);
-    }
-
-    function creditLineCoverage(
-        address hub,
-        address asset
-    ) external view returns (uint256 required, uint256 funded) {
-        (required, funded) = (_lines[hub][asset][2], _lines[hub][asset][3]);
+    ) external view returns (uint256 drawCapSum, uint256 required, uint256 funded) {
+        uint256[3] storage c = _coverage[hub][asset];
+        (drawCapSum, required, funded) = (c[0], c[1], c[2]);
     }
 }
 

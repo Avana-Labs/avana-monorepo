@@ -82,7 +82,7 @@ It runs three steps, each a plain function with JSON input and output in `operat
 2. **`releaseHub(chain, release, config)`** runs the release steps on that config, each acting only on what it adds:
    - the Aave side: Hub, Spokes, assets and loss layers;
    - the timelock operations;
-   - the listing: tokens, feeds, CDP Spokes, First-Loss Reserves, credit lines, debt price sources, routes and markets;
+   - the listing: tokens, feeds, CDP Spokes, First-Loss Reserves, debt price sources, routes and markets;
    - the listing metadata and activation;
    - the manifest, produced and verified.
    Each step is recorded, and a rerun resumes at the failed one. The chain mines on every transaction meanwhile, then returns to its block time.
@@ -117,7 +117,7 @@ Tokens and pools a Hub file needs that the test world lacks go in `contracts/scr
 
 ## Values the DAO sets
 
-Caps, credit lines, First-Loss Reserve and DAO offset amounts, and speed limits are set by the Aave DAO and governance on a real network, never by a release config or a Hub file. The local stack needs some to run: `test-values.json` holds them (per debt asset, per collateral token with a default, per market with a default), and the stack merges them into each chain's config. Hub files carry structure and page text only.
+Caps, First-Loss Reserve and DAO offset amounts, and speed limits are set by the Aave DAO and governance on a real network, never by a release config or a Hub file. The local stack needs some to run: `test-values.json` holds them (per debt asset, per collateral token with a default, per market with a default), and the stack merges them into each chain's config. Hub files carry structure and page text only. The per-asset `creditLineWhole` is no longer read by the contracts or the listing step, which records no credit line; only the address book generator still prints it, as a "Credit line size".
 
 ## The app on the test networks
 

@@ -86,8 +86,6 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         rows.push(Row(mr, IMarketRegistry.listToken.selector, false, false));
         rows.push(Row(mr, IMarketRegistry.enableDebtReserve.selector, false, false));
         rows.push(Row(mr, IMarketRegistry.removeDebtReserve.selector, false, false));
-        rows.push(Row(mr, IMarketRegistry.setCrossHubLinesEnabled.selector, false, false));
-        rows.push(Row(mr, IMarketRegistry.setCrossHubLine.selector, false, false));
         rows.push(Row(mr, IMarketRegistry.setFlashSource.selector, false, false));
         rows.push(Row(mr, IMarketRegistry.unpause.selector, false, false));
         rows.push(Row(mr, IMarketRegistry.unfreeze.selector, false, false));

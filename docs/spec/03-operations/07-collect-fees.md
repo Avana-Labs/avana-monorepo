@@ -94,7 +94,7 @@ The steps above give these outcomes.
 | Pool token with a transfer fee switched on after listing | Allowed; `W` receives the amounts less the token's fee (`Q-271`) |
 | Every price state, including feeds past their heartbeat, USD band breach, grace window | Allowed |
 | Market `Offboarding`, `Closed` or not active, liquidation halt, config drift, Hub shares ≠ assets | Allowed (`Q-355`) |
-| Every Aave reserve pause or freeze (vault-token or debt reserve), Hub halts the Spoke, credit line exhausted, flash source short or paused | Allowed (`Q-140`, `Q-351`) |
+| Every Aave reserve pause or freeze (vault-token or debt reserve), Hub halts the Spoke, drawCap exhausted or summed drawCaps above first-loss coverage, flash source short or paused | Allowed (`Q-140`, `Q-351`) |
 | Any RiskModule, MarketRegistry or ParameterStore implementation, including one that reverts on every call | Allowed (`Q-223`) |
 | AaveAdapter implementation that reverts on `collectFees` | Refused until the chain's Timelock replaces the implementation; fees stay owed to the position and nothing is lost |
 | Any health factor, including HF < 1 and an account being liquidated in another transaction | Allowed |

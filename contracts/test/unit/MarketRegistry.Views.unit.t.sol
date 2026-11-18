@@ -96,10 +96,8 @@ contract MarketRegistryViewsUnitTest is MarketRegistryFixture {
         assertEq(pricing, address(0));
         assertEq(registry.integrationIdOf(anyAddr), 0);
         assertEq(registry.firstLossReserveOf(anyAddr, anyAddr), address(0));
-        assertEq(registry.crossHubLineCap(anyAddr, anyAddr, anyAddr), 0);
-        assertEq(registry.crossHubLineTotal(anyAddr, anyAddr), 0);
-        (uint256 line, uint256 sum) = registry.creditLine(anyAddr, anyAddr);
-        assertEq(line + sum, 0);
+        (uint256 capSum, uint256 required, uint256 funded) = registry.drawCapCoverage(anyAddr, anyAddr);
+        assertEq(capSum + required + funded, 0);
         assertEq(registry.integrationContracts(anyIntegration).length, 0);
         (uint256 dm, DriftReason dr) = registry.spokeSettingsDrift(anyAddr);
         assertEq(dm, 0);
@@ -160,58 +158,19 @@ contract MarketRegistryViewsUnitTest is MarketRegistryFixture {
     }
 
     // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010
-    // creditLineCoverage reads (0, 0) for a zero line whatever the First-Loss Reserve holds, and the funded balance of the
-    // recorded First-Loss Reserve otherwise; ceil(20,000,000 x 10^18 x 2,000 / 10^4) = 4 x 10^24 for the GHO line.
-    function test_TEST_273_coverageViewAtZeroAndAtTheLine() public {
-        (uint256 required, uint256 funded) = registry.creditLineCoverage(address(hub), address(gho));
-        assertEq(required, 4e24);
-        assertEq(funded, 4e24);
-        (required, funded) = registry.creditLineCoverage(address(hub), address(usdc));
-        assertEq(required, 0);
-        assertEq(funded, 0);
-        ghoCoverage.setFunded(123, false);
-        (, funded) = registry.creditLineCoverage(address(hub), address(gho));
-        assertEq(funded, 123);
-    }
-
-    // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010
-    // A line so large that line x 10^decimals x ratio would overflow requires type(uint256).max: such a line is refused
-    // with that requirement; the largest line that does not overflow is computed exactly (ceil).
-    function test_TEST_273_coverageOverflowBoundary() public {
-        uint256 k = 1e18 * 2000;
-        uint256 edge = (type(uint256).max - 10_000) / k;
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(gho), type(uint256).max, 4e24
-            )
-        );
-        registry.recordCreditLine(address(hub), address(gho), edge + 1);
-        uint256 exact = (edge * k + 10_000 - 1) / 10_000;
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(gho), exact, 4e24)
-        );
-        registry.recordCreditLine(address(hub), address(gho), edge);
-    }
-
-    // TEST-273 verifies: REQ-CONFIG-081, SPEC-CAP-010
-    function testFuzz_TEST_273_coverageViewMatchesTheFormula(
-        uint256 line,
-        uint16 ratio,
-        uint256 fundedBalance
-    ) public {
-        ratio = uint16(bound(ratio, 0, 10_000));
-        line = bound(line, 1_000_000, 1e30);
-        fundedBalance = bound(fundedBalance, 0, type(uint128).max);
-        ps.setCoverageRatioBps(ratio);
-        ghoCoverage.setFunded(type(uint256).max / 2, false);
-        vm.prank(address(timelock));
-        registry.recordCreditLine(address(hub), address(gho), line);
-        ghoCoverage.setFunded(fundedBalance, false);
-        (uint256 required, uint256 funded) = registry.creditLineCoverage(address(hub), address(gho));
-        assertEq(required, (line * 1e18 * uint256(ratio) + 9999) / 10_000);
-        assertEq(funded, fundedBalance);
+    // An unbounded Aave draw cap counts 2^128 whole tokens, which no First-Loss Reserve covers; the largest finite cap
+    // is computed exactly (ceil).
+    function test_TEST_273_unboundedDrawCapIsNeverCovered() public {
+        hub.setSpokeConfig(GHO_ASSET, address(spoke), 0, type(uint40).max);
+        (uint256 sum, uint256 required, uint256 funded) = registry.drawCapCoverage(address(hub), address(gho));
+        assertEq(sum, 2 ** 128, "unbounded counts 2^128");
+        assertEq(required, 2 ** 128 * 2e17, "required at 2,000 bps");
+        assertGt(required, funded, "not covered");
+        uint40 big = type(uint40).max - 1;
+        hub.setSpokeConfig(GHO_ASSET, address(spoke), 0, big);
+        (sum, required,) = registry.drawCapCoverage(address(hub), address(gho));
+        assertEq(sum, big, "largest finite cap");
+        assertEq(required, (uint256(big) * 1e18 * 2000 + 9999) / 10_000, "rounded up");
     }
 
     // TEST-204 verifies: REQ-CONFIG-076, REQ-MREG-025, INV-093

@@ -108,10 +108,9 @@ contract MarketRegistrySpecExamplesUnitTest is MarketRegistryFixture {
         cs2.setFunded(4e24, false);
         vm.startPrank(address(timelock));
         registry.setAvanaFirstLossReserve(address(hub2), address(gho), address(cs2));
-        registry.recordCreditLine(address(hub2), address(gho), 20_000_000);
         registry.enableDebtReserve(
             address(spoke2),
-            DebtReserveDef(0, address(gho), 18, address(hub2), 0, address(ghoSource), true, address(cs2), false, false)
+            DebtReserveDef(0, address(gho), 18, address(hub2), 0, address(ghoSource), true, address(cs2), false)
         );
         vm.stopPrank();
     }

@@ -86,13 +86,6 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
 
     event AvanaFirstLossReserveSet(address indexed hub, address indexed asset, address firstLossReserve);
 
-    /// @notice A cross-Hub credit line cap changed; `total` is the new sum for (fundingHub, asset).
-    event CrossHubLineSet(
-        address indexed fundingHub, address indexed asset, address indexed spoke, uint256 cap, uint256 total
-    );
-
-    event CrossHubLinesEnabledSet(bool enabled);
-
     /// @param previous The previous source (address(0) for the first).
     event FlashSourceSet(address indexed previous, address indexed current);
 
@@ -104,17 +97,6 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
 
     /// @notice The First-Loss Reserve does not report the Hub and asset, or the pair already has one.
     error InvalidAvanaFirstLossReserve(address firstLossReserve);
-
-    /// @notice A non-zero cross-Hub line cap while lines are off for the chain.
-    error CrossHubLinesDisabled();
-
-    /// @notice The sum of cross-Hub lines for (funding Hub, asset) would exceed that Hub's first-loss coverage.
-    /// @param total The sum the call would produce, base units.
-    /// @param coverage The First-Loss Reserve's first-loss coverage, base units.
-    error CrossHubCapExceeded(uint256 total, uint256 coverage);
-
-    /// @notice A cross-Hub debt reserve was enabled with no open line.
-    error CrossHubLineClosed(address fundingHub, address asset, address spoke);
 
     /// @notice Records a Hub of the chain with its risk tier.
     /// @dev Reverts `InvalidRoute` when `hub` is the flash source's lender.
@@ -137,22 +119,6 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
         address hub,
         address asset,
         address firstLossReserve
-    ) external;
-
-    /// @notice Sets the cap of the cross-Hub credit line that lets `spoke` borrow `asset` from `fundingHub`.
-    /// @dev Reverts `CrossHubCapExceeded` when a raise takes the sum of lines past first-loss coverage.
-    /// @param cap Most the line may have drawn, base units of `asset`.
-    function setCrossHubLine(
-        address fundingHub,
-        address asset,
-        address spoke,
-        uint256 cap
-    ) external;
-
-    /// @notice Turns cross-Hub credit lines on or off for the chain.
-    /// @dev Turning off keeps stored caps but blocks every new cross-Hub draw.
-    function setCrossHubLinesEnabled(
-        bool enabled
     ) external;
 
     /// @notice Risk tier of a recorded Hub (`None` for an unknown Hub).
@@ -190,24 +156,6 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
         address hub,
         address asset
     ) external view returns (address firstLossReserve);
-
-    /// @notice Cap of one cross-Hub credit line.
-    /// @return cap The cap, base units; 0 when closed or unknown.
-    function crossHubLineCap(
-        address fundingHub,
-        address asset,
-        address spoke
-    ) external view returns (uint256 cap);
-
-    /// @notice Sum of every cross-Hub line cap for (funding Hub, asset).
-    /// @return total Sum of caps, base units.
-    function crossHubLineTotal(
-        address fundingHub,
-        address asset
-    ) external view returns (uint256 total);
-
-    /// @notice Whether cross-Hub credit lines are on for the chain (false by default).
-    function crossHubLinesEnabled() external view returns (bool enabled);
 
     /// @notice Drift check of the standard Spoke settings Avana depends on, for every listed market of a CDP Spoke.
     /// @dev Never reverts; a failed read reports drift. `marketId` is 0 for a Spoke-wide drift.
@@ -397,19 +345,7 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
         address token
     ) external view returns (uint64 version);
 
-    /// @notice A line or a Spoke's draw cap was recorded.
-    /// @param spoke CDP Spoke whose draw cap was read (`address(0)` for a line change).
-    /// @param drawCap The Spoke's draw cap, whole tokens (`2^128` for an unbounded cap).
-    event CreditLineRecorded(
-        address indexed hub, address indexed asset, address indexed spoke, uint256 drawCap, uint256 sum
-    );
-
-    event CreditLineSet(address indexed hub, address indexed asset, uint256 line, uint256 sum);
-
-    /// @notice The draw caps on `(hub, asset)` would exceed the recorded line.
-    error CreditLineExceeded(address hub, address asset, uint256 sum, uint256 line);
-
-    /// @notice The First-Loss Reserve of `(hub, asset)` is below the coverage ratio for the line.
+    /// @notice The First-Loss Reserve of `(hub, asset)` is below the coverage ratio for the summed draw caps.
     error CoverageBelowRatio(address hub, address asset, uint256 required, uint256 funded);
 
     /// @notice A debt reserve names a First-Loss Reserve other than `firstLossReserveOf(hub, asset)`.
@@ -418,38 +354,17 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
     /// @notice The First-Loss Reserve of `(hub, asset)` holds less than its `firstLossReserveMinimum`.
     error CoverageNotFunded(address hub, address asset);
 
-    /// @notice A cross-Hub reserve was enabled before the funding Hub's governance recorded a line.
-    error FundingHubConsentMissing(address hub, address asset);
-
-    /// @notice Records the line of `(fundingHub, asset)` that the funding Hub's governance approved.
-    /// @dev `APPLICATION_ADMIN` only. The line must cover `drawCapSum` and be covered by the First-Loss Reserve.
-    function recordCreditLine(
-        address fundingHub,
-        address asset,
-        uint256 line
-    ) external;
-
-    /// @notice Re-reads a Spoke's live `drawCap` for one debt reserve and recomputes `drawCapSum`.
-    /// @dev Callable by anyone. Records the live cap regardless of coverage or line, so a raise is never hidden.
-    function syncDrawCap(
-        address spoke,
-        uint256 debtReserveId
-    ) external;
-
-    /// @notice The recorded line and draw-cap sum of `(fundingHub, asset)`.
-    function creditLine(
-        address fundingHub,
-        address asset
-    ) external view returns (uint256 line, uint256 drawCapSum);
-
-    /// @notice First-loss coverage of the line of `(fundingHub, asset)`.
-    /// @dev Covered when `required <= funded`; `required` rounds up. The RiskModule gates cross-Hub borrows on it.
-    /// @return required Balance the line requires, base units.
+    /// @notice First-loss coverage of `(hub, asset)`: the summed live Aave draw caps of every CDP Spoke with an enabled
+    /// debt reserve of the pair, against the First-Loss Reserve's funded balance.
+    /// @dev Covered when `required <= funded`; `required` rounds up. `enableDebtReserve` and every borrow of the asset
+    /// require it, so a draw-cap raise past the cover stops new borrowing until the reserve is funded or the cap cut.
+    /// @return drawCapSum Sum of the draw caps, whole tokens (an unbounded cap counts `2^128`).
+    /// @return required Balance the caps require, base units: `drawCapSum x 10^decimals x coverageRatioBps / 10^4`.
     /// @return funded First-Loss Reserve balance, base units.
-    function creditLineCoverage(
-        address fundingHub,
+    function drawCapCoverage(
+        address hub,
         address asset
-    ) external view returns (uint256 required, uint256 funded);
+    ) external view returns (uint256 drawCapSum, uint256 required, uint256 funded);
 
     event MarketClosed(uint256 indexed marketId);
 

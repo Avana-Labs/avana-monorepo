@@ -207,7 +207,6 @@ abstract contract AaveAdapterFixture is CollateralizationFixture {
             priceSource: address(debtPrice),
             fixedPrice: decimals == 18,
             firstLossReserve: firstLossReserve,
-            crossHub: false,
             approved: true
         });
     }

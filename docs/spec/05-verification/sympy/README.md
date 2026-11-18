@@ -4,6 +4,8 @@ Each script checks that a formula of the specification equals the rule it implem
 
 Sources: the specification pages in [`docs/spec/01-architecture`](../../01-architecture/) to [`docs/spec/04-security`](../../04-security/), the decisions in [4.4](../../04-security/04-design-decisions.md), Aave V4 at `a3ef63e` (`LiquidationLogic.sol`, `Spoke.sol`, `UserPositionUtils.sol`, `Premium.sol`, `Hub.sol`) and Uniswap v3 (`SqrtPriceMath`, `TickMath`).
 
+**Removed features.** The contracts no longer have the per-(Hub, asset) credit line (`recordCreditLine`, `syncDrawCap`, `creditLine`), cross-Hub credit lines, the per-market `hardHealthFloor` or the pool-share cap (`poolShareMaxBps`, the `POOL_SHARE` breaker reason, Collateralization's `poolUnits` counter). First-loss coverage is now checked on the summed live Aave draw caps of every CDP Spoke drawing an asset on a Hub (`MarketRegistry.drawCapCoverage`, [2.8](../../02-contracts/08-market-registry.md) `REQ-CONFIG-081`), at `enableDebtReserve` and on every borrow of the asset; the health check after a borrow or a withdrawal that keeps debt is `max(1, minHealthFactor)`; the pool-depth gate stays. The model files were not changed: the pool-share figure of `SYM-137a` recomputes the former deposit example.
+
 ## Run
 
 ```bash

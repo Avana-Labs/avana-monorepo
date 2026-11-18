@@ -60,15 +60,13 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
     // TEST-066 verifies: REQ-MREG-004, REQ-MREG-022, REQ-MREG-028, Q-262, Q-263, REQ-ACCESS-089, REQ-ACCESS-094, REQ-ACCESS-112, REQ-ACCESS-128
     // Sources: 5.1 TEST-066
     function test_TEST_066_guardianPowersAreStopsOnly() public {
-        bytes[] memory adminOnly = new bytes[](8);
+        bytes[] memory adminOnly = new bytes[](6);
         adminOnly[0] = abi.encodeCall(registry.recordHub, (alice, RiskTier.Stable));
         adminOnly[1] = abi.encodeCall(registry.unfreezeAddress, (alice));
         adminOnly[2] = abi.encodeCall(registry.restorePriceRoute, (address(usdc)));
         adminOnly[3] = abi.encodeCall(registry.setRoute, (1, address(usdc), address(gho), 0, alice));
         adminOnly[4] = abi.encodeCall(registry.setFlashSource, (alice));
-        adminOnly[5] = abi.encodeCall(registry.setCrossHubLinesEnabled, (true));
-        adminOnly[6] = abi.encodeCall(registry.recordCreditLine, (address(hub), address(gho), 1));
-        adminOnly[7] = abi.encodeCall(registry.upgradeToAndCall, (alice, ""));
+        adminOnly[5] = abi.encodeCall(registry.upgradeToAndCall, (alice, ""));
         for (uint256 i = 0; i < adminOnly.length; ++i) {
             vm.prank(emergencyGuardian);
             (bool ok, bytes memory ret) = address(registry).call(adminOnly[i]);

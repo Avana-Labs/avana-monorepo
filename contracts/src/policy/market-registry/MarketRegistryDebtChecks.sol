@@ -26,21 +26,10 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 // forge-lint: disable-start(calls-loop)
 abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
     function _checkFunding(
-        address spoke,
         address homeHub,
         DebtReserveDef calldata def
-    ) internal view {
-        bool cross = def.fundingHub != homeHub;
-        if (def.crossHub != cross) revert InvalidDebtReserve("crossHub");
-        if (!cross) return;
-        Layout storage l = _s();
-        if (!l.crossHubLinesEnabled) revert IMarketRegistry.CrossHubLinesDisabled();
-        if (l.crossHubLineCap[def.fundingHub][def.asset][spoke] == 0) {
-            revert IMarketRegistry.CrossHubLineClosed(def.fundingHub, def.asset, spoke);
-        }
-        if (l.creditLines[def.fundingHub][def.asset].line == 0) {
-            revert IMarketRegistry.FundingHubConsentMissing(def.fundingHub, def.asset);
-        }
+    ) internal pure {
+        if (def.fundingHub != homeHub) revert InvalidDebtReserve("fundingHub");
     }
 
     function _checkAaveReserve(

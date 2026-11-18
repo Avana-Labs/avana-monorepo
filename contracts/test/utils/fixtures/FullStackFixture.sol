@@ -262,7 +262,6 @@ abstract contract FullStackFixture is FullStackDeploy {
                 priceSource: address(ghoPrice),
                 fixedPrice: true,
                 firstLossReserve: cs,
-                crossHub: false,
                 approved: false
             }),
             FLOOR_ROUNDING_ALLOWANCE_GHO
@@ -284,7 +283,6 @@ abstract contract FullStackFixture is FullStackDeploy {
                 priceSource: address(usdcOracle),
                 fixedPrice: false,
                 firstLossReserve: cs,
-                crossHub: false,
                 approved: false
             }),
             FLOOR_ROUNDING_ALLOWANCE_USDC
@@ -367,7 +365,6 @@ abstract contract FullStackFixture is FullStackDeploy {
         firstLossReserveOf[asset] = cs;
         vm.startPrank(address(timelock));
         registry.setAvanaFirstLossReserve(aave.hub, asset, cs);
-        registry.recordCreditLine(aave.hub, asset, CREDIT_LINE);
         vm.stopPrank();
     }
 

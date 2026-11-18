@@ -413,12 +413,9 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
             keccak256(abi.encode(uint256(keccak256("avana.storage.MarketRegistry")) - 1)) & ~bytes32(uint256(0xff));
         assertEq(ns, LAYOUT);
         (uint256 id,,) = _listMarket();
-        // Field 0 marketCount, 20 flashSource, 31 crossHubLinesEnabled: unchanged positions.
+        // Field 0 marketCount, 20 flashSource: unchanged positions.
         assertEq(uint256(vm.load(address(registry), LAYOUT)), id);
         assertEq(address(uint160(uint256(vm.load(address(registry), bytes32(uint256(LAYOUT) + 20))))), address(flash));
-        vm.prank(address(timelock));
-        registry.setCrossHubLinesEnabled(true);
-        assertEq(uint256(vm.load(address(registry), bytes32(uint256(LAYOUT) + 31))), 1);
         // Field 41 frozen, 42 freezeBuckets.
         vm.warp(7200);
         vm.prank(emergencyGuardian);

@@ -75,7 +75,6 @@ contract AdapterRegistryMock {
     mapping(bytes32 => uint32) public latched;
     mapping(bytes32 => uint64) public lastBreachAt;
     bool public implementationStale;
-    bool public crossHubEnabled;
 
     function setMarketStatus(
         uint256 marketId,
@@ -230,25 +229,12 @@ contract AdapterRegistryMock {
         }
     }
 
-    function crossHubLinesEnabled() external view returns (bool) {
-        _ok();
-        return crossHubEnabled;
-    }
-
-    function creditLine(
+    function drawCapCoverage(
         address,
         address
-    ) external view returns (uint256 line, uint256 drawCapSum) {
+    ) external view returns (uint256 drawCapSum, uint256 required, uint256 funded) {
         _ok();
-        (line, drawCapSum) = (1, 0);
-    }
-
-    function creditLineCoverage(
-        address,
-        address
-    ) external view returns (uint256 required, uint256 funded) {
-        _ok();
-        (required, funded) = (0, 0);
+        (drawCapSum, required, funded) = (0, 0, 0);
     }
 
     function setMarketSpoke(

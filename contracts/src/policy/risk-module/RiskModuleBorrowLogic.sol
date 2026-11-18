@@ -134,7 +134,7 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
         (bool halted, uint256 haltedReserve) = _routeHalt(s);
         if (halted) revert DebtLiquidationHalted(haltedReserve);
         _breakers(s, borrow);
-        if (borrow) _creditLine(s);
+        if (borrow) _coverage(s);
     }
 
     function _collateralPrice(
@@ -184,26 +184,18 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
         }
     }
 
-    function _creditLine(
+    /// @dev The First-Loss Reserve of the borrowed asset covers the summed Aave draw caps of its Spokes; a draw-cap
+    /// raise past the cover refuses new borrows of the asset until the reserve is funded or the cap is cut.
+    function _coverage(
         Scope memory s
     ) internal view {
         for (uint256 i = 0; i < s.debt.length; ++i) {
             if (s.debt[i] != s.borrowed) continue;
-            address fundingHub = s.defs[i].fundingHub;
-            if (fundingHub == s.m.hub) return;
-            // A disabled cross-Hub line refuses the whole borrow.
+            (address hub, address asset) = (s.defs[i].fundingHub, s.defs[i].asset);
+            // forge-lint: disable-next-line(unused-return)
+            (, uint256 required, uint256 funded) = _registry().drawCapCoverage(hub, asset);
             // forge-lint: disable-next-line(require-revert-in-loop)
-            if (!_registry().crossHubLinesEnabled()) revert IMarketRegistry.CrossHubLinesDisabled();
-            address asset = s.defs[i].asset;
-            (uint256 line, uint256 sum) = _registry().creditLine(fundingHub, asset);
-            // A full credit line refuses the whole borrow.
-            // forge-lint: disable-next-line(require-revert-in-loop)
-            if (sum > line) revert IMarketRegistry.CreditLineExceeded(fundingHub, asset, sum, line);
-            (uint256 required, uint256 funded) = _registry().creditLineCoverage(fundingHub, asset);
-            if (required > funded) {
-                // forge-lint: disable-next-line(require-revert-in-loop)
-                revert IMarketRegistry.CoverageBelowRatio(fundingHub, asset, required, funded);
-            }
+            if (required > funded) revert IMarketRegistry.CoverageBelowRatio(hub, asset, required, funded);
             return;
         }
     }

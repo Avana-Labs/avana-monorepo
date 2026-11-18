@@ -34,9 +34,7 @@ library TimelockSelectors {
             || selector == IMarketRegistry.setFlashSource.selector
             || selector == IMarketRegistry.deployCdpSpoke.selector
             || selector == IMarketRegistry.listCollateralMarket.selector
-            || selector == IMarketRegistry.enableDebtReserve.selector
-            || selector == IMarketRegistry.setCrossHubLinesEnabled.selector
-            || selector == IMarketRegistry.setCrossHubLine.selector || _isInitializer(selector);
+            || selector == IMarketRegistry.enableDebtReserve.selector || _isInitializer(selector);
     }
 
     /// @notice Whether `selector` is on the fixed short-delay list.

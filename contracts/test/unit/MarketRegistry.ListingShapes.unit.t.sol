@@ -94,7 +94,6 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
             priceSource: source,
             fixedPrice: fixedPrice,
             firstLossReserve: address(cs),
-            crossHub: false,
             approved: false
         });
     }

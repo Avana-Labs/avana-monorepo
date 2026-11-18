@@ -53,69 +53,65 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
         address[] memory one = new address[](1);
         one[0] = address(this);
         MarketDef memory def = _marketDef(vt, address(0));
-        w = new Write[](41);
+        w = new Write[](37);
         w[0] = Write("recordHub", abi.encodeCall(registry.recordHub, (alice, RiskTier.Stable)), ADMIN);
         w[1] = Write("registerIntegration", abi.encodeCall(registry.registerIntegration, (2, alice, bob)), ADMIN);
         w[2] = Write(
             "setAvanaFirstLossReserve", abi.encodeCall(registry.setAvanaFirstLossReserve, (h, alice, bob)), ADMIN
         );
-        w[3] = Write("setCrossHubLine", abi.encodeCall(registry.setCrossHubLine, (h, address(gho), sp, 0)), ADMIN);
-        w[4] = Write("setCrossHubLinesEnabled", abi.encodeCall(registry.setCrossHubLinesEnabled, (true)), ADMIN);
-        w[5] = Write("setFlashSource", abi.encodeCall(registry.setFlashSource, (address(flash))), ADMIN);
-        w[6] = Write("approveSpokeCodeHash", abi.encodeCall(registry.approveSpokeCodeHash, (keccak256("x"))), ADMIN);
-        w[7] =
+        w[3] = Write("setFlashSource", abi.encodeCall(registry.setFlashSource, (address(flash))), ADMIN);
+        w[4] = Write("approveSpokeCodeHash", abi.encodeCall(registry.approveSpokeCodeHash, (keccak256("x"))), ADMIN);
+        w[5] =
             Write("recordIntegrationContracts", abi.encodeCall(registry.recordIntegrationContracts, (V3, one)), ADMIN);
-        w[8] = Write("deployCdpSpoke", abi.encodeCall(registry.deployCdpSpoke, (_spokeDef())), ADMIN);
-        w[9] = Write("enableDebtReserve", abi.encodeCall(registry.enableDebtReserve, (sp, _ghoDef())), ADMIN);
-        w[10] = Write("removeDebtReserve", abi.encodeCall(registry.removeDebtReserve, (sp, 7)), ADMIN);
-        w[11] = Write(
+        w[6] = Write("deployCdpSpoke", abi.encodeCall(registry.deployCdpSpoke, (_spokeDef())), ADMIN);
+        w[7] = Write("enableDebtReserve", abi.encodeCall(registry.enableDebtReserve, (sp, _ghoDef())), ADMIN);
+        w[8] = Write("removeDebtReserve", abi.encodeCall(registry.removeDebtReserve, (sp, 7)), ADMIN);
+        w[9] = Write(
             "listToken",
             abi.encodeCall(registry.listToken, (alice, _tokenDef(new address[](0), one, new address[](0)))),
             ADMIN
         );
-        w[12] = Write(
+        w[10] = Write(
             "setPriceSource", abi.encodeCall(registry.setPriceSource, (alice, one, one, new address[](0))), ADMIN
         );
-        w[13] = Write("listCollateralMarket", abi.encodeCall(registry.listCollateralMarket, (def)), ADMIN);
-        w[14] = Write("activateMarket", abi.encodeCall(registry.activateMarket, (marketId)), ADMIN);
-        w[15] = Write("cancelRegistration", abi.encodeCall(registry.cancelRegistration, (marketId)), ADMIN);
-        w[16] = Write("setMarketOffboarding", abi.encodeCall(registry.setMarketOffboarding, (marketId)), ADMIN);
-        w[17] = Write(
+        w[11] = Write("listCollateralMarket", abi.encodeCall(registry.listCollateralMarket, (def)), ADMIN);
+        w[12] = Write("activateMarket", abi.encodeCall(registry.activateMarket, (marketId)), ADMIN);
+        w[13] = Write("cancelRegistration", abi.encodeCall(registry.cancelRegistration, (marketId)), ADMIN);
+        w[14] = Write("setMarketOffboarding", abi.encodeCall(registry.setMarketOffboarding, (marketId)), ADMIN);
+        w[15] = Write(
             "setRoute", abi.encodeCall(registry.setRoute, (marketId, address(usdc), address(gho), 0, alice)), ADMIN
         );
-        w[18] = Write(
+        w[16] = Write(
             "disableRoute", abi.encodeCall(registry.disableRoute, (marketId, address(usdc), address(gho), 0)), ADMIN
         );
-        w[19] = Write(
+        w[17] = Write(
             "restoreRoute",
             abi.encodeCall(registry.restoreRoute, (marketId, address(usdc), address(gho), 0, alice)),
             ADMIN
         );
-        w[20] = Write("restorePriceRoute", abi.encodeCall(registry.restorePriceRoute, (address(usdc))), ADMIN);
-        w[21] = Write("unfreezeAddress", abi.encodeCall(registry.unfreezeAddress, (alice)), ADMIN);
-        w[22] = Write("setSettlementReserve", abi.encodeCall(registry.setSettlementReserve, (marketId, 0)), ADMIN);
-        w[23] = Write("recordCreditLine", abi.encodeCall(registry.recordCreditLine, (h, address(gho), 1)), ADMIN);
-        w[24] = Write("upgradeToAndCall", abi.encodeCall(registry.upgradeToAndCall, (alice, "")), ADMIN);
-        w[25] = Write("freeze", abi.encodeCall(registry.freeze, (h)), FREEZE_OR_ADMIN);
-        w[26] = Write("freezeAll", abi.encodeCall(registry.freezeAll, ()), FREEZE_OR_ADMIN);
-        w[27] = Write("freezeAddress", abi.encodeCall(registry.freezeAddress, (bob)), FREEZE_OR_ADMIN);
-        w[28] = Write("tripMarketBreaker", abi.encodeCall(registry.tripMarketBreaker, (marketId)), FREEZE_OR_ADMIN);
-        w[29] = Write("tripDebtBreaker", abi.encodeCall(registry.tripDebtBreaker, (sp, 0)), FREEZE_OR_ADMIN);
-        w[30] = Write("pause", abi.encodeCall(registry.pause, (h, PauseReason.General)), PAUSE_OR_ADMIN);
-        w[31] = Write("pauseAll", abi.encodeCall(registry.pauseAll, (PauseReason.General)), PAUSE_OR_ADMIN);
-        w[32] = Write("unfreeze", abi.encodeCall(registry.unfreeze, (h)), PAUSE_OR_ADMIN);
-        w[33] = Write("unpause", abi.encodeCall(registry.unpause, (h)), PAUSE_OR_ADMIN);
-        w[34] = Write("resetMarketBreaker", abi.encodeCall(registry.resetMarketBreaker, (marketId)), PAUSE_OR_ADMIN);
-        w[35] = Write("resetDebtBreaker", abi.encodeCall(registry.resetDebtBreaker, (sp, 0)), PAUSE_OR_ADMIN);
-        w[36] = Write(
+        w[18] = Write("restorePriceRoute", abi.encodeCall(registry.restorePriceRoute, (address(usdc))), ADMIN);
+        w[19] = Write("unfreezeAddress", abi.encodeCall(registry.unfreezeAddress, (alice)), ADMIN);
+        w[20] = Write("setSettlementReserve", abi.encodeCall(registry.setSettlementReserve, (marketId, 0)), ADMIN);
+        w[21] = Write("upgradeToAndCall", abi.encodeCall(registry.upgradeToAndCall, (alice, "")), ADMIN);
+        w[22] = Write("freeze", abi.encodeCall(registry.freeze, (h)), FREEZE_OR_ADMIN);
+        w[23] = Write("freezeAll", abi.encodeCall(registry.freezeAll, ()), FREEZE_OR_ADMIN);
+        w[24] = Write("freezeAddress", abi.encodeCall(registry.freezeAddress, (bob)), FREEZE_OR_ADMIN);
+        w[25] = Write("tripMarketBreaker", abi.encodeCall(registry.tripMarketBreaker, (marketId)), FREEZE_OR_ADMIN);
+        w[26] = Write("tripDebtBreaker", abi.encodeCall(registry.tripDebtBreaker, (sp, 0)), FREEZE_OR_ADMIN);
+        w[27] = Write("pause", abi.encodeCall(registry.pause, (h, PauseReason.General)), PAUSE_OR_ADMIN);
+        w[28] = Write("pauseAll", abi.encodeCall(registry.pauseAll, (PauseReason.General)), PAUSE_OR_ADMIN);
+        w[29] = Write("unfreeze", abi.encodeCall(registry.unfreeze, (h)), PAUSE_OR_ADMIN);
+        w[30] = Write("unpause", abi.encodeCall(registry.unpause, (h)), PAUSE_OR_ADMIN);
+        w[31] = Write("resetMarketBreaker", abi.encodeCall(registry.resetMarketBreaker, (marketId)), PAUSE_OR_ADMIN);
+        w[32] = Write("resetDebtBreaker", abi.encodeCall(registry.resetDebtBreaker, (sp, 0)), PAUSE_OR_ADMIN);
+        w[33] = Write(
             "useStandbyRoute",
             abi.encodeCall(registry.useStandbyRoute, (address(usdc), RouteSlot.Primary)),
             PAUSE_OR_ADMIN
         );
-        w[37] = Write("cancelStandbySwitch", abi.encodeCall(registry.cancelStandbySwitch, (address(usdc))), EXECUTOR);
-        w[38] = Write("recordBreach", abi.encodeCall(registry.recordBreach, (bytes32(marketId), 8)), RISK);
-        w[39] = Write("syncDrawCap", abi.encodeCall(registry.syncDrawCap, (sp, 0)), ANYONE);
-        w[40] =
+        w[34] = Write("cancelStandbySwitch", abi.encodeCall(registry.cancelStandbySwitch, (address(usdc))), EXECUTOR);
+        w[35] = Write("recordBreach", abi.encodeCall(registry.recordBreach, (bytes32(marketId), 8)), RISK);
+        w[36] =
             Write("finalizeIntegrationContracts", abi.encodeCall(registry.finalizeIntegrationContracts, (V3)), ADMIN);
     }
 
@@ -225,8 +221,6 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
         address[7] memory c = _callers();
         for (uint256 j = 0; j < c.length; ++j) {
             uint256 snap = vm.snapshotState();
-            vm.prank(c[j]);
-            registry.syncDrawCap(address(spoke), GHO_RESERVE);
             vm.prank(c[j]);
             vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.MarketNotOffboarding.selector, marketId));
             registry.closeMarket(marketId);

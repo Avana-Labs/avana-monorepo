@@ -269,7 +269,6 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
         ps.setStressRise(address(dai), 500);
         vm.startPrank(address(timelock));
         registry.setAvanaFirstLossReserve(address(hub), address(dai), address(daiCoverage));
-        registry.recordCreditLine(address(hub), address(dai), 2_000_000);
         vm.stopPrank();
         def = DebtReserveDef({
             reserveId: DAI_RESERVE,
@@ -280,7 +279,6 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
             priceSource: address(daiOracle),
             fixedPrice: false,
             firstLossReserve: address(daiCoverage),
-            crossHub: false,
             approved: false
         });
     }

@@ -2298,7 +2298,7 @@ export const lensAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "line",
+            "name": "drawCapSum",
             "type": "uint256",
             "internalType": "uint256"
           },

@@ -223,7 +223,6 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         registry.setFlashSource(address(flash));
         hub.setAsset(address(gho), GHO_ASSET);
         registry.setAvanaFirstLossReserve(address(hub), address(gho), address(ghoCoverage));
-        registry.recordCreditLine(address(hub), address(gho), 20_000_000);
         vm.stopPrank();
         _setGhoReserve();
         rSpoke.setReserveCount(1);
@@ -349,7 +348,6 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         store.setStressRise(address(usdc), 500);
         vm.startPrank(address(timelock));
         registry.setAvanaFirstLossReserve(address(hub), address(usdc), address(usdcCoverage));
-        registry.recordCreditLine(address(hub), address(usdc), 1_000_000);
         vm.stopPrank();
         _setRoute(mid, address(usdt), address(usdc), 0, "dexE");
         _setRoute(mid, address(usdt), address(usdc), 1, "dexF");
@@ -362,52 +360,45 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
             priceSource: address(usdcOracle),
             fixedPrice: false,
             firstLossReserve: address(usdcCoverage),
-            crossHub: false,
             approved: false
         });
         vm.prank(address(timelock));
         registry.enableDebtReserve(address(spoke), def);
     }
 
-    /// @dev Enables DAI (listed) as debt reserve 6 on the CDP Spoke, funded by a second Hub (asset 3, fixed price):
-    /// cross-Hub lines on, a 1,000,000 DAI credit line with a 500,000 DAI draw cap, routes from USDC and USDT into DAI.
-    function _enableCrossHubDebt() internal {
-        hub2 = new RiskHubMock();
+    /// @dev Enables DAI (listed) as debt reserve 6 on the CDP Spoke, funded by the home Hub (asset 3, fixed price),
+    /// with a 500,000 DAI draw cap covered by a 4,000,000 DAI First-Loss Reserve and routes from USDC and USDT into
+    /// DAI. `hub2` is the home Hub.
+    function _enableDaiDebt() internal {
+        hub2 = rHub;
         tDai = new RiskTokenMock(18);
         RegistryFeedMock daiSource = new RegistryFeedMock(8, 1e8);
-        hub2.setAsset(address(tDai), DAI_ASSET);
-        hub2.setSpokeConfig(DAI_ASSET, address(spoke), 0, 500_000);
-        hub2.setThreshold(DAI_ASSET, address(spoke), type(uint24).max);
+        hub.setAsset(address(tDai), DAI_ASSET);
+        hub.setSpokeConfig(DAI_ASSET, address(spoke), 0, 500_000);
+        rHub.setThreshold(DAI_ASSET, address(spoke), type(uint24).max);
         RegistryAvanaFirstLossReserveMock daiCoverage =
-            new RegistryAvanaFirstLossReserveMock(address(hub2), address(tDai), DAI_ASSET);
+            new RegistryAvanaFirstLossReserveMock(address(hub), address(tDai), DAI_ASSET);
         daiCoverage.setFunded(4e24, false);
         IAaveV4Spoke.Reserve memory r;
-        (r.underlying, r.hub, r.assetId, r.decimals) = (address(tDai), address(hub2), uint16(DAI_ASSET), 18);
+        (r.underlying, r.hub, r.assetId, r.decimals) = (address(tDai), address(hub), uint16(DAI_ASSET), 18);
         IAaveV4Spoke.ReserveConfig memory c;
         c.borrowable = true;
         spoke.setReserve(DAI_RESERVE, r, c, IAaveV4Spoke.DynamicReserveConfig(0, 0, 0));
         rSpoke.setReserveCount(DAI_RESERVE + 1);
         aaveOracle.setSource(DAI_RESERVE, address(daiSource));
-        vm.startPrank(address(timelock));
-        registry.recordHub(address(hub2), RiskTier.Stable);
-        registry.setAvanaFirstLossReserve(address(hub2), address(tDai), address(daiCoverage));
-        registry.recordCreditLine(address(hub2), address(tDai), 1_000_000);
-        registry.setCrossHubLinesEnabled(true);
-        // Base units: 1,000,000 DAI, within the 4,000,000 DAI coverage and above the 500,000 DAI draw cap.
-        registry.setCrossHubLine(address(hub2), address(tDai), address(spoke), 1_000_000e18);
-        vm.stopPrank();
+        vm.prank(address(timelock));
+        registry.setAvanaFirstLossReserve(address(hub), address(tDai), address(daiCoverage));
         _listToken(address(tDai), "dai");
         _setRoutesInto(mid, address(tDai));
         DebtReserveDef memory def = DebtReserveDef({
             reserveId: DAI_RESERVE,
             asset: address(tDai),
             decimals: 18,
-            fundingHub: address(hub2),
+            fundingHub: address(hub),
             hubAssetId: DAI_ASSET,
             priceSource: address(daiSource),
             fixedPrice: true,
             firstLossReserve: address(daiCoverage),
-            crossHub: true,
             approved: false
         });
         vm.prank(address(timelock));
