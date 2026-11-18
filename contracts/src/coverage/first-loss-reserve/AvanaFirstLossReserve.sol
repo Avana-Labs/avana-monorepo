@@ -4,11 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
-import {IAvanaFirstLossReserve} from "./IAvanaFirstLossReserve.sol";
-import {IAvanaFirstLossReserveAdmin} from "./IAvanaFirstLossReserveAdmin.sol";
-import {IAvanaFirstLossReserveErrors} from "./IAvanaFirstLossReserveErrors.sol";
-import {IAvanaFirstLossReserveViews} from "./IAvanaFirstLossReserveViews.sol";
-import {Withdrawal, WithdrawalStatus} from "./types/Withdrawal.sol";
+import {IAvanaFirstLossReserve, Withdrawal, WithdrawalStatus} from "./IAvanaFirstLossReserve.sol";
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -20,14 +16,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// @title AvanaFirstLossReserve
 /// @notice Avana Umbrella of one `(HUB, ASSET)`: a supply-only Spoke whose Hub shares cover allowlisted deficits.
 /// @dev Immutable; its only authority is the Aave DAO's AccessManager. Holds no tokens between transactions.
-contract AvanaFirstLossReserve is
-    IAvanaFirstLossReserve,
-    IAvanaFirstLossReserveAdmin,
-    IAvanaFirstLossReserveViews,
-    IAvanaFirstLossReserveErrors,
-    AccessManaged,
-    ReentrancyGuardTransient
-{
+contract AvanaFirstLossReserve is IAvanaFirstLossReserve, AccessManaged, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
@@ -50,16 +39,16 @@ contract AvanaFirstLossReserve is
     /// @inheritdoc IAvanaFirstLossReserve
     uint256 public override firstLossReserveMinimum;
 
-    /// @inheritdoc IAvanaFirstLossReserveViews
+    /// @inheritdoc IAvanaFirstLossReserve
     uint256 public override nextWithdrawalId = 1;
 
-    /// @inheritdoc IAvanaFirstLossReserveViews
+    /// @inheritdoc IAvanaFirstLossReserve
     uint256 public override totalFunded;
 
-    /// @inheritdoc IAvanaFirstLossReserveViews
+    /// @inheritdoc IAvanaFirstLossReserve
     uint256 public override totalCovered;
 
-    /// @inheritdoc IAvanaFirstLossReserveViews
+    /// @inheritdoc IAvanaFirstLossReserve
     uint256 public override totalWithdrawn;
 
     mapping(uint256 id => Withdrawal request) internal _withdrawals;
@@ -121,7 +110,7 @@ contract AvanaFirstLossReserve is
         _alertIfBelowMinimum(balanceAfter);
     }
 
-    /// @inheritdoc IAvanaFirstLossReserveAdmin
+    /// @inheritdoc IAvanaFirstLossReserve
     function setAllowedBorrowSpoke(
         address spoke,
         bool allowed
@@ -135,7 +124,7 @@ contract AvanaFirstLossReserve is
         emit BorrowSpokeAllowlistUpdated(spoke, allowed);
     }
 
-    /// @inheritdoc IAvanaFirstLossReserveAdmin
+    /// @inheritdoc IAvanaFirstLossReserve
     function setFirstLossReserveMinimum(
         uint256 minimum
     ) external override nonReentrant restricted {
@@ -145,7 +134,7 @@ contract AvanaFirstLossReserve is
         emit FirstLossReserveMinimumUpdated(oldMinimum, minimum);
     }
 
-    /// @inheritdoc IAvanaFirstLossReserveAdmin
+    /// @inheritdoc IAvanaFirstLossReserve
     function requestWithdrawal(
         uint256 amount,
         address to
@@ -160,7 +149,7 @@ contract AvanaFirstLossReserve is
         emit WithdrawalRequested(id, amount, to, executableAt);
     }
 
-    /// @inheritdoc IAvanaFirstLossReserveAdmin
+    /// @inheritdoc IAvanaFirstLossReserve
     function cancelWithdrawal(
         uint256 id
     ) external override nonReentrant restricted {
@@ -171,7 +160,7 @@ contract AvanaFirstLossReserve is
         emit WithdrawalCancelled(id);
     }
 
-    /// @inheritdoc IAvanaFirstLossReserveAdmin
+    /// @inheritdoc IAvanaFirstLossReserve
     function executeWithdrawal(
         uint256 id
     ) external override nonReentrant restricted returns (uint256 withdrawn) {
@@ -201,12 +190,12 @@ contract AvanaFirstLossReserve is
         below = fundedBalance() < firstLossReserveMinimum;
     }
 
-    /// @inheritdoc IAvanaFirstLossReserveViews
+    /// @inheritdoc IAvanaFirstLossReserve
     function fundedShares() external view override returns (uint256 shares) {
         shares = _HUB.getSpokeAddedShares(_ASSET_ID, address(this));
     }
 
-    /// @inheritdoc IAvanaFirstLossReserveViews
+    /// @inheritdoc IAvanaFirstLossReserve
     function getWithdrawal(
         uint256 id
     ) external view override returns (Withdrawal memory withdrawal) {
@@ -228,7 +217,7 @@ contract AvanaFirstLossReserve is
         assetId = _ASSET_ID;
     }
 
-    /// @inheritdoc IAvanaFirstLossReserveViews
+    /// @inheritdoc IAvanaFirstLossReserve
     function RESERVE_WITHDRAWAL_DELAY() external view override returns (uint256 delay) {
         delay = _RESERVE_WITHDRAWAL_DELAY;
     }

@@ -4,9 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {FlashLiquidator} from "../../src/periphery/flash-liquidator/FlashLiquidator.sol";
-import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
+import {FlashLiquidationRequest, IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {OperatorFlashLiquidator} from "../../src/periphery/flash-liquidator/OperatorFlashLiquidator.sol";
-import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 
@@ -72,9 +71,9 @@ contract LPVaultSwapFlashHelperGuardsIntegrationTest is LPVaultSwapUnitBase {
             assertFalse(ok, "none on the operator variant");
         }
 
-        vm.expectRevert(IFlashLiquidatorErrors.ZeroAddress.selector);
+        vm.expectRevert(IFlashLiquidator.ZeroAddress.selector);
         new FlashLiquidator(address(v3Pool), address(0), address(registry), address(store));
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.InvalidTopUpBps.selector, 10_001));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.InvalidTopUpBps.selector, 10_001));
         new OperatorFlashLiquidator(
             address(v3Pool), address(lvs), address(registry), address(store), signer, safe, 10_001
         );
@@ -120,7 +119,7 @@ contract LPVaultSwapFlashHelperGuardsIntegrationTest is LPVaultSwapUnitBase {
         uint256 debt = _debtOf(proxy, usdcReserveId);
         uint256 units = _suppliedUnits(proxy);
         vm.expectCall(address(lvs), abi.encodeWithSelector(lvs.liquidate.selector), 0);
-        bytes memory invalid = abi.encodeWithSelector(IFlashLiquidatorErrors.InvalidFlashAmount.selector);
+        bytes memory invalid = abi.encodeWithSelector(IFlashLiquidator.InvalidFlashAmount.selector);
 
         _expectRefused(address(helper), carol, _request(1950e6, 0), invalid);
         _expectRefused(address(helper), carol, _request(1950e6, 1950e6 + 1), invalid);
@@ -135,7 +134,7 @@ contract LPVaultSwapFlashHelperGuardsIntegrationTest is LPVaultSwapUnitBase {
             address(opHelper),
             carol,
             _request(1950e6, 1950e6),
-            abi.encodeWithSelector(IFlashLiquidatorErrors.NotSigner.selector)
+            abi.encodeWithSelector(IFlashLiquidator.NotSigner.selector)
         );
 
         registry.setRecordedHub(address(v3Pool), true);
@@ -143,7 +142,7 @@ contract LPVaultSwapFlashHelperGuardsIntegrationTest is LPVaultSwapUnitBase {
             address(helper),
             carol,
             _request(1950e6, 1950e6),
-            abi.encodeWithSelector(IFlashLiquidatorErrors.FlashSourceIsHub.selector)
+            abi.encodeWithSelector(IFlashLiquidator.FlashSourceIsHub.selector)
         );
         registry.setRecordedHub(address(v3Pool), false);
 
@@ -156,7 +155,7 @@ contract LPVaultSwapFlashHelperGuardsIntegrationTest is LPVaultSwapUnitBase {
         address[2] memory callers = [address(v3Pool), attacker];
         for (uint256 i = 0; i < callers.length; ++i) {
             vm.prank(callers[i]);
-            vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+            vm.expectRevert(IFlashLiquidator.InvalidFlashCallback.selector);
             helper.executeOperation(assets, amounts, premiums, address(helper), data);
         }
 
@@ -173,7 +172,7 @@ contract LPVaultSwapFlashHelperGuardsIntegrationTest is LPVaultSwapUnitBase {
     function test_TEST_289_callbackBoundToItsContext() public {
         uint256 debt = _debtOf(proxy, usdcReserveId);
         uint256 units = _suppliedUnits(proxy);
-        bytes memory forged = abi.encodeWithSelector(IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        bytes memory forged = abi.encodeWithSelector(IFlashLiquidator.InvalidFlashCallback.selector);
 
         v3Pool.setInitiatorOverride(attacker);
         _expectRefused(address(helper), carol, _request(1950e6, 1950e6), forged);
@@ -193,14 +192,14 @@ contract LPVaultSwapFlashHelperGuardsIntegrationTest is LPVaultSwapUnitBase {
             address(helper),
             carol,
             q,
-            abi.encodeWithSelector(IFlashLiquidatorErrors.PremiumTooHigh.selector, 975_000, 974_999)
+            abi.encodeWithSelector(IFlashLiquidator.PremiumTooHigh.selector, 975_000, 974_999)
         );
         v3Pool.setPremiumOverride(3_900_000);
         _expectRefused(
             address(helper),
             carol,
             _request(1950e6, 1950e6),
-            abi.encodeWithSelector(IFlashLiquidatorErrors.FlashFeeTooHigh.selector, 3_900_000, 1_950_000)
+            abi.encodeWithSelector(IFlashLiquidator.FlashFeeTooHigh.selector, 3_900_000, 1_950_000)
         );
 
         assertEq(_debtOf(proxy, usdcReserveId), debt, "no debt repaid");

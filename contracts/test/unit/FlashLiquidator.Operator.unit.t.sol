@@ -4,9 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IPayoutEscrow} from "../../src/liquidation/payout-escrow/IPayoutEscrow.sol";
-import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
-import {IFlashLiquidatorEvents} from "../../src/periphery/flash-liquidator/IFlashLiquidatorEvents.sol";
-import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
+import {FlashLiquidationRequest, IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {FlashLiquidatorFixture} from "../utils/fixtures/FlashLiquidatorFixture.sol";
 
 /// @notice The operator variant of the flash liquidation helper (2.11 `REQ-HELPER-011`): only `SIGNER` calls; the
@@ -32,10 +30,10 @@ contract FlashLiquidatorOperatorUnitTest is FlashLiquidatorFixture {
         vm.assume(who != signer);
         FlashLiquidationRequest memory request = _exampleRequest();
         vm.prank(who);
-        vm.expectRevert(IFlashLiquidatorErrors.NotSigner.selector);
+        vm.expectRevert(IFlashLiquidator.NotSigner.selector);
         opHelper.flashLiquidate(request);
         vm.prank(who);
-        vm.expectRevert(IFlashLiquidatorErrors.NotSigner.selector);
+        vm.expectRevert(IFlashLiquidator.NotSigner.selector);
         opHelper.claimEscrowed(address(usdtToken));
     }
 
@@ -47,9 +45,7 @@ contract FlashLiquidatorOperatorUnitTest is FlashLiquidatorFixture {
         _fund(signer, address(opHelper), 1_000_000e6);
         lvs.addResidue(usdtToken, 0.4e6);
         vm.expectEmit(true, true, true, true, address(opHelper));
-        emit IFlashLiquidatorEvents.FlashLiquidated(
-            signer, safe, address(usdcToken), 1950e6, 975_000, 2118.3e6, 0, 167.325e6
-        );
+        emit IFlashLiquidator.FlashLiquidated(signer, safe, address(usdcToken), 1950e6, 975_000, 2118.3e6, 0, 167.325e6);
         uint256 payout = _signerLiquidates(_request(2047.5e6, 1950e6, 975_000, 0, 167e6));
         assertEq(payout, 167.325e6);
         assertEq(usdcToken.balanceOf(safe), 167.325e6, "Safe paid 97.5 and received the payout");
@@ -72,10 +68,10 @@ contract FlashLiquidatorOperatorUnitTest is FlashLiquidatorFixture {
         uint256 premium = 4.9e6;
         // keeperOut = R when D = X and A = 0; the top-up is X + premium - R.
         lvs.setOutcome(x, x + premium - 98e6 - 1, 0);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.TopUpExceeded.selector, 98e6 + 1, 98e6));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.TopUpExceeded.selector, 98e6 + 1, 98e6));
         _signerLiquidates(_request(x, x, premium, 1000e6, 0));
         lvs.setOutcome(x, x + premium - 98e6, 0);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.TopUpExceeded.selector, 98e6, 50e6));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.TopUpExceeded.selector, 98e6, 50e6));
         _signerLiquidates(_request(x, x, premium, 50e6, 0));
         uint256 payout = _signerLiquidates(_request(x, x, premium, 1000e6, 0));
         assertEq(payout, 0);

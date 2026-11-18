@@ -9,8 +9,7 @@ import {INonfungiblePositionManager} from "../../src/interfaces/external/uniswap
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
 import {TailCoverageView} from "../../src/lens/lens/types/TailCoverageView.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
-import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
+import {FlashLiquidationRequest, IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";

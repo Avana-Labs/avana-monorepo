@@ -10,9 +10,7 @@ import {
     RouteMode
 } from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {FlashLiquidator} from "../../../src/periphery/flash-liquidator/FlashLiquidator.sol";
-import {IFlashLiquidator} from "../../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
-import {IFlashLiquidatorErrors} from "../../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
-import {FlashLiquidationRequest} from "../../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
+import {FlashLiquidationRequest, IFlashLiquidator} from "../../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../../src/types/Market.sol";
 import {MockFlashFeeCap} from "../../utils/mocks/MockFlashReceiver.sol";
@@ -306,7 +304,7 @@ contract FlashLiquidatorProperties {
                 )
             );
         assert(!ok);
-        assert(ret.length >= 4 && bytes4(ret) == IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        assert(ret.length >= 4 && bytes4(ret) == IFlashLiquidator.InvalidFlashCallback.selector);
     }
 
     /// @notice A Pool reporting any initiator other than the helper makes the whole call revert; a call that completes

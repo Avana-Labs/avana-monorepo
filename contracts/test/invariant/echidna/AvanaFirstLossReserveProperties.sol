@@ -4,9 +4,11 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
-import {IAvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
-import {IAvanaFirstLossReserveAdmin} from "../../../src/coverage/first-loss-reserve/IAvanaFirstLossReserveAdmin.sol";
-import {Withdrawal, WithdrawalStatus} from "../../../src/coverage/first-loss-reserve/types/Withdrawal.sol";
+import {
+    IAvanaFirstLossReserve,
+    Withdrawal,
+    WithdrawalStatus
+} from "../../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {CoverageActor} from "../../utils/mocks/CoverageActor.sol";
 import {MockAuthority} from "../../utils/mocks/MockAuthority.sol";
 import {MockCoverageHub} from "../../utils/mocks/MockCoverageHub.sol";
@@ -66,11 +68,11 @@ contract AvanaFirstLossReserveProperties {
         HUB.setSpoke(address(OTHER), true, true, false);
 
         AUTH.allow(address(this), IAvanaFirstLossReserve.coverDeficit.selector);
-        AUTH.allow(address(this), IAvanaFirstLossReserveAdmin.setAllowedBorrowSpoke.selector);
-        AUTH.allow(address(this), IAvanaFirstLossReserveAdmin.setFirstLossReserveMinimum.selector);
-        AUTH.allow(address(this), IAvanaFirstLossReserveAdmin.requestWithdrawal.selector);
-        AUTH.allow(address(this), IAvanaFirstLossReserveAdmin.cancelWithdrawal.selector);
-        AUTH.allow(address(this), IAvanaFirstLossReserveAdmin.executeWithdrawal.selector);
+        AUTH.allow(address(this), IAvanaFirstLossReserve.setAllowedBorrowSpoke.selector);
+        AUTH.allow(address(this), IAvanaFirstLossReserve.setFirstLossReserveMinimum.selector);
+        AUTH.allow(address(this), IAvanaFirstLossReserve.requestWithdrawal.selector);
+        AUTH.allow(address(this), IAvanaFirstLossReserve.cancelWithdrawal.selector);
+        AUTH.allow(address(this), IAvanaFirstLossReserve.executeWithdrawal.selector);
 
         TOKEN.mint(address(HUB), 1_000_000e18);
         LEND.exec(address(HUB), abi.encodeCall(MockCoverageHub.add, (ASSET_ID, 1_000_000e18)));
@@ -278,15 +280,15 @@ contract AvanaFirstLossReserveProperties {
         if (i == 0) {
             data = abi.encodeCall(IAvanaFirstLossReserve.coverDeficit, (address(BORROW), 1e18));
         } else if (i == 1) {
-            data = abi.encodeCall(IAvanaFirstLossReserveAdmin.setAllowedBorrowSpoke, (address(OTHER), true));
+            data = abi.encodeCall(IAvanaFirstLossReserve.setAllowedBorrowSpoke, (address(OTHER), true));
         } else if (i == 2) {
-            data = abi.encodeCall(IAvanaFirstLossReserveAdmin.setFirstLossReserveMinimum, (0));
+            data = abi.encodeCall(IAvanaFirstLossReserve.setFirstLossReserveMinimum, (0));
         } else if (i == 3) {
-            data = abi.encodeCall(IAvanaFirstLossReserveAdmin.requestWithdrawal, (1e18, address(OUTSIDER)));
+            data = abi.encodeCall(IAvanaFirstLossReserve.requestWithdrawal, (1e18, address(OUTSIDER)));
         } else if (i == 4) {
-            data = abi.encodeCall(IAvanaFirstLossReserveAdmin.cancelWithdrawal, (1));
+            data = abi.encodeCall(IAvanaFirstLossReserve.cancelWithdrawal, (1));
         } else {
-            data = abi.encodeCall(IAvanaFirstLossReserveAdmin.executeWithdrawal, (1));
+            data = abi.encodeCall(IAvanaFirstLossReserve.executeWithdrawal, (1));
         }
         (bool ok,) = OUTSIDER.exec(address(CS), data);
         assert(!ok);

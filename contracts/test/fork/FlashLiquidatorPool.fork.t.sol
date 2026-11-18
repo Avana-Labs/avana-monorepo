@@ -11,7 +11,7 @@ import {
     RouteMode
 } from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {FlashLiquidator} from "../../src/periphery/flash-liquidator/FlashLiquidator.sol";
-import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
+import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";

@@ -5,10 +5,8 @@ pragma solidity 0.8.28;
 
 import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {FlashLiquidator} from "../../src/periphery/flash-liquidator/FlashLiquidator.sol";
-import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
-import {IFlashLiquidatorEvents} from "../../src/periphery/flash-liquidator/IFlashLiquidatorEvents.sol";
+import {FlashLiquidationRequest, IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {OperatorFlashLiquidator} from "../../src/periphery/flash-liquidator/OperatorFlashLiquidator.sol";
-import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -20,7 +18,7 @@ import {Vm} from "forge-std/Vm.sol";
 /// no loan of its own and runs every check), repays the Pool from `keeperOut`, pulls an inventory, a shortfall budget
 /// or a top-up from its payer only, forwards residues and pays its caller only after the loan returns.
 /// forge-config: default.isolate = false
-contract LPVaultSwapFlashHelpersIntegrationTest is LPVaultSwapUnitBase, IFlashLiquidatorEvents {
+contract LPVaultSwapFlashHelpersIntegrationTest is LPVaultSwapUnitBase {
     FlashLiquidator internal helper;
     OperatorFlashLiquidator internal opHelper;
     address internal signer = makeAddr("operatorSigner");
@@ -202,7 +200,7 @@ contract LPVaultSwapFlashHelpersIntegrationTest is LPVaultSwapUnitBase, IFlashLi
     // TEST-267 verifies: REQ-HELPER-011; shared: TEST-267's operator variant, run locally on the real LPVaultSwap
     function test_TEST_289_operatorSignerSafeAndNoLoan() public {
         vm.prank(carol);
-        vm.expectRevert(IFlashLiquidatorErrors.NotSigner.selector);
+        vm.expectRevert(IFlashLiquidator.NotSigner.selector);
         opHelper.flashLiquidate(_request(1950e6, 1950e6));
         usdc.mint(safe, 1950e6);
         vm.prank(safe);
@@ -220,7 +218,7 @@ contract LPVaultSwapFlashHelpersIntegrationTest is LPVaultSwapUnitBase, IFlashLi
         vm.prank(signer);
         (bool ok, bytes memory ret) = address(opHelper).call(abi.encodeCall(opHelper.flashLiquidate, (big)));
         assertFalse(ok, "refused");
-        assertEq(bytes4(ret), IFlashLiquidatorErrors.FlashAmountAboveNeed.selector, "FlashAmountAboveNeed");
+        assertEq(bytes4(ret), IFlashLiquidator.FlashAmountAboveNeed.selector, "FlashAmountAboveNeed");
     }
 
     function dave() internal returns (address) {
@@ -275,7 +273,7 @@ contract LPVaultSwapFlashHelpersIntegrationTest is LPVaultSwapUnitBase, IFlashLi
         assertLt(helper.maxFlashLoan(address(usdc)), 2 * largest, "below twice the size: the alert condition");
         uint256 calls = adapter.burnCalls();
         vm.prank(carol);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.InsufficientFlashLiquidity.selector, largest - 1));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.InsufficientFlashLiquidity.selector, largest - 1));
         helper.flashLiquidate(_request(largest, largest));
         assertEq(adapter.burnCalls(), calls, "LPVaultSwap never called");
         LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, largest));

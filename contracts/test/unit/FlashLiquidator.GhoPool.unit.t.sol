@@ -3,10 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
-import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
-import {IFlashLiquidatorEvents} from "../../src/periphery/flash-liquidator/IFlashLiquidatorEvents.sol";
-import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
+import {FlashLiquidationRequest, IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {FlashLiquidatorFixture} from "../utils/fixtures/FlashLiquidatorFixture.sol";
 
 /// @notice GHO-debt liquidations through the flash liquidation helper (2.11 `REQ-HELPER-015`, `REQ-FLASH-010`): the
@@ -60,7 +57,7 @@ contract FlashLiquidatorGhoPoolUnitTest is FlashLiquidatorFixture {
         assertEq(helper.maxFlashLoan(address(ghoToken)), IDLE_GHO, "the Pool's idle GHO");
         assertEq(helper.flashPremium(address(ghoToken), D_GHO), PREMIUM_GHO);
         vm.expectEmit(true, true, true, true, address(helper));
-        emit IFlashLiquidatorEvents.FlashLiquidated(
+        emit IFlashLiquidator.FlashLiquidated(
             caller, caller, address(ghoToken), D_GHO, PREMIUM_GHO, KEEPER_OUT_GHO, 0, PAYOUT_GHO
         );
         vm.prank(caller);
@@ -89,14 +86,14 @@ contract FlashLiquidatorGhoPoolUnitTest is FlashLiquidatorFixture {
         aavePool.setVirtualBalance(address(ghoToken), 1000e18);
         assertEq(helper.maxFlashLoan(address(ghoToken)), 1000e18);
         vm.prank(caller);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.InsufficientFlashLiquidity.selector, 1000e18));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.InsufficientFlashLiquidity.selector, 1000e18));
         helper.flashLiquidate(_example());
 
         aavePool.setVirtualBalance(address(ghoToken), uint128(IDLE_GHO));
         aavePool.setFlags(address(ghoToken), true, false, false, false);
         assertEq(helper.maxFlashLoan(address(ghoToken)), 0, "flash-disabled GHO reserve");
         vm.prank(caller);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.InsufficientFlashLiquidity.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.InsufficientFlashLiquidity.selector, 0));
         helper.flashLiquidate(_example());
         // Configuration bits above the flash-loan flag (a supply cap, bits 116-151) do not stand in for it.
         aavePool.setConfiguration(
@@ -121,7 +118,7 @@ contract FlashLiquidatorGhoPoolUnitTest is FlashLiquidatorFixture {
     function test_TEST_292_ghoPremiumHeldToCapAndMaxPremium() public {
         aavePool.setPremiumTotal(20);
         vm.prank(caller);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.FlashFeeTooHigh.selector, 3.9e18, 1.95e18));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.FlashFeeTooHigh.selector, 3.9e18, 1.95e18));
         helper.flashLiquidate(_example());
 
         aavePool.setPremiumTotal(uint128(POOL_PREMIUM_BPS));
@@ -129,12 +126,12 @@ contract FlashLiquidatorGhoPoolUnitTest is FlashLiquidatorFixture {
         FlashLiquidationRequest memory r = _example();
         r.maxPremium = 3e18;
         vm.prank(caller);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.FlashFeeTooHigh.selector, 2e18, 1.95e18));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.FlashFeeTooHigh.selector, 2e18, 1.95e18));
         helper.flashLiquidate(r);
 
         aavePool.setPremiumOverride(1e18);
         vm.prank(caller);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.PremiumTooHigh.selector, 1e18, PREMIUM_GHO));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.PremiumTooHigh.selector, 1e18, PREMIUM_GHO));
         helper.flashLiquidate(_example());
     }
 
@@ -164,7 +161,7 @@ contract FlashLiquidatorGhoPoolUnitTest is FlashLiquidatorFixture {
     function test_TEST_292_ghoRefusedWhenPoolIsHub() public {
         registry.setHub(address(aavePool), true);
         vm.prank(caller);
-        vm.expectRevert(IFlashLiquidatorErrors.FlashSourceIsHub.selector);
+        vm.expectRevert(IFlashLiquidator.FlashSourceIsHub.selector);
         helper.flashLiquidate(_example());
         assertEq(aavePool.flashLoanCalls(), 0);
     }
@@ -179,7 +176,7 @@ contract FlashLiquidatorGhoPoolUnitTest is FlashLiquidatorFixture {
         amounts[0] = D_GHO;
         uint256[] memory modes = new uint256[](1);
         vm.prank(makeAddr("thirdParty"));
-        vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        vm.expectRevert(IFlashLiquidator.InvalidFlashCallback.selector);
         aavePool.flashLoan(address(helper), assets, amounts, modes, address(helper), abi.encode(_example().params), 0);
     }
 
@@ -237,7 +234,7 @@ contract FlashLiquidatorGhoPoolUnitTest is FlashLiquidatorFixture {
         uint256 x = 10_000e18;
         FlashLiquidationRequest memory r = _ghoRequest(x, x, 5e18, 0);
         vm.prank(signer);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.FlashAmountAboveNeed.selector, x, 2047.5e18));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.FlashAmountAboveNeed.selector, x, 2047.5e18));
         opHelper.flashLiquidate(r);
         vm.prank(signer);
         assertEq(opHelper.flashLiquidate(_example()), PAYOUT_GHO);

@@ -6,7 +6,6 @@ pragma solidity 0.8.28;
 import {DaoDeficitOffset} from "../../src/coverage/dao-deficit-offset/DaoDeficitOffset.sol";
 import {IDaoDeficitOffset} from "../../src/coverage/dao-deficit-offset/IDaoDeficitOffset.sol";
 import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
-import {IAvanaFirstLossReserveErrors} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserveErrors.sol";
 import {DaoDeficitOffsetFixture} from "../utils/fixtures/DaoDeficitOffsetFixture.sol";
 import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
@@ -49,13 +48,13 @@ contract DaoDeficitOffsetUnitTest is DaoDeficitOffsetFixture {
     // Sources: 5.1 TEST-298
     /// @notice A zero first-loss layer reverts `ZeroAddress`; the First-Loss Reserve constructor checks still apply.
     function test_TEST_298_constructorRejectsZeroLayerAndInheritsChecks() public {
-        vm.expectRevert(IAvanaFirstLossReserveErrors.ZeroAddress.selector);
+        vm.expectRevert(IAvanaFirstLossReserve.ZeroAddress.selector);
         _deploy(address(0));
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.InvalidWithdrawalDelay.selector, 1));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.InvalidWithdrawalDelay.selector, 1));
         new DaoDeficitOffset(aave.hub, address(gho), ghoAssetId, aave.accessManager, 1, address(ghoCoverage));
-        vm.expectRevert(IAvanaFirstLossReserveErrors.ZeroAddress.selector);
+        vm.expectRevert(IAvanaFirstLossReserve.ZeroAddress.selector);
         new DaoDeficitOffset(address(0), address(gho), ghoAssetId, aave.accessManager, 1_209_600, address(ghoCoverage));
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.InvalidHubAsset.selector, usdcAssetId));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.InvalidHubAsset.selector, usdcAssetId));
         new DaoDeficitOffset(aave.hub, address(gho), usdcAssetId, aave.accessManager, 1_209_600, address(ghoCoverage));
     }
 
@@ -163,7 +162,7 @@ contract DaoDeficitOffsetUnitTest is DaoDeficitOffsetFixture {
         assertEq(ghoCoverage.totalCovered(), 100_000e18, "Avana totalCovered");
         assertEq(ghoOffset.totalCovered(), 150_000e18, "DAO totalCovered");
         assertTrue(ghoOffset.isBelowMinimum(), "offset below its size");
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.NothingToCover.selector, aave.cdpSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.NothingToCover.selector, aave.cdpSpoke));
         _coverWith(ghoOffset, aave.cdpSpoke, type(uint256).max);
     }
 
@@ -181,7 +180,7 @@ contract DaoDeficitOffsetUnitTest is DaoDeficitOffsetFixture {
         );
         ghoOffset.coverDeficit(aave.cdpSpoke, type(uint256).max);
         assertEq(_coverWith(ghoCoverage, aave.cdpSpoke, type(uint256).max), 40_000e18, "rest from the Avana layer");
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.NothingToCover.selector, aave.cdpSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.NothingToCover.selector, aave.cdpSpoke));
         _coverWith(ghoOffset, aave.cdpSpoke, type(uint256).max);
         assertEq(ghoOffset.fundedBalance(), DAO_OFFSET_GHO, "DAO offset intact");
         assertEq(ghoCoverage.fundedBalance(), 40_000e18, "Avana layer left");
@@ -274,7 +273,7 @@ contract DaoDeficitOffsetUnitTest is DaoDeficitOffsetFixture {
         _reportDeficit(ghoAssetId, otherSpoke, 110_000e18);
         _coverWith(ghoCoverage, otherSpoke, type(uint256).max);
         assertEq(ghoCoverage.fundedBalance(), 0, "Avana layer exhausted on the other Spoke");
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.SpokeNotAllowlisted.selector, otherSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.SpokeNotAllowlisted.selector, otherSpoke));
         _coverWith(ghoOffset, otherSpoke, type(uint256).max);
         vm.prank(aaveGovernanceExecutor);
         ghoOffset.setAllowedBorrowSpoke(otherSpoke, true);
@@ -288,7 +287,7 @@ contract DaoDeficitOffsetUnitTest is DaoDeficitOffsetFixture {
     /// reduces a USDC deficit; the USDC offset covers USDC after the USDC Avana Umbrella.
     function test_TEST_298_layersPerAsset() public {
         _reportDeficit(usdcAssetId, aave.cdpSpoke, 80_000e6);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.NothingToCover.selector, aave.cdpSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.NothingToCover.selector, aave.cdpSpoke));
         _coverWith(ghoOffset, aave.cdpSpoke, type(uint256).max);
         assertEq(_coverWith(usdcCoverage, aave.cdpSpoke, type(uint256).max), 50_000e6, "USDC Avana layer");
         assertEq(_coverWith(usdcOffset, aave.cdpSpoke, type(uint256).max), 30_000e6, "USDC offset");
@@ -309,7 +308,7 @@ contract DaoDeficitOffsetUnitTest is DaoDeficitOffsetFixture {
         vm.warp(block.timestamp + 1_209_600);
         _reportDeficit(ghoAssetId, aave.cdpSpoke, 1000e18);
         vm.prank(aaveGovernanceExecutor);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.DeficitOutstanding.selector, aave.cdpSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.DeficitOutstanding.selector, aave.cdpSpoke));
         ghoOffset.executeWithdrawal(id);
         _coverWith(ghoCoverage, aave.cdpSpoke, type(uint256).max);
 

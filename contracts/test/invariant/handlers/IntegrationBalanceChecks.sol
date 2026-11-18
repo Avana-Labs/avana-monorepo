@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {IFlashLiquidatorEvents} from "../../../src/periphery/flash-liquidator/IFlashLiquidatorEvents.sol";
-import {FlashLiquidationRequest} from "../../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
+import {FlashLiquidationRequest, IFlashLiquidator} from "../../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -128,7 +127,7 @@ library IntegrationBalanceChecks {
         for (uint256 i = 0; i < logs.length; ++i) {
             if (
                 logs[i].emitter == helper && logs[i].topics.length != 0
-                    && logs[i].topics[0] == IFlashLiquidatorEvents.FlashLiquidated.selector
+                    && logs[i].topics[0] == IFlashLiquidator.FlashLiquidated.selector
             ) {
                 (, premium,, topUp, payout) = abi.decode(logs[i].data, (uint256, uint256, uint256, uint256, uint256));
                 return (true, premium, topUp, payout);

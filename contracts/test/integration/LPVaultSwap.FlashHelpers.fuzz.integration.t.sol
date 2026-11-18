@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {FlashLiquidator} from "../../src/periphery/flash-liquidator/FlashLiquidator.sol";
-import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
-import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
+import {FlashLiquidationRequest, IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapFlashHelpersFuzzIntegrationTest
@@ -78,7 +77,7 @@ contract LPVaultSwapFlashHelpersFuzzIntegrationTest is LPVaultSwapUnitBase {
         q.maxPremium = quote - below;
         uint256 burns = adapter.burnCalls();
         vm.prank(carol);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.PremiumTooHigh.selector, quote, quote - below));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.PremiumTooHigh.selector, quote, quote - below));
         helper.flashLiquidate(q);
         assertEq(adapter.burnCalls(), burns, "LPVaultSwap never reached");
         q.maxPremium = quote;
@@ -103,7 +102,7 @@ contract LPVaultSwapFlashHelpersFuzzIntegrationTest is LPVaultSwapUnitBase {
         q.minPayout = payout + extra;
         uint256 debt = _debtOf(proxy, usdcReserveId);
         vm.prank(carol);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.PayoutTooLow.selector, payout, payout + extra));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.PayoutTooLow.selector, payout, payout + extra));
         helper.flashLiquidate(q);
         assertEq(_debtOf(proxy, usdcReserveId), debt, "nothing repaid");
         q.minPayout = payout;

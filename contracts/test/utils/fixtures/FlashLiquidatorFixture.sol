@@ -7,8 +7,8 @@ import {LiquidationParams, RouteMode} from "../../../src/liquidation/lp-vault-sw
 import {PayoutEscrow} from "../../../src/liquidation/payout-escrow/PayoutEscrow.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
 import {FlashLiquidator} from "../../../src/periphery/flash-liquidator/FlashLiquidator.sol";
+import {FlashLiquidationRequest} from "../../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {OperatorFlashLiquidator} from "../../../src/periphery/flash-liquidator/OperatorFlashLiquidator.sol";
-import {FlashLiquidationRequest} from "../../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
 import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../../src/types/Market.sol";
 import {MockAaveV3ACLManager, MockAaveV3AddressesProvider, MockAaveV3Pool} from "../mocks/AaveV3PoolMocks.sol";

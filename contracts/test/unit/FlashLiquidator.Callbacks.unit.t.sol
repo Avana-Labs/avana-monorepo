@@ -3,9 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
-import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
-import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
+import {FlashLiquidationRequest, IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {FlashLiquidatorFixture} from "../utils/fixtures/FlashLiquidatorFixture.sol";
 import {HelperReenterer} from "../utils/mocks/hostile/HelperReenterer.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -71,7 +69,7 @@ contract FlashLiquidatorCallbacksUnitTest is FlashLiquidatorFixture {
     ) public {
         usdcToken.mint(address(helper), 1000e6);
         vm.prank(from);
-        vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        vm.expectRevert(IFlashLiquidator.InvalidFlashCallback.selector);
         helper.executeOperation(_oneAsset(address(usdcToken)), _one(amount), _one(premium), initiator, params);
         assertEq(usdcToken.allowance(address(helper), from), 0);
         assertEq(usdcToken.balanceOf(address(helper)), 1000e6);
@@ -85,11 +83,11 @@ contract FlashLiquidatorCallbacksUnitTest is FlashLiquidatorFixture {
         vm.prank(address(aavePool));
         (bool ok, bytes memory ret) = address(helper).call(forged);
         assertFalse(ok);
-        assertEq(bytes4(ret), IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        assertEq(bytes4(ret), IFlashLiquidator.InvalidFlashCallback.selector);
         vm.prank(attacker);
         (ok, ret) = address(helper).call(forged);
         assertFalse(ok);
-        assertEq(bytes4(ret), IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        assertEq(bytes4(ret), IFlashLiquidator.InvalidFlashCallback.selector);
     }
 
     /// @notice A third party's own Pool loan naming the helper as receiver: the Pool calls the helper with the third
@@ -98,7 +96,7 @@ contract FlashLiquidatorCallbacksUnitTest is FlashLiquidatorFixture {
     function test_TEST_046_helperThirdPartyLoanWithHelperAsReceiverReverts() public {
         usdcToken.mint(address(helper), 10e6);
         vm.prank(attacker);
-        vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        vm.expectRevert(IFlashLiquidator.InvalidFlashCallback.selector);
         aavePool.flashLoan(
             address(helper),
             _oneAsset(address(usdcToken)),
@@ -118,12 +116,12 @@ contract FlashLiquidatorCallbacksUnitTest is FlashLiquidatorFixture {
     // TEST-046 verifies: REQ-HELPER-005, REQ-HELPER-013, INV-040
     function test_TEST_046_helperCallbackPoolInitiatorAssetAmountAndHash() public {
         aavePool.setInitiatorOverride(attacker);
-        vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        vm.expectRevert(IFlashLiquidator.InvalidFlashCallback.selector);
         _liquidate(_exampleRequest());
         aavePool.setInitiatorOverride(address(0));
         for (uint8 shape = 1; shape <= 6; ++shape) {
             aavePool.setCallbackShape(shape);
-            vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+            vm.expectRevert(IFlashLiquidator.InvalidFlashCallback.selector);
             _liquidate(_exampleRequest());
         }
         aavePool.setCallbackShape(0);
@@ -137,7 +135,7 @@ contract FlashLiquidatorCallbacksUnitTest is FlashLiquidatorFixture {
     function test_TEST_046_helperSecondCallbackReverts() public {
         _fund(caller, address(helper), 10_000e6);
         aavePool.setCallbackTwice(true);
-        vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        vm.expectRevert(IFlashLiquidator.InvalidFlashCallback.selector);
         _liquidate(_request(1950e6, 1950e6, 975_000, 10_000e6, 0));
     }
 
@@ -148,7 +146,7 @@ contract FlashLiquidatorCallbacksUnitTest is FlashLiquidatorFixture {
         aavePool.setSkipCallback(true);
         // It also pulls nothing, so the helper's own check is what stops the call.
         aavePool.setPullShortBy(1950e6 + 975_000);
-        vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        vm.expectRevert(IFlashLiquidator.InvalidFlashCallback.selector);
         _liquidate(_request(1950e6, 1950e6, 975_000, 0, 0));
     }
 
@@ -171,11 +169,11 @@ contract FlashLiquidatorCallbacksUnitTest is FlashLiquidatorFixture {
     // TEST-046 verifies: REQ-HELPER-004, INV-040
     function test_TEST_174_helperReentrantFlashLiquidateReverts() public {
         lvs.setHook(address(helper), abi.encodeCall(IFlashLiquidator.flashLiquidate, (_exampleRequest())));
-        vm.expectRevert(IFlashLiquidatorErrors.ContextActive.selector);
+        vm.expectRevert(IFlashLiquidator.ContextActive.selector);
         _liquidate(_exampleRequest());
         lvs.setHook(address(opHelper), abi.encodeCall(IFlashLiquidator.flashLiquidate, (_exampleRequest())));
         vm.prank(signer);
-        vm.expectRevert(IFlashLiquidatorErrors.ContextActive.selector);
+        vm.expectRevert(IFlashLiquidator.ContextActive.selector);
         opHelper.flashLiquidate(_exampleRequest());
     }
 
@@ -184,7 +182,7 @@ contract FlashLiquidatorCallbacksUnitTest is FlashLiquidatorFixture {
     // TEST-046 verifies: REQ-HELPER-005, INV-040
     function test_TEST_046_helperReentrantCallbackReverts() public {
         lvs.setHook(address(helper), _exampleCallback(address(helper)));
-        vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        vm.expectRevert(IFlashLiquidator.InvalidFlashCallback.selector);
         _liquidate(_exampleRequest());
     }
 
@@ -206,7 +204,7 @@ contract FlashLiquidatorCallbacksUnitTest is FlashLiquidatorFixture {
         assertEq(payout, 69.825e6);
         assertTrue(reenterer.fired(), "hook ran inside the payout transfer");
         assertFalse(reenterer.succeeded());
-        assertEq(bytes4(reenterer.returned()), IFlashLiquidatorErrors.ContextActive.selector);
+        assertEq(bytes4(reenterer.returned()), IFlashLiquidator.ContextActive.selector);
 
         HelperReenterer replay = new HelperReenterer();
         replay.arm(address(helper), _exampleCallback(address(helper)), IERC20(address(usdcToken)), caller, 69.825e6);
@@ -214,7 +212,7 @@ contract FlashLiquidatorCallbacksUnitTest is FlashLiquidatorFixture {
         _liquidate(_exampleRequest());
         assertTrue(replay.fired());
         assertFalse(replay.succeeded());
-        assertEq(bytes4(replay.returned()), IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        assertEq(bytes4(replay.returned()), IFlashLiquidator.InvalidFlashCallback.selector);
     }
 
     // ─── Context reuse ───
@@ -231,13 +229,13 @@ contract FlashLiquidatorCallbacksUnitTest is FlashLiquidatorFixture {
         vm.prank(address(aavePool));
         (bool ok, bytes memory ret) = address(helper).call(replay);
         assertFalse(ok, "used context replayed");
-        assertEq(bytes4(ret), IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        assertEq(bytes4(ret), IFlashLiquidator.InvalidFlashCallback.selector);
     }
 
     /// @notice A reverted call leaves no context: the next call in the same transaction runs.
     // TEST-174 verifies: REQ-HELPER-004
     function test_TEST_174_helperRevertedCallLeavesNoContext() public {
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.PayoutTooLow.selector, 69.825e6, 70e6));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.PayoutTooLow.selector, 69.825e6, 70e6));
         _liquidate(_request(1950e6, 1950e6, 975_000, 0, 70e6));
         _liquidate(_exampleRequest());
         assertEq(usdcToken.balanceOf(caller), 69.825e6);

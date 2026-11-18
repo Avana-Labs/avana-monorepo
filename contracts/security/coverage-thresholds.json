@@ -123,7 +123,6 @@
     "src/oracle/lp-oracle/LPPriceMath.sol": 100,
     "src/periphery/flash-liquidator/FlashLiquidator.sol": 100,
     "src/periphery/flash-liquidator/FlashLiquidatorBase.sol": 100,
-    "src/periphery/flash-liquidator/FlashLiquidatorLenders.sol": 100,
     "src/periphery/flash-liquidator/OperatorFlashLiquidator.sol": 100,
     "src/periphery/gas-vault/AvanaGasVault.sol": 100,
     "src/policy/aave-adapter/AaveAdapter.sol": 100,

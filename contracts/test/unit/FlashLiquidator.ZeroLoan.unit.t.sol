@@ -3,10 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
-import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
-import {IFlashLiquidatorEvents} from "../../src/periphery/flash-liquidator/IFlashLiquidatorEvents.sol";
-import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
+import {FlashLiquidationRequest, IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {FlashLiquidatorFixture} from "../utils/fixtures/FlashLiquidatorFixture.sol";
 
 /// @notice The operator helper with `F = 0` (2.11 `REQ-HELPER-003`, `REQ-HELPER-011`): no loan is taken, the funding
@@ -41,7 +38,7 @@ contract FlashLiquidatorZeroLoanUnitTest is FlashLiquidatorFixture {
         _fund(safe, address(opHelper), 1950e6);
         uint256 poolBefore = usdcToken.balanceOf(aUsdc);
         vm.expectEmit(true, true, true, true, address(opHelper));
-        emit IFlashLiquidatorEvents.FlashLiquidated(signer, safe, address(usdcToken), 0, 0, 2020.8e6, 0, 2020.8e6);
+        emit IFlashLiquidator.FlashLiquidated(signer, safe, address(usdcToken), 0, 0, 2020.8e6, 0, 2020.8e6);
         uint256 payout = _signerLiquidates(_request(1950e6, 0, 0, 0, 2020.8e6));
         assertEq(payout, 2020.8e6);
         assertEq(usdcToken.balanceOf(safe), 2020.8e6, "Safe paid X and received keeperOut");
@@ -63,7 +60,7 @@ contract FlashLiquidatorZeroLoanUnitTest is FlashLiquidatorFixture {
         _setCap(0);
         _fund(safe, address(opHelper), 1950e6);
         vm.prank(signer);
-        vm.expectRevert(IFlashLiquidatorErrors.FlashSourceIsHub.selector);
+        vm.expectRevert(IFlashLiquidator.FlashSourceIsHub.selector);
         opHelper.flashLiquidate(_request(1950e6, 1, 0, 0, 0));
         assertEq(_signerLiquidates(_request(1950e6, 0, 0, 0, 0)), 2020.8e6);
         assertEq(aavePool.flashLoanCalls(), 0);
@@ -74,7 +71,7 @@ contract FlashLiquidatorZeroLoanUnitTest is FlashLiquidatorFixture {
     function test_TEST_174_publicHelperRefusesZeroLoan() public {
         _fund(caller, address(helper), 1950e6);
         vm.prank(caller);
-        vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashAmount.selector);
+        vm.expectRevert(IFlashLiquidator.InvalidFlashAmount.selector);
         helper.flashLiquidate(_request(1950e6, 0, 0, 0, 0));
         assertEq(lvs.calls(), 0);
     }
@@ -84,16 +81,16 @@ contract FlashLiquidatorZeroLoanUnitTest is FlashLiquidatorFixture {
     function test_TEST_174_operatorZeroLoanRequestChecks() public {
         FlashLiquidationRequest memory r = _request(uint256(type(uint128).max) + 1, 0, 0, 0, 0);
         vm.prank(signer);
-        vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashAmount.selector);
+        vm.expectRevert(IFlashLiquidator.InvalidFlashAmount.selector);
         opHelper.flashLiquidate(r);
         r = _request(1950e6, 0, 0, 0, 0);
         r.params.maxShortfall = uint256(type(uint128).max) + 1;
         vm.prank(signer);
-        vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashAmount.selector);
+        vm.expectRevert(IFlashLiquidator.InvalidFlashAmount.selector);
         opHelper.flashLiquidate(r);
         r.params.maxShortfall = 0;
         vm.prank(caller);
-        vm.expectRevert(IFlashLiquidatorErrors.NotSigner.selector);
+        vm.expectRevert(IFlashLiquidator.NotSigner.selector);
         opHelper.flashLiquidate(r);
         assertEq(lvs.calls(), 0);
     }
@@ -104,7 +101,7 @@ contract FlashLiquidatorZeroLoanUnitTest is FlashLiquidatorFixture {
     function test_TEST_174_operatorZeroLoanMinPayout() public {
         _fund(safe, address(opHelper), 1950e6);
         vm.prank(signer);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.PayoutTooLow.selector, 2020.8e6, 2020.800001e6));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.PayoutTooLow.selector, 2020.8e6, 2020.800001e6));
         opHelper.flashLiquidate(_request(1950e6, 0, 0, 0, 2020.800001e6));
         assertEq(usdcToken.balanceOf(safe), 1950e6);
     }
@@ -117,7 +114,7 @@ contract FlashLiquidatorZeroLoanUnitTest is FlashLiquidatorFixture {
         _fund(safe, address(opHelper), 1950e6);
         lvs.setOutcome(D_EXAMPLE, 1900e6, 0);
         vm.prank(signer);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.OutlayExceeded.selector, 50e6, 19.5e6));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.OutlayExceeded.selector, 50e6, 19.5e6));
         opHelper.flashLiquidate(_request(1950e6, 0, 0, 0, 0));
         lvs.setOutcome(D_EXAMPLE, 1940e6, 0);
         assertEq(_signerLiquidates(_request(1950e6, 0, 0, 0, 0)), 1940e6);
@@ -153,11 +150,11 @@ contract FlashLiquidatorZeroLoanUnitTest is FlashLiquidatorFixture {
         );
         lvs.setHook(address(opHelper), callback);
         vm.prank(signer);
-        vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        vm.expectRevert(IFlashLiquidator.InvalidFlashCallback.selector);
         opHelper.flashLiquidate(_request(1950e6, 0, 0, 0, 0));
         lvs.setHook(address(opHelper), abi.encodeCall(IFlashLiquidator.flashLiquidate, (_request(1950e6, 0, 0, 0, 0))));
         vm.prank(signer);
-        vm.expectRevert(IFlashLiquidatorErrors.ContextActive.selector);
+        vm.expectRevert(IFlashLiquidator.ContextActive.selector);
         opHelper.flashLiquidate(_request(1950e6, 0, 0, 0, 0));
         assertEq(usdcToken.balanceOf(safe), 3900e6, "every refused call left the Safe whole");
     }
@@ -176,7 +173,7 @@ contract FlashLiquidatorZeroLoanUnitTest is FlashLiquidatorFixture {
         );
         lvs.setHook(address(aavePool), abi.encodeCall(CallbackRelay.relay, (callback)));
         vm.prank(signer);
-        vm.expectRevert(IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        vm.expectRevert(IFlashLiquidator.InvalidFlashCallback.selector);
         opHelper.flashLiquidate(_request(1950e6, 0, 0, 0, 0));
     }
 

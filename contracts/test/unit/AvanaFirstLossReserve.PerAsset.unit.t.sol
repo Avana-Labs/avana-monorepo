@@ -5,7 +5,6 @@ pragma solidity 0.8.28;
 
 import {AvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
-import {IAvanaFirstLossReserveErrors} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserveErrors.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {AvanaFirstLossReserveFixture, ICoverageHubSpokeCalls} from "../utils/fixtures/AvanaFirstLossReserveFixture.sol";
 import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
@@ -72,7 +71,7 @@ contract AvanaFirstLossReservePerAssetUnitTest is AvanaFirstLossReserveFixture {
     function test_TEST_199_crossAssetReverts() public {
         uint256 deficitRay = _reportDeficit(usdcAssetId, aave.cdpSpoke, 1200e6);
         uint256 ghoShares = ghoCoverage.fundedShares();
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.NothingToCover.selector, aave.cdpSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.NothingToCover.selector, aave.cdpSpoke));
         _cover(ghoCoverage, aave.cdpSpoke, type(uint256).max);
         assertEq(hub.getSpokeDeficitRay(usdcAssetId, aave.cdpSpoke), deficitRay, "usdc deficit unchanged");
         assertEq(ghoCoverage.fundedShares(), ghoShares, "gho shares unchanged");
@@ -84,15 +83,13 @@ contract AvanaFirstLossReservePerAssetUnitTest is AvanaFirstLossReserveFixture {
     /// after a removal; the Hub alone would accept it (MATH-ST-50).
     function test_TEST_199_spokeNotAllowlistedReverts() public {
         _reportDeficit(ghoAssetId, otherSpoke, 500e18);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.SpokeNotAllowlisted.selector, otherSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.SpokeNotAllowlisted.selector, otherSpoke));
         _cover(ghoCoverage, otherSpoke, type(uint256).max);
 
         _reportDeficit(ghoAssetId, aave.cdpSpoke, 100e18);
         vm.prank(aaveGovernanceExecutor);
         ghoCoverage.setAllowedBorrowSpoke(aave.cdpSpoke, false);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAvanaFirstLossReserveErrors.SpokeNotAllowlisted.selector, aave.cdpSpoke)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.SpokeNotAllowlisted.selector, aave.cdpSpoke));
         _cover(ghoCoverage, aave.cdpSpoke, type(uint256).max);
         assertEq(hub.getSpokeDeficitRay(ghoAssetId, otherSpoke), 500e18 * RAY, "other deficit unchanged");
     }
@@ -121,7 +118,7 @@ contract AvanaFirstLossReservePerAssetUnitTest is AvanaFirstLossReserveFixture {
         assertEq(usdcCoverage.fundedShares(), 0, "every share burned");
         assertEq(hub.getSpokeDeficitRay(usdcAssetId, aave.cdpSpoke), deficitRay - funded * RAY, "remainder stays");
         assertTrue(usdcCoverage.isBelowMinimum(), "below minimum");
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.NothingToCover.selector, aave.cdpSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.NothingToCover.selector, aave.cdpSpoke));
         _cover(usdcCoverage, aave.cdpSpoke, type(uint256).max);
     }
 
@@ -156,17 +153,17 @@ contract AvanaFirstLossReservePerAssetUnitTest is AvanaFirstLossReserveFixture {
     // TEST-199 verifies: REQ-FLR-030, SPEC-FLR-001
     /// @notice A zero `maxAmount`, a Spoke with no deficit and an unfunded instance all revert `NothingToCover`.
     function test_TEST_199_nothingToCover() public {
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.NothingToCover.selector, aave.cdpSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.NothingToCover.selector, aave.cdpSpoke));
         _cover(ghoCoverage, aave.cdpSpoke, 1e18);
         _reportDeficit(ghoAssetId, aave.cdpSpoke, 10e18);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.NothingToCover.selector, aave.cdpSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.NothingToCover.selector, aave.cdpSpoke));
         _cover(ghoCoverage, aave.cdpSpoke, 0);
 
         AvanaFirstLossReserve empty =
             _deployAvanaFirstLossReserve(address(gho), ghoAssetId, ADD_CAP_GHO, "EmptyCoverage");
         vm.prank(aaveGovernanceExecutor);
         empty.setAllowedBorrowSpoke(aave.cdpSpoke, true);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.NothingToCover.selector, aave.cdpSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.NothingToCover.selector, aave.cdpSpoke));
         _cover(empty, aave.cdpSpoke, 1e18);
     }
 
@@ -183,7 +180,7 @@ contract AvanaFirstLossReservePerAssetUnitTest is AvanaFirstLossReserveFixture {
         uint256 shares = ghoCoverage.fundedShares();
         uint256[3] memory asks = [uint256(1), 1000e18, type(uint256).max];
         for (uint256 i = 0; i < asks.length; ++i) {
-            vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.NothingToCover.selector, aave.cdpSpoke));
+            vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.NothingToCover.selector, aave.cdpSpoke));
             _cover(ghoCoverage, aave.cdpSpoke, asks[i]);
         }
         assertEq(ghoCoverage.fundedShares(), shares, "nothing spent without a recorded deficit");

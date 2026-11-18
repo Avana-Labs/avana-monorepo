@@ -3,13 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAvanaGasVaultErrors} from "./IAvanaGasVaultErrors.sol";
-import {IAvanaGasVaultEvents} from "./IAvanaGasVaultEvents.sol";
-
 /// @title IAvanaGasVault
 /// @notice Per-chain vault of native gas for Avana's keeper signers; anyone may top up a signer below its minimum.
 /// @dev `TIMELOCK` raises and withdraws; `GUARDIAN` (or `TIMELOCK`) removes, lowers and pauses.
-interface IAvanaGasVault is IAvanaGasVaultErrors, IAvanaGasVaultEvents {
+interface IAvanaGasVault {
     /// @notice A signer's refill rule: top up below `minBalance`, to `targetBalance`, at most `periodCap` per `PERIOD`.
     struct SignerConfig {
         uint80 minBalance;
@@ -121,4 +118,80 @@ interface IAvanaGasVault is IAvanaGasVaultErrors, IAvanaGasVaultEvents {
     function quoteTopUp(
         address signer
     ) external view returns (uint256 amount, uint256 requested);
+
+    /// @notice A constructor address is `address(0)`, or `TREASURY` equals `TIMELOCK` or `GUARDIAN`.
+    error InvalidAddress();
+
+    /// @notice The constructor's `maxSigners` is 0 or above `MAX_SIGNERS_LIMIT`.
+    error InvalidMaxSigners(uint256 maxSigners);
+
+    /// @notice The caller is not `TIMELOCK`.
+    error NotTimelock();
+
+    /// @notice The caller is neither `GUARDIAN` nor `TIMELOCK`.
+    error NotGuardianOrTimelock();
+
+    /// @notice `addSigner` named `address(0)`, the vault, `TREASURY`, `TIMELOCK`, `GUARDIAN` or a listed signer.
+    error InvalidSigner(address signer);
+
+    /// @notice The signer is not on the allowlist.
+    error UnknownSigner(address signer);
+
+    /// @notice The allowlist already holds `MAX_SIGNERS` signers.
+    error TooManySigners();
+
+    /// @notice Config breaks `minBalance ≤ targetBalance`, exceeds 80 bits or has a zero outside `tightenSigner`.
+    error InvalidConfig(uint256 minBalance, uint256 targetBalance, uint256 periodCap);
+
+    /// @notice `tightenSigner` would raise one of the three values.
+    error NotTighter();
+
+    /// @notice `topUp` named a signer whose balance is not below its `minBalance`.
+    error NotBelowMinimum(address signer, uint256 balance, uint256 minBalance);
+
+    /// @notice `topUp` is due but would send 0: the signer's 24 h cap is used up or the vault holds nothing.
+    /// @param requested `targetBalance − balance`.
+    /// @param capRoom What the 24 h cap still allows.
+    error NothingToSend(address signer, uint256 requested, uint256 capRoom, uint256 held);
+
+    /// @notice The ETH transfer to the signer or to `TREASURY` failed.
+    error SendFailed(address to, uint256 amount);
+
+    /// @notice A top-up was called while the vault is paused.
+    error VaultPaused();
+
+    /// @notice `withdraw` asked for 0 or for more than the vault holds.
+    error InvalidWithdrawal(uint256 amount, uint256 held);
+
+    /// @notice ETH was added through `fund` or a plain transfer.
+    event Funded(address indexed from, uint256 amount);
+
+    /// @notice A signer was topped up. `amount < requested` means the cap or the vault balance limited it.
+    /// @param caller `msg.sender`, who receives nothing.
+    /// @param requested `targetBalance − balance` before the send.
+    event ToppedUp(address indexed signer, address indexed caller, uint256 amount, uint256 requested);
+
+    /// @notice `topUpAll` skipped a signer whose ETH transfer failed; nothing was sent or recorded for it.
+    event TopUpFailed(address indexed signer, uint256 amount);
+
+    /// @notice A signer was added to the allowlist.
+    /// @param periodCap Most ETH sent to it in any 24 h.
+    event SignerAdded(address indexed signer, uint256 minBalance, uint256 targetBalance, uint256 periodCap);
+
+    /// @notice A signer's configuration changed through `setSignerConfig` or `tightenSigner`.
+    /// @param by `TIMELOCK` or `GUARDIAN`.
+    event SignerConfigChanged(
+        address indexed signer, address indexed by, uint256 minBalance, uint256 targetBalance, uint256 periodCap
+    );
+
+    /// @notice A signer was removed from the allowlist.
+    /// @param by `TIMELOCK` or `GUARDIAN`.
+    event SignerRemoved(address indexed signer, address indexed by);
+
+    /// @notice Top-ups were paused or unpaused.
+    /// @param by `TIMELOCK` or `GUARDIAN`.
+    event PauseChanged(bool paused, address indexed by);
+
+    /// @notice ETH was withdrawn to `TREASURY`.
+    event Withdrawn(uint256 amount);
 }

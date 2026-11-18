@@ -5,7 +5,6 @@ pragma solidity 0.8.28;
 
 import {AvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
-import {IAvanaFirstLossReserveAdmin} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserveAdmin.sol";
 import {MockAuthority} from "../utils/mocks/MockAuthority.sol";
 import {MockDebtAsset} from "../utils/mocks/MockDebtAsset.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -191,11 +190,11 @@ contract AvanaFirstLossReserveHalmosTest is Test {
         hub = new HalmosCoverageHub(address(token), ASSET_ID);
         auth = new MockAuthority();
         auth.allow(COVERAGE, IAvanaFirstLossReserve.coverDeficit.selector);
-        auth.allow(DAO, IAvanaFirstLossReserveAdmin.setAllowedBorrowSpoke.selector);
-        auth.allow(DAO, IAvanaFirstLossReserveAdmin.setFirstLossReserveMinimum.selector);
-        auth.allow(DAO, IAvanaFirstLossReserveAdmin.requestWithdrawal.selector);
-        auth.allow(DAO, IAvanaFirstLossReserveAdmin.cancelWithdrawal.selector);
-        auth.allow(DAO, IAvanaFirstLossReserveAdmin.executeWithdrawal.selector);
+        auth.allow(DAO, IAvanaFirstLossReserve.setAllowedBorrowSpoke.selector);
+        auth.allow(DAO, IAvanaFirstLossReserve.setFirstLossReserveMinimum.selector);
+        auth.allow(DAO, IAvanaFirstLossReserve.requestWithdrawal.selector);
+        auth.allow(DAO, IAvanaFirstLossReserve.cancelWithdrawal.selector);
+        auth.allow(DAO, IAvanaFirstLossReserve.executeWithdrawal.selector);
         cs = new AvanaFirstLossReserve(address(hub), address(token), ASSET_ID, address(auth), 1_209_600);
         hub.setListed(BORROW);
         vm.prank(DAO);
