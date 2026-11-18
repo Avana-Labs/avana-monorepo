@@ -134,7 +134,6 @@ export interface Applied {
   readonly touched: ReadonlySet<string>;
   readonly pending: boolean;
   readonly status: boolean;
-  readonly market: boolean;
 }
 
 /**
@@ -146,7 +145,6 @@ export function applyStreamRecords(records: readonly ExportRecord[], cache: Acco
   const touched = new Set<string>();
   let pending = false;
   let status = false;
-  let market = false;
   for (const r of records) {
     if (CREATION.has(r.kind)) {
       const a = r.args as { wallet: Address; spoke: Address; marketId: string; proxy: Address };
@@ -160,7 +158,6 @@ export function applyStreamRecords(records: readonly ExportRecord[], cache: Acco
       if (user) touched.add(user.toLowerCase());
     } else if (PENDING.has(r.kind)) pending = true;
     else if (STATUS.has(r.kind)) status = true;
-    else market = true;
   }
-  return { announced, touched, pending, status, market };
+  return { announced, touched, pending, status };
 }

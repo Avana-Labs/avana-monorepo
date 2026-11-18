@@ -35,54 +35,6 @@ contract LensEdgesUnitTest is LensFixture {
         assertEq(c.recoveryFloor, a.recoveryFloor, "a larger LPOracle answer never raises it");
     }
 
-    // TEST-069 verifies: SPEC-LIQ-004, REQ-LENS-026
-    function test_TEST_069_debtPriceIsTheLargerOfAaveAndDebtOracle() public {
-        _borrow(aliceProxy, 15_000e18);
-        _setVtPrice(1.8e8);
-        _seizeAndKeep(aliceProxy, 3000e18);
-        uint256 owed = _debtOf(aliceProxy, debtReserveId);
-        debt.mint(aliceProxy, owed);
-        vm.startPrank(aliceProxy);
-        debt.approve(aave.cdpSpoke, owed);
-        IAaveV4Spoke(aave.cdpSpoke).repay(debtReserveId, owed, aliceProxy);
-        vm.stopPrank();
-        _withdraw(aliceProxy, _key(1), coll.previewRelease(INTEGRATION, _key(1)));
-        reg.setSettlementReserve(MARKET_ID, usdcReserveId);
-        uint256 base = lens.getPendingSettlement(vt).valueDebt;
-        // The DebtOracle answers above the AaveOracle's price (a different Aave source reads lower).
-        vm.mockCall(address(usdcOracle), abi.encodeWithSignature("latestAnswer()"), abi.encode(int256(1.1e8)));
-        vm.mockCall(aave.cdpOracle, abi.encodeWithSignature("getReservePrice(uint256)", usdcReserveId), abi.encode(1e8));
-        PendingView memory p = lens.getPendingSettlement(vt);
-        assertEq(p.valueDebt, p.units * 1.8e8 * 1e6 / (1e6 * 1.1e8), "valued at the larger debt price");
-        assertGt(p.units, 0, "units pending");
-        assertLt(p.valueDebt, base, "a larger debt price lowers the value");
-        vm.clearMockedCalls();
-    }
-
-    // TEST-247 verifies: REQ-LENS-030
-    function test_TEST_247_debtRouteWithoutFeedIsNeverFresh() public {
-        LensDebtOracleMock noFeed = new LensDebtOracleMock(1e8, address(0), address(0));
-        vm.mockCall(
-            address(reg),
-            abi.encodeWithSignature("getDebtReserve(address,uint256)", aave.cdpSpoke, usdcReserveId),
-            abi.encode(_def(usdcReserveId, address(usdc), 6, usdcAssetId, address(noFeed), false, usdcCov))
-        );
-        DebtPriceView memory v = lens.getDebtPriceState(aave.cdpSpoke, usdcReserveId);
-        assertEq(uint8(v.state), uint8(PriceState.Live), "Live");
-        assertEq(v.age, 0, "accepted now");
-        assertFalse(v.borrowFresh || v.liquidationFresh, "a route that names no feed has no age limit to meet");
-        vm.clearMockedCalls();
-    }
-
-    // TEST-247 verifies: REQ-LENS-030, REQ-RISK-061, REQ-SWAP-091
-    function test_TEST_247_debtServedInTheFutureCountsAgeZero() public {
-        usdcOracle.set(1e8, PriceState.Live, 1e8, uint64(block.timestamp + 100));
-        DebtPriceView memory v = lens.getDebtPriceState(aave.cdpSpoke, usdcReserveId);
-        assertEq(v.age, 0, "no negative age");
-        assertFalse(v.borrowFresh, "the RiskModule refuses a served timestamp in the future");
-        assertTrue(v.liquidationFresh, "LPVaultSwap counts it age 0");
-    }
-
     // TEST-247 verifies: REQ-LENS-011, REQ-LENS-014
     function test_TEST_247_recordOutOfCustodyReportsZeroLiveUnits() public {
         vm.mockCall(address(lpVault), abi.encodeWithSignature("depositorOf(bytes32)", _key(1)), abi.encode(address(0)));
@@ -108,11 +60,5 @@ contract LensEdgesUnitTest is LensFixture {
         );
         assertFalse(lens.checkBacking(vt).singleBorrowSpoke, "a fee receiver that is the CDP Spoke itself");
         vm.clearMockedCalls();
-    }
-
-    // TEST-247 verifies: REQ-LENS-009, REQ-LENS-015
-    function test_TEST_247_accountPriceStateFollowsTheLPOracle() public {
-        lpo.setState(PriceState.Drifting, 0, false);
-        assertEq(uint8(lens.getAccount(alice, MARKET_ID).markets[0].priceState), 1, "Drifting");
     }
 }

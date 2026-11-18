@@ -393,14 +393,6 @@ contract LensMarketUnitTest is LensFixture {
     }
 
     // TEST-247 verifies: REQ-LENS-018
-    function test_TEST_247_chargePriceUsesStressFloor() public {
-        store.setCaps(MARKET_ID, 1_000_000e8, 100_000e8, 2.5e8);
-        assertEq(lens.getCapHeadroom(vt, alice).chargePricePerWholeToken, 2.5e8, "stress floor above accepted");
-        lpo.setAccepted(3e8, uint64(block.timestamp));
-        assertEq(lens.getCapHeadroom(vt, alice).chargePricePerWholeToken, 3e8, "accepted above the floor");
-    }
-
-    // TEST-247 verifies: REQ-LENS-018
     function test_TEST_247_headroomFloorsAtZero() public {
         store.setCaps(MARKET_ID, 10_000e8, 0, 1e8);
         store.setTokenCap(aave.hub, address(usdc), 0);

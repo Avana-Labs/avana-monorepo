@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Read cadence and batching (runtime/chainLoop.ts, chain/reads.ts): liquidations, breaker pokes and oracles that are
-// not Live are checked at every head (every oracle's price state is read at each head); the instance's status, pending
-// settlement, configuration pokes and Live oracles at the first head KEEPER_SLOW_JOB_SECONDS after their last check
+// Read cadence and batching (runtime/chainLoop.ts, chain/reads.ts): liquidations and breaker pokes are checked at
+// every head; the instance's status, pending settlement and configuration pokes at the first head
+// KEEPER_SLOW_JOB_SECONDS after their last check
 // (0: every head); the funding alerts found at a complete slow check are posted again at every head until the next
 // one, and kept when a check fails. A view read is made once per block reader; a simulation of a write is not batched
 // with reads, and the breaker pokes of all markets share one. A log range a provider refused is not asked for again in
@@ -16,7 +16,6 @@ import { createChainReader } from "../src/chain/reads.ts";
 import { type ChainConfig, type KeeperConfig, SLOW_JOB_SECONDS, slowJobSeconds } from "../src/config.ts";
 import { AccountCache } from "../src/discovery/accountCache.ts";
 import { getLogsChunked, nextSweepFrom } from "../src/discovery/backfill.ts";
-import { POKE_LEAD_SECONDS, pokeDue } from "../src/jobs/oraclePoke.ts";
 import { type Alert, HeldAlerts } from "../src/monitoring/alerts.ts";
 import { chainLoop } from "../src/runtime/chainLoop.ts";
 
@@ -28,12 +27,11 @@ const COLLATERALIZATION = addr(0x13);
 const RISK = addr(0x14);
 const VAULT = addr(0x20);
 const ORACLE = addr(0x30);
-const FEED = addr(0x40);
 const IMPL = addr(0x50);
 const HELPER = addr(0x60);
 
 const manifest = {
-  markets: [{ marketId: 1n, vaultToken: { address: VAULT }, lpOracle: { address: ORACLE, implementation: IMPL }, feeds: [{ feed: FEED, heartbeatSeconds: 86_400 }], routes: [] }],
+  markets: [{ marketId: 1n, vaultToken: { address: VAULT }, lpOracle: { address: ORACLE }, feeds: [], routes: [] }],
   debtReserves: [],
   aave: { borrowSpokes: [] },
   avana: {
@@ -45,8 +43,8 @@ const manifest = {
   },
 };
 
-/** A node answering the keeper's reads, counting them by function name; `oracleState` sets getPriceState's state. */
-function node(oracleState: () => number) {
+/** A node answering the keeper's reads, counting them by function name. */
+function node() {
   const reads = new Map<string, number>();
   const count = (name: string) => reads.set(name, (reads.get(name) ?? 0) + 1);
   const client = {
@@ -63,10 +61,6 @@ function node(oracleState: () => number) {
           return { units: 0n, settleable: false, settleableUnits: 0n };
         case "getSpokes":
           return [];
-        case "latestRoundData":
-          return [1n, 1n, 0n, 0n, 1n];
-        case "getPriceState":
-          return { state: oracleState() };
         default:
           throw new Error(`unexpected read ${functionName}`);
       }
@@ -82,8 +76,8 @@ function node(oracleState: () => number) {
   return { client: client as unknown as PublicClient, reads };
 }
 
-function loop(slowSeconds: number, oracleState: () => number) {
-  const { client, reads } = node(oracleState);
+function loop(slowSeconds: number) {
+  const { client, reads } = node();
   const fundingAt: boolean[] = [];
   const onHead = chainLoop({
     keeper: { mode: "observe", role: "primary", shard: null, slowJobSeconds: slowSeconds } as unknown as KeeperConfig,
@@ -107,56 +101,32 @@ function loop(slowSeconds: number, oracleState: () => number) {
 }
 
 describe("slow-cadence jobs", () => {
-  it("checks status, pending settlement, configuration pokes and a Live oracle once per 60 s of block time, funding at the same heads", async () => {
+  it("checks status, pending settlement and configuration pokes once per 60 s of block time, funding at the same heads", async () => {
     vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-    const { run, reads, fundingAt } = loop(60, () => 0);
+    const { run, reads, fundingAt } = loop(60);
     await run(10); // 12 s blocks: heads 1 and 6 are 60 s apart
     expect(reads.get("isFrozenAddress")).toBe(2);
     expect(reads.get("getPendingSettlement")).toBe(2);
     expect(reads.get("getSpokes")).toBe(2);
-    expect(reads.get("latestRoundData")).toBe(2);
     expect(fundingAt).toEqual([true, false, false, false, false, true, false, false, false, false]);
     vi.restoreAllMocks();
   });
 
-  it("simulates the breaker pokes and reads every oracle's price state at every head", async () => {
+  it("simulates the breaker pokes at every head", async () => {
     vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-    const { run, reads } = loop(60, () => 0);
+    const { run, reads } = loop(60);
     await run(10);
     expect(reads.get("callAt")).toBe(10);
-    expect(reads.get("getPriceState")).toBe(10);
-    vi.restoreAllMocks();
-  });
-
-  it("checks an oracle at the first head it leaves Live, between two slow heads", async () => {
-    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-    let state = 0;
-    const { run, reads } = loop(60, () => state);
-    await run(2);
-    expect(reads.get("latestRoundData")).toBe(1);
-    state = 2;
-    await run(3, 3);
-    expect(reads.get("latestRoundData")).toBe(2);
-    vi.restoreAllMocks();
-  });
-
-  it("checks an oracle that is not Live at every head", async () => {
-    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-    const { run, reads } = loop(60, () => 2);
-    await run(10);
-    expect(reads.get("getPriceState")).toBe(10);
-    expect(reads.get("latestRoundData")).toBe(10);
     expect(reads.get("getPendingSettlement")).toBe(2);
     vi.restoreAllMocks();
   });
 
   it("checks everything at every head with KEEPER_SLOW_JOB_SECONDS=0", async () => {
     vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-    const { run, reads, fundingAt } = loop(0, () => 0);
+    const { run, reads, fundingAt } = loop(0);
     await run(5);
     expect(reads.get("isFrozenAddress")).toBe(5);
     expect(reads.get("getPendingSettlement")).toBe(5);
-    expect(reads.get("getPriceState")).toBe(5);
     expect(fundingAt.every(Boolean)).toBe(true);
     vi.restoreAllMocks();
   });
@@ -170,17 +140,6 @@ describe("KEEPER_SLOW_JOB_SECONDS", () => {
     expect(() => slowJobSeconds({ KEEPER_SLOW_JOB_SECONDS: "-1" })).toThrow();
     expect(() => slowJobSeconds({ KEEPER_SLOW_JOB_SECONDS: "3601" })).toThrow();
     expect(() => slowJobSeconds({ KEEPER_SLOW_JOB_SECONDS: "1.5" })).toThrow();
-  });
-});
-
-describe("scheduled poke lead", () => {
-  it("sends a slow-checked poke that much earlier, so it still lands inside the interval", () => {
-    const last = 1_000n;
-    const lead = POKE_LEAD_SECONDS + SLOW_JOB_SECONDS + 12;
-    expect(pokeDue(last + 3_600n - 133n, last, 3_600, false, lead)).toBe(false);
-    expect(pokeDue(last + 3_600n - 132n, last, 3_600, false, lead)).toBe(true);
-    expect(pokeDue(last + 3_600n - 61n, last, 3_600, false)).toBe(false);
-    expect(pokeDue(last + 3_600n - 60n, last, 3_600, false)).toBe(true);
   });
 });
 
@@ -211,23 +170,23 @@ describe("HeldAlerts", () => {
 
 describe("block reader", () => {
   it("reads a view once per block and never batches a simulated write", async () => {
-    const { client, reads } = node(() => 0);
+    const { client, reads } = node();
     const calls: { batch?: boolean }[] = [];
     (client as unknown as { call: (a: { batch?: boolean }) => Promise<{ data: undefined }> }).call = async (a) => {
       calls.push(a);
       return { data: undefined };
     };
     const reader = createChainReader(client, manifest as never, 5n);
-    await Promise.all([reader.pendingSettlement(VAULT), reader.pendingSettlement(VAULT), reader.feedRound(FEED)]);
+    await Promise.all([reader.pendingSettlement(VAULT), reader.pendingSettlement(VAULT), reader.approvedSpokes(), reader.approvedSpokes()]);
     await reader.pendingSettlement(VAULT);
     expect(reads.get("getPendingSettlement")).toBe(1);
-    expect(reads.get("latestRoundData")).toBe(1);
+    expect(reads.get("getSpokes")).toBe(1);
     await reader.callAt(RISK, "0x1234");
     expect(calls[0]?.batch).toBe(false);
   });
 
   it("simulates the breaker pokes of all markets in one unbatched eth_call, an entry that reverted as null", async () => {
-    const { client } = node(() => 0);
+    const { client } = node();
     const calls: { to?: Address; data?: Hex; batch?: boolean }[] = [];
     (client as unknown as { call: (a: { to?: Address; data?: Hex; batch?: boolean }) => Promise<{ data: Hex }> }).call = async (a) => {
       calls.push(a);

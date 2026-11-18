@@ -9,8 +9,6 @@ import {
     LiquidationResult,
     RouteMode
 } from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {IDebtOracle} from "../../../src/oracle/debt-oracle/IDebtOracle.sol";
-import {DebtOracleInitParams} from "../../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
 import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
 import {DebtReserveDef, TokenDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
@@ -40,7 +38,7 @@ abstract contract RealStackFlows is FullStackMarkets {
     uint256 internal constant FLOOR_ROUNDING_ALLOWANCE_WETH = 3e14;
 
     ClTestToken internal weth;
-    IDebtOracle internal wethOracle;
+    OracleFeedMock internal wethOracle;
     uint256 internal wethAssetId;
     uint256 internal wethReserveId;
 
@@ -125,20 +123,10 @@ abstract contract RealStackFlows is FullStackMarkets {
         ClTestToken token,
         string memory description,
         uint256 floorRounding
-    ) internal returns (IDebtOracle oracle, uint256 assetId, uint256 reserveId) {
-        vm.prank(address(timelock));
-        store.tightenDebtStressRiseBps(address(token), 500);
-        IDebtOracle impl = IDebtOracle(deployCode("DebtOracle.sol:DebtOracle", abi.encode(address(timelock))));
-        DebtOracleInitParams memory p = DebtOracleInitParams({
-            timelock: address(timelock),
-            asset: address(token),
-            marketRegistry: address(registry),
-            parameterStore: address(store),
-            description: description,
-            pokeMinGas: 600_000
-        });
-        oracle = IDebtOracle(address(new ERC1967Proxy(address(impl), abi.encodeCall(IDebtOracle.initialize, (p)))));
-        vm.label(address(oracle), string.concat("DebtOracle ", token.symbol()));
+    ) internal returns (OracleFeedMock oracle, uint256 assetId, uint256 reserveId) {
+        // The debt price source is the token's primary Chainlink feed, as Aave reads it.
+        oracle = feedsOf[address(token)][0];
+        description;
         uint8 dec = token.decimals();
         (assetId, reserveId) = _addDebtAsset(token, dec, address(oracle));
         address cs = _coverage(address(token), assetId);
@@ -188,9 +176,6 @@ abstract contract RealStackFlows is FullStackMarkets {
     ) internal {
         _publish(token, price8);
         _alignRoutes();
-        if (token == address(weth) && address(wethOracle) != address(0)) wethOracle.poke();
-        if (token == address(usdc)) usdcOracle.poke();
-        _pokeAll();
     }
 
     // ─── Accounts through the AaveAdapter ───
@@ -252,7 +237,6 @@ abstract contract RealStackFlows is FullStackMarkets {
         _publish(address(usdc), price8);
         _publish(address(usdt), price8);
         _alignRoutes();
-        _pokeAll();
     }
 
     /// @notice The USD price of `token` the feeds publish (GHO: its fixed $1.00), 8 decimals.
@@ -280,13 +264,6 @@ abstract contract RealStackFlows is FullStackMarkets {
         }
     }
 
-    function _pokeAll() internal {
-        uint256 n = registry.marketCount();
-        for (uint256 id = 1; id <= n; ++id) {
-            mkt[id].oracle.poke();
-        }
-    }
-
     /// @notice USDT alone at `price8`: every USDT feed, both markets' USDC/USDT pools swapped to the new rate, then
     /// `TWAP_WAIT` (31 minutes) so the pools' 1,800 s TWAP agrees with the feeds, every feed republished, the route-DEX
     /// pools aligned and every LPOracle poked. A full-range USDC/USDT unit is worth `2·sqrt(pUSDC·pUSDT)`, so USDT at
@@ -310,7 +287,6 @@ abstract contract RealStackFlows is FullStackMarkets {
         vm.roll(block.number + TWAP_WAIT / BLOCK_TIME);
         _refreshFeeds();
         _alignRoutes();
-        _pokeAll();
     }
 
     /// @dev Long enough after a pool move for the 1,800 s TWAP to sit at the new rate.

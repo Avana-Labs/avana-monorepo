@@ -222,9 +222,6 @@ async function wait(e: Env, seconds: number) {
   await e.advance(seconds);
   await e.refresh({}, Object.keys(e.prices));
 }
-async function pokeAll(e: Env) {
-  for (const m of e.markets) await e.poke(m.lpOracle);
-}
 
 // ─── Setup ───
 
@@ -312,7 +309,6 @@ function switchDrill(forward: string, backward: string | (() => string), want: R
     c.works("before: borrow", await borrowProbe(e, h));
     if (opts.pledge) c.works("before: pledge", await pledge());
     mustApply(forward, log);
-    await pokeAll(e);
     c.refused("forward: borrow", await borrowProbe(e, h), want);
     for (const x of opts.extra ?? []) c.refused(`forward: borrow on ${s[x].market}`, await borrowProbe(e, s[x]), want);
     if (opts.pledge) c.refused("forward: pledge by a new account", await pledge(), opts.pledge);
@@ -376,33 +372,6 @@ const DRILLS: Record<string, Drill> = {
   "aave-freeze": switchDrill("aave-freeze-forward.json", "aave-freeze-back.json", /ReserveFrozen|AaveReserveUnavailable/, { pledge: /ReserveFrozen|AaveReserveUnavailable/ }),
   "aave-freeze-v4": switchDrill("aave-freeze-v4-forward.json", "aave-freeze-v4-back.json", /ReserveFrozen|AaveReserveUnavailable/, { pledge: /ReserveFrozen|AaveReserveUnavailable/, holder: "v4StableBorrower", pledger: "v4Pledger" }),
 
-  // P-02: USDC's primary feed reports 2 % low (disagreement with the alternate); the guardian switches the primary slot
-  // to the listed standby; the feed is fixed and restorePriceRoute (timelock, normal delay) puts the primary back.
-  async "oracle-standby"(e, c, log) {
-    const s = loadState();
-    const m = e.market(M1);
-    const usdc = e.ctx.world.feeds.USDC as Record<string, Address>;
-    await e.settle();
-    c.works("before: borrow", await borrowProbe(e, s.borrower));
-    const wrong = (e.prices.USDC! * 98n) / 100n;
-    await e.ctx.client.waitForTransactionReceipt({ hash: await transmit(e.ctx.client, e.ctx.wallet, usdc.primaryAggregator!, wrong) });
-    await e.poke(m.lpOracle);
-    c.that("fault: LPOracle state", true, e.describe(await e.priceState(m.lpOracle)));
-    c.refused("fault: borrow while USDC's routes disagree", await borrowProbe(e, s.borrower), /PriceNotLive|PriceNotAccepted|SecondSourceDisagrees/);
-    mustApply("oracle-standby-forward.json", log);
-    await e.poke(m.lpOracle);
-    const routes = await e.read(e.registry, marketRegistryAbi, "activePriceRoutes", [e.token("USDC")]);
-    c.that("standby in the primary slot", Number(routes[2]) === 1, `replaced slot ${routes[2]}; primary in force ${routes[0].join(",")}`);
-    c.that("standby: LPOracle state", true, e.describe(await e.priceState(m.lpOracle)));
-    c.works("standby: borrow", await borrowProbe(e, s.borrower));
-    // The feed is fixed; the listed route comes back at the normal delay.
-    await e.ctx.client.waitForTransactionReceipt({ hash: await transmit(e.ctx.client, e.ctx.wallet, usdc.primaryAggregator!, e.prices.USDC!) });
-    mustApply("oracle-standby-back.json", log);
-    await e.settle();
-    const after = await e.read(e.registry, marketRegistryAbi, "activePriceRoutes", [e.token("USDC")]);
-    c.that("backward: listed primary route restored", Number(after[2]) === 0 && after[0][0].toLowerCase() === usdc.primary!.toLowerCase(), `replaced slot ${after[2]}; primary ${after[0].join(",")}`);
-    c.works("backward: borrow", await borrowProbe(e, s.borrower));
-  },
 
   // The keeper operator's kill switch (services/keeper/src/safety/killSwitch.ts, mutual TLS): halt, then resume.
   async "keeper-kill-switch"(_e, c, log) {
@@ -612,7 +581,7 @@ function deficitDrill(cfg: { market: string; holder: HolderName; owner: Address;
     const coll = await e.collateralUsd8(m, a);
     const target = (debtUsd * m.maxLiquidationBonus * 9_500n) / (10_000n * 10_000n);
     const r = (target * target * 10_000n) / (coll * coll);
-    await e.setWeth(r < 1_000n ? r : 1_000n, [m.lpOracle]);
+    await e.setWeth(r < 1_000n ? r : 1_000n);
     const hubAbi = aaveV4HubAbi;
     const assetId = (await e.read(m.hub, hubAbi, "getAssetId", [m.debtAsset])) as bigint;
     const pools = await routePoolPrices(e, m);
@@ -655,7 +624,6 @@ function offboardDrill(cfg: { market: string; holder: HolderName; pledger: Pledg
       c.works("before: pledge", await pledge());
       mustApply(cfg.files[0], log);
       mustApply(cfg.files[1], log);
-      await pokeAll(e);
       c.refused("forward: pledge", await pledge(), /MarketOffboarding|ReserveFrozen|AaveReserveUnavailable/);
       c.refused("forward: borrow", await borrowProbe(e, h), /MarketOffboarding|ReserveFrozen/);
       c.works("forward: repay stays open", await repayProbe(e, h));
@@ -710,7 +678,6 @@ function retireDrill(cfg: { market: string; fresh: Address; prefix: string }): D
       c.works(`before: pledge into ${cfg.market}`, await pledgeProbe(e, s, cfg.market, fresh, p));
       mustApply(`${cfg.prefix}-forward-aip.json`, log);
       mustApply(`${cfg.prefix}-forward.json`, log);
-      await pokeAll(e);
       c.refused(`forward: pledge into ${cfg.market}`, await pledgeProbe(e, s, cfg.market, fresh, p), /MarketOffboarding|ReserveFrozen|AaveReserveUnavailable/);
       await wait(e, 5 * 86_400 + 1);
       await e.gasFor(W.anyone);

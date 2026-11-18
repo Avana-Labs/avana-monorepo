@@ -204,50 +204,6 @@ contract ParameterStoreSecondSourceUnitTest is ParameterStoreFixture {
         assertTrue(store.onStandby(usdc));
     }
 
-    // TEST-250 verifies: REQ-PSTORE-029, REQ-PSTORE-009, EMG-103
-    function test_TEST_250_restoreRechecksAndEmitsOnlyOnAChange() public {
-        _tl();
-        store.setSecondSource(usdc, _oracleNetwork(network), _oracleNetwork(standbyNetwork));
-        // Nothing to restore: no event.
-        vm.recordLogs();
-        _tl();
-        store.restoreSecondSource(usdc);
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        for (uint256 i = 0; i < logs.length; ++i) {
-            assertTrue(logs[i].emitter != address(store), "restore without a change emitted");
-        }
-        vm.prank(emergencyGuardian);
-        store.useStandbySecondSource(usdc);
-        // The recorded source must pass checkConfig again before it returns.
-        lpOracle.setFailed(32);
-        _tl();
-        vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 32)
-        );
-        store.restoreSecondSource(usdc);
-        assertTrue(store.onStandby(usdc));
-        lpOracle.setFailed(0);
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.SecondSourceSwitched(usdc, false, address(timelock));
-        store.restoreSecondSource(usdc);
-        assertFalse(store.onStandby(usdc));
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-009, REQ-CONFIG-024, REQ-ORACLE-053
-    function test_TEST_250_secondSourceFeedChangeRechecksItsMarkets() public {
-        _tl();
-        store.setSecondSource(usdc, _oracleNetwork(network), _oracleNetwork(standbyNetwork));
-        // The standby's feed is used by no route; a change to it still re-runs checkConfig of USDC's markets, since
-        // the second-source tolerance bound counts its deviation threshold.
-        lpOracle.setFailed(64);
-        _tl();
-        vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 64)
-        );
-        store.setFeed(standbyNetwork, _feedDef(86_400, 1800));
-    }
-
     // TEST-250 verifies: REQ-PSTORE-029
     function test_TEST_250_standbyPoolMustDifferFromTheSourcePool() public {
         // Two pool sources read through different integrations but the same pool fail together.
@@ -275,14 +231,5 @@ contract ParameterStoreSecondSourceUnitTest is ParameterStoreFixture {
             );
         }
         assertFalse(store.onStandby(usdc));
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-029, REQ-PSTORE-009
-    /// @notice Without a standby, `setSecondSource` runs the LPOracle check of the market holding the token once: there
-    /// is no standby configuration to check.
-    function test_TEST_250_setWithoutStandbyChecksOnce() public {
-        vm.expectCall(address(lpOracle), abi.encodeWithSelector(MockLPOracle.checkConfig.selector), 1);
-        _tl();
-        store.setSecondSource(usdc, _oracleNetwork(network), none);
     }
 }

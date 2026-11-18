@@ -94,38 +94,12 @@ contract LensPriceGatesIntegrationTest is RealStackVolatile {
         store.tightenBorrowPriceMaxAge(address(usdcPrimary), BORROW_AGE);
     }
 
-    // TEST-247 verifies: REQ-LENS-035, REQ-LENS-044, REQ-RISK-061, REQ-ADAPTER-038
-    /// @notice A stale, borrow-closed or not-Live USDC price: `previewBorrowMax` and `previewBorrowRecommended` return
-    /// 0 exactly when the borrow reverts `DebtPriceTooOld`, and the previewed maximum executes once the price is fresh.
-    function test_TEST_247_borrowMaxAppliesTheBorrowedReservesDebtPrice() public {
-        assertGt(_previewUsdc(), 0, "open with a fresh USDC price");
-        _tightenUsdcBorrowAge();
-        _round(usdcPrimary, 1e8, block.timestamp - BORROW_AGE - 1);
-        assertEq(_previewUsdc(), 0, "stale: the preview refuses");
-        (uint256 rec, uint256 max) = lens.previewBorrowRecommended(alice, mV, usdcReserveIdV, _deadline());
-        assertEq(rec + max, 0, "the recommended borrow too");
-        _borrowUsdc(1e6, _tooOld(BORROW_AGE + 1));
-        _round(usdcPrimary, 1e8, block.timestamp);
-        _round(feedsOf[address(usdc)][3], 97_000_000, block.timestamp);
-        assertEq(_previewUsdc(), 0, "the oracle's own borrow gate closed: the preview refuses");
-        _borrowUsdc(1e6, _tooOld(0));
-        _round(feedsOf[address(usdc)][3], 1e8, block.timestamp);
-        _round(feedsOf[address(usdc)][1], 97_000_000, block.timestamp);
-        assertEq(_previewUsdc(), 0, "not Live: the preview refuses");
-        _borrowUsdc(1e6, _tooOld(0));
-        _round(feedsOf[address(usdc)][1], 1e8, block.timestamp);
-        uint256 amount = _previewUsdc();
-        assertGt(amount, 0, "fresh again");
-        _borrowUsdc(amount, "");
-        assertEq(_debtOn(spokeV, proxyV, usdcReserveIdV), amount, "the previewed maximum executes");
-    }
-
     // TEST-247 verifies: REQ-LENS-030, REQ-LENS-035, REQ-RISK-061
     /// @notice Borrow side at the boundary: a served route aged exactly `borrowPriceMaxAge()` is fresh for the Lens and
     /// borrows; one second older is stale for both.
     function test_TEST_247_debtBorrowAgeBoundaryMatchesExecution() public {
         _tightenUsdcBorrowAge();
-        uint32 maxAge = usdcOracle.borrowPriceMaxAge();
+        uint32 maxAge = store.getFeed(address(usdcPrimary)).borrowPriceMaxAge;
         _round(usdcPrimary, 1e8, block.timestamp - maxAge - 1);
         DebtPriceView memory v = _debtView();
         assertEq(v.age, uint256(maxAge) + 1, "the served route's age");
@@ -138,67 +112,6 @@ contract LensPriceGatesIntegrationTest is RealStackVolatile {
         assertTrue(v.borrowFresh, "max: fresh");
         assertGt(_previewUsdc(), 0, "max: borrowable");
         _borrowUsdc(1e6, "");
-    }
-
-    // TEST-247 verifies: REQ-LENS-030, REQ-RISK-061
-    /// @notice The accepted price's stored timestamp only moves on a poke; execution reads the served route's live
-    /// timestamp. A fresh route behind an accepted timestamp older than `FEED_AGE` is fresh for both. Rounds dated in the
-    /// future on both USDC routes are unreadable to the real DebtOracle (`updatedAt > now`): it serves its accepted
-    /// price, which the RiskModule refuses and the Lens reports closed to borrowing and to liquidation.
-    function test_TEST_247_debtAgeIsTheServedRoutesNotTheAcceptedPrices() public {
-        // Nothing pokes the DebtOracle for FEED_AGE + 560 seconds while every feed keeps publishing.
-        _warpBlocks(FEED_AGE / 2 + 280);
-        _refreshFeeds();
-        _pokeAll();
-        _warpBlocks(FEED_AGE / 2 + 280);
-        _refreshFeeds();
-        _pokeAll();
-        _round(usdcPrimary, 1e8, block.timestamp - 60);
-        (, uint64 acceptedAt) = usdcOracle.lastAcceptedPrice();
-        assertGt(block.timestamp - acceptedAt, uint256(FEED_AGE) + 500, "the accepted timestamp is old");
-        DebtPriceView memory v = _debtView();
-        assertEq(v.age, 60, "the served route's age");
-        assertTrue(v.borrowFresh && v.liquidationFresh, "fresh, as execution sees it");
-        assertGt(_previewUsdc(), 0, "borrowable");
-        _borrowUsdc(1e6, "");
-        _round(usdcPrimary, 1e8, block.timestamp + 5);
-        _round(feedsOf[address(usdc)][1], 1e8, block.timestamp + 5);
-        v = _debtView();
-        assertFalse(v.borrowFresh, "a timestamp in the future: the RiskModule refuses");
-        assertFalse(v.liquidationFresh, "no readable route: the accepted price is closed to liquidation too");
-        assertEq(_previewUsdc(), 0, "no borrow");
-        _borrowUsdc(1e6, _tooOld(60));
-    }
-
-    // TEST-247 verifies: REQ-LENS-030, REQ-LENS-016, REQ-SWAP-091
-    /// @notice Liquidation side at the boundary: a leg aged exactly its liquidation age limit is fresh for the Lens and
-    /// `liquidate` runs; one second older is stale for both (`DebtPriceStale`). The ParameterStore keeps a feed's
-    /// `liquidationPriceMaxAge` equal to its `feedMaxAge`, so a primary leg past it is no longer served; the served leg
-    /// here is the USDC alternate (the primary quiet past its `feedMaxAge`), whose liquidation limit is its
-    /// `borrowPriceMaxAge`, lowered to `LIQ_AGE` by the timelock.
-    function test_TEST_247_debtLiquidationAgeBoundaryMatchesExecution() public {
-        (address bobProxy,) = _usdcAccountBelowOne(bob, mV);
-        OracleFeedMock usdcAlternate = feedsOf[address(usdc)][1];
-        vm.prank(address(timelock));
-        store.tightenBorrowPriceMaxAge(address(usdcAlternate), LIQ_AGE);
-        _round(usdcPrimary, 1e8, block.timestamp - FEED_AGE - 1);
-        _round(usdcAlternate, 1e8, block.timestamp - LIQ_AGE - 1);
-        LiquidationPreview memory p = lens.previewLiquidation(bobProxy, usdcReserveIdV, block.timestamp + 120);
-        assertFalse(p.debtPriceFresh, "max + 1: stale");
-        usdc.mint(keeper, p.params.debtToCover);
-        vm.startPrank(keeper);
-        usdc.approve(lpVaultSwap, p.params.debtToCover);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DebtPriceStale.selector, usdcReserveIdV));
-        lvs.liquidate(p.params);
-        usdc.approve(lpVaultSwap, 0);
-        vm.stopPrank();
-        _round(usdcAlternate, 1e8, block.timestamp - LIQ_AGE);
-        p = lens.previewLiquidation(bobProxy, usdcReserveIdV, block.timestamp + 120);
-        assertTrue(p.debtPriceFresh, "max: fresh");
-        assertTrue(p.pricesUsable, "max: usable");
-        uint256 debtBefore = _debtOn(spokeV, bobProxy, usdcReserveIdV);
-        _liquidateOn(spokeV, keeper, p.params);
-        assertLt(_debtOn(spokeV, bobProxy, usdcReserveIdV), debtBefore, "liquidated at the boundary");
     }
 
     // ─── Route and record cases: Alice's USDC/USDT account ───

@@ -4,14 +4,16 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClMarketConfig, RiskStatus} from "../../../src/amm/types/AmmTypes.sol";
-import {DebtPriceView as OracleDebtView} from "../../../src/oracle/debt-oracle/types/DebtPriceView.sol";
+import {ILPOracle} from "../../../src/oracle/ILPOracle.sol";
 import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {SpeedView} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {AccountGateStatus, Market, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
 import {PriceState, PriceStateView, TokenPriceView} from "../../../src/types/OracleTypes.sol";
 import {PledgePreview} from "../../../src/types/PositionTypes.sol";
 import {CollLPVaultMock} from "./CollateralizationMocks.sol";
+import {DebtPriceView as OracleDebtView} from "./DebtPriceView.sol";
 
 /// @notice The MarketRegistry views the Lens reads, settable (the Lens suites' stand-in for the registry's listing
 /// world; the registry's own suites test the real contract).
@@ -320,6 +322,13 @@ contract LensStoreMock {
     ) external view returns (uint16) {
         return _poolShareSet[key] ? _poolShareMax[key] : 10_000;
     }
+
+    function getFeed(
+        address feed
+    ) external view returns (FeedDef memory d) {
+        (d.decimals, d.borrowPriceMaxAge, d.liquidationPriceMaxAge) =
+        (8, borrowPriceMaxAge[feed], liquidationPriceMaxAge[feed]);
+    }
 }
 
 /// @notice The RiskModule views the Lens reads, settable per proxy, market and debt reserve.
@@ -496,6 +505,18 @@ contract LensLPOracleMock {
         _tokens[i].updatedAt = [at0, at1];
     }
 
+    /// @notice The round time recorded for `feed` on any token's route, 0 for a feed on no route.
+    function updatedAtOf(
+        address feed
+    ) external view returns (uint64) {
+        for (uint256 i = 0; i < _tokens.length; ++i) {
+            for (uint256 k = 0; k < 2; ++k) {
+                if (_tokens[i].feeds[k] == feed) return _tokens[i].updatedAt[k];
+            }
+        }
+        return 0;
+    }
+
     function setTokenPrice(
         uint256 i,
         uint256 price
@@ -567,12 +588,37 @@ contract LensLPOracleMock {
         return (acceptedPrice, acceptedAt);
     }
 
-    function getTokenPrices() external view returns (uint256[] memory prices, uint64 servedUpdatedAt, PriceState s) {
+    function getTokenPrices() external view returns (uint256[] memory prices, uint64 updatedAt) {
         prices = new uint256[](_tokens.length);
         for (uint256 i = 0; i < _tokens.length; ++i) {
             prices[i] = _tokens[i].price;
         }
-        (servedUpdatedAt, s) = (acceptedAt, state);
+        updatedAt = acceptedAt;
+    }
+
+    function getPriceStatus() external view returns (ILPOracle.PriceStatus memory s) {
+        (s.answer, s.updatedAt) = (latestAnswer(), acceptedAt);
+        s.liquidationFresh = (state == PriceState.Live || state == PriceState.Drifting) && !liquidationPaused
+            && !pauseActive && !expired;
+        s.borrowFresh = s.liquidationFresh && state == PriceState.Live && borrowAllowed;
+    }
+
+    function tokens() external view returns (address[] memory list) {
+        list = new address[](_tokens.length);
+        for (uint256 i = 0; i < list.length; ++i) {
+            list[i] = _tokens[i].token;
+        }
+    }
+
+    function feedsOf(
+        uint256 i
+    ) external view returns (address[] memory feeds) {
+        uint256 n = (_tokens[i].feeds[0] != address(0) ? 1 : 0) + (_tokens[i].feeds[1] != address(0) ? 1 : 0);
+        feeds = new address[](n);
+        n = 0;
+        for (uint256 k = 0; k < 2; ++k) {
+            if (_tokens[i].feeds[k] != address(0)) feeds[n++] = _tokens[i].feeds[k];
+        }
     }
 
     function getPriceState() external view returns (PriceStateView memory v) {
@@ -680,6 +726,16 @@ contract LensDebtOracleMock {
         }
         v.liquidationPaused = state != PriceState.Live || extraLiquidationPause;
         v.borrowAllowed = state == PriceState.Live && !extraBorrowStop;
+    }
+
+    /// @notice The debt source as a Chainlink feed: a current round while Live, open and within the route's borrow
+    /// age, otherwise a round at time 0.
+    function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
+        uint32 maxAge = this.borrowPriceMaxAge();
+        bool ok = state == PriceState.Live && !extraLiquidationPause && !extraBorrowStop && servedAt <= block.timestamp
+            && (store == address(0) || block.timestamp - servedAt <= maxAge);
+        uint256 at = ok ? block.timestamp : 0;
+        return (0, latestAnswer, at, at, 0);
     }
 }
 
@@ -805,5 +861,22 @@ contract LensFirstLossLayerMock {
             mstore(32, 0)
             return(0, add(32, mul(32, eq(m, 3))))
         }
+    }
+}
+
+/// @notice A Chainlink feed whose latest round is dated at the time its LensLPOracleMock records for it; the fixture
+/// etches this code onto each listed feed address.
+contract LensFeedEcho {
+    LensLPOracleMock internal immutable _ORACLE;
+
+    constructor(
+        LensLPOracleMock oracle
+    ) {
+        _ORACLE = oracle;
+    }
+
+    function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
+        uint64 at = _ORACLE.updatedAtOf(address(this));
+        return (1, 1e8, at, at, 1);
     }
 }

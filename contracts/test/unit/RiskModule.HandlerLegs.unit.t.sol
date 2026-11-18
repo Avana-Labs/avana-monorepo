@@ -41,20 +41,6 @@ contract RiskModuleHandlerLegsUnitTest is RiskModuleFixture {
         );
     }
 
-    function test_TEST_095_staleFeedRefusesTheFailingSeeds() public {
-        // Seeds 2, 3235 and 3.12e28 each open every gate and then close gate 2, a feed older than its
-        // borrowPriceMaxAge.
-        vm.expectRevert(RiskModuleHandler.Skipped.selector);
-        handler.withdraw(2);
-        vm.expectRevert(RiskModuleHandler.Skipped.selector);
-        handler.withdraw(3235);
-        vm.expectRevert(RiskModuleHandler.Skipped.selector);
-        handler.withdraw(31_200_000_000_000_000_000_000_000_000);
-        assertEq(handler.withdrawals(), 0, "a stale-feed pre-check passed");
-        assertEq(handler.violations(), 0, "a pre-check passed with a gate closed");
-        assertEq(handler.refusedWhileClear(), 0, "a pre-check refused with every gate open");
-    }
-
     function test_TEST_095_openGatesPass() public {
         // A seed whose mode opens every gate and closes none (keccak(seed) % 4 == 1).
         uint256 seed;

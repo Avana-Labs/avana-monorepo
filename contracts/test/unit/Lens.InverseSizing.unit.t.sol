@@ -278,6 +278,6 @@ contract LensInverseSizingUnitTest is LensFixture {
     }
 
     function _prices() internal view returns (uint256[] memory prices) {
-        (prices,,) = lpo.getTokenPrices();
+        (prices,) = lpo.getTokenPrices();
     }
 }

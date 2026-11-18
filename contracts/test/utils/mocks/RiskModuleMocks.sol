@@ -5,10 +5,11 @@ pragma solidity 0.8.28;
 
 import {RiskStatus} from "../../../src/amm/types/AmmTypes.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {DebtPriceView} from "../../../src/oracle/debt-oracle/types/DebtPriceView.sol";
+import {ILPOracle} from "../../../src/oracle/ILPOracle.sol";
 import {MarketSpeedLimits, SpeedLimit} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {OracleConfig, PriceState, PriceStateView, TokenPriceView} from "../../../src/types/OracleTypes.sol";
 import {PledgeCounters} from "../../../src/types/PositionTypes.sol";
+import {DebtPriceView} from "./DebtPriceView.sol";
 import {RegistryHubMock, RegistrySpokeMock} from "./MarketRegistryAaveMocks.sol";
 import {
     RegistryAdapterMock,
@@ -481,6 +482,8 @@ contract RiskLPOracleMock {
     uint256 public pokes;
     uint256 public accepted = 2e8;
     bool public pokeReverts;
+    /// @notice The legs' borrow age limit; 0 leaves the legs' ages out of `borrowFresh`.
+    uint64 public legMaxAge;
     PriceStateView internal _pv;
 
     constructor(
@@ -517,6 +520,14 @@ contract RiskLPOracleMock {
         _pv.state = s;
         _pv.reasons = reasons;
         _pv.borrowAllowed = borrowAllowed;
+    }
+
+    /// @notice As the LPOracle reads each leg's round age against its borrow limit: a leg older than `age` fails
+    /// `borrowFresh`.
+    function setLegMaxAge(
+        uint64 age
+    ) external {
+        legMaxAge = age;
     }
 
     function setPokeReverts(
@@ -567,6 +578,32 @@ contract RiskLPOracleMock {
         ++pokes;
         return _pv.state;
     }
+
+    /// @notice The stateless oracle's report: fresh to borrow while Live and allowed, to liquidate while Live or
+    /// Drifting.
+    function getPriceStatus() external view returns (ILPOracle.PriceStatus memory s) {
+        s.answer = _pv.answer;
+        s.updatedAt = uint64(block.timestamp);
+        s.borrowFresh = _pv.state == PriceState.Live && _pv.borrowAllowed && _legsFresh();
+        s.liquidationFresh = _pv.state == PriceState.Live || _pv.state == PriceState.Drifting;
+    }
+
+    function _legsFresh() internal view returns (bool) {
+        if (legMaxAge == 0) return true;
+        for (uint256 i = 0; i < _pv.tokens.length; ++i) {
+            uint64 at = _pv.tokens[i].legUpdatedAt[0];
+            if (at > block.timestamp || block.timestamp - at > legMaxAge) return false;
+        }
+        return true;
+    }
+
+    function getTokenPrices() external view returns (uint256[] memory prices, uint64 updatedAt) {
+        prices = new uint256[](_pv.tokens.length);
+        for (uint256 i = 0; i < prices.length; ++i) {
+            prices[i] = _pv.tokens[i].quote;
+        }
+        updatedAt = uint64(block.timestamp);
+    }
 }
 
 /// @title RiskDebtOracleMock
@@ -603,6 +640,15 @@ contract RiskDebtOracleMock is RegistryDebtOracleMock {
     function poke() external returns (PriceState) {
         ++pokes;
         return _dv.state;
+    }
+
+    /// @notice The debt source as a Chainlink feed: a current round while the report is Live, allowed and within
+    /// `borrowPriceMaxAge`, otherwise a round at time 0.
+    function latestRoundData() external view override returns (uint80, int256, uint256, uint256, uint80) {
+        bool fresh = _dv.state == PriceState.Live && _dv.borrowAllowed && _dv.servedUpdatedAt <= block.timestamp
+            && block.timestamp - _dv.servedUpdatedAt <= borrowPriceMaxAge;
+        uint256 at = fresh ? block.timestamp : 0;
+        return (0, latestAnswer, at, at, 0);
     }
 }
 

@@ -6,7 +6,7 @@
 //   1. a new Hub, `exotic` (tier 3), with its Lend Spoke `lendExotic`, a Uniswap v3 CDP Spoke `uniV3Exotic` and a
 //      Slipstream CDP Spoke `slipExotic`;
 //   2. three debt assets new to Aave: PEPE (a meme coin, 18 decimals, $0.00001), AAVE (a governance token) and WBTC
-//      (8 decimals, $95,000), each with its DebtOracle. The exotic Hub lends USDC, PEPE, AAVE and WBTC; borrowing is
+//      (8 decimals, $95,000), each priced by its own Chainlink feed. The exotic Hub lends USDC, PEPE, AAVE and WBTC; borrowing is
 //      mixed per Spoke: uniV3Exotic all four, slipExotic USDC and WBTC, and WBTC also on the volatile Hub's
 //      uniV3Volatile (its listed markets get routes into WBTC);
 //   3. seven collateral tokens (PEPE, AAVE, UNI, WBTC, THIN, AERO, cbBTC) and seven markets: Uniswap v3 PEPE/USDC 1 %,
@@ -71,7 +71,7 @@ c.listing.spokes.push(
 );
 
 // 2. The new debt assets. Draw caps, loss-layer minimums and the (Hub, asset) credit line and speed limit are in whole
-// tokens, so each is sized to the token's price: PEPE's are in the billions. A DebtOracle's floor rounding allowance is
+// tokens, so each is sized to the token's price: PEPE's are in the billions. A debt asset's floor rounding allowance is
 // at most $1 of the asset (ParameterStore ROUNDING_ALLOWANCE_USD_MAX).
 type DebtAsset = {
   symbol: string;
@@ -144,7 +144,6 @@ for (const d of DEBT_ASSETS) {
     fixedPrice: false,
     stressRiseBps: d.stressRiseBps,
     floorRoundingAllowance: d.floorRoundingAllowance,
-    debtOraclePokeMinGas: 1000000,
     ...(d.creditLineWhole ? { creditLineWhole: d.creditLineWhole } : {}),
     ...(d.debtMinWhole ? { debtMinWhole: d.debtMinWhole, debtMaxWhole: d.debtMaxWhole } : {}),
     address: `$world:.tokens.${d.symbol}`,

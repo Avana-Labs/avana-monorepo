@@ -4,35 +4,19 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequencerUptimeFeed.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {IRiskModuleErrors} from "./IRiskModuleErrors.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
-import {RiskModuleMath} from "./RiskModuleMath.sol";
 import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleBase
 /// @notice Implementation immutables and the reads shared by the RiskModule and its logic contracts.
 /// @dev Holds no state.
 abstract contract RiskModuleBase is IRiskModuleErrors {
-    uint256 internal constant SEQUENCER_CALL_GAS = 50_000;
-    /// @dev ABI length of `latestRoundData()`: five words.
-    uint256 internal constant ROUND_LENGTH = 160;
-    uint8 internal constant SEQUENCER_UP = 0;
-    uint8 internal constant SEQUENCER_DOWN = 1;
-    uint8 internal constant SEQUENCER_GRACE = 2;
-    /// @dev LPOracle market reason bits that make a market Drifting, and the USD-band breach bit.
-    uint256 internal constant PRICE_DRIFTING_BITS = 0x7c;
-    uint256 internal constant PRICE_USD_BAND = 1 << 3;
-    /// @dev LPOracle token reason bits SECOND_SOURCE_DISAGREE and SECOND_SOURCE_UNAVAILABLE.
-    uint32 internal constant TOKEN_SECOND_SOURCE_BITS = (1 << 4) | (1 << 5);
-    /// @dev LPOracle market reason bit: some token's second source unconfirmed.
-    uint256 internal constant PRICE_SECOND_SOURCE_BIT = 1 << 16;
     /// @dev A pool-share cap of 10,000 bps is no limit.
     uint256 internal constant NO_POOL_SHARE_CAP = 10_000;
 
@@ -103,22 +87,11 @@ abstract contract RiskModuleBase is IRiskModuleErrors {
         key = keccak256(abi.encode(m.integrationId, m.pool, m.poolId));
     }
 
-    /// @dev The LPOracle's last accepted price, 8 decimals.
-    function _accepted(
-        address lpOracle
-    ) internal view returns (uint256 price8) {
-        // The time of the accepted price is not used.
-        // forge-lint: disable-next-line(unused-return)
-        (price8,) = ILPOracle(lpOracle).lastAcceptedPrice();
-    }
-
+    /// @dev The LPOracle's price, 8 decimals, used for the cap charges.
     function _capPrice(
         address lpOracle
     ) internal view returns (uint256 price8) {
-        int256 fresh = ILPOracle(lpOracle).getPriceState().freshAnswer;
-        // A positive int256 is cast; a failed market's 0 keeps the accepted price.
-        // forge-lint: disable-next-line(unsafe-typecast)
-        price8 = RiskModuleMath.capPrice(_accepted(lpOracle), fresh > 0 ? uint256(fresh) : 0);
+        return _served(lpOracle);
     }
 
     /// @dev The LPOracle's served price, 8 decimals, at least 1.
@@ -129,32 +102,6 @@ abstract contract RiskModuleBase is IRiskModuleErrors {
         // `latestAnswer` is at least 1 in every state; a non-positive value reads as 1.
         // forge-lint: disable-next-line(unsafe-typecast)
         price8 = a > 0 ? uint256(a) : 1;
-    }
-
-    /// @dev Sequencer gate: `Down` while the feed reports down, is unreadable or answers other than 160 bytes.
-    function _sequencerState() internal view returns (uint8 state, uint256 graceEndsAt) {
-        (address feed, uint32 gracePeriod) = _store().sequencer();
-        if (feed == address(0)) return (SEQUENCER_UP, 0);
-        (bool ok, bytes memory ret) = RiskModuleMath.staticRead(
-            feed, SEQUENCER_CALL_GAS, abi.encodeCall(ISequencerUptimeFeed.latestRoundData, ()), ROUND_LENGTH + 1
-        );
-        ok = ok && ret.length == ROUND_LENGTH;
-        (, uint256 answerWord) = RiskModuleMath.wordAt(ret, 32);
-        (, uint256 startedAt) = RiskModuleMath.wordAt(ret, 64);
-        // A two's-complement word read as int256: 0 is up, 1 is down, anything else is unknown.
-        // forge-lint: disable-next-line(unsafe-typecast)
-        int256 answer = int256(answerWord);
-        (bool up,,, bool inGrace,) =
-            LPPriceMath.sequencerStatus(true, ok, answer, startedAt, block.timestamp, gracePeriod);
-        if (!up) return (SEQUENCER_DOWN, 0);
-        if (inGrace) return (SEQUENCER_GRACE, startedAt + gracePeriod);
-        return (SEQUENCER_UP, 0);
-    }
-
-    function _requireSequencerUp() internal view {
-        (uint8 state, uint256 graceEndsAt) = _sequencerState();
-        if (state == SEQUENCER_DOWN) revert SequencerDown();
-        if (state == SEQUENCER_GRACE) revert SequencerGrace(graceEndsAt);
     }
 
     /// @dev Collateral factor of the market's reserve on its latest dynamic key, bps.

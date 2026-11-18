@@ -172,8 +172,6 @@ export function renderAddresses(m: Model, problems: string[]): string {
     "",
   );
 
-  const fixed = fixedAssets(m).map((d) => d.symbol);
-  const fixedNote = fixed.length ? ` ${list(fixed)} ${fixed.length > 1 ? "are" : "is"} priced at a fixed $1 and ${fixed.length > 1 ? "need" : "needs"} none.` : "";
   const core: string[][] = [
     ["AvanaTimelock", "Owns and upgrades every Avana contract on this chain. Each change waits out a delay; only the governance Safe and the Aave governance executor can propose one. Immutable.", a.timelock.address],
     ["MarketRegistry", "Records every Hub, CDP Spoke, AMM integration, market, debt reserve and swap route Avana lists on this chain, and holds each Hub's pause switch. Upgradeable through the AvanaTimelock.", a.marketRegistry.address],
@@ -202,15 +200,6 @@ export function renderAddresses(m: Model, problems: string[]): string {
     );
   }
   for (const d of m.debtAssets) {
-    if (d.debtOracle) {
-      core.push([
-        `DebtOracle, ${d.symbol}`,
-        `Price source of the ${d.symbol} debt reserve on every CDP Spoke's AaveOracle, with failover to an alternate and a standby route.${fixedNote} Upgradeable through the AvanaTimelock.`,
-        d.debtOracle,
-      ]);
-    }
-  }
-  for (const d of m.debtAssets) {
     if (d.fixedPriceSource) {
       core.push([
         `Fixed $1 price source, ${d.symbol}`,
@@ -227,11 +216,11 @@ export function renderAddresses(m: Model, problems: string[]): string {
     "",
     table(["Name", "Description", "Address"], core),
     "",
-    "> Each market's vault token and LPOracle proxy are under Markets. Its swap routes, a primary and a backup route per pool token and debt asset, belong to the market and are recorded in the MarketRegistry and the release manifest.",
+    "> Each market's vault token and LPOracle are under Markets. Its swap routes, a primary and a backup route per pool token and debt asset, belong to the market and are recorded in the MarketRegistry and the release manifest.",
     "",
     "### Markets",
     "",
-    "Each market has its own vault token, the ERC-20 a pledge mints and the Spoke holds as collateral, and its own LPOracle proxy, which prices the vault token for the Spoke's AaveOracle. Vault tokens are immutable; each LPOracle is upgradeable through the AvanaTimelock.",
+    "Each market has its own vault token, the ERC-20 a pledge mints and the Spoke holds as collateral, and its own LPOracle, which prices the vault token for the Spoke's AaveOracle. Vault tokens and LPOracles are immutable.",
     "",
     table(
       ["Spoke", "Market", "Market ID", "Vault token", "LPOracle"],
@@ -337,7 +326,7 @@ export function renderAddresses(m: Model, problems: string[]): string {
     }
   }
   if (m.manifest.sequencerFeed) {
-    ext.push(["Chainlink L2 sequencer uptime feed", "While it reports the sequencer down, borrow-side prices fail closed and liquidation pauses.", m.manifest.sequencerFeed]);
+    ext.push(["Chainlink L2 sequencer uptime feed", "Recorded in the ParameterStore; Avana's borrow and liquidation gates do not read it.", m.manifest.sequencerFeed]);
   }
   for (const sym of pageTokens(m)) {
     const fixed = m.debtAssets.find((d) => d.symbol === sym)?.fixedPrice;
@@ -480,7 +469,6 @@ export function renderParameters(m: Model, problems: string[]): string {
   const feeds: string[][] = m.debtAssets.map((d) => {
     let source: string;
     if (d.fixedPrice) source = d.fixedPriceSource ? `[Fixed $1 price source, ${d.symbol}](${link(m, "addresses", "avana-core")})` : "Fixed $1 price (Aave)";
-    else if (d.debtOracle) source = `[DebtOracle, ${d.symbol}](${link(m, "addresses", "avana-core")})`;
     else source = `[${d.symbol} / USD price feed](${link(m, "addresses", "external-dependencies")})`;
     return ["Lend Spoke and every CDP Spoke", d.symbol, source];
   });
@@ -563,9 +551,9 @@ export function renderParameters(m: Model, problems: string[]): string {
       [
         "`sequencer.feed`",
         "Chainlink L2 sequencer uptime feed",
-        `While it reports the sequencer down, borrow-side prices fail closed and liquidation pauses. Its address is on [Contract Addresses](${link(m, "addresses", "external-dependencies")}).`,
+        `Recorded in the ParameterStore; Avana's borrow and liquidation gates do not read it. Its address is on [Contract Addresses](${link(m, "addresses", "external-dependencies")}).`,
       ],
-      ["`sequencer.gracePeriod`", seconds(m.sequencerGraceSeconds), "Time after a sequencer restart during which borrowing and new pledges are refused (bounds 600–7,200 s)."],
+      ["`sequencer.gracePeriod`", seconds(m.sequencerGraceSeconds), "Grace period recorded with the feed in the ParameterStore (bounds 600–7,200 s); no Avana gate reads it."],
     );
   } else {
     settings.push([
@@ -592,9 +580,6 @@ export function renderParameters(m: Model, problems: string[]): string {
     if (unset) problems.push("missing: routeDepthThreshold of some swap routes (listing.markets[].routes[].depthThreshold)");
     const vals = [...new Set(thresholds)].sort((p, q) => p - q).map((v) => int(v));
     settings.push(["`routeDepthThreshold`", vals.join(" or ") || "MISSING", "Whole units of the route's debt asset each approved swap route must deliver within the slippage allowance in the stress case, set on every route slot at listing."]);
-  }
-  for (const d of m.debtAssets) {
-    if (d.debtOracle) settings.push([`\`pokeMinGas\` (DebtOracle, ${d.symbol})`, `${int(d.debtOraclePokeMinGas ?? Number.NaN)} gas`, `Minimum gas a \`poke()\` of the ${d.symbol} DebtOracle needs at entry.`]);
   }
   out.push("### Chain settings", "", table(["Parameter", "Value", "Description"], settings));
   return out.join("\n");

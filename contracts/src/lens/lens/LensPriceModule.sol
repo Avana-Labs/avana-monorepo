@@ -5,9 +5,9 @@ pragma solidity 0.8.28;
 
 import {IFlashSource} from "../../flash/IFlashSource.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {PauseState} from "../../types/MarketTypes.sol";
-import {PriceState, PriceStateView, PriceView} from "../../types/OracleTypes.sol";
+import {PriceState, PriceView} from "../../types/OracleTypes.sol";
 import {LensBase} from "./LensBase.sol";
 import {LensDeleverage} from "./LensDeleverage.sol";
 import {DebtPriceView, DeleverageSizing} from "./types/LensTypes.sol";
@@ -85,30 +85,21 @@ contract LensPriceModule is LensDeleverage {
         return x > 0 && _healthAt(d, units, x) >= target;
     }
 
-    /// @dev LPOracle reason bit ALTERNATE_PAST_BORROW_AGE, which LPVaultSwap treats as Cached.
-    uint256 internal constant ALTERNATE_PAST_BORROW_AGE = 1 << 12;
-
     function getPriceState(
         address vaultToken
     ) external view returns (PriceView memory v) {
         _unlocked();
         (, address lpOracle) = _lpOracleOf(vaultToken);
-        PriceStateView memory ps = ILPOracle(lpOracle).getPriceState();
+        ILPOracle.PriceStatus memory st = ILPOracle(lpOracle).getPriceStatus();
         (v.blockNumber, v.timestamp, v.vaultToken, v.feed) = (block.number, block.timestamp, vaultToken, lpOracle);
-        (v.state, v.liquidationState, v.reasons) = (ps.state, _liquidationState(ps), ps.reasons);
+        v.state = st.liquidationFresh ? PriceState.Live : PriceState.Cached;
+        v.liquidationState = v.state;
+        // The oracle serves at least 1; a non-positive answer is reported as 0.
         // forge-lint: disable-next-line(unsafe-typecast)
-        v.price = ps.answer > 0 ? uint256(ps.answer) : 0;
-        (v.acceptedPrice, v.acceptedAt) = ILPOracle(lpOracle).lastAcceptedPrice();
-        v.inputs = _inputs(ps.tokens);
-        v.tokenDeviationBps = new uint256[](ps.tokens.length);
-        for (uint256 i = 0; i < ps.tokens.length; ++i) {
-            v.tokenDeviationBps[i] = ps.tokens[i].deviationBps;
-        }
-        (v.disagreeSince, v.disagreementPauseActive, v.disagreementExpired) =
-        (ps.disagreeSince, ps.disagreementPauseActive, ps.disagreementExpired);
-        (v.recoveredAt, v.graceEndsAt) = (ps.recoveredAt, ps.graceEndsAt);
-        v.graceHealthFactor = _store().graceHealthFactor();
-        v.borrowAllowed = ps.borrowAllowed;
+        v.price = st.answer > 0 ? uint256(st.answer) : 0;
+        (v.acceptedPrice, v.acceptedAt) = (v.price, st.updatedAt);
+        v.inputs = _inputs(lpOracle);
+        v.borrowAllowed = st.borrowFresh;
     }
 
     function getDebtPriceState(
@@ -139,18 +130,6 @@ contract LensPriceModule is LensDeleverage {
     ) internal view returns (uint256 marketId, address lpOracle) {
         marketId = _registry().marketOfVaultToken(vaultToken);
         lpOracle = _market(marketId).lpOracle;
-    }
-
-    /// @dev The state LPVaultSwap applies when the market is seized (Expired, Cached or Drifting override the state).
-    function _liquidationState(
-        PriceStateView memory ps
-    ) internal pure returns (PriceState s) {
-        s = ps.state;
-        if (ps.disagreementExpired) return PriceState.Expired;
-        if (uint8(s) < uint8(PriceState.Cached) && ps.reasons & ALTERNATE_PAST_BORROW_AGE != 0) {
-            return PriceState.Cached;
-        }
-        if (s == PriceState.Live && ps.disagreementPauseActive) s = PriceState.Drifting;
     }
 
     /// @param core The nine core addresses, in `LensBase` order.

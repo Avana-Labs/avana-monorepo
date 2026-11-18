@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Avana Labs
 // Publishes a fresh OCR2 round, at each feed's current answer, on every feed of the test-network world
 // (deployments-local/<network>/world.json): the local rehearsal moves the chain clock by the timelock delays (5 days,
-// 12 hours), after which every feed is older than its 86,400 s heartbeat plus margin and every LPOracle and DebtOracle
-// would read Cached or Expired. A live Chainlink network publishes at least once per heartbeat; this does the same.
+// 12 hours), after which every feed is older than its 86,400 s heartbeat plus margin and no LPOracle or debt price
+// would be fresh. A live Chainlink network publishes at least once per heartbeat; this does the same.
 // `--symbols A,B` limits the refresh to those tokens; `--price SYMBOL=answer8` moves one token's feeds to a new answer.
 // `--every <seconds>` keeps running and publishes a round on every feed at that interval (a test network's feeds,
 // whose heartbeat is 86,400 s: script/testnet/testnet.ts feeds). The oracles sign from the encrypted keystores of

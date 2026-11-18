@@ -70,58 +70,6 @@ contract LPVaultSwapPriceGatesFuzzTest is LPVaultSwapUnitBase {
         return PriceState(g.debtState % 4) == PriceState.Live && !g.debtPaused && (g.debtLegAge % 120_000) <= 88_200;
     }
 
-    /// @notice `liquidate` over every combination: settles exactly when every gate passes, else the first failing
-    /// gate's error with the debt unchanged.
-    // TEST-049 verifies: REQ-SWAP-008, REQ-SWAP-050, REQ-SWAP-091, REQ-SWAP-110, INV-030, INV-059, Q-128, Q-208
-    function testFuzz_TEST_049_liquidateGates(
-        Gates memory g
-    ) public {
-        _apply(g);
-        bytes memory expected;
-        if (!_marketOk(g)) {
-            expected = abi.encodeWithSelector(ILPVaultSwapBase.StalePrice.selector);
-        } else if (!_debtOk(g)) {
-            expected = abi.encodeWithSelector(ILPVaultSwapBase.DebtPriceStale.selector, usdcReserveId);
-        } else if (g.grace && !g.graceMet) {
-            expected = abi.encodeWithSelector(ILPVaultSwapBase.GraceHealthFactor.selector);
-        }
-        uint256 debt = _debtOf(proxy, usdcReserveId);
-        if (expected.length != 0) {
-            _fund(usdc, keeper, 1950e6);
-            vm.prank(keeper);
-            vm.expectRevert(expected);
-            lvs.liquidate(_params(proxy, 1950e6));
-            assertEq(_debtOf(proxy, usdcReserveId), debt, "a refusal repays nothing");
-        } else {
-            LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, 1950e6));
-            assertGt(r.unitsSeized, 0, "every gate passed: settles");
-            assertLt(_debtOf(proxy, usdcReserveId), debt, "debt repaid");
-        }
-    }
-
-    /// @notice `settlePending` over the same combinations: the price gates apply, the grace bound does not.
-    // TEST-170 verifies: REQ-SWAP-066, REQ-SWAP-091, REQ-SWAP-110
-    function testFuzz_TEST_170_pendingGates(
-        Gates memory g
-    ) public {
-        _seizeAndKeep(proxy, 1000e6);
-        _liquidateAs(keeper, _params(proxy, 500e6));
-        uint256 pending = coll.getPending(address(vt)).units;
-        _apply(g);
-        if (!_marketOk(g)) {
-            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.StalePrice.selector));
-            lvs.settlePending(MARKET_ID, usdcReserveId);
-            assertEq(coll.getPending(address(vt)).units, pending, "nothing settled");
-        } else if (!_debtOk(g)) {
-            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DebtPriceStale.selector, usdcReserveId));
-            lvs.settlePending(MARKET_ID, usdcReserveId);
-            assertEq(coll.getPending(address(vt)).units, pending, "nothing settled");
-        } else {
-            (uint256 units,,) = lvs.settlePending(MARKET_ID, usdcReserveId);
-            assertGt(units, 0, "settled, whatever the grace state");
-        }
-    }
-
     /// @notice The DebtOracle's legs are checked only for a reserve that is not GHO's fixed price: a GHO repayment
     /// settles with the USDC DebtOracle in any state.
     // TEST-226 verifies: REQ-SWAP-091, REQ-SWAP-110, Q-208

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Avana Labs
 // Fork tests on Base at a pinned block: the keeper's reads of contracts Avana does not deploy. The L1 data fee from
 // the OP Stack GasPriceOracle (the fee ceiling's worst-case cost), the Aave V3 Pool's implementation slot and reserves
-// behind flash sizing and M-17, Chainlink ETH/USD behind the oracle poke cadence, and the second-provider health-factor
+// behind flash sizing and M-17, and the second-provider health-factor
 // read against a live Aave V4 Spoke (Spoke.getUserAccountData through Multicall3). Not run without RPC_BASE.
 
 import { describe, expect, it } from "vitest";
@@ -30,7 +30,6 @@ const POOL_IMPLEMENTATION_CODE_HASH = "0xa4d2855cd851dc69a5bef2dfc99504ab6b101f2
 const ACL_MANAGER: Address = "0x43955b0899Ab7232E3a454cf84AedD22Ad46FD33";
 const USDC: Address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const A_USDC: Address = "0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB";
-const ETH_USD: Address = "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70";
 const MULTICALL3: Address = "0xcA11bde05977b3631167028862bE2a173976CA11";
 /** The tokenized-equities Spoke of Aave V4's equities Hub on Base (EXT-031), and one of its borrowers at BASE_BLOCK. */
 const V4_SPOKE: Address = "0x17905Db0e4A3514467539956c084180616AE7B8D";
@@ -112,14 +111,6 @@ describe.skipIf(!RPC_BASE)(`fork: Base at block ${BASE_BLOCK} (not run without R
         aclManager: ACL_MANAGER,
       });
     });
-  });
-
-  it("reads Chainlink ETH/USD inside its 1,200 s heartbeat", async () => {
-    const [roundId, answer, , updatedAt] = await reader.feedRound(ETH_USD);
-    expect(roundId).toBe(55_340_232_221_128_668_978n);
-    expect(answer).toBe(178_362_029_145n);
-    expect(updatedAt).toBe(1_794_690_326n);
-    expect(ctx.blockTimestamp - updatedAt).toBeLessThanOrEqual(1_200n);
   });
 
   describe("second-provider health factor (Aave V4 Spoke.getUserAccountData)", () => {

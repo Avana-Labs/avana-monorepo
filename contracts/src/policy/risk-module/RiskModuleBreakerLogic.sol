@@ -7,10 +7,8 @@ import {RiskStatus} from "../../amm/types/AmmTypes.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
-import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {DriftReason, Market} from "../../types/MarketTypes.sol";
-import {PriceState, PriceStateView} from "../../types/OracleTypes.sol";
 import {BreakerReasons} from "../market-registry/types/Breaker.sol";
 import {IssuerProbe, IssuerProbes} from "../market-registry/types/IssuerProbe.sol";
 import {DebtReserveDef} from "../market-registry/types/MarketRegistryTypes.sol";
@@ -23,7 +21,7 @@ import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleBreakerLogic
 /// @notice Circuit-breaker conditions and tripped state of markets and debt reserves.
-/// @dev Views only, except `pokeOracles`, whose only state changes are the oracles' own `poke()`.
+/// @dev Views only.
 // View calls and gas-limited probes in loops over at most 8 pool tokens (at most two probe reads each).
 // forge-lint: disable-start(calls-loop)
 contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
@@ -48,22 +46,6 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
     /// @inheritdoc IRiskModuleLogic
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("RiskModuleBreakerLogic"), _IMMUTABLES_HASH);
-    }
-
-    /// @inheritdoc IRiskModuleBreakerLogic
-    function pokeOracles(
-        uint256 marketId
-    ) external override {
-        Market memory m = _market(marketId);
-        // The pokes store observations only; the conditions read the price state themselves.
-        // forge-lint: disable-next-line(unused-return)
-        ILPOracle(m.lpOracle).poke();
-        uint256[] memory ids = _registry().getDebtReserveIds(m.spoke);
-        for (uint256 i = 0; i < ids.length; ++i) {
-            DebtReserveDef memory d = _registry().getDebtReserve(m.spoke, ids[i]);
-            // forge-lint: disable-next-line(unused-return)
-            if (!d.fixedPrice) IDebtOracle(d.priceSource).poke();
-        }
     }
 
     /// @inheritdoc IRiskModuleBreakerLogic
@@ -137,12 +119,11 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
         uint256 poolUnits
     ) internal view returns (uint32 live) {
         Market memory m = _market(marketId);
-        PriceStateView memory pv = ILPOracle(m.lpOracle).getPriceState();
-        if (pv.state != PriceState.Live || !pv.borrowAllowed) live |= BreakerReasons.ORACLE;
+        if (!ILPOracle(m.lpOracle).getPriceStatus().borrowFresh) live |= BreakerReasons.ORACLE;
         RiskStatus memory rs =
             ILPVault(m.integration).riskStatus(marketId, _store().getMarketParams(marketId).twapWindow);
         if (!rs.depthAvailable || rs.depthUnits == 0) live |= BreakerReasons.POOL_DEPTH;
-        if (_concentrated(m, pv, rs, unitsGiven, poolUnits)) live |= BreakerReasons.POOL_SHARE;
+        if (_concentrated(m, rs, unitsGiven, poolUnits)) live |= BreakerReasons.POOL_SHARE;
         for (uint256 i = 0; i < m.tokens.length; ++i) {
             if (_issuerTripped(m.tokens[i])) {
                 live |= BreakerReasons.ISSUER;
@@ -158,7 +139,6 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
     /// @dev The LP at or below its peg and Avana's pool share above the cap (unknown depth counts as above).
     function _concentrated(
         Market memory m,
-        PriceStateView memory pv,
         RiskStatus memory rs,
         bool unitsGiven,
         uint256 poolUnits
@@ -166,10 +146,9 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
         bytes32 key = _poolKey(m);
         uint256 cap = _store().poolShareMaxBpsOf(key);
         if (cap >= NO_POOL_SHARE_CAP) return false;
-        uint256[] memory quotes = new uint256[](pv.tokens.length);
-        for (uint256 i = 0; i < quotes.length; ++i) {
-            quotes[i] = pv.tokens[i].quote;
-        }
+        // The time of the prices is not used.
+        // forge-lint: disable-next-line(unused-return)
+        (uint256[] memory quotes,) = ILPOracle(m.lpOracle).getTokenPrices();
         if (!RiskModuleMath.atOrBelowPeg(quotes)) return false;
         if (!rs.depthAvailable) return true;
         uint256 units = unitsGiven ? poolUnits : ICollateralization(_COLLATERALIZATION).poolUnits(key);

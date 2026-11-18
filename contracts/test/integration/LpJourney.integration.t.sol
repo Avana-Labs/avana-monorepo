@@ -200,7 +200,6 @@ contract LpJourneyIntegrationTest is RealStackFlows {
         vm.warp(block.timestamp + 30 days);
         vm.roll(block.number + 30 days / BLOCK_TIME);
         _refreshFeeds();
-        _pokeAll();
         uint256 owed = _debtOf(proxy, ghoReserveId);
         _repayVia(carol, alice, mA, ghoReserveId, owed / 4, false);
         assertApproxEqAbs(_debtOf(proxy, ghoReserveId), owed - owed / 4, 1, "a quarter repaid");

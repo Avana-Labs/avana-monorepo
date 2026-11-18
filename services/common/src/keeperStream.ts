@@ -30,15 +30,13 @@ export const KEEPER_ACCOUNT_KINDS = [
   "AaveSpoke.LiquidationCall",
   "AaveSpoke.ReportDeficit",
 ] as const;
-/** Events that refresh a market or a debt reserve. */
-export const KEEPER_MARKET_KINDS = ["LPOracle.PriceStateChanged", "DebtOracle.DebtPriceStateChanged", "LPOracle.GraceStarted", "DebtOracle.DebtGraceStarted"] as const;
 /** Events that drive `settlePending`. */
 export const KEEPER_PENDING_KINDS = ["Collateralization.SeizureReconciled", "Collateralization.PendingSettled"] as const;
 /** Events that change the keeper's own status. */
 export const KEEPER_STATUS_KINDS = ["LPVaultSwap.KeeperAdded", "LPVaultSwap.KeeperRemoved", "MarketRegistry.AddressFrozen", "MarketRegistry.AddressUnfrozen"] as const;
 
 /** Every kind the stream serves; any other `event_log` row is left out. */
-export const KEEPER_STREAM_KINDS: readonly string[] = [...KEEPER_ACCOUNT_KINDS, ...KEEPER_MARKET_KINDS, ...KEEPER_PENDING_KINDS, ...KEEPER_STATUS_KINDS];
+export const KEEPER_STREAM_KINDS: readonly string[] = [...KEEPER_ACCOUNT_KINDS, ...KEEPER_PENDING_KINDS, ...KEEPER_STATUS_KINDS];
 
 /** The last block a page covered, with its hash as the indexer held it. */
 export interface KeeperStreamCursor {

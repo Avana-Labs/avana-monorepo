@@ -202,37 +202,6 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
         );
     }
 
-    // TEST-275 verifies: REQ-ADAPTER-080, REQ-ADAPTER-102, REQ-RISK-081
-    /// @notice While the sequencer gate is Down (reported down, unreadable, or a malformed answer) the call reverts
-    /// `SequencerDown()`; during the grace period after a restart and on a chain with no feed it is open.
-    function test_TEST_275_sequencerGate() public {
-        vm.warp(1_000_000);
-        swap.setDeleverage(400e18, 2e12, 0);
-        AdapterSequencerFeed feed = new AdapterSequencerFeed();
-        pstore.setSequencer(address(feed), 3600);
-        RepayWithCollateralParams memory params = _rwc(MARKET_ID, k1, 200_000_000, debtReserveId);
-        feed.set(1, block.timestamp - 10);
-        _expectRwcRevert(abi.encodeWithSelector(IRiskModuleErrors.SequencerDown.selector), params);
-        feed.set(0, block.timestamp - 10);
-        feed.setMode(1);
-        _expectRwcRevert(abi.encodeWithSelector(IRiskModuleErrors.SequencerDown.selector), params);
-        feed.setMode(2);
-        _expectRwcRevert(abi.encodeWithSelector(IRiskModuleErrors.SequencerDown.selector), params);
-        feed.setMode(3);
-        _expectRwcRevert(abi.encodeWithSelector(IRiskModuleErrors.SequencerDown.selector), params);
-        feed.setMode(0);
-        feed.set(2, block.timestamp - 10);
-        _expectRwcRevert(abi.encodeWithSelector(IRiskModuleErrors.SequencerDown.selector), params);
-        // Up and inside the 3,600 s grace period: open.
-        feed.set(0, block.timestamp - 10);
-        _rwcAs(alice, params);
-        // Up long ago, and no feed at all: open.
-        feed.set(0, 1);
-        _rwcAs(alice, _rwc(MARKET_ID, k1, 200_000_000, debtReserveId));
-        pstore.setSequencer(address(0), 0);
-        _rwcAs(alice, _rwc(MARKET_ID, k1, 200_000_000, debtReserveId));
-    }
-
     // TEST-239 verifies: REQ-ADAPTER-091
     /// @notice LPVaultSwap's own refusals propagate: `DeleverageTooSmall` and `DeleverageShortfall`.
     function test_TEST_239_lpVaultSwapErrorsPropagate() public {

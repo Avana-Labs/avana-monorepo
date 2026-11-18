@@ -9,7 +9,7 @@ import {CounterKind, Pending} from "../../src/custody/collateralization/types/Co
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {INonfungiblePositionManager} from "../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
 import {IUniswapV3Pool} from "../../src/interfaces/external/uniswap/IUniswapV3Pool.sol";
-import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../src/oracle/ILPOracle.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
@@ -134,7 +134,7 @@ contract CollateralizationSurfaceUnitTest is CollateralizationFixture {
             IAaveV4Spoke.borrow.selector,
             IAaveV4Spoke.liquidationCall.selector,
             IAaveV4Spoke.getLiquidationBonus.selector,
-            ILPOracle.getPriceState.selector,
+            ILPOracle.getPriceStatus.selector,
             ILPOracle.latestAnswer.selector,
             IMarketRegistry.pauseState.selector,
             IMarketRegistry.isFrozenAddress.selector
@@ -145,7 +145,6 @@ contract CollateralizationSurfaceUnitTest is CollateralizationFixture {
         assertFalse(_pushes(code, IMarketRegistry.pauseReason.selector), "pause reason read");
         assertFalse(_pushes(code, bytes4(keccak256("isValidSignature(bytes32,bytes)"))), "ERC-1271");
         assertFalse(code.hasOpcode(0, code.length, 0xf4), "DELEGATECALL");
-        assertTrue(_pushes(code, ILPOracle.poke.selector), "scan sanity: the pledge's poke");
         assertTrue(_pushes(code, ICollateralization.pledge.selector), "scan sanity: the dispatcher");
     }
 
@@ -254,52 +253,6 @@ contract CollateralizationSurfaceUnitTest is CollateralizationFixture {
     }
 
     // ─── Upstream errors ───
-
-    /// @notice A failing LPOracle `poke`, a RiskModule refusal and a locked pool in the LPVault each reach the caller
-    /// with the upstream error unchanged, and the pledge moves nothing: the position stays with its owner, no record,
-    /// no credit and no counter.
-    /// @dev Kills: Collateralization catching, re-wrapping or skipping an upstream revert in `pledge`, or a supply check
-    /// added to `pledge` (the last pledge, made before any supply, would revert).
-    // TEST-011 verifies: REQ-VAULT-092, REQ-VAULT-144, REQ-VAULT-020
-    function test_TEST_011_upstreamErrorsPassThroughAndMoveNothing() public {
-        lpVault.mintPosition(KEY_A, alice, MARKET_ID, 5_000_000_000);
-        uint256 before = coll.getCounters(vt, alice).regularUsed;
-        vm.startPrank(adapter);
-        lock.acquire();
-        token.addValidProxy(aliceProxy);
-
-        CollOracleMock(address(oracle)).setFail(true);
-        vm.expectRevert(CollOracleMock.PokeFailed.selector);
-        coll.pledge(alice, aliceProxy, vt, KEY_A, false);
-        CollOracleMock(address(oracle)).setFail(false);
-
-        CollRiskModuleMock(address(riskModule)).setRefuse(true);
-        vm.expectRevert(abi.encodeWithSelector(CollRiskModuleMock.Refused.selector, uint128(5_000_000_000)));
-        coll.pledge(alice, aliceProxy, vt, KEY_A, false);
-        CollRiskModuleMock(address(riskModule)).setRefuse(false);
-
-        lpVault.setPoolLocked(true);
-        vm.expectRevert(bytes4(keccak256("PoolLocked()")));
-        coll.pledge(alice, aliceProxy, vt, KEY_A, false);
-        lpVault.setPoolLocked(false);
-
-        lock.release();
-        vm.stopPrank();
-        assertEq(lpVault.ownerOf(KEY_A), alice, "position not taken");
-        assertEq(coll.recordIdOf(INTEGRATION, KEY_A), 0, "no record");
-        assertEq(coll.getTotalCredited(vt), 0, "no credit");
-        assertEq(coll.getCounters(vt, alice).regularUsed, before, "no counter");
-
-        // With every upstream answering, `pledge` completes before any supply: the proxy has supplied nothing and
-        // Collateralization checks no supply (the Adapter's check runs after the proxy's supply).
-        vm.startPrank(adapter);
-        lock.acquire();
-        (, uint128 credited) = coll.pledge(alice, aliceProxy, vt, KEY_A, false);
-        lock.release();
-        vm.stopPrank();
-        assertEq(credited, 5_000_000_000, "credited");
-        assertEq(_shares(aliceProxy), 0, "nothing supplied when pledge returned");
-    }
 
     /// @notice A market token that reverts on the transfer in `settlePending` reverts the call with the token's own
     /// error; the burn, the pending balance and the pending units stay as they were, and a later settlement pays them.

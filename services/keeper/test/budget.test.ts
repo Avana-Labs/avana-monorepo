@@ -23,7 +23,7 @@ const BUDGETS = { scheduled: 1_000n, lazy: 500n };
 const entry = (jobClass: JobClass, costWei: bigint, at: bigint, hub: Address | null = null) => ({ chainId: 1, jobClass, at, costWei, market: null, hub });
 
 const plan = (jobClass: JobClass, subject = `1:${addr(0xa1)}`): TxPlan => ({
-  job: jobClass === "urgent" ? "liquidation" : jobClass === "scheduled" ? "oraclePoke" : "settlePending",
+  job: jobClass === "urgent" ? "liquidation" : jobClass === "scheduled" ? "breakerPoke" : "settlePending",
   jobClass,
   subject,
   to: addr(0xf1),
@@ -143,18 +143,16 @@ describe("spend attribution", () => {
   const HUB_1 = addr(0x41);
   const HUB_2 = addr(0x42);
   const LP_7 = addr(0xa7);
-  const DEBT_ORACLE = addr(0xd1);
   const manifest = {
     markets: [{ marketId: 7n, spoke: SPOKE_A, lpOracle: { address: LP_7 } }],
-    debtReserves: [{ spoke: SPOKE_B, debtOracle: { address: DEBT_ORACLE } }],
     aave: { borrowSpokes: [{ address: SPOKE_A }, { address: SPOKE_B }] },
   } as unknown as ServiceManifest;
 
   it("spendAttributedToHub", async () => {
     // Every subject kind names its market (where it has one) and the CDP Spoke, whose Hub MarketRegistry.hubOf gives.
     expect(attributeSubject(manifest, "1:market:7")).toEqual({ market: "7", spoke: SPOKE_A });
-    expect(attributeSubject(manifest, `1:${LP_7}`)).toEqual({ market: "7", spoke: SPOKE_A });
-    expect(attributeSubject(manifest, `1:${DEBT_ORACLE}`)).toEqual({ market: null, spoke: SPOKE_B });
+    // An LPOracle is never a transaction subject (the oracles are stateless): it names nothing.
+    expect(attributeSubject(manifest, `1:${LP_7}`)).toEqual({ market: null, spoke: null });
     expect(attributeSubject(manifest, `1:${SPOKE_B}`)).toEqual({ market: null, spoke: SPOKE_B });
     expect(attributeSubject(manifest, `1:${SPOKE_A}:${addr(0xbeef)}@5`, () => 7n)).toEqual({ market: "7", spoke: SPOKE_A });
     expect(attributeSubject(manifest, "1:market:99")).toEqual({ market: null, spoke: null });
@@ -183,7 +181,7 @@ describe("spend attribution", () => {
         },
       },
     });
-    const poke = plan("scheduled", `1:${LP_7}`);
+    const poke = plan("scheduled", "1:market:7");
     await s.submit(ctx(T0), poke, sim);
     state.confirmed = 6;
     await s.followUps(ctx(T0 + 2n, 11n), async () => true, () => {});

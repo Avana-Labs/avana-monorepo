@@ -309,14 +309,6 @@ contract LensLiquidationUnitTest is LensFixture {
         assertTrue(lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE).pricesUsable, "Drifting is usable");
     }
 
-    // TEST-069 verifies: REQ-LENS-016, REQ-SWAP-008
-    function test_TEST_069_staleInputBlocks() public {
-        lpo.setTokenAt(1, uint64(block.timestamp - FEED_AGE - 1), 0);
-        assertFalse(lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE).pricesUsable, "USDT past 88,200 s");
-        lpo.setTokenAt(1, uint64(block.timestamp - FEED_AGE), 0);
-        assertTrue(lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE).pricesUsable, "at the bound: fresh");
-    }
-
     // TEST-069 verifies: REQ-LENS-016, REQ-LENS-030
     function test_TEST_069_staleDebtPriceBlocksOnlyItsReserve() public {
         _borrow(aliceProxy, 1000e18);
@@ -336,29 +328,6 @@ contract LensLiquidationUnitTest is LensFixture {
     function test_TEST_069_debtOracleNotLiveBlocks() public {
         usdcOracle.set(0.9999e8, PriceState.Cached, 0.9999e8, uint64(block.timestamp));
         assertFalse(lens.previewLiquidation(aliceProxy, usdcReserveId, DEADLINE).debtPriceFresh, "Cached");
-    }
-
-    // TEST-069 verifies: REQ-LENS-016, Q-208
-    function test_TEST_069_disagreementReported() public {
-        lpo.setDisagreement(uint64(block.timestamp - 100), true, false);
-        lpo.setState(PriceState.Live, 1 << 9, true);
-        LiquidationPreview memory p = lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE);
-        assertTrue(p.feedsDisagree, "pause active");
-        assertFalse(p.pricesUsable, "seizure paused");
-    }
-
-    // TEST-069 verifies: REQ-LENS-016, REQ-SWAP-009
-    function test_TEST_069_graceReported() public {
-        _borrow(aliceProxy, 15_000e18);
-        _setVtPrice(1.8e8);
-        lpo.setGrace(true, uint64(block.timestamp - 10), uint64(block.timestamp + 1790));
-        LiquidationPreview memory p = lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE);
-        assertTrue(p.inGrace, "grace");
-        assertFalse(p.belowGraceHealthFactor, "HF 0.96 above 0.95");
-        store.setGraceHealthFactor(0.97e18);
-        assertTrue(lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE).belowGraceHealthFactor, "below 0.97");
-        lpo.setGrace(false, 0, 0);
-        assertFalse(lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE).belowGraceHealthFactor, "no grace");
     }
 
     // TEST-069 verifies: REQ-LENS-016
@@ -417,19 +386,6 @@ contract LensLiquidationUnitTest is LensFixture {
         assertEq(p.activeKeeperCount, 2, "frozen operator not counted");
         assertTrue(p.vaultTokenReservePaused, "Aave paused flag");
         assertFalse(p.debtReservePaused, "debt reserve live");
-    }
-
-    // TEST-069 verifies: REQ-LENS-016, REQ-LENS-030, Q-247
-    function test_TEST_069_stressValuedOtherReserveNeverBlocks() public {
-        _borrow(aliceProxy, 1000e18);
-        _borrowUsdc(aliceProxy, 1000e6);
-        usdcOracle.set(1.05e8, PriceState.Expired, 1e8, uint64(block.timestamp));
-        LiquidationPreview memory p = lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE);
-        assertTrue(p.stressValued, "USDC served above its accepted price");
-        assertTrue(p.pricesUsable, "it does not block repaying GHO");
-        LiquidationPreview memory q = lens.previewLiquidation(aliceProxy, usdcReserveId, DEADLINE);
-        assertFalse(q.stressValued, "the repaid reserve itself is not another reserve");
-        assertFalse(q.pricesUsable, "repaying the Expired reserve is blocked");
     }
 
     // TEST-069 verifies: REQ-LENS-016, SPEC-LIQ-001, SPEC-LIQ-003

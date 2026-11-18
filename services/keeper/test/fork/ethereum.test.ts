@@ -2,14 +2,13 @@
 // Copyright (c) 2026 Avana Labs
 // Fork tests on Ethereum at a pinned block: the keeper's reads of contracts Avana does not deploy. The Aave V3 Core
 // Pool's implementation slot (the code check that switches liquidations to inventory only), its reserves behind flash
-// sizing and M-17 (the aToken, idle liquidity and premium the operator helper reads), Chainlink ETH/USD rounds behind
-// the oracle poke cadence, and Multicall3, through which every batched read goes. Not run without RPC_MAINNET.
+// sizing and M-17 (the aToken, idle liquidity and premium the operator helper reads), and Multicall3, through which
+// every batched read goes. Not run without RPC_MAINNET.
 
 import { describe, expect, it } from "vitest";
 import type { Address } from "viem";
 import { createChainReader } from "../../src/chain/reads.ts";
 import { fundingPlan } from "../../src/jobs/liquidationRules.ts";
-import { PokeBook, oraclePokeJob } from "../../src/jobs/oraclePoke.ts";
 import { m17IdleLevel } from "../../src/monitoring/funding.ts";
 import { checkTargets } from "../../src/safety/guards.ts";
 import {
@@ -33,7 +32,6 @@ const USDC: Address = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 const A_USDC: Address = "0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c";
 const GHO: Address = "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f";
 const A_GHO: Address = "0x00907f9921424583e7ffBfEdf84F92B7B2Be4977";
-const ETH_USD: Address = "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419";
 const MULTICALL3: Address = "0xcA11bde05977b3631167028862bE2a173976CA11";
 /** Any address that is not a FLASH_BORROWER, standing in for an operator helper. */
 const HELPER: Address = "0x00000000000000000000000000000000000a11ce";
@@ -91,36 +89,6 @@ describe.skipIf(!RPC_MAINNET)(`fork: Ethereum at block ${ETHEREUM_BLOCK} (not ru
       expect(m17IdleLevel(idle, 50n * million)).toBe("ok");
       expect(m17IdleLevel(idle, 100n * million)).toBe("warn");
       expect(m17IdleLevel(idle, 200n * million)).toBe("page");
-    });
-  });
-
-  describe("Chainlink ETH/USD (oracle poke cadence)", () => {
-    it("reads the latest round at the block, inside the feed's 3,600 s heartbeat", async () => {
-      const [roundId, answer, , updatedAt] = await reader.feedRound(ETH_USD);
-      expect(roundId).toBe(129_127_208_515_966_896_950n);
-      expect(answer).toBe(201_072_791_073n);
-      expect(updatedAt).toBe(1_794_500_135n);
-      expect(ctx.blockTimestamp - updatedAt).toBeLessThanOrEqual(3_600n);
-    });
-
-    it("pokes on first sight, waits while the round is unchanged and pokes again on the next round", async () => {
-      const book = new PokeBook();
-      const job = oraclePokeJob(book);
-      const target = { oracle: "0x00000000000000000000000000000000000000a1" as Address, implementation: "0x0000000000000000000000000000000000000001" as Address, kind: "lp" as const, feeds: [{ feed: ETH_USD, heartbeatSeconds: 3_600 }] };
-      // The target is a stand-in address with no oracle code: its price state is read as Live, so only the feed decides.
-      const live = (c: typeof ctx) => ({ ...c, reader: { ...c.reader, oracleState: async () => 0 } });
-      const decision = { target, jobClass: "scheduled", state: 0 };
-
-      expect(await job.check(live(ctx), target)).toEqual({ act: true, decision });
-      await job.build(live(ctx), { target, jobClass: "scheduled", state: 0 });
-      expect(await job.check(live(ctx), target)).toEqual({ act: false, reason: "notDue" });
-
-      // 300 blocks (an hour) later the feed has a new round.
-      const later = ETHEREUM_BLOCK + 300n;
-      const { timestamp } = await client.getBlock({ blockNumber: later });
-      const laterCtx = blockContext("mainnet", createChainReader(client, NO_AVANA_MANIFEST, later), later, timestamp);
-      expect((await laterCtx.reader.feedRound(ETH_USD))[0]).toBe(129_127_208_515_966_896_951n);
-      expect(await job.check(live(laterCtx), target)).toEqual({ act: true, decision });
     });
   });
 

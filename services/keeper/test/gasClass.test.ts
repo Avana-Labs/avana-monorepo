@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Fee classes (keeper DESIGN.md, Fees): urgent keeps today's rule (the 90th percentile of the last 5 blocks, at least
-// minTipUrgent), scheduled pays minTipScheduled inside the poke lead, lazy pays minTipLazy only at a low base fee and
+// minTipUrgent), scheduled pays minTipScheduled, lazy pays minTipLazy only at a low base fee and
 // otherwise waits up to lazyMaxWait, then goes at scheduled fees. Max fee is 2 × base + tip and the per-transaction
 // ceiling applies to every class; a liquidation still pre-empts a pending poke.
 
@@ -13,7 +13,6 @@ import type { ChainReader } from "../src/chain/reads.ts";
 import type { TxSigner } from "../src/chain/signer.ts";
 import { type ChainConfig, defaultFeePolicy, feePolicy } from "../src/config.ts";
 import { InventoryBook } from "../src/inventory.ts";
-import { POKE_LEAD_SECONDS, PokeBook, oraclePokeJob } from "../src/jobs/oraclePoke.ts";
 import { AboveGasCeiling, NotSent, Submitter } from "../src/runtime/submitter.ts";
 import type { BlockContext, JobClass, TxPlan } from "../src/types.ts";
 
@@ -22,7 +21,7 @@ const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as Address;
 const POLICY: FeePolicy = { minTipUrgent: GWEI, minTipScheduled: GWEI / 10n, minTipLazy: GWEI / 100n, lazyBaseFeeMax: 5n * GWEI, lazyMaxWaitSeconds: 3_600n };
 
 const plan = (jobClass: JobClass, n = 1): TxPlan => ({
-  job: jobClass === "urgent" ? "liquidation" : jobClass === "scheduled" ? "oraclePoke" : "settlePending",
+  job: jobClass === "urgent" ? "liquidation" : jobClass === "scheduled" ? "breakerPoke" : "settlePending",
   jobClass,
   subject: `1:${addr(0x100 + n)}`,
   to: addr(0xf1),
@@ -81,27 +80,8 @@ describe("fee classes", () => {
     expect(s.pending.get(plan("urgent").subject)!.fees).toEqual({ maxPriorityFeePerGas: 8n * GWEI, maxFeePerGas: 28n * GWEI });
   });
 
-  it("scheduledLandsInsideLead", async () => {
-    // The checkpoint poke is planned POKE_LEAD_SECONDS before the interval ends, as a scheduled poke…
-    const lp = addr(0xa1);
-    const manifest = { markets: [{ lpOracle: { address: lp, implementation: addr(1) }, feeds: [{ feed: addr(0xf1), heartbeatSeconds: 86_400 }] }], debtReserves: [] };
-    const reader = { feedRound: async () => [1n, 0n, 0n, 0n, 1n] as const, oracleState: async () => 0 };
-    const job = oraclePokeJob(new PokeBook());
-    const planned: { at: bigint; jobClass: JobClass }[] = [];
-    for (let n = 0n; n < 700n; n++) {
-      const c: BlockContext = { config: { chain: { id: 1 }, manifest } as unknown as ChainConfig, blockNumber: n, blockTimestamp: 1_700_000_000n + n * 12n, reader: reader as unknown as ChainReader };
-      for (const t of await job.discover(c)) {
-        const check = await job.check(c, t);
-        if (check.act) planned.push({ at: c.blockTimestamp, jobClass: (await job.build(c, check.decision)).jobClass });
-      }
-    }
-    expect(planned.map((p) => p.jobClass)).toEqual(["scheduled", "scheduled", "scheduled"]);
-    for (let i = 1; i < planned.length; i++) {
-      const gap = planned[i]!.at - planned[i - 1]!.at;
-      expect(gap).toBeLessThanOrEqual(3_600n - BigInt(POKE_LEAD_SECONDS) + 12n); // decided in the first block of the lead
-      expect(3_600n - gap).toBeGreaterThanOrEqual(BigInt(POKE_LEAD_SECONDS) - 12n); // a lead of at least 4 blocks left to land
-    }
-    // …and sent at the scheduled tip, not the p90, with max fee 2 × base + tip.
+  it("scheduledPaysScheduledTip", async () => {
+    // A scheduled transaction is sent at the scheduled tip, not the p90, with max fee 2 × base + tip.
     const { s } = setup({ rewards: [9n * GWEI], base: 10n * GWEI });
     await s.submit(ctx(900n), plan("scheduled"), sim);
     expect(s.pending.get(plan("scheduled").subject)!.fees).toEqual({ maxPriorityFeePerGas: GWEI / 10n, maxFeePerGas: 20n * GWEI + GWEI / 10n });

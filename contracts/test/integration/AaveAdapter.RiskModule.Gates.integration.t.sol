@@ -172,7 +172,6 @@ contract AaveAdapterRiskModuleGatesIntegrationTest is AaveAdapterRiskFixture {
         rm.checkPledge(bob, bobProxy_, MARKET_ID, INTEGRATION, bytes32(uint256(77)), UNITS, k, false);
         _expectBorrow(err);
         _expectWithdrawWithDebt(err);
-        assertEq(uint8(lpOracleA.getPriceState().state), uint8(PriceState.Live), "the LPOracle's state is unchanged");
         _repayAndExit();
     }
 

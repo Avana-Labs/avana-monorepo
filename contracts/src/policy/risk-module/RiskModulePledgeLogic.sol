@@ -13,10 +13,10 @@ import {ICollateralization} from "../../custody/collateralization/ICollateraliza
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {DriftReason, Market} from "../../types/MarketTypes.sol";
-import {PriceState, PriceStateView} from "../../types/OracleTypes.sol";
+import {PriceState} from "../../types/OracleTypes.sol";
 import {PledgeCounters, PledgePreview} from "../../types/PositionTypes.sol";
 import {IAaveAdapter} from "../aave-adapter/IAaveAdapter.sol";
 import {BreakerReasons} from "../market-registry/types/Breaker.sol";
@@ -224,7 +224,7 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         uint128 remainingUnits
     ) external view override {
         Market memory m = _market(marketId);
-        uint256 usd = RiskModuleMath.pledgeUsd(remainingUnits, _accepted(m.lpOracle), m.decimals);
+        uint256 usd = RiskModuleMath.pledgeUsd(remainingUnits, _served(m.lpOracle), m.decimals);
         uint256 minUsd = _store().minPledgeUsd(marketId);
         if (usd < minUsd) revert RecordBelowMinPledge(usd, minUsd);
     }
@@ -243,15 +243,11 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         c.topUp = a.borrowCount > 0;
         c.hf = c.topUp ? a.healthFactor : type(uint256).max;
         c.debtRay = a.totalDebtValueRay;
-        if (!c.topUp) _requireSequencerUp();
-        PriceStateView memory pv = ILPOracle(c.m.lpOracle).getPriceState();
-        if (pv.state == PriceState.Cached || pv.state == PriceState.Expired) revert PriceNotAccepted(uint8(pv.state));
-        // Not failed (Live or Drifting), so the fresh price is positive.
+        ILPOracle.PriceStatus memory st = ILPOracle(c.m.lpOracle).getPriceStatus();
+        if (!st.liquidationFresh) revert PriceNotAccepted(uint8(PriceState.Cached));
+        // `getPriceStatus` serves at least 1.
         // forge-lint: disable-next-line(unsafe-typecast)
-        c.fresh = pv.freshAnswer > 0 ? uint256(pv.freshAnswer) : 0;
-        if (!c.topUp && pv.state == PriceState.Drifting && (pv.reasons & PRICE_DRIFTING_BITS) != PRICE_USD_BAND) {
-            revert PriceNotAccepted(uint8(pv.state));
-        }
+        c.fresh = uint256(st.answer);
         _reserveAvailable(c);
         if (!c.topUp) _newAccount(c);
     }
@@ -285,7 +281,7 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
     function _value(
         Ctx memory c
     ) internal view {
-        uint256 accepted = _accepted(c.m.lpOracle);
+        uint256 accepted = _served(c.m.lpOracle);
         uint256 price8 = RiskModuleMath.bookingPrice(accepted, c.fresh);
         // Caps at the fresh price, the minimum at the lower of the two.
         uint256 capPrice8 = RiskModuleMath.capPrice(accepted, c.fresh);

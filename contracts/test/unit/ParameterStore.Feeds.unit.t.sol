@@ -441,24 +441,6 @@ contract ParameterStoreFeedsSequencerUnitTest is ParameterStoreFixture {
         assertEq(feed, address(0));
     }
 
-    // TEST-250 verifies: REQ-PSTORE-023, REQ-PSTORE-009
-    function test_TEST_250_l2SequencerReachesEveryLpOracle() public {
-        // On an L2 the sequencer check comes before any TWAP window (REQ-PSTORE-034).
-        (bool ok,) = _set(address(seq), 3600);
-        assertTrue(ok);
-        _listMarket();
-        uint256[] memory w = store.getOracleInputs(address(lpOracle), new address[](0), false);
-        assertEq(w[8], uint160(address(seq)));
-        assertEq(w[9], 3600);
-        lpOracle.setFailed(1);
-        bytes memory ret;
-        (ok, ret) = _set(address(seq), 1800);
-        assertFalse(ok);
-        assertEq(ret, abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 1));
-        (, uint32 grace) = store.sequencer();
-        assertEq(grace, 3600);
-    }
-
     // TEST-250 verifies: REQ-PSTORE-023
     function test_TEST_250_l2InitializeLeavesTheCheckEmpty() public view {
         (address feed, uint32 grace) = store.sequencer();

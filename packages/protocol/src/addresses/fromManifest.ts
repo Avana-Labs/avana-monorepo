@@ -48,7 +48,6 @@ export interface AvanaAddresses {
     readonly asset: Address;
     readonly decimals: number;
     readonly isGho: boolean;
-    readonly debtOracle: Address | null;
   }[];
   readonly aave: {
     readonly hubs: readonly { readonly label: string; readonly tier: number; readonly address: Address }[];
@@ -102,7 +101,6 @@ export function addressesFromManifest(m: ReleaseManifest): AvanaAddresses {
       asset: r.asset,
       decimals: r.decimals,
       isGho: r.isGho,
-      debtOracle: r.debtOracle?.address ?? null,
     })),
     aave: {
       hubs: m.aave.hubs.map((h) => ({ label: h.label, tier: h.tier, address: h.address })),

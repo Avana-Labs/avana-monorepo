@@ -69,15 +69,6 @@ const manifestProps: Record<string, Schema> = {
     lpVaults: arr(obj({ ...immutableProps, integrationId: { type: "integer", minimum: 1 }, kind: { enum: ["uniswap-v3", "slipstream", "uniswap-v4"] } })),
     firstLossReserves: arr(obj({ ...immutableProps, asset: address, hub: address })),
     daoDeficitOffsets: arr(obj({ ...immutableProps, asset: address, hub: address })),
-    debtOracleImplementation: ref("immutable"),
-    clOracles: arr(
-      obj({
-        ...immutableProps,
-        integrationId: { type: "integer", minimum: 1 },
-        moduleLogic: ref("immutable"),
-        logics: arr(obj({ name: { type: "string" }, address, codeHash: hash, artifact: { type: "string" } })),
-      }),
-    ),
     proxyCreationCodeHash: hash,
     gasVault: nullable(
       obj({ ...immutableProps, treasury: address, timelock: address, guardian: address, maxSigners: { type: "integer", minimum: 1, maximum: 8 } }),
@@ -142,7 +133,7 @@ export const releaseManifestSchema: Schema = {
         integrationId: { type: "integer", minimum: 1 },
         spoke: address,
         vaultToken: ref("immutable"),
-        lpOracle: ref("upgradeable"),
+        lpOracle: ref("immutable"),
         reserveId: decimal,
         pool: address,
         poolId: hash,
@@ -158,7 +149,6 @@ export const releaseManifestSchema: Schema = {
       asset: address,
       decimals: { type: "integer", minimum: 0, maximum: 36 },
       isGho: { type: "boolean" },
-      debtOracle: nullable(ref("upgradeable")),
       feeds: feedList,
     }),
   },

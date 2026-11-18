@@ -385,30 +385,6 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
     // ─── Boundaries of the enablement checks ───
 
     // TEST-185 verifies: REQ-MREG-006, REQ-MREG-008
-    // The DebtOracle must be the asset's own, bound to this registry and this ParameterStore: each binding alone fails.
-    function test_TEST_185_debtOracleBindingsEachChecked() public {
-        address[3] memory assets = [address(usdc), alice, address(usdc)];
-        address[3] memory regs = [address(registry), address(registry), bob];
-        address[3] memory stores = [alice, address(ps), address(ps)];
-        for (uint256 i = 0; i < 3; ++i) {
-            RegistryDebtOracleMock o = new RegistryDebtOracleMock(assets[i], regs[i], stores[i]);
-            aaveOracle.setSource(USDC_RESERVE, address(o));
-            DebtReserveDef memory d = _usdcDef();
-            d.priceSource = address(o);
-            _expectInvalid(d, "debtOracle");
-        }
-    }
-
-    // TEST-185 verifies: REQ-MREG-006, REQ-MREG-008
-    // debtStressRiseBps must be at least 100: 99 fails, 100 passes.
-    function test_TEST_185_stressRiseBoundary() public {
-        ps.setStressRise(address(usdc), 99);
-        _expectInvalid(_usdcDef(), "stressRise");
-        ps.setStressRise(address(usdc), 100);
-        _enable(_usdcDef());
-    }
-
-    // TEST-185 verifies: REQ-MREG-006, REQ-MREG-008
     // A fixed source must answer above 0: 0 and -1 fail, 1 passes.
     function test_TEST_185_fixedSourceAnswerBoundary() public {
         _remove(GHO_RESERVE);

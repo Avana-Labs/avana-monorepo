@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IntegrationCapabilities, PoolKeying} from "../../../src/amm/types/AmmTypes.sol";
+import {ILPOracle} from "../../../src/oracle/ILPOracle.sol";
 import {FeedDef, MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {OracleConfig, PriceState, PriceStateView} from "../../../src/types/OracleTypes.sol";
 import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
@@ -45,6 +46,17 @@ contract RegistryParameterStoreMock {
         address feed
     ) external view returns (FeedDef memory) {
         return _feeds[feed];
+    }
+
+    /// @notice A debt reserve's Chainlink source, listed with its decimals and borrow and liquidation age limits.
+    function setFeedAges(
+        address feed,
+        uint8 decimals,
+        uint32 borrowAge,
+        uint32 liquidationAge
+    ) external {
+        FeedDef storage f = _feeds[feed];
+        (f.decimals, f.borrowPriceMaxAge, f.liquidationPriceMaxAge) = (decimals, borrowAge, liquidationAge);
     }
 
     function setStressRise(
@@ -379,6 +391,13 @@ contract RegistryLPOracleMock {
         report.state = state;
         report.answer = latestAnswer;
     }
+
+    function getPriceStatus() external view returns (ILPOracle.PriceStatus memory s) {
+        s.answer = latestAnswer;
+        s.updatedAt = uint64(block.timestamp);
+        s.borrowFresh = state == PriceState.Live;
+        s.liquidationFresh = state == PriceState.Live || state == PriceState.Drifting;
+    }
 }
 
 /// @title RegistryFeedMock
@@ -466,6 +485,20 @@ contract RegistryDebtOracleMock {
         ASSET = asset;
         MARKET_REGISTRY = registry;
         PARAMETER_STORE = store;
+        // Listed in a mock ParameterStore as a Chainlink feed (8 decimals, 24.5 h borrow and 25 h liquidation ages).
+        if (store.code.length != 0) {
+            (bool listed,) = store.call(
+                abi.encodeWithSignature(
+                    "setFeedAges(address,uint8,uint32,uint32)", address(this), uint8(8), uint32(88_200), uint32(90_000)
+                )
+            );
+            listed;
+        }
+    }
+
+    /// @notice The debt source as a Chainlink feed with a current round.
+    function latestRoundData() external view virtual returns (uint80, int256, uint256, uint256, uint80) {
+        return (0, latestAnswer, block.timestamp, block.timestamp, 0);
     }
 }
 

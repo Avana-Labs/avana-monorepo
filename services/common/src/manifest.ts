@@ -92,11 +92,12 @@ export interface ManifestMarket {
   readonly integrationId: number;
   readonly spoke: Address;
   readonly vaultToken: Immutable;
-  readonly lpOracle: Upgradeable;
+  /** The market's stateless LPOracle, a plain contract. */
+  readonly lpOracle: Immutable;
   readonly reserveId: bigint;
   readonly pool: Address;
   readonly tokens: readonly Address[];
-  /** Every Chainlink leg of both price routes; the keeper pokes on each new round and every heartbeat (EMG-035). */
+  /** Every Chainlink leg of both tokens' price routes; the monitor reads their ages (M-03). */
   readonly feeds: readonly { readonly feed: Address; readonly heartbeatSeconds: number }[];
   /** Swap routes into each debt asset; the keeper code-checks them and keeps the flash loan off their reserves. */
   readonly routes: readonly Immutable[];
@@ -108,9 +109,8 @@ export interface ManifestDebtReserve {
   readonly asset: Address;
   readonly decimals: number;
   readonly isGho: boolean;
-  /** Null for GHO, whose price is fixed by the Spoke. */
-  readonly debtOracle: Upgradeable | null;
-  /** Chainlink legs of the DebtOracle's routes; empty for GHO. */
+  /** The asset's Chainlink USD feeds. Aave reads the primary one as the reserve's price, except for GHO, whose price
+   * source is fixed. */
   readonly feeds: readonly { readonly feed: Address; readonly heartbeatSeconds: number }[];
 }
 

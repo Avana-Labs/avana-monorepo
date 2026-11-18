@@ -48,9 +48,9 @@ export interface SignalDef {
 }
 
 export const SIGNALS: readonly SignalDef[] = [
-  { id: "M-01", name: "LPOracle and DebtOracle price state", source: "snapshot", warn: "Cached on entry", page: "Expired", responders: ["operators", "emergencyGuardian"], playbook: "P-02 (EMG-076)" },
-  { id: "M-02", name: "Feed disagreement start", source: "snapshot", warn: "on entry", page: "30 minutes before disagreementPauseMax ends", responders: ["operators", "emergencyGuardian"], playbook: "P-02 (EMG-076)" },
-  { id: "M-03", name: "Feed leg age, collateral and DebtOracle legs", source: "snapshot", warn: "above 50 % of feedMaxAge", page: "above 90 %", responders: ["operators"], playbook: "P-02 (EMG-076)" },
+  { id: "M-01", name: "LPOracle and debt price freshness", source: "snapshot", warn: "Cached (an input past its liquidationPriceMaxAge)", page: "Expired", responders: ["operators", "emergencyGuardian"], playbook: "P-02 (EMG-076)" },
+  { id: "M-02", name: "Feed disagreement start (retired: the stateless LPOracle records no disagreement)", source: "snapshot", warn: "—", page: "—", responders: ["operators", "emergencyGuardian"], playbook: "P-02 (EMG-076)" },
+  { id: "M-03", name: "Feed leg age, collateral and debt feeds", source: "snapshot", warn: "above 50 % of feedMaxAge", page: "above 90 %", responders: ["operators"], playbook: "P-02 (EMG-076)" },
   { id: "M-04", name: "Debt feed age", source: "snapshot", warn: "above borrowPriceMaxAge", page: "above 90 % of liquidationPriceMaxAge", responders: ["operators", "aave"], playbook: "P-02 (EMG-076)" },
   { id: "M-05", name: "USD band distance √(q0·q1)", source: "snapshot", warn: "below 0.95", page: "below 0.90", responders: ["guardians"], playbook: "P-03 (EMG-077)" },
   { id: "M-06", name: "Collateral value per market at oracle prices", source: "snapshot", warn: "−10 % in 1 hour", page: "−25 % in 1 hour", responders: ["guardians"], playbook: "P-03 (EMG-077)" },
@@ -81,7 +81,7 @@ export const SIGNALS: readonly SignalDef[] = [
   { id: "M-31", name: "Keeper gas spend anomaly", source: "keeper", warn: "rolling 24 h spend above 3× the 7-day median daily spend", page: "above 5×", responders: ["avanaLabs", "keeperOnCall"], playbook: "P-08 (EMG-082)" },
   { id: "M-32", name: "Keeper class budget reached", source: "keeper", warn: "—", page: "a scheduled or lazy class reaches its rolling 24 h budget and stops sending", responders: ["keeperOnCall", "avanaLabs"], playbook: "P-08 (EMG-082)" },
   { id: "M-33", name: "Standby keeper signer below its minimum balance", source: "keeper", warn: "standby signer balance below its minBalance", page: "—", responders: ["avanaLabs"], playbook: "P-08 (EMG-082)" },
-  { id: "M-34", name: "Oracle poke overdue", source: "snapshot", warn: "—", page: "priceCheckpoint().at older than 7,200 s on any market", responders: ["keeperOnCall", "operators"], playbook: "P-08 (EMG-082)" },
+  { id: "M-34", name: "Oracle poke overdue (retired: the stateless oracles are never poked)", source: "snapshot", warn: "—", page: "—", responders: ["keeperOnCall", "operators"], playbook: "P-08 (EMG-082)" },
   { id: "M-35", name: "Gas vault runway", source: "snapshot", warn: "vault balance below 30 days of its daily top-ups", page: "below 14 days", responders: ["avanaLabs", "keeperOnCall"], playbook: "P-22 (EMG-115)" },
   { id: "M-36", name: "Gas vault top-up capped", source: "events", warn: "—", page: "a ToppedUp below its requested amount (24 h cap or vault balance) or a TopUpFailed", responders: ["avanaLabs", "keeperOnCall"], playbook: "P-22 (EMG-115)" },
 ];

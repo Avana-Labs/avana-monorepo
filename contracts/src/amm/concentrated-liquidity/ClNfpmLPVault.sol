@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
-import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
+import {LPPriceMath} from "../../oracle/LPPriceMath.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
 import {

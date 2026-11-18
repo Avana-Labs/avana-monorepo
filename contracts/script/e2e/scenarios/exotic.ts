@@ -76,7 +76,6 @@ async function memeCrash(e: Env) {
   // PEPE to a tenth of its price on every feed; USDC stays at $1. The pools are not moved.
   const crashed = e.prices.PEPE! / 10n;
   await e.refresh({ PEPE: crashed, USDC: e.prices.USDC! });
-  await e.poke(m.lpOracle);
   const hf = await e.healthFactor(m, a);
   n.crash = `PEPE ${usd8(e.prices.PEPE!)} -> ${usd8(crashed)}: collateral ${usd8(await e.collateralUsd8(m, a))}; ${e.describe(await e.priceState(m.lpOracle))}; HF ${fmt(hf, 18)}`;
   if (hf >= WAD) {

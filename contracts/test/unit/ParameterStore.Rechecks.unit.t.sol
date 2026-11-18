@@ -86,35 +86,6 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         store.setFeed(address(fUsdc), _feedDef(86_400, 1800));
     }
 
-    // TEST-064 verifies: REQ-CONFIG-051, REQ-PSTORE-009, REQ-PSTORE-013, SPEC-GOV-011
-    function test_TEST_064_tighteningRevertsOnlyForChecksItBreaks() public {
-        // checkConfig fails check 8 below a tolerance of 145: lowering 150 to 140 breaks it.
-        lpOracle.setFloors(0, 145, 0);
-        _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 8));
-        store.tightenFeedAgreementToleranceBps(usdc, 140);
-        // checkConfig fails check 16 below a borrow age of 80,000 s: lowering 88,200 to 70,000 breaks it.
-        lpOracle.setFloors(0, 0, 80_000);
-        _tl();
-        vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 16)
-        );
-        store.tightenBorrowPriceMaxAge(address(fUsdc), 70_000);
-        // Check 4 failing before and after is not the tightenings' doing.
-        lpOracle.setFloors(0, 0, 0);
-        lpOracle.setFailed(4);
-        _tl();
-        store.tightenFeedAgreementToleranceBps(usdc, 140);
-        _tl();
-        store.tightenBorrowPriceMaxAge(address(fUsdc), 70_000);
-        assertEq(store.feedAgreementToleranceBps(usdc), 140);
-        assertEq(store.borrowPriceMaxAge(address(fUsdc)), 70_000);
-        // The structural setters keep the full check.
-        _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 4));
-        store.setFeedAgreementToleranceBps(usdc, 150);
-    }
-
     // TEST-064 verifies: SPEC-CF-004, REQ-CONFIG-019, REQ-CONFIG-020, REQ-PSTORE-004
     function test_TEST_064_collateralFactorRaiseRerunsListingMargin() public {
         // fUsdcAlt at 25 + 6,875 = 6,900 bps of route error; CF_LP = ⌊7,500 × 4,000 / 10⁴⌋ = 3,000 leaves 7,000.
@@ -305,14 +276,6 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         _tl();
         vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setInitialMarketParams(2, _defaultMarketParams());
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-009, REQ-PSTORE-013, REQ-CONFIG-054
-    function test_TEST_250_structuralSetterKeepsTheFullCheck() public {
-        lpOracle.setFailed(4);
-        _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 4));
-        store.setConsistencyToleranceBps(M, 60);
     }
 
     // TEST-225 verifies: SPEC-CAP-006, REQ-RISK-044

@@ -236,8 +236,8 @@ export function liquidationTargets(m: ServiceManifest, market: ManifestMarket, r
   if (!helperEntry || !lpVault || !spoke) throw new Error("helper, LPVault or CDP Spoke missing from the manifest");
   return [
     up(m.avana.lpVaultSwap), up(m.avana.aaveAdapter), up(m.avana.marketRegistry), up(m.avana.parameterStore), up(m.avana.riskModule),
-    up(spoke), up(market.lpOracle), ...(reserve.debtOracle ? [up(reserve.debtOracle)] : []),
-    im(helperEntry), im(m.avana.proxyManager), im(lpVault), im(m.avana.collateralization), im(market.vaultToken), im(m.avana.payoutEscrow),
+    up(spoke),
+    im(market.lpOracle), im(helperEntry), im(m.avana.proxyManager), im(lpVault), im(m.avana.collateralization), im(market.vaultToken), im(m.avana.payoutEscrow),
     im(m.avana.lock), im(m.avana.lens), ...market.routes.map(im),
     ...(flash ? [up(m.aave.v3Pool)] : []),
   ];

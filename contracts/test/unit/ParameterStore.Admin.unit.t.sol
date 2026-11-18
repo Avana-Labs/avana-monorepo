@@ -146,37 +146,6 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         assertEq(store.graceDuration(), 60);
     }
 
-    // TEST-064 verifies: REQ-CONFIG-055, REQ-CONFIG-052, REQ-CONFIG-049, REQ-PSTORE-009, REQ-ACCESS-099
-    function test_TEST_064_bandAndTimers() public {
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.setUsdBand(1e8, 1.02e8);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.setUsdBand(0.9e8, 1e8);
-        _tl();
-        store.setUsdBand(0.95e8, 1.01e8);
-        assertEq(store.usdBandLow(), 0.95e8);
-        assertEq(store.usdBandHigh(), 1.01e8);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
-        store.setDisagreementPauseMax(3601);
-        _tl();
-        store.setDisagreementPauseMax(1800);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.setCachedWindow(0);
-        lpOracle.setFailed(8);
-        _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 8));
-        store.setCachedWindow(1200);
-        // A Cancelled market's LPOracle is not consulted.
-        registry.setStatus(M, MarketStatus.Cancelled);
-        _tl();
-        store.setCachedWindow(1200);
-        assertEq(store.cachedWindow(), 1200);
-    }
-
     // TEST-064 verifies: REQ-CONFIG-015, REQ-CONFIG-019, REQ-CONFIG-020, REQ-PSTORE-010, SPEC-CF-004, REQ-ACCESS-138
     function test_TEST_064_riskStructural() public {
         _tl();
@@ -253,38 +222,6 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         _tl();
         store.restoreSecondSource(usdc);
         assertFalse(store.onStandby(usdc));
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-028, REQ-PSTORE-029, REQ-PSTORE-009
-    function test_TEST_250_secondSourceChecks() public {
-        address pyth = _networkFeed();
-        SecondSource memory empty;
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.setSecondSource(usdc, _src(SecondSourceKind.OracleNetwork, pyth, 0, 501), empty);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.setSecondSource(usdc, _src(SecondSourceKind.OracleNetwork, alice, 0, 50), empty);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.setSecondSource(usdc, empty, empty);
-        // A standby sharing a feed with the token's routes, or the recorded source, is refused.
-        SecondSource memory src = _src(SecondSourceKind.OracleNetwork, pyth, 0, 50);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.setSecondSource(usdc, src, _src(SecondSourceKind.OracleNetwork, address(fUsdcAlt), 0, 50));
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.setSecondSource(usdc, src, src);
-        _tl();
-        store.setSecondSource(usdc, src, empty);
-        // A configuration the LPOracle refuses is not written.
-        lpOracle.setFailed(16);
-        _tl();
-        vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 16)
-        );
-        store.setSecondSource(usdc, src, empty);
     }
 
     // TEST-250 verifies: REQ-PSTORE-029

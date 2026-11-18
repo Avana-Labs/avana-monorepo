@@ -47,19 +47,6 @@ contract LPVaultSwapPriceGatesUnitTest is LPVaultSwapUnitBase {
         _liquidateAs(keeper, _params(proxy, 1950e6));
     }
 
-    /// @notice LPVaultSwap calls `poke()` before it reads the state: a failure the poke records (here a pending
-    /// Expired transition) refuses the call that triggered it.
-    // TEST-049 verifies: REQ-SWAP-008, Q-199
-    function test_TEST_049_pokeBeforeRead() public {
-        uint256 pokes = lpOracle.pokes();
-        lpOracle.setPendingState(PriceState.Expired);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _stale());
-        assertEq(uint8(lpOracle.state()), uint8(PriceState.Live), "the poke reverted with the call");
-        lpOracle.setState(PriceState.Live);
-        _liquidateAs(keeper, _params(proxy, 1950e6));
-        assertGt(lpOracle.pokes(), pokes, "poked in the call");
-    }
-
     /// @notice (a) `liquidationPaused` (which includes a sequencer reporting down) and (d) the disagreement pause and a
     /// disagreement past `disagreementPauseMax` each refuse the seizure.
     // TEST-049 verifies: REQ-SWAP-008, REQ-SWAP-050, INV-059, Q-208, Q-248
@@ -72,59 +59,6 @@ contract LPVaultSwapPriceGatesUnitTest is LPVaultSwapUnitBase {
         _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _stale());
         lpOracle.setFlags(false, false, false, false);
         _liquidateAs(keeper, _params(proxy, 1950e6));
-    }
-
-    /// @notice (c) Every used leg of every token is checked against the ParameterStore's `liquidationPriceMaxAge` of
-    /// its feed: 88,200 s (86,400 s heartbeat plus 1,800 s margin) passes at exactly 88,200 s and fails at 88,201 s.
-    // TEST-049 verifies: REQ-SWAP-008, REQ-SWAP-047, Q-182, Q-247
-    // TEST-230 verifies: REQ-SWAP-008, INV-087
-    function test_TEST_049_legAgeAgainstLiquidationMaxAge() public {
-        store.setLiquidationPriceMaxAge(feed, 88_200);
-        lpOracle.setLeg(1, 1, feed, uint64(block.timestamp - 88_201));
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _stale());
-        lpOracle.setLeg(1, 1, feed, uint64(block.timestamp - 88_200));
-        _liquidateAs(keeper, _params(proxy, 1950e6));
-        // A tightened per-feed age applies at once: the ParameterStore is read on every call.
-        store.setLiquidationPriceMaxAge(feed, 3600);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _stale());
-        // The first token's first leg is checked too.
-        store.setLiquidationPriceMaxAge(feed, 88_200);
-        lpOracle.setLeg(0, 0, usdcFeed, uint64(block.timestamp - 100_000));
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _stale());
-        // A future timestamp counts as age 0.
-        lpOracle.setLeg(0, 0, usdcFeed, uint64(block.timestamp + 10));
-        _liquidateAs(keeper, _params(proxy, 1950e6));
-    }
-
-    /// @notice REQ-SWAP-091: the repaid USDC reserve's DebtOracle is poked and must be Live, not liquidation-paused and
-    /// within `liquidationPriceMaxAge` on every leg; otherwise `DebtPriceStale(r)`.
-    // TEST-049 verifies: REQ-SWAP-091, REQ-SWAP-096, Q-238, Q-247, Q-248
-    // TEST-226 verifies: REQ-SWAP-091
-    // TEST-201 verifies: REQ-SWAP-091, REQ-SWAP-096; shared: TEST-201's stale USDC debt price refused, then a fresh one settles
-    function test_TEST_049_staleRepaidReserveRefused() public {
-        usdcOracle.setState(PriceState.Cached, true);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _debtStale());
-        usdcOracle.setState(PriceState.Drifting, false);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _debtStale());
-        usdcOracle.setState(PriceState.Live, true);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _debtStale());
-        usdcOracle.setState(PriceState.Live, false);
-        usdcOracle.setLeg(0, usdcFeed, uint64(block.timestamp - 88_201));
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _debtStale());
-        usdcOracle.setLeg(0, usdcFeed, uint64(block.timestamp - 88_200));
-        usdcOracle.setLeg(1, feed, uint64(block.timestamp - 90_000));
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _debtStale());
-        usdcOracle.setLeg(1, address(0), 0);
-        uint256 pokes = usdcOracle.pokes();
-        _liquidateAs(keeper, _params(proxy, 1950e6));
-        assertGt(usdcOracle.pokes(), pokes, "DebtOracle poked");
-    }
-
-    /// @notice The DebtOracle is poked before it is read: a pending Expired transition refuses the call.
-    // TEST-049 verifies: REQ-SWAP-091, Q-199
-    function test_TEST_049_debtOraclePokedBeforeRead() public {
-        usdcOracle.setPendingState(PriceState.Expired);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _debtStale());
     }
 
     /// @notice GHO's fixed source is never gated: an account owing USDC and GHO is liquidated against its GHO debt
@@ -145,67 +79,6 @@ contract LPVaultSwapPriceGatesUnitTest is LPVaultSwapUnitBase {
         LiquidationResult memory r = _liquidateAs(keeper, p);
         assertEq(r.debtAsset, address(gho), "GHO repaid");
         assertGt(r.debtRepaid, 0, "GHO debt repaid");
-    }
-
-    /// @notice REQ-SWAP-009 grace latch: inside a grace window an account at `HF >= graceHealthFactor` reverts
-    /// `GraceHealthFactor`; below it, it is liquidated. The bound is read per call.
-    // TEST-049 verifies: REQ-SWAP-009, REQ-SWAP-051, Q-129, Q-154, Q-324
-    function test_TEST_049_graceHealthFactor() public {
-        lpOracle.setFlags(false, false, false, true);
-        uint256 hf = _hf(proxy);
-        store.setGraceHealthFactor(hf);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.GraceHealthFactor.selector));
-        store.setGraceHealthFactor(hf + 1);
-        _liquidateAs(keeper, _params(proxy, 1950e6));
-        // Outside grace the bound does not apply.
-        lpOracle.setFlags(false, false, false, false);
-        store.setGraceHealthFactor(0);
-        _liquidateAs(keeper, _params(proxy, 1950e6));
-    }
-
-    /// @notice REQ-SWAP-009: the grace refusal holds for every `HF >= graceHealthFactor`, not only at equality: with
-    /// the bound 1 below the account's health factor the liquidation still reverts `GraceHealthFactor`.
-    // TEST-049 verifies: REQ-SWAP-009, REQ-SWAP-051
-    function test_TEST_049_graceHealthFactorAboveBound() public {
-        lpOracle.setFlags(false, false, false, true);
-        uint256 hf = _hf(proxy);
-        store.setGraceHealthFactor(hf - 1);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.GraceHealthFactor.selector));
-    }
-
-    /// @notice SPEC-LIQ-004: `Pc` is the smaller of the AaveOracle price and the LPOracle's served price, `Pdebt` the
-    /// larger of the AaveOracle price and the DebtOracle's. With the AaveOracle at $1.00 for USDC and the DebtOracle at
-    /// $1.01, Aave seizes at $1.00 and LPVaultSwap values the seizure at $1.01; with the AaveOracle at $2.00 for the
-    /// vault token and the LPOracle at $2.10, LPVaultSwap values it at $2.00.
-    // TEST-050 verifies: SPEC-LIQ-004, REQ-SWAP-008, Q-327
-    function test_TEST_050_valuationPrices() public {
-        uint256 snapshot = vm.snapshotState();
-        LiquidationResult memory base = _liquidateAs(keeper, _params(proxy, 1950e6));
-        vm.revertToState(snapshot);
-        vm.mockCall(
-            aave.cdpOracle,
-            abi.encodeWithSignature("getReservePrice(uint256)", usdcReserveId),
-            abi.encode(uint256(PRICE_UNIT))
-        );
-        usdcOracle.setAnswer(101_000_000);
-        LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, 1950e6));
-        assertEq(r.unitsSeized, base.unitsSeized, "Aave seized at its own $1.00");
-        uint256 v = r.unitsSeized * P_VAULT / 101_000_000;
-        assertEq(
-            r.minOut,
-            _floorOf(v, 100, 1 + _ceilDiv(P_USDT, 101_000_000), FLOOR_ROUNDING_ALLOWANCE_USDC),
-            "floor at Pdebt = max(1.00, 1.01)"
-        );
-        assertLt(r.minOut, base.minOut, "V lower against the dearer debt price");
-        vm.revertToState(snapshot);
-        vm.mockCall(
-            aave.cdpOracle,
-            abi.encodeWithSignature("getReservePrice(uint256)", vtReserveId),
-            abi.encode(uint256(200_000_000))
-        );
-        r = _liquidateAs(keeper, _params(proxy, 1950e6));
-        v = r.unitsSeized * 200_000_000 / PRICE_UNIT;
-        assertEq(r.minOut, _floorOf(v, 100, 2, FLOOR_ROUNDING_ALLOWANCE_USDC), "floor at Pc = min(2.00, 2.10)");
     }
 
     /// @notice A zero served price of the market (`latestAnswer <= 0`) reverts the valuation with

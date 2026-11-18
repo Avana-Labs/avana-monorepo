@@ -420,22 +420,6 @@ contract MarketRegistryListingBoundsUnitTest is MarketRegistryFixture {
         _expectPriceSourceRefused(t, _two(p[0], p[0]), a, s, "sharedFeed");
     }
 
-    // TEST-231 verifies: REQ-CONFIG-026, REQ-MREG-027
-    // A Cancelled market using the token is not re-checked: its failing LPOracle does not block the change.
-    function test_TEST_231_setPriceSourceSkipsCancelledMarkets() public {
-        (uint256 id,, RegistryLPOracleMock o) = _listMarket();
-        o.setFailed(3);
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("usdc2");
-        vm.prank(address(timelock));
-        _expectListing("oracleConfig");
-        registry.setPriceSource(address(usdc), p, a, s);
-        vm.prank(address(timelock));
-        registry.cancelRegistration(id);
-        vm.prank(address(timelock));
-        registry.setPriceSource(address(usdc), p, a, s);
-        assertEq(registry.getToken(address(usdc)).primaryRoute[0], p[0]);
-    }
-
     function _one(
         address x
     ) internal pure returns (address[] memory r) {

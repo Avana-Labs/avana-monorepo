@@ -19,6 +19,7 @@ contract RiskModuleInvariantTest is RiskModuleFixture {
     function setUp() public {
         _deployRiskWorld();
         _debt(1.5e18, 1000);
+        oracle.setLegMaxAge(FEED_AGE);
         handler = new RiskModuleHandler(
             RiskModuleHandler.World({
                 rm: riskModule,

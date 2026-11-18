@@ -80,25 +80,6 @@ contract RiskModuleHealthUnitTest is RiskModuleFixture {
         assertEq(riskModule.debtValueUsd(address(proxy)), 5_000_000_000);
     }
 
-    // TEST-013 verifies: SPEC-CAP-003, REQ-RISK-026
-    // Sources: 2.7 SPEC-CAP-003 example (D = 1e57, hf 1.02, CF 3,000; Drifting accepted 198,950,000, served 154,800,000)
-    function test_TEST_013_restoreAmountUsesServedPrice() public {
-        _debt(1.02e18, 10_000);
-        assertEq(riskModule.usdToRestore(address(proxy)), 266_666_666_667);
-        // While Drifting the restore amount on the booking basis divides by the served price.
-        oracle.setPrices(198_950_000, 154_800_000);
-        oracle.setState(PriceState.Drifting, 1 << 2, false);
-        PledgeCounters memory k = _counters();
-        k.regularUsed = 1_000_000e8; // no regular room: the whole charge goes to the slice
-        // ceil(266,666,666,667 * 198,950,000 / 154,800,000) = 342,721,791,560.
-        vm.expectRevert(IRiskModuleErrors.SliceNotAvailable.selector);
-        _pledge(1723e18, k, false); // charge 342,790,850,000 > restoreBooked
-        assertEq(_pledge(1722e18, k, false).sliceUsd, 342_591_900_000);
-        // No debt, or at or above 1.10: nothing to restore.
-        _debt(1.1e18, 10_000);
-        assertEq(riskModule.usdToRestore(address(proxy)), 0);
-    }
-
     // TEST-034 verifies: REQ-RISK-031, REQ-RISK-010, REQ-RISK-057, REQ-RISK-008, REQ-RISK-012, REQ-RISK-027
     function test_TEST_034_previewPledge() public {
         bytes32 key = bytes32(uint256(7));

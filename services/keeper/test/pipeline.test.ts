@@ -28,7 +28,7 @@ function context(implementation: string): BlockContext {
 }
 
 const plan: TxPlan = {
-  job: "oraclePoke",
+  job: "breakerPoke",
   jobClass: "scheduled",
   subject: TARGET,
   to: TARGET,
@@ -36,11 +36,11 @@ const plan: TxPlan = {
   deadline: null,
   reservations: [],
   targets: [{ kind: "upgradeable", address: TARGET, implementation: IMPL }],
-  params: { oracle: TARGET },
+  params: { marketId: 1n },
 };
 
 const job: Job<string, string> = {
-  kind: "oraclePoke",
+  kind: "breakerPoke",
   discover: async () => [TARGET],
   check: async (_ctx, c) => ({ act: true, decision: c }),
   build: async () => plan,

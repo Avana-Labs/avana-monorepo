@@ -51,21 +51,11 @@ export function contractTable(m: ReleaseManifest, explorer: string | undefined =
   imm("Avana", "Lens", a.lens);
   a.lensModules.forEach((x, i) => imm("Avana", `Lens module ${i}`, x));
   imm("Avana", "LensAaveSizing", a.lensAaveSizing);
-  imm("Avana", "DebtOracle implementation", a.debtOracleImplementation);
-  // The contract name of an artifact `<File>.sol:<Contract>` (LPOracleCL or LPOracleV4 and their module logic).
-  const contractOf = (x: Immutable, fallback: string) => x.artifact?.split(":")[1] ?? fallback;
-  for (const x of a.clOracles) {
-    const name = contractOf(x, "LPOracleCL");
-    imm("Avana", `${name} implementation, integration ${x.integrationId}`, x);
-    imm("Avana", `${contractOf(x.moduleLogic, "LPOracleCLModuleLogic")}, integration ${x.integrationId}`, x.moduleLogic);
-    for (const l of x.logics) rows.push({ group: "Avana", name: `${name} ${x.integrationId} · ${l.name}`, address: l.address, kind: "logic (delegatecall target)", codeHash: l.codeHash });
-  }
   for (const mk of m.markets) {
     imm("Avana markets", `Vault token, market ${mk.marketId}`, mk.vaultToken);
-    upg("Avana markets", `LPOracle, market ${mk.marketId}`, mk.lpOracle);
+    imm("Avana markets", `LPOracle, market ${mk.marketId}`, mk.lpOracle);
     mk.routes.forEach((r, i) => imm("Avana markets", `Swap route ${i}, market ${mk.marketId}`, r));
   }
-  for (const d of m.debtReserves) if (d.debtOracle) upg("Avana markets", `DebtOracle ${d.asset}`, d.debtOracle);
   const groupName: Record<string, string> = {
     "aave-v4": "Aave V4",
     "aave-v3": "Aave V3",

@@ -53,26 +53,6 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
         _pledge(0, k, false);
     }
 
-    // TEST-012 verifies: REQ-RISK-017, REQ-RISK-048, REQ-RISK-049, INV-026
-    function test_TEST_012_priceStateByAccountClass() public {
-        PledgeCounters memory k = _counters();
-        // New account: Drifting from the USD band only passes; any other Drifting reason reverts.
-        oracle.setState(PriceState.Drifting, 1 << 3, false);
-        _pledge(TEN_K, k, false);
-        oracle.setState(PriceState.Drifting, (1 << 3) | (1 << 2), false);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.PriceNotAccepted.selector, uint8(1)));
-        _pledge(TEN_K, k, false);
-        // Top-up: Drifting for any reason passes; Cached and Expired revert.
-        _debt(1.5e18, 1000);
-        _pledge(TEN_K, k, false);
-        oracle.setState(PriceState.Cached, 0, false);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.PriceNotAccepted.selector, uint8(2)));
-        _pledge(TEN_K, k, false);
-        oracle.setState(PriceState.Expired, 0, false);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.PriceNotAccepted.selector, uint8(3)));
-        _pledge(TEN_K, k, false);
-    }
-
     // TEST-012 verifies: REQ-RISK-018, REQ-RISK-019, REQ-RISK-050, INV-029, REQ-RISK-028
     function test_TEST_012_newAccountChecksSkippedForTopUps() public {
         PledgeCounters memory k = _counters();
@@ -402,29 +382,6 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
         // A rescue top-up passes the breaker.
         _debt(1.02e18, 1_000_000);
         assertTrue(_pledge(TEN_K, k, false).rescue);
-    }
-
-    // TEST-275 verifies: REQ-RISK-081, REQ-RISK-084
-    // Sources: 2.7 REQ-RISK-081 example (restart at 1,000,000, grace 3,600 s)
-    function test_TEST_275_sequencerGateForNewAccounts() public {
-        RiskSequencerFeed feed = new RiskSequencerFeed();
-        store.setSequencer(address(feed), 3600);
-        PledgeCounters memory k = _counters();
-        feed.set(0, block.timestamp - 2000, false);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.SequencerGrace.selector, block.timestamp + 1600));
-        _pledge(TEN_K, k, false);
-        feed.set(1, block.timestamp - 5000, false);
-        vm.expectRevert(IRiskModuleErrors.SequencerDown.selector);
-        _pledge(TEN_K, k, false);
-        feed.set(0, 0, true);
-        vm.expectRevert(IRiskModuleErrors.SequencerDown.selector);
-        _pledge(TEN_K, k, false);
-        // Top-ups never read the gate.
-        _debt(1.5e18, 1000);
-        _pledge(TEN_K, k, false);
-        feed.set(0, block.timestamp - 3600, false);
-        rSpoke.setAccount(address(proxy), 0, 0, 0);
-        _pledge(TEN_K, k, false);
     }
 
     // TEST-164 verifies: REQ-RISK-006, REQ-RISK-026, SPEC-CAP-001

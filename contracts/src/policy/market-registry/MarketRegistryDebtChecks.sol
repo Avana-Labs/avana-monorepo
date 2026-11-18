@@ -10,8 +10,8 @@ import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ITetherFee} from "../../interfaces/external/tether/ITetherFee.sol";
 import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
-import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
+import {FeedDef} from "../parameter-store/types/ParameterStoreTypes.sol";
 import {RiskModuleMath} from "../risk-module/RiskModuleMath.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
@@ -73,15 +73,9 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
             if (IAaveV4PriceFeed(src).latestAnswer() <= 0) revert InvalidDebtReserve("priceSource");
             return;
         }
-        // A listed token without an alternate route is a monitoring-only listing.
-        if (_s().tokens[def.asset].alternateRoute.length == 0) revert InvalidDebtReserve("routes");
-        IDebtOracle o = IDebtOracle(src);
-        if (o.ASSET() != def.asset || o.MARKET_REGISTRY() != address(this) || o.PARAMETER_STORE() != _PARAMETER_STORE) {
-            revert InvalidDebtReserve("debtOracle");
-        }
-        if (IParameterStore(_PARAMETER_STORE).debtStressRiseBps(def.asset) < 100) {
-            revert InvalidDebtReserve("stressRise");
-        }
+        // The source is the asset's Chainlink feed, with age limits set in the ParameterStore.
+        FeedDef memory f = IParameterStore(_PARAMETER_STORE).getFeed(src);
+        if (f.borrowPriceMaxAge == 0 || f.liquidationPriceMaxAge == 0) revert InvalidDebtReserve("feed");
     }
 
     function _checkAvanaFirstLossReserve(

@@ -54,9 +54,9 @@ test("writes the network's section of all three pages from the deployment", () =
     for (const x of m.markets) assert.ok(addresses.includes(`| ${x.marketId} | ${x.vaultToken.address} | ${x.lpOracle.address} |`));
     // No gas vault in this deployment: the row stays, marked as not deployed.
     assert.ok(addresses.includes("| AvanaGasVault | Holds the chain's native gas token and refills Avana's own keeper signers up to a per-signer cap over any 24 hours. Immutable. | Not deployed on this network |"));
-    // The test network's GHO price stand-in and its DebtOracle.
+    // The test network's GHO price stand-in; USDC is priced by its own Chainlink feed, with no oracle contract of Avana's.
     assert.ok(addresses.includes("| Fixed $1 price source, GHO |"));
-    assert.ok(addresses.includes("| DebtOracle, USDC |"));
+    assert.ok(!addresses.includes("DebtOracle"));
     assert.ok(!addresses.includes("sequencer uptime feed"));
 
     const parameters = w.read("parameters");
@@ -69,7 +69,7 @@ test("writes the network's section of all three pages from the deployment", () =
     assert.ok(parameters.includes("| `MIN_NORMAL_DELAY` | 60 s |"));
     assert.ok(parameters.includes("| `MIN_NORMAL_DELAY` | Per network |"));
     assert.ok(parameters.includes("| `routeDepthThreshold` | 5,000,000 |"));
-    assert.ok(parameters.includes("| `pokeMinGas` (DebtOracle, USDC) | 1,000,000 gas |"));
+    assert.ok(!parameters.includes("pokeMinGas"));
     assert.ok(parameters.includes("| Uniswap v3 Stable | 156 bps | 50 bps |"));
     assert.ok(parameters.includes("| Aave DAO, through the Lend Spoke | Avana Ethereum Hub | USDC | 100,000,000 USDC |"));
     assert.ok(parameters.includes("[Fixed $1 price source, GHO](/developers/reference/addresses?network=ethereum-sepolia#avana-core)"));
@@ -202,7 +202,7 @@ test("a sequencer feed adds its address and grace period", () => {
       j.chain = { blockTime: 2, hasSequencer: true, sequencerFeed: feed, sequencerGraceSeconds: 3600 };
     });
     generate({ network: "base-sepolia", deployment: w.dep, out: w.out, date: DATE });
-    assert.ok(w.read("addresses").includes(`| Chainlink L2 sequencer uptime feed | While it reports the sequencer down, borrow-side prices fail closed and liquidation pauses. | ${feed} |`));
+    assert.ok(w.read("addresses").includes(`| Chainlink L2 sequencer uptime feed | Recorded in the ParameterStore; Avana's borrow and liquidation gates do not read it. | ${feed} |`));
     const parameters = w.read("parameters");
     assert.ok(parameters.includes("| `sequencer.gracePeriod` | 3,600 s (1 hour) |"));
     assert.ok(parameters.includes("| `twapMinObservations` | 901 |"));

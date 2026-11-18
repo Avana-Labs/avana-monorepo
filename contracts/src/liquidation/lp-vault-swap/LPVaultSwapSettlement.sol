@@ -6,15 +6,11 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
-import {DebtPriceView} from "../../oracle/debt-oracle/types/DebtPriceView.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
+import {ChainlinkPrice} from "../../oracle/ChainlinkPrice.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
-import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {Market} from "../../types/MarketTypes.sol";
-import {PriceState, PriceStateView, TokenPriceView} from "../../types/OracleTypes.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IPayoutEscrow} from "../payout-escrow/IPayoutEscrow.sol";
 import {ISettlementRoute} from "../settlement-routes/ISettlementRoute.sol";
@@ -92,45 +88,17 @@ abstract contract LPVaultSwapSettlement is LPVaultSwapStorage {
 
     function _checkCollateralPrice(
         address lpOracle
-    ) internal returns (bool inGrace) {
-        // The poke result is read back through getPriceState below, which also carries the flags and leg ages.
-        // forge-lint: disable-next-line(unused-return)
-        ILPOracle(lpOracle).poke();
-        PriceStateView memory ps = ILPOracle(lpOracle).getPriceState();
-        bool stale = ps.liquidationPaused || ps.state == PriceState.Cached || ps.state == PriceState.Expired
-            || ps.disagreementPauseActive || ps.disagreementExpired;
-        uint256 n = ps.tokens.length;
-        for (uint256 i = 0; i < n && !stale; ++i) {
-            TokenPriceView memory t = ps.tokens[i];
-            stale = _legStale(t.legFeeds[0], t.legUpdatedAt[0]) || _legStale(t.legFeeds[1], t.legUpdatedAt[1]);
-        }
-        if (stale) revert StalePrice();
-        inGrace = ps.inGrace;
+    ) internal view {
+        if (!ILPOracle(lpOracle).getPriceStatus().liquidationFresh) revert StalePrice();
     }
 
     function _checkDebtPrice(
         DebtReserveDef memory def,
         uint256 reserveId
-    ) internal {
+    ) internal view {
         if (def.fixedPrice) return;
-        address oracle = def.priceSource;
-        if (oracle == address(0)) revert DebtPriceStale(reserveId);
-        // The poke result is read back through getPriceState below, with the liquidation flag and leg ages.
-        // forge-lint: disable-next-line(unused-return)
-        IDebtOracle(oracle).poke();
-        DebtPriceView memory v = IDebtOracle(oracle).getPriceState();
-        if (
-            v.state != PriceState.Live || v.liquidationPaused || _legStale(v.legFeeds[0], v.legUpdatedAt[0])
-                || _legStale(v.legFeeds[1], v.legUpdatedAt[1])
-        ) revert DebtPriceStale(reserveId);
-    }
-
-    function _legStale(
-        address feed,
-        uint64 updatedAt
-    ) private view returns (bool) {
-        if (feed == address(0)) return false;
-        return !LPPriceMath.liquidationFresh(updatedAt, IParameterStore(_PARAMETER_STORE).liquidationPriceMaxAge(feed));
+        if (def.priceSource == address(0)) revert DebtPriceStale(reserveId);
+        if (!ChainlinkPrice.read(def.priceSource, _PARAMETER_STORE).liquidationFresh) revert DebtPriceStale(reserveId);
     }
 
     /// @dev The smaller of the AaveOracle price of the collateral reserve and the LPOracle's served price.
@@ -145,18 +113,13 @@ abstract contract LPVaultSwapSettlement is LPVaultSwapStorage {
         if (uint256(lp) < price) price = uint256(lp);
     }
 
-    /// @dev The larger of the AaveOracle price of the reserve and its DebtOracle's; the AaveOracle's alone if fixed.
+    /// @dev The AaveOracle price of the debt reserve: its Chainlink source, or Aave's fixed GHO price.
     function _debtPrice(
         address spoke,
         uint256 reserveId,
-        DebtReserveDef memory def
+        DebtReserveDef memory
     ) internal view returns (uint256 pd) {
         pd = IAaveV4Oracle(IAaveV4Spoke(spoke).ORACLE()).getReservePrice(reserveId);
-        if (def.fixedPrice) return pd;
-        int256 d = IDebtOracle(def.priceSource).latestAnswer();
-        // The cast runs only for d > 0 (same expression), so it is of a positive int256.
-        // forge-lint: disable-next-line(unsafe-typecast)
-        if (d > 0 && uint256(d) > pd) pd = uint256(d);
     }
 
     function _snapshot(

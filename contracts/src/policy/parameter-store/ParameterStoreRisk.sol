@@ -15,12 +15,10 @@ import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {SecondSource, SecondSourceKind} from "../../types/OracleTypes.sol";
 import {PledgeCounters, ShapeKind} from "../../types/PositionTypes.sol";
 import {DebtReserveDef, TokenDef} from "../market-registry/types/MarketRegistryTypes.sol";
-import {IParameterStore} from "./IParameterStore.sol";
 import {IPoolObservations} from "./IPoolObservations.sol";
 import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";
 import {FeedDef} from "./types/ParameterStoreTypes.sol";
@@ -81,21 +79,11 @@ abstract contract ParameterStoreRisk is ParameterStoreStorage {
         if (failed != 0) revert OracleConfigRejected(lpOracle, failed);
     }
 
-    /// @dev The `checkConfig` bitmap of `lpOracle` for the configuration in storage, `2²⁵⁶ − 1` on a failed call.
+    /// @dev `2²⁵⁶ − 1` when `lpOracle` has no code, else 0: the stateless oracle has no configuration to check.
     function _configFailures(
         address lpOracle
     ) internal view returns (uint256 failed) {
-        // Self-call to the proxy's own view; the returned bytes are forwarded unchanged (no re-encoding).
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool ok, bytes memory config) =
-            address(this).staticcall(abi.encodeCall(IParameterStore.getOracleConfig, (lpOracle)));
-        failed = type(uint256).max;
-        if (ok && lpOracle.code.length != 0) {
-            // The LPOracle's view, called with the configuration bytes above.
-            // solhint-disable-next-line avoid-low-level-calls
-            (bool done, bytes memory ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector, config));
-            if (done && ret.length == 32) failed = abi.decode(ret, (uint256));
-        }
+        failed = lpOracle.code.length == 0 ? type(uint256).max : 0;
     }
 
     /// @dev Reverts `LivenessBound` for a tolerance below its bound, then `OracleConfigRejected` for a failed check.

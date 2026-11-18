@@ -108,47 +108,6 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         assertEq(registry.priceRouteVersion(address(dai)), 0);
     }
 
-    // TEST-231 verifies: REQ-CONFIG-026, REQ-CONFIG-027, REQ-CONFIG-034, REQ-CONFIG-036, REQ-MREG-027, Q-248, REQ-ACCESS-045
-    // Sources: 5.1 TEST-231, TEST-139
-    function test_TEST_231_setPriceSourceRechecksEveryMarket() public {
-        (uint256 id,, RegistryLPOracleMock lpOracle) = _activeMarket();
-        vm.prank(emergencyGuardian);
-        registry.useStandbyRoute(address(usdc), RouteSlot.Primary);
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("usdc2");
-        vm.startPrank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TokenNotListed.selector, alice));
-        registry.setPriceSource(alice, p, a, s);
-        // The new standby shares a feed with USDT's alternate: common-mode guard.
-        address[] memory usdtAlt = registry.getToken(address(usdt)).alternateRoute;
-        _expectListing("commonMode");
-        registry.setPriceSource(address(usdc), p, a, _one(usdtAlt[1]));
-        // The tolerance would fall below its lower bound.
-        ps.setTolerance(address(usdc), 40, 50);
-        _expectListing("tolerance");
-        registry.setPriceSource(address(usdc), p, a, s);
-        ps.setTolerance(address(usdc), 100, 50);
-        // A route whose deviation plus drift reaches 1 - CF.
-        ps.setFeed(s[0], 8, 86_400, 1000, 1000);
-        _expectListing("listingMargin");
-        registry.setPriceSource(address(usdc), p, a, s);
-        ps.setFeed(s[0], 8, 86_400, 25, 25);
-        // The market's LPOracle refuses the configuration the new routes give it.
-        lpOracle.setFailed(1);
-        _expectListing("oracleConfig");
-        registry.setPriceSource(address(usdc), p, a, s);
-        lpOracle.setFailed(0);
-        uint64 v = registry.priceRouteVersion(address(usdc));
-        vm.expectEmit(address(registry));
-        emit IMarketRegistryBase.PriceSourceSet(address(usdc), p, a, s);
-        registry.setPriceSource(address(usdc), p, a, s);
-        vm.stopPrank();
-        assertEq(registry.priceRouteVersion(address(usdc)), v + 1);
-        (address[] memory primary,, RouteSlot replaced) = registry.activePriceRoutes(address(usdc));
-        assertEq(uint8(replaced), uint8(RouteSlot.None));
-        assertEq(primary[0], p[0]);
-        assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Active));
-    }
-
     // TEST-138 verifies: REQ-CONFIG-078, REQ-CONFIG-006, REQ-CONFIG-007, REQ-CONFIG-008, REQ-CONFIG-028, REQ-CONFIG-037, REQ-MREG-033, Q-312, REQ-ACCESS-033
     // Sources: 5.1 TEST-138
     function test_TEST_138_listCollateralMarketRecordsTheMarket() public {
@@ -486,29 +445,5 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         assertEq(
             uint256(vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(address(usdt)))), 47))), block.timestamp
         );
-    }
-
-    // TEST-231 verifies: REQ-CONFIG-026, REQ-CONFIG-036, REQ-MREG-027
-    /// @notice `setPriceSource` stops at the first market that fails its re-check, also when a later market passes, and
-    /// walks markets that do not hold the token without reading past their token list: with two USDC/USDT markets and
-    /// market 1's LPOracle refusing, the change reverts; a change to GHO, held by no market, passes.
-    function test_TEST_231_setPriceSourceFirstFailureWinsAndSkipsOtherTokens() public {
-        (uint256 id1,, RegistryLPOracleMock o1) = _listMarket();
-        PositionShape memory wide = PositionShape(ShapeKind.TickRange, -100, 100);
-        (address vt2, RegistryLPOracleMock o2) = _deployTokenAndOracle(registry.marketCount() + 1, wide);
-        MarketDef memory d2 = _marketDef(vt2, address(o2));
-        d2.shape = wide;
-        vm.prank(address(timelock));
-        uint256 id2 = registry.listCollateralMarket(d2);
-        assertEq(id2, id1 + 1);
-        o1.setFailed(1);
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("usdc2");
-        vm.prank(address(timelock));
-        _expectListing("oracleConfig");
-        registry.setPriceSource(address(usdc), p, a, s);
-        (p, a, s) = _routes("gho2");
-        vm.prank(address(timelock));
-        registry.setPriceSource(address(gho), p, a, s);
-        assertEq(registry.getToken(address(gho)).primaryRoute[0], p[0]);
     }
 }

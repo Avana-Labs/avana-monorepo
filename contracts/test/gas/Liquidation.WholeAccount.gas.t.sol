@@ -6,10 +6,10 @@ pragma solidity 0.8.28;
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
 import {ClTestToken} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackVolatile} from "../utils/fixtures/RealStackVolatile.sol";
+import {OracleFeedMock} from "../utils/mocks/LPOracleMocks.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title LiquidationWholeAccountGasTest
@@ -38,7 +38,7 @@ contract LiquidationWholeAccountGasTest is RealStackVolatile, GasCalibration {
 
     uint256 internal mV;
     ClTestToken internal dai;
-    IDebtOracle internal daiOracle;
+    OracleFeedMock internal daiOracle;
     uint256 internal wethReserveIdV;
     uint256 internal daiReserveIdV;
 
@@ -57,11 +57,7 @@ contract LiquidationWholeAccountGasTest is RealStackVolatile, GasCalibration {
         _pokeDebtOracles();
     }
 
-    function _pokeDebtOracles() internal {
-        usdcOracle.poke();
-        wethOracle.poke();
-        daiOracle.poke();
-    }
+    function _pokeDebtOracles() internal {}
 
     /// @dev `wallet`'s account of `records` equal records worth `COLLATERAL_USD` in all, borrowing USDC up to HF 1.02
     /// (after $100 each of GHO, WETH and DAI when `fourDebts`), then WBTC and WETH 80 % lower.

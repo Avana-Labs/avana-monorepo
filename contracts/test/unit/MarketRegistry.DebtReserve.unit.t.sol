@@ -183,51 +183,6 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         registry.recordCreditLine(address(hub), address(gho), type(uint256).max / 1e18);
     }
 
-    // TEST-185 verifies: REQ-MREG-006, REQ-MREG-008, REQ-MREG-018, ATTACK-121
-    function test_TEST_185_definitionChecks() public {
-        DebtReserveDef memory d = _usdcDef();
-        vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, alice));
-        registry.enableDebtReserve(alice, d);
-        d.fundingHub = alice;
-        _expectInvalid(d, "fundingHub");
-        d = _usdcDef();
-        d.crossHub = true;
-        _expectInvalid(d, "crossHub");
-        d = _usdcDef();
-        d.hubAssetId = 3;
-        _expectInvalid(d, "reserve");
-        d = _usdcDef();
-        d.decimals = 18;
-        _expectInvalid(d, "reserve");
-        d = _usdcDef();
-        IAaveV4Spoke.ReserveConfig memory c;
-        spoke.setConfig(USDC_RESERVE, c);
-        _expectInvalid(d, "borrowable");
-        c.borrowable = true;
-        spoke.setConfig(USDC_RESERVE, c);
-        IAaveV4Spoke.DynamicReserveConfig memory dyn;
-        dyn.collateralFactor = 1;
-        spoke.setDynamic(USDC_RESERVE, dyn);
-        _expectInvalid(d, "collateralFactor");
-        dyn.collateralFactor = 0;
-        spoke.setDynamic(USDC_RESERVE, dyn);
-        d.priceSource = address(ghoSource);
-        _expectInvalid(d, "priceSource");
-        d = _usdcDef();
-        RegistryDebtOracleMock foreign = new RegistryDebtOracleMock(address(usdt), address(registry), address(ps));
-        aaveOracle.setSource(USDC_RESERVE, address(foreign));
-        d.priceSource = address(foreign);
-        _expectInvalid(d, "debtOracle");
-        aaveOracle.setSource(USDC_RESERVE, address(usdcOracle));
-        d = _usdcDef();
-        ps.setStressRise(address(usdc), 99);
-        _expectInvalid(d, "stressRise");
-        ps.setStressRise(address(usdc), 500);
-        // Already enabled.
-        _expectInvalid(_ghoDef(), "enabled");
-    }
-
     // TEST-185 verifies: REQ-MREG-006, REQ-CONFIG-081, REQ-MREG-009
     function test_TEST_185_firstLossReserveChecks() public {
         DebtReserveDef memory d = _usdcDef();

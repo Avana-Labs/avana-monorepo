@@ -7,10 +7,10 @@ import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol"
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackUniswapV4} from "../utils/fixtures/RealStackUniswapV4.sol";
+import {OracleFeedMock} from "../utils/mocks/LPOracleMocks.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 
@@ -37,7 +37,7 @@ contract LiquidationWholeAccountUniswapV4GasTest is RealStackUniswapV4, GasCalib
 
     uint256 internal mV4;
     ClTestToken internal dai;
-    IDebtOracle internal daiOracle;
+    OracleFeedMock internal daiOracle;
     uint256 internal v4WethReserveV;
     uint256 internal v4DaiReserveV;
 
@@ -59,15 +59,10 @@ contract LiquidationWholeAccountUniswapV4GasTest is RealStackUniswapV4, GasCalib
         (daiOracle,,) = _addDebtReserve(dai, "DAI / USD", 9e17);
         (uint256 daiAssetIdV,) = _volatileDebt(dai, 18, address(daiOracle), false);
         v4DaiReserveV = _v4Debt(hubV, v4SpokeV, dai, daiAssetIdV, address(daiOracle), false);
-        _pokeAll();
         _pokeDebtOracles();
     }
 
-    function _pokeDebtOracles() internal {
-        usdcOracle.poke();
-        wethOracle.poke();
-        daiOracle.poke();
-    }
+    function _pokeDebtOracles() internal {}
 
     /// @dev `wallet`'s account of `records` equal v4 records worth `COLLATERAL_USD` in all, borrowing USDC up to HF
     /// 1.02 (after $100 each of GHO, WETH and DAI when `fourDebts`), then ETH 99 % lower. With `fees`, a 10 ETH swap

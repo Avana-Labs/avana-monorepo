@@ -10,8 +10,6 @@ import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LPVaultSwap} from "../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
 import {LPVaultSwapImmutables, LPVaultSwapLogics} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
-import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
@@ -187,8 +185,6 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     function _otherRows(
         address o
     ) internal {
-        rows.push(Row(o, ILPOracle.setPokeMinGas.selector, false, false));
-        rows.push(Row(o, IDebtOracle.setPokeMinGas.selector, false, false));
         rows.push(Row(o, ILPVault.returnStray.selector, false, false));
         rows.push(Row(o, IVaultTokenFactory.deployVaultToken.selector, false, false));
         rows.push(Row(o, UUPSUpgradeable.upgradeToAndCall.selector, false, false));

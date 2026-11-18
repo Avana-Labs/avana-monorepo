@@ -43,30 +43,6 @@ contract LensPreviewBranchesUnitTest is LensFixture {
 
     // ─── previewRecredit ───
 
-    // TEST-238 verifies: REQ-LENS-038, SPEC-CAP-001
-    /// @notice 2,500 whole vault tokens are donated to Alice's position. The accepted price is $2.00 and the stress
-    /// floor $1.00. A fresh answer of $1.50 books the re-credit at $1.50 (3,750 USD); a fresh answer of $2.50 above the
-    /// accepted price leaves $2.00 (5,000 USD); a fresh answer of $0.50 is lifted to the $1.00 floor (2,500 USD); a
-    /// non-positive fresh answer leaves the accepted $2.00.
-    function test_TEST_238_recreditBookedAtTheLowerFreshAnswer() public {
-        vault.addUnits(_key(1), 2500e6);
-        _setFresh(1.5e8);
-        (uint128 added, uint256 charge, bool rescue) = lens.previewRecredit(MARKET_ID, _key(1));
-        assertEq(added, 2500e6, "2,500 whole vault tokens");
-        assertEq(charge, 3750e8, "2,500 x $1.50: min(fresh, accepted)");
-        assertFalse(rescue, "a regular top-up");
-        _setFresh(2.5e8);
-        (, charge,) = lens.previewRecredit(MARKET_ID, _key(1));
-        assertEq(charge, 5000e8, "a fresh answer above the accepted price leaves $2.00");
-        _setFresh(0.5e8);
-        (, charge,) = lens.previewRecredit(MARKET_ID, _key(1));
-        assertEq(charge, 2500e8, "the $1.00 stress floor lifts a $0.50 fresh answer");
-        _setFresh(-1);
-        (, charge,) = lens.previewRecredit(MARKET_ID, _key(1));
-        assertEq(charge, 5000e8, "a negative fresh answer leaves the accepted price");
-        vm.clearMockedCalls();
-    }
-
     // ─── previewRepayWithCollateral ───
 
     // TEST-239 verifies: REQ-LENS-038, SPEC-LIQ-020, REQ-LENS-007

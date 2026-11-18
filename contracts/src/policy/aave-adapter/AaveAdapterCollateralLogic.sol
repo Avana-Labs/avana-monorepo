@@ -5,18 +5,13 @@ pragma solidity 0.8.28;
 
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequencerUptimeFeed.sol";
 import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {DeleverageRequest} from "../../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
 import {Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
 import {PositionRef} from "../../types/PositionTypes.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
-import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {IRiskModule} from "../risk-module/IRiskModule.sol";
-import {IRiskModuleErrors} from "../risk-module/IRiskModuleErrors.sol";
-import {RiskModuleMath} from "../risk-module/RiskModuleMath.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
@@ -30,10 +25,6 @@ import {AaveAdapterImmutables, AdapterAccount, RepayWithCollateralParams} from "
 // forge-lint: disable-start(reentrancy-events)
 // forge-lint: disable-next-line(missing-inheritance)
 contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
-    uint256 internal constant SEQUENCER_CALL_GAS = 50_000;
-    /// @dev ABI length of `latestRoundData()`: five words.
-    uint256 internal constant ROUND_LENGTH = 160;
-
     constructor(
         AaveAdapterImmutables memory im
     ) AaveAdapterStorage(im) {}
@@ -220,7 +211,6 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         (b.spoke, b.vaultToken) = (account.spoke, account.vaultToken);
         (PauseState state, PauseReason reason) = _pauseOf(IVaultToken(b.vaultToken).hub());
         if (state == PauseState.Paused && reason == PauseReason.MintPathSuspect) revert ApplicationPaused();
-        _requireSequencerNotDown();
         _checkIntegration(p.marketId, b.vaultToken, p.position.integrationId);
         if (!IMarketRegistry(_MARKET_REGISTRY).isApprovedDebtReserve(b.spoke, p.debtReserveId)) {
             revert UnknownDebtReserve(b.spoke, p.debtReserveId);
@@ -253,25 +243,6 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
             if (hfAfter < required) revert HealthFactorNotImproved(b.healthFactor, hfAfter);
         }
         _checkGap(b.vaultToken, b.gap);
-    }
-
-    /// @dev Reverts `SequencerDown()` while the feed reports down or cannot be read; no feed means up.
-    function _requireSequencerNotDown() private view {
-        // The grace period does not stop a repay with collateral, so only the feed is read.
-        // forge-lint: disable-next-line(unused-return)
-        (address feed,) = IParameterStore(_PARAMETER_STORE).sequencer();
-        if (feed == address(0)) return;
-        (bool ok, bytes memory ret) = RiskModuleMath.staticRead(
-            feed, SEQUENCER_CALL_GAS, abi.encodeCall(ISequencerUptimeFeed.latestRoundData, ()), ROUND_LENGTH + 1
-        );
-        ok = ok && ret.length == ROUND_LENGTH;
-        (, uint256 answerWord) = RiskModuleMath.wordAt(ret, 32);
-        (, uint256 startedAt) = RiskModuleMath.wordAt(ret, 64);
-        // Two's-complement word read as int256: 0 is up, 1 is down, anything else is unknown.
-        // forge-lint: disable-next-line(unsafe-typecast)
-        int256 answer = int256(answerWord);
-        (bool up,,,,) = LPPriceMath.sequencerStatus(true, ok, answer, startedAt, block.timestamp, 0);
-        if (!up) revert IRiskModuleErrors.SequencerDown();
     }
 }
 // forge-lint: disable-end(reentrancy-events)

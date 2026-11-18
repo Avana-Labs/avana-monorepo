@@ -12,9 +12,8 @@ pragma solidity 0.8.28;
 import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {IAaveV4ExtSload} from "../../interfaces/external/aave/IAaveV4ExtSload.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
-import {PriceState} from "../../types/OracleTypes.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {FeedDef} from "../parameter-store/types/ParameterStoreTypes.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
@@ -413,25 +412,19 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         }
     }
 
-    /// @dev True when the LPOracle's `checkConfig` returns 0 for its stored configuration; any failed call fails.
+    /// @dev True when the LPOracle is deployed; the stateless oracle has no configuration to check.
     function _oracleConfigPasses(
         address lpOracle
     ) internal view returns (bool) {
-        (bool ok, bytes memory cfg) =
-            _PARAMETER_STORE.staticcall(abi.encodeCall(IParameterStore.getOracleConfig, (lpOracle)));
-        if (!ok) return false;
-        bytes memory ret;
-        (ok, ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector, cfg));
-        return ok && ret.length == 32 && abi.decode(ret, (uint256)) == 0;
+        return lpOracle.code.length != 0;
     }
 
-    /// @dev True when the LPOracle reports `Live`. The first word is the struct offset; the second is the state.
+    /// @dev True when the LPOracle answers and its inputs are fresh enough to liquidate.
     function _oracleLive(
         address lpOracle
     ) internal view returns (bool) {
-        (bool ok, bytes memory ret) = lpOracle.staticcall(abi.encodeCall(ILPOracle.getPriceState, ()));
-        if (!ok || ret.length < 64) return false;
-        (, uint256 state) = abi.decode(ret, (uint256, uint256));
-        return state == uint256(PriceState.Live);
+        (bool ok, bytes memory ret) = lpOracle.staticcall(abi.encodeCall(ILPOracle.getPriceStatus, ()));
+        if (!ok || ret.length != 128) return false;
+        return abi.decode(ret, (ILPOracle.PriceStatus)).liquidationFresh;
     }
 }

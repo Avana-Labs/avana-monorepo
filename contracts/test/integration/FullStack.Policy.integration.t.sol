@@ -6,8 +6,7 @@ pragma solidity 0.8.28;
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {BackingRecord} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
-import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
-import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../src/oracle/ILPOracle.sol";
 import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
@@ -129,32 +128,6 @@ contract FullStackPolicyIntegrationTest is FullStackMarkets {
 
     // ─── TEST-039: price states with the tolerance from the ParameterStore ───
 
-    /// @notice USDT's alternate route 1.3 % above its primary agrees within the listed 150 bps and the market stays
-    /// Live; a tightening to 120 bps executed through the timelock at the short delay applies on the next read, and the
-    /// market is Drifting with no override; with both routes stale the first failed read starts Cached, and after
-    /// `cachedWindow` the market is Expired, whatever the disagreement.
-    // TEST-039 verifies: REQ-ORACLE-016, REQ-ORACLE-018
-    function test_TEST_039_toleranceTighteningAppliesOnTheNextRead() public {
-        ILPOracle o = ILPOracle(address(mkt[mA].oracle));
-        feedsOf[address(usdt)][1].push(101_300_000, block.timestamp);
-        o.poke();
-        assertEq(uint8(o.getPriceState().state), uint8(PriceState.Live), "within 150 bps");
-        bytes memory call =
-            abi.encodeCall(IParameterStoreTighten.tightenFeedAgreementToleranceBps, (address(usdt), 120));
-        uint256 delay = _govern(address(store), call);
-        assertEq(delay, SHORT_DELAY, "short delay");
-        assertEq(store.feedAgreementToleranceBps(address(usdt)), 120, "tightened");
-        // `_govern` republished every feed at its answer, the alternate's 1.3 % included.
-        assertEq(uint8(o.getPriceState().state), uint8(PriceState.Drifting), "beyond 120 bps on the next read");
-        o.poke();
-        assertEq(uint8(o.getPriceState().state), uint8(PriceState.Drifting), "still Drifting after a poke");
-        vm.warp(block.timestamp + FEED_AGE + 1);
-        o.poke();
-        assertEq(uint8(o.getPriceState().state), uint8(PriceState.Cached), "first failed read: Cached");
-        vm.warp(block.timestamp + store.cachedWindow() + 1);
-        assertEq(uint8(o.getPriceState().state), uint8(PriceState.Expired), "after cachedWindow: Expired");
-    }
-
     // ─── TEST-054: route slots through the timelock ───
 
     /// @notice `setRoute` takes the normal delay and `disableRoute` and `restoreRoute` the short one; a disabled slot
@@ -238,7 +211,6 @@ contract FullStackPolicyIntegrationTest is FullStackMarkets {
             if (round == 0) {
                 _publish(address(usdc), 95_000_000);
                 _publish(address(usdt), 95_000_000);
-                mkt[mA].oracle.poke();
                 uint128 credited = _record(kB).credited;
                 vm.prank(bob);
                 adapterC.withdraw(mA, _ref(kB), credited, _deadline(), 0);
@@ -282,25 +254,4 @@ contract FullStackPolicyIntegrationTest is FullStackMarkets {
     }
 
     // ─── TEST-163: the borrow checks poke the real oracles ───
-
-    /// @notice A borrow pokes the market's LPOracle and the DebtOracle of the USDC reserve the account holds (the GHO
-    /// reserve has a fixed price and no DebtOracle) before the RiskModule reads them.
-    // TEST-163 verifies: REQ-ORACLE-036, REQ-ORACLE-096, REQ-RISK-056
-    function test_TEST_163_borrowPokesTheRealOracles() public {
-        vm.expectCall(address(mkt[mA].oracle), abi.encodeWithSelector(ILPOracle.poke.selector));
-        vm.expectCall(address(usdcOracle), abi.encodeWithSelector(IDebtOracle.poke.selector));
-        _borrowAs(alice, mA, ghoReserveId, 100e18);
-    }
-
-    /// @notice A repay and a debt-free withdrawal poke neither oracle.
-    // TEST-163 verifies: REQ-ORACLE-036, REQ-ORACLE-096
-    function test_TEST_163_repayAndDebtFreeExitPokeNoOracle() public {
-        vm.expectCall(address(mkt[mA].oracle), abi.encodeWithSelector(ILPOracle.poke.selector), 0);
-        vm.expectCall(address(usdcOracle), abi.encodeWithSelector(IDebtOracle.poke.selector), 0);
-        vm.prank(alice);
-        adapterC.repay(alice, mA, ghoReserveId, 50e18, false, _deadline());
-        uint128 credited = _record(kB).credited;
-        vm.prank(bob);
-        adapterC.withdraw(mA, _ref(kB), credited, _deadline(), 0);
-    }
 }

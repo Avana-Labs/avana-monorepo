@@ -40,39 +40,6 @@ contract AaveAdapterRiskGatesFuzzTest is AaveAdapterRiskFixture {
         adapterC.repay(alice, MARKET_ID, debtReserveId, 1e18, false, d);
     }
 
-    // TEST-275 verifies: REQ-ADAPTER-102, REQ-RISK-081, REQ-PROXY-026, REQ-PROXY-032
-    // Sources: 2.10 SPEC-ORC-021 (up, down, unknown, grace)
-    /// @notice A borrow passes only when the sequencer feed reports up with a restart older than the grace period:
-    /// `SequencerDown()` for down, unknown or unreadable, `SequencerGrace(startedAt + grace)` inside the grace period.
-    /// Repay passes in every case.
-    function testFuzz_TEST_275_sequencerOutcome(
-        int8 answer,
-        uint32 sinceRestart,
-        uint32 grace,
-        bool reverts
-    ) public {
-        sinceRestart = uint32(bound(sinceRestart, 1, 10 days));
-        grace = uint32(bound(grace, 0, 2 days));
-        RiskSequencerFeed feed = new RiskSequencerFeed();
-        uint256 startedAt = block.timestamp - sinceRestart;
-        feed.set(answer, startedAt, reverts);
-        rstore.setSequencer(address(feed), grace);
-        bool up = !reverts && answer == 0;
-        (bool ok, bytes memory err) = _tryBorrow(1e18);
-        if (!up) {
-            assertFalse(ok, "down refuses");
-            assertEq(err, abi.encodeWithSelector(IRiskModuleErrors.SequencerDown.selector), "SequencerDown");
-        } else if (sinceRestart < grace) {
-            assertFalse(ok, "grace refuses");
-            assertEq(
-                err, abi.encodeWithSelector(IRiskModuleErrors.SequencerGrace.selector, startedAt + grace), "grace end"
-            );
-        } else {
-            assertTrue(ok, "up passes");
-        }
-        _repayOne();
-    }
-
     // TEST-028 verifies: REQ-ADAPTER-094, REQ-RISK-065
     /// @notice After a breach recorded at `lastBreach` with nothing latched, borrowing reopens exactly
     /// `gateRecoverySeconds` later; a latched reason refuses whatever the time.

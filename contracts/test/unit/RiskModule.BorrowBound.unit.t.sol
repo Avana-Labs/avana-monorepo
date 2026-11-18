@@ -18,45 +18,12 @@ contract RiskModuleBorrowBoundUnitTest is RiskModuleFixture {
         _deployRiskWorld();
     }
 
-    // TEST-230 verifies: REQ-RISK-059, REQ-RISK-026, SPEC-CF-005, SPEC-ORC-017
-    /// @dev Served $2.20 after a rally, accepted $2.00: an Aave health factor of 1.05 is checked as
-    /// `1.05 * 2.00 / 2.20 = 0.954545...`, below Aave's 1.00, so the borrow reverts.
-    function test_TEST_230_rallyAddsNoBorrowingPower() public {
-        _debt(1.05e18, 10_000);
-        oracle.setPrices(2e8, 2.2e8);
-        uint256 bounded = uint256(1.05e18) * 2e8 / 2.2e8;
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.HealthFactorTooLow.selector, bounded, 1e18));
-        riskModule.postHealthCheck(address(proxy), 0);
-        // At HF 1.20 the bounded value 1.0909 passes and is what the check returns.
-        _debt(1.2e18, 10_000);
-        assertEq(riskModule.postHealthCheck(address(proxy), 0), uint256(1.2e18) * 2e8 / 2.2e8);
-    }
-
     // TEST-230 verifies: REQ-RISK-059, SPEC-ORC-017
     /// @dev A fall below the accepted price is used as Aave computes it: no scaling.
     function test_TEST_230_fallIsUsedAsIs() public {
         _debt(1.05e18, 10_000);
         oracle.setPrices(2e8, 1.8e8);
         assertEq(riskModule.postHealthCheck(address(proxy), 0), 1.05e18);
-    }
-
-    // TEST-230 verifies: REQ-RISK-026, SPEC-CAP-001
-    /// @dev The pledge's cap charge is booked at the fresh price: fresh $1.50 under accepted $2.00 books 10,000 units at
-    /// $1.50 each, and fresh $2.40 above it at $2.40 each.
-    function test_TEST_230_pledgeChargeBookedAtTheFreshPrice() public {
-        bytes32 key = bytes32(uint256(7));
-        rVault.setPosition(key, wallet, 10_000e18);
-        PledgeCounters memory k = _counters();
-        coll.setCounters(k);
-        oracle.setFresh(1.5e8);
-        PledgePreview memory p = riskModule.previewPledge(wallet, mid, key);
-        assertTrue(p.eligible);
-        assertEq(p.usdCharge, 15_000e8, "booked at the fresh price");
-        // A fresh price above the accepted one is charged in full: a rally adds no cap room.
-        oracle.setFresh(2.4e8);
-        p = riskModule.previewPledge(wallet, mid, key);
-        assertEq(p.usdCharge, 24_000e8, "booked at the fresh price");
-        oracle.setState(PriceState.Live, 0, true);
     }
 
     // TEST-230 verifies: REQ-RISK-026, REQ-RISK-059

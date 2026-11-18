@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../src/oracle/ILPOracle.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {RiskModule} from "../../src/policy/risk-module/RiskModule.sol";
@@ -135,27 +135,5 @@ contract RiskModuleScopeUnitTest is RiskModuleFixture {
             riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1e27);
         }
         riskModule.preWithdrawCheck(address(proxy));
-    }
-
-    // TEST-228 verifies: SPEC-BRK-001, Q-241, Q-399
-    // Sources: 2.7 SPEC-BRK-001 (monitoring alert only; PRICE_DROP never set)
-    /// @notice A drop of 4 % from the stored checkpoint within the hour trips nothing: the borrow and withdraw gates
-    /// pass, `pokeBreakers` reports the same reasons as before the drop and latches nothing, and no RiskModule path
-    /// reads the LPOracle's price checkpoint at all.
-    /// @dev Kills: a price-drop breaker evaluated by the RiskModule (a `priceCheckpoint` read or a trip on the drop).
-    function test_TEST_228_priceDropTripsNoBreaker() public {
-        vm.expectCall(address(oracle), abi.encodeWithSelector(ILPOracle.priceCheckpoint.selector), 0);
-        uint32 before = riskModule.pokeBreakers(mid);
-        (uint32 latchedBefore,) = registry.marketBreaker(mid);
-        vm.warp(block.timestamp + 40 minutes);
-        // Accepted at the checkpoint $2.00, served now $1.92.
-        oracle.setPrices(2e8, 1.92e8);
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        riskModule.preWithdrawCheck(address(proxy));
-        assertEq(riskModule.pokeBreakers(mid), before, "same reasons after the drop");
-        (uint32 latched,) = registry.marketBreaker(mid);
-        assertEq(latched, latchedBefore, "nothing latched");
-        (uint32 status,) = riskModule.getBreakerStatus(mid);
-        assertEq(status, before, "the status view agrees");
     }
 }

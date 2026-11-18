@@ -286,7 +286,7 @@ export class Submitter {
     return hash;
   }
 
-  /** Called with a transaction a liquidation pre-empted, so its job can send it again (an oracle poke forgets its last poke). */
+  /** Called with a transaction a liquidation pre-empted, so its job can send it again. */
   preempted: (plan: TxPlan) => void = () => {};
 
   /**

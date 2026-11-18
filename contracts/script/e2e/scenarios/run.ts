@@ -190,9 +190,7 @@ async function main() {
       results.push({
         name: s.name,
         outcome: "not-run",
-        detail: manifest.avana.clOraclePricing
-          ? "no market listed in the manifest"
-          : "no market can be listed: the concentrated-liquidity LPOracle (LPOracleCL) is not in this build",
+        detail: "no market listed in the manifest",
       });
       continue;
     }

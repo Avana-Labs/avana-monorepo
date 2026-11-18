@@ -6,10 +6,11 @@ pragma solidity 0.8.28;
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {ChainlinkPrice} from "../../oracle/ChainlinkPrice.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
+import {LPPriceMath} from "../../oracle/LPPriceMath.sol";
 import {AccountGateStatus, MarketGateStatus, PauseReason, PauseState} from "../../types/MarketTypes.sol";
-import {PriceStateView} from "../../types/OracleTypes.sol";
+import {PriceState} from "../../types/OracleTypes.sol";
 import {DebtReserveDef, MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleBorrowLogic} from "./IRiskModuleBorrowLogic.sol";
 import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
@@ -117,18 +118,10 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
     ) internal view returns (MarketGateStatus memory g) {
         g.marketId = s.marketId;
         g.reserveId = s.m.reserveId;
-        PriceStateView memory pv = ILPOracle(s.m.lpOracle).getPriceState();
-        g.priceState = pv.state;
-        for (uint256 i = 0; i < pv.tokens.length; ++i) {
-            for (uint256 j = 0; j < 2; ++j) {
-                address feed = pv.tokens[i].legFeeds[j];
-                if (feed == address(0)) continue;
-                uint256 at = pv.tokens[i].legUpdatedAt[j];
-                uint256 age = at > block.timestamp ? 0 : block.timestamp - at;
-                if (age > g.oldestFeedAge) g.oldestFeedAge = age;
-                if (at > block.timestamp || age > _store().borrowPriceMaxAge(feed)) g.feedTooOld = true;
-            }
-        }
+        ILPOracle.PriceStatus memory st = ILPOracle(s.m.lpOracle).getPriceStatus();
+        g.priceState = st.liquidationFresh ? PriceState.Live : PriceState.Cached;
+        g.oldestFeedAge = LPPriceMath.age(st.updatedAt);
+        g.feedTooOld = !st.borrowFresh;
         g.offboarding = s.m.status == MarketStatus.Offboarding;
         IAaveV4Spoke.ReserveConfig memory rc = IAaveV4Spoke(s.spoke).getReserveConfig(s.m.reserveId);
         g.aaveReservePaused = rc.paused;
@@ -175,7 +168,7 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
         address source = IAaveV4Oracle(oracle).getReserveSource(r);
         if (source != s.defs[i].priceSource) return true;
         if (s.defs[i].fixedPrice) return false;
-        return !IDebtOracle(source).getPriceState().borrowAllowed;
+        return !ChainlinkPrice.read(source, address(_store())).borrowFresh;
     }
 
     function _passes(

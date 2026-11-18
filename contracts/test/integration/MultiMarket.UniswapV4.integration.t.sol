@@ -48,7 +48,6 @@ contract MultiMarketUniswapV4IntegrationTest is RealStackUniswapV4 {
         _ageNewPools(refs);
         v4UsdcUsdt = _addV4Market(stableKey, stableRef, VT_CF);
         v4EthUsdc = _addV4Market(ethKey, ethRef, VT_CF);
-        _pokeAll();
         for (uint256 k = 0; k < 2; ++k) {
             IClPool r = routePoolOf[address(weth)][address(gho)][k];
             (int24 lower, int24 upper) = _fullRange(r);
@@ -76,8 +75,7 @@ contract MultiMarketUniswapV4IntegrationTest is RealStackUniswapV4 {
         address[] memory proxies = new address[](cases.length);
         for (uint256 i = 0; i < cases.length; ++i) {
             Case memory c = cases[i];
-            PriceStateView memory v = mkt[c.marketId].oracle.getPriceState();
-            assertEq(uint8(v.state), uint8(PriceState.Live), "v4 market Live, not Drifting");
+            assertTrue(mkt[c.marketId].oracle.getPriceStatus().borrowFresh, "v4 market price fresh");
             proxies[i] = _open(c);
             address spoke = _spokeOf(c.marketId);
             assertTrue(spoke == v4SpokeS || spoke == v4SpokeV, "a v4 CDP Spoke");
@@ -119,22 +117,6 @@ contract MultiMarketUniswapV4IntegrationTest is RealStackUniswapV4 {
             assertEq(ts[k].balanceOf(lpVaultSwap), 0, "LPVaultSwap keeps no token");
         }
         assertFalse(lock.isLocked(), "Lock free");
-    }
-
-    // TEST-343 verifies: REQ-AMM-V4-005, SPEC-AMM-V4-002, REQ-ORACLE-015
-    function test_TEST_343_parkedV4PoolFailsClosed() public {
-        Case memory c = cases[0];
-        (, address proxy) = _v4PledgeUsd(c.wallet, c.marketId, c.usd);
-        uint256 nonce = adapterC.borrowNonce(proxy);
-        PoolKey memory pk = v4KeyOf[c.marketId];
-        (uint160 s,) = UniswapV4State.slot0(IUniswapV4PoolManager(address(v4pm)), keccak256(abi.encode(pk)));
-        v4actor.swap(pk, true, -int256(uint256(type(uint128).max)), uint160((uint256(s) * 95) / 100));
-        PriceStateView memory v = mkt[c.marketId].oracle.getPriceState();
-        assertEq(uint8(v.state), uint8(PriceState.Drifting), "spot gate");
-        assertFalse(v.borrowAllowed, "no new borrowing");
-        vm.prank(c.wallet);
-        vm.expectRevert();
-        adapterC.borrow(c.marketId, c.reserveId, c.borrowed, c.wallet, _deadline(), 0, nonce);
     }
 
     // TEST-331 verifies: REQ-AMM-V4-001, REQ-AMM-V4-006

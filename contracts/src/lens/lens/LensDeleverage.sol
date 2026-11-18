@@ -8,14 +8,12 @@ import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol";
-import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
-import {PriceStateView} from "../../types/OracleTypes.sol";
 import {ILensHubReads} from "./ILensHubReads.sol";
 import {ILensSpokeReads} from "./ILensSpokeReads.sol";
 import {LensAccountMath} from "./LensAccountMath.sol";
-import {PriceInput} from "./types/LensTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensDeleverage
@@ -110,13 +108,7 @@ abstract contract LensDeleverage is LensAccountMath {
     function _marketPriceUsable(
         Market memory m
     ) internal view returns (bool) {
-        PriceStateView memory ps = ILPOracle(m.lpOracle).getPriceState();
-        if (ps.liquidationPaused) return false;
-        PriceInput[] memory inputs = _inputs(ps.tokens);
-        for (uint256 i = 0; i < inputs.length; ++i) {
-            if (!inputs[i].liquidationFresh) return false;
-        }
-        return true;
+        return ILPOracle(m.lpOracle).getPriceStatus().liquidationFresh;
     }
 
     function _deleverageInputs(
@@ -147,7 +139,7 @@ abstract contract LensDeleverage is LensAccountMath {
         uint256 pd
     ) internal view returns (uint256 u) {
         // forge-lint: disable-next-line(unused-return)
-        (uint256[] memory prices,,) = ILPOracle(m.lpOracle).getTokenPrices();
+        (uint256[] memory prices,) = ILPOracle(m.lpOracle).getTokenPrices();
         for (uint256 i = 0; i < m.tokens.length; ++i) {
             if (m.tokens[i] == def.asset) ++u;
             else if (prices[i] != 0) u += _tokenValue(1, prices[i], m.tokenDecimals[i], def.decimals, pd, true);

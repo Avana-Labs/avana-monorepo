@@ -18,6 +18,7 @@ contract AaveAdapterRiskGatesInvariantTest is AaveAdapterRiskFixture, HandlerRea
 
     function setUp() public override {
         super.setUp();
+        lpOracleA.setLegMaxAge(FEED_AGE);
         RiskWorld memory world = RiskWorld({
             adapter: adapterC,
             coll: coll,

@@ -150,8 +150,10 @@ contract ConfigureAccess is TimelockOperations {
         address store
     ) private view returns (Operation memory op) {
         address factory = vm.parseJsonAddress(out, ".vaultTokenFactory");
-        address[] memory pricing = vm.parseJsonAddressArray(out, ".clOraclePricing");
         address[] memory lpVaults = vm.parseJsonAddressArray(out, ".lpVaults");
+        // Each market's LPOracle is a stateless contract deployed at listing; the integration's pricing is its LPVault,
+        // which returns the composition the oracle values.
+        address[] memory pricing = lpVaults;
         op = _newOperation("chain-wiring", c.release, c.aave.hubs.length + 2 + 2 * lpVaults.length);
         for (uint256 i = 0; i < c.aave.hubs.length; ++i) {
             if (IWiringViews(registry).isRecordedHub(c.aave.hubs[i].hub)) continue;

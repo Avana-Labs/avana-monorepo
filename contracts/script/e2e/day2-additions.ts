@@ -7,7 +7,7 @@
 //   1. a new Hub, `growth` (tier 3), with its Lend Spoke `lendGrowth` and a Uniswap v3 CDP Spoke `uniV3Growth`
 //      (Aave side: Hub, Spokes, assets; Avana side: recordHub, CDP Spoke, First-Loss Reserves, credit line);
 //   2. a new lend asset: WETH on the volatile Hub's Lend Spoke only (`lendOnly`, no CDP Spoke, no loss layers);
-//   3. a new borrowable asset on an existing CDP Spoke: USDT on `slipVolatile`, with its DebtOracle, and the routes
+//   3. a new borrowable asset on an existing CDP Spoke: USDT on `slipVolatile`, priced by its own Chainlink feed, and the routes
 //      the Spoke's listed market needs into USDT;
 //   4. a new collateral token, LINK, and a market on an existing Spoke: Uniswap v3 LINK/USDC 0.3 % on `uniV3Volatile`;
 //   5. a market on the new Hub: Uniswap v3 USDC/USDT 0.05 % on `uniV3Growth`, borrowing GHO.
@@ -66,13 +66,12 @@ c.aavePayload.debtAssets.push({
   lendOnly: true,
 });
 
-// 3. USDT borrowable on slipVolatile, priced by its own DebtOracle; the Spoke's listed market gets routes into USDT.
+// 3. USDT borrowable on slipVolatile, priced by its own Chainlink feed; the Spoke's listed market gets routes into USDT.
 c.listing.debtAssets.push({
   symbol: "USDT",
   fixedPrice: false,
   stressRiseBps: 500,
   floorRoundingAllowance: "1000000",
-  debtOraclePokeMinGas: 1000000,
   address: "$world:.tokens.USDT",
   feeds: { primary: "$world:.feeds.USDT.primary" },
 });

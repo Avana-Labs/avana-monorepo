@@ -134,7 +134,6 @@
         "symbol": "USDC",
         "fixedPrice": false,
         "stressRiseBps": 500,
-        "debtOraclePokeMinGas": 1000000,
         "floorRoundingAllowance": "1000000"
       }
     ],

@@ -9,7 +9,7 @@ import {AvanaDeployment, ChainInputs, IntegrationInput} from "./DeployTypes.sol"
 /// @title AvanaPeripheryDeploy
 /// @notice Steps 4–11 of the deployment order: the immutable contracts (Lock, Collateralization, the LPVault of each
 /// AMM integration, VaultTokenFactory, ProxyManager, PayoutEscrow, the flash source and the flash liquidation
-/// helpers), the Lens, the DebtOracle implementation and the concentrated-liquidity LPOracle implementation.
+/// helpers) and the Lens.
 abstract contract AvanaPeripheryDeploy is AvanaCoreDeploy {
     function _deployImmutables(
         ChainInputs memory c,
@@ -159,15 +159,5 @@ abstract contract AvanaPeripheryDeploy is AvanaCoreDeploy {
             m[i] = d.lensModules[i];
         }
         d.lens = _deploy3("Lens", bytes.concat(_artifact("Lens.sol", "Lens"), abi.encode(m)));
-    }
-
-    /// @notice The DebtOracle implementation every non-GHO debt reserve's proxy uses (`REQ-DEBTORACLE-001`); proxies are
-    /// created at debt-reserve listing, because `initialize` reads the listed asset.
-    function _deployDebtOracleImplementation(
-        Predicted memory p
-    ) internal returns (address) {
-        return _deploy(
-            "DebtOracleImplementation", bytes.concat(_artifact("DebtOracle.sol", "DebtOracle"), abi.encode(p.timelock))
-        );
     }
 }

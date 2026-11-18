@@ -747,7 +747,7 @@ jobs:
           retention-days: 14
 
   differential:
-    name: FFI differential (LPOracle vs mpmath)
+    name: FFI differential (vs mpmath)
     needs: build
     # Long check: a manual run of the long suite only.
     if: github.event_name == 'workflow_dispatch' && inputs.suite == 'long' && !inputs.only
@@ -788,7 +788,7 @@ jobs:
           fi
 
       - name: Build Uniswap v3 artifacts for the fixture
-        # LPOracleCL.differential.t.sol deploys the Uniswap v3 pool and position manager from out-univ3/ (vm.getCode).
+        # The differential suites deploy the Uniswap v3 pool and position manager from out-univ3/ (vm.getCode).
         run: FOUNDRY_PROFILE=univ3 forge build
 
       - name: Differential fuzzing (TEST-037)
@@ -836,7 +836,7 @@ jobs:
       # minutes at 20 s per query, runs 43824532883 and 43835608650). Every other contract's timeout fails.
       # Contracts on which the model check runs out of time or memory on a hosted runner: a timeout, the memory cap or
       # a solc crash (signal) is reported in the summary, not failed. Their properties are carried by Certora, Halmos and the invariant tests.
-      SMT_TIMEOUT_REPORTED: "AaveAdapterCollateralLogic AaveAdapterExitLogic AaveAdapterSettlementLogic AaveAdapterUserLogic AvanaTimelock Collateralization DebtOracle DexPathRoute LPOracleCL LPVaultSwap LPVaultSwapDeleverageLogic LPVaultSwapLiquidationLogic LPVaultSwapPendingLogic MarketRegistry ParameterStore PayoutEscrow PegModuleRoute RiskModule UniswapV3Integration WrapperThenDexRoute"
+      SMT_TIMEOUT_REPORTED: "AaveAdapterCollateralLogic AaveAdapterExitLogic AaveAdapterSettlementLogic AaveAdapterUserLogic AvanaTimelock Collateralization DexPathRoute LPOracle LPVaultSwap LPVaultSwapDeleverageLogic LPVaultSwapLiquidationLogic LPVaultSwapPendingLogic MarketRegistry ParameterStore PayoutEscrow PegModuleRoute RiskModule UniswapV3Integration WrapperThenDexRoute"
       SMT_TIMEOUT_REPORTED_NOTE: "Certora, Halmos and the invariant tests carry this contract's properties (PayoutEscrow: Halmos PROP_052)"
       # Solver memory cap per solc process (KiB) on a 16 GB hosted runner; above it solc is stopped and the job reports
       # instead of the runner being shut down.

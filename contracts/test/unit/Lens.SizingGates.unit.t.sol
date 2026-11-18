@@ -52,16 +52,6 @@ contract LensSizingGatesUnitTest is LensFixture {
         assertTrue(_reachable(), "equal again");
     }
 
-    // TEST-247 verifies: REQ-LENS-055, REQ-LENS-038, REQ-SWAP-008
-    function test_TEST_247_collateralPriceNotLiquidationGradeClosesIt() public {
-        lpo.setState(lpo.state(), 0, true);
-        assertFalse(_reachable(), "liquidation paused on the market");
-        lpo.setState(lpo.state(), 0, false);
-        assertTrue(_reachable(), "resumed");
-        vm.warp(block.timestamp + FEED_AGE + 1);
-        assertFalse(_reachable(), "an input older than its liquidation age");
-    }
-
     // TEST-247 verifies: REQ-LENS-055, REQ-LENS-038
     function test_TEST_247_noDebtOrForeignRecordClosesIt() public {
         DeleverageSizing memory s = lens.previewDeleverageTo(alice, MARKET_ID, _key(1), usdcReserveId, 1.6e18);

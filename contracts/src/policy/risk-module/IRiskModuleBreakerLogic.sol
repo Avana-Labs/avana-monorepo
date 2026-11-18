@@ -8,12 +8,6 @@ import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 /// @title IRiskModuleBreakerLogic
 /// @notice Breaker conditions and states of markets and debt reserves.
 interface IRiskModuleBreakerLogic is IRiskModuleLogic {
-    /// @notice Pokes the market's LPOracle and its Spoke's DebtOracles, as the pre-checks do.
-    /// @dev Anyone may call. A poke reverts only with `InsufficientGas`, which reverts the whole `pokeBreakers`.
-    function pokeOracles(
-        uint256 marketId
-    ) external;
-
     /// @notice Market breaker reasons holding now from live state.
     /// @param unitsGiven True when `poolUnits` is given (inside a pledge); false reads Collateralization's.
     /// @param poolUnits Avana's credited units in every market of the pool, when given.

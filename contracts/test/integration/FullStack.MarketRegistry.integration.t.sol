@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
+import {ILPOracle} from "../../src/oracle/ILPOracle.sol";
 import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
@@ -69,8 +69,6 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
         bytes32 key = _newKey();
         lpVault.mintPosition(key, bob, mA, UNITS / 4);
         uint256 supplyBefore = ERC20(vtA).totalSupply();
-        vm.expectCall(address(mkt[mA].oracle), abi.encodeWithSelector(ILPOracle.poke.selector), 1);
-        vm.expectCall(address(mkt[mB].oracle), abi.encodeWithSelector(ILPOracle.poke.selector), 0);
         vm.expectCall(
             address(riskModule),
             bytes.concat(IRiskModule.checkPledge.selector, abi.encode(bob, pB, mA, V3, key, UNITS / 4))

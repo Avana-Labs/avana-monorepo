@@ -20,21 +20,6 @@ contract LensViewsFuzzTest is LensFixture {
         _deployLens();
     }
 
-    // TEST-247 verifies: REQ-LENS-045
-    function testFuzz_TEST_247_marketSupplyValue(
-        uint256 units,
-        uint256 accepted
-    ) public {
-        units = bound(units, 1, 1_000_000e6);
-        accepted = bound(accepted, 1, 1e12);
-        _open(alice, aliceProxy, 1, uint128(units));
-        lpo.setAccepted(accepted, uint64(block.timestamp));
-        MarketView memory v = lens.getMarket(MARKET_ID);
-        assertEq(v.suppliedUnits, IAaveV4Hub(aave.hub).getSpokeAddedAssets(vtAssetId, aave.cdpSpoke), "Hub supply");
-        assertEq(v.suppliedUsd, units * accepted / 1e6, "floor(units x accepted / 10^d)");
-        assertEq(v.acceptedPrice, accepted, "accepted");
-    }
-
     // TEST-247 verifies: REQ-LENS-046
     function testFuzz_TEST_247_reserveRatesFollowTheHub(
         uint256 borrowGho,
@@ -74,27 +59,6 @@ contract LensViewsFuzzTest is LensFixture {
         assertEq(c.marketHeadroomUsd, marketCap > charge ? marketCap - charge : 0, "market");
         uint256 usedUsdc = coll.getCounters(vt, alice).tokenUsed[0];
         assertEq(c.tokenHeadroomUsd[0], tokenCap > usedUsdc ? tokenCap - usedUsdc : 0, "USDC");
-    }
-
-    // TEST-238 verifies: REQ-LENS-038, SPEC-CAP-001
-    function testFuzz_TEST_238_recreditCharge(
-        uint128 donation,
-        uint256 accepted,
-        uint256 floor
-    ) public {
-        _open(alice, aliceProxy, 1, 10_000e6);
-        donation = uint128(bound(donation, 1, 1_000_000e6));
-        accepted = bound(accepted, 1, 1e10);
-        floor = bound(floor, 0, 1e10);
-        vault.addUnits(_key(1), donation);
-        lpo.setAccepted(accepted, uint64(block.timestamp));
-        store.setCaps(MARKET_ID, 1_000_000e8, 100_000e8, floor);
-        (uint128 added, uint256 charge,) = lens.previewRecredit(MARKET_ID, _key(1));
-        assertEq(added, donation, "the donated units");
-        uint256 price = accepted > floor ? accepted : floor;
-        assertEq(
-            charge, Math.mulDiv(donation, price, 1e6, Math.Rounding.Ceil), "ceil(added x max(price, floor) / 10^d)"
-        );
     }
 
     // TEST-247 verifies: REQ-LENS-014, INV-002

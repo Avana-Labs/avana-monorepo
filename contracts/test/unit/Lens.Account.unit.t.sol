@@ -222,20 +222,6 @@ contract LensAccountUnitTest is LensFixture {
         assertEq(a.breakerReasons, 1, "the market's breakers still apply");
     }
 
-    // TEST-247 verifies: REQ-LENS-009, REQ-LENS-007
-    function test_TEST_247_getAccountReportsEveryPriceState() public {
-        _borrow(aliceProxy, 1000e18);
-        for (uint8 s = 0; s < 4; ++s) {
-            lpo.setState(PriceState(s), 0, s >= 2);
-            AccountView memory a = lens.getAccount(alice, MARKET_ID);
-            assertEq(uint8(a.markets[0].priceState), s, "state reported, never a revert");
-        }
-        _setVtPrice(1);
-        AccountView memory e = lens.getAccount(alice, MARKET_ID);
-        assertEq(e.healthFactor, _hf(aliceProxy), "the served price drives the health factor");
-        assertLt(e.healthFactor, 1e18, "Expired counts the collateral as worthless");
-    }
-
     // TEST-247 verifies: REQ-LENS-022
     function test_TEST_247_getAccountUnknownMarketReverts() public {
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 7));

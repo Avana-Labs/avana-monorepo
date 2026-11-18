@@ -7,10 +7,8 @@ import {IClIntegration} from "../../src/amm/IClIntegration.sol";
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {DexHop, HopKind, RouteConfig} from "../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
-import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
-import {DebtOracleInitParams} from "../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
-import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {InitParams} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
+import {ILPOracle} from "../../src/oracle/ILPOracle.sol";
+import {LPOracle} from "../../src/oracle/LPOracle.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
 import {
     DebtReserveDef,
@@ -34,7 +32,6 @@ import {ChainInputs} from "./lib/DeployTypes.sol";
 import {IPoolTokens, ListingBase} from "./lib/ListingBase.sol";
 import {ITimelockOps} from "./lib/TimelockOperations.sol";
 import {TokenProbe} from "./lib/TokenProbe.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
 import {console2} from "forge-std/console2.sol";
@@ -90,9 +87,6 @@ interface IRelistedToken {
 /// (`09-market-metadata`), so the operation commits to the pages it adds. Outputs: `listing-oracles.json` and `listing-markets.json` in
 /// `deployments-local/<network>/`, read by the manifest producer and the scenarios.
 contract ListMarkets is ListingBase {
-    uint32 internal constant LP_ORACLE_POKE_MIN_GAS = 1_000_000;
-    uint256 internal constant LP_ORACLE_POKE_GAS = 1_500_000;
-
     // From the network inputs (`ChainInputs` holds arrays of structs, which the legacy pipeline cannot copy to storage).
     address internal safe;
     uint32 internal blockTime;
@@ -473,21 +467,10 @@ contract ListMarkets is ListingBase {
                     string.concat("FixedPriceSource.", sym), _artifact("FixedPriceSource.sol", "FixedPriceSource")
                 );
             } else {
-                DebtOracleInitParams memory p = DebtOracleInitParams({
-                    timelock: timelock,
-                    asset: _token(sym),
-                    marketRegistry: address(registry),
-                    parameterStore: address(store),
-                    description: string.concat(sym, " / USD debt"),
-                    pokeMinGas: uint32(_uint(string.concat(k, ".debtOraclePokeMinGas")))
-                });
-                address impl = vm.parseJsonAddress(avanaJson, ".debtOracleImplementation");
-                source = _deploy(
-                    string.concat("DebtOracle.", sym),
-                    bytes.concat(
-                        type(ERC1967Proxy).creationCode, abi.encode(impl, abi.encodeCall(IDebtOracle.initialize, (p)))
-                    )
-                );
+                // Aave reads the asset's own Chainlink USD feed: its one-leg primary route in the registry.
+                (address[] memory primary,,) = registry.activePriceRoutes(_token(sym));
+                require(primary.length == 1, string.concat(sym, ": a debt asset needs a one-leg USD feed"));
+                source = primary[0];
             }
             json = vm.serializeAddress(o, sym, source);
             console2.log("price source", sym, source);
@@ -957,29 +940,31 @@ contract ListMarkets is ListingBase {
         revert(string.concat("no debt reserve for ", spokeLabel));
     }
 
-    /// @notice `MKT-019`: the market's LPOracle, a proxy of its integration's `LPOracleCL` (`LPOracleV4` for Uniswap v4)
-    /// initialised in its deploying transaction; `initialize` refuses a configuration that does not price Live.
+    /// @notice `MKT-019`: the market's stateless LPOracle, valuing its vault token from each token's primary Chainlink
+    /// route and the LPVault's composition.
     function _deployLpOracle(
         Mkt memory m
     ) private {
-        InitParams memory p;
-        p.timelock = timelock;
-        p.parameterStore = address(store);
-        p.marketRegistry = address(registry);
-        p.marketId = m.marketId;
-        p.integration = m.lpVault;
-        p.isUsdStable = new bool[](2);
-        p.isUsdStable[0] = _bool(string.concat(_tokenKey(m.token0), ".isUsdStable"));
-        p.isUsdStable[1] = _bool(string.concat(_tokenKey(m.token1), ".isUsdStable"));
-        p.description = _str(string.concat(m.key, ".name"));
-        p.pokeMinGas = LP_ORACLE_POKE_MIN_GAS;
-        p.config = _oracleConfig(m, p.isUsdStable[0] && p.isUsdStable[1]);
-        p.market = _oracleMarket(m);
-        address impl = vm.parseJsonAddressArray(avanaJson, ".clOraclePricing")[_integrationIndex(m.integrationId)];
+        address[2] memory toks = [m.token0, m.token1];
+        ILPOracle.TokenRoute[] memory routes = new ILPOracle.TokenRoute[](2);
+        for (uint256 i = 0; i < 2; ++i) {
+            (address[] memory primary,,) = registry.activePriceRoutes(toks[i]);
+            routes[i] = ILPOracle.TokenRoute({
+                token: toks[i], isUsdStable: _bool(string.concat(_tokenKey(toks[i]), ".isUsdStable")), feeds: primary
+            });
+        }
+        ILPOracle.Params memory p = ILPOracle.Params({
+            marketId: m.marketId,
+            integration: m.lpVault,
+            parameterStore: address(store),
+            description: _str(string.concat(m.key, ".name")),
+            vaultDecimals: m.decimals,
+            routes: routes
+        });
         vm.broadcast(deployerOf());
         m.lpOracle = _deploy(
             string.concat("LPOracle.", vm.toString(m.marketId)),
-            bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(impl, abi.encodeCall(ILPOracle.initialize, (p))))
+            bytes.concat(type(LPOracle).creationCode, abi.encode(p))
         );
         console2.log("LPOracle", m.marketId, m.lpOracle);
     }
@@ -1382,13 +1367,6 @@ contract ListMarkets is ListingBase {
             uint256 id = registry.marketOfKey(_marketKeyOf(f, i));
             if (id != 0 && registry.getMarket(id).status == MarketStatus.Registered) ids[k++] = id;
         }
-        vm.startBroadcast(deployerOf());
-        for (uint256 i = 0; i < k; ++i) {
-            // `poke` refuses less than `pokeMinGas` at entry (1,000,000 here); a gas estimate is the gas it uses, so the
-            // limit is set explicitly.
-            ILPOracle(registry.getMarket(ids[i]).lpOracle).poke{gas: LP_ORACLE_POKE_GAS}();
-        }
-        vm.stopBroadcast();
         for (uint256 i = 0; i < k; ++i) {
             _add(op, address(registry), abi.encodeCall(registry.activateMarket, (ids[i])), "MR.activateMarket");
         }

@@ -21,96 +21,10 @@ contract LensPriceUnitTest is LensFixture {
 
     // ─── getPriceState ───
 
-    // TEST-247 verifies: REQ-LENS-015, REQ-LENS-005
-    function test_TEST_247_priceStateLive() public view {
-        PriceView memory v = lens.getPriceState(vt);
-        assertEq(v.blockNumber, block.number, "block");
-        assertEq(v.timestamp, block.timestamp, "timestamp");
-        assertEq(v.vaultToken, vt, "market");
-        assertEq(v.feed, address(lpo), "the market's LPOracle");
-        assertEq(uint8(v.state), uint8(PriceState.Live), "Live");
-        assertEq(uint8(v.liquidationState), uint8(PriceState.Live), "seizable");
-        assertEq(v.price, 2e8, "served = latestAnswer");
-        assertEq(v.acceptedPrice, 2e8, "accepted");
-        assertEq(v.acceptedAt, T0 - 600, "accepted at");
-        assertEq(v.inputs.length, 2, "one leg per token");
-        assertEq(v.inputs[0].feed, feedUsdc, "USDC feed");
-        assertEq(v.inputs[1].feed, feedUsdt, "USDT feed");
-        assertEq(v.inputs[0].updatedAt, T0 - 600, "source timestamp");
-        assertEq(v.inputs[0].age, 600, "age");
-        assertEq(v.inputs[0].borrowPriceMaxAge, FEED_AGE, "borrow limit from the ParameterStore");
-        assertEq(v.inputs[0].liquidationPriceMaxAge, FEED_AGE, "liquidation limit");
-        assertTrue(v.inputs[0].borrowFresh && v.inputs[0].liquidationFresh, "fresh");
-        assertEq(v.tokenDeviationBps.length, 2, "one deviation per token");
-        assertEq(v.graceHealthFactor, 0.95e18, "grace HF from the ParameterStore");
-        assertTrue(v.borrowAllowed, "borrow allowed");
-    }
-
-    // TEST-247 verifies: REQ-LENS-015, REQ-LENS-007
-    function test_TEST_247_priceStateEveryStateReported() public {
-        for (uint8 s = 0; s < 4; ++s) {
-            lpo.setState(PriceState(s), 0, s >= 2);
-            PriceView memory v = lens.getPriceState(vt);
-            assertEq(uint8(v.state), s, "state");
-            assertEq(uint8(v.liquidationState), s, "no disagreement: the same state");
-        }
-    }
-
-    // TEST-247 verifies: REQ-LENS-015, REQ-ORACLE-085
-    function test_TEST_247_priceStateExpiredServesOne() public {
-        lpo.setState(PriceState.Expired, 0, true);
-        lpo.setAnswer(true, 1);
-        PriceView memory v = lens.getPriceState(vt);
-        assertEq(v.price, 1, "worthless collateral");
-        assertEq(v.acceptedPrice, 2e8, "the accepted price is kept");
-        assertLe(v.price, v.acceptedPrice, "served at most accepted when not Live");
-    }
-
     // TEST-247 verifies: REQ-LENS-015, REQ-LENS-007
     function test_TEST_247_priceStateNegativeAnswerReportsZero() public {
         lpo.setAnswer(true, -5);
         assertEq(lens.getPriceState(vt).price, 0, "a non-positive answer is reported as 0, never a revert");
-    }
-
-    // TEST-247 verifies: REQ-LENS-015, Q-208, Q-247
-    function test_TEST_247_priceStateDisagreementPauseIsDrifting() public {
-        lpo.setDisagreement(1_762_696_000, true, false);
-        lpo.setAnswer(true, 197_483_855);
-        lpo.setAccepted(199_980_000, uint64(block.timestamp - 100));
-        lpo.setTokenRoute(1, 0, 250);
-        PriceView memory v = lens.getPriceState(vt);
-        assertEq(uint8(v.state), uint8(PriceState.Live), "the market is Live");
-        assertEq(uint8(v.liquidationState), uint8(PriceState.Drifting), "the seizure is paused");
-        assertTrue(v.disagreementPauseActive, "pause active");
-        assertEq(v.disagreeSince, 1_762_696_000, "first observation");
-        assertEq(v.price, 197_483_855, "lower route");
-        assertEq(v.acceptedPrice, 199_980_000, "accepted");
-        assertEq(v.tokenDeviationBps[1], 250, "USDT routes 2.5 % apart");
-    }
-
-    // TEST-247 verifies: REQ-LENS-015, Q-208
-    function test_TEST_247_priceStateDisagreementExpiredIsExpired() public {
-        lpo.setDisagreement(1_762_696_000, false, true);
-        PriceView memory v = lens.getPriceState(vt);
-        assertTrue(v.disagreementExpired, "past disagreementPauseMax");
-        assertEq(uint8(v.liquidationState), uint8(PriceState.Expired), "treated as Expired for liquidation");
-        lpo.setState(PriceState.Cached, 0, true);
-        assertEq(uint8(lens.getPriceState(vt).liquidationState), uint8(PriceState.Expired), "even when Cached");
-    }
-
-    // TEST-247 verifies: REQ-LENS-015, REQ-ORACLE-090
-    function test_TEST_247_priceStateAlternatePastBorrowAgeIsCached() public {
-        lpo.setState(PriceState.Drifting, 1 << 12, true);
-        assertEq(uint8(lens.getPriceState(vt).liquidationState), uint8(PriceState.Cached), "alternate leg too old");
-        lpo.setState(PriceState.Live, 1 << 12, true);
-        assertEq(uint8(lens.getPriceState(vt).liquidationState), uint8(PriceState.Cached), "from Live too");
-        lpo.setState(PriceState.Expired, 1 << 12, true);
-        assertEq(uint8(lens.getPriceState(vt).liquidationState), uint8(PriceState.Expired), "Expired stays");
-        // Other reason bits without bit 12 leave the state as it is.
-        lpo.setState(PriceState.Drifting, (1 << 9) | (1 << 10) | (1 << 13), true);
-        assertEq(uint8(lens.getPriceState(vt).liquidationState), uint8(PriceState.Drifting), "other reasons only");
-        lpo.setState(PriceState.Live, 1 << 10, true);
-        assertEq(uint8(lens.getPriceState(vt).liquidationState), uint8(PriceState.Live), "in grace, Live");
     }
 
     // TEST-247 verifies: REQ-LENS-015
@@ -138,18 +52,6 @@ contract LensPriceUnitTest is LensFixture {
         assertEq(v.inputs[3].borrowPriceMaxAge, 3600, "its own limit");
     }
 
-    // TEST-247 verifies: REQ-LENS-015, REQ-SWAP-009
-    function test_TEST_247_priceStateGraceAndBorrowGate() public {
-        lpo.setGrace(true, uint64(block.timestamp - 60), uint64(block.timestamp + 1740));
-        lpo.setBorrowAllowed(false);
-        store.setGraceHealthFactor(0.97e18);
-        PriceView memory v = lens.getPriceState(vt);
-        assertEq(v.recoveredAt, block.timestamp - 60, "recovered at");
-        assertEq(v.graceEndsAt, block.timestamp + 1740, "recoveredAt + graceDuration");
-        assertEq(v.graceHealthFactor, 0.97e18, "grace health factor");
-        assertFalse(v.borrowAllowed, "sequencer or second-source gate closed");
-    }
-
     // TEST-247 verifies: REQ-LENS-022
     function test_TEST_247_priceStateUnknownVaultTokenReverts() public {
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 0));
@@ -173,63 +75,6 @@ contract LensPriceUnitTest is LensFixture {
         assertEq(v.age, 0, "age 0");
         assertTrue(v.borrowFresh && v.liquidationFresh, "both fresh");
         assertFalse(v.stressPriced, "never stress-priced");
-    }
-
-    // TEST-247 verifies: REQ-LENS-030, Q-248, Q-274
-    function test_TEST_247_debtPriceOracleExampleLiveThenCached() public {
-        usdcOracle.set(99_990_000, PriceState.Live, 99_990_000, 1_762_696_000);
-        vm.warp(1_762_697_800);
-        DebtPriceView memory v = lens.getDebtPriceState(aave.cdpSpoke, usdcReserveId);
-        assertTrue(usdcReserveId != 0, "a non-zero reserve id");
-        assertEq(v.debtReserveId, usdcReserveId, "reserve");
-        assertEq(v.source, address(usdcOracle), "DebtOracle");
-        assertFalse(v.fixedPrice, "not fixed");
-        assertEq(v.age, 1800, "age");
-        assertTrue(v.borrowFresh && v.liquidationFresh, "within 4,200 s");
-        assertEq(v.price, 99_990_000, "served");
-        vm.warp(1_762_700_500);
-        usdcOracle.set(99_990_000, PriceState.Cached, 99_990_000, 1_762_696_000);
-        v = lens.getDebtPriceState(aave.cdpSpoke, usdcReserveId);
-        assertEq(uint8(v.state), uint8(PriceState.Cached), "Cached");
-        assertEq(v.price, v.acceptedPrice, "served = accepted while Cached");
-        assertFalse(v.borrowFresh || v.liquidationFresh, "neither");
-    }
-
-    // TEST-247 verifies: REQ-LENS-030, SPEC-ORC-018
-    function test_TEST_247_debtPriceExpiredStress() public {
-        usdcOracle.set(104_989_500, PriceState.Expired, 99_990_000, uint64(block.timestamp - 90_000));
-        DebtPriceView memory v = lens.getDebtPriceState(aave.cdpSpoke, usdcReserveId);
-        assertEq(v.price, 104_989_500, "ceil(99,990,000 x 10,500 / 1e4)");
-        assertTrue(v.stressPriced, "served above accepted");
-        assertGe(v.price, v.acceptedPrice, "debt served at least accepted");
-        assertFalse(v.borrowFresh, "not Live");
-    }
-
-    // TEST-247 verifies: REQ-LENS-030, REQ-LENS-016
-    function test_TEST_247_debtPriceFollowsTheOraclesOwnGates() public {
-        // Live with a fresh accepted price, yet the oracle closes liquidation (sequencer down, or an alternate leg
-        // past its borrow age) or borrowing (sequencer not ready, second source unconfirmed).
-        usdcOracle.setGates(true, false);
-        DebtPriceView memory v = lens.getDebtPriceState(aave.cdpSpoke, usdcReserveId);
-        assertTrue(v.state == PriceState.Live && v.borrowFresh, "borrowing stays open");
-        assertFalse(v.liquidationFresh, "liquidation of the reserve is paused");
-        usdcOracle.setGates(false, true);
-        v = lens.getDebtPriceState(aave.cdpSpoke, usdcReserveId);
-        assertFalse(v.borrowFresh, "the RiskModule would refuse the borrow");
-        assertTrue(v.liquidationFresh, "liquidation open");
-    }
-
-    // TEST-247 verifies: REQ-LENS-030
-    function test_TEST_247_debtPriceLiveButOld() public {
-        usdcOracle.set(1e8, PriceState.Live, 1e8, uint64(block.timestamp - 4201));
-        DebtPriceView memory v = lens.getDebtPriceState(aave.cdpSpoke, usdcReserveId);
-        assertEq(uint8(v.state), uint8(PriceState.Live), "Live");
-        assertFalse(v.borrowFresh, "older than borrowPriceMaxAge");
-        assertFalse(v.liquidationFresh, "older than liquidationPriceMaxAge");
-        store.setAges(feedUsdcDebt, 4000, 5000);
-        v = lens.getDebtPriceState(aave.cdpSpoke, usdcReserveId);
-        assertFalse(v.borrowFresh, "4,201 > 4,000");
-        assertTrue(v.liquidationFresh, "4,201 <= 5,000");
     }
 
     // TEST-247 verifies: REQ-LENS-030, REQ-LENS-032

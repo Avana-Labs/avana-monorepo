@@ -104,7 +104,6 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         assertEq(k.poolUnits, 5_000_000_000);
         assertEq(lpVault.ownerOf(KEY42), address(lpVault), "custody");
         assertEq(lpVault.depositorOf(KEY42), alice, "depositor of record");
-        assertEq(oracle.pokes(), 1, "LPOracle poked once");
     }
 
     // TEST-186 verifies: REQ-VAULT-012, REQ-VAULT-018, REQ-VAULT-042, SPEC-BACK-002, SPEC-BACK-009, INV-001, INV-006
@@ -127,13 +126,12 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
 
     // TEST-171 verifies: REQ-COLL-002, REQ-COLL-003, REQ-VAULT-014, REQ-VAULT-102, INV-017, ATTACK-005, ATTACK-033, Q-126, Q-224, Q-240, REQ-RISK-058
     // Sources: 5.1 TEST-171
-    /// @notice The pledge pokes the vault token's own LPOracle and passes the vault token's own market ID and
+    /// @notice The pledge passes the vault token's own market ID and
     /// integration to `checkPledge`; no registry is read.
     function test_TEST_171_marketIdentityFromVaultToken() public {
         lpVault.mintPosition(KEY42, alice, MARKET_ID, 5_000_000_000);
         _acquire(adapter);
         _register(aliceProxy);
-        vm.expectCall(address(oracle), abi.encodeCall(CollOracleMock.poke, ()), 1);
         vm.expectCall(
             address(riskModule),
             abi.encodeWithSelector(

@@ -83,36 +83,6 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         store.setFeed(address(f18), _feedDef(3600, 600));
     }
 
-    // TEST-250 verifies: REQ-CONFIG-023, REQ-CONFIG-052, REQ-PSTORE-009
-    function test_TEST_250_feedAgeSetters() public {
-        _listMarket();
-        address f = address(fUsdc);
-        _tl();
-        store.setBorrowPriceMaxAge(f, 1000);
-        _tl();
-        store.setBorrowPriceMaxAge(f, 88_200);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.setBorrowPriceMaxAge(f, 88_201);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
-        store.setLiquidationPriceMaxAge(f, 88_199);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.setLiquidationPriceMaxAge(f, 88_201);
-        _tl();
-        store.setLiquidationPriceMaxAge(f, 88_200);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.setFeedMaxAge(f, 88_199);
-        _tl();
-        store.setFeedMaxAge(f, 88_200);
-        lpOracle.setFailed(1);
-        _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 1));
-        store.setBorrowPriceMaxAge(f, 1000);
-    }
-
     // TEST-250 verifies: REQ-CONFIG-024, REQ-CONFIG-052
     function test_TEST_250_setFeedKeepsToleranceBound() public {
         _listMarket();

@@ -248,22 +248,6 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         assertEq(registry.getMarket(id).tokens[1], address(ghoM));
     }
 
-    // TEST-139 verifies: REQ-CONFIG-021, REQ-MREG-006, REQ-MREG-008
-    /// @notice A debt asset without a fixed price still needs its three routes: a monitoring-only listing is refused
-    /// for a DebtOracle-priced reserve with `InvalidDebtReserve("routes")` and accepted once it has three routes.
-    /// Fails without the route check in `_checkPriceSource` (the reserve is enabled).
-    function test_TEST_139_nonFixedPriceDebtAssetNeedsThreeRoutes() public {
-        _listMonitoring(address(ghoM));
-        DebtReserveDef memory d = _oracleReserveFor(address(ghoM), 18);
-        vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidDebtReserve.selector, bytes32("routes")));
-        registry.enableDebtReserve(address(spoke), d);
-        _giveThreeRoutes(address(ghoM));
-        _enable(d);
-        assertTrue(registry.getDebtReserve(address(spoke), NEW_RESERVE).approved);
-        assertFalse(registry.getDebtReserve(address(spoke), NEW_RESERVE).fixedPrice);
-    }
-
     // ─── Combined USDT issuer probe ───
 
     // TEST-139 verifies: REQ-MREG-027, Q-241

@@ -5,7 +5,7 @@
 // the contracts fails here instead of in production.
 
 import { describe, expect, it } from "vitest";
-import { debtOracleAbi, lensAbi, lpOracleAbi, marketRegistryAbi, parameterStoreAbi } from "@avana/protocol/abis";
+import { lensAbi, lpOracleAbi, marketRegistryAbi, parameterStoreAbi } from "@avana/protocol/abis";
 import type { Abi } from "viem";
 import { BACKING_FLAGS } from "../src/probes/coverage.ts";
 import { EVENT_NAMES, TOPIC_COUNT } from "../src/probes/events.ts";
@@ -21,10 +21,9 @@ function outputs(abi: Abi, fn: string): string[] {
 
 describe("protocol names the probes read", () => {
   const cases: [string, Abi, string, string[]][] = [
-    ["LPOracle", lpOracleAbi as Abi, "getPriceState", ["usdLevel", "disagreeSince"]],
-    ["ParameterStore", parameterStoreAbi as Abi, "getOracleConfig", ["usdBandLow", "disagreementPauseMax"]],
+    ["ParameterStore", parameterStoreAbi as Abi, "getOracleConfig", ["usdBandLow"]],
     ["ParameterStore", parameterStoreAbi as Abi, "getFeed", ["feedMaxAge"]],
-    ["Lens", lensAbi as Abi, "getDebtPriceState", ["state", "age", "fixedPrice"]],
+    ["Lens", lensAbi as Abi, "getDebtPriceState", ["source", "state", "age", "fixedPrice"]],
     ["Lens", lensAbi as Abi, "getCapHeadroom", ["poolShareBps", "poolShareMaxBps"]],
     ["Lens", lensAbi as Abi, "checkBacking", [...BACKING_FLAGS]],
     ["Lens", lensAbi as Abi, "getTailCoverage", ["funded", "minimum", "ratioBps", "deficitOffset", "offsetFunded"]],
@@ -33,8 +32,8 @@ describe("protocol names the probes read", () => {
     ["ParameterStore", parameterStoreAbi as Abi, "routeDepthThreshold", ["value"]],
     ["MarketRegistry", marketRegistryAbi as Abi, "getRoute", ["route", "usable"]],
     ["LPOracle", lpOracleAbi as Abi, "getTokenPrices", ["prices"]],
-    ["DebtOracle", debtOracleAbi as Abi, "borrowPriceMaxAge", [""]],
-    ["DebtOracle", debtOracleAbi as Abi, "liquidationPriceMaxAge", [""]],
+    ["ParameterStore", parameterStoreAbi as Abi, "borrowPriceMaxAge", ["age"]],
+    ["ParameterStore", parameterStoreAbi as Abi, "liquidationPriceMaxAge", ["age"]],
   ];
   for (const [contract, abi, fn, fields] of cases) {
     it(`${contract}.${fn} has ${fields.filter(Boolean).join(", ") || "its output"}`, () => {

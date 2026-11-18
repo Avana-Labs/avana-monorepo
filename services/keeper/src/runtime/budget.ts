@@ -30,7 +30,7 @@ export interface SpendEntry {
   /** Unix seconds of the block it was seen included in. */
   readonly at: bigint;
   readonly costWei: bigint;
-  /** The market ID (decimal) the subject names; null for a subject without one (a DebtOracle, a CDP Spoke). */
+  /** The market ID (decimal) the subject names; null for a subject without one (a CDP Spoke, the gas vault). */
   readonly market: string | null;
   /** The Hub the subject's CDP Spoke draws from (lower-case); null when the Spoke or its Hub is not known. */
   readonly hub: Address | null;
@@ -147,9 +147,9 @@ const bare = (subject: string) => subject.split("@")[0]!;
  * The market and CDP Spoke a transaction's subject names, from the manifest:
  * - `chainId:market:<marketId>` (breaker poke, `settlePending`): that market and its Spoke;
  * - `chainId:<spoke>:<proxy>` (liquidation): that Spoke; the market comes from the account (`marketOfAccount`);
- * - `chainId:<address>`: a market's LPOracle (that market), a DebtOracle (its reserve's Spoke) or a CDP Spoke.
+ * - `chainId:<address>`: a CDP Spoke (configuration poke); any other address (the gas vault) names neither.
  */
-export function attributeSubject(manifest: Pick<ServiceManifest, "markets" | "debtReserves" | "aave">, subject: string, marketOfAccount?: (proxy: string) => bigint | undefined): { market: string | null; spoke: Address | null } {
+export function attributeSubject(manifest: Pick<ServiceManifest, "markets" | "aave">, subject: string, marketOfAccount?: (proxy: string) => bigint | undefined): { market: string | null; spoke: Address | null } {
   const parts = bare(subject).split(":");
   const eq = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
   const ofMarket = (id: bigint | undefined) => {
@@ -163,10 +163,6 @@ export function attributeSubject(manifest: Pick<ServiceManifest, "markets" | "de
   }
   if (parts.length === 2) {
     const a = parts[1]!;
-    const lp = manifest.markets.find((m) => eq(m.lpOracle.address, a));
-    if (lp) return { market: lp.marketId.toString(10), spoke: lp.spoke };
-    const debt = manifest.debtReserves.find((r) => r.debtOracle !== null && eq(r.debtOracle.address, a));
-    if (debt) return { market: null, spoke: debt.spoke };
     if (manifest.aave.borrowSpokes.some((s) => eq(s.address, a))) return { market: null, spoke: a as Address };
   }
   return { market: null, spoke: null };
