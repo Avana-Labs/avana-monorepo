@@ -8,7 +8,7 @@ import {OracleConfig} from "../../types/OracleConfig.sol";
 import {OracleLeg} from "../../types/OracleLeg.sol";
 import {OracleRoute} from "../../types/OracleRoute.sol";
 import {TokenOracleConfig} from "../../types/TokenOracleConfig.sol";
-import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
+import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
 import {ParameterStoreRisk} from "./ParameterStoreRisk.sol";
 import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";

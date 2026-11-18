@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {ActionPreview} from "../../src/lens/lens/types/ActionPreview.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
 
@@ -251,7 +251,7 @@ contract LensActionsUnitTest is LensFixture {
         vm.expectRevert(ILensErrors.Locked.selector);
         lens.previewWithdrawAfter(alice, MARKET_ID, _key(1));
         _releaseLock();
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 99));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 99));
         lens.previewBorrowAfter(alice, 99, debtReserveId, 1);
         vm.expectRevert(abi.encodeWithSelector(ILensErrors.UnknownDebtReserve.selector, aave.cdpSpoke, 77));
         lens.previewBorrowAfter(alice, MARKET_ID, 77, 1);

@@ -15,9 +15,7 @@ import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/Li
 import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../../src/oracle/lp-oracle/LPOracleCL.sol";
 import {InitParams} from "../../../src/oracle/lp-oracle/types/InitParams.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {RiskTier} from "../../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../../src/policy/market-registry/types/SpokeDef.sol";
+import {DebtReserveDef, RiskTier, SpokeDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
 import {MarketSpeedLimits} from "../../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
 import {SpeedLimit} from "../../../src/policy/parameter-store/types/SpeedLimit.sol";

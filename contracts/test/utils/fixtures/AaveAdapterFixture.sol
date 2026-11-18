@@ -14,10 +14,12 @@ import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
 import {AaveAdapterLogics} from "../../../src/policy/aave-adapter/types/AaveAdapterLogics.sol";
 import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
-import {RiskTier} from "../../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../../src/policy/market-registry/types/SpokeDef.sol";
+import {
+    DebtReserveDef,
+    MarketStatus,
+    RiskTier,
+    SpokeDef
+} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
 import {Market} from "../../../src/types/Market.sol";
 import {PauseReason} from "../../../src/types/PauseReason.sol";

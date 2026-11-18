@@ -4,10 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
-import {IMarketRegistryApprovals} from "../../src/policy/market-registry/IMarketRegistryApprovals.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketRegistryEvents.sol";
-import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryLPVaultMock, RegistryRouteMock, RegistryTokenMock} from "../utils/mocks/MarketRegistryMocks.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -56,7 +54,7 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         address route
     ) internal {
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setRoute(id, address(usdc), address(gho), kind, route);
     }
 
@@ -64,7 +62,7 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         uint32 integrationId
     ) internal {
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidIntegration.selector, integrationId));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, integrationId));
         registry.finalizeIntegrationContracts(integrationId);
     }
 
@@ -77,7 +75,7 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         _expectRouteRefused(0, route);
         bytes32 key = _recordKeyOf(V3);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryApprovals.IntegrationContractsRecorded(V3, key, _pair());
+        emit IMarketRegistry.IntegrationContractsRecorded(V3, key, _pair());
         _record(V3, _pair());
         // Recorded, not finalized: still refused.
         _expectRouteRefused(0, route);
@@ -88,7 +86,7 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         );
         registry.finalizeIntegrationContracts(V3);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryApprovals.IntegrationContractsFinalized(V3, key, 2);
+        emit IMarketRegistry.IntegrationContractsFinalized(V3, key, 2);
         _finalize(V3);
         vm.prank(address(timelock));
         registry.setRoute(id, address(usdc), address(gho), 0, route);
@@ -132,7 +130,7 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         address[] memory one = new address[](1);
         one[0] = address(new RegistryTokenMock(0));
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidIntegration.selector, V3));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, V3));
         registry.recordIntegrationContracts(V3, one);
         vm.chainId(chain);
         vm.prank(address(timelock));
@@ -154,7 +152,7 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         address[] memory one = new address[](1);
         one[0] = address(new RegistryTokenMock(0));
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidIntegration.selector, V3));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, V3));
         registry.recordIntegrationContracts(V3, one);
     }
 
@@ -178,7 +176,7 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         _expectBadFinalize(2);
         // The same AMM contracts may serve the replacement; they are recorded under its own key.
         vm.expectEmit(address(registry));
-        emit IMarketRegistryApprovals.IntegrationContractsRecorded(2, _recordKeyOf(2), _pair());
+        emit IMarketRegistry.IntegrationContractsRecorded(2, _recordKeyOf(2), _pair());
         _record(2, _pair());
         _finalize(2);
         assertEq(registry.integrationContracts(V3).length, 2);
@@ -203,9 +201,9 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         address[] memory one = new address[](1);
         one[0] = later;
         vm.expectEmit(address(registry));
-        emit IMarketRegistryApprovals.IntegrationContractsRecorded(V3, _recordKeyOf(V3), one);
+        emit IMarketRegistry.IntegrationContractsRecorded(V3, _recordKeyOf(V3), one);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.RouteDisabled(id, address(usdc), address(gho), 1, address(timelock));
+        emit IMarketRegistryBase.RouteDisabled(id, address(usdc), address(gho), 1, address(timelock));
         _record(V3, one);
         (address r, bool usable) = registry.getRoute(id, address(usdc), address(gho), 1);
         assertEq(r, unsafe);
@@ -215,7 +213,7 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         (r, usable) = registry.getRoute(id, address(usdt), address(gho), 0);
         assertTrue(r == usdtPrimary && usable);
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.restoreRoute(id, address(usdc), address(gho), 1, unsafe);
     }
 
@@ -236,7 +234,7 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         // The record event and exactly one RouteDisabled.
         uint256 disabled = 0;
         for (uint256 i = 0; i < logs.length; ++i) {
-            if (logs[i].topics[0] == IMarketRegistryEvents.RouteDisabled.selector) ++disabled;
+            if (logs[i].topics[0] == IMarketRegistryBase.RouteDisabled.selector) ++disabled;
         }
         assertEq(disabled, 1);
         (, bool usable) = registry.getRoute(id, address(usdc), address(gho), 0);
@@ -264,7 +262,7 @@ contract MarketRegistryIntegrationRecordUnitTest is MarketRegistryFixture {
         _record(V3, one);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         for (uint256 i = 0; i < logs.length; ++i) {
-            assertTrue(logs[i].topics[0] != IMarketRegistryEvents.RouteDisabled.selector, "cancelled market touched");
+            assertTrue(logs[i].topics[0] != IMarketRegistryBase.RouteDisabled.selector, "cancelled market touched");
         }
     }
 }

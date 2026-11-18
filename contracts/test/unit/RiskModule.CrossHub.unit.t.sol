@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryCreditLines} from "../../src/policy/market-registry/IMarketRegistryCreditLines.sol";
-import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {AccountGateStatus} from "../../src/types/AccountGateStatus.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {RegistryAvanaFirstLossReserveMock} from "../utils/mocks/MarketRegistryMocks.sol";
@@ -31,7 +30,7 @@ contract RiskModuleCrossHubUnitTest is RiskModuleFixture {
     function test_TEST_273_crossHubBorrowNeedsLinesEnabled() public {
         riskModule.preBorrowCheck(address(proxy), DAI_RESERVE, 1);
         _setLinesEnabled(false);
-        vm.expectRevert(IMarketRegistryHubs.CrossHubLinesDisabled.selector);
+        vm.expectRevert(IMarketRegistry.CrossHubLinesDisabled.selector);
         riskModule.preBorrowCheck(address(proxy), DAI_RESERVE, 1);
         // Same-Hub reserves skip the line, and a withdraw-with-debt never reads it, even with DAI debt held.
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
@@ -56,11 +55,7 @@ contract RiskModuleCrossHubUnitTest is RiskModuleFixture {
         registry.syncDrawCap(address(spoke), DAI_RESERVE);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IMarketRegistryCreditLines.CreditLineExceeded.selector,
-                address(hub2),
-                address(tDai),
-                1_000_001,
-                1_000_000
+                IMarketRegistry.CreditLineExceeded.selector, address(hub2), address(tDai), 1_000_001, 1_000_000
             )
         );
         riskModule.preBorrowCheck(address(proxy), DAI_RESERVE, 1);
@@ -80,11 +75,7 @@ contract RiskModuleCrossHubUnitTest is RiskModuleFixture {
     ) internal {
         vm.expectRevert(
             abi.encodeWithSelector(
-                IMarketRegistryCreditLines.CoverageBelowRatio.selector,
-                address(hub2),
-                address(tDai),
-                DAI_REQUIRED,
-                funded
+                IMarketRegistry.CoverageBelowRatio.selector, address(hub2), address(tDai), DAI_REQUIRED, funded
             )
         );
         riskModule.preBorrowCheck(address(proxy), DAI_RESERVE, 1);
@@ -127,16 +118,12 @@ contract RiskModuleCrossHubUnitTest is RiskModuleFixture {
         registry.syncDrawCap(address(spoke), DAI_RESERVE);
         // The switch is checked first, then the line sum, then the coverage.
         _setLinesEnabled(false);
-        vm.expectRevert(IMarketRegistryHubs.CrossHubLinesDisabled.selector);
+        vm.expectRevert(IMarketRegistry.CrossHubLinesDisabled.selector);
         riskModule.preBorrowCheck(address(proxy), DAI_RESERVE, 1);
         _setLinesEnabled(true);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IMarketRegistryCreditLines.CreditLineExceeded.selector,
-                address(hub2),
-                address(tDai),
-                1_000_001,
-                1_000_000
+                IMarketRegistry.CreditLineExceeded.selector, address(hub2), address(tDai), 1_000_001, 1_000_000
             )
         );
         riskModule.preBorrowCheck(address(proxy), DAI_RESERVE, 1);

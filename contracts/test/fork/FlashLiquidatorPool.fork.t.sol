@@ -10,7 +10,7 @@ import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/Liqui
 import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
 import {FlashLiquidator} from "../../src/periphery/flash-liquidator/FlashLiquidator.sol";
 import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {MockFlashFeeCap} from "../utils/mocks/MockFlashReceiver.sol";

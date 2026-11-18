@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {MarketDef} from "../../src/types/MarketDef.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
@@ -160,7 +160,7 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(1, _shape());
         o.setSeed(8, 0);
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("lpOracle")));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("lpOracle")));
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         assertEq(registry.marketCount(), 0);
         assertEq(registry.marketOfVaultToken(vt), 0);
@@ -180,8 +180,7 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
     // fails.
     function test_TEST_138_lpOracleSeedEachPart() public {
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(1, _shape());
-        bytes memory err =
-            abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("lpOracle"));
+        bytes memory err = abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("lpOracle"));
         o.setSeed(18, 1e8);
         vm.prank(address(timelock));
         vm.expectRevert(err);
@@ -209,7 +208,7 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
         MarketDef memory d = _marketDef(token, address(o));
         d.shape = sh;
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("lpOracle")));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("lpOracle")));
         registry.listCollateralMarket(d);
     }
 }

@@ -5,12 +5,10 @@ pragma solidity 0.8.28;
 
 import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketRegistryEvents.sol";
-import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {TokenDef} from "../../src/policy/market-registry/types/TokenDef.sol";
+import {MarketStatus, TokenDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {MarketDef} from "../../src/types/MarketDef.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
@@ -31,7 +29,7 @@ contract MarketRegistryListingBoundsUnitTest is MarketRegistryFixture {
     function _expectListing(
         bytes32 check
     ) internal {
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, check));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, check));
     }
 
     function _list(
@@ -158,11 +156,11 @@ contract MarketRegistryListingBoundsUnitTest is MarketRegistryFixture {
         _setPoolTokens(toks);
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(1, _shape());
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.TokenNotListed.selector, a));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TokenNotListed.selector, a));
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         _listToken(a, "a");
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.TokenNotListed.selector, b));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TokenNotListed.selector, b));
         registry.listCollateralMarket(_marketDef(vt, address(o)));
     }
 
@@ -196,17 +194,17 @@ contract MarketRegistryListingBoundsUnitTest is MarketRegistryFixture {
         MarketDef memory d = _marketDef(vt, address(o));
         d.spoke = alice;
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.InvalidSpoke.selector, alice));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, alice));
         registry.listCollateralMarket(d);
         d = _marketDef(vt, address(o));
         d.hub = alice;
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.InvalidSpoke.selector, address(spoke)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, address(spoke)));
         registry.listCollateralMarket(d);
         d = _marketDef(vt, address(o));
         d.integrationId = 2;
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidIntegration.selector, uint32(2)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, uint32(2)));
         registry.listCollateralMarket(d);
     }
 
@@ -219,11 +217,11 @@ contract MarketRegistryListingBoundsUnitTest is MarketRegistryFixture {
         MarketDef memory d = _marketDef(vt, address(o2));
         d.shape = other;
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.VaultTokenMismatch.selector);
+        vm.expectRevert(IMarketRegistryBase.VaultTokenMismatch.selector);
         registry.listCollateralMarket(d);
         d.vaultToken = address(0);
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.VaultTokenMismatch.selector);
+        vm.expectRevert(IMarketRegistryBase.VaultTokenMismatch.selector);
         registry.listCollateralMarket(d);
     }
 

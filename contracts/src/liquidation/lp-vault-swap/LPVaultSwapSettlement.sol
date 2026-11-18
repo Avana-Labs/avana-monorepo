@@ -11,7 +11,7 @@ import {DebtPriceView} from "../../oracle/debt-oracle/types/DebtPriceView.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {PriceAge} from "../../oracle/lp-oracle/PriceAge.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
-import {DebtReserveDef} from "../../policy/market-registry/types/DebtReserveDef.sol";
+import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {Market} from "../../types/Market.sol";
 import {PriceState} from "../../types/PriceState.sol";

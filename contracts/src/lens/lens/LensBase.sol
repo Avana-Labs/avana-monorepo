@@ -14,8 +14,8 @@ import {DebtPriceView as OracleDebtView} from "../../oracle/debt-oracle/types/De
 import {PriceAge} from "../../oracle/lp-oracle/PriceAge.sol";
 import {IAaveAdapterViews} from "../../policy/aave-adapter/IAaveAdapterViews.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
-import {IMarketRegistryErrors} from "../../policy/market-registry/IMarketRegistryErrors.sol";
-import {DebtReserveDef} from "../../policy/market-registry/types/DebtReserveDef.sol";
+import {IMarketRegistryBase} from "../../policy/market-registry/IMarketRegistryBase.sol";
+import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
 import {Market} from "../../types/Market.sol";
@@ -115,7 +115,7 @@ abstract contract LensBase is ILensErrors {
     ) internal view returns (Market memory m) {
         m = _registry().getMarket(marketId);
         // forge-lint: disable-next-line(require-revert-in-loop)
-        if (m.vaultToken == address(0)) revert IMarketRegistryErrors.UnknownMarket(marketId);
+        if (m.vaultToken == address(0)) revert IMarketRegistryBase.UnknownMarket(marketId);
     }
 
     /// @dev The market of a vault token; `UnknownMarket(0)` for an address that is no market's vault token.

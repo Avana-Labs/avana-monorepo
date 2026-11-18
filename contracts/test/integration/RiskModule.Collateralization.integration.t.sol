@@ -9,7 +9,7 @@ import {ICollateralizationViews} from "../../src/custody/collateralization/IColl
 import {Lock} from "../../src/lock/lock/Lock.sol";
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
-import {MarketRegistryImmutables} from "../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
+import {MarketRegistryImmutables} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {RiskModule} from "../../src/policy/risk-module/RiskModule.sol";

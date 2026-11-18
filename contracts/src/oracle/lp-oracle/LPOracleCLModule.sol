@@ -8,7 +8,7 @@ import {IClIntegration} from "../../amm/IClIntegration.sol";
 import {ClPriceMath} from "../../amm/concentrated-liquidity/ClPriceMath.sol";
 import {ClUnitMath} from "../../amm/concentrated-liquidity/ClUnitMath.sol";
 import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.sol";
-import {IMarketRegistryViews} from "../../policy/market-registry/IMarketRegistryViews.sol";
+import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {OracleConfig} from "../../types/OracleConfig.sol";
 import {SecondSource} from "../../types/SecondSource.sol";
 import {SecondSourceKind} from "../../types/SecondSourceKind.sol";
@@ -223,10 +223,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
     /// @dev Whether the MarketRegistry has registered this feed, or the read fails.
     function _bound() internal view returns (bool) {
         (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
-            _s().marketRegistry,
-            CONFIG_CALL_GAS,
-            abi.encodeCall(IMarketRegistryViews.marketOfLpOracle, (address(this))),
-            32
+            _s().marketRegistry, CONFIG_CALL_GAS, abi.encodeCall(IMarketRegistry.marketOfLpOracle, (address(this))), 32
         );
         (bool okW, uint256 id) = LPOracleCalls.wordAt(ret, 0);
         return !ok || !okW || id != 0;

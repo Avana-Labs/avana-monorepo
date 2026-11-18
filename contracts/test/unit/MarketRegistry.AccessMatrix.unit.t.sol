@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryWindDown} from "../../src/policy/market-registry/IMarketRegistryWindDown.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
+import {RiskTier} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketDef} from "../../src/types/MarketDef.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
@@ -141,21 +141,21 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
         if (class == FREEZE_OR_ADMIN) {
             return admin || registry.hasRole(FREEZE_GUARDIAN, caller)
                 ? bytes("")
-                : abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, caller);
+                : abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, caller);
         }
         if (class == PAUSE_OR_ADMIN) {
             return admin || registry.hasRole(PAUSE_GUARDIAN, caller)
                 ? bytes("")
-                : abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, caller);
+                : abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, caller);
         }
         if (class == EXECUTOR) {
             return caller == aaveGovernanceExecutor
                 ? bytes("")
-                : abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, caller);
+                : abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, caller);
         }
         if (class == RISK) {
             return
-                caller == address(rm) ? bytes("") : abi.encodeWithSelector(IMarketRegistryErrors.NotRiskModule.selector);
+                caller == address(rm) ? bytes("") : abi.encodeWithSelector(IMarketRegistryBase.NotRiskModule.selector);
         }
         return "";
     }
@@ -166,7 +166,7 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
         if (ret.length < 4) return false;
         bytes4 sel = bytes4(ret);
         return sel == IAccessControl.AccessControlUnauthorizedAccount.selector
-            || sel == IMarketRegistryErrors.Unauthorized.selector || sel == IMarketRegistryErrors.NotRiskModule.selector;
+            || sel == IMarketRegistryBase.Unauthorized.selector || sel == IMarketRegistryBase.NotRiskModule.selector;
     }
 
     /// @dev Runs `w` as `caller` from a snapshot and checks the access outcome; the state is restored afterwards.
@@ -230,7 +230,7 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
             vm.prank(c[j]);
             registry.syncDrawCap(address(spoke), GHO_RESERVE);
             vm.prank(c[j]);
-            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.MarketNotOffboarding.selector, marketId));
+            vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.MarketNotOffboarding.selector, marketId));
             registry.closeMarket(marketId);
             vm.revertToState(snap);
         }
@@ -240,7 +240,7 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
     // The router checks the caller before the logic runs, so a refused caller sees the access error even when the
     // arguments would also fail (an unknown Hub, market or debt reserve).
     function test_TEST_062_accessCheckedBeforeArguments() public {
-        bytes memory unauthorized = abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, stranger);
+        bytes memory unauthorized = abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, stranger);
         vm.startPrank(stranger);
         vm.expectRevert(unauthorized);
         registry.freeze(alice);
@@ -258,7 +258,7 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
         registry.useStandbyRoute(alice, RouteSlot.None);
         vm.expectRevert(unauthorized);
         registry.cancelStandbySwitch(alice);
-        vm.expectRevert(IMarketRegistryErrors.NotRiskModule.selector);
+        vm.expectRevert(IMarketRegistryBase.NotRiskModule.selector);
         registry.recordBreach(bytes32(0), 0);
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, stranger, APP_ADMIN)
@@ -292,7 +292,7 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
         registry.revokeRole(FREEZE_GUARDIAN, aaveGuardian);
         assertFalse(registry.hasRole(FREEZE_GUARDIAN, aaveGuardian));
         vm.prank(aaveGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, aaveGuardian));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, aaveGuardian));
         registry.freeze(address(hub));
         // The pause role it still holds keeps working.
         vm.prank(aaveGuardian);
@@ -306,7 +306,7 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
         registry.renounceRole(PAUSE_GUARDIAN, pauseOnly);
         assertFalse(registry.hasRole(PAUSE_GUARDIAN, pauseOnly));
         vm.prank(pauseOnly);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, pauseOnly));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, pauseOnly));
         registry.pause(address(hub), PauseReason.General);
         vm.prank(pauseOnly);
         vm.expectRevert(IAccessControl.AccessControlBadConfirmation.selector);
@@ -322,7 +322,7 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
         vm.assume(account != address(timelock));
         bytes32 role = defaultAdmin ? registry.DEFAULT_ADMIN_ROLE() : APP_ADMIN;
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.AdminRoleOnlyTimelock.selector, role, account));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.AdminRoleOnlyTimelock.selector, role, account));
         registry.grantRole(role, account);
         assertFalse(registry.hasRole(role, account));
     }
@@ -366,7 +366,7 @@ contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
             )
         );
         impl.recordHub(alice, RiskTier.Stable);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, address(timelock)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, address(timelock)));
         impl.freeze(address(hub));
         vm.stopPrank();
     }

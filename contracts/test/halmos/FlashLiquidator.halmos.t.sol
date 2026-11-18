@@ -12,7 +12,7 @@ import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiqui
 import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
 import {OperatorFlashLiquidator} from "../../src/periphery/flash-liquidator/OperatorFlashLiquidator.sol";
 import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {MockAaveV3ACLManager, MockAaveV3AddressesProvider, MockAaveV3Pool} from "../utils/mocks/AaveV3PoolMocks.sol";
 import {LockMember} from "../utils/mocks/LockMember.sol";

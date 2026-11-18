@@ -10,9 +10,8 @@ import {RouteMode} from "../../../src/liquidation/lp-vault-swap/types/RouteMode.
 import {IDebtOracle} from "../../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {DebtOracleInitParams} from "../../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
 import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
-import {TokenDef} from "../../../src/policy/market-registry/types/TokenDef.sol";
+import {DebtReserveDef, TokenDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {PauseReason} from "../../../src/types/PauseReason.sol";
 import {PauseState} from "../../../src/types/PauseState.sol";
 import {RouteSlot} from "../../../src/types/RouteSlot.sol";

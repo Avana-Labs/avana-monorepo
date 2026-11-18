@@ -8,9 +8,11 @@ import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegist
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {MarketRegistrySafetyLogic} from "../../../src/policy/market-registry/MarketRegistrySafetyLogic.sol";
 import {MarketRegistryStorage} from "../../../src/policy/market-registry/MarketRegistryStorage.sol";
-import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
-import {MarketRegistryLogics} from "../../../src/policy/market-registry/types/MarketRegistryLogics.sol";
-import {RiskTier} from "../../../src/policy/market-registry/types/RiskTier.sol";
+import {
+    MarketRegistryImmutables,
+    MarketRegistryLogics,
+    RiskTier
+} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {PauseReason} from "../../../src/types/PauseReason.sol";
 import {PauseState} from "../../../src/types/PauseState.sol";
 import {RegistryAdapterMock} from "../../utils/mocks/MarketRegistryMocks.sol";

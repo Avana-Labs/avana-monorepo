@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAggregatorProxy} from "../../interfaces/external/chainlink/IAggregatorProxy.sol";
 import {IOffchainAggregator} from "../../interfaces/external/chainlink/IOffchainAggregator.sol";
-import {IMarketRegistryViews} from "../../policy/market-registry/IMarketRegistryViews.sol";
+import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {IParameterStoreViews} from "../../policy/parameter-store/IParameterStoreViews.sol";
 import {OracleConfig} from "../../types/OracleConfig.sol";
 import {OracleLeg} from "../../types/OracleLeg.sol";
@@ -293,7 +293,7 @@ abstract contract LPOracleListing is LPOracleViews {
         (ok, ret) = LPOracleCalls.staticRead(
             _s().marketRegistry,
             CONFIG_CALL_GAS,
-            abi.encodeCall(IMarketRegistryViews.marketOfLpOracle, (address(this))),
+            abi.encodeCall(IMarketRegistry.marketOfLpOracle, (address(this))),
             WORD
         );
         if (ok) (ok, registered) = LPOracleCalls.wordAt(ret, 0);
@@ -311,7 +311,7 @@ abstract contract LPOracleListing is LPOracleViews {
         (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
             _s().marketRegistry,
             ORACLE_CONFIG_BASE_GAS,
-            abi.encodeCall(IMarketRegistryViews.getMarket, (marketId)),
+            abi.encodeCall(IMarketRegistry.getMarket, (marketId)),
             MARKET_LENGTH
         );
         return ok && _marketMatches(ret) ? 0 : LPOracleCodes.CHECK_MARKET;

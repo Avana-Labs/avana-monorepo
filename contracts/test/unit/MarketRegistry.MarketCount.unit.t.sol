@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketDef} from "../../src/types/MarketDef.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
@@ -61,7 +61,7 @@ contract MarketRegistryMarketCountUnitTest is MarketRegistryFixture {
         MarketDef memory d
     ) internal {
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.MarketCountLimit.selector, CAP));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.MarketCountLimit.selector, CAP));
         registry.listCollateralMarket(d);
     }
 
@@ -119,7 +119,7 @@ contract MarketRegistryMarketCountUnitTest is MarketRegistryFixture {
         MarketDef memory live = _marketDef(registry.getMarket(2).vaultToken, registry.getMarket(2).lpOracle);
         live.shape = _shapeOf(2);
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.DuplicateMarketKey.selector);
+        vm.expectRevert(IMarketRegistryBase.DuplicateMarketKey.selector);
         registry.listCollateralMarket(live);
         _expectCapped(_defFor(CAP + 1, CAP + 1));
         assertEq(registry.marketCount(), CAP);
@@ -129,7 +129,7 @@ contract MarketRegistryMarketCountUnitTest is MarketRegistryFixture {
         MarketDef memory d
     ) internal {
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.VaultTokenMismatch.selector);
+        vm.expectRevert(IMarketRegistryBase.VaultTokenMismatch.selector);
         registry.listCollateralMarket(d);
     }
 }

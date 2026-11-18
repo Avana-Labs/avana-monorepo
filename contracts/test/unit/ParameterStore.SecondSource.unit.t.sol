@@ -10,8 +10,7 @@ import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleI
 import {SecondSource} from "../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
-import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
-import {MockLPOracle} from "../utils/mocks/ParameterStoreMocks.sol";
+import {MockAggregator, MockLPOracle} from "../utils/mocks/ParameterStoreMocks.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 /// @notice Second-source configuration: every setter that writes it refuses a word the oracles would read as out of

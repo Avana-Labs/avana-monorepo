@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {DebtPriceView} from "../../src/lens/lens/types/DebtPriceView.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
@@ -154,7 +154,7 @@ contract LensPriceUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-022
     function test_TEST_247_priceStateUnknownVaultTokenReverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 0));
         lens.getPriceState(makeAddr("x"));
     }
 

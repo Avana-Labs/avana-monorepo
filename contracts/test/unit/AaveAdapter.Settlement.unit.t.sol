@@ -12,7 +12,7 @@ import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErro
 import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
 import {IAaveAdapterSettlement} from "../../src/policy/aave-adapter/IAaveAdapterSettlement.sol";
 import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
-import {IMarketRegistryFreeze} from "../../src/policy/market-registry/IMarketRegistryFreeze.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
@@ -195,7 +195,7 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
     function test_TEST_192_repayWithCollateralPauseMatrix() public {
         swap.setDeleverage(1000e18, 2e12, 0);
         registry.setFrozen(alice, true);
-        vm.expectCall(address(registry), abi.encodeWithSelector(IMarketRegistryFreeze.isFrozenAddress.selector), 0);
+        vm.expectCall(address(registry), abi.encodeWithSelector(IMarketRegistry.isFrozenAddress.selector), 0);
         _pause(PauseState.Frozen, PauseReason.None);
         _rwcAs(alice, _rwc(MARKET_ID, k1, 500_000_000, debtReserveId));
         _pause(PauseState.Paused, PauseReason.General);

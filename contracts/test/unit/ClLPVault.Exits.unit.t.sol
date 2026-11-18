@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
 import {IClIntegration} from "../../src/amm/IClIntegration.sol";
 import {IClPositionManager} from "../../src/amm/concentrated-liquidity/IClPositionManager.sol";
-import {IMarketRegistryPause} from "../../src/policy/market-registry/IMarketRegistryPause.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {ClLPVaultBase, ClLPVaultSlipstreamHooks, ClLPVaultUniswapHooks, IClTestManager} from "./ClLPVault.Base.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -438,8 +438,8 @@ abstract contract ClLPVaultExitsTests is ClLPVaultBase {
         uint8 reason
     ) internal {
         address r = _cCore().registry;
-        vm.mockCall(r, abi.encodeWithSelector(IMarketRegistryPause.pauseState.selector), abi.encode(state));
-        vm.mockCall(r, abi.encodeWithSelector(IMarketRegistryPause.pauseReason.selector), abi.encode(reason));
+        vm.mockCall(r, abi.encodeWithSelector(IMarketRegistry.pauseState.selector), abi.encode(state));
+        vm.mockCall(r, abi.encodeWithSelector(IMarketRegistry.pauseReason.selector), abi.encode(reason));
     }
 
     /// @dev The 5.1 example: NFT 42 with 1,000 units and NFT 7 with 800 units, both alice's.

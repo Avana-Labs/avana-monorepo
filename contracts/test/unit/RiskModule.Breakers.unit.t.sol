@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
 import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
@@ -128,7 +128,7 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
         assertEq(riskModule.pokeBreakers(mid), BreakerReasons.DEFICIT);
         // A reset is refused while the deficit is still above the limit.
         vm.prank(emergencyGuardian);
-        vm.expectPartialRevert(IMarketRegistryErrors.ConditionStillHolds.selector);
+        vm.expectPartialRevert(IMarketRegistryBase.ConditionStillHolds.selector);
         registry.resetDebtBreaker(address(spoke), GHO_RESERVE);
         // Covered: the latch keeps the reserve closed until reset.
         hub.setOwed(GHO_ASSET, address(spoke), 0, 0);
@@ -147,7 +147,7 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
 
     // TEST-228 verifies: REQ-MREG-026, REQ-RISK-091, REQ-ACCESS-167
     function test_TEST_228_recordBreachOnlyRiskModule() public {
-        vm.expectRevert(IMarketRegistryErrors.NotRiskModule.selector);
+        vm.expectRevert(IMarketRegistryBase.NotRiskModule.selector);
         registry.recordBreach(bytes32(mid), BreakerReasons.ISSUER);
         assertEq(riskModule.pokeBreakers(mid), 0);
     }

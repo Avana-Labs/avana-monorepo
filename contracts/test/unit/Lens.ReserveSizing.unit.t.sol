@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {TailCoverageView} from "../../src/lens/lens/types/TailCoverageView.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 

@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {DebtReserveDef} from "../../policy/market-registry/types/DebtReserveDef.sol";
+import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleViews} from "../../policy/risk-module/IRiskModuleViews.sol";
 import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
 import {Market} from "../../types/Market.sol";

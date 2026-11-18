@@ -9,7 +9,7 @@ import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {IAaveAdapterCollateral} from "../../src/policy/aave-adapter/IAaveAdapterCollateral.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
@@ -182,7 +182,7 @@ contract FullStackPolicyIntegrationTest is FullStackMarkets {
         (, usable) = registry.getRoute(mA, address(usdt), address(gho), 0);
         assertFalse(usable, "disabled");
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.NotPreviouslyApproved.selector);
+        vm.expectRevert(IMarketRegistryBase.NotPreviouslyApproved.selector);
         registry.restoreRoute(mA, address(usdt), address(gho), 0, fresh);
         d = _govern(
             address(registry),

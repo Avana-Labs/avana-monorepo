@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {DriftReason} from "../../src/types/DriftReason.sol";
 import {PriceState} from "../../src/types/PriceState.sol";

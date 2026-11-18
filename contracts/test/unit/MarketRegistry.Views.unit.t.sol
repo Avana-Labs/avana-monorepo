@@ -4,12 +4,14 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IMarketRegistryCreditLines} from "../../src/policy/market-registry/IMarketRegistryCreditLines.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
-import {TokenDef} from "../../src/policy/market-registry/types/TokenDef.sol";
-import {WindDownState} from "../../src/policy/market-registry/types/WindDownState.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {
+    MarketStatus,
+    RiskTier,
+    SpokeDef,
+    TokenDef,
+    WindDownState
+} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {DriftReason} from "../../src/types/DriftReason.sol";
 import {Market} from "../../src/types/Market.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
@@ -184,20 +186,14 @@ contract MarketRegistryViewsUnitTest is MarketRegistryFixture {
         vm.prank(address(timelock));
         vm.expectRevert(
             abi.encodeWithSelector(
-                IMarketRegistryCreditLines.CoverageBelowRatio.selector,
-                address(hub),
-                address(gho),
-                type(uint256).max,
-                4e24
+                IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(gho), type(uint256).max, 4e24
             )
         );
         registry.recordCreditLine(address(hub), address(gho), edge + 1);
         uint256 exact = (edge * k + 10_000 - 1) / 10_000;
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IMarketRegistryCreditLines.CoverageBelowRatio.selector, address(hub), address(gho), exact, 4e24
-            )
+            abi.encodeWithSelector(IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(gho), exact, 4e24)
         );
         registry.recordCreditLine(address(hub), address(gho), edge);
     }

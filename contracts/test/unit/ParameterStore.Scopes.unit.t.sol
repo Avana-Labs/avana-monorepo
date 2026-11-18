@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
+import {DebtReserveDef, MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
 import {DebtReserveParams} from "../../src/policy/parameter-store/types/DebtReserveParams.sol";
 import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
@@ -13,8 +12,13 @@ import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleI
 import {SecondSource} from "../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
-import {MockAggregator, OracleConfigReader, OracleConfigSummary} from "../utils/mocks/ParameterStoreMocks.sol";
-import {MockAvanaFirstLossReserve, MockPriceSource} from "../utils/mocks/ParameterStoreMocks.sol";
+import {
+    MockAggregator,
+    MockAvanaFirstLossReserve,
+    MockPriceSource,
+    OracleConfigReader,
+    OracleConfigSummary
+} from "../utils/mocks/ParameterStoreMocks.sol";
 
 /// @notice Scope checks of every keyed setter (market, Hub, token, feed, Spoke, debt reserve), the listing-only
 /// setters against every market status, and the zero answers of every view for an unknown key (REQ-PSTORE-011).

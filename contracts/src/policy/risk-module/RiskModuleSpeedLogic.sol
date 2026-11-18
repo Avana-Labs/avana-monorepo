@@ -9,7 +9,7 @@ import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {Market} from "../../types/Market.sol";
 import {PledgeCounters} from "../../types/PledgeCounters.sol";
-import {DebtReserveDef} from "../market-registry/types/DebtReserveDef.sol";
+import {DebtReserveDef} from "../market-registry/types/MarketRegistryTypes.sol";
 import {MarketSpeedLimits} from "../parameter-store/types/MarketSpeedLimits.sol";
 import {SpeedLimit} from "../parameter-store/types/SpeedLimit.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";

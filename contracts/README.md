@@ -160,7 +160,7 @@ Callers import only the piece they call, for example `IRiskModuleChecks` for `ch
 
 | Contract | Pieces besides events and errors |
 |---|---|
-| MarketRegistry | `IMarketRegistryListing`, `IMarketRegistryHubs`, `IMarketRegistryCreditLines`, `IMarketRegistryRoutes`, `IMarketRegistryRouteViews`, `IMarketRegistryStandby`, `IMarketRegistryPause`, `IMarketRegistryFreeze`, `IMarketRegistryBreakers`, `IMarketRegistryWindDown`, `IMarketRegistryViews`, `IMarketRegistrySafetyEvents` |
+| MarketRegistry | `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistryRoutes`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistry`, `IMarketRegistryBase` |
 | ParameterStore | `IParameterStoreTighten`, `IParameterStoreLoosen`, `IParameterStoreListing`, `IParameterStoreLiquidation`, `IParameterStoreBreakers`, `IParameterStoreChain`, `IParameterStoreAdmin`, `IParameterStoreViews`, `IParameterStoreRiskViews` |
 | AaveAdapter | `IAaveAdapterUser`, `IAaveAdapterCollateral`, `IAaveAdapterSettlement`, `IAaveAdapterAdmin`, `IAaveAdapterViews` |
 | LPVault | `ILPVault`, which implements `IAmmIntegration` and `IAmmIntegrationHooks` (`src/amm/`) |
@@ -173,7 +173,7 @@ Callers import only the piece they call, for example `IRiskModuleChecks` for `ch
 | LPOracle | `ILPOracle`, `ILPOracleCL` |
 | DebtOracle | `IDebtOracle` |
 
-Size limits (`Q-240`): an implementation file holds at most 500 lines of code (lines that are neither blank nor comment-only), and an interface file at most 300 lines including NatSpec and blank lines. [`script/check-file-size.sh`](script/check-file-size.sh) treats a file as an implementation when it declares a contract or a library with functions, and every other `.sol` file under `src/` (interfaces, events, errors, types, constant-only libraries, external mirrors) as an interface file. It prints each file over its limit and the largest file of each class, and exits 1 when any file is over; the CI build job runs it.
+Size limits (`Q-240`): an implementation file holds at most 500 lines of code (lines that are neither blank nor comment-only), and an interface file at most 900 lines including NatSpec and blank lines (one interface per contract, as Aave V4 does). [`script/check-file-size.sh`](script/check-file-size.sh) treats a file as an implementation when it declares a contract or a library with functions, and every other `.sol` file under `src/` (interfaces, events, errors, types, constant-only libraries, external mirrors) as an interface file. It prints each file over its limit and the largest file of each class, and exits 1 when any file is over; the CI build job runs it.
 
 ### Implementation rules carried by the interfaces
 

@@ -8,7 +8,7 @@ import {Market} from "../../types/Market.sol";
 import {SecondSource} from "../../types/SecondSource.sol";
 import {SequencerConfig} from "../../types/SequencerConfig.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
-import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
+import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreErrors} from "./IParameterStoreErrors.sol";
 import {IParameterStoreEvents} from "./IParameterStoreEvents.sol";
 import {FeedDef} from "./types/FeedDef.sol";

@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
-import {TokenDef} from "../../../src/policy/market-registry/types/TokenDef.sol";
+import {MarketStatus, TokenDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../../src/types/Market.sol";
 import {ShapeKind} from "../../../src/types/ShapeKind.sol";
 

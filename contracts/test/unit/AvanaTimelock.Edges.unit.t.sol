@@ -10,9 +10,8 @@ import {IAvanaTimelockGovernance} from "../../src/governance/timelock/IAvanaTime
 import {GovernedTargets} from "../../src/governance/timelock/types/GovernedTargets.sol";
 import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
 import {ILPVaultSwapAdmin} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
-import {IMarketRegistryFreeze} from "../../src/policy/market-registry/IMarketRegistryFreeze.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
-import {IMarketRegistryStandby} from "../../src/policy/market-registry/IMarketRegistryStandby.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {TimelockFixture} from "../utils/fixtures/TimelockFixture.sol";
 import {TimelockShortDelayLists} from "../utils/fixtures/TimelockShortDelayLists.sol";
@@ -233,7 +232,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         _expectShort(ps, remove);
         _expectShort(mr, remove);
         bytes4 restore = IMarketRegistryRoutes.restoreRoute.selector;
-        bytes4 unfreeze = IMarketRegistryFreeze.unfreezeAddress.selector;
+        bytes4 unfreeze = IMarketRegistry.unfreezeAddress.selector;
         bytes4 add = ILPVaultSwapAdmin.addKeeper.selector;
         _expectDao(lvs, restore);
         _expectDao(ps, restore);
@@ -322,9 +321,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
 
     // TEST-244 verifies: REQ-ACCESS-156
     function test_TEST_244_useStandbyRouteIsDaoOnly() public view {
-        assertTrue(
-            timelock.isDaoOnlyCancelSelector(address(marketRegistry), IMarketRegistryStandby.useStandbyRoute.selector)
-        );
+        assertTrue(timelock.isDaoOnlyCancelSelector(address(marketRegistry), IMarketRegistry.useStandbyRoute.selector));
     }
 
     // TEST-194 verifies: REQ-ACCESS-144, REQ-ACCESS-027

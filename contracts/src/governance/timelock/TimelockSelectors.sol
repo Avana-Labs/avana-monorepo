@@ -7,13 +7,8 @@ import {ILPVaultSwapAdmin} from "../../liquidation/lp-vault-swap/ILPVaultSwapAdm
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {IAaveAdapterAdmin} from "../../policy/aave-adapter/IAaveAdapterAdmin.sol";
-import {IMarketRegistryBreakers} from "../../policy/market-registry/IMarketRegistryBreakers.sol";
-import {IMarketRegistryFreeze} from "../../policy/market-registry/IMarketRegistryFreeze.sol";
-import {IMarketRegistryHubs} from "../../policy/market-registry/IMarketRegistryHubs.sol";
-import {IMarketRegistryListing} from "../../policy/market-registry/IMarketRegistryListing.sol";
-import {IMarketRegistryPause} from "../../policy/market-registry/IMarketRegistryPause.sol";
+import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../policy/market-registry/IMarketRegistryRoutes.sol";
-import {IMarketRegistryStandby} from "../../policy/market-registry/IMarketRegistryStandby.sol";
 import {IParameterStoreAdmin} from "../../policy/parameter-store/IParameterStoreAdmin.sol";
 import {IParameterStoreBreakers} from "../../policy/parameter-store/IParameterStoreBreakers.sol";
 import {IParameterStoreLiquidation} from "../../policy/parameter-store/IParameterStoreLiquidation.sol";
@@ -41,12 +36,12 @@ library TimelockSelectors {
         bytes4 selector
     ) internal pure returns (bool) {
         return isRoleSelector(selector) || selector == UUPSUpgradeable.upgradeToAndCall.selector
-            || selector == IMarketRegistryHubs.setFlashSource.selector
-            || selector == IMarketRegistryListing.deployCdpSpoke.selector
-            || selector == IMarketRegistryListing.listCollateralMarket.selector
-            || selector == IMarketRegistryListing.enableDebtReserve.selector
-            || selector == IMarketRegistryHubs.setCrossHubLinesEnabled.selector
-            || selector == IMarketRegistryHubs.setCrossHubLine.selector || _isInitializer(selector);
+            || selector == IMarketRegistry.setFlashSource.selector
+            || selector == IMarketRegistry.deployCdpSpoke.selector
+            || selector == IMarketRegistry.listCollateralMarket.selector
+            || selector == IMarketRegistry.enableDebtReserve.selector
+            || selector == IMarketRegistry.setCrossHubLinesEnabled.selector
+            || selector == IMarketRegistry.setCrossHubLine.selector || _isInitializer(selector);
     }
 
     /// @notice Whether `selector` is on the fixed short-delay list.
@@ -55,14 +50,13 @@ library TimelockSelectors {
     ) internal pure returns (bool) {
         return _isTightenSelector(selector) || selector == IMarketRegistryRoutes.disableRoute.selector
             || selector == IMarketRegistryRoutes.restoreRoute.selector
-            || selector == IMarketRegistryListing.setMarketOffboarding.selector
-            || selector == IMarketRegistryListing.activateMarket.selector
-            || selector == IMarketRegistryListing.cancelRegistration.selector
-            || selector == IMarketRegistryPause.freeze.selector || selector == IMarketRegistryPause.pause.selector
-            || selector == IMarketRegistryFreeze.freezeAddress.selector
-            || selector == IMarketRegistryBreakers.tripMarketBreaker.selector
-            || selector == IMarketRegistryBreakers.tripDebtBreaker.selector
-            || selector == IMarketRegistryStandby.useStandbyRoute.selector
+            || selector == IMarketRegistry.setMarketOffboarding.selector
+            || selector == IMarketRegistry.activateMarket.selector
+            || selector == IMarketRegistry.cancelRegistration.selector || selector == IMarketRegistry.freeze.selector
+            || selector == IMarketRegistry.pause.selector || selector == IMarketRegistry.freezeAddress.selector
+            || selector == IMarketRegistry.tripMarketBreaker.selector
+            || selector == IMarketRegistry.tripDebtBreaker.selector
+            || selector == IMarketRegistry.useStandbyRoute.selector
             || selector == ILPVaultSwapAdmin.removeKeeper.selector;
     }
 
@@ -71,9 +65,8 @@ library TimelockSelectors {
         bytes4 selector
     ) internal pure returns (bool) {
         return selector == IMarketRegistryRoutes.restoreRoute.selector
-            || selector == IMarketRegistryStandby.useStandbyRoute.selector
-            || selector == IMarketRegistryFreeze.unfreezeAddress.selector
-            || selector == ILPVaultSwapAdmin.addKeeper.selector;
+            || selector == IMarketRegistry.useStandbyRoute.selector
+            || selector == IMarketRegistry.unfreezeAddress.selector || selector == ILPVaultSwapAdmin.addKeeper.selector;
     }
 
     /// @notice Owner of a short-eligible or DAO-only selector: 1 ParameterStore, 2 MarketRegistry, 3 LPVaultSwap,
@@ -119,8 +112,8 @@ library TimelockSelectors {
         bytes4 selector
     ) private pure returns (bool) {
         return selector == IAaveAdapterAdmin.initialize.selector || selector == IRiskModuleAdmin.initialize.selector
-            || selector == IMarketRegistryListing.initialize.selector
-            || selector == IParameterStoreAdmin.initialize.selector || selector == ILPOracle.initialize.selector
-            || selector == IDebtOracle.initialize.selector || selector == ILPVaultSwapAdmin.initialize.selector;
+            || selector == IMarketRegistry.initialize.selector || selector == IParameterStoreAdmin.initialize.selector
+            || selector == ILPOracle.initialize.selector || selector == IDebtOracle.initialize.selector
+            || selector == ILPVaultSwapAdmin.initialize.selector;
     }
 }

@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
 import {PositionRef} from "../../types/PositionRef.sol";
-import {IMarketRegistryViews} from "../market-registry/IMarketRegistryViews.sol";
+import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapter} from "./IAaveAdapter.sol";
 import {IAaveAdapterAdmin} from "./IAaveAdapterAdmin.sol";
@@ -228,7 +228,7 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
     ) external view override returns (address proxy) {
         proxy = _s().proxyOf[wallet][marketId];
         if (proxy != address(0)) return proxy;
-        address spoke = IMarketRegistryViews(_MARKET_REGISTRY).getMarket(marketId).spoke;
+        address spoke = IMarketRegistry(_MARKET_REGISTRY).getMarket(marketId).spoke;
         proxy = IProxyManager(_PROXY_MANAGER).predictProxy(wallet, spoke, marketId);
     }
 

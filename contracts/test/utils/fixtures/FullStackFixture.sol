@@ -9,11 +9,13 @@ import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IDebtOracle} from "../../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {DebtOracleInitParams} from "../../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
-import {RiskTier} from "../../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../../src/policy/market-registry/types/SpokeDef.sol";
-import {TokenDef} from "../../../src/policy/market-registry/types/TokenDef.sol";
+import {
+    DebtReserveDef,
+    RiskTier,
+    SpokeDef,
+    TokenDef
+} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {DebtReserveParams} from "../../../src/policy/parameter-store/types/DebtReserveParams.sol";
 import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
 import {SpeedLimit} from "../../../src/policy/parameter-store/types/SpeedLimit.sol";

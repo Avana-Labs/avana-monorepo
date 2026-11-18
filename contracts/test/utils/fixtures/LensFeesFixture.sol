@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {BackingRecord} from "../../../src/custody/collateralization/types/BackingRecord.sol";
 import {ILens} from "../../../src/lens/lens/ILens.sol";
 import {Lens} from "../../../src/lens/lens/Lens.sol";
-import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
+import {MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../../src/types/Market.sol";
 import {PositionShape} from "../../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../../src/types/ShapeKind.sol";

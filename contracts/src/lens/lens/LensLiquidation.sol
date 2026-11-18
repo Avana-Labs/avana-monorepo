@@ -14,7 +14,7 @@ import {RouteMode} from "../../liquidation/lp-vault-swap/types/RouteMode.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {IAaveAdapterViews} from "../../policy/aave-adapter/IAaveAdapterViews.sol";
-import {DebtReserveDef} from "../../policy/market-registry/types/DebtReserveDef.sol";
+import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../types/Market.sol";
 import {PriceStateView} from "../../types/PriceStateView.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";

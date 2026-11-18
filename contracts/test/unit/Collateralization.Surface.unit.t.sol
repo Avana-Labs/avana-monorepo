@@ -11,8 +11,7 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {INonfungiblePositionManager} from "../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
 import {IUniswapV3Pool} from "../../src/interfaces/external/uniswap/IUniswapV3Pool.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {IMarketRegistryFreeze} from "../../src/policy/market-registry/IMarketRegistryFreeze.sol";
-import {IMarketRegistryPause} from "../../src/policy/market-registry/IMarketRegistryPause.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {BytecodeInspector} from "../utils/BytecodeInspector.sol";
@@ -138,13 +137,13 @@ contract CollateralizationSurfaceUnitTest is CollateralizationFixture {
             IAaveV4Spoke.getLiquidationBonus.selector,
             ILPOracle.getPriceState.selector,
             ILPOracle.latestAnswer.selector,
-            IMarketRegistryPause.pauseState.selector,
-            IMarketRegistryFreeze.isFrozenAddress.selector
+            IMarketRegistry.pauseState.selector,
+            IMarketRegistry.isFrozenAddress.selector
         ];
         for (uint256 i = 0; i < forbidden.length; ++i) {
             assertFalse(_pushes(code, forbidden[i]), "forbidden call in Collateralization");
         }
-        assertFalse(_pushes(code, IMarketRegistryPause.pauseReason.selector), "pause reason read");
+        assertFalse(_pushes(code, IMarketRegistry.pauseReason.selector), "pause reason read");
         assertFalse(_pushes(code, bytes4(keccak256("isValidSignature(bytes32,bytes)"))), "ERC-1271");
         assertFalse(code.hasOpcode(0, code.length, 0xf4), "DELEGATECALL");
         assertTrue(_pushes(code, ILPOracle.poke.selector), "scan sanity: the pledge's poke");

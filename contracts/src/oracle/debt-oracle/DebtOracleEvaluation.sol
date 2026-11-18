@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryStandby} from "../../policy/market-registry/IMarketRegistryStandby.sol";
-import {IMarketRegistryViews} from "../../policy/market-registry/IMarketRegistryViews.sol";
+import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {IParameterStoreChain} from "../../policy/parameter-store/IParameterStoreChain.sol";
 import {IParameterStoreLiquidation} from "../../policy/parameter-store/IParameterStoreLiquidation.sol";
 import {IParameterStoreViews} from "../../policy/parameter-store/IParameterStoreViews.sol";
@@ -69,7 +68,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         (r, v) = _readWordOf(store, IParameterStoreViews.feedAgreementToleranceBps.selector, asset, type(uint16).max);
         ok = ok && r;
         e.toleranceBps = SafeCast.toUint16(v);
-        (r, v) = _readWordOf(registry, IMarketRegistryStandby.priceRouteVersion.selector, asset, type(uint64).max);
+        (r, v) = _readWordOf(registry, IMarketRegistry.priceRouteVersion.selector, asset, type(uint64).max);
         e.routeVersionRead = r;
         e.routeVersion = SafeCast.toUint64(v);
         ok = ok && r && _readListed(registry, asset);
@@ -88,7 +87,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         address registry,
         address asset
     ) internal view returns (bool listed) {
-        (bool s,, uint256[] memory w) = _callOf(registry, IMarketRegistryViews.getToken.selector, asset, 2);
+        (bool s,, uint256[] memory w) = _callOf(registry, IMarketRegistry.getToken.selector, asset, 2);
         return s && w.length == 2 && w[0] == 32 && w[1] == 1;
     }
 
@@ -98,7 +97,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         address asset
     ) internal view returns (bool ok, RouteSlot replaced, RouteRead[2] memory routes) {
         (bool s, uint256 size, uint256[] memory w) =
-            _callOf(registry, IMarketRegistryStandby.activePriceRoutes.selector, asset, 9);
+            _callOf(registry, IMarketRegistry.activePriceRoutes.selector, asset, 9);
         if (!s || (size & 31) != 0 || size > 288 || w.length < 5 || w[0] != 96 || w[2] > 2) {
             return (false, replaced, routes);
         }

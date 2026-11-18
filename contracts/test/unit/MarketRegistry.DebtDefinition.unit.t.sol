@@ -4,9 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IMarketRegistryCreditLines} from "../../src/policy/market-registry/IMarketRegistryCreditLines.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
     RegistryAvanaFirstLossReserveMock,
@@ -87,7 +87,7 @@ contract MarketRegistryDebtDefinitionUnitTest is MarketRegistryFixture {
     function _invalid(
         bytes32 check
     ) internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IMarketRegistryErrors.InvalidDebtReserve.selector, check);
+        return abi.encodeWithSelector(IMarketRegistryBase.InvalidDebtReserve.selector, check);
     }
 
     function _enable(
@@ -167,10 +167,7 @@ contract MarketRegistryDebtDefinitionUnitTest is MarketRegistryFixture {
         _expect(
             d,
             abi.encodeWithSelector(
-                IMarketRegistryCreditLines.AvanaFirstLossReserveMismatch.selector,
-                address(hub),
-                address(usdc),
-                address(0)
+                IMarketRegistry.AvanaFirstLossReserveMismatch.selector, address(hub), address(usdc), address(0)
             )
         );
         // The Aave reserve and the definition name Hub asset 9, but the recorded First-Loss Reserve covers asset 2.
@@ -190,7 +187,7 @@ contract MarketRegistryDebtDefinitionUnitTest is MarketRegistryFixture {
         d.priceSource = address(0);
         d.firstLossReserve = address(0);
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.InvalidSpoke.selector, alice));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, alice));
         registry.enableDebtReserve(alice, d);
         _expect(d, _invalid("fundingHub"));
         d.fundingHub = address(hub);
@@ -205,10 +202,7 @@ contract MarketRegistryDebtDefinitionUnitTest is MarketRegistryFixture {
         _expect(
             d,
             abi.encodeWithSelector(
-                IMarketRegistryCreditLines.AvanaFirstLossReserveMismatch.selector,
-                address(hub),
-                address(usdc),
-                address(0)
+                IMarketRegistry.AvanaFirstLossReserveMismatch.selector, address(hub), address(usdc), address(0)
             )
         );
         d.firstLossReserve = address(usdcCoverage);
@@ -219,20 +213,13 @@ contract MarketRegistryDebtDefinitionUnitTest is MarketRegistryFixture {
         _expect(
             d,
             abi.encodeWithSelector(
-                IMarketRegistryCreditLines.CreditLineExceeded.selector,
-                address(hub),
-                address(usdc),
-                2_000_000,
-                1_000_000
+                IMarketRegistry.CreditLineExceeded.selector, address(hub), address(usdc), 2_000_000, 1_000_000
             )
         );
         hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 500_000);
         usdcCoverage.setFunded(1, false);
         _expect(
-            d,
-            abi.encodeWithSelector(
-                IMarketRegistryCreditLines.CoverageBelowRatio.selector, address(hub), address(usdc), 2e11, 1
-            )
+            d, abi.encodeWithSelector(IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(usdc), 2e11, 1)
         );
         usdcCoverage.setFunded(2e12, false);
         _enable(d);

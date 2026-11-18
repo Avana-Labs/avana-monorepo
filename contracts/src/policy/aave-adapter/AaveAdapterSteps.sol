@@ -10,8 +10,7 @@ import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
 import {PauseReason} from "../../types/PauseReason.sol";
 import {PauseState} from "../../types/PauseState.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
-import {IMarketRegistryFreeze} from "../market-registry/IMarketRegistryFreeze.sol";
-import {IMarketRegistryPause} from "../market-registry/IMarketRegistryPause.sol";
+import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {AdapterAccount} from "./types/AdapterAccount.sol";
@@ -66,14 +65,14 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
     function _pauseOf(
         address hub
     ) internal view returns (PauseState state, PauseReason reason) {
-        state = IMarketRegistryPause(_MARKET_REGISTRY).pauseState(hub);
-        if (state == PauseState.Paused) reason = IMarketRegistryPause(_MARKET_REGISTRY).pauseReason(hub);
+        state = IMarketRegistry(_MARKET_REGISTRY).pauseState(hub);
+        if (state == PauseState.Paused) reason = IMarketRegistry(_MARKET_REGISTRY).pauseReason(hub);
     }
 
     function _isFrozen(
         address account
     ) internal view returns (bool frozen) {
-        frozen = IMarketRegistryFreeze(_MARKET_REGISTRY).isFrozenAddress(account);
+        frozen = IMarketRegistry(_MARKET_REGISTRY).isFrozenAddress(account);
     }
 
     function _withDebtGates(

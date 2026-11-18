@@ -10,8 +10,7 @@ import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVa
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
+import {DebtReserveDef, MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 

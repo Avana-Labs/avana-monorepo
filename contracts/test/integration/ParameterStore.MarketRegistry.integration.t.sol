@@ -6,8 +6,8 @@ pragma solidity 0.8.28;
 import {RiskStatus} from "../../src/amm/types/RiskStatus.sol";
 import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
 import {IPoolObservations} from "../../src/policy/parameter-store/IPoolObservations.sol";
 import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
@@ -147,7 +147,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         (a[0], a[1]) = (routeFeeds[address(usdc)][1], routeFeeds[address(usdc)][2]);
         s[0] = wide;
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("tolerance")));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("tolerance")));
         registry.setPriceSource(address(usdc), p, a, s);
         // Raising the store's tolerance first lets the same route change through.
         vm.prank(address(timelock));
@@ -429,7 +429,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
     /// the listed values, and the listing writes close.
     function test_TEST_138_activationOnlyAfterTheStoreListing() public {
         (uint256 id, address vaultToken,) = _listMarket();
-        vm.expectPartialRevert(IMarketRegistryErrors.ActivationCheckFailed.selector);
+        vm.expectPartialRevert(IMarketRegistryBase.ActivationCheckFailed.selector);
         vm.prank(address(timelock));
         registry.activateMarket(id);
         assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Registered), "still Registered");

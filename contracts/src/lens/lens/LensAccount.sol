@@ -11,7 +11,7 @@ import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IPayoutEscrow} from "../../liquidation/payout-escrow/IPayoutEscrow.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {IAaveAdapterViews} from "../../policy/aave-adapter/IAaveAdapterViews.sol";
-import {DebtReserveDef} from "../../policy/market-registry/types/DebtReserveDef.sol";
+import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleViews} from "../../policy/risk-module/IRiskModuleViews.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {Market} from "../../types/Market.sol";

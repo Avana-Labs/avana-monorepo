@@ -4,7 +4,7 @@
 # File size limits of contracts/src (Q-240).
 #
 #   implementation file  at most 500 lines of code: lines that are neither blank nor comment-only
-#   interface file       at most 300 lines in total, NatSpec and blank lines included
+#   interface file       at most 900 lines in total, NatSpec and blank lines included
 #
 # An implementation file declares a contract (abstract or not) or a library with functions. Every other file
 # (interfaces, events and errors, structs and enums, constant-only libraries, external mirrors) is an interface file.
@@ -16,7 +16,7 @@ set -euo pipefail
 
 SRC_DIR="${1:-src}"
 MAX_IMPL_CODE=500
-MAX_INTERFACE_LINES=300
+MAX_INTERFACE_LINES=900
 
 if [ ! -d "$SRC_DIR" ]; then
   echo "check-file-size: no such directory: $SRC_DIR" >&2

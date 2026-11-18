@@ -16,8 +16,7 @@ import {PauseReason} from "../../types/PauseReason.sol";
 import {PauseState} from "../../types/PauseState.sol";
 import {PositionRef} from "../../types/PositionRef.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
-import {IMarketRegistryRouteViews} from "../market-registry/IMarketRegistryRouteViews.sol";
-import {IMarketRegistryViews} from "../market-registry/IMarketRegistryViews.sol";
+import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {IParameterStoreChain} from "../parameter-store/IParameterStoreChain.sol";
 import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
 import {IRiskModuleErrors} from "../risk-module/IRiskModuleErrors.sol";
@@ -109,7 +108,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _acquire();
         if (block.timestamp > deadline) revert DeadlineExpired(deadline);
         (address proxy, AdapterAccount memory account) = _accountOf(msg.sender, marketId);
-        Market memory m = IMarketRegistryViews(_MARKET_REGISTRY).getMarket(marketId);
+        Market memory m = IMarketRegistry(_MARKET_REGISTRY).getMarket(marketId);
         if (position.integrationId != m.integrationId) revert IntegrationMismatch(marketId, position.integrationId);
         bool requireRescue = _mintGate(m.hub, account.spoke, proxy);
         uint128 rescueUnits;
@@ -212,7 +211,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         RepayWithCollateralParams calldata p
     ) private view returns (bytes32) {
         if (p.minAmounts.length != 0) return keccak256(abi.encode(p.minAmounts));
-        uint256 n = IMarketRegistryViews(_MARKET_REGISTRY).getMarket(p.marketId).tokens.length;
+        uint256 n = IMarketRegistry(_MARKET_REGISTRY).getMarket(p.marketId).tokens.length;
         return keccak256(abi.encode(new uint256[](n)));
     }
 
@@ -229,7 +228,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (state == PauseState.Paused && reason == PauseReason.MintPathSuspect) revert ApplicationPaused();
         _requireSequencerNotDown();
         _checkIntegration(p.marketId, b.vaultToken, p.position.integrationId);
-        if (!IMarketRegistryRouteViews(_MARKET_REGISTRY).isApprovedDebtReserve(b.spoke, p.debtReserveId)) {
+        if (!IMarketRegistry(_MARKET_REGISTRY).isApprovedDebtReserve(b.spoke, p.debtReserveId)) {
             revert UnknownDebtReserve(b.spoke, p.debtReserveId);
         }
         IAaveV4Spoke sp = IAaveV4Spoke(b.spoke);

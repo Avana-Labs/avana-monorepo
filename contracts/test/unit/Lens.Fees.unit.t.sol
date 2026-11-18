@@ -8,7 +8,7 @@ import {FeeMode} from "../../src/amm/types/FeeMode.sol";
 import {IntegrationCapabilities} from "../../src/amm/types/IntegrationCapabilities.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {PositionFeesView} from "../../src/lens/lens/types/PositionFeesView.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {LensFeesV3Fixture, LensRecordsStub} from "../utils/fixtures/LensFeesFixture.sol";
 import {AaveAdapterLensMock} from "../utils/mocks/AaveAdapterLensMock.sol";
 import {MintableToken, MockNFPM} from "../utils/mocks/UniswapV3Mocks.sol";
@@ -266,9 +266,9 @@ contract LensFeesUnitTest is LensFeesV3Fixture {
         vm.expectRevert(ILensErrors.Locked.selector);
         lens.getAccountFees(alice, M1);
         _unlock();
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 9));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 9));
         lens.getPositionFees(9, key);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 9));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 9));
         lens.getAccountFees(alice, 9);
     }
 }

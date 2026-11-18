@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
-import {IMarketRegistryStandby} from "../../policy/market-registry/IMarketRegistryStandby.sol";
+import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {OracleConfig} from "../../types/OracleConfig.sol";
 import {PriceState} from "../../types/PriceState.sol";
 import {PriceStateView} from "../../types/PriceStateView.sol";
@@ -116,10 +116,7 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
         address token
     ) private view returns (uint64 version) {
         (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
-            _s().marketRegistry,
-            CONFIG_CALL_GAS,
-            abi.encodeCall(IMarketRegistryStandby.priceRouteVersion, (token)),
-            WORD
+            _s().marketRegistry, CONFIG_CALL_GAS, abi.encodeCall(IMarketRegistry.priceRouteVersion, (token)), WORD
         );
         uint256 value = 0;
         if (ok) (ok, value) = LPOracleCalls.uintAt(ret, 0, type(uint64).max);

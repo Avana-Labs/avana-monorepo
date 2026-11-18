@@ -8,13 +8,11 @@ import {PauseReason} from "../../types/PauseReason.sol";
 import {PauseState} from "../../types/PauseState.sol";
 import {IAaveAdapterViews} from "../aave-adapter/IAaveAdapterViews.sol";
 import {IRiskModuleViews} from "../risk-module/IRiskModuleViews.sol";
-import {IMarketRegistryHubs} from "./IMarketRegistryHubs.sol";
+import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
 import {BreakerReasons, BreakerScope} from "./types/Breaker.sol";
-import {MarketRegistryImmutables} from "./types/MarketRegistryImmutables.sol";
-import {MarketStatus} from "./types/MarketStatus.sol";
-import {RiskTier} from "./types/RiskTier.sol";
+import {MarketRegistryImmutables, MarketStatus, RiskTier} from "./types/MarketRegistryTypes.sol";
 
 /// @title MarketRegistrySafetyLogic
 /// @notice Bodies of the per-Hub pause state and reason, the address freeze and the breaker writes.
@@ -207,7 +205,7 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
     function _stateOf(
         address hub
     ) private view returns (PauseState) {
-        if (_s().hubTier[hub] == RiskTier.None) revert IMarketRegistryHubs.InvalidHub(hub);
+        if (_s().hubTier[hub] == RiskTier.None) revert IMarketRegistry.InvalidHub(hub);
         return _s().pauseState[hub];
     }
 

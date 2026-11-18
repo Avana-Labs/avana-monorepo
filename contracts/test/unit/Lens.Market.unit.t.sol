@@ -10,7 +10,7 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {BackingView} from "../../src/lens/lens/types/BackingView.sol";
 import {RecordBackingView} from "../../src/lens/lens/types/RecordBackingView.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {CapView} from "../../src/types/CapView.sol";
 import {PendingView} from "../../src/types/PendingView.sol";
 import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
@@ -173,7 +173,7 @@ contract LensMarketUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-022
     function test_TEST_247_checkBackingUnknownVaultTokenReverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 0));
         lens.checkBacking(makeAddr("notAVaultToken"));
     }
 
@@ -254,7 +254,7 @@ contract LensMarketUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-022
     function test_TEST_247_checkRecordBackingUnknownVaultTokenReverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 0));
         lens.checkRecordBacking(makeAddr("x"), 0, 10);
     }
 
@@ -423,7 +423,7 @@ contract LensMarketUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-022
     function test_TEST_247_capHeadroomUnknownVaultTokenReverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 0));
         lens.getCapHeadroom(makeAddr("x"), alice);
     }
 

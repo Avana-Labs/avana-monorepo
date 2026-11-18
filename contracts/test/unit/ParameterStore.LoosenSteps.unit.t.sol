@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
 import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
 import {DebtReserveParams} from "../../src/policy/parameter-store/types/DebtReserveParams.sol";

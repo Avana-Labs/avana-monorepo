@@ -8,7 +8,7 @@ import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSw
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {SettlementReport} from "../../src/types/SettlementReport.sol";
 import {AccessTrace} from "../utils/AccessTrace.sol";

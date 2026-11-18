@@ -7,7 +7,7 @@ import {ICollateralizationViews} from "../../../src/custody/collateralization/IC
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {BreakerReasons} from "../../../src/policy/market-registry/types/Breaker.sol";
-import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
+import {MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {PositionRef} from "../../../src/types/PositionRef.sol";
 import {PriceState} from "../../../src/types/PriceState.sol";
 import {AdapterRegistryMock} from "../../utils/mocks/AaveAdapterMocks.sol";

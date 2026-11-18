@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistrySafetyEvents} from "../../src/policy/market-registry/IMarketRegistrySafetyEvents.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {BreakerReasons, BreakerScope} from "../../src/policy/market-registry/types/Breaker.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketDef} from "../../src/types/MarketDef.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
@@ -56,7 +55,7 @@ contract MarketRegistryBreakerMatrixUnitTest is MarketRegistryFixture {
                 assertEq(latched, bit, "security bit latches");
                 assertEq(last, 0, "no breach time for a security bit");
                 assertEq(logs.length, 1);
-                assertEq(logs[0].topics[0], IMarketRegistrySafetyEvents.BreakerLatched.selector);
+                assertEq(logs[0].topics[0], IMarketRegistryBase.BreakerLatched.selector);
                 assertEq(logs[0].topics[1], bytes32(uint256(BreakerScope.Market)));
                 assertEq(logs[0].topics[2], mKey);
                 assertEq(abi.decode(logs[0].data, (uint32)), bit);
@@ -64,7 +63,7 @@ contract MarketRegistryBreakerMatrixUnitTest is MarketRegistryFixture {
                 assertEq(latched, 0, "temporary bit never latches");
                 assertEq(last, 7777);
                 assertEq(logs.length, 1);
-                assertEq(logs[0].topics[0], IMarketRegistrySafetyEvents.GateBreached.selector);
+                assertEq(logs[0].topics[0], IMarketRegistryBase.GateBreached.selector);
                 assertEq(logs[0].topics[1], mKey);
                 (uint32 reasons, uint64 at) = abi.decode(logs[0].data, (uint32, uint64));
                 assertEq(reasons, bit);
@@ -86,10 +85,10 @@ contract MarketRegistryBreakerMatrixUnitTest is MarketRegistryFixture {
         uint32 all = type(uint32).max;
         Vm.Log[] memory logs = _breach(dKey, all);
         assertEq(logs.length, 2);
-        assertEq(logs[0].topics[0], IMarketRegistrySafetyEvents.BreakerLatched.selector);
+        assertEq(logs[0].topics[0], IMarketRegistryBase.BreakerLatched.selector);
         assertEq(logs[0].topics[1], bytes32(uint256(BreakerScope.DebtReserve)));
         assertEq(abi.decode(logs[0].data, (uint32)), BreakerReasons.SECURITY);
-        assertEq(logs[1].topics[0], IMarketRegistrySafetyEvents.GateBreached.selector);
+        assertEq(logs[1].topics[0], IMarketRegistryBase.GateBreached.selector);
         (uint32 temp, uint64 at) = abi.decode(logs[1].data, (uint32, uint64));
         assertEq(temp, BreakerReasons.TEMPORARY);
         assertEq(at, 10_000);
@@ -107,7 +106,7 @@ contract MarketRegistryBreakerMatrixUnitTest is MarketRegistryFixture {
             [BreakerScope.Market, BreakerScope.Market, BreakerScope.DebtReserve, BreakerScope.DebtReserve];
         for (uint256 i = 0; i < keys.length; ++i) {
             vm.expectEmit(address(registry));
-            emit IMarketRegistrySafetyEvents.BreakerLatched(want[i], keys[i], BreakerReasons.ISSUER);
+            emit IMarketRegistryBase.BreakerLatched(want[i], keys[i], BreakerReasons.ISSUER);
             vm.prank(address(rm));
             registry.recordBreach(keys[i], BreakerReasons.ISSUER);
         }
@@ -135,7 +134,7 @@ contract MarketRegistryBreakerMatrixUnitTest is MarketRegistryFixture {
     function test_TEST_228_latchedEventCarriesTheWholeSet() public {
         _breach(mKey, BreakerReasons.ISSUER);
         vm.expectEmit(address(registry));
-        emit IMarketRegistrySafetyEvents.BreakerLatched(
+        emit IMarketRegistryBase.BreakerLatched(
             BreakerScope.Market, mKey, BreakerReasons.ISSUER | BreakerReasons.CONFIG_DRIFT
         );
         vm.prank(address(rm));
@@ -150,13 +149,13 @@ contract MarketRegistryBreakerMatrixUnitTest is MarketRegistryFixture {
     function test_TEST_228_manualTripOnEveryKnownStatus() public {
         _breach(mKey, BreakerReasons.DEFICIT);
         vm.expectEmit(address(registry));
-        emit IMarketRegistrySafetyEvents.BreakerLatched(
+        emit IMarketRegistryBase.BreakerLatched(
             BreakerScope.Market, mKey, BreakerReasons.DEFICIT | BreakerReasons.MANUAL
         );
         vm.prank(emergencyGuardian);
         registry.tripMarketBreaker(marketId);
         vm.expectEmit(address(registry));
-        emit IMarketRegistrySafetyEvents.BreakerLatched(
+        emit IMarketRegistryBase.BreakerLatched(
             BreakerScope.Market, mKey, BreakerReasons.DEFICIT | BreakerReasons.MANUAL
         );
         vm.prank(aaveGuardian);
@@ -210,12 +209,12 @@ contract MarketRegistryBreakerMatrixUnitTest is MarketRegistryFixture {
         uint32 still = live & latched & BreakerReasons.SECURITY;
         vm.prank(aaveGuardian);
         if (latched == 0) {
-            vm.expectRevert(IMarketRegistryErrors.NothingToReset.selector);
+            vm.expectRevert(IMarketRegistryBase.NothingToReset.selector);
         } else if (still != 0) {
-            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ConditionStillHolds.selector, mKey, still));
+            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ConditionStillHolds.selector, mKey, still));
         } else {
             vm.expectEmit(address(registry));
-            emit IMarketRegistrySafetyEvents.BreakerReset(BreakerScope.Market, mKey, aaveGuardian);
+            emit IMarketRegistryBase.BreakerReset(BreakerScope.Market, mKey, aaveGuardian);
         }
         registry.resetMarketBreaker(marketId);
         (uint32 after_,) = registry.marketBreaker(marketId);
@@ -235,7 +234,7 @@ contract MarketRegistryBreakerMatrixUnitTest is MarketRegistryFixture {
         uint32 still = live & latched;
         vm.prank(emergencyGuardian);
         if (still != 0) {
-            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ConditionStillHolds.selector, dKey, still));
+            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ConditionStillHolds.selector, dKey, still));
         }
         registry.resetDebtBreaker(address(spoke), GHO_RESERVE);
         (uint32 after_,) = registry.debtBreaker(address(spoke), GHO_RESERVE);
@@ -246,10 +245,10 @@ contract MarketRegistryBreakerMatrixUnitTest is MarketRegistryFixture {
     // A reset of a debt key with nothing latched reports NothingToReset whether or not the reserve exists.
     function test_TEST_228_resetWithNothingLatchedNeedsNoReserve() public {
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.NothingToReset.selector);
+        vm.expectRevert(IMarketRegistryBase.NothingToReset.selector);
         registry.resetDebtBreaker(alice, 1234);
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.NothingToReset.selector);
+        vm.expectRevert(IMarketRegistryBase.NothingToReset.selector);
         registry.resetMarketBreaker(1234);
     }
 
@@ -281,7 +280,7 @@ contract MarketRegistryBreakerMatrixUnitTest is MarketRegistryFixture {
         }
         vm.prank(emergencyGuardian);
         vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.UnknownDebtReserve.selector, address(spoke), GHO_RESERVE)
+            abi.encodeWithSelector(IMarketRegistryBase.UnknownDebtReserve.selector, address(spoke), GHO_RESERVE)
         );
         registry.tripDebtBreaker(address(spoke), GHO_RESERVE);
         vm.prank(address(timelock));

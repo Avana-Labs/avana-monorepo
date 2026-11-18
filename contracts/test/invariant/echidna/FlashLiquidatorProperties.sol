@@ -11,7 +11,7 @@ import {FlashLiquidator} from "../../../src/periphery/flash-liquidator/FlashLiqu
 import {IFlashLiquidator} from "../../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {IFlashLiquidatorErrors} from "../../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
 import {FlashLiquidationRequest} from "../../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
+import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../../src/types/Market.sol";
 import {MockFlashFeeCap} from "../../utils/mocks/MockFlashReceiver.sol";
 import {PayoutToken} from "../../utils/mocks/PayoutToken.sol";

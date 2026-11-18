@@ -15,11 +15,8 @@ import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
 import {IRiskModuleViews} from "../risk-module/IRiskModuleViews.sol";
 import {IMarketRegistryDriftLogic} from "./IMarketRegistryDriftLogic.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
-import {MarketRegistryOracleChecks} from "./MarketRegistryOracleChecks.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
-import {MarketRegistryImmutables} from "./types/MarketRegistryImmutables.sol";
-import {MarketStatus} from "./types/MarketStatus.sol";
-import {WindDownState} from "./types/WindDownState.sol";
+import {MarketRegistryImmutables, MarketStatus, WindDownState} from "./types/MarketRegistryTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title MarketRegistryActivationLogic
@@ -31,7 +28,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 // forge-lint: disable-start(reentrancy-events)
 // ParameterStore liveness views over the Spoke's enabled debt reserves; views only.
 // forge-lint: disable-start(calls-loop)
-contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketRegistryLogic, IMarketRegistryDriftLogic {
+contract MarketRegistryActivationLogic is MarketRegistryStorage, IMarketRegistryLogic, IMarketRegistryDriftLogic {
     constructor(
         MarketRegistryImmutables memory im
     ) MarketRegistryStorage(im) {}

@@ -321,9 +321,9 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "9dce35880f02f57d",
+      "fingerprint": "f4b54f786ce0f704",
       "check": "unchecked-return",
-      "file": "src/policy/market-registry/MarketRegistryRouter.sol",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
       "reason": "_forward discards the empty return data of a write that returns nothing; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
@@ -384,9 +384,9 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "d1e8b0436feb59bd",
+      "fingerprint": "ed52039e6f9b0d3c",
       "check": "unused-import",
-      "file": "src/policy/market-registry/MarketRegistryRouter.sol",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
       "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },

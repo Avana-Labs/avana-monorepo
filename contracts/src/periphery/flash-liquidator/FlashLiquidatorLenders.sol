@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IAaveV3ACLManager} from "../../interfaces/external/aave/IAaveV3ACLManager.sol";
 import {IAaveV3Pool} from "../../interfaces/external/aave/IAaveV3Pool.sol";
 import {IAaveV3PoolAddressesProvider} from "../../interfaces/external/aave/IAaveV3PoolAddressesProvider.sol";
-import {IMarketRegistryHubs} from "../../policy/market-registry/IMarketRegistryHubs.sol";
+import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {IFlashLiquidator} from "./IFlashLiquidator.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -37,7 +37,7 @@ abstract contract FlashLiquidatorLenders is IFlashLiquidator {
         address marketRegistry
     ) {
         if (pool == address(0) || marketRegistry == address(0)) revert ZeroAddress();
-        if (IMarketRegistryHubs(marketRegistry).isRecordedHub(pool)) revert FlashSourceIsHub();
+        if (IMarketRegistry(marketRegistry).isRecordedHub(pool)) revert FlashSourceIsHub();
         POOL = pool;
         MARKET_REGISTRY = marketRegistry;
     }

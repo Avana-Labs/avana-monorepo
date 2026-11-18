@@ -6,10 +6,12 @@ pragma solidity 0.8.28;
 import {ICollateralizationViews} from "../../../src/custody/collateralization/ICollateralizationViews.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {BreakerReasons} from "../../../src/policy/market-registry/types/Breaker.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
-import {SpokeDef} from "../../../src/policy/market-registry/types/SpokeDef.sol";
-import {TokenDef} from "../../../src/policy/market-registry/types/TokenDef.sol";
+import {
+    DebtReserveDef,
+    MarketStatus,
+    SpokeDef,
+    TokenDef
+} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {IPositionProxy} from "../../../src/proxy/position-proxy/IPositionProxy.sol";
 import {Market} from "../../../src/types/Market.sol";

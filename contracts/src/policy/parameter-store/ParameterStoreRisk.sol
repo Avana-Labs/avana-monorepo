@@ -10,7 +10,7 @@ import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {Market} from "../../types/Market.sol";
 import {PledgeCounters} from "../../types/PledgeCounters.sol";
-import {DebtReserveDef} from "../market-registry/types/DebtReserveDef.sol";
+import {DebtReserveDef} from "../market-registry/types/MarketRegistryTypes.sol";
 import {ParameterStoreOracle} from "./ParameterStoreOracle.sol";
 
 /// @title ParameterStoreRisk

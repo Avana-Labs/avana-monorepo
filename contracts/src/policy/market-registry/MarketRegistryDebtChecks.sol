@@ -15,12 +15,10 @@ import {IParameterStoreLiquidation} from "../parameter-store/IParameterStoreLiqu
 import {IParameterStoreViews} from "../parameter-store/IParameterStoreViews.sol";
 import {RiskModuleConstants} from "../risk-module/RiskModuleConstants.sol";
 import {RiskModuleMath} from "../risk-module/RiskModuleMath.sol";
-import {IMarketRegistryCreditLines} from "./IMarketRegistryCreditLines.sol";
-import {IMarketRegistryHubs} from "./IMarketRegistryHubs.sol";
+import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
-import {DebtReserveDef} from "./types/DebtReserveDef.sol";
 import {IssuerProbes} from "./types/IssuerProbe.sol";
-import {RiskTier} from "./types/RiskTier.sol";
+import {DebtReserveDef, RiskTier} from "./types/MarketRegistryTypes.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /// @title MarketRegistryDebtChecks
@@ -38,12 +36,12 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         if (def.crossHub != cross) revert InvalidDebtReserve("crossHub");
         if (!cross) return;
         Layout storage l = _s();
-        if (!l.crossHubLinesEnabled) revert IMarketRegistryHubs.CrossHubLinesDisabled();
+        if (!l.crossHubLinesEnabled) revert IMarketRegistry.CrossHubLinesDisabled();
         if (l.crossHubLineCap[def.fundingHub][def.asset][spoke] == 0) {
-            revert IMarketRegistryHubs.CrossHubLineClosed(def.fundingHub, def.asset, spoke);
+            revert IMarketRegistry.CrossHubLineClosed(def.fundingHub, def.asset, spoke);
         }
         if (l.creditLines[def.fundingHub][def.asset].line == 0) {
-            revert IMarketRegistryCreditLines.FundingHubConsentMissing(def.fundingHub, def.asset);
+            revert IMarketRegistry.FundingHubConsentMissing(def.fundingHub, def.asset);
         }
     }
 
@@ -93,13 +91,13 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
     ) internal view {
         address cs = def.firstLossReserve;
         if (cs == address(0) || cs != _s().firstLossReserveOf[def.fundingHub][def.asset]) {
-            revert IMarketRegistryCreditLines.AvanaFirstLossReserveMismatch(def.fundingHub, def.asset, cs);
+            revert IMarketRegistry.AvanaFirstLossReserveMismatch(def.fundingHub, def.asset, cs);
         }
         IAvanaFirstLossReserve c = IAvanaFirstLossReserve(cs);
         if (c.ASSET() != def.asset || c.HUB() != def.fundingHub || c.ASSET_ID() != def.hubAssetId) {
             revert InvalidDebtReserve("firstLossReserve");
         }
-        if (c.isBelowMinimum()) revert IMarketRegistryCreditLines.CoverageNotFunded(def.fundingHub, def.asset);
+        if (c.isBelowMinimum()) revert IMarketRegistry.CoverageNotFunded(def.fundingHub, def.asset);
     }
 
     function _checkFlashAndFee(

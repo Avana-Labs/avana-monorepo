@@ -12,7 +12,7 @@ import {PauseState} from "../../types/PauseState.sol";
 import {PledgeCounters} from "../../types/PledgeCounters.sol";
 import {PledgePreview} from "../../types/PledgePreview.sol";
 import {BreakerReasons} from "../market-registry/types/Breaker.sol";
-import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
+import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "./IRiskModule.sol";
 import {IRiskModuleAdmin} from "./IRiskModuleAdmin.sol";
 import {IRiskModuleBorrowLogic} from "./IRiskModuleBorrowLogic.sol";

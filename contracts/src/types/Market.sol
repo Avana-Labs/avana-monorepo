@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {MarketStatus} from "../policy/market-registry/types/MarketStatus.sol";
+import {MarketStatus} from "../policy/market-registry/types/MarketRegistryTypes.sol";
 import {PositionShape} from "./PositionShape.sol";
 
 /// @notice Stored market definition.

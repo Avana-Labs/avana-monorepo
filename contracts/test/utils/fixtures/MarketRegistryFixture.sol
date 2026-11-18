@@ -13,13 +13,15 @@ import {MarketRegistryListingLogic} from "../../../src/policy/market-registry/Ma
 import {MarketRegistryRoutesLogic} from "../../../src/policy/market-registry/MarketRegistryRoutesLogic.sol";
 import {MarketRegistrySafetyLogic} from "../../../src/policy/market-registry/MarketRegistrySafetyLogic.sol";
 import {MarketRegistryWindDownLogic} from "../../../src/policy/market-registry/MarketRegistryWindDownLogic.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
-import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
-import {MarketRegistryLogics} from "../../../src/policy/market-registry/types/MarketRegistryLogics.sol";
-import {RiskTier} from "../../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../../src/policy/market-registry/types/SpokeDef.sol";
-import {TokenDef} from "../../../src/policy/market-registry/types/TokenDef.sol";
+import {
+    DebtReserveDef,
+    MarketRegistryImmutables,
+    MarketRegistryLogics,
+    RiskTier,
+    SpokeDef,
+    TokenDef
+} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketDef} from "../../../src/types/MarketDef.sol";
 import {PositionShape} from "../../../src/types/PositionShape.sol";
 import {RouteSlot} from "../../../src/types/RouteSlot.sol";

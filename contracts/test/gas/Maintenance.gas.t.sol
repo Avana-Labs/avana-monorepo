@@ -10,7 +10,7 @@ import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiqui
 import {OperatorFlashLiquidator} from "../../src/periphery/flash-liquidator/OperatorFlashLiquidator.sol";
 import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
 import {IAaveAdapterUser} from "../../src/policy/aave-adapter/IAaveAdapterUser.sol";
-import {IMarketRegistryCreditLines} from "../../src/policy/market-registry/IMarketRegistryCreditLines.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -123,9 +123,7 @@ contract MaintenanceGasTest is RealStackFlows, GasCalibration {
         assertTrue(ok, "the Aave DAO raised the draw cap");
         _nextBlock();
         uint256 used = _txGas(
-            anyone,
-            address(registry),
-            abi.encodeCall(IMarketRegistryCreditLines.syncDrawCap, (aave.cdpSpoke, ghoReserveId))
+            anyone, address(registry), abi.encodeCall(IMarketRegistry.syncDrawCap, (aave.cdpSpoke, ghoReserveId))
         );
         vm.snapshotValue("Maintenance", "syncDrawCap_raise", used);
         emit log_named_uint("syncDrawCap (raised cap)", used);

@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketRegistryEvents.sol";
-import {IMarketRegistryStandby} from "../../src/policy/market-registry/IMarketRegistryStandby.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketDef} from "../../src/types/MarketDef.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
@@ -75,15 +74,15 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         bytes memory ret;
         (ok, ret) = _setAs(id, address(usdc), address(gho), 0, r);
         assertFalse(ok);
-        assertEq(ret, abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, id));
+        assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, id));
         // Cancelled and unknown.
         (uint256 c,,) = _listWide();
         vm.prank(address(timelock));
         registry.cancelRegistration(c);
         (ok, ret) = _setAs(c, address(usdc), address(gho), 0, r);
-        assertEq(ret, abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, c));
+        assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, c));
         (ok, ret) = _setAs(0, address(usdc), address(gho), 0, r);
-        assertEq(ret, abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 0));
+        assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 0));
     }
 
     function _listWide() internal returns (uint256 m, address token, RegistryLPOracleMock o) {
@@ -113,7 +112,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         bytes memory ret;
         (ok, ret) = _setAs(id, address(usdc), address(dai), 0, _route(address(usdc), address(dai), "d3"));
         assertFalse(ok);
-        assertEq(ret, abi.encodeWithSelector(IMarketRegistryErrors.TokenNotListed.selector, address(dai)));
+        assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.TokenNotListed.selector, address(dai)));
         vm.prank(address(timelock));
         registry.setAvanaFirstLossReserve(address(hub), address(dai), address(cs));
         (ok,) = _setAs(id, address(usdc), address(dai), 0, _route(address(usdc), address(dai), "d3"));
@@ -134,7 +133,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
             assertTrue(usable);
         } else {
             assertFalse(ok);
-            assertEq(ret, abi.encodeWithSelector(IMarketRegistryErrors.InvalidRoute.selector));
+            assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.InvalidRoute.selector));
             (address got, bool usable) = registry.getRoute(id, address(usdc), address(gho), kind);
             assertEq(got, address(0));
             assertFalse(usable);
@@ -149,7 +148,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         vm.prank(address(timelock));
         registry.setRoute(id, address(usdt), address(gho), 0, p);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.RouteSet(id, address(usdt), address(gho), 1, b);
+        emit IMarketRegistryBase.RouteSet(id, address(usdt), address(gho), 1, b);
         vm.prank(address(timelock));
         registry.setRoute(id, address(usdt), address(gho), 1, b);
         (address r0,) = registry.getRoute(id, address(usdt), address(gho), 0);
@@ -172,11 +171,11 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         (uint256 other,,) = _listWide();
         vm.startPrank(address(timelock));
         registry.disableRoute(id, address(usdc), address(gho), 0);
-        vm.expectRevert(IMarketRegistryErrors.NotPreviouslyApproved.selector);
+        vm.expectRevert(IMarketRegistryBase.NotPreviouslyApproved.selector);
         registry.restoreRoute(id, address(usdc), address(gho), 1, p);
-        vm.expectRevert(IMarketRegistryErrors.NotPreviouslyApproved.selector);
+        vm.expectRevert(IMarketRegistryBase.NotPreviouslyApproved.selector);
         registry.restoreRoute(other, address(usdc), address(gho), 0, p);
-        vm.expectRevert(IMarketRegistryErrors.NotPreviouslyApproved.selector);
+        vm.expectRevert(IMarketRegistryBase.NotPreviouslyApproved.selector);
         registry.restoreRoute(id, address(usdc), address(usdt), 0, p);
         registry.restoreRoute(id, address(usdc), address(gho), 0, p);
         vm.stopPrank();
@@ -194,7 +193,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         // The route no longer supports the Spoke's token class.
         RegistryRouteMock(p).setClassOk(false);
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.restoreRoute(id, address(usdc), address(gho), 0, p);
         RegistryRouteMock(p).setClassOk(true);
         // Closed market.
@@ -212,7 +211,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         vm.warp(block.timestamp + 5 days);
         registry.closeMarket(id);
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, id));
         registry.restoreRoute(id, address(usdc), address(gho), 0, p);
     }
 
@@ -228,9 +227,9 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         assertEq(cur, address(0));
         assertFalse(usable);
         vm.startPrank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.disableRoute(id, address(usdc), address(gho), 0);
-        vm.expectRevert(IMarketRegistryErrors.NotPreviouslyApproved.selector);
+        vm.expectRevert(IMarketRegistryBase.NotPreviouslyApproved.selector);
         registry.restoreRoute(id, address(usdc), address(gho), 0, p);
         // Approved again in the new epoch, it can be restored again.
         registry.setRoute(id, address(usdc), address(gho), 0, p);
@@ -246,7 +245,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         address p = _setRoute(id, address(usdc), address(gho), 0, "dexA");
         for (uint256 i = 0; i < 2; ++i) {
             vm.expectEmit(address(registry));
-            emit IMarketRegistryEvents.RouteDisabled(id, address(usdc), address(gho), 0, address(timelock));
+            emit IMarketRegistryBase.RouteDisabled(id, address(usdc), address(gho), 0, address(timelock));
             vm.prank(address(timelock));
             registry.disableRoute(id, address(usdc), address(gho), 0);
             (address cur, bool usable) = registry.getRoute(id, address(usdc), address(gho), 0);
@@ -334,7 +333,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         vm.warp(block.timestamp + w);
         vm.prank(aaveGuardian);
         if (block.timestamp < until) {
-            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryStandby.StandbySwitchLocked.selector, t, until));
+            vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.StandbySwitchLocked.selector, t, until));
         }
         registry.useStandbyRoute(t, RouteSlot.Alternate);
         if (block.timestamp >= until) {
@@ -375,7 +374,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
     // The slot is checked before the token: RouteSlot.None on an unlisted token reports InvalidRouteSlot.
     function test_TEST_231_slotCheckedBeforeToken() public {
         vm.prank(emergencyGuardian);
-        vm.expectRevert(IMarketRegistryErrors.InvalidRouteSlot.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRouteSlot.selector);
         registry.useStandbyRoute(alice, RouteSlot.None);
         // A replaced slot is refused before the standby is re-checked.
         vm.prank(emergencyGuardian);
@@ -383,7 +382,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         address[] memory s = registry.getToken(address(usdc)).standbyRoute;
         ps.setFeed(s[0], 8, 0, 25, 25);
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.StandbyAlreadyActive.selector, address(usdc)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.StandbyAlreadyActive.selector, address(usdc)));
         registry.useStandbyRoute(address(usdc), RouteSlot.Alternate);
     }
 }

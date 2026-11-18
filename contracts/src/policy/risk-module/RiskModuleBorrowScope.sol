@@ -6,8 +6,7 @@ pragma solidity 0.8.28;
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {DriftReason} from "../../types/DriftReason.sol";
 import {Market} from "../../types/Market.sol";
-import {DebtReserveDef} from "../market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
+import {DebtReserveDef, MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";
 import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
 

@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {MarketRegistryDebtChecks} from "../../../src/policy/market-registry/MarketRegistryDebtChecks.sol";
 import {MarketRegistryStorage} from "../../../src/policy/market-registry/MarketRegistryStorage.sol";
-import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
+import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 
 /// @title MarketRegistryDebtChecksHarness
 /// @notice External wrapper of the enablement fee read (`_feeRateZero`), so a unit test can call it with a chosen gas

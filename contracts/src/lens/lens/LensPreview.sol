@@ -12,7 +12,7 @@ import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {BreakerReasons} from "../../policy/market-registry/types/Breaker.sol";
-import {DebtReserveDef} from "../../policy/market-registry/types/DebtReserveDef.sol";
+import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleViews} from "../../policy/risk-module/IRiskModuleViews.sol";
 import {RiskModuleMath} from "../../policy/risk-module/RiskModuleMath.sol";
 import {Market} from "../../types/Market.sol";

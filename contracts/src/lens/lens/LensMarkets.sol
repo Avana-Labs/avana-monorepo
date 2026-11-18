@@ -10,7 +10,7 @@ import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {DebtReserveDef} from "../../policy/market-registry/types/DebtReserveDef.sol";
+import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleViews} from "../../policy/risk-module/IRiskModuleViews.sol";
 import {Market} from "../../types/Market.sol";
 import {PledgeCounters} from "../../types/PledgeCounters.sol";

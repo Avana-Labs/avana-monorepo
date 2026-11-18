@@ -9,7 +9,7 @@ import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {CloseAccountView} from "../../src/lens/lens/types/CloseAccountView.sol";
 import {DeleverageSizing} from "../../src/lens/lens/types/DeleverageSizing.sol";
 import {RemovalSizing} from "../../src/lens/lens/types/RemovalSizing.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {RiskModuleMath} from "../../src/policy/risk-module/RiskModuleMath.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
@@ -262,11 +262,11 @@ contract LensInverseSizingUnitTest is LensFixture {
         vm.expectRevert(ILensErrors.Locked.selector);
         lens.previewCloseAccount(alice, MARKET_ID, 0);
         _releaseLock();
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 5));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 5));
         lens.previewMaxWithdraw(alice, 5, 1e18);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 5));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 5));
         lens.previewDeleverageTo(alice, 5, _key(1), debtReserveId, 1e18);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 5));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 5));
         lens.previewCloseAccount(alice, 5, 0);
     }
 

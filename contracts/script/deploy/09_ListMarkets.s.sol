@@ -12,12 +12,14 @@ import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {DebtOracleInitParams} from "../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
-import {TokenDef} from "../../src/policy/market-registry/types/TokenDef.sol";
+import {
+    DebtReserveDef,
+    MarketStatus,
+    RiskTier,
+    SpokeDef,
+    TokenDef
+} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {DebtReserveParams} from "../../src/policy/parameter-store/types/DebtReserveParams.sol";
 import {GlobalParams} from "../../src/policy/parameter-store/types/GlobalParams.sol";
 import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";

@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketDef} from "../../src/types/MarketDef.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
@@ -92,7 +92,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
     function _routesErr(
         uint256 id
     ) internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IMarketRegistryErrors.ActivationCheckFailed.selector, id, bytes32("routes"));
+        return abi.encodeWithSelector(IMarketRegistryBase.ActivationCheckFailed.selector, id, bytes32("routes"));
     }
 
     // TEST-054 verifies: REQ-CONFIG-039, REQ-CONFIG-047, REQ-MREG-032, REQ-CONFIG-073, REQ-ROUTE-001
@@ -178,11 +178,11 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         _daiRoutes(id);
         ps.setLivenessFails(address(spoke), id, DAI_RESERVE, true);
         _expectActivation(
-            id, abi.encodeWithSelector(IMarketRegistryErrors.LivenessBound.selector, address(spoke), id, DAI_RESERVE)
+            id, abi.encodeWithSelector(IMarketRegistryBase.LivenessBound.selector, address(spoke), id, DAI_RESERVE)
         );
         ps.setLivenessFails(address(spoke), id, GHO_RESERVE, true);
         _expectActivation(
-            id, abi.encodeWithSelector(IMarketRegistryErrors.LivenessBound.selector, address(spoke), id, GHO_RESERVE)
+            id, abi.encodeWithSelector(IMarketRegistryBase.LivenessBound.selector, address(spoke), id, GHO_RESERVE)
         );
         ps.setLivenessFails(address(spoke), id, GHO_RESERVE, false);
         ps.setLivenessFails(address(spoke), id, DAI_RESERVE, false);
@@ -205,14 +205,14 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         // No DAI routes anywhere: the first liquidatable market fails.
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.LivenessBound.selector, address(spoke), active, DAI_RESERVE)
+            abi.encodeWithSelector(IMarketRegistryBase.LivenessBound.selector, address(spoke), active, DAI_RESERVE)
         );
         registry.enableDebtReserve(address(spoke), _daiDef());
         // Routes for the Active market only: the Offboarding one fails.
         _daiRoutes(active);
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.LivenessBound.selector, address(spoke), off, DAI_RESERVE)
+            abi.encodeWithSelector(IMarketRegistryBase.LivenessBound.selector, address(spoke), off, DAI_RESERVE)
         );
         registry.enableDebtReserve(address(spoke), _daiDef());
         // Routes for both: the liveness bound failing on the Offboarding market still blocks.
@@ -220,7 +220,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         ps.setLivenessFails(address(spoke), off, DAI_RESERVE, true);
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.LivenessBound.selector, address(spoke), off, DAI_RESERVE)
+            abi.encodeWithSelector(IMarketRegistryBase.LivenessBound.selector, address(spoke), off, DAI_RESERVE)
         );
         registry.enableDebtReserve(address(spoke), _daiDef());
         ps.setLivenessFails(address(spoke), off, DAI_RESERVE, false);

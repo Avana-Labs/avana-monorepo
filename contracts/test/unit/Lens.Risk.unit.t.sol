@@ -7,7 +7,7 @@ import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {HubAssetExposureView} from "../../src/lens/lens/types/HubAssetExposureView.sol";
 import {TailCoverageView} from "../../src/lens/lens/types/TailCoverageView.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 

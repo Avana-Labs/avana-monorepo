@@ -9,9 +9,8 @@ import {IUniswapV4Integration} from "../../src/amm/uniswap-v4/IUniswapV4Integrat
 import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {MarketDef} from "../../src/types/MarketDef.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
@@ -222,7 +221,7 @@ contract MarketRegistryUniswapV4ListingUnitTest is MarketRegistryFixture {
             deps[0] = bad[i];
             address route = address(new RegistryRouteMock(address(usdc), address(gho), address(lpVaultSwap), deps));
             vm.prank(address(timelock));
-            vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+            vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
             registry.setRoute(id, address(usdc), address(gho), 0, route);
         }
         address ok = address(_newRoute(address(usdc), address(gho), "otherPool"));

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {TokenDef} from "../../../src/policy/market-registry/types/TokenDef.sol";
+import {TokenDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
 import {RouteSlot} from "../../../src/types/RouteSlot.sol";
 import {SecondSource} from "../../../src/types/SecondSource.sol";

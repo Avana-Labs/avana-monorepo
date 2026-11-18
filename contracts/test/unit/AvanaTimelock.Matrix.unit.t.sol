@@ -14,14 +14,8 @@ import {LPVaultSwapImmutables} from "../../src/liquidation/lp-vault-swap/types/L
 import {LPVaultSwapLogics} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapLogics.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {IMarketRegistryApprovals} from "../../src/policy/market-registry/IMarketRegistryApprovals.sol";
-import {IMarketRegistryBreakers} from "../../src/policy/market-registry/IMarketRegistryBreakers.sol";
-import {IMarketRegistryFreeze} from "../../src/policy/market-registry/IMarketRegistryFreeze.sol";
-import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
-import {IMarketRegistryListing} from "../../src/policy/market-registry/IMarketRegistryListing.sol";
-import {IMarketRegistryPause} from "../../src/policy/market-registry/IMarketRegistryPause.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
-import {IMarketRegistryStandby} from "../../src/policy/market-registry/IMarketRegistryStandby.sol";
 import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterStoreAdmin.sol";
 import {IParameterStoreBreakers} from "../../src/policy/parameter-store/IParameterStoreBreakers.sol";
 import {IParameterStoreLiquidation} from "../../src/policy/parameter-store/IParameterStoreLiquidation.sol";
@@ -75,41 +69,41 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     ) internal {
         // Short delay, any canceller.
         rows.push(Row(mr, IMarketRegistryRoutes.disableRoute.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryListing.setMarketOffboarding.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryListing.activateMarket.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryListing.cancelRegistration.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryPause.freeze.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryPause.pause.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryFreeze.freezeAddress.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryBreakers.tripMarketBreaker.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryBreakers.tripDebtBreaker.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.setMarketOffboarding.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.activateMarket.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.cancelRegistration.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.freeze.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.pause.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.freezeAddress.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.tripMarketBreaker.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.tripDebtBreaker.selector, true, false));
         // Short delay, DAO-only cancel (restoring).
         rows.push(Row(mr, IMarketRegistryRoutes.restoreRoute.selector, true, true));
-        rows.push(Row(mr, IMarketRegistryStandby.useStandbyRoute.selector, true, true));
+        rows.push(Row(mr, IMarketRegistry.useStandbyRoute.selector, true, true));
         // Normal delay, DAO-only cancel (restoring).
-        rows.push(Row(mr, IMarketRegistryFreeze.unfreezeAddress.selector, false, true));
+        rows.push(Row(mr, IMarketRegistry.unfreezeAddress.selector, false, true));
         // Normal delay, any canceller.
-        rows.push(Row(mr, IMarketRegistryListing.listCollateralMarket.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryListing.setPriceSource.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.listCollateralMarket.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.setPriceSource.selector, false, false));
         rows.push(Row(mr, IMarketRegistryRoutes.setRoute.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryApprovals.recordIntegrationContracts.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryApprovals.finalizeIntegrationContracts.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryApprovals.approveSpokeCodeHash.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryListing.deployCdpSpoke.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryListing.listToken.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryListing.enableDebtReserve.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryListing.removeDebtReserve.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryHubs.setCrossHubLinesEnabled.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryHubs.setCrossHubLine.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryHubs.setFlashSource.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryPause.unpause.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryPause.unfreeze.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.recordIntegrationContracts.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.finalizeIntegrationContracts.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.approveSpokeCodeHash.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.deployCdpSpoke.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.listToken.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.enableDebtReserve.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.removeDebtReserve.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.setCrossHubLinesEnabled.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.setCrossHubLine.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.setFlashSource.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.unpause.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.unfreeze.selector, false, false));
         // The chain-wide stops wait the normal delay from the admin: the guardians already stop every Hub at once.
-        rows.push(Row(mr, IMarketRegistryPause.freezeAll.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryPause.pauseAll.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryBreakers.resetMarketBreaker.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryBreakers.resetDebtBreaker.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryStandby.restorePriceRoute.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.freezeAll.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.pauseAll.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.resetMarketBreaker.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.resetDebtBreaker.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.restorePriceRoute.selector, false, false));
         rows.push(Row(mr, UUPSUpgradeable.upgradeToAndCall.selector, false, false));
     }
 
@@ -319,7 +313,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     function test_TEST_067_everyOperationTypeByEveryCanceller() public {
         address[4] memory cancellers = [governanceMultisig, emergencyGuardian, aaveGuardian, aaveGovernanceExecutor];
         Call[][7] memory ops;
-        ops[0] = _one(address(marketRegistry), abi.encodeCall(IMarketRegistryPause.freeze, (address(1))));
+        ops[0] = _one(address(marketRegistry), abi.encodeCall(IMarketRegistry.freeze, (address(1))));
         ops[1] = _one(
             address(marketRegistry),
             abi.encodeCall(IMarketRegistryRoutes.setRoute, (1, address(2), address(3), 0, address(4)))

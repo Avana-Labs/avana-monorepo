@@ -329,9 +329,9 @@
       "review": "Reviewed per call site, group J (Chainlink-style read that is not a price read): checked 2026-11-11, an Aave V4 price-source interface call or a listing-time magnitude check; freshness and sequencer rules apply on the price path; not in an approved pattern."
     },
     {
-      "fingerprint": "f6e20c39abc4da81",
+      "fingerprint": "e649661d6017d94a",
       "check": "Use of deprecated chainlink function: `latestAnswer()`",
-      "file": "src/policy/market-registry/MarketRegistryMarketChecks.sol",
+      "file": "src/policy/market-registry/MarketRegistryListingLogic.sol",
       "reason": "Avana's LPOracle is an Aave V4 price source whose interface is latestAnswer(); the activation check requires a positive answer from it (MKT-026).",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group J (Chainlink-style read that is not a price read): checked 2026-11-11, an Aave V4 price-source interface call or a listing-time magnitude check; freshness and sequencer rules apply on the price path; not in an approved pattern."
@@ -353,17 +353,17 @@
       "review": "Reviewed per call site, group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern. keccak256(abi.encode(...)) here fingerprints implementation immutables, not typed data."
     },
     {
-      "fingerprint": "638e8ab4b3dcacd6",
+      "fingerprint": "23049abfc46909e6",
       "check": "Chainlink's `latestRoundData` might return stale or incorrect results",
-      "file": "src/policy/market-registry/MarketRegistryMarketChecks.sol",
+      "file": "src/policy/market-registry/MarketRegistryListingLogic.sol",
       "reason": "Listing-time magnitude check of the primary route's raw answer (0 < answer < 2^96), not a price used for any amount, as the comment above states; staleness, round completeness and the sequencer are enforced by the LPOracle on every price read (2.10).",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group J (Chainlink-style read that is not a price read): checked 2026-11-11, an Aave V4 price-source interface call or a listing-time magnitude check; freshness and sequencer rules apply on the price path; not in an approved pattern."
     },
     {
-      "fingerprint": "7674208ff70e6cf8",
+      "fingerprint": "5c2a263a7c785208",
       "check": "Missing checks for whether the L2 Sequencer is active",
-      "file": "src/policy/market-registry/MarketRegistryMarketChecks.sol",
+      "file": "src/policy/market-registry/MarketRegistryListingLogic.sol",
       "reason": "Same site: a listing-time magnitude check, not a price read; the LPOracle applies the sequencer-uptime check (ParameterStore sequencer config) on every price read.",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group J (Chainlink-style read that is not a price read): checked 2026-11-11, an Aave V4 price-source interface call or a listing-time magnitude check; freshness and sequencer rules apply on the price path; not in an approved pattern."

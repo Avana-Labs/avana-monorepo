@@ -20,8 +20,7 @@ import {DexPathRoute} from "../../../src/liquidation/settlement-routes/DexPathRo
 import {DexHop, HopKind} from "../../../src/liquidation/settlement-routes/types/DexHop.sol";
 import {RouteConfig} from "../../../src/liquidation/settlement-routes/types/RouteConfig.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
+import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../../src/types/Market.sol";
 import {PositionRef} from "../../../src/types/PositionRef.sol";
 import {PositionShape} from "../../../src/types/PositionShape.sol";

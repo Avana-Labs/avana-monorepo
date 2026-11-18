@@ -9,8 +9,8 @@ import {ILPVaultSwapAdmin} from "../../../src/liquidation/lp-vault-swap/ILPVault
 import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
 import {IAaveAdapterAdmin} from "../../../src/policy/aave-adapter/IAaveAdapterAdmin.sol";
 import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
-import {IMarketRegistryListing} from "../../../src/policy/market-registry/IMarketRegistryListing.sol";
-import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
+import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
+import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreAdmin} from "../../../src/policy/parameter-store/IParameterStoreAdmin.sol";
 import {IRiskModuleAdmin} from "../../../src/policy/risk-module/IRiskModuleAdmin.sol";
 import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleImmutables.sol";
@@ -129,8 +129,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
             "MarketRegistryImplementation",
             bytes.concat(_artifact("MarketRegistry.sol", "MarketRegistry"), abi.encode(im), logics)
         );
-        d.proxy =
-            _proxy("MarketRegistry", d.implementation, abi.encodeCall(IMarketRegistryListing.initialize, (p.timelock)));
+        d.proxy = _proxy("MarketRegistry", d.implementation, abi.encodeCall(IMarketRegistry.initialize, (p.timelock)));
     }
 
     /// @notice ParameterStore: five logic contracts, the router, the proxy with the initial values (`REQ-PSTORE-001`).

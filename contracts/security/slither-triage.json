@@ -163,9 +163,9 @@
       "function": "AaveV3FlashSource.flashLoan(address,uint256,address,bytes)"
     },
     {
-      "fingerprint": "8e88e806765a59ca",
+      "fingerprint": "ee5af9aa64b6d33b",
       "check": "unused-return",
-      "file": "src/policy/market-registry/MarketRegistryMarketChecks.sol",
+      "file": "src/policy/market-registry/MarketRegistryListingLogic.sol",
       "reason": "Only the answer of latestRoundData is used: the raw-price bound (REQ-CONFIG-035) is a listing-time magnitude check, not a price read, so round id and timestamps are irrelevant; freshness is enforced by the LPOracle. Covered by TEST-139.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
@@ -184,16 +184,16 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "fc4adc2216f2ce45",
+      "fingerprint": "0b2cc73dd2cbd97a",
       "check": "low-level-calls",
-      "file": "src/policy/market-registry/MarketRegistryOracleChecks.sol",
+      "file": "src/policy/market-registry/MarketRegistryStorage.sol",
       "reason": "Two STATICCALLs: the ParameterStore's getOracleConfig view and LPOracle.checkConfig, passing the returned bytes unchanged (the return encoding of getOracleConfig(address) equals the argument encoding of checkConfig(OracleConfig)), because decoding OracleConfig into memory exceeds the legacy pipeline's stack; a failed or malformed call counts as a failed check (REQ-CONFIG-027, REQ-CONFIG-047). getPriceState is read the same way for its first field. Covered by TEST-231, TEST-138.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "e989e2b325da6ec4",
+      "fingerprint": "eb46ddcf88c02596",
       "check": "low-level-calls",
-      "file": "src/policy/market-registry/MarketRegistryOracleChecks.sol",
+      "file": "src/policy/market-registry/MarketRegistryStorage.sol",
       "reason": "Two STATICCALLs: the ParameterStore's getOracleConfig view and LPOracle.checkConfig, passing the returned bytes unchanged (the return encoding of getOracleConfig(address) equals the argument encoding of checkConfig(OracleConfig)), because decoding OracleConfig into memory exceeds the legacy pipeline's stack; a failed or malformed call counts as a failed check (REQ-CONFIG-027, REQ-CONFIG-047). getPriceState is read the same way for its first field. Covered by TEST-231, TEST-138.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
@@ -517,13 +517,7 @@
     },
     {
       "check": "calls-loop",
-      "files": "src/policy/market-registry/MarketRegistryDriftView.sol",
-      "reason": "View calls in loops over a route's one or two feeds, a market's tokens (at most 8), a Spoke's markets and debt reserves, or the markets using a token: listing, activation, setPriceSource and the drift view. All are STATICCALL (ParameterStore, RiskModule, LPOracle, Chainlink, Aave views); loop lengths are bounded by records only timelock operations add, and a reverting callee makes the governance call revert (fail closed) or the view report drift.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "check": "calls-loop",
-      "files": "src/policy/market-registry/MarketRegistryMarketChecks.sol",
+      "files": "src/policy/market-registry/MarketRegistryViews.sol",
       "reason": "View calls in loops over a route's one or two feeds, a market's tokens (at most 8), a Spoke's markets and debt reserves, or the markets using a token: listing, activation, setPriceSource and the drift view. All are STATICCALL (ParameterStore, RiskModule, LPOracle, Chainlink, Aave views); loop lengths are bounded by records only timelock operations add, and a reverting callee makes the governance call revert (fail closed) or the view report drift.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
@@ -532,12 +526,6 @@
       "files": "src/policy/parameter-store/ParameterStoreStorage.sol",
       "reason": "View calls in loops over a route's one or two feeds, a market's tokens (at most 8), a Spoke's markets and debt reserves, or the markets using a token: listing, activation, setPriceSource and the drift view. All are STATICCALL (ParameterStore, RiskModule, LPOracle, Chainlink, Aave views); loop lengths are bounded by records only timelock operations add, and a reverting callee makes the governance call revert (fail closed) or the view report drift. Here: one MarketRegistry getToken per market token at listing, to set the market's USD band (REQ-ORACLE-056). Covered by TEST-250.",
       "approval": "approved (Josue, 2026-11-13, by pattern)"
-    },
-    {
-      "check": "calls-loop",
-      "files": "src/policy/market-registry/MarketRegistryOracleChecks.sol",
-      "reason": "View calls in loops over a route's one or two feeds, a market's tokens (at most 8), a Spoke's markets and debt reserves, or the markets using a token: listing, activation, setPriceSource and the drift view. All are STATICCALL (ParameterStore, RiskModule, LPOracle, Chainlink, Aave views); loop lengths are bounded by records only timelock operations add, and a reverting callee makes the governance call revert (fail closed) or the view report drift.",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
       "check": "calls-loop",

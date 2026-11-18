@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
@@ -48,7 +48,7 @@ contract MarketRegistryGuardianRehearsalUnitTest is MarketRegistryFixture {
         registry.freeze(h);
         assertEq(uint8(_state()), uint8(PauseState.Frozen), "freeze-only signer set froze");
         vm.prank(freezeOnly);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, freezeOnly));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, freezeOnly));
         registry.unfreeze(h);
         vm.prank(emergencyGuardian);
         registry.unfreeze(h);

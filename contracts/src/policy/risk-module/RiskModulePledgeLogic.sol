@@ -14,7 +14,7 @@ import {PledgeCounters} from "../../types/PledgeCounters.sol";
 import {PriceState} from "../../types/PriceState.sol";
 import {PriceStateView} from "../../types/PriceStateView.sol";
 import {BreakerReasons} from "../market-registry/types/Breaker.sol";
-import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
+import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
 import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";

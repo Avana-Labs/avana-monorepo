@@ -4,15 +4,13 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
+import {DebtReserveDef, MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
 import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
 import {SecondSource} from "../../src/types/SecondSource.sol";
 import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
-import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
-import {MockHub, MockSpoke} from "../utils/mocks/ParameterStoreMocks.sol";
+import {MockAggregator, MockHub, MockSpoke} from "../utils/mocks/ParameterStoreMocks.sol";
 
 /// @notice Structural setters, the liquidation-liveness check and the standby second source.
 contract ParameterStoreAdminUnitTest is ParameterStoreFixture {

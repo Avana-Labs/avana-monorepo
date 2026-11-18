@@ -5,12 +5,8 @@ pragma solidity 0.8.28;
 
 import {SelectorPair} from "../../../src/governance/timelock/types/SelectorPair.sol";
 import {ILPVaultSwapAdmin} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
-import {IMarketRegistryBreakers} from "../../../src/policy/market-registry/IMarketRegistryBreakers.sol";
-import {IMarketRegistryFreeze} from "../../../src/policy/market-registry/IMarketRegistryFreeze.sol";
-import {IMarketRegistryListing} from "../../../src/policy/market-registry/IMarketRegistryListing.sol";
-import {IMarketRegistryPause} from "../../../src/policy/market-registry/IMarketRegistryPause.sol";
+import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../../src/policy/market-registry/IMarketRegistryRoutes.sol";
-import {IMarketRegistryStandby} from "../../../src/policy/market-registry/IMarketRegistryStandby.sol";
 import {IParameterStoreAdmin} from "../../../src/policy/parameter-store/IParameterStoreAdmin.sol";
 import {IParameterStoreBreakers} from "../../../src/policy/parameter-store/IParameterStoreBreakers.sol";
 import {IParameterStoreLiquidation} from "../../../src/policy/parameter-store/IParameterStoreLiquidation.sol";
@@ -57,15 +53,15 @@ library TimelockShortDelayLists {
         bytes4[11] memory mr = [
             IMarketRegistryRoutes.disableRoute.selector,
             IMarketRegistryRoutes.restoreRoute.selector,
-            IMarketRegistryListing.setMarketOffboarding.selector,
-            IMarketRegistryListing.activateMarket.selector,
-            IMarketRegistryListing.cancelRegistration.selector,
-            IMarketRegistryPause.freeze.selector,
-            IMarketRegistryPause.pause.selector,
-            IMarketRegistryFreeze.freezeAddress.selector,
-            IMarketRegistryBreakers.tripMarketBreaker.selector,
-            IMarketRegistryBreakers.tripDebtBreaker.selector,
-            IMarketRegistryStandby.useStandbyRoute.selector
+            IMarketRegistry.setMarketOffboarding.selector,
+            IMarketRegistry.activateMarket.selector,
+            IMarketRegistry.cancelRegistration.selector,
+            IMarketRegistry.freeze.selector,
+            IMarketRegistry.pause.selector,
+            IMarketRegistry.freezeAddress.selector,
+            IMarketRegistry.tripMarketBreaker.selector,
+            IMarketRegistry.tripDebtBreaker.selector,
+            IMarketRegistry.useStandbyRoute.selector
         ];
         pairs = new SelectorPair[](SHORT_COUNT);
         for (uint256 i; i < ps.length; ++i) {
@@ -83,8 +79,8 @@ library TimelockShortDelayLists {
     ) internal pure returns (SelectorPair[] memory pairs) {
         pairs = new SelectorPair[](DAO_COUNT);
         pairs[0] = SelectorPair(marketRegistry, IMarketRegistryRoutes.restoreRoute.selector);
-        pairs[1] = SelectorPair(marketRegistry, IMarketRegistryStandby.useStandbyRoute.selector);
-        pairs[2] = SelectorPair(marketRegistry, IMarketRegistryFreeze.unfreezeAddress.selector);
+        pairs[1] = SelectorPair(marketRegistry, IMarketRegistry.useStandbyRoute.selector);
+        pairs[2] = SelectorPair(marketRegistry, IMarketRegistry.unfreezeAddress.selector);
         pairs[3] = SelectorPair(lpVaultSwap, ILPVaultSwapAdmin.addKeeper.selector);
     }
 }

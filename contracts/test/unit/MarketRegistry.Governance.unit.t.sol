@@ -3,11 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
-import {MarketRegistryImmutables} from "../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
-import {MarketRegistryLogics} from "../../src/policy/market-registry/types/MarketRegistryLogics.sol";
+import {
+    MarketRegistryImmutables,
+    MarketRegistryLogics
+} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {RouteSlot} from "../../src/types/RouteSlot.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
@@ -189,7 +191,7 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
         address newTimelock = makeAddr("newTimelock");
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.AdminRoleOnlyTimelock.selector, APP_ADMIN, newTimelock)
+            abi.encodeWithSelector(IMarketRegistryBase.AdminRoleOnlyTimelock.selector, APP_ADMIN, newTimelock)
         );
         registry.grantRole(APP_ADMIN, newTimelock);
         MarketRegistryImmutables memory im2 = im;
@@ -202,7 +204,7 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
         bytes32 defaultAdmin = registry.DEFAULT_ADMIN_ROLE();
         vm.startPrank(address(timelock));
         // The old timelock still holds the roles stored in the proxy, and may now hand them only to the new one.
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.AdminRoleOnlyTimelock.selector, APP_ADMIN, alice));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.AdminRoleOnlyTimelock.selector, APP_ADMIN, alice));
         registry.grantRole(APP_ADMIN, alice);
         registry.grantRole(APP_ADMIN, newTimelock);
         registry.grantRole(defaultAdmin, newTimelock);

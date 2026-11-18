@@ -13,9 +13,7 @@ import {ILPVaultSwapAdmin} from "../../src/liquidation/lp-vault-swap/ILPVaultSwa
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {IAaveAdapterAdmin} from "../../src/policy/aave-adapter/IAaveAdapterAdmin.sol";
-import {IMarketRegistryFreeze} from "../../src/policy/market-registry/IMarketRegistryFreeze.sol";
-import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
-import {IMarketRegistryListing} from "../../src/policy/market-registry/IMarketRegistryListing.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterStoreAdmin.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
@@ -142,9 +140,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
         assertTrue(
             timelock.isDaoOnlyCancelSelector(address(marketRegistry), IMarketRegistryRoutes.restoreRoute.selector)
         );
-        assertTrue(
-            timelock.isDaoOnlyCancelSelector(address(marketRegistry), IMarketRegistryFreeze.unfreezeAddress.selector)
-        );
+        assertTrue(timelock.isDaoOnlyCancelSelector(address(marketRegistry), IMarketRegistry.unfreezeAddress.selector));
         assertTrue(timelock.isDaoOnlyCancelSelector(address(lpVaultSwap), ILPVaultSwapAdmin.addKeeper.selector));
         assertFalse(
             timelock.isDaoOnlyCancelSelector(address(marketRegistry), IMarketRegistryRoutes.disableRoute.selector)
@@ -160,13 +156,13 @@ contract AvanaTimelockUnitTest is TimelockFixture {
             IAccessControl.revokeRole.selector,
             IAccessControl.renounceRole.selector,
             UUPSUpgradeable.upgradeToAndCall.selector,
-            IMarketRegistryHubs.setFlashSource.selector,
-            IMarketRegistryListing.deployCdpSpoke.selector,
-            IMarketRegistryListing.listCollateralMarket.selector,
-            IMarketRegistryListing.enableDebtReserve.selector,
-            IMarketRegistryHubs.setCrossHubLinesEnabled.selector,
-            IMarketRegistryHubs.setCrossHubLine.selector,
-            IMarketRegistryListing.initialize.selector,
+            IMarketRegistry.setFlashSource.selector,
+            IMarketRegistry.deployCdpSpoke.selector,
+            IMarketRegistry.listCollateralMarket.selector,
+            IMarketRegistry.enableDebtReserve.selector,
+            IMarketRegistry.setCrossHubLinesEnabled.selector,
+            IMarketRegistry.setCrossHubLine.selector,
+            IMarketRegistry.initialize.selector,
             IParameterStoreAdmin.initialize.selector,
             IAaveAdapterAdmin.initialize.selector,
             IRiskModuleAdmin.initialize.selector,

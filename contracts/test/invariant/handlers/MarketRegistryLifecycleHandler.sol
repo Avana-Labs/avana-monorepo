@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
-import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
-import {WindDownState} from "../../../src/policy/market-registry/types/WindDownState.sol";
+import {MarketStatus, WindDownState} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../../src/types/Market.sol";
 import {MarketDef} from "../../../src/types/MarketDef.sol";
 import {PositionShape} from "../../../src/types/PositionShape.sol";

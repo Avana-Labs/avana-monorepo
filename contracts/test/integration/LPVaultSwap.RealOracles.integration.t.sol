@@ -9,7 +9,7 @@ import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/Liqui
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {PriceStateView} from "../../src/types/PriceStateView.sol";

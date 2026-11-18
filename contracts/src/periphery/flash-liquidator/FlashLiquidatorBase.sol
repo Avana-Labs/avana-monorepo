@@ -10,9 +10,7 @@ import {LiquidationParams} from "../../liquidation/lp-vault-swap/types/Liquidati
 import {LiquidationResult} from "../../liquidation/lp-vault-swap/types/LiquidationResult.sol";
 import {IPayoutEscrow} from "../../liquidation/payout-escrow/IPayoutEscrow.sol";
 import {ISettlementRoute} from "../../liquidation/settlement-routes/ISettlementRoute.sol";
-import {IMarketRegistryHubs} from "../../policy/market-registry/IMarketRegistryHubs.sol";
-import {IMarketRegistryRouteViews} from "../../policy/market-registry/IMarketRegistryRouteViews.sol";
-import {IMarketRegistryViews} from "../../policy/market-registry/IMarketRegistryViews.sol";
+import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {IParameterStoreViews} from "../../policy/parameter-store/IParameterStoreViews.sol";
 import {Market} from "../../types/Market.sol";
 import {FlashLiquidatorLenders} from "./FlashLiquidatorLenders.sol";
@@ -94,15 +92,14 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
             (flashAmount == 0 && !_zeroLoanAllowed()) || flashAmount > request.params.debtToCover
                 || request.params.debtToCover > type(uint128).max || request.params.maxShortfall > type(uint128).max
         ) revert InvalidFlashAmount();
-        Market memory market = IMarketRegistryViews(MARKET_REGISTRY).getMarket(request.params.marketId);
-        IERC20 asset = IERC20(
-            IMarketRegistryRouteViews(MARKET_REGISTRY).getDebtReserve(market.spoke, request.params.debtReserveId).asset
-        );
+        Market memory market = IMarketRegistry(MARKET_REGISTRY).getMarket(request.params.marketId);
+        IERC20 asset =
+            IERC20(IMarketRegistry(MARKET_REGISTRY).getDebtReserve(market.spoke, request.params.debtReserveId).asset);
         // With F = 0 the lender is `address(0)`, so the Pool's callback cannot bind to the context.
         address lender = address(0);
         if (flashAmount != 0) {
             lender = POOL;
-            if (IMarketRegistryHubs(MARKET_REGISTRY).isRecordedHub(lender)) revert FlashSourceIsHub();
+            if (IMarketRegistry(MARKET_REGISTRY).isRecordedHub(lender)) revert FlashSourceIsHub();
             uint256 available = maxFlashLoan(address(asset));
             if (flashAmount > available) revert InsufficientFlashLiquidity(available);
             // Pre-loan bound on the quote; the callback re-checks the charged premium.
@@ -325,7 +322,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
             for (uint8 kind = 0; kind < 2; ++kind) {
                 // Bounded: at most 8 tokens and two route slots each. An unusable slot is still read for residues.
                 // forge-lint: disable-next-line(calls-loop, unused-return)
-                (address route,) = IMarketRegistryRouteViews(MARKET_REGISTRY).getRoute(marketId, tokens[i], asset, kind);
+                (address route,) = IMarketRegistry(MARKET_REGISTRY).getRoute(marketId, tokens[i], asset, kind);
                 if (route == address(0)) continue;
                 // A route listed by the MarketRegistry; a reverting one is skipped, as LPVaultSwap skips it.
                 // forge-lint: disable-next-line(calls-loop)

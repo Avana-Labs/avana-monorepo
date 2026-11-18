@@ -11,7 +11,7 @@ import {Market} from "../../types/Market.sol";
 import {SecondSource} from "../../types/SecondSource.sol";
 import {SecondSourceKind} from "../../types/SecondSourceKind.sol";
 import {ShapeKind} from "../../types/ShapeKind.sol";
-import {TokenDef} from "../market-registry/types/TokenDef.sol";
+import {TokenDef} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreViews} from "./IParameterStoreViews.sol";
 import {IPoolObservations} from "./IPoolObservations.sol";
 import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";

@@ -9,9 +9,7 @@ import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {IAaveAdapterCollateral} from "../../src/policy/aave-adapter/IAaveAdapterCollateral.sol";
 import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
 import {IAaveAdapterUser} from "../../src/policy/aave-adapter/IAaveAdapterUser.sol";
-import {IMarketRegistryPause} from "../../src/policy/market-registry/IMarketRegistryPause.sol";
-import {IMarketRegistryRouteViews} from "../../src/policy/market-registry/IMarketRegistryRouteViews.sol";
-import {IMarketRegistryViews} from "../../src/policy/market-registry/IMarketRegistryViews.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {Market} from "../../src/types/Market.sol";
@@ -70,9 +68,7 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
         uint256 answer
     ) internal {
         address vtA = mkt[mA].vaultToken;
-        vm.mockCall(
-            address(registry), abi.encodeCall(IMarketRegistryViews.marketOfVaultToken, (vtA)), abi.encode(answer)
-        );
+        vm.mockCall(address(registry), abi.encodeCall(IMarketRegistry.marketOfVaultToken, (vtA)), abi.encode(answer));
         bytes32 key = _newKey();
         lpVault.mintPosition(key, bob, mA, UNITS / 4);
         uint256 supplyBefore = ERC20(vtA).totalSupply();
@@ -125,7 +121,7 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
         hostile.spoke = makeAddr("attackerSpoke");
         Market[2] memory lies = [stale, hostile];
         for (uint256 i = 0; i < 2; ++i) {
-            vm.mockCall(address(registry), abi.encodeCall(IMarketRegistryViews.getMarket, (mA)), abi.encode(lies[i]));
+            vm.mockCall(address(registry), abi.encodeCall(IMarketRegistry.getMarket, (mA)), abi.encode(lies[i]));
             bytes32 key = _newKey();
             lpVault.mintPosition(key, bob, mA, UNITS / 4);
             uint256 supply = ERC20(m.vaultToken).totalSupply();
@@ -144,7 +140,7 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
         // The vault-token reserve of market B listed as a debt reserve by the registry: the Spoke does not lend it.
         vm.mockCall(
             address(registry),
-            abi.encodeCall(IMarketRegistryRouteViews.isApprovedDebtReserve, (aave.cdpSpoke, mkt[mB].reserveId)),
+            abi.encodeCall(IMarketRegistry.isApprovedDebtReserve, (aave.cdpSpoke, mkt[mB].reserveId)),
             abi.encode(true)
         );
         uint256 n = adapterC.borrowNonce(pA);
@@ -163,10 +159,10 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
     // TEST-162 verifies: REQ-ADAPTER-044, REQ-ADAPTER-047, REQ-ADAPTER-086, REQ-ACCESS-082
     function test_TEST_162_exitsNeverReadThePauseState() public {
         vm.mockCallRevert(
-            address(registry), abi.encodeWithSelector(IMarketRegistryPause.pauseState.selector), "registry down"
+            address(registry), abi.encodeWithSelector(IMarketRegistry.pauseState.selector), "registry down"
         );
         vm.mockCallRevert(
-            address(registry), abi.encodeWithSelector(IMarketRegistryPause.pauseReason.selector), "registry down"
+            address(registry), abi.encodeWithSelector(IMarketRegistry.pauseReason.selector), "registry down"
         );
         vm.prank(alice);
         adapterC.repay(alice, mA, ghoReserveId, 100e18, false, _deadline());
@@ -197,7 +193,7 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
         (, address pC) = _pledgeAs(carol, mA, UNITS);
         _borrowAs(carol, mA, ghoReserveId, 1000e18);
         vm.mockCallRevert(
-            address(registry), abi.encodeWithSelector(IMarketRegistryPause.pauseState.selector), "registry down"
+            address(registry), abi.encodeWithSelector(IMarketRegistry.pauseState.selector), "registry down"
         );
         uint256 nonce = adapterC.borrowNonce(pC);
         vm.prank(carol);

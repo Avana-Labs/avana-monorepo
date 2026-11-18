@@ -16,9 +16,8 @@ import {Market} from "../../types/Market.sol";
 import {PriceState} from "../../types/PriceState.sol";
 import {PriceStateView} from "../../types/PriceStateView.sol";
 import {TokenPriceView} from "../../types/TokenPriceView.sol";
-import {IMarketRegistryCreditLines} from "../market-registry/IMarketRegistryCreditLines.sol";
-import {IMarketRegistryHubs} from "../market-registry/IMarketRegistryHubs.sol";
-import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
+import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
+import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleBorrowLogic} from "./IRiskModuleBorrowLogic.sol";
 import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
 import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
@@ -242,16 +241,16 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
             if (fundingHub == s.m.hub) return;
             // A disabled cross-Hub line refuses the whole borrow.
             // forge-lint: disable-next-line(require-revert-in-loop)
-            if (!_registry().crossHubLinesEnabled()) revert IMarketRegistryHubs.CrossHubLinesDisabled();
+            if (!_registry().crossHubLinesEnabled()) revert IMarketRegistry.CrossHubLinesDisabled();
             address asset = s.defs[i].asset;
             (uint256 line, uint256 sum) = _registry().creditLine(fundingHub, asset);
             // A full credit line refuses the whole borrow.
             // forge-lint: disable-next-line(require-revert-in-loop)
-            if (sum > line) revert IMarketRegistryCreditLines.CreditLineExceeded(fundingHub, asset, sum, line);
+            if (sum > line) revert IMarketRegistry.CreditLineExceeded(fundingHub, asset, sum, line);
             (uint256 required, uint256 funded) = _registry().creditLineCoverage(fundingHub, asset);
             if (required > funded) {
                 // forge-lint: disable-next-line(require-revert-in-loop)
-                revert IMarketRegistryCreditLines.CoverageBelowRatio(fundingHub, asset, required, funded);
+                revert IMarketRegistry.CoverageBelowRatio(fundingHub, asset, required, funded);
             }
             return;
         }
