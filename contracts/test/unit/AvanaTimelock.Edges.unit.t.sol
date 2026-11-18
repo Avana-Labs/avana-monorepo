@@ -541,7 +541,9 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].emitter != address(on) || logs[i].topics.length == 0) continue;
             if (logs[i].topics[0] == IAvanaTimelock.PublicExecutionToggled.selector && abi.decode(logs[i].data, (bool)))
-            ++toggledOn;
+            {
+                ++toggledOn;
+            }
         }
         assertEq(toggledOn, 1, "PublicExecutionToggled(true)");
         assertTrue(on.publicExecution());
