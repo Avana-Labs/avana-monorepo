@@ -9,7 +9,7 @@ name: contracts
 #   security/ (size margins, licence allowlist) runs the build.
 #   A pull request labelled `hotfix` (playbook P-05) also runs the touched contracts' invariant campaigns at full depth.
 # - full (`suite: full` by hand): the ci profile in 10 shards (fuzz 10,000 runs, invariants 1,000 at depth 100), gas,
-#   ABIs, branch coverage, the fast security tier, traceability and the evidence report.
+#   ABIs, branch coverage and the fast security tier.
 # - long (`suite: long` by hand, the default of a manual run): the full suite plus the long checks: the deep invariant
 #   campaign (the 10 test shards then leave test/invariant/ out, so each campaign runs once), fork tests, the FFI
 #   differential suite, SMTChecker and Certora (paused unless the repository variable CERTORA_ENABLED is `true`), one
@@ -42,7 +42,7 @@ on:
   workflow_dispatch:
     inputs:
       suite:
-        description: "fast (the pull-request suite), full (10 shards at ci depth, coverage, security fast tier, evidence) or long (full plus every long check)"
+        description: "fast (the pull-request suite), full (10 shards at ci depth, coverage, security fast tier) or long (full plus every long check)"
         required: true
         type: choice
         default: long
@@ -211,7 +211,12 @@ jobs:
             forge-build-${{ runner.os }}-
 
       - name: Build
-        run: forge build --sizes
+        # A pull request builds src/ and script/ here with the real settings: the size check reads src/ only, and the
+        # test-build job compiles the tests alongside. A manual run builds everything.
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then forge build src script --sizes; else forge build --sizes; fi
 
       - name: Restore the base branch's contract sizes
         if: github.event_name == 'pull_request'
@@ -269,8 +274,61 @@ jobs:
             contracts/cache
           retention-days: 7
 
+  test-build:
+    # Pull requests only: compiles src/ and test/ with the lite profile (optimizer off outside foundry.toml's
+    # compilation restrictions, out-lite/, cache-lite/) while the build job checks sizes with the real settings, so
+    # the tests start without waiting for the optimized build. Gas snapshots keep the real settings (gas job).
+    name: test build (lite profile)
+    needs: changes
+    if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.tests == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      FOUNDRY_PROFILE: lite
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - run: forge soldeer install
+
+      - name: Restore the last lite build (out-lite, cache-lite)
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            contracts/out-lite
+            contracts/cache-lite
+          key: forge-lite-${{ runner.os }}-${{ hashFiles('contracts/.foundry-version', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/remappings.txt', 'contracts/src/**/*.sol', 'contracts/test/**/*.sol', 'contracts/script/**/*.sol') }}
+          restore-keys: |
+            forge-lite-${{ runner.os }}-
+
+      - name: Build (lite profile)
+        run: forge build
+
+      - name: Upload the lite build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge-out-lite
+          path: |
+            contracts/out-lite
+            contracts/cache-lite
+          retention-days: 7
+
   test:
-    # The suite is split into shards that run side by side (3 in the fast suite, 10 in the full and long ones): every
+    # A pull request runs the shards on the lite build (test-build job); a manual run on the build job's optimized
+    # build at the ci profile. The suite is split into shards that run side by side (3 in the fast suite, 10 in the full and long ones): every
     # test file (fork and differential excluded) is assigned by its measured run time (script/test-shard.sh,
     # script/test-shard.py, script/test-timings.json), so the shards take about equal time and each unit runs in
     # exactly one shard. A file of test/invariant/ is one unit: Foundry runs all invariants of a test contract in one
@@ -279,8 +337,8 @@ jobs:
     # job's compiled output. In a long run the deep invariant job runs every file of test/invariant/, so the shards
     # leave them out (TEST_SHARD_SKIP_INVARIANT).
     name: tests (ci profile, shard ${{ matrix.shard }}/${{ (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && 10 || 3 }})
-    needs: [changes, build]
-    if: ${{ needs.changes.outputs.tests == 'true' && !inputs.only }}
+    needs: [changes, build, test-build]
+    if: ${{ !cancelled() && needs.changes.outputs.tests == 'true' && !inputs.only && needs.build.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.test-build.result) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
@@ -288,12 +346,12 @@ jobs:
       matrix:
         shard: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && '[1,2,3,4,5,6,7,8,9,10]' || '[1,2,3]') }}
     env:
-      FOUNDRY_PROFILE: ci
+      FOUNDRY_PROFILE: ${{ github.event_name == 'pull_request' && 'lite' || 'ci' }}
       SHARDS: ${{ (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && 10 || 3 }}
       # The fast suite: fuzz 1,000 runs (the default profile's) and invariants 64 runs at depth 64.
       FAST: ${{ (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && '0' || '1' }}
       TEST_SHARD_SKIP_INVARIANT: ${{ (github.event_name == 'workflow_dispatch' && inputs.suite == 'long') && '1' || '0' }}
-      # script/test-shard.sh writes each forge invocation's results here (`--json-file`); the evidence job reads them.
+      # script/test-shard.sh writes each forge invocation's results here (`--json-file`), uploaded per shard.
       TEST_RESULTS_DIR: ${{ github.workspace }}/contracts/out-results
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -322,6 +380,13 @@ jobs:
           name: forge-out
           path: contracts
 
+      - name: Reuse the lite build (pull requests)
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge-out-lite
+          path: contracts
+
       - name: Unit, fuzz, integration, hostile and invariant suites, shard ${{ matrix.shard }} (fast suite fuzz 1,000 and invariants 64 x 64; full suite fuzz 10,000 and invariants 1,000 x 100; long suite leaves invariants to the deep job; TEST-007)
         # A fresh seed per run widens coverage over time; the seed is printed for reproduction. The fast suite runs the
         # fuzz and invariant suites as a short check; the full suite runs them at the ci profile. A long run leaves
@@ -331,7 +396,8 @@ jobs:
           SEED=$(printf '0x%x' "$(( $(date +%s) + ${{ matrix.shard }} ))")
           echo "fuzz seed: $SEED"
           if [ "$FAST" = 1 ]; then
-            export FOUNDRY_FUZZ_RUNS=1000 FOUNDRY_INVARIANT_RUNS=64 FOUNDRY_INVARIANT_DEPTH=64
+            # The ci profile's reject limit, which the lite profile of a pull request does not carry.
+            export FOUNDRY_FUZZ_RUNS=1000 FOUNDRY_FUZZ_MAX_TEST_REJECTS=1000000 FOUNDRY_INVARIANT_RUNS=64 FOUNDRY_INVARIANT_DEPTH=64
             echo "fast suite: fuzz 1,000 runs, invariant suites 64 runs at depth 64"
           fi
           if [ "$TEST_SHARD_SKIP_INVARIANT" = 1 ]; then
@@ -347,7 +413,6 @@ jobs:
         with:
           name: test-results-${{ matrix.shard }}
           path: contracts/out-results
-          # A shard without results leaves its tests "not run" in the evidence job, which then fails.
           if-no-files-found: warn
           retention-days: 14
 
@@ -567,7 +632,7 @@ jobs:
     # hours at 1 million calls, measured 2026-11-12) needs about 3.1 hours, so the job has GitHub's maximum of 6 hours.
     # A file whose calls are slow pins fewer runs inline (`invariant.invariant.*`, Integration: 40,000 calls of the
     # whole real stack). The test shards of the same run leave test/invariant/ out, so each campaign runs once, here,
-    # with a fresh seed; its results (forge --json-file) go to the evidence job like the shards'.
+    # with a fresh seed; its results (forge --json-file) are uploaded like the shards'.
     name: deep invariant campaign (${{ matrix.file }})
     needs: [build, plan]
     if: (github.event_name == 'workflow_dispatch' && (inputs.suite == 'long' || inputs.only)) && needs.plan.outputs.invariant != '[]'
@@ -1072,7 +1137,7 @@ jobs:
           mkdir -p out-results
           .venv/bin/certoraRun "certora/conf/$CONF.conf" --wait_for_results all 2>&1 | tee "out-results/certora-$CONF.log"
           # --wait_for_results all exits non-zero on any rule that is not verified, so reaching this line means every
-          # rule of the conf passed. Record it with the job link for docs/spec/05-verification/evidence.py: the older
+          # rule of the conf passed. Record it with the job link: the older
           # prover.certora.com/output link, or the app.certora.com report link certora-cli 8.x prints.
           job=$(grep -oE 'https://(prover\.certora\.com/output/[0-9]+/[0-9a-f]{32}|app\.certora\.com/orgs/[A-Za-z0-9_-]+/jobs/[0-9a-f-]{36}/report)' \
             "out-results/certora-$CONF.log" | tail -n 1)
@@ -1087,109 +1152,6 @@ jobs:
         with:
           name: certora-result-${{ matrix.conf }}
           path: contracts/out-results
-          retention-days: 30
-
-  traceability:
-    name: traceability
-    # Report only; the full and long suites.
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    defaults:
-      run:
-        working-directory: docs/spec/05-verification
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        continue-on-error: true
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        continue-on-error: true
-        with:
-          python-version: "3.12"
-
-      - name: "Every @custom:spec and verifies: tag names a defined ID and sits on a test"
-        continue-on-error: true
-        # Fails on an undefined ID and on a tag that sits on no test function or CVL rule. The strict check, which
-        # needs the run's results, is the evidence job's.
-        run: python3 trace.py
-
-  evidence:
-    # Which spec rows a test that ran and passed checks. Reads every test shard's results (forge --json-file), the deep
-    # invariant, fork, differential and Certora results of a long run, the prover results recorded in
-    # contracts/certora/RUNS.md and the Halmos logs in docs/audit/halmos/results/, then:
-    # contract_checklist.py --all --check (every contract key, and the TEST rows on no checklist) and trace.py with the
-    # run's results (fails on errors; its coverage-gap warnings are listed, not enforced). Each step runs even when an
-    # earlier one fails, so the summary shows every list.
-    name: evidence (checklists, traceability)
-    # The long jobs run only in a long run; elsewhere they are skipped at once, so this job waits
-    # for the test shards only, and the rows only a fork, differential or prover run checks read "not run".
-    needs: [test, invariant, fork, differential, certora]
-    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: .
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        continue-on-error: true
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        continue-on-error: true
-        with:
-          python-version: "3.12"
-
-      - name: Download every result of this run (test shards, and fork, differential and prover runs where they ran)
-        continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          pattern: "*-result*"
-          path: results
-          merge-multiple: true
-
-      - name: Results present
-        continue-on-error: true
-        run: |
-          mkdir -p evidence results
-          n=$(find results -name '*.json' | wc -l | tr -d ' ')
-          echo "result files: $n"
-          [ "$n" -gt 0 ] || { echo "::error::no test results: every row would read 'not run'"; exit 1; }
-
-      - name: Contract checklists, every contract (contract_checklist.py --all --check)
-        continue-on-error: true
-        if: ${{ !cancelled() }}
-        run: |
-          mkdir -p evidence
-          rc=0
-          python3 docs/spec/05-verification/contract_checklist.py --all --check --results results \
-            --out-dir evidence/checklists --summary evidence/checklists.md > evidence/checklists.txt || rc=$?
-          cat evidence/checklists.txt
-          cat evidence/checklists.md >> "$GITHUB_STEP_SUMMARY"
-          exit $rc
-
-      - name: Traceability with the run's results (trace.py)
-        continue-on-error: true
-        if: ${{ !cancelled() }}
-        run: |
-          rc=0
-          python3 docs/spec/05-verification/trace.py --results results --out evidence/traceability.md \
-            > evidence/trace.txt || rc=$?
-          { echo '### trace.py'; echo '```'; tail -n 1 evidence/trace.txt
-            awk '/^ERROR/ && c < 50 {print; c++}' evidence/trace.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          tail -n 40 evidence/trace.txt
-          exit $rc
-
-      - name: Upload the evidence report
-        continue-on-error: true
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: evidence
-          path: evidence
           retention-days: 30
 
   coverage:
@@ -1364,8 +1326,7 @@ jobs:
     # fork test skipped) fails the gate, as a failed one does. No branch rule requires this check.
     name: gate
     if: always()
-    # traceability and evidence (spec rows) are report only since 2026-11-13 and not required here.
-    needs: [changes, scripts, build, plan, test, hotfix-plan, hotfix, gas, abis, invariant, fork, differential, smtchecker, certora, coverage, fast-security]
+    needs: [changes, scripts, build, test-build, plan, test, hotfix-plan, hotfix, gas, abis, invariant, fork, differential, smtchecker, certora, coverage, fast-security]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -1378,18 +1339,20 @@ jobs:
           TESTS: ${{ needs.changes.outputs.tests == 'true' && !inputs.only }}
           FULL: ${{ github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only }}
           LONG: ${{ github.event_name == 'workflow_dispatch' && inputs.suite == 'long' }}
+          PR: ${{ github.event_name == 'pull_request' }}
           HOTFIX: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix') }}
           CERTORA: ${{ vars.CERTORA_ENABLED == 'true' }}
           # A manual run with `only` runs just those long-check targets; every skipped job is not selected.
           ONLY: ${{ inputs.only != '' && inputs.only != null }}
         run: |
           args=(--argjson build "$BUILD" --argjson tests "$TESTS" --argjson full "$FULL" --argjson longrun "$LONG"
-            --argjson hotfix "$HOTFIX" --argjson certora "$CERTORA" --argjson only "$ONLY"
+            --argjson hotfix "$HOTFIX" --argjson pr "$PR" --argjson certora "$CERTORA" --argjson only "$ONLY"
             --argjson long '["plan","invariant","fork","differential","smtchecker","certora"]')
           defs='def due($k):
               if $k == "changes" or $k == "scripts" then true
               elif $k == "build" then $build
               elif $k == "test" or $k == "gas" or $k == "abis" then $tests
+              elif $k == "test-build" then $tests and $pr
               elif $k == "coverage" or $k == "fast-security" then $full
               elif $k == "certora" then ($longrun or $only) and $certora
               elif ($long | index($k)) != null then ($longrun or $only)

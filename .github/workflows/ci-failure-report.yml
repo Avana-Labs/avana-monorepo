@@ -13,7 +13,7 @@ name: ci-failure-report
 
 on:
   workflow_run:
-    workflows: [contracts, spec, security-slow, mutation-gate, gitleaks, services, models]
+    workflows: [contracts, security-slow, mutation-gate, gitleaks, services]
     types: [completed]
 
 permissions:
