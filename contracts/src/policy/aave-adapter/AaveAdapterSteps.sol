@@ -8,7 +8,6 @@ import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
-import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {AdapterAccount} from "./types/AaveAdapterTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -219,20 +218,6 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         if (IERC20(asset).balanceOf(proxy) != start - amount || IERC20(asset).allowance(proxy, spoke) != 0) {
             revert BalanceDeltaMismatch();
         }
-        _creditSpeed(proxy, debtReserveId, spent);
-    }
-
-    function _creditSpeed(
-        address proxy,
-        uint256 debtReserveId,
-        uint256 spent
-    ) internal {
-        if (spent == 0) return;
-        uint256 left = gasleft();
-        if (left < SPEED_CREDIT_FLOOR) revert InsufficientGas(left, SPEED_CREDIT_FLOOR);
-        // A failed credit only leaves the window fuller than the net debt; it must not block the repay.
-        // solhint-disable-next-line no-empty-blocks
-        try IRiskModule(_RISK_MODULE).creditRepay{gas: SPEED_CREDIT_GAS}(proxy, debtReserveId, spent) {} catch {}
     }
 
     /// @dev Moves nothing at zero debt; a repay-all above its cap reverts before any transfer.

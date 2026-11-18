@@ -85,7 +85,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     function _parameterStoreRows(
         address ps
     ) internal {
-        bytes4[15] memory tighten = [
+        bytes4[14] memory tighten = [
             IParameterStoreTighten.tightenSlippageAllowanceBps.selector,
             IParameterStoreTighten.tightenFloorRoundingAllowance.selector,
             IParameterStoreTighten.tightenBorrowPriceMaxAge.selector,
@@ -99,13 +99,12 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStore.tightenMaxShortfallBps.selector,
             IParameterStore.tightenDebtStressRiseBps.selector,
             IParameterStore.tightenMaxFlashFeeBps.selector,
-            IParameterStore.tightenMarketSpeedLimits.selector,
-            IParameterStore.tightenDebtSpeedLimit.selector
+            IParameterStore.tightenMarketDynamicCap.selector
         ];
         for (uint256 i; i < tighten.length; ++i) {
             rows.push(Row(ps, tighten[i], true, false));
         }
-        bytes4[30] memory normal = [
+        bytes4[29] memory normal = [
             IParameterStoreLoosen.loosenSlippageAllowanceBps.selector,
             IParameterStoreLoosen.loosenFloorRoundingAllowance.selector,
             IParameterStoreLoosen.loosenRouteDepthThreshold.selector,
@@ -116,8 +115,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStore.loosenDeficitMax.selector,
             IParameterStore.loosenMaxShortfallBps.selector,
             IParameterStore.loosenDebtStressRiseBps.selector,
-            IParameterStore.loosenMarketSpeedLimits.selector,
-            IParameterStore.loosenDebtSpeedLimit.selector,
+            IParameterStore.loosenMarketDynamicCap.selector,
             IParameterStore.setBorrowPriceMaxAge.selector,
             IParameterStore.setPoolRiskFactor.selector,
             IParameterStore.setAvanaFeeShareBps.selector,

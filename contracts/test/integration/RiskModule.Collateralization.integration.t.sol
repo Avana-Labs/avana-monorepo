@@ -9,10 +9,10 @@ import {Lock} from "../../src/lock/lock/Lock.sol";
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {MarketRegistryImmutables} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {MarketDynamicCap} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {RiskModule} from "../../src/policy/risk-module/RiskModule.sol";
-import {RiskModuleImmutables, SpeedView} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {RiskModuleImmutables} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {VaultTokenFactory} from "../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {RegistrySpokeImplMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
@@ -74,39 +74,19 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
         assertEq(riskModule.postHealthCheck(address(proxy), 0), 1.5e18);
     }
 
-    // TEST-322 verifies: REQ-RISK-097, REQ-RISK-093
-    /// @notice The pledge-speed view reads the real ledger's booked counters: free, it reports the window on the
-    /// market's booked value; with any Lock member holding the Lock, the ledger refuses the read and the view reports
-    /// `unavailable` instead of reverting.
-    function test_TEST_322_pledgeViewReadsTheRealLedger() public {
-        store.setMarketSpeed(
-            mid, MarketSpeedLimits(21_600, 2500, 2500, 250_000e8, 2_500_000e8, 1_000_000e8, 10_000_000e8)
-        );
-        SpeedView memory p = riskModule.getPledgeSpeed(mid);
-        assertFalse(p.unavailable);
-        assertEq(p.limit, 1_000_000e8, "empty ledger: P_min");
-        _acquire(address(adapter));
-        p = riskModule.getPledgeSpeed(mid);
-        assertTrue(p.unavailable, "ledger locked: unavailable, no revert");
-        assertEq(p.limit, 0);
-        _release(address(adapter));
-        assertFalse(riskModule.getPledgeSpeed(mid).unavailable);
-    }
-
-    // TEST-321 verifies: REQ-RISK-092, REQ-RISK-095
-    /// @notice Inside the Adapter's Lock session the borrow-speed check charges the windows like any other borrow:
-    /// the speed reads touch no ledger view.
-    function test_TEST_321_borrowSpeedUnderTheAdapterLock() public {
-        rHub.setSpokeListed(GHO_ASSET, address(spoke), true);
+    /// @notice Inside the Adapter's Lock session the dynamic borrow cap check stores the interval like any other
+    /// borrow, and its view reads no ledger value, so it answers under any Lock holder.
+    function test_borrowCapUnderTheAdapterLock() public {
         hub.setOwed(GHO_ASSET, address(spoke), 1_000_000e18, 0);
-        store.setMarketSpeed(mid, MarketSpeedLimits(21_600, 2500, 2500, 0, 2_500_000e8, 0, 0));
+        store.setMarketDynamicCap(mid, MarketDynamicCap(21_600, 2500, 0, 2_500_000e8));
         _acquire(address(adapter));
         vm.prank(address(adapter));
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 100_000e18);
+        (uint256 cap, uint256 debt,) = riskModule.getDynamicBorrowCap(mid);
         _release(address(adapter));
-        (SpeedView memory m,) = riskModule.getBorrowSpeed(mid, GHO_RESERVE);
-        assertEq(m.used, 100_000e8);
-        assertEq(m.limit, 250_000e8, "25 % of the window-start base $1,000,000");
+        assertEq(cap, 1_250_000e8, "D + 25 % of the debt before the first borrow: $1,000,000 + $250,000");
+        assertEq(debt, 1_000_000e8);
+        assertEq(riskModule.getDynamicCap(mid).cap, 1_250_000e8);
     }
 
     // ─── Helpers ───

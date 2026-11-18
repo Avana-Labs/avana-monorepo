@@ -157,7 +157,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         );
     }
 
-    /// @notice RiskModule: drift, breaker, pledge, borrow, status and speed logic, the router, the proxy.
+    /// @notice RiskModule: drift, breaker, pledge, borrow, status and dynamic cap logic, the router, the proxy.
     function _deployRiskModule(
         Predicted memory p
     ) internal returns (UpgradeableDeployment memory d) {
@@ -194,11 +194,12 @@ abstract contract AvanaCoreDeploy is DeployBase {
                 _artifact("RiskModuleStatusLogic.sol", "RiskModuleStatusLogic"), im, db, abi.encode(d.logics[3])
             )
         );
-        // The borrow-speed and pledge-speed reads (Q-411).
+        // The per-market dynamic borrow cap.
         d.logics[5] = _deploy(
-            "RiskModuleSpeedLogic", bytes.concat(_artifact("RiskModuleSpeedLogic.sol", "RiskModuleSpeedLogic"), im)
+            "RiskModuleDynamicCapLogic",
+            bytes.concat(_artifact("RiskModuleDynamicCapLogic.sol", "RiskModuleDynamicCapLogic"), im)
         );
-        // RiskModuleLogics{drift, breaker, pledge, borrow, status, speed}.
+        // RiskModuleLogics{drift, breaker, pledge, borrow, status, dynamicCap}.
         bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2], d.logics[3], d.logics[4], d.logics[5]);
         d.implementation =
             _deploy("RiskModuleImplementation", bytes.concat(_artifact("RiskModule.sol", "RiskModule"), im, logics));

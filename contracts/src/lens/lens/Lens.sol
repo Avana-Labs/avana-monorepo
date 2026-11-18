@@ -3,13 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {SpeedView} from "../../policy/risk-module/types/RiskModuleTypes.sol";
 import {CapView} from "../../types/MarketTypes.sol";
 import {PriceView} from "../../types/OracleTypes.sol";
 import {PendingView} from "../../types/PositionTypes.sol";
 import {ILens} from "./ILens.sol";
 import {ILensAccount} from "./ILensAccount.sol";
 import {ILensActions} from "./ILensActions.sol";
+import {ILensDynamicCap} from "./ILensDynamicCap.sol";
 import {ILensFees} from "./ILensFees.sol";
 import {ILensHubAssets} from "./ILensHubAssets.sol";
 import {ILensMarket} from "./ILensMarket.sol";
@@ -17,7 +17,6 @@ import {ILensMarkets} from "./ILensMarkets.sol";
 import {ILensPositions} from "./ILensPositions.sol";
 import {ILensPreview} from "./ILensPreview.sol";
 import {ILensRisk} from "./ILensRisk.sol";
-import {ILensSpeed} from "./ILensSpeed.sol";
 import {LensBase} from "./LensBase.sol";
 import {LensConstants} from "./LensConstants.sol";
 import {
@@ -25,7 +24,6 @@ import {
     AccountView,
     ActionPreview,
     BackingView,
-    BorrowSpeedView,
     CloseAccountView,
     DebtPriceView,
     DebtReserveView,
@@ -57,7 +55,7 @@ contract Lens is ILens {
     address private immutable _PREVIEW_MODULE;
     address private immutable _MARKETS_MODULE;
     address private immutable _POSITIONS_MODULE;
-    address private immutable _SPEED_MODULE;
+    address private immutable _DYNAMIC_CAP_MODULE;
     address private immutable _COLLATERALIZATION;
     address private immutable _ADAPTER;
     address private immutable _LOCK;
@@ -66,7 +64,7 @@ contract Lens is ILens {
     address private immutable _LP_VAULT_SWAP;
 
     /// @notice Fixes the nine modules; their core addresses must agree.
-    /// @param modules The Account, Market, Price, Liquidation, Risk, Preview, Markets, Positions and Speed modules.
+    /// @param modules The Account, Market, Price, Liquidation, Risk, Preview, Markets, Positions and DynamicCap modules.
     constructor(
         address[9] memory modules
     ) {
@@ -78,7 +76,7 @@ contract Lens is ILens {
         if (!same) revert InvalidModules();
         (_ACCOUNT_MODULE, _MARKET_MODULE, _PRICE_MODULE) = (modules[0], modules[1], modules[2]);
         (_LIQUIDATION_MODULE, _RISK_MODULE_LENS, _PREVIEW_MODULE) = (modules[3], modules[4], modules[5]);
-        (_MARKETS_MODULE, _POSITIONS_MODULE, _SPEED_MODULE) = (modules[6], modules[7], modules[8]);
+        (_MARKETS_MODULE, _POSITIONS_MODULE, _DYNAMIC_CAP_MODULE) = (modules[6], modules[7], modules[8]);
         LensBase m = LensBase(modules[0]);
         (_COLLATERALIZATION, _ADAPTER, _LP_VAULT_SWAP) = (m.COLLATERALIZATION(), m.ADAPTER(), m.LP_VAULT_SWAP());
         (_LOCK, _MARKET_REGISTRY, _PARAMETER_STORE) = (m.LOCK(), m.MARKET_REGISTRY(), m.PARAMETER_STORE());
@@ -455,21 +453,12 @@ contract Lens is ILens {
         _forward(_RISK_MODULE_LENS);
     }
 
-    /// @inheritdoc ILensSpeed
-    function getBorrowSpeed(
-        uint256,
+    /// @inheritdoc ILensDynamicCap
+    function getDynamicBorrowCap(
         uint256
-    ) external view override returns (BorrowSpeedView memory speed) {
-        speed;
-        _forward(_SPEED_MODULE);
-    }
-
-    /// @inheritdoc ILensSpeed
-    function getPledgeSpeed(
-        uint256
-    ) external view override returns (SpeedView memory pledge) {
-        pledge;
-        _forward(_SPEED_MODULE);
+    ) external view override returns (uint256 cap, uint256 debt, uint64 intervalStart) {
+        (cap, debt, intervalStart);
+        _forward(_DYNAMIC_CAP_MODULE);
     }
 
     /// @inheritdoc ILens

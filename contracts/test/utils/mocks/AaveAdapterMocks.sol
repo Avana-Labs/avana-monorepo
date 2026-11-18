@@ -126,7 +126,7 @@ contract AdapterRegistryMock {
         return _debtIds[spoke];
     }
 
-    // The CDP Spokes the RiskModule's (Hub, asset) speed window sums over (Q-411): every Spoke a market was set on.
+    // Every CDP Spoke a market was set on.
     address[] internal _spokeList;
     mapping(address => bool) internal _spokeListed;
 

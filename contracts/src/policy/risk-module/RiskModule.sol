@@ -11,64 +11,33 @@ import {IRiskModule} from "./IRiskModule.sol";
 import {IRiskModuleBorrowLogic} from "./IRiskModuleBorrowLogic.sol";
 import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
 import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
+import {IRiskModuleDynamicCapLogic} from "./IRiskModuleDynamicCapLogic.sol";
 import {IRiskModulePledgeLogic} from "./IRiskModulePledgeLogic.sol";
-import {IRiskModuleSpeedLogic} from "./IRiskModuleSpeedLogic.sol";
 import {IRiskModuleStatusLogic} from "./IRiskModuleStatusLogic.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";
 import {RiskModuleMath} from "./RiskModuleMath.sol";
-import {
-    PledgeCharge,
-    RiskModuleImmutables,
-    RiskModuleLogics,
-    SpeedScope,
-    SpeedView,
-    SpeedWindow
-} from "./types/RiskModuleTypes.sol";
+import {DynamicCap, PledgeCharge, RiskModuleImmutables, RiskModuleLogics} from "./types/RiskModuleTypes.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title RiskModule
-/// @notice Avana's risk checks on one chain: pledge, borrow-side, speed-limit, drift and live breaker checks.
+/// @notice Avana's risk checks on one chain: pledge, borrow-side, dynamic borrow cap, drift and live breaker checks.
 /// @dev UUPS proxy; only the timelock can upgrade it. Check bodies run in six stateless logic contracts.
 contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase, IRiskModule {
-    /// @custom:storage-location erc7201:avana.storage.RiskModule.speed
-    struct SpeedLayout {
-        mapping(uint256 marketId => SpeedWindow) marketBorrow;
-        mapping(bytes32 hubAssetKey => SpeedWindow) debtBorrow;
-        mapping(uint256 marketId => SpeedWindow) marketPledge;
+    /// @custom:storage-location erc7201:avana.storage.RiskModule.dynamicCap
+    struct DynamicCapLayout {
+        mapping(uint256 marketId => DynamicCap) marketBorrowCap;
     }
 
-    bytes32 private constant _SPEED_SLOT = 0x1858dc028745fe2a4f37a8a31dd3ca321a1f7863f165bffa26e588c97f1ff200;
+    /// @dev `keccak256(abi.encode(uint256(keccak256("avana.storage.RiskModule.dynamicCap")) - 1)) & ~bytes32(uint256(0xff))`.
+    bytes32 private constant _DYNAMIC_CAP_SLOT = 0x39128d80f0178a14e89ab235df8bb39067415fbde0926f652a6e7f9d2722c100;
 
-    function _speed() internal pure returns (SpeedLayout storage $) {
+    function _dynamicCap() internal pure returns (DynamicCapLayout storage $) {
         // ERC-7201 namespaced storage: the slot is a compile-time constant.
         // solhint-disable-next-line no-inline-assembly
         assembly {
-            $.slot := _SPEED_SLOT
+            $.slot := _DYNAMIC_CAP_SLOT
         }
-    }
-
-    function _window(
-        SpeedScope scope,
-        bytes32 key
-    ) internal view returns (SpeedWindow storage w) {
-        SpeedLayout storage $ = _speed();
-        if (scope == SpeedScope.DebtBorrow) return $.debtBorrow[key];
-        if (scope == SpeedScope.MarketBorrow) return $.marketBorrow[uint256(key)];
-        return $.marketPledge[uint256(key)];
-    }
-
-    function _putWindow(
-        SpeedScope scope,
-        bytes32 key,
-        SpeedWindow memory w
-    ) internal {
-        SpeedWindow storage s = _window(scope, key);
-        s.start = w.start;
-        s.prev = w.prev;
-        s.curr = w.curr;
-        s.base = w.base;
-        s.opened = w.opened;
     }
 
     address internal immutable _DRIFT_LOGIC;
@@ -76,7 +45,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
     address internal immutable _PLEDGE_LOGIC;
     address internal immutable _BORROW_LOGIC;
     address internal immutable _STATUS_LOGIC;
-    address internal immutable _SPEED_LOGIC;
+    address internal immutable _DYNAMIC_CAP_LOGIC;
 
     constructor(
         RiskModuleImmutables memory im,
@@ -87,13 +56,13 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
         _requireLogic(logics.pledge, keccak256("RiskModulePledgeLogic"));
         _requireLogic(logics.borrow, keccak256("RiskModuleBorrowLogic"));
         _requireLogic(logics.status, keccak256("RiskModuleStatusLogic"));
-        _requireLogic(logics.speed, keccak256("RiskModuleSpeedLogic"));
+        _requireLogic(logics.dynamicCap, keccak256("RiskModuleDynamicCapLogic"));
         _DRIFT_LOGIC = logics.drift;
         _BREAKER_LOGIC = logics.breaker;
         _PLEDGE_LOGIC = logics.pledge;
         _BORROW_LOGIC = logics.borrow;
         _STATUS_LOGIC = logics.status;
-        _SPEED_LOGIC = logics.speed;
+        _DYNAMIC_CAP_LOGIC = logics.dynamicCap;
         _disableInitializers();
     }
 
@@ -118,14 +87,9 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
         uint128 units,
         PledgeCounters calldata counters,
         bool requireRescue
-    ) external override returns (PledgeCharge memory charge) {
+    ) external view override returns (PledgeCharge memory charge) {
         charge = IRiskModulePledgeLogic(_PLEDGE_LOGIC)
             .checkPledge(depositor, proxy, marketId, integrationId, positionKey, units, counters, requireRescue);
-        if (!charge.rescue) {
-            uint256 booked = uint256(counters.regularUsed) + counters.sliceUsed;
-            SpeedWindow memory w = IRiskModuleSpeedLogic(_SPEED_LOGIC).pledgeCharge(marketId, booked, charge.usdCharge);
-            if (msg.sender == _COLLATERALIZATION) _putWindow(SpeedScope.MarketPledge, bytes32(marketId), w);
-        }
     }
 
     /// @inheritdoc IRiskModule
@@ -135,41 +99,9 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
         uint256 amount
     ) external override {
         IRiskModuleBorrowLogic(_BORROW_LOGIC).preCheck(proxy, debtReserveId, true);
-        (uint256 marketId, bytes32 debtKey, SpeedWindow memory m, SpeedWindow memory d) =
-            IRiskModuleSpeedLogic(_SPEED_LOGIC).borrowCharge(proxy, debtReserveId, amount);
-        if (msg.sender == _ADAPTER) _putBorrowWindows(marketId, debtKey, m, d);
-    }
-
-    /// @inheritdoc IRiskModule
-    function creditRepay(
-        address proxy,
-        uint256 debtReserveId,
-        uint256 amount
-    ) external override {
-        if (msg.sender != _ADAPTER) revert NotSpeedWriter(msg.sender);
-        (uint256 marketId, bytes32 debtKey, SpeedWindow memory m, SpeedWindow memory d) =
-            IRiskModuleSpeedLogic(_SPEED_LOGIC).repayCredit(proxy, debtReserveId, amount);
-        _putBorrowWindows(marketId, debtKey, m, d);
-    }
-
-    /// @inheritdoc IRiskModule
-    function creditWithdraw(
-        uint256 marketId,
-        uint256 usd
-    ) external override {
-        if (msg.sender != _COLLATERALIZATION) revert NotSpeedWriter(msg.sender);
-        SpeedWindow memory w = IRiskModuleSpeedLogic(_SPEED_LOGIC).withdrawCredit(marketId, usd);
-        _putWindow(SpeedScope.MarketPledge, bytes32(marketId), w);
-    }
-
-    function _putBorrowWindows(
-        uint256 marketId,
-        bytes32 debtKey,
-        SpeedWindow memory market,
-        SpeedWindow memory debt
-    ) internal {
-        _putWindow(SpeedScope.MarketBorrow, bytes32(marketId), market);
-        _putWindow(SpeedScope.DebtBorrow, debtKey, debt);
+        (uint256 marketId, DynamicCap memory next) =
+            IRiskModuleDynamicCapLogic(_DYNAMIC_CAP_LOGIC).borrowCheck(proxy, debtReserveId, amount);
+        if (msg.sender == _ADAPTER) _dynamicCap().marketBorrowCap[marketId] = next;
     }
 
     /// @inheritdoc IRiskModule
@@ -318,36 +250,17 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
     }
 
     /// @inheritdoc IRiskModule
-    function getBorrowSpeed(
-        uint256 marketId,
-        uint256 debtReserveId
-    ) external view override returns (SpeedView memory market, SpeedView memory debt) {
-        try IRiskModuleSpeedLogic(_SPEED_LOGIC).borrowViews(marketId, debtReserveId) returns (
-            SpeedView memory m, SpeedView memory d
-        ) {
-            (market, debt) = (m, d);
-        } catch {
-            (market.unavailable, debt.unavailable) = (true, true);
-        }
-    }
-
-    /// @inheritdoc IRiskModule
-    function getPledgeSpeed(
+    function getDynamicBorrowCap(
         uint256 marketId
-    ) external view override returns (SpeedView memory pledge) {
-        try IRiskModuleSpeedLogic(_SPEED_LOGIC).pledgeView(marketId) returns (SpeedView memory v) {
-            pledge = v;
-        } catch {
-            pledge.unavailable = true;
-        }
+    ) external view override returns (uint256 cap, uint256 debt, uint64 intervalStart) {
+        (cap, debt, intervalStart) = IRiskModuleDynamicCapLogic(_DYNAMIC_CAP_LOGIC).capView(marketId);
     }
 
     /// @inheritdoc IRiskModule
-    function getSpeedWindow(
-        SpeedScope scope,
-        bytes32 key
-    ) external view override returns (SpeedWindow memory window) {
-        window = _window(scope, key);
+    function getDynamicCap(
+        uint256 marketId
+    ) external view override returns (DynamicCap memory interval) {
+        interval = _dynamicCap().marketBorrowCap[marketId];
     }
 
     /// @inheritdoc IRiskModule

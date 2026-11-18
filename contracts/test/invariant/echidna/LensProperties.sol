@@ -6,12 +6,12 @@ pragma solidity 0.8.28;
 import {ILens} from "../../../src/lens/lens/ILens.sol";
 import {ILensAccount} from "../../../src/lens/lens/ILensAccount.sol";
 import {ILensActions} from "../../../src/lens/lens/ILensActions.sol";
+import {ILensDynamicCap} from "../../../src/lens/lens/ILensDynamicCap.sol";
 import {ILensFees} from "../../../src/lens/lens/ILensFees.sol";
 import {ILensHubAssets} from "../../../src/lens/lens/ILensHubAssets.sol";
 import {ILensMarket} from "../../../src/lens/lens/ILensMarket.sol";
 import {ILensPreview} from "../../../src/lens/lens/ILensPreview.sol";
 import {ILensRisk} from "../../../src/lens/lens/ILensRisk.sol";
-import {ILensSpeed} from "../../../src/lens/lens/ILensSpeed.sol";
 import {Lens} from "../../../src/lens/lens/Lens.sol";
 import {LensConstants} from "../../../src/lens/lens/LensConstants.sol";
 
@@ -140,7 +140,7 @@ contract LensProperties {
 
     /// @notice Routing of the views added for the app pages: fees to `LensMarketsModule`, after-action previews and the
     /// removal sizing to `LensPositionsModule`, the deleverage sizing to `LensPriceModule`, the close-account preview to
-    /// `LensAccountModule`, the Hub-asset view to `LensRiskModule` and the speed views to `LensSpeedModule`, with the
+    /// `LensAccountModule`, the Hub-asset view to `LensRiskModule` and the dynamic borrow cap view to `LensDynamicCapModule`, with the
     /// calldata and the answer unchanged.
     function checkRouteAdded(
         uint8 which,
@@ -149,7 +149,7 @@ contract LensProperties {
         address a = address(uint160(x));
         bytes memory data;
         uint256 expected;
-        uint8 w = which % 8;
+        uint8 w = which % 7;
         if (w == 0) {
             (data, expected) = (abi.encodeCall(ILensFees.getPositionFees, (x, bytes32(x))), 6);
         } else if (w == 1) {
@@ -162,10 +162,8 @@ contract LensProperties {
             (data, expected) = (abi.encodeCall(ILens.previewCloseAccount, (a, x, x)), 0);
         } else if (w == 5) {
             (data, expected) = (abi.encodeCall(ILensHubAssets.getHubAsset, (a, x)), 4);
-        } else if (w == 6) {
-            (data, expected) = (abi.encodeCall(ILensSpeed.getBorrowSpeed, (x, x)), 8);
         } else {
-            (data, expected) = (abi.encodeCall(ILensSpeed.getPledgeSpeed, (x)), 8);
+            (data, expected) = (abi.encodeCall(ILensDynamicCap.getDynamicBorrowCap, (x)), 8);
         }
         (bool ok, bytes memory ret) = address(LENS).staticcall(data);
         assert(ok);

@@ -8,7 +8,6 @@ import {ILPOracle} from "../../../src/oracle/ILPOracle.sol";
 import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {SpeedView} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {AccountGateStatus, Market} from "../../../src/types/MarketTypes.sol";
 import {PriceState} from "../../../src/types/OracleTypes.sol";
 import {PledgePreview} from "../../../src/types/PositionTypes.sol";
@@ -360,18 +359,11 @@ contract LensRiskModuleMock {
         return _debtReasons[spoke][id];
     }
 
-    /// @notice The speed windows the Lens forwards (REQ-LENS-061): open windows with no room, read-only.
-    function getBorrowSpeed(
-        uint256,
-        uint256
-    ) external pure returns (SpeedView memory market, SpeedView memory debt) {
-        return (market, debt);
-    }
-
-    function getPledgeSpeed(
-        uint256
-    ) external pure returns (SpeedView memory pledge) {
-        return pledge;
+    /// @notice The dynamic borrow cap the Lens forwards (REQ-LENS-061): a fixed reading, read-only.
+    function getDynamicBorrowCap(
+        uint256 marketId
+    ) external pure returns (uint256 cap, uint256 debt, uint64 intervalStart) {
+        return (marketId * 1000, marketId * 100, uint64(marketId));
     }
 }
 

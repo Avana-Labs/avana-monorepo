@@ -7,10 +7,10 @@ import {Market} from "../../types/MarketTypes.sol";
 import {IParameterStore} from "./IParameterStore.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
 import {IParameterStoreLoosen} from "./IParameterStoreLoosen.sol";
+import {ParameterStoreCapRules} from "./ParameterStoreCapRules.sol";
 import {ParameterStoreRisk} from "./ParameterStoreRisk.sol";
-import {ParameterStoreSpeedRules} from "./ParameterStoreSpeedRules.sol";
 import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";
-import {MarketParams, MarketSpeedLimits, SpeedLimit} from "./types/ParameterStoreTypes.sol";
+import {MarketDynamicCap, MarketParams} from "./types/ParameterStoreTypes.sol";
 
 /// @title ParameterStoreLoosenLogic
 /// @notice Bodies of every loosen setter: each moves one risk parameter in its riskier direction.
@@ -206,38 +206,19 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         emit ParameterLoosened("deficitMax", _pair(hub, asset), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStore.loosenMarketSpeedLimits`.
-    function loosenMarketSpeedLimits(
+    /// @notice Body of `IParameterStore.loosenMarketDynamicCap`.
+    function loosenMarketDynamicCap(
         uint256 marketId,
-        MarketSpeedLimits calldata limits
+        MarketDynamicCap calldata terms
     ) external {
         _onlyDelegated();
         _requireMarket(marketId);
-        MarketSpeedLimits memory old = _s().marketSpeed[marketId];
-        (bool noTighter, bool looser) = ParameterStoreSpeedRules.compareMarket(limits, old);
+        MarketDynamicCap memory old = _s().marketDynamicCap[marketId];
+        (bool noTighter, bool looser) = ParameterStoreCapRules.compare(terms, old);
         if (!noTighter || !looser) revert NotLooser();
-        if (!ParameterStoreSpeedRules.validMarket(limits)) revert OutOfBounds();
-        _s().marketSpeed[marketId] = limits;
-        emit IParameterStore.MarketSpeedLimitsSet(marketId, old, limits, false);
-    }
-
-    /// @notice Body of `IParameterStore.loosenDebtSpeedLimit`.
-    function loosenDebtSpeedLimit(
-        address hub,
-        address asset,
-        SpeedLimit calldata limit
-    ) external {
-        _onlyDelegated();
-        _requireHub(hub);
-        SpeedLimit memory old = _s().debtSpeed[hub][asset];
-        (bool noTighter, bool looser) = ParameterStoreSpeedRules.compareDebt(limit, old);
-        if (!noTighter || !looser) revert NotLooser();
-        if (!ParameterStoreSpeedRules.validDebt(limit)) revert OutOfBounds();
-        // forge-lint: disable-next-line(unused-return)
-        (bool found,,,) = _scanReserves(asset, hub);
-        if (!found) revert UnknownDebtReserve(address(0), 0);
-        _s().debtSpeed[hub][asset] = limit;
-        emit IParameterStore.DebtSpeedLimitSet(hub, asset, old, limit, false);
+        if (!ParameterStoreCapRules.valid(terms)) revert OutOfBounds();
+        _s().marketDynamicCap[marketId] = terms;
+        emit IParameterStore.MarketDynamicCapSet(marketId, old, terms, false);
     }
 }
 // forge-lint: disable-end(reentrancy-events)

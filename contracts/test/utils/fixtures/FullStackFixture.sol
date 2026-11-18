@@ -14,11 +14,7 @@ import {
     SpokeDef,
     TokenDef
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {
-    DebtReserveParams,
-    FeedDef,
-    SpeedLimit
-} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {DebtReserveParams, FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {FullStackAvanaFirstLossReserveMock} from "../mocks/FullStackLPVaultMock.sol";
 import {OracleFeedMock} from "../mocks/LPOracleMocks.sol";
 import {RegistryFlashSourceMock} from "../mocks/MarketRegistryMocks.sol";
@@ -365,9 +361,6 @@ abstract contract FullStackFixture is FullStackDeploy {
         vm.startPrank(address(timelock));
         registry.enableDebtReserve(aave.cdpSpoke, def);
         store.setDebtAssetParams(def.asset, DebtReserveParams(floorRounding));
-        // Default borrow-speed limit (IParameterStore example for GHO), in the asset's units.
-        uint96 unit = uint96(10 ** def.decimals);
-        store.loosenDebtSpeedLimit(aave.hub, def.asset, SpeedLimit(2500, 21_600, 500_000 * unit, 5_000_000 * unit));
         vm.stopPrank();
     }
 

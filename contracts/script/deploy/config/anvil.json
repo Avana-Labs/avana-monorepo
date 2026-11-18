@@ -1228,17 +1228,11 @@
         }
       }
     ],
-    "speedLimits": {
-      "window": 21600,
-      "borrowRateBps": 2500,
-      "pledgeRateBps": 2500,
-      "borrowMinUsd": 250000,
-      "borrowMaxUsd": 2500000,
-      "pledgeMinUsd": 1000000,
-      "pledgeMaxUsd": 10000000,
-      "debtRateBps": 2500,
-      "debtMinWhole": 500000,
-      "debtMaxWhole": 5000000
+    "dynamicBorrowCap": {
+      "interval": 21600,
+      "alphaBps": 2500,
+      "bufferMinUsd": 250000,
+      "bufferMaxUsd": 2500000
     },
     "markets": [
       {

@@ -63,7 +63,6 @@ contract CollateralizationLedgerHarness is CollateralizationLedger {
             proxy: proxy,
             pledgedAt: uint40(block.timestamp),
             lastDebitedAt: 0,
-            windowedBps: 10_000,
             credited: credited,
             originalUnits: credited,
             rescueUnits: rescue,

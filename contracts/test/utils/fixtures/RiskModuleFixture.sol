@@ -15,8 +15,8 @@ import {RiskModule} from "../../../src/policy/risk-module/RiskModule.sol";
 import {RiskModuleBorrowLogic} from "../../../src/policy/risk-module/RiskModuleBorrowLogic.sol";
 import {RiskModuleBreakerLogic} from "../../../src/policy/risk-module/RiskModuleBreakerLogic.sol";
 import {RiskModuleDriftLogic} from "../../../src/policy/risk-module/RiskModuleDriftLogic.sol";
+import {RiskModuleDynamicCapLogic} from "../../../src/policy/risk-module/RiskModuleDynamicCapLogic.sol";
 import {RiskModulePledgeLogic} from "../../../src/policy/risk-module/RiskModulePledgeLogic.sol";
-import {RiskModuleSpeedLogic} from "../../../src/policy/risk-module/RiskModuleSpeedLogic.sol";
 import {RiskModuleStatusLogic} from "../../../src/policy/risk-module/RiskModuleStatusLogic.sol";
 import {
     PledgeCharge,
@@ -179,7 +179,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         l.pledge = address(new RiskModulePledgeLogic(i, l.drift, l.breaker));
         l.borrow = address(new RiskModuleBorrowLogic(i, l.drift, l.breaker));
         l.status = address(new RiskModuleStatusLogic(i, l.drift, l.breaker, l.borrow));
-        l.speed = address(new RiskModuleSpeedLogic(i));
+        l.dynamicCap = address(new RiskModuleDynamicCapLogic(i));
     }
 
     /// @dev Hub, Spoke, tokens and the GHO debt reserve, as `MarketRegistryFixture._setUpWorld` with richer mocks.
@@ -434,7 +434,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         uint128 units,
         PledgeCounters memory k,
         bool requireRescue
-    ) internal returns (PledgeCharge memory) {
+    ) internal view returns (PledgeCharge memory) {
         return riskModule.checkPledge(wallet, address(proxy), mid, V3, bytes32(uint256(1)), units, k, requireRescue);
     }
 }

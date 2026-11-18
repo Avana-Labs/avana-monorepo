@@ -1,5 +1,5 @@
 {
-  "_comment": "Local stack only. Every number the Aave DAO, governance or a risk provider sets on a real network (amounts, caps, speed limits, collateral factors, liquidation bonus, pool risk factor, tolerances, slippage, rate models, liquidity fees), so the local chains can run. Never part of a release config or a Hub file. Values here are the rehearsal's (contracts/script/deploy/config/anvil.json).",
+  "_comment": "Local stack only. Every number the Aave DAO, governance or a risk provider sets on a real network (amounts, caps, dynamic borrow cap terms, collateral factors, liquidation bonus, pool risk factor, tolerances, slippage, rate models, liquidity fees), so the local chains can run. Never part of a release config or a Hub file. Values here are the rehearsal's (contracts/script/deploy/config/anvil.json).",
   "debtAssets": {
     "GHO": {
       "drawCap": 10000000,
@@ -26,17 +26,11 @@
     }
   },
   "routeDepthThreshold": 5000000,
-  "speedLimits": {
-    "window": 21600,
-    "borrowRateBps": 2500,
-    "pledgeRateBps": 2500,
-    "borrowMinUsd": 250000,
-    "borrowMaxUsd": 2500000,
-    "pledgeMinUsd": 1000000,
-    "pledgeMaxUsd": 10000000,
-    "debtRateBps": 2500,
-    "debtMinWhole": 500000,
-    "debtMaxWhole": 5000000
+  "dynamicBorrowCap": {
+    "interval": 21600,
+    "alphaBps": 2500,
+    "bufferMinUsd": 250000,
+    "bufferMaxUsd": 2500000
   },
   "tokens": {
     "_comment": "The collateral factors of cbBTC, WBTC, AAVE, UNI, AERO, LINK and the tokenized stocks are Avana's proposed values for the listing AIP; the Aave DAO sets the final ones.",

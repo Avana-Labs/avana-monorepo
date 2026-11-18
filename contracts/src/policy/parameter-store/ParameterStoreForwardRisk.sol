@@ -8,56 +8,30 @@ import {IParameterStore} from "./IParameterStore.sol";
 import {IParameterStoreLoosen} from "./IParameterStoreLoosen.sol";
 import {IParameterStoreTighten} from "./IParameterStoreTighten.sol";
 import {ParameterStoreRouter} from "./ParameterStoreRouter.sol";
-import {MarketSpeedLimits, SpeedLimit} from "./types/ParameterStoreTypes.sol";
+import {MarketDynamicCap} from "./types/ParameterStoreTypes.sol";
 
 /// @title ParameterStoreForwardRisk
 /// @notice The tighten and loosen setters of the market, Hub, cap, feed and route parameters.
 abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterStore {
     /// @inheritdoc IParameterStore
-    function marketSpeedLimits(
+    function marketDynamicCap(
         uint256 marketId
-    ) external view override returns (MarketSpeedLimits memory limits) {
-        limits = _s().marketSpeed[marketId];
+    ) external view override returns (MarketDynamicCap memory terms) {
+        terms = _s().marketDynamicCap[marketId];
     }
 
     /// @inheritdoc IParameterStore
-    function debtSpeedLimit(
-        address hub,
-        address asset
-    ) external view override returns (SpeedLimit memory limit) {
-        limit = _s().debtSpeed[hub][asset];
-    }
-
-    /// @inheritdoc IParameterStore
-    function tightenMarketSpeedLimits(
+    function tightenMarketDynamicCap(
         uint256,
-        MarketSpeedLimits calldata
+        MarketDynamicCap calldata
     ) external override onlyAdminOrSteward {
         _forward(_TIGHTEN_LOGIC);
     }
 
     /// @inheritdoc IParameterStore
-    function loosenMarketSpeedLimits(
+    function loosenMarketDynamicCap(
         uint256,
-        MarketSpeedLimits calldata
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_LOOSEN_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function tightenDebtSpeedLimit(
-        address,
-        address,
-        SpeedLimit calldata
-    ) external override onlyAdminOrSteward {
-        _forward(_TIGHTEN_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function loosenDebtSpeedLimit(
-        address,
-        address,
-        SpeedLimit calldata
+        MarketDynamicCap calldata
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
         _forward(_LOOSEN_LOGIC);
     }

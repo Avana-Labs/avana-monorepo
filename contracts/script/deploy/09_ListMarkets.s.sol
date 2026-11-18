@@ -19,9 +19,8 @@ import {
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {
     DebtReserveParams,
-    MarketParams,
-    MarketSpeedLimits,
-    SpeedLimit
+    MarketDynamicCap,
+    MarketParams
 } from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketDef} from "../../src/types/MarketTypes.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
@@ -69,8 +68,8 @@ interface IRelistedToken {
 /// - `markets` (normal delay): Avana operators deploy each market's LPOracle proxy and swap routes (a cancelled market
 ///   of the config is relisted under its reserved ID with its first vault token and LPOracle); the batch enables
 ///   the debt reserves (`enableDebtReserve`, the debt asset's settlement parameters and, on the first reserve of a
-///   (Hub, asset), `loosenDebtSpeedLimit`), then per market `deployVaultToken`, `listCollateralMarket`,
-///   `setInitialMarketParams`, `setInitialMarketCaps`, `loosenMarketSpeedLimits`, the primary and backup route of
+///   (Hub, asset)), then per market `deployVaultToken`, `listCollateralMarket`,
+///   `setInitialMarketParams`, `setInitialMarketCaps`, `loosenMarketDynamicCap`, the primary and backup route of
 ///   every pool token into the Spoke's debt asset and each route slot's depth threshold (`tightenRouteDepthThreshold`,
 ///   from the route's `depthThreshold` in the config). `10_AaveListingPayload` (`vault-tokens`) then lists the vault
 ///   tokens.
@@ -79,9 +78,8 @@ interface IRelistedToken {
 /// key's currencies, fee and tick spacing, and the Uniswap v3 reference pool of its pair), and the market is keyed by
 /// `poolId = keccak256(abi.encode(key))` with `pool = address(0)`. Native ETH (`currency0 = address(0)`) is the
 /// LPVault's `wrappedNative()` among the market's tokens.
-/// Speed limits fail closed (Q-411): a market or a (Hub, asset) without a written value refuses every pledge or
-/// borrow, so the listing batch writes the config values (τ 6 h; borrow 25 %, $250k–$2.5M; pledge 25 %, $1M–$10M;
-/// (Hub, asset) 25 %, 500k–5M tokens). The `markets` operation's salt is keccak256 of the listing metadata file
+/// The dynamic borrow cap fails closed: a market without written terms refuses every borrow, so the listing batch
+/// writes the config values (tau 6 h, alpha 25 %, L_min $250k, L_max $2.5M). The `markets` operation's salt is keccak256 of the listing metadata file
 /// (`09-market-metadata`), so the operation commits to the pages it adds. Outputs: `listing-oracles.json` and `listing-markets.json` in
 /// `deployments-local/<network>/`, read by the manifest producer and the scenarios.
 contract ListMarkets is ListingBase {
@@ -943,9 +941,7 @@ contract ListMarkets is ListingBase {
         );
     }
 
-    /// @notice `enableDebtReserve` for each configured reserve, the asset's settlement parameters and, on the first
-    /// reserve of a (Hub, asset), its borrow-speed limit (written after the reserve exists, `UnknownDebtReserve`
-    /// otherwise).
+    /// @notice `enableDebtReserve` for each configured reserve and the asset's settlement parameters.
     function _enableDebtReserves(
         Operation memory op
     ) private view {
@@ -973,20 +969,6 @@ contract ListMarkets is ListingBase {
                 abi.encodeCall(registry.enableDebtReserve, (_spokeAddr(spokeLabel), d)),
                 string.concat("MR.enableDebtReserve ", spokeLabel, " ", sym)
             );
-            if (!_firstOfPair(i) || store.debtSpeedLimit(d.fundingHub, d.asset).window != 0) continue;
-            uint256 unit = 10 ** d.decimals;
-            SpeedLimit memory s = SpeedLimit({
-                rateBps: uint16(_uint(".listing.speedLimits.debtRateBps")),
-                window: uint32(_uint(".listing.speedLimits.window")),
-                min: uint96(_debtAssetUint(sym, "debtMinWhole", ".listing.speedLimits") * unit),
-                max: uint96(_debtAssetUint(sym, "debtMaxWhole", ".listing.speedLimits") * unit)
-            });
-            _add(
-                op,
-                address(store),
-                abi.encodeCall(store.loosenDebtSpeedLimit, (d.fundingHub, d.asset, s)),
-                "PS.loosenDebtSpeedLimit"
-            );
         }
         uint256 a = _cfgCount(".listing.debtAssets");
         for (uint256 i = 0; i < a; ++i) {
@@ -1002,25 +984,6 @@ contract ListMarkets is ListingBase {
                 "PS.setDebtAssetParams"
             );
         }
-    }
-
-    /// @notice A whole-token amount of debt asset `sym`: its own `listing.debtAssets[].<field>` when set, else
-    /// `<fallbackParent>.<field>`. The chain-wide credit line and (Hub, asset) speed-limit bounds count whole tokens, which
-    /// a token priced far from $1 (a meme coin at $0.00001, WBTC at $95,000) overrides.
-    function _debtAssetUint(
-        string memory sym,
-        string memory field,
-        string memory fallbackParent
-    ) private view returns (uint256) {
-        uint256 a = _cfgCount(".listing.debtAssets");
-        for (uint256 i = 0; i < a; ++i) {
-            string memory k = _at("debtAssets", i);
-            if (!_eq(_str(string.concat(k, ".symbol")), sym)) continue;
-            string memory own = string.concat(k, ".", field);
-            if (vm.keyExistsJson(cfg, own)) return _uint(own);
-            break;
-        }
-        return _uint(string.concat(fallbackParent, ".", field));
     }
 
     function _debtAssetFixed(
@@ -1086,13 +1049,13 @@ contract ListMarkets is ListingBase {
             "PS.setInitialMarketParams"
         );
         _add(op, address(store), _marketCapsCall(m), "PS.setInitialMarketCaps");
-        // A relisted market kept its speed limits; loosening to the same values reverts NotLooser.
-        if (keccak256(abi.encode(store.marketSpeedLimits(m.marketId))) != keccak256(abi.encode(_speedLimits()))) {
+        // A relisted market kept its cap terms; loosening to the same values reverts NotLooser.
+        if (keccak256(abi.encode(store.marketDynamicCap(m.marketId))) != keccak256(abi.encode(_dynamicCap()))) {
             _add(
                 op,
                 address(store),
-                abi.encodeCall(store.loosenMarketSpeedLimits, (m.marketId, _speedLimits())),
-                "PS.loosenMarketSpeedLimits"
+                abi.encodeCall(store.loosenMarketDynamicCap, (m.marketId, _dynamicCap())),
+                "PS.loosenMarketDynamicCap"
             );
         }
         routes = _routes(op, m);
@@ -1131,15 +1094,12 @@ contract ListMarkets is ListingBase {
         p.minPledgeUsd = vm.parseUint(_str(string.concat(k, ".minPledgeUsd"))) * 1e8;
     }
 
-    function _speedLimits() private view returns (MarketSpeedLimits memory s) {
-        string memory k = ".listing.speedLimits";
-        s.window = uint32(_uint(string.concat(k, ".window")));
-        s.borrowRateBps = uint16(_uint(string.concat(k, ".borrowRateBps")));
-        s.pledgeRateBps = uint16(_uint(string.concat(k, ".pledgeRateBps")));
-        s.borrowMinUsd = uint96(_uint(string.concat(k, ".borrowMinUsd")) * 1e8);
-        s.borrowMaxUsd = uint96(_uint(string.concat(k, ".borrowMaxUsd")) * 1e8);
-        s.pledgeMinUsd = uint96(_uint(string.concat(k, ".pledgeMinUsd")) * 1e8);
-        s.pledgeMaxUsd = uint96(_uint(string.concat(k, ".pledgeMaxUsd")) * 1e8);
+    function _dynamicCap() private view returns (MarketDynamicCap memory t) {
+        string memory k = ".listing.dynamicBorrowCap";
+        t.capInterval = uint32(_uint(string.concat(k, ".interval")));
+        t.capAlphaBps = uint16(_uint(string.concat(k, ".alphaBps")));
+        t.capBufferMin = uint96(_uint(string.concat(k, ".bufferMinUsd")) * 1e8);
+        t.capBufferMax = uint96(_uint(string.concat(k, ".bufferMaxUsd")) * 1e8);
     }
 
     /// @notice The primary (kind 0) and backup (kind 1) `DexPathRoute` of each configured (pool token, debt asset),

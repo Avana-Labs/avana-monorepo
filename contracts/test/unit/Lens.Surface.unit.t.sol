@@ -5,13 +5,13 @@ pragma solidity 0.8.28;
 
 import {ILens} from "../../src/lens/lens/ILens.sol";
 import {ILensAccount} from "../../src/lens/lens/ILensAccount.sol";
+import {ILensDynamicCap} from "../../src/lens/lens/ILensDynamicCap.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {ILensMarket} from "../../src/lens/lens/ILensMarket.sol";
 import {ILensMarkets} from "../../src/lens/lens/ILensMarkets.sol";
 import {ILensPositions} from "../../src/lens/lens/ILensPositions.sol";
 import {ILensPreview} from "../../src/lens/lens/ILensPreview.sol";
 import {ILensRisk} from "../../src/lens/lens/ILensRisk.sol";
-import {ILensSpeed} from "../../src/lens/lens/ILensSpeed.sol";
 import {Lens} from "../../src/lens/lens/Lens.sol";
 import {LensBase} from "../../src/lens/lens/LensBase.sol";
 import {LensConstants} from "../../src/lens/lens/LensConstants.sol";
@@ -293,7 +293,7 @@ contract LensSurfaceUnitTest is LensFixture {
     }
 
     function _allCalls() internal view returns (bytes[] memory c) {
-        c = new bytes[](31);
+        c = new bytes[](30);
         address[] memory toks = new address[](1);
         toks[0] = address(usdc);
         uint256[] memory ids = new uint256[](1);
@@ -328,7 +328,6 @@ contract LensSurfaceUnitTest is LensFixture {
         c[26] = abi.encodeCall(ILensPositions.getAccountRisk, (alice, MARKET_ID));
         c[27] = abi.encodeCall(ILensPositions.previewPledge, (alice, MARKET_ID, _key(1)));
         c[28] = abi.encodeCall(ILensPositions.previewWithdraw, (alice, MARKET_ID, _key(1), 0));
-        c[29] = abi.encodeCall(ILensSpeed.getBorrowSpeed, (MARKET_ID, debtReserveId));
-        c[30] = abi.encodeCall(ILensSpeed.getPledgeSpeed, (MARKET_ID));
+        c[29] = abi.encodeCall(ILensDynamicCap.getDynamicBorrowCap, (MARKET_ID));
     }
 }

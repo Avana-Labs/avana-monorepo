@@ -110,21 +110,8 @@ interface IRiskModuleErrors {
     /// @notice A logic contract given to the implementation constructor reports another kind or other immutables.
     error InvalidLogic(address logic);
 
-    /// @notice A borrow's USD charge does not fit the market's borrow-speed window.
-    /// @param availableUsd Room in the window now, 8-decimal USD.
-    /// @param moreAt Time the next charges stop counting, or 0 when only a larger base or a loosening adds room.
-    error BorrowSpeedExceeded(uint256 marketId, uint256 availableUsd, uint64 moreAt);
-
-    /// @notice A borrow does not fit the (funding Hub, asset) borrow-speed window.
-    /// @param available Room in the window now, asset base units.
-    /// @param moreAt Time the next charges stop counting, or 0.
-    error DebtSpeedExceeded(address hub, address asset, uint256 available, uint64 moreAt);
-
-    /// @notice A non-rescue pledge's charge does not fit the market's pledge-speed window.
-    /// @param availableUsd Room in the window now, 8-decimal USD.
-    /// @param moreAt Time the next charges stop counting, or 0.
-    error PledgeSpeedExceeded(uint256 marketId, uint256 availableUsd, uint64 moreAt);
-
-    /// @notice `creditRepay` not from the AaveAdapter, or `creditWithdraw` not from Collateralization.
-    error NotSpeedWriter(address caller);
+    /// @notice A borrow would take the market's debt above the cap fixed for the running interval.
+    /// @param cap The interval's cap, 8-decimal USD.
+    /// @param newDebt The market's debt after the borrow, 8-decimal USD.
+    error DynamicBorrowCapExceeded(uint256 marketId, uint256 cap, uint256 newDebt);
 }

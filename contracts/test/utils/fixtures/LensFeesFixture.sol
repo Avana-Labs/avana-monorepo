@@ -68,7 +68,7 @@ library LensFeesDeploy {
         m[5] = _create("LensPreviewModule.sol:LensPreviewModule", abi.encode(c));
         m[6] = _create("LensMarketsModule.sol:LensMarketsModule", abi.encode(c));
         m[7] = _create("LensPositionsModule.sol:LensPositionsModule", abi.encode(c));
-        m[8] = _create("LensSpeedModule.sol:LensSpeedModule", abi.encode(c));
+        m[8] = _create("LensDynamicCapModule.sol:LensDynamicCapModule", abi.encode(c));
     }
 
     function _create(

@@ -6,10 +6,10 @@ pragma solidity 0.8.28;
 import {IParameterStore} from "./IParameterStore.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
 import {IParameterStoreTighten} from "./IParameterStoreTighten.sol";
+import {ParameterStoreCapRules} from "./ParameterStoreCapRules.sol";
 import {ParameterStoreRisk} from "./ParameterStoreRisk.sol";
-import {ParameterStoreSpeedRules} from "./ParameterStoreSpeedRules.sol";
 import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";
-import {FeedDef, MarketParams, MarketSpeedLimits, SpeedLimit} from "./types/ParameterStoreTypes.sol";
+import {FeedDef, MarketDynamicCap, MarketParams} from "./types/ParameterStoreTypes.sol";
 
 /// @title ParameterStoreTightenLogic
 /// @notice Bodies of every tighten setter: each moves one value strictly in its safer direction.
@@ -215,35 +215,19 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         emit ParameterTightened("maxFlashFeeBps", bytes32(0), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStore.tightenMarketSpeedLimits`.
-    function tightenMarketSpeedLimits(
+    /// @notice Body of `IParameterStore.tightenMarketDynamicCap`.
+    function tightenMarketDynamicCap(
         uint256 marketId,
-        MarketSpeedLimits calldata limits
+        MarketDynamicCap calldata terms
     ) external {
         _onlyDelegated();
         _requireMarket(marketId);
-        MarketSpeedLimits memory old = _s().marketSpeed[marketId];
-        (bool noLooser, bool stricter) = ParameterStoreSpeedRules.compareMarket(old, limits);
+        MarketDynamicCap memory old = _s().marketDynamicCap[marketId];
+        (bool noLooser, bool stricter) = ParameterStoreCapRules.compare(old, terms);
         if (!noLooser || !stricter) revert NotStricter();
-        if (!ParameterStoreSpeedRules.validMarket(limits)) revert OutOfBounds();
-        _s().marketSpeed[marketId] = limits;
-        emit IParameterStore.MarketSpeedLimitsSet(marketId, old, limits, true);
-    }
-
-    /// @notice Body of `IParameterStore.tightenDebtSpeedLimit`.
-    function tightenDebtSpeedLimit(
-        address hub,
-        address asset,
-        SpeedLimit calldata limit
-    ) external {
-        _onlyDelegated();
-        _requireHub(hub);
-        SpeedLimit memory old = _s().debtSpeed[hub][asset];
-        (bool noLooser, bool stricter) = ParameterStoreSpeedRules.compareDebt(old, limit);
-        if (!noLooser || !stricter) revert NotStricter();
-        if (!ParameterStoreSpeedRules.validDebt(limit)) revert OutOfBounds();
-        _s().debtSpeed[hub][asset] = limit;
-        emit IParameterStore.DebtSpeedLimitSet(hub, asset, old, limit, true);
+        if (!ParameterStoreCapRules.valid(terms)) revert OutOfBounds();
+        _s().marketDynamicCap[marketId] = terms;
+        emit IParameterStore.MarketDynamicCapSet(marketId, old, terms, true);
     }
 }
 // forge-lint: disable-end(reentrancy-events)

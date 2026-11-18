@@ -83,8 +83,7 @@ library TimelockSelectors {
             || s == IParameterStore.tightenDeficitMax.selector || s == IParameterStore.tightenMaxShortfallBps.selector
             || s == IParameterStore.tightenDebtStressRiseBps.selector
             || s == IParameterStore.tightenMaxFlashFeeBps.selector
-            || s == IParameterStore.tightenMarketSpeedLimits.selector
-            || s == IParameterStore.tightenDebtSpeedLimit.selector;
+            || s == IParameterStore.tightenMarketDynamicCap.selector;
     }
 
     function _isInitializer(

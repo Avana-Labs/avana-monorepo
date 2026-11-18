@@ -14,7 +14,6 @@ struct BackingRecord {
     address proxy;
     uint40 pledgedAt;
     uint40 lastDebitedAt;
-    uint16 windowedBps;
     uint128 credited;
     uint128 originalUnits;
     uint128 rescueUnits;

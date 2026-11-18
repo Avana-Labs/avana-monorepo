@@ -476,38 +476,6 @@ contract CollRiskModuleMock {
         useOverride = false;
     }
 
-    /// @dev Withdrawal credits received (`creditWithdraw`), their USD sum and the last market.
-    uint256 public withdrawCredits;
-    uint256 public creditedUsd;
-    uint256 public lastCreditMarket;
-    /// @dev When set, `creditWithdraw` reverts, or burns every unit of gas it is given.
-    bool public creditReverts;
-    bool public creditBurnsGas;
-
-    function setCredit(
-        bool reverts,
-        bool burnsGas
-    ) external {
-        (creditReverts, creditBurnsGas) = (reverts, burnsGas);
-    }
-
-    function creditWithdraw(
-        uint256 marketId,
-        uint256 usd
-    ) external {
-        if (creditReverts) revert Refused(0);
-        if (creditBurnsGas) {
-            // Spends the whole stipend.
-            uint256 i = 0;
-            while (gasleft() > 0) {
-                ++i;
-            }
-        }
-        ++withdrawCredits;
-        creditedUsd += usd;
-        lastCreditMarket = marketId;
-    }
-
     function checkPledge(
         address,
         address,

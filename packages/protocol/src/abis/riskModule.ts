@@ -231,7 +231,7 @@ export const riskModuleAbi = [
         ]
       }
     ],
-    "stateMutability": "nonpayable"
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -250,47 +250,6 @@ export const riskModuleAbi = [
     ],
     "outputs": [],
     "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "creditRepay",
-    "inputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "creditWithdraw",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "usd",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -485,99 +444,6 @@ export const riskModuleAbi = [
   },
   {
     "type": "function",
-    "name": "getBorrowSpeed",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "market",
-        "type": "tuple",
-        "internalType": "struct SpeedView",
-        "components": [
-          {
-            "name": "limit",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "used",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "available",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "moreAt",
-            "type": "uint64",
-            "internalType": "uint64"
-          },
-          {
-            "name": "moreAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "unavailable",
-            "type": "bool",
-            "internalType": "bool"
-          }
-        ]
-      },
-      {
-        "name": "debt",
-        "type": "tuple",
-        "internalType": "struct SpeedView",
-        "components": [
-          {
-            "name": "limit",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "used",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "available",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "moreAt",
-            "type": "uint64",
-            "internalType": "uint64"
-          },
-          {
-            "name": "moreAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "unavailable",
-            "type": "bool",
-            "internalType": "bool"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getBreakerStatus",
     "inputs": [
       {
@@ -621,7 +487,7 @@ export const riskModuleAbi = [
   },
   {
     "type": "function",
-    "name": "getPledgeSpeed",
+    "name": "getDynamicBorrowCap",
     "inputs": [
       {
         "name": "marketId",
@@ -631,90 +497,48 @@ export const riskModuleAbi = [
     ],
     "outputs": [
       {
-        "name": "pledge",
-        "type": "tuple",
-        "internalType": "struct SpeedView",
-        "components": [
-          {
-            "name": "limit",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "used",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "available",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "moreAt",
-            "type": "uint64",
-            "internalType": "uint64"
-          },
-          {
-            "name": "moreAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "unavailable",
-            "type": "bool",
-            "internalType": "bool"
-          }
-        ]
+        "name": "cap",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "debt",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "intervalStart",
+        "type": "uint64",
+        "internalType": "uint64"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "getSpeedWindow",
+    "name": "getDynamicCap",
     "inputs": [
       {
-        "name": "scope",
-        "type": "uint8",
-        "internalType": "enum SpeedScope"
-      },
-      {
-        "name": "key",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [
       {
-        "name": "window",
+        "name": "interval",
         "type": "tuple",
-        "internalType": "struct SpeedWindow",
+        "internalType": "struct DynamicCap",
         "components": [
           {
-            "name": "start",
+            "name": "intervalStart",
             "type": "uint64",
             "internalType": "uint64"
           },
           {
-            "name": "prev",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "curr",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "base",
-            "type": "uint248",
-            "internalType": "uint248"
-          },
-          {
-            "name": "opened",
-            "type": "bool",
-            "internalType": "bool"
+            "name": "cap",
+            "type": "uint192",
+            "internalType": "uint192"
           }
         ]
       }
@@ -993,27 +817,6 @@ export const riskModuleAbi = [
   },
   {
     "type": "error",
-    "name": "BorrowSpeedExceeded",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "availableUsd",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "moreAt",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "BreakerTripped",
     "inputs": [
       {
@@ -1110,27 +913,22 @@ export const riskModuleAbi = [
   },
   {
     "type": "error",
-    "name": "DebtSpeedExceeded",
+    "name": "DynamicBorrowCapExceeded",
     "inputs": [
       {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "available",
+        "name": "marketId",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "moreAt",
-        "type": "uint64",
-        "internalType": "uint64"
+        "name": "cap",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "newDebt",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ]
   },
@@ -1260,38 +1058,6 @@ export const riskModuleAbi = [
         "name": "restoreBooked",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "NotSpeedWriter",
-    "inputs": [
-      {
-        "name": "caller",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "PledgeSpeedExceeded",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "availableUsd",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "moreAt",
-        "type": "uint64",
-        "internalType": "uint64"
       }
     ]
   },

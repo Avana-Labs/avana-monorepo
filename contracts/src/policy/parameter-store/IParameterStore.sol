@@ -11,9 +11,8 @@ import {
     DebtReserveParams,
     FeedDef,
     GlobalParams,
-    MarketParams,
-    MarketSpeedLimits,
-    SpeedLimit
+    MarketDynamicCap,
+    MarketParams
 } from "./types/ParameterStoreTypes.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
@@ -245,52 +244,26 @@ interface IParameterStore is
     /// @notice MarketRegistry fixed proxy address (implementation immutable).
     function MARKET_REGISTRY() external view returns (address registry);
 
-    /// @notice A market's speed limits changed.
-    event MarketSpeedLimitsSet(
-        uint256 indexed marketId, MarketSpeedLimits oldLimits, MarketSpeedLimits newLimits, bool tightened
+    /// @notice A market's dynamic borrow cap terms changed.
+    event MarketDynamicCapSet(
+        uint256 indexed marketId, MarketDynamicCap oldTerms, MarketDynamicCap newTerms, bool tightened
     );
 
-    /// @notice A (funding Hub, debt asset)'s borrow-speed limit changed.
-    event DebtSpeedLimitSet(
-        address indexed hub, address indexed asset, SpeedLimit oldLimit, SpeedLimit newLimit, bool tightened
-    );
-
-    /// @notice A market's speed limits.
-    function marketSpeedLimits(
+    /// @notice A market's dynamic borrow cap terms: interval, alpha and the buffer bounds.
+    function marketDynamicCap(
         uint256 marketId
-    ) external view returns (MarketSpeedLimits memory limits);
+    ) external view returns (MarketDynamicCap memory terms);
 
-    /// @notice A (funding Hub, debt asset)'s borrow-speed limit, in base units of the asset.
-    function debtSpeedLimit(
-        address hub,
-        address asset
-    ) external view returns (SpeedLimit memory limit);
-
-    /// @notice Tightens a market's speed limits: no field looser, one strictly tighter.
-    function tightenMarketSpeedLimits(
+    /// @notice Tightens a market's dynamic borrow cap terms: no field looser, one strictly tighter.
+    function tightenMarketDynamicCap(
         uint256 marketId,
-        MarketSpeedLimits calldata limits
+        MarketDynamicCap calldata terms
     ) external;
 
-    /// @notice Loosens a market's speed limits, or writes the first value: no field tighter, one strictly looser.
-    function loosenMarketSpeedLimits(
+    /// @notice Loosens a market's dynamic borrow cap terms, or writes the first value: no field tighter, one looser.
+    function loosenMarketDynamicCap(
         uint256 marketId,
-        MarketSpeedLimits calldata limits
-    ) external;
-
-    /// @notice Tightens a (funding Hub, debt asset)'s borrow-speed limit: no field looser, one strictly tighter.
-    function tightenDebtSpeedLimit(
-        address hub,
-        address asset,
-        SpeedLimit calldata limit
-    ) external;
-
-    /// @notice Loosens a (funding Hub, debt asset)'s borrow-speed limit, or writes the first value.
-    /// @dev Reverts `UnknownDebtReserve` when no approved debt reserve draws `asset` from `hub`.
-    function loosenDebtSpeedLimit(
-        address hub,
-        address asset,
-        SpeedLimit calldata limit
+        MarketDynamicCap calldata terms
     ) external;
 
     /// @notice Returns a market's parameters.

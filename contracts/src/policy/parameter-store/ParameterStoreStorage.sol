@@ -8,7 +8,7 @@ import {Market} from "../../types/MarketTypes.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreBase} from "./IParameterStoreBase.sol";
-import {FeedDef, GlobalParams, MarketParams, MarketSpeedLimits, SpeedLimit} from "./types/ParameterStoreTypes.sol";
+import {FeedDef, GlobalParams, MarketDynamicCap, MarketParams} from "./types/ParameterStoreTypes.sol";
 
 /// @title ParameterStoreStorage
 /// @notice Storage layout, immutables, hard bounds and shared checks of the ParameterStore and its logic contracts.
@@ -31,8 +31,7 @@ abstract contract ParameterStoreStorage is IParameterStoreBase {
         mapping(address asset => uint16) debtStressRiseBps;
         mapping(bytes32 paramKey => uint64) lastLoosenedAt;
         // Appended members follow; earlier members keep their slots.
-        mapping(uint256 marketId => MarketSpeedLimits) marketSpeed;
-        mapping(address hub => mapping(address asset => SpeedLimit)) debtSpeed;
+        mapping(uint256 marketId => MarketDynamicCap) marketDynamicCap;
         // True once `setInitialTokenCap` has written the (Hub, token) cap; stays set when tightened to 0.
         mapping(address hub => mapping(address token => bool)) tokenCapSet;
     }

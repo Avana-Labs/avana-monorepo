@@ -16,7 +16,7 @@ import {IParameterStoreTighten} from "../../../src/policy/parameter-store/IParam
 /// addresses: 15 ParameterStore tighten setters, 5 MarketRegistry selectors and LPVaultSwap `removeKeeper`; and
 /// MarketRegistry `restoreRoute` with LPVaultSwap `addKeeper`.
 library TimelockShortDelayLists {
-    uint256 internal constant SHORT_COUNT = 21;
+    uint256 internal constant SHORT_COUNT = 20;
     uint256 internal constant DAO_COUNT = 2;
 
     function shortEligible(
@@ -24,7 +24,7 @@ library TimelockShortDelayLists {
         address marketRegistry,
         address lpVaultSwap
     ) internal pure returns (SelectorPair[] memory pairs) {
-        bytes4[15] memory ps = [
+        bytes4[14] memory ps = [
             IParameterStoreTighten.tightenSlippageAllowanceBps.selector,
             IParameterStoreTighten.tightenFloorRoundingAllowance.selector,
             IParameterStoreTighten.tightenBorrowPriceMaxAge.selector,
@@ -38,8 +38,7 @@ library TimelockShortDelayLists {
             IParameterStore.tightenMaxShortfallBps.selector,
             IParameterStore.tightenDebtStressRiseBps.selector,
             IParameterStore.tightenMaxFlashFeeBps.selector,
-            IParameterStore.tightenMarketSpeedLimits.selector,
-            IParameterStore.tightenDebtSpeedLimit.selector
+            IParameterStore.tightenMarketDynamicCap.selector
         ];
         bytes4[5] memory mr = [
             IMarketRegistryRoutes.disableRoute.selector,

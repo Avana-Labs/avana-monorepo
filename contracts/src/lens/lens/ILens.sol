@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 import {PriceView} from "../../types/OracleTypes.sol";
 import {ILensAccount} from "./ILensAccount.sol";
 import {ILensActions} from "./ILensActions.sol";
+import {ILensDynamicCap} from "./ILensDynamicCap.sol";
 import {ILensErrors} from "./ILensErrors.sol";
 import {ILensFees} from "./ILensFees.sol";
 import {ILensHubAssets} from "./ILensHubAssets.sol";
@@ -14,7 +15,6 @@ import {ILensMarkets} from "./ILensMarkets.sol";
 import {ILensPositions} from "./ILensPositions.sol";
 import {ILensPreview} from "./ILensPreview.sol";
 import {ILensRisk} from "./ILensRisk.sol";
-import {ILensSpeed} from "./ILensSpeed.sol";
 import {
     CloseAccountView,
     DebtPriceView,
@@ -37,7 +37,7 @@ interface ILens is
     ILensFees,
     ILensActions,
     ILensHubAssets,
-    ILensSpeed
+    ILensDynamicCap
 {
     /// @notice Returns the largest page size `getRecords` and `checkRecordBacking` accept.
     function LENS_MAX_PAGE() external view returns (uint256 maxPage);

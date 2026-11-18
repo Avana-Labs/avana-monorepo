@@ -154,52 +154,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "debtSpeedLimit",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "limit",
-        "type": "tuple",
-        "internalType": "struct SpeedLimit",
-        "components": [
-          {
-            "name": "rateBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "window",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "min",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "max",
-            "type": "uint96",
-            "internalType": "uint96"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "debtStressRiseBps",
     "inputs": [
       {
@@ -579,51 +533,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "loosenDebtSpeedLimit",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "limit",
-        "type": "tuple",
-        "internalType": "struct SpeedLimit",
-        "components": [
-          {
-            "name": "rateBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "window",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "min",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "max",
-            "type": "uint96",
-            "internalType": "uint96"
-          }
-        ]
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "loosenDebtStressRiseBps",
     "inputs": [
       {
@@ -683,7 +592,7 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "loosenMarketSpeedLimits",
+    "name": "loosenMarketDynamicCap",
     "inputs": [
       {
         "name": "marketId",
@@ -691,42 +600,27 @@ export const parameterStoreAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "limits",
+        "name": "terms",
         "type": "tuple",
-        "internalType": "struct MarketSpeedLimits",
+        "internalType": "struct MarketDynamicCap",
         "components": [
           {
-            "name": "window",
+            "name": "capInterval",
             "type": "uint32",
             "internalType": "uint32"
           },
           {
-            "name": "borrowRateBps",
+            "name": "capAlphaBps",
             "type": "uint16",
             "internalType": "uint16"
           },
           {
-            "name": "pledgeRateBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "borrowMinUsd",
+            "name": "capBufferMin",
             "type": "uint96",
             "internalType": "uint96"
           },
           {
-            "name": "borrowMaxUsd",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "pledgeMinUsd",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "pledgeMaxUsd",
+            "name": "capBufferMax",
             "type": "uint96",
             "internalType": "uint96"
           }
@@ -879,7 +773,7 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "marketSpeedLimits",
+    "name": "marketDynamicCap",
     "inputs": [
       {
         "name": "marketId",
@@ -889,42 +783,27 @@ export const parameterStoreAbi = [
     ],
     "outputs": [
       {
-        "name": "limits",
+        "name": "terms",
         "type": "tuple",
-        "internalType": "struct MarketSpeedLimits",
+        "internalType": "struct MarketDynamicCap",
         "components": [
           {
-            "name": "window",
+            "name": "capInterval",
             "type": "uint32",
             "internalType": "uint32"
           },
           {
-            "name": "borrowRateBps",
+            "name": "capAlphaBps",
             "type": "uint16",
             "internalType": "uint16"
           },
           {
-            "name": "pledgeRateBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "borrowMinUsd",
+            "name": "capBufferMin",
             "type": "uint96",
             "internalType": "uint96"
           },
           {
-            "name": "borrowMaxUsd",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "pledgeMinUsd",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "pledgeMaxUsd",
+            "name": "capBufferMax",
             "type": "uint96",
             "internalType": "uint96"
           }
@@ -1494,51 +1373,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "tightenDebtSpeedLimit",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "limit",
-        "type": "tuple",
-        "internalType": "struct SpeedLimit",
-        "components": [
-          {
-            "name": "rateBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "window",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "min",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "max",
-            "type": "uint96",
-            "internalType": "uint96"
-          }
-        ]
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "tightenDebtStressRiseBps",
     "inputs": [
       {
@@ -1598,7 +1432,7 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "tightenMarketSpeedLimits",
+    "name": "tightenMarketDynamicCap",
     "inputs": [
       {
         "name": "marketId",
@@ -1606,42 +1440,27 @@ export const parameterStoreAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "limits",
+        "name": "terms",
         "type": "tuple",
-        "internalType": "struct MarketSpeedLimits",
+        "internalType": "struct MarketDynamicCap",
         "components": [
           {
-            "name": "window",
+            "name": "capInterval",
             "type": "uint32",
             "internalType": "uint32"
           },
           {
-            "name": "borrowRateBps",
+            "name": "capAlphaBps",
             "type": "uint16",
             "internalType": "uint16"
           },
           {
-            "name": "pledgeRateBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "borrowMinUsd",
+            "name": "capBufferMin",
             "type": "uint96",
             "internalType": "uint96"
           },
           {
-            "name": "borrowMaxUsd",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "pledgeMinUsd",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "pledgeMaxUsd",
+            "name": "capBufferMax",
             "type": "uint96",
             "internalType": "uint96"
           }
@@ -1980,87 +1799,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "event",
-    "name": "DebtSpeedLimitSet",
-    "inputs": [
-      {
-        "name": "hub",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "asset",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "oldLimit",
-        "type": "tuple",
-        "indexed": false,
-        "internalType": "struct SpeedLimit",
-        "components": [
-          {
-            "name": "rateBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "window",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "min",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "max",
-            "type": "uint96",
-            "internalType": "uint96"
-          }
-        ]
-      },
-      {
-        "name": "newLimit",
-        "type": "tuple",
-        "indexed": false,
-        "internalType": "struct SpeedLimit",
-        "components": [
-          {
-            "name": "rateBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "window",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "min",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "max",
-            "type": "uint96",
-            "internalType": "uint96"
-          }
-        ]
-      },
-      {
-        "name": "tightened",
-        "type": "bool",
-        "indexed": false,
-        "internalType": "bool"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "FeedConfigured",
     "inputs": [
       {
@@ -2134,7 +1872,7 @@ export const parameterStoreAbi = [
   },
   {
     "type": "event",
-    "name": "MarketSpeedLimitsSet",
+    "name": "MarketDynamicCapSet",
     "inputs": [
       {
         "name": "marketId",
@@ -2143,86 +1881,56 @@ export const parameterStoreAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "oldLimits",
+        "name": "oldTerms",
         "type": "tuple",
         "indexed": false,
-        "internalType": "struct MarketSpeedLimits",
+        "internalType": "struct MarketDynamicCap",
         "components": [
           {
-            "name": "window",
+            "name": "capInterval",
             "type": "uint32",
             "internalType": "uint32"
           },
           {
-            "name": "borrowRateBps",
+            "name": "capAlphaBps",
             "type": "uint16",
             "internalType": "uint16"
           },
           {
-            "name": "pledgeRateBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "borrowMinUsd",
+            "name": "capBufferMin",
             "type": "uint96",
             "internalType": "uint96"
           },
           {
-            "name": "borrowMaxUsd",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "pledgeMinUsd",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "pledgeMaxUsd",
+            "name": "capBufferMax",
             "type": "uint96",
             "internalType": "uint96"
           }
         ]
       },
       {
-        "name": "newLimits",
+        "name": "newTerms",
         "type": "tuple",
         "indexed": false,
-        "internalType": "struct MarketSpeedLimits",
+        "internalType": "struct MarketDynamicCap",
         "components": [
           {
-            "name": "window",
+            "name": "capInterval",
             "type": "uint32",
             "internalType": "uint32"
           },
           {
-            "name": "borrowRateBps",
+            "name": "capAlphaBps",
             "type": "uint16",
             "internalType": "uint16"
           },
           {
-            "name": "pledgeRateBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "borrowMinUsd",
+            "name": "capBufferMin",
             "type": "uint96",
             "internalType": "uint96"
           },
           {
-            "name": "borrowMaxUsd",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "pledgeMinUsd",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "pledgeMaxUsd",
+            "name": "capBufferMax",
             "type": "uint96",
             "internalType": "uint96"
           }

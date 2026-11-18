@@ -92,10 +92,6 @@ interface IAaveAdapterBase {
     /// @notice An implementation was built with a logic contract of another kind or built with other immutables.
     error InvalidLogic(address logic);
 
-    /// @notice A repay reached the RiskModule's speed credit with too little gas for its stipend.
-    /// @param required `SPEED_CREDIT_FLOOR`.
-    error InsufficientGas(uint256 gasLeft, uint256 required);
-
     /// @notice The wallet's proxy for a market was created and bound.
     event UserProxyCreated(address indexed wallet, address indexed spoke, uint256 indexed marketId, address proxy);
 

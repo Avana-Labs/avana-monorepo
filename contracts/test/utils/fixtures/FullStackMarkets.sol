@@ -9,7 +9,7 @@ import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.s
 import {INonfungiblePositionManager} from "../../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
 import {DexHop, HopKind, RouteConfig} from "../../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {LPOracle} from "../../../src/oracle/LPOracle.sol";
-import {MarketParams, MarketSpeedLimits} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {MarketDynamicCap, MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketDef} from "../../../src/types/MarketTypes.sol";
 import {PositionRef, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {RegistryRouteMock} from "../mocks/MarketRegistryMocks.sol";
@@ -154,10 +154,8 @@ abstract contract FullStackMarkets is FullStackFixture {
         vm.startPrank(address(timelock));
         store.setInitialMarketParams(id, p);
         store.setInitialMarketCaps(id, 1_000_000e8, 100_000e8, 1e8);
-        // Default speed limits (IParameterStore example): 6-hour window, 25 % per window.
-        store.loosenMarketSpeedLimits(
-            id, MarketSpeedLimits(21_600, 2500, 2500, 250_000e8, 2_500_000e8, 1_000_000e8, 10_000_000e8)
-        );
+        // Default dynamic borrow cap terms (IParameterStore example): 6-hour interval, 25 %, $250k to $2.5M buffer.
+        store.loosenMarketDynamicCap(id, MarketDynamicCap(21_600, 2500, 250_000e8, 2_500_000e8));
         if (id == 1) {
             store.setInitialTokenCap(aave.hub, address(usdc), 10_000_000e8);
             store.setInitialTokenCap(aave.hub, address(usdt), 10_000_000e8);

@@ -146,7 +146,7 @@ abstract contract AvanaPeripheryDeploy is AvanaCoreDeploy {
             "LensPreviewModule",
             "LensMarketsModule",
             "LensPositionsModule",
-            "LensSpeedModule"
+            "LensDynamicCapModule"
         ];
         d.lensModules = new address[](9);
         for (uint256 i = 0; i < 9; ++i) {

@@ -216,11 +216,6 @@ export const collateralizationAbi = [
             "internalType": "uint40"
           },
           {
-            "name": "windowedBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
             "name": "credited",
             "type": "uint128",
             "internalType": "uint128"
@@ -435,11 +430,6 @@ export const collateralizationAbi = [
             "internalType": "uint40"
           },
           {
-            "name": "windowedBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
             "name": "credited",
             "type": "uint128",
             "internalType": "uint128"
@@ -579,11 +569,6 @@ export const collateralizationAbi = [
             "name": "lastDebitedAt",
             "type": "uint40",
             "internalType": "uint40"
-          },
-          {
-            "name": "windowedBps",
-            "type": "uint16",
-            "internalType": "uint16"
           },
           {
             "name": "credited",

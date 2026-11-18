@@ -115,11 +115,11 @@ contract RiskModuleScopeUnitTest is RiskModuleFixture {
 
     // TEST-028 verifies: REQ-ADAPTER-023, REQ-RISK-077, Q-118, Q-197, Q-314
     // Sources: 2.7 REQ-ADAPTER-023 (Aave enforces the drawCap and the freeze inside Spoke.borrow; the only amount gate
-    // of the RiskModule is the speed windows of REQ-RISK-092)
+    // of the RiskModule is the dynamic borrow cap)
     /// @notice `preBorrowCheck` of a same-Hub reserve passes whatever the reserve's `drawCap` and drawn amount, with the
-    /// debt reserve frozen on the Spoke, and for any number of checks of any size within the speed windows in one
-    /// block: those limits are Aave's, checked inside `Spoke.borrow`. The fixture's store leaves the windows open
-    /// (`uint96` maximum), and a check not made by the AaveAdapter charges nothing.
+    /// debt reserve frozen on the Spoke, and for any number of checks of any size within the dynamic borrow cap in one
+    /// block: those limits are Aave's, checked inside `Spoke.borrow`. The fixture's store leaves the cap open
+    /// (`uint96` maximum buffer), and a check not made by the AaveAdapter stores nothing.
     /// @dev Kills: a `drawCap`, drawn-amount, debt-reserve freeze or cumulative-amount check added to the borrow gate.
     function test_TEST_028_drawCapFreezeAndDailyLimitAreAaves() public {
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
@@ -130,7 +130,7 @@ contract RiskModuleScopeUnitTest is RiskModuleFixture {
         // The GHO reserve frozen on the Spoke (still borrowable).
         rSpoke.setConfig(GHO_RESERVE, IAaveV4Spoke.ReserveConfig(0, false, true, true, false));
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1e27);
-        // No daily limit beyond the speed windows: repeated large checks in one block.
+        // No daily limit beyond the dynamic borrow cap: repeated large checks in one block.
         for (uint256 i = 0; i < 5; ++i) {
             riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1e27);
         }

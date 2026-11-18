@@ -45,8 +45,8 @@ import {RiskModule} from "../../../src/policy/risk-module/RiskModule.sol";
 import {RiskModuleBorrowLogic} from "../../../src/policy/risk-module/RiskModuleBorrowLogic.sol";
 import {RiskModuleBreakerLogic} from "../../../src/policy/risk-module/RiskModuleBreakerLogic.sol";
 import {RiskModuleDriftLogic} from "../../../src/policy/risk-module/RiskModuleDriftLogic.sol";
+import {RiskModuleDynamicCapLogic} from "../../../src/policy/risk-module/RiskModuleDynamicCapLogic.sol";
 import {RiskModulePledgeLogic} from "../../../src/policy/risk-module/RiskModulePledgeLogic.sol";
-import {RiskModuleSpeedLogic} from "../../../src/policy/risk-module/RiskModuleSpeedLogic.sol";
 import {RiskModuleStatusLogic} from "../../../src/policy/risk-module/RiskModuleStatusLogic.sol";
 import {RiskModuleImmutables, RiskModuleLogics} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
@@ -269,7 +269,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         m[5] = deployCode("LensPreviewModule.sol:LensPreviewModule", abi.encode(core));
         m[6] = deployCode("LensMarketsModule.sol:LensMarketsModule", abi.encode(core));
         m[7] = deployCode("LensPositionsModule.sol:LensPositionsModule", abi.encode(core));
-        m[8] = deployCode("LensSpeedModule.sol:LensSpeedModule", abi.encode(core));
+        m[8] = deployCode("LensDynamicCapModule.sol:LensDynamicCapModule", abi.encode(core));
         lens = ILens(deployCode("Lens.sol:Lens:default", abi.encode(m)));
     }
 
@@ -401,7 +401,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         l.pledge = address(new RiskModulePledgeLogic(riskIm, l.drift, l.breaker));
         l.borrow = address(new RiskModuleBorrowLogic(riskIm, l.drift, l.breaker));
         l.status = address(new RiskModuleStatusLogic(riskIm, l.drift, l.breaker, l.borrow));
-        l.speed = address(new RiskModuleSpeedLogic(riskIm));
+        l.dynamicCap = address(new RiskModuleDynamicCapLogic(riskIm));
         RiskModule impl = new RiskModule(riskIm, l);
         AdapterPlaceholder(riskAddr)
             .upgradeToAndCall(address(impl), abi.encodeCall(RiskModule.initialize, (address(timelock))));

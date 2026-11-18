@@ -1168,116 +1168,6 @@ export const lensAbi = [
   },
   {
     "type": "function",
-    "name": "getBorrowSpeed",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "speed",
-        "type": "tuple",
-        "internalType": "struct BorrowSpeedView",
-        "components": [
-          {
-            "name": "market",
-            "type": "tuple",
-            "internalType": "struct SpeedView",
-            "components": [
-              {
-                "name": "limit",
-                "type": "uint256",
-                "internalType": "uint256"
-              },
-              {
-                "name": "used",
-                "type": "uint256",
-                "internalType": "uint256"
-              },
-              {
-                "name": "available",
-                "type": "uint256",
-                "internalType": "uint256"
-              },
-              {
-                "name": "moreAt",
-                "type": "uint64",
-                "internalType": "uint64"
-              },
-              {
-                "name": "moreAmount",
-                "type": "uint256",
-                "internalType": "uint256"
-              },
-              {
-                "name": "unavailable",
-                "type": "bool",
-                "internalType": "bool"
-              }
-            ]
-          },
-          {
-            "name": "debt",
-            "type": "tuple",
-            "internalType": "struct SpeedView",
-            "components": [
-              {
-                "name": "limit",
-                "type": "uint256",
-                "internalType": "uint256"
-              },
-              {
-                "name": "used",
-                "type": "uint256",
-                "internalType": "uint256"
-              },
-              {
-                "name": "available",
-                "type": "uint256",
-                "internalType": "uint256"
-              },
-              {
-                "name": "moreAt",
-                "type": "uint64",
-                "internalType": "uint64"
-              },
-              {
-                "name": "moreAmount",
-                "type": "uint256",
-                "internalType": "uint256"
-              },
-              {
-                "name": "unavailable",
-                "type": "bool",
-                "internalType": "bool"
-              }
-            ]
-          },
-          {
-            "name": "availableNow",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "moreAt",
-            "type": "uint64",
-            "internalType": "uint64"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getBreakerStatus",
     "inputs": [
       {
@@ -1836,6 +1726,35 @@ export const lensAbi = [
             "internalType": "uint32"
           }
         ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getDynamicBorrowCap",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "cap",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "debt",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "intervalStart",
+        "type": "uint64",
+        "internalType": "uint64"
       }
     ],
     "stateMutability": "view"
@@ -2842,57 +2761,6 @@ export const lensAbi = [
             "name": "valueDebt",
             "type": "uint256",
             "internalType": "uint256"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getPledgeSpeed",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "pledge",
-        "type": "tuple",
-        "internalType": "struct SpeedView",
-        "components": [
-          {
-            "name": "limit",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "used",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "available",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "moreAt",
-            "type": "uint64",
-            "internalType": "uint64"
-          },
-          {
-            "name": "moreAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "unavailable",
-            "type": "bool",
-            "internalType": "bool"
           }
         ]
       }

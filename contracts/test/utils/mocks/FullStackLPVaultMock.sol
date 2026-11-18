@@ -74,7 +74,7 @@ contract FullStackLPVaultMock is IntegLPVaultMock {
 
 /// @title FullStackAvanaFirstLossReserveMock
 /// @notice A First-Loss Reserve as the MarketRegistry and the ParameterStore read it (`RegistryAvanaFirstLossReserveMock` plus the
-/// first-loss reserve minimum the ParameterStore bounds its breaker and speed settings by).
+/// first-loss reserve minimum the ParameterStore bounds its breaker settings by).
 contract FullStackAvanaFirstLossReserveMock is RegistryAvanaFirstLossReserveMock {
     uint256 public firstLossReserveMinimum;
 

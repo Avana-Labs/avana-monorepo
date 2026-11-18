@@ -106,14 +106,14 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
 
     // TEST-239 verifies: REQ-ADAPTER-080, REQ-ADAPTER-086, REQ-ADAPTER-047, Q-356
     /// @notice With every gate the RiskModule applies failing (sequencer aside, which the Adapter itself reads for a
-    /// repay with collateral), a repay with collateral completes and calls no RiskModule check (only the speed credit).
+    /// repay with collateral), a repay with collateral completes and calls no RiskModule check.
     function test_TEST_239_repayWithCollateralCallsNoRiskModule() public {
         lpOracleA.setState(PriceState.Expired, 0, false);
         usdcOracle.setReport(PriceState.Expired, uint64(block.timestamp), false);
         riskVault.setDepth(0, false);
         swap.setActiveKeeperCount(0);
         swap.setDeleverage(1000e18, 2e12, 0);
-        // The one RiskModule call an exit makes is the speed credit (REQ-RISK-005); no check is called.
+        // An exit makes no RiskModule call; no check is called.
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preBorrowCheck.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.postHealthCheck.selector), 0);
@@ -130,10 +130,10 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
 
     // TEST-099 verifies: REQ-ADAPTER-047, REQ-ADAPTER-086, REQ-PROXY-035, INV-043, INV-045
     /// @notice Every exit completes with every RiskModule gate failing, the sequencer down included, and none calls a
-    /// RiskModule check (each repay and release only gives room back to the speed windows).
+    /// RiskModule check.
     function test_TEST_099_exitsCallNoRiskModule() public {
         _stopEverythingTheRiskModuleReads();
-        // The one RiskModule call an exit makes is the speed credit (REQ-RISK-005); no check is called.
+        // An exit makes no RiskModule call; no check is called.
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preBorrowCheck.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
         vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.postHealthCheck.selector), 0);

@@ -389,7 +389,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         uint256[] memory caps = new uint256[](1);
         caps[0] = g;
         vm.expectCall(address(registry), "", 0);
-        // The one RiskModule call an exit makes is the speed credit (REQ-RISK-005); no check is called.
+        // An exit makes no RiskModule call; no check is called.
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.preBorrowCheck.selector), 0);
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
         vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.postHealthCheck.selector), 0);

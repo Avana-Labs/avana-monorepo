@@ -71,7 +71,7 @@ interface ICollateralizationBase {
     error InvalidDepositor(address depositor);
 
     /// @notice Too little gas left for a call whose failure must not come from the caller's gas limit.
-    /// @param required `DEBT_MARK_GAS_FLOOR` or `SPEED_CREDIT_FLOOR`.
+    /// @param required `DEBT_MARK_GAS_FLOOR`.
     error InsufficientGas(uint256 gasLeft, uint256 required);
 
     /// @notice `releasePartial` asked for at least the record's credited units; use a full withdrawal instead.

@@ -5,9 +5,9 @@ pragma solidity 0.8.28;
 
 import {ILens} from "../../src/lens/lens/ILens.sol";
 import {ILensActions} from "../../src/lens/lens/ILensActions.sol";
+import {ILensDynamicCap} from "../../src/lens/lens/ILensDynamicCap.sol";
 import {ILensFees} from "../../src/lens/lens/ILensFees.sol";
 import {ILensHubAssets} from "../../src/lens/lens/ILensHubAssets.sol";
-import {ILensSpeed} from "../../src/lens/lens/ILensSpeed.sol";
 import {Lens} from "../../src/lens/lens/Lens.sol";
 import {LensModuleStub, LensProperties} from "../invariant/echidna/LensProperties.sol";
 import {Test} from "forge-std/Test.sol";
@@ -64,9 +64,8 @@ contract LensRoutingStubsUnitTest is Test {
     }
 
     // TEST-247 verifies: REQ-LENS-001, REQ-LENS-061
-    function test_TEST_247_speedViewsReachTheSpeedModule() public view {
-        _route(abi.encodeCall(ILensSpeed.getBorrowSpeed, (4, 2)), 8);
-        _route(abi.encodeCall(ILensSpeed.getPledgeSpeed, (4)), 8);
+    function test_TEST_247_dynamicCapViewReachesTheDynamicCapModule() public view {
+        _route(abi.encodeCall(ILensDynamicCap.getDynamicBorrowCap, (4)), 8);
     }
 
     // TEST-247 verifies: REQ-LENS-001

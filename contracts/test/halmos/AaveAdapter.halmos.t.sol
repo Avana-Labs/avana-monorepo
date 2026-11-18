@@ -185,17 +185,6 @@ contract HalmosSpoke {
     }
 }
 
-/// @notice RiskModule stand-in: `creditRepay` accepts every credit. The repay step calls it after each repay
-/// (REQ-RISK-092) inside a try/catch, which cannot catch a call to an address with no code, so the RiskModule must be a
-/// contract; the credit's own effect on the speed windows is checked in the RiskModule's tests.
-contract HalmosRiskModule {
-    function creditRepay(
-        address,
-        uint256,
-        uint256
-    ) external {}
-}
-
 /// @notice Collateralization stand-in: the market's credited total and pending units, and a debit.
 contract HalmosCollateralization {
     uint256 public credited;
@@ -281,8 +270,6 @@ contract AaveAdapterStepsHarness is AaveAdapterSteps {
 /// amounts are bounded to `uint128`, the Hub's amount bound. Addresses are constants or contracts built in `setUp`.
 contract AaveAdapterHalmosTest is Test {
     address internal constant PAYER = address(0xBA7E5);
-    /// @dev `AaveAdapterStorage.SPEED_CREDIT_FLOOR`: the 250,000 gas stipend, ⌊250,000 / 63⌋ = 3,968 and 10,000.
-    uint256 internal constant SPEED_CREDIT_FLOOR = 263_968;
 
     HalmosToken internal vt;
     HalmosToken internal asset;
@@ -301,7 +288,7 @@ contract AaveAdapterHalmosTest is Test {
         AaveAdapterImmutables memory im = AaveAdapterImmutables({
             proxyManager: address(0x1001),
             collateralization: address(coll),
-            riskModule: address(new HalmosRiskModule()),
+            riskModule: address(0x1003),
             marketRegistry: address(0x1004),
             parameterStore: address(0x1005),
             lpVaultSwap: address(0x1006),
@@ -389,20 +376,6 @@ contract AaveAdapterHalmosTest is Test {
             assert(asset.balanceOf(address(proxy)) == 0);
             assert(asset.allowance(address(proxy), address(spoke)) == 0);
         } catch (bytes memory reason) {
-            // A repay that moved debt refuses only a caller who left too little gas for the RiskModule's credit
-            // stipend (REQ-RISK-005); Halmos leaves the gas left free, so that refusal is a feasible path here.
-            if (bytes4(reason) == IAaveAdapterBase.InsufficientGas.selector) {
-                assert(d != 0 && (!repayAll || d <= cap) && reason.length == 68);
-                uint256 left;
-                uint256 required;
-                // solhint-disable-next-line no-inline-assembly
-                assembly {
-                    left := mload(add(reason, 36))
-                    required := mload(add(reason, 68))
-                }
-                assert(required == SPEED_CREDIT_FLOOR && left < required);
-                return;
-            }
             assert(repayAll && d > cap);
             assert(
                 keccak256(reason)

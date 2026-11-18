@@ -15,8 +15,8 @@ import {RiskModule} from "../../../src/policy/risk-module/RiskModule.sol";
 import {RiskModuleBorrowLogic} from "../../../src/policy/risk-module/RiskModuleBorrowLogic.sol";
 import {RiskModuleBreakerLogic} from "../../../src/policy/risk-module/RiskModuleBreakerLogic.sol";
 import {RiskModuleDriftLogic} from "../../../src/policy/risk-module/RiskModuleDriftLogic.sol";
+import {RiskModuleDynamicCapLogic} from "../../../src/policy/risk-module/RiskModuleDynamicCapLogic.sol";
 import {RiskModulePledgeLogic} from "../../../src/policy/risk-module/RiskModulePledgeLogic.sol";
-import {RiskModuleSpeedLogic} from "../../../src/policy/risk-module/RiskModuleSpeedLogic.sol";
 import {RiskModuleStatusLogic} from "../../../src/policy/risk-module/RiskModuleStatusLogic.sol";
 import {RiskModuleImmutables, RiskModuleLogics} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {RiskDebtOracleMock, RiskLPOracleMock, RiskLPVaultMock, RiskStoreMock} from "../mocks/RiskModuleMocks.sol";
@@ -116,7 +116,7 @@ abstract contract AaveAdapterRiskFixture is AaveAdapterFixture {
         l.pledge = address(new RiskModulePledgeLogic(rmIm, l.drift, l.breaker));
         l.borrow = address(new RiskModuleBorrowLogic(rmIm, l.drift, l.breaker));
         l.status = address(new RiskModuleStatusLogic(rmIm, l.drift, l.breaker, l.borrow));
-        l.speed = address(new RiskModuleSpeedLogic(rmIm));
+        l.dynamicCap = address(new RiskModuleDynamicCapLogic(rmIm));
         RiskModule rmImpl = new RiskModule(rmIm, l);
         rm = RiskModule(address(new ERC1967Proxy(address(rmImpl), abi.encodeCall(RiskModule.initialize, (timelock)))));
         vm.label(address(rm), "RiskModule");

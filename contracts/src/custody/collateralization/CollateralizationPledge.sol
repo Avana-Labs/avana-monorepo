@@ -13,7 +13,6 @@ import {ILPVault} from "../lp-vault/ILPVault.sol";
 import {CollateralizationLedger} from "./CollateralizationLedger.sol";
 import {ICollateralization} from "./ICollateralization.sol";
 import {BackingRecord} from "./types/CollateralizationTypes.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title CollateralizationPledge
@@ -34,7 +33,8 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
     ) external override {
         (Ctx memory c, uint256 id, BackingRecord storage r) = _prepareExit(vaultToken, positionKey, proxy, units, 0);
         if (units == 0 || units != r.credited) revert UnitsMismatch();
-        _creditSpeed(c.marketId, _windowed(r, _debitRecord(c, r, units)));
+        // forge-lint: disable-next-line(unused-return)
+        _debitRecord(c, r, units);
         emit CollateralReleased(id, positionKey, r.depositor, proxy, vaultToken, units);
         _close(c, id, r);
         _returnPosition(c, positionKey);
@@ -54,7 +54,6 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         if (units == 0) revert UnitsMismatch();
         if (units >= credited) revert PartialRemovalTooLarge(units, credited);
         uint256 released = _debitRecord(c, r, units);
-        _creditSpeed(c.marketId, _windowed(r, released));
         remaining = credited - units;
         emit RecordReduced(id, units, released);
         address depositor = r.depositor;
@@ -77,7 +76,6 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
             _prepareExit(vaultToken, positionKey, proxy, units, minAmounts.length + 1);
         if (units == 0 || units > r.credited) revert UnitsMismatch();
         uint256 released = _debitRecord(c, r, units);
-        _creditSpeed(c.marketId, _windowed(r, released));
         closed = r.credited == 0;
         emit RecordReduced(id, units, released);
         if (closed) {
@@ -139,27 +137,6 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         _reconcile(c, proxy, _supplied(c, proxy) + units);
     }
 
-    /// @dev The part of `released` USD the pledge window was charged, rounded down.
-    function _windowed(
-        BackingRecord storage r,
-        uint256 released
-    ) private view returns (uint256) {
-        return released * r.windowedBps / WINDOW_BPS;
-    }
-
-    /// @notice Gives the booked value a withdrawal released back to the market's pledge-speed window.
-    function _creditSpeed(
-        uint256 marketId,
-        uint256 usd
-    ) private {
-        if (usd == 0) return;
-        uint256 left = gasleft();
-        if (left < SPEED_CREDIT_FLOOR) revert InsufficientGas(left, SPEED_CREDIT_FLOOR);
-        // A failed credit only leaves the window fuller than the net pledges; it must not block the exit.
-        // solhint-disable-next-line no-empty-blocks
-        try IRiskModule(_RISK_MODULE).creditWithdraw{gas: SPEED_CREDIT_GAS}(marketId, usd) {} catch {}
-    }
-
     function _depositorRecord(
         Ctx memory c,
         bytes32 positionKey,
@@ -214,7 +191,6 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
             // forge-lint: disable-next-line(unsafe-typecast)
             pledgedAt: uint40(block.timestamp),
             lastDebitedAt: 0,
-            windowedBps: charge.rescue ? 0 : WINDOW_BPS,
             credited: credited,
             originalUnits: credited,
             rescueUnits: charge.rescueUnits,
@@ -285,7 +261,6 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         uint256 rebased = r.currentUsdCharge + charge.usdCharge;
         if (rebased >= CHARGE_BOUND) revert InvalidCharge();
         rescueUnits = charge.rescueUnits;
-        r.windowedBps = _windowedBps(r.currentUsdCharge, r.windowedBps, charge, rebased);
         // credited + added <= 2^120 - 1 (`_uncredited`) and rebased < 2^64.
         uint128 units = r.credited + added;
         r.credited = units;
@@ -299,19 +274,6 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         r.rescueUnits += rescueUnits;
         _credit(c, r.proxy, added, rescueUnits);
         _book(c, charge);
-    }
-
-    /// @dev The record's `windowedBps` after a re-credit, rounded down so an exit never credits more than was charged.
-    function _windowedBps(
-        uint256 current,
-        uint16 bps,
-        PledgeCharge memory charge,
-        uint256 rebased
-    ) private pure returns (uint16) {
-        if (rebased == 0) return WINDOW_BPS;
-        uint256 windowed = current * bps / WINDOW_BPS + (charge.rescue ? 0 : charge.usdCharge);
-        // windowed <= rebased, so the share is at most WINDOW_BPS and fits uint16; `rebased` is non-zero here.
-        return SafeCast.toUint16(Math.mulDiv(windowed, WINDOW_BPS, rebased));
     }
 
     function _prepareRecredit(
@@ -343,7 +305,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         bytes32 positionKey,
         uint128 units,
         bool requireRescue
-    ) private returns (PledgeCharge memory) {
+    ) private view returns (PledgeCharge memory) {
         PledgeCounters memory counters = _counters(c);
         counters.accountRecords = seizureList[proxy][c.vaultToken].length + zeroCreditList[proxy][c.vaultToken].length;
         return IRiskModule(_RISK_MODULE)

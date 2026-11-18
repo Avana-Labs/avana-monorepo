@@ -8,6 +8,7 @@ import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.s
 import {ILens} from "../../../src/lens/lens/ILens.sol";
 import {Lens} from "../../../src/lens/lens/Lens.sol";
 import {LensAccountModule} from "../../../src/lens/lens/LensAccountModule.sol";
+import {LensDynamicCapModule} from "../../../src/lens/lens/LensDynamicCapModule.sol";
 import {LensLiquidationModule} from "../../../src/lens/lens/LensLiquidationModule.sol";
 import {LensMarketModule} from "../../../src/lens/lens/LensMarketModule.sol";
 import {LensMarketsModule} from "../../../src/lens/lens/LensMarketsModule.sol";
@@ -15,7 +16,6 @@ import {LensPositionsModule} from "../../../src/lens/lens/LensPositionsModule.so
 import {LensPreviewModule} from "../../../src/lens/lens/LensPreviewModule.sol";
 import {LensPriceModule} from "../../../src/lens/lens/LensPriceModule.sol";
 import {LensRiskModule} from "../../../src/lens/lens/LensRiskModule.sol";
-import {LensSpeedModule} from "../../../src/lens/lens/LensSpeedModule.sol";
 import {PayoutEscrow} from "../../../src/liquidation/payout-escrow/PayoutEscrow.sol";
 import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
@@ -137,7 +137,7 @@ abstract contract LensFixture is CollateralizationFixture {
         m[5] = address(new LensPreviewModule(c));
         m[6] = address(new LensMarketsModule(c));
         m[7] = address(new LensPositionsModule(c));
-        m[8] = address(new LensSpeedModule(c));
+        m[8] = address(new LensDynamicCapModule(c));
     }
 
     /// @dev USDC (the market's first pool token) as a debt reserve of the CDP Spoke, priced by its DebtOracle.

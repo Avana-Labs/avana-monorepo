@@ -194,7 +194,7 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
             (bool ok,) = address(store).staticcall(abi.encodePacked(sels[i], new bytes(64)));
             assertFalse(ok, removed[i]);
         }
-        // One pass over each code for all the removed selectors (the store's code grew with the speed limits, and a
+        // One pass over each code for all the removed selectors (the store's code grew with the cap terms, and a
         // pass per selector ran out of the block gas limit in the unoptimized coverage build).
         for (uint256 j = 0; j < codes.length; ++j) {
             bytes memory code = codes[j].code;

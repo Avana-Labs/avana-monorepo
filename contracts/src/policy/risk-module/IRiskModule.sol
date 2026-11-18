@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {AccountGateStatus, DriftReason} from "../../types/MarketTypes.sol";
 import {PledgeCounters, PledgePreview} from "../../types/PositionTypes.sol";
 import {IRiskModuleErrors} from "./IRiskModuleErrors.sol";
-import {PledgeCharge, SpeedScope, SpeedView, SpeedWindow} from "./types/RiskModuleTypes.sol";
+import {DynamicCap, PledgeCharge} from "./types/RiskModuleTypes.sol";
 
 /// @title IRiskModule
 /// @notice Avana's risk checks on one chain: the pledge check and the borrow-side pre- and post-checks.
@@ -22,7 +22,6 @@ interface IRiskModule is IRiskModuleErrors {
     event ConfigDriftDetected(address indexed spoke, DriftReason reason);
 
     /// @notice Pledge eligibility, rescue rule, minimum, breaker, charge and cap check; returns the charge or reverts.
-    /// @dev Only Collateralization's call writes the pledge-speed window; any other caller writes nothing.
     /// @param units Units to credit: the position's units for a pledge, the added units for a re-credit.
     /// @param requireRescue True when only a rescue top-up may pass; the AaveAdapter passes false.
     function checkPledge(
@@ -34,32 +33,15 @@ interface IRiskModule is IRiskModuleErrors {
         uint128 units,
         PledgeCounters calldata counters,
         bool requireRescue
-    ) external returns (PledgeCharge memory charge);
+    ) external view returns (PledgeCharge memory charge);
 
-    /// @notice Pre-borrow gate over the account's collateral market and every debt reserve of the account.
-    /// @dev Anyone may call; only the AaveAdapter's call adds the borrow-speed charges.
+    /// @notice Pre-borrow gate over the account's collateral market and every debt reserve of the account, with the dynamic borrow cap.
+    /// @dev Anyone may call; only the AaveAdapter's call stores the market's cap interval.
     /// @param amount Amount borrowed, base units of the reserve's asset.
     function preBorrowCheck(
         address proxy,
         uint256 debtReserveId,
         uint256 amount
-    ) external;
-
-    /// @notice Gives room back in the borrow-speed windows after a repay.
-    /// @dev Only the AaveAdapter; reverts `NotSpeedWriter` otherwise.
-    /// @param amount Base units the repay took.
-    function creditRepay(
-        address proxy,
-        uint256 debtReserveId,
-        uint256 amount
-    ) external;
-
-    /// @notice Gives room back in a market's pledge-speed window after a withdrawal.
-    /// @dev Only Collateralization; reverts `NotSpeedWriter` otherwise.
-    /// @param usd Booked value released, 8-decimal USD.
-    function creditWithdraw(
-        uint256 marketId,
-        uint256 usd
     ) external;
 
     /// @notice Pre-withdrawal gate for an account with debt.
@@ -183,26 +165,17 @@ interface IRiskModule is IRiskModuleErrors {
         address proxy
     ) external view returns (uint256 usd);
 
-    /// @notice The market and (funding Hub, asset) borrow-speed windows as the next borrow of the reserve sees them.
-    /// @dev Never reverts: a failed read returns both views with `unavailable = true`.
-    /// @return market The market window, 8-decimal USD.
-    /// @return debt The (funding Hub, asset) window, asset base units.
-    function getBorrowSpeed(
-        uint256 marketId,
-        uint256 debtReserveId
-    ) external view returns (SpeedView memory market, SpeedView memory debt);
-
-    /// @notice The market's pledge-speed window as the next non-rescue pledge would see it now.
-    /// @dev Never reverts; reports `unavailable` while Collateralization's lock is held.
-    /// @return pledge The pledge window, 8-decimal USD.
-    function getPledgeSpeed(
+    /// @notice The market's dynamic borrow cap as the next borrow would see it, with the market's debt now.
+    /// @dev Reverts `MarketNotActive` for a market without a vault token.
+    /// @return cap The running interval's cap, or the cap a new interval would fix on the current debt, 8-decimal USD.
+    /// @return debt The market's debt, 8-decimal USD.
+    /// @return intervalStart The running interval's start, or the current time when the next borrow opens one.
+    function getDynamicBorrowCap(
         uint256 marketId
-    ) external view returns (SpeedView memory pledge);
+    ) external view returns (uint256 cap, uint256 debt, uint64 intervalStart);
 
-    /// @notice A speed window as stored, not rolled to now.
-    /// @param key `bytes32(marketId)` for a market window, `keccak256(abi.encode(hub, asset))` for a debt window.
-    function getSpeedWindow(
-        SpeedScope scope,
-        bytes32 key
-    ) external view returns (SpeedWindow memory window);
+    /// @notice A market's cap interval as stored, not rolled to now.
+    function getDynamicCap(
+        uint256 marketId
+    ) external view returns (DynamicCap memory interval);
 }

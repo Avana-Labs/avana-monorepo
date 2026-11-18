@@ -12,11 +12,7 @@ import {INonfungiblePositionManager} from "../../../src/interfaces/external/unis
 import {LiquidationParams, LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPOracle} from "../../../src/oracle/LPOracle.sol";
 import {DebtReserveDef, RiskTier, SpokeDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {
-    MarketParams,
-    MarketSpeedLimits,
-    SpeedLimit
-} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {MarketDynamicCap, MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketDef} from "../../../src/types/MarketTypes.sol";
 import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {OracleFeedMock} from "../mocks/LPOracleMocks.sol";
@@ -187,7 +183,7 @@ abstract contract RealStackVolatile is RealStackFlows {
 
     /// @dev `asset` on the Volatile Hub lent through the Lend Spoke (1,000,000 whole tokens), its borrowable reserve on
     /// the Volatile Spoke priced by `source`, a real First-Loss Reserve (100,000 whole tokens) and credit line on the
-    /// Hub, and the reserve enabled in the MarketRegistry with the asset's default speed limit on the Hub.
+    /// Hub, and the reserve enabled in the MarketRegistry.
     function _volatileDebt(
         ClTestToken asset,
         uint8 dec,
@@ -217,8 +213,6 @@ abstract contract RealStackVolatile is RealStackFlows {
     ) private {
         vm.startPrank(address(timelock));
         registry.enableDebtReserve(spokeV, def);
-        uint96 unit = uint96(10 ** def.decimals);
-        store.loosenDebtSpeedLimit(hubV, def.asset, SpeedLimit(2500, 21_600, 500_000 * unit, 5_000_000 * unit));
         vm.stopPrank();
     }
 
@@ -448,9 +442,7 @@ abstract contract RealStackVolatile is RealStackFlows {
         vm.startPrank(address(timelock));
         store.setInitialMarketParams(id, mp);
         store.setInitialMarketCaps(id, 1_000_000e8, 100_000e8, 1e8);
-        store.loosenMarketSpeedLimits(
-            id, MarketSpeedLimits(21_600, 2500, 2500, 250_000e8, 2_500_000e8, 1_000_000e8, 10_000_000e8)
-        );
+        store.loosenMarketDynamicCap(id, MarketDynamicCap(21_600, 2500, 250_000e8, 2_500_000e8));
         vm.stopPrank();
     }
 

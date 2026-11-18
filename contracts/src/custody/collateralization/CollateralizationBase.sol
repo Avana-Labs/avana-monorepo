@@ -66,16 +66,8 @@ abstract contract CollateralizationBase is ICollateralizationBase {
 
     uint256 internal constant CHARGE_BOUND = 2 ** 64;
 
-    /// @dev `BackingRecord.windowedBps` of a charge the pledge window took in full.
-    uint16 internal constant WINDOW_BPS = 10_000;
-
     /// @notice Gas that must be left after a failed `markDebtFree` read for the failure to count as the read's own.
     uint256 internal constant DEBT_MARK_GAS_FLOOR = 50_000;
-
-    uint256 internal constant SPEED_CREDIT_GAS = 100_000;
-
-    /// @notice Gas an exit must hold before the credit call, so the credit always receives its full stipend.
-    uint256 internal constant SPEED_CREDIT_FLOOR = SPEED_CREDIT_GAS + SPEED_CREDIT_GAS / 63 + 10_000;
 
     /// @dev First of five transient slots of the seizure snapshot; slot +0 (`proxy`) is non-zero while active.
     uint256 internal constant SEIZURE_SLOT = uint256(keccak256("avana.collateralization.seizure"));

@@ -27,11 +27,6 @@ abstract contract AaveAdapterStorage is IAaveAdapterBase {
     uint256 internal constant STEP_REPAID = 1;
     uint256 internal constant STEP_RELEASED = 2;
 
-    /// @dev Gas given to the RiskModule's `creditRepay` after a repay step, about twice the measured cost.
-    uint256 internal constant SPEED_CREDIT_GAS = 250_000;
-    /// @dev Gas a repay step must hold before the credit call, so the credit always gets its full stipend.
-    uint256 internal constant SPEED_CREDIT_FLOOR = SPEED_CREDIT_GAS + SPEED_CREDIT_GAS / 63 + 10_000;
-
     address internal immutable _PROXY_MANAGER;
     address internal immutable _COLLATERALIZATION;
     address internal immutable _RISK_MODULE;
