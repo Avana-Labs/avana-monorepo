@@ -18,14 +18,9 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title DebtOracleEvaluation
-/// @notice One evaluation of the debt asset: configuration, legs, routes, quote and failover, agreement, state,
-/// failure start, disagreement windows, served price and its age limits, sequencer gate, grace and second source.
-/// @dev Shared by every view and `poke()`, so `getPriceState().answer == latestAnswer()` in the same block. It reads
-/// storage and makes only gas-guarded static calls; it never writes and never reverts except `InsufficientGas`.
-/// @custom:spec REQ-ORACLE-092, REQ-ORACLE-093, REQ-ORACLE-094, REQ-ORACLE-095, SPEC-ORC-013, SPEC-ORC-015, SPEC-ORC-016, SPEC-ORC-018, SPEC-ORC-020, SPEC-ORC-021
+/// @notice One evaluation of the debt asset, shared by every view and `poke()`.
+/// @dev Writes nothing and never reverts except `InsufficientGas`.
 abstract contract DebtOracleEvaluation is DebtOracleReads {
-    /// @dev Evaluates the asset in the current block.
-    /// @custom:spec REQ-ORACLE-092, REQ-ORACLE-093, REQ-ORACLE-016, REQ-ORACLE-026
     function _evaluate() internal view returns (DebtEvaluation memory e) {
         DebtOracleLayout storage $ = _s();
         e.accepted = $.accepted.price8;
@@ -46,10 +41,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
             && block.timestamp - e.servedUpdatedAt <= e.borrowPriceMaxAge;
     }
 
-    /// @dev Every configuration read of `REQ-ORACLE-092`; false when one fails (reason bit 2). A failed `cachedWindow`
-    /// read uses `lastCachedWindow` and a failed `debtStressRiseBps` read `lastStressRiseBps`, the values the last
-    /// writing call read. A stress rise above `MAX_STRESS_RISE_BPS` is read as 5,000 (`SPEC-ORC-018`).
-    /// @custom:spec REQ-ORACLE-092, REQ-ORACLE-094, REQ-ORACLE-017, REQ-ORACLE-083
+    /// @dev Every configuration read; false when one fails. Failed window or stress-rise reads use stored values.
     function _readConfig(
         DebtOracleLayout storage $,
         DebtEvaluation memory e
@@ -92,9 +84,6 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         }
     }
 
-    /// @dev `MarketRegistry.getToken(asset).listed`: the return is an offset word (32) and the struct, whose first word
-    /// is `listed`.
-    /// @custom:spec REQ-ORACLE-091, REQ-ORACLE-092
     function _readListed(
         address registry,
         address asset
@@ -103,9 +92,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         return s && w.length == 2 && w[0] == 32 && w[1] == 1;
     }
 
-    /// @dev `MarketRegistry.activePriceRoutes(asset)` in its canonical encoding: two arrays of one or two aggregator
-    /// addresses each and the replaced slot. Any other shape (no leg, more than two legs, another layout) fails.
-    /// @custom:spec REQ-ORACLE-094, REQ-ORACLE-017
+    /// @dev `MarketRegistry.activePriceRoutes(asset)`: two routes of one or two legs; any other shape fails.
     function _readRouteFeeds(
         address registry,
         address asset
@@ -123,7 +110,6 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         ok = _setFeeds(routes[0], w, 4, n0) && _setFeeds(routes[1], w, 5 + n0, n1);
     }
 
-    /// @dev Copies `n` aggregator words from `w[first..]` into a route.
     function _setFeeds(
         RouteRead memory route,
         uint256[] memory w,
@@ -139,9 +125,6 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         return true;
     }
 
-    /// @dev Reads the legs of a route and classifies it (`REQ-ORACLE-004`, `SPEC-ORC-002`, `SPEC-ORC-013`): valid only
-    /// if every leg is valid and `1 <= r <= MAX_ROUTE_ANSWER`; `Stale` if every failing leg is `Stale` and `r` passes.
-    /// @custom:spec REQ-ORACLE-004, SPEC-ORC-002, SPEC-ORC-013, REQ-ORACLE-092
     function _readRoute(
         RouteRead memory route
     ) internal view {
@@ -186,9 +169,6 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         }
     }
 
-    /// @dev Quote and failover (`REQ-ORACLE-005`), agreement (`SPEC-ORC-003`), failed state and failure start
-    /// (`SPEC-ORC-013`), and the disagreement windows (`SPEC-ORC-016`, `REQ-ORACLE-095`).
-    /// @custom:spec REQ-ORACLE-005, REQ-ORACLE-006, REQ-ORACLE-008, REQ-ORACLE-017, SPEC-ORC-003, SPEC-ORC-013, SPEC-ORC-016, REQ-ORACLE-022, REQ-ORACLE-095
     function _classify(
         DebtOracleLayout storage $,
         DebtEvaluation memory e,
@@ -222,9 +202,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         e.reasons |= e.pauseActive ? R_DISAGREEMENT_PAUSE : R_DISAGREEMENT_EXPIRED;
     }
 
-    /// @dev Primary when valid, else the alternate when valid, else no route (`REQ-ORACLE-005`); both valid and
-    /// outside the tolerance disagree, and the quote stays the primary (`REQ-ORACLE-008`).
-    /// @custom:spec REQ-ORACLE-005, REQ-ORACLE-008, REQ-ORACLE-019, SPEC-ORC-003, SPEC-ORC-013
+    /// @dev Primary when valid, else the alternate, else no route; the quote stays the primary on disagreement.
     function _selectQuote(
         DebtEvaluation memory e
     ) internal pure {
@@ -253,17 +231,10 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         }
     }
 
-    /// @dev Served price (`SPEC-ORC-018`), the route it comes from, its source timestamp and its age limits
-    /// (`SPEC-ORC-012`, `SPEC-ORC-015`), and the alternate held to its borrow age (`REQ-ORACLE-090`). While the routes
-    /// disagree the served value is `max(min(p, b), A)`, the median of `p`, `b` and `A` (or `A` when above both): the routes disagree, so one of
-    /// them is wrong and the two alone cannot tell which, and one faulty route must not raise the debt price alone
-    /// (ORACLE-06); the debt still never counts below `A`. Its route is the lower route, and when `A` exceeds it, no
-    /// route: the accepted timestamp is reported with age limits 0, as when failed.
-    /// @custom:spec SPEC-ORC-018, SPEC-ORC-012, SPEC-ORC-015, REQ-ORACLE-090, REQ-ORACLE-093, REQ-ORACLE-021, REQ-ORACLE-066
+    /// @dev While Drifting serves `max(min(p, b), A)`, so one faulty route cannot raise the debt price alone.
     function _serve(
         DebtEvaluation memory e
     ) internal view {
-        // Drifting passes the lower route as both route values, so `debtServedPrice` serves `max(min(p, b), A)`.
         uint256 low = Math.min(e.routes[0].value, e.routes[1].value);
         e.served = LPPriceMath.debtServedPrice(e.state, e.quote, low, low, e.accepted, e.stressRiseBps);
         e.servedRoute = _servedRoute(e);
@@ -289,9 +260,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         if (e.alternatePastBorrowAge) e.reasons |= R_ALTERNATE_PAST_BORROW_AGE;
     }
 
-    /// @dev The route the served value comes from: none when failed; while Drifting the route of `min(p, b)` (a tie
-    /// is impossible, the routes disagree), or none when `A > min(p, b)`; otherwise the quote's route.
-    /// @custom:spec SPEC-ORC-012, SPEC-ORC-015, SPEC-ORC-018
+    /// @dev The route the served value comes from; none when failed or the accepted price is served.
     function _servedRoute(
         DebtEvaluation memory e
     ) internal pure returns (RouteSlot slot) {
@@ -303,9 +272,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         return b < p ? RouteSlot.Alternate : RouteSlot.Primary;
     }
 
-    /// @dev Sequencer gate (`SPEC-ORC-021`, `REQ-ORACLE-099`); a failed `sequencer()` read, or an uptime answer that is
-    /// not exactly 160 bytes, is `sequencerUnknown`.
-    /// @custom:spec SPEC-ORC-021, REQ-ORACLE-099, REQ-ORACLE-092
+    /// @dev Sequencer gate; a failed or malformed read is `sequencerUnknown`.
     function _readSequencer(
         address store,
         DebtEvaluation memory e
@@ -329,20 +296,15 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
             (up, down, unknown, inGrace, ready) = LPPriceMath.sequencerStatus(
                 feed != address(0), readOk && size == 160, answer, startedAt, block.timestamp, w[1]
             );
-            // In grace, startedAt <= now < 2^64 and the period fits 32 bits.
             if (inGrace) e.sequencerGraceEndsAt = SafeCast.toUint64(startedAt + w[1]);
-            // A borrow also needs the served round newer than the restart (`_serve` ran first): a price from rounds
-            // before it is not ready for borrowing. `sequencerReady` gates only `borrowAllowed`.
+            // Borrowing also needs the served round newer than the restart (`_serve` ran first).
             if (up && e.servedUpdatedAt <= startedAt) ready = false;
         }
-        // Ready implies up (SPEC-ORC-021); a chain without a feed is ready and reports up as false.
         (e.sequencerDown, e.sequencerUnknown, e.sequencerGrace, e.sequencerReady) = (down, unknown, inGrace, ready);
         if (down || unknown) e.reasons |= R_SEQUENCER_DOWN;
         if (inGrace) e.reasons |= R_SEQUENCER_GRACE;
     }
 
-    /// @dev Grace window (`REQ-ORACLE-034`, `REQ-ORACLE-099`): the stored recovery window or the sequencer restart.
-    /// @custom:spec REQ-ORACLE-034, REQ-ORACLE-099
     function _grace(
         DebtEvaluation memory e
     ) internal view {
@@ -354,9 +316,7 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         if (e.inGrace) e.reasons |= R_IN_GRACE;
     }
 
-    /// @dev Second-source confirmation (`SPEC-ORC-020`): an `OracleNetwork` aggregator held to the leg rules with its
-    /// feed record's pinned decimals and bounds and `maxAge`; any other source or failed read is unconfirmed.
-    /// @custom:spec SPEC-ORC-020, REQ-ORACLE-100, REQ-ORACLE-092
+    /// @dev Only an `OracleNetwork` aggregator held to the leg rules can confirm.
     function _readSecondSource(
         DebtOracleLayout storage $,
         DebtEvaluation memory e
@@ -379,7 +339,6 @@ abstract contract DebtOracleEvaluation is DebtOracleReads {
         if (!e.confirmed) e.reasons |= R_SECOND_SOURCE_DISAGREE;
     }
 
-    /// @dev A leg record naming only its feed.
     function _newLeg(
         address feed
     ) internal pure returns (LegRead memory leg) {

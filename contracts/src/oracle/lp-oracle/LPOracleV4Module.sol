@@ -14,17 +14,8 @@ import {LPPriceMath} from "./LPPriceMath.sol";
 import {ClPriceStateView} from "./types/ClPriceStateView.sol";
 
 /// @title LPOracleV4Module
-/// @notice The Uniswap v4 pricing module of the LPOracle: the concentrated-liquidity module with the v4 market, read
-/// guard and consistency check. Composition is the same as Uniswap v3, at the oracle square-root price clamped to the
-/// range (`SPEC-AMM-V4-001`). The pool hook reads the PoolManager's lock through `exttload` (`REQ-AMM-V4-003`) and its
-/// `slot0` through `extsload`, and the consistency check is the larger of the spot gate and the reference Uniswap v3
-/// pool's TWAP deviation (`REQ-AMM-V4-005`, `SPEC-AMM-V4-002`). The per-block quote-change cap is the core's
-/// (`REQ-AMM-CORE-014`); uncollected fees never enter the price.
-/// @dev The concentrated-liquidity layout keeps the range, spacing, square-root bounds and unit exponent; its `pool`
-/// is the reference pool, so the inherited cardinality, `observe`, listing and report reads go to it. The v4 pool lives
-/// in the ERC-7201 namespace `avana.storage.LPOracleV4`. Every PoolManager read is a gas-guarded static call
-/// (`SPEC-ORC-023`) whose short or failed answer is a failed read, never a revert.
-/// @custom:spec REQ-AMM-V4-003, REQ-AMM-V4-005, REQ-AMM-V4-007, SPEC-AMM-V4-001, SPEC-AMM-V4-002, REQ-ORACLE-103, REQ-ORACLE-104, REQ-ORACLE-105
+/// @notice Uniswap v4 pricing module of the LPOracle.
+/// @dev The layout's `pool` is a reference Uniswap v3 pool, used for TWAP reads.
 abstract contract LPOracleV4Module is LPOracleCLModule {
     /// @notice The v4 pool of the market.
     /// @custom:storage-location erc7201:avana.storage.LPOracleV4
@@ -37,22 +28,20 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
 
     /// @notice Listing bit: the v4 pool is unreadable or uninitialized.
     uint256 internal constant V4_CHECK_POOL = 1 << 8;
-    /// @notice Listing bit: the integration's reference pool of the market is not the module's (`REQ-AMM-V4-007`).
+    /// @notice Listing bit: the integration's reference pool of the market is not the module's.
     uint256 internal constant V4_CHECK_REFERENCE = 1 << 9;
-    /// @notice Listing bit: the integration's PoolManager is not the module's (`REQ-AMM-V4-007`).
+    /// @notice Listing bit: the integration's PoolManager is not the module's.
     uint256 internal constant V4_CHECK_MARKET = 1 << 10;
 
     /// @dev keccak256(abi.encode(uint256(keccak256("avana.storage.LPOracleV4")) - 1)) & ~bytes32(uint256(0xff)).
     bytes32 private constant _V4_SLOT = 0xe8667b9ac72eb16e19c1ef126cfd84d293b85d6b77c13d77a23b929b113ec400;
-    /// @dev Bytes of the market encoding: `abi.encode(poolManager, key, tickLower, tickUpper, unitExp, referencePool)`.
     uint256 private constant _MARKET_LENGTH = 10 * 32;
-    /// @dev Largest tick spacing of a v4 pool.
     int256 private constant _MAX_SPACING = type(int16).max;
 
     /// @dev The chain's wrapped native token, which stands for a native-ETH `currency0`.
     address internal immutable _WRAPPED_NATIVE;
 
-    /// @notice Fixes the wrapped native token; reverts `MarketMismatch(0)` for address(0).
+    /// @notice Sets the wrapped native token; reverts `MarketMismatch(0)` for address(0).
     constructor(
         address wrappedNative
     ) {
@@ -73,13 +62,7 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         }
     }
 
-    // ─── Market (REQ-ORACLE-058) ───
-
-    /// @dev `market = abi.encode(poolManager, UniswapV4PoolKey key, tickLower, tickUpper, unitExp, referencePool)`. The
-    /// key must be hookless, its currencies the market's tokens (native ETH as `WRAPPED_NATIVE`), the pool initialized,
-    /// the range usable at its spacing, and the reference pool must pair the two tokens in either order. Every word is
-    /// range-checked, so a malformed encoding returns false and never reverts.
-    /// @custom:spec REQ-ORACLE-058, REQ-AMM-V4-001, REQ-AMM-V4-007
+    /// @dev `market = abi.encode(poolManager, key, tickLower, tickUpper, unitExp, referencePool)`, hookless key.
     function _initMarket(
         bytes calldata market,
         address[] memory tokens
@@ -103,7 +86,6 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         c.poolId = v.poolId;
     }
 
-    /// @dev The checked words of a v4 market encoding.
     struct MarketWords {
         address manager;
         address ref;
@@ -113,7 +95,6 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         uint8 unitExp;
     }
 
-    /// @dev Reads and range-checks every word of `market` into `w` (`_parseAddresses`, `_parseTicks`).
     function _parse(
         bytes calldata market,
         address[] memory tokens,
@@ -122,8 +103,7 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         return _parseAddresses(market, tokens, w) && _parseTicks(market, w);
     }
 
-    /// @dev Addresses within 160 bits, no hook, code at the PoolManager and the reference pool, and currencies equal to
-    /// `tokens` (native ETH as `WRAPPED_NATIVE`).
+    /// @dev Addresses fit 160 bits, no hook, code at both pools, and currencies equal `tokens`.
     function _parseAddresses(
         bytes calldata market,
         address[] memory tokens,
@@ -141,8 +121,7 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         return (c0 == address(0) ? _WRAPPED_NATIVE : c0) == tokens[0] && c1 == tokens[1];
     }
 
-    /// @dev Fee within 24 bits, ticks and spacing within `int24`, spacing in `[1, 32767]`, `unitExp <= MAX_UNIT_EXP`
-    /// and the range usable at the spacing.
+    /// @dev Fee, ticks, spacing and unit exponent within range, and the range usable at the spacing.
     function _parseTicks(
         bytes calldata market,
         MarketWords memory w
@@ -158,13 +137,13 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         if (!okS || !okL || !okU || w.spacing < 1 || w.spacing > _MAX_SPACING || unitExp > ClUnitMath.MAX_UNIT_EXP) {
             return false;
         }
-        // At most MAX_UNIT_EXP = 18, checked above.
+        // At most MAX_UNIT_EXP, checked above.
         // forge-lint: disable-next-line(unsafe-typecast)
         w.unitExp = uint8(unitExp);
         return ClPriceMath.isUsableRange(w.lower, w.upper, w.spacing);
     }
 
-    /// @dev Whether the reference pool's `token0`/`token1` are the market's two tokens; `same` when in the same order.
+    /// @dev Whether the reference pool holds the market's two tokens; `same` when in the same order.
     function _pairs(
         address ref,
         address[] memory tokens
@@ -175,13 +154,7 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         ok = okT0 && okT1 && (same || (r0 == tokens[1] && r1 == tokens[0]));
     }
 
-    // ─── Pricing hooks ───
-
-    /// @dev `REQ-AMM-V4-003`: `locked` while the PoolManager is unlocked; `readOk` false for a failed `exttload` or
-    /// `extsload`, or an uninitialized pool. Then `SPEC-AMM-V4-002` on the uncapped quotes: unavailable for a zero
-    /// window, a reference cardinality below `SPEC-ORC-022`, a failed `observe` or a quote outside
-    /// `[1, MAX_ROUTE_ANSWER]`.
-    /// @custom:spec REQ-AMM-V4-003, REQ-AMM-V4-005, SPEC-AMM-V4-002, SPEC-ORC-022, REQ-ORACLE-104
+    /// @dev `locked` while the PoolManager is unlocked. Deviation is the larger of the spot and TWAP tick distances.
     function _poolCheck(
         uint256[] memory quotes,
         uint256[] memory prices,
@@ -207,23 +180,18 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         p.pass = p.deviationBps <= toleranceBps;
     }
 
-    /// @dev True when `poolRef` is the market's `PoolId` (`REQ-ORACLE-100`); a `PoolTwap` source naming the reference
-    /// pool is allowed.
+    /// @dev True when `poolRef` is the market's `PoolId`; the reference pool may serve as a `PoolTwap` source.
     function _isOwnPool(
         bytes32 poolRef
     ) internal view virtual override returns (bool own) {
         own = poolRef == _v4().poolId;
     }
 
-    /// @dev The range is checked at the v4 pool's spacing fixed by its key.
     function _rangeFails() internal view virtual override returns (bool) {
         ClLayout storage c = _cl();
         return !ClPriceMath.isUsableRange(c.tickLower, c.tickUpper, c.tickSpacing);
     }
 
-    /// @dev The concentrated-liquidity checks on the reference pool, plus `V4_CHECK_POOL`, `V4_CHECK_REFERENCE` and
-    /// `V4_CHECK_MARKET`.
-    /// @custom:spec REQ-ORACLE-105, REQ-AMM-V4-007
     function _clListingChecks(
         ClListingInputs memory x,
         uint256[] memory quotes
@@ -232,8 +200,7 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         (bool okP, uint160 sqrtPriceX96,) = _pmSlot0();
         if (!okP || sqrtPriceX96 == 0) failed |= V4_CHECK_POOL;
         if (!_referenceMatches()) failed |= V4_CHECK_REFERENCE;
-        // The integration's PoolManager is the module's (`REQ-AMM-V4-007`); the `PoolId` and the range are the
-        // MarketRegistry record's, checked by the core (`CHECK_MARKET`, `_isOwnMarket`).
+        // The `PoolId` and range are checked by the core against the MarketRegistry record.
         (bool okR, bytes memory ret) = LPOracleCalls.staticRead(
             _s().integration, CONFIG_CALL_GAS, abi.encodeCall(IUniswapV4Integration.POOL_MANAGER, ()), 32 + 1
         );
@@ -243,9 +210,7 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         }
     }
 
-    /// @dev The report of `getClPriceState()` with the reference pool's mean tick in the v4 pool's token order and the
-    /// deviation of `SPEC-AMM-V4-002`.
-    /// @custom:spec REQ-ORACLE-104, SPEC-AMM-V4-002
+    /// @dev `getClPriceState()` with the reference pool's mean tick in v4 token order.
     function _clReport(
         bool priced,
         uint256[] memory quotes,
@@ -266,10 +231,7 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         r.tickDeviation = uint24(a > b ? a : b);
     }
 
-    // ─── Internal ───
-
-    /// @dev The reference pool's mean tick over `window`, in the v4 pool's token order; false for a zero window, a
-    /// cardinality below `SPEC-ORC-022` or a failed read.
+    /// @dev The reference pool's mean tick over `window`, in the v4 pool's token order.
     function _referenceTick(
         uint32 window
     ) internal view returns (bool ok, int24 tick) {
@@ -280,8 +242,7 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         if (ok && _v4().referenceReversed) tick = -tick;
     }
 
-    /// @dev `IUniswapV4Integration.v4Market(marketId).referencePool` is this module's reference pool. Before the
-    /// integration binds the market the read reverts and is not counted.
+    /// @dev The integration's reference pool is this module's; a failed read passes only before registration.
     function _referenceMatches() internal view returns (bool) {
         Layout storage $ = _s();
         (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
@@ -304,12 +265,12 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         uint256 word;
         if (ok && ret.length == 32) (ok, word) = LPOracleCalls.wordAt(ret, 0);
         else ok = false;
-        // Zero until the read below sets it; a failed read leaves it zero by design.
+        // Zero unless the read succeeds; a failed read leaves it zero by design.
         // forge-lint: disable-next-line(uninitialized-local)
         unlocked = word != 0;
     }
 
-    /// @dev The pool's `slot0` through `extsload`: square-root price and tick.
+    /// @dev The pool's sqrt price and tick through `extsload`.
     function _pmSlot0() internal view returns (bool ok, uint160 sqrtPriceX96, int24 tick) {
         V4Layout storage v = _v4();
         bytes memory ret;
@@ -327,7 +288,6 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         (sqrtPriceX96, tick) = (uint160(word), int24(int256(word >> 160)));
     }
 
-    /// @dev Word `i` of `market` as an address, `ok` false above 160 bits.
     function _addr(
         bytes calldata market,
         uint256 i
@@ -339,7 +299,6 @@ abstract contract LPOracleV4Module is LPOracleCLModule {
         a = address(uint160(w));
     }
 
-    /// @dev Word `i` of `market` as an `int24`, `ok` false outside its range.
     function _int24(
         bytes calldata market,
         uint256 i

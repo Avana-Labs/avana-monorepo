@@ -24,28 +24,14 @@ import {RiskModuleBorrowScope} from "./RiskModuleBorrowScope.sol";
 import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
 
 /// @title RiskModuleStatusLogic
-/// @notice Body of `getAccountGateStatus`: every borrow-side gate outcome of an account on the stored oracle state,
-/// without poking (REQ-ADAPTER-038, REQ-RISK-060).
-/// @dev `borrowAllowed` and `withdrawWithDebtAllowed` are exactly the outcome of the borrow logic's `gate`, the same
-/// code as the pre-checks without the pokes, so a value read between pokes can differ from what the next call sees.
-/// Reserve fields hold `type(uint256).max` when no reserve matches (reserve 0 is a valid identifier). The body reads no
-/// pause state and no address freeze: the pause state of the market's Hub comes from `pauseOf`, which the RiskModule
-/// calls separately and copies into the two pause fields only (PROP-066). The RiskModule turns a revert of either into
-/// the unavailable status, so the view never reverts.
-/// @custom:spec REQ-ADAPTER-038, REQ-RISK-060
+/// @notice Body of `getAccountGateStatus`: every borrow-side gate outcome of an account, without poking.
+/// @dev Reads no pause state; reserve fields hold `type(uint256).max` when no reserve matches.
 // View calls in loops over the account's reserves and legs, bounded by listings.
 // forge-lint: disable-start(calls-loop)
 contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic {
-    /// @dev The borrow logic, whose `gate` gives the two outcomes.
     address internal immutable _BORROW;
 
-    /// @notice Fixes the implementation immutables and the drift, breaker and borrow logic.
-    /// @param im The per-chain Avana addresses.
-    /// @param drift The drift logic built with `im`.
-    /// @param breaker The breaker logic built with `im`.
-    /// @param borrowLogic The borrow logic built with `im`.
-    /// @custom:spec REQ-RISK-002
-    // `_requireLogic` checks each logic address, which rejects zero (REQ-RISK-002).
+    // `_requireLogic` checks each logic address, which rejects zero.
     // forge-lint: disable-next-item(missing-zero-check)
     constructor(
         RiskModuleImmutables memory im,
@@ -58,13 +44,11 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
     }
 
     /// @inheritdoc IRiskModuleLogic
-    /// @custom:spec REQ-RISK-002
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("RiskModuleStatusLogic"), _IMMUTABLES_HASH);
     }
 
     /// @inheritdoc IRiskModuleStatusLogic
-    /// @custom:spec REQ-ADAPTER-038, REQ-RISK-060
     function getAccountGateStatus(
         address proxy
     ) external view override returns (AccountGateStatus memory st) {
@@ -97,7 +81,6 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
     }
 
     /// @inheritdoc IRiskModuleStatusLogic
-    /// @custom:spec REQ-ADAPTER-038
     function pauseOf(
         address proxy
     ) external view override returns (PauseState state, PauseReason reason) {
@@ -107,7 +90,6 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
         reason = _registry().pauseReason(hub);
     }
 
-    /// @dev Collateral reserves that map to no market of the account, and the debt reserves the Spoke reports.
     function _accountReserves(
         AccountGateStatus memory st,
         Scope memory s
@@ -133,7 +115,6 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
         }
     }
 
-    /// @dev Per-market outcome of the account's market.
     function _marketStatus(
         Scope memory s,
         bool noKeeper
@@ -163,7 +144,6 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
             IRiskModuleBreakerLogic(_BREAKER).marketBreaker(s.marketId, false, 0);
     }
 
-    /// @dev First unapproved, paused, stale, route-halted and breaker-tripped debt reserve of the account.
     function _debtStatus(
         AccountGateStatus memory st,
         Scope memory s
@@ -202,7 +182,6 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
         return !IDebtOracle(source).getPriceState().borrowAllowed;
     }
 
-    /// @dev Whether the borrow logic's gate passes now.
     function _passes(
         address proxy,
         bool borrow

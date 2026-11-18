@@ -13,18 +13,10 @@ import {LPOracleCalls} from "./LPOracleCalls.sol";
 import {LPOracleStorage} from "./LPOracleStorage.sol";
 
 /// @title LPOracleCLPool
-/// @notice The concentrated-liquidity pricing module's market storage and its pool reads: the market's pool and exact
-/// range fixed at `initialize`, the pool's `slot0` lock flag and observation cardinality, its token pair and tick
-/// spacing, and the mean tick of `observe([window, 0])` (2.10 Concentrated-liquidity pricing).
-/// @dev ERC-7201 namespace `avana.storage.LPOracleCL`, next to the base's `avana.storage.LPOracle` in the same proxy.
-/// Every read is a gas-guarded static call (`SPEC-ORC-023`) that copies one byte more than the expected return, so a
-/// short, long or malformed answer is a failed read and never a decoder revert. `slot0` has 7 words on Uniswap v3 and 6
-/// on Aerodrome Slipstream; the implementation fixes which at deployment (`SLOT0_WORDS`), and only the lock flag
-/// (the last word) and the observation cardinality (word 3) are read, never the pool's price or tick (`REQ-ORACLE-011`).
-/// @custom:spec REQ-ORACLE-011, REQ-ORACLE-014, REQ-ORACLE-103, REQ-ORACLE-104, REQ-AMM-V3-003, REQ-AMM-SLIP-003, SPEC-ORC-010, SPEC-ORC-023
+/// @notice Market storage and pool reads of the concentrated-liquidity pricing module.
+/// @dev A malformed pool answer is a failed read, never a revert.
 abstract contract LPOracleCLPool is LPOracleStorage {
-    /// @notice The market's pool and exact range, the range's square-root ratios computed once at `initialize`, and the
-    /// pool's unit exponent.
+    /// @notice The market's pool, range, the range's sqrt ratios and the pool's unit exponent.
     /// @custom:storage-location erc7201:avana.storage.LPOracleCL
     struct ClLayout {
         address pool;
@@ -33,26 +25,21 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         int24 tickSpacing;
         uint160 sqrtLower;
         uint160 sqrtUpper;
-        // Unit exponent `k` of the market's pool (`SPEC-ORC-005`): one vault-token unit is `10^k` liquidity, as in the
-        // integration (`IClIntegration.unitExponent`).
+        // Unit exponent `k`: one vault-token unit is `10^k` liquidity.
         uint8 unitExp;
-        // Uniswap v4: the market's `PoolId`, the pool being keyed by identifier and `pool` holding the reference
-        // Uniswap v3 pool; zero for a pool keyed by address (Uniswap v3, Slipstream).
+        // Uniswap v4 `PoolId` (then `pool` is the reference v3 pool); zero for a pool keyed by address.
         bytes32 poolId;
     }
 
     /// @dev keccak256(abi.encode(uint256(keccak256("avana.storage.LPOracleCL")) - 1)) & ~bytes32(uint256(0xff)).
     bytes32 private constant _CL_SLOT = 0xb7c40d03a80aa05aa5c63763d6d3607d29246f15ca457871c1bef2104cb45600;
 
-    /// @dev Bytes of one ABI word.
     uint256 private constant _W = 32;
-    /// @dev Return length of `observe([window, 0])`: two arrays of two words with their offsets and lengths.
     uint256 private constant _OBSERVE_LENGTH = 8 * _W;
 
-    /// @dev Number of words `slot0()` returns: 7 on Uniswap v3, 6 on Aerodrome Slipstream (`REQ-AMM-V3-003`).
+    /// @dev Number of words `slot0()` returns: 7 on Uniswap v3, 6 on Aerodrome Slipstream.
     uint8 internal immutable _SLOT0_WORDS;
 
-    /// @notice The configuration words the module's listing checks read (`REQ-ORACLE-055`, `REQ-ORACLE-100`).
     struct ClListingInputs {
         uint32 twapWindow;
         uint16 consistencyToleranceBps;
@@ -62,10 +49,7 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         bytes32[2] poolRefs;
     }
 
-    /// @notice Fixes the `slot0` layout of the AMM protocol this implementation prices.
-    /// @dev Reverts `MarketMismatch(0)` for any layout other than 6 or 7 words.
     /// @param slot0Words 7 for Uniswap v3, 6 for Aerodrome Slipstream.
-    /// @custom:spec REQ-AMM-V3-003, REQ-AMM-SLIP-003
     constructor(
         uint8 slot0Words
     ) {
@@ -73,7 +57,6 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         _SLOT0_WORDS = slot0Words;
     }
 
-    /// @dev The words of `config` the module's listing checks read.
     function _listingInputs(
         OracleConfig calldata config
     ) internal pure returns (ClListingInputs memory x) {
@@ -89,15 +72,11 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         }
     }
 
-    /// @notice Words of the pool's `slot0()` return this implementation decodes: 7 (Uniswap v3) or 6 (Slipstream).
-    /// @dev The implementation's constructor requires its three logic contracts to report the same value.
-    /// @return words The layout fixed at deployment.
-    /// @custom:spec REQ-AMM-V3-003, REQ-AMM-SLIP-003
+    /// @notice Words of the pool's `slot0()` return: 7 (Uniswap v3) or 6 (Slipstream).
     function SLOT0_WORDS() external view returns (uint8 words) {
         words = _SLOT0_WORDS;
     }
 
-    /// @dev The module's ERC-7201 namespace.
     function _cl() internal pure returns (ClLayout storage c) {
         // ERC-7201 namespaced storage: the slot is a compile-time constant.
         // solhint-disable-next-line no-inline-assembly
@@ -106,9 +85,7 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         }
     }
 
-    /// @dev `slot0()` of `pool`: whether the read succeeded with exactly `_SLOT0_WORDS` words, a valid boolean lock flag
-    /// and a cardinality within `uint16`; the observation cardinality (word 3) and `unlocked` (the last word).
-    /// @custom:spec REQ-ORACLE-103, REQ-AMM-V3-003, REQ-AMM-SLIP-003
+    /// @dev The observation cardinality (word 3) and `unlocked` (the last word) from `slot0()`.
     function _slot0(
         address pool
     ) internal view returns (bool ok, uint16 cardinality, bool unlocked) {
@@ -126,8 +103,6 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         (cardinality, unlocked) = (uint16(card), flag == 1);
     }
 
-    /// @dev One address word of `pool` (the answer to `data`: `token0()` or `token1()`), `ok` false for a failed or
-    /// malformed read.
     function _poolAddress(
         address pool,
         bytes memory data,
@@ -138,12 +113,11 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         uint256 word = 0;
         if (ok && ret.length == _W) (ok, word) = LPOracleCalls.uintAt(ret, 0, type(uint160).max);
         else ok = false;
-        // casting to 'uint160' is safe because `uintAt` bounds `word` by type(uint160).max.
+        // `uintAt` bounds `word` by type(uint160).max.
         // forge-lint: disable-next-line(unsafe-typecast)
         value = address(uint160(word));
     }
 
-    /// @dev `tickSpacing()` of `pool`, `ok` false for a failed or malformed read or a spacing outside `int24`.
     function _tickSpacing(
         address pool
     ) internal view returns (bool ok, int24 spacing) {
@@ -158,11 +132,7 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         spacing = int24(value);
     }
 
-    /// @dev Arithmetic mean tick of `pool` over `window` seconds from `observe([window, 0])`, rounded toward negative
-    /// infinity as Uniswap's `OracleLibrary.consult` (`SPEC-ORC-010`); `ok` false for a zero window, a failed read
-    /// (including the pool's `OLD` revert when its buffer does not cover the window), a malformed return or a mean
-    /// outside `[MIN_TICK, MAX_TICK]`. The cumulative difference wraps at 56 bits, as the pool's own arithmetic does.
-    /// @custom:spec SPEC-ORC-010, REQ-ORACLE-014
+    /// @dev Mean tick of `pool` over `window` seconds, as Uniswap's `OracleLibrary.consult`.
     function _meanTick(
         address pool,
         uint32 window
@@ -183,11 +153,7 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         (ok, tick) = _meanOf(c0, c1, window);
     }
 
-    /// @dev `SPEC-ORC-010`'s mean tick of two tick cumulatives over `window > 0` seconds: the difference modulo `2^56`
-    /// (Uniswap's own wrap), divided by `window` rounding toward negative infinity; `ok` false outside
-    /// `[MIN_TICK, MAX_TICK]`. Never reverts for `int56` inputs. Example: `Δ = -497,384,100`, `window = 1,800` gives
-    /// `-276,325`.
-    /// @custom:spec SPEC-ORC-010
+    /// @dev Mean tick of two cumulatives, rounded toward negative infinity; `ok` false outside the tick range.
     function _meanOf(
         int256 c0,
         int256 c1,
@@ -209,7 +175,6 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         (ok, tick) = (true, int24(mean));
     }
 
-    /// @dev The head of an `(int56[2], uint160[2])` return: offsets 0x40 and 0xa0 and both lengths 2.
     function _observeShape(
         bytes memory ret
     ) private pure returns (bool) {
@@ -220,10 +185,7 @@ abstract contract LPOracleCLPool is LPOracleStorage {
         return ok0 && ok1 && ok2 && ok5 && off0 == 2 * _W && off1 == 5 * _W && len0 == 2 && len1 == 2;
     }
 
-    /// @dev The record names this implementation's pool, a `TickRange` shape and the exact range stored at `initialize`
-    /// (REQ-ORACLE-046): a pool keyed by address with no pool identifier, or for Uniswap v4 no address and the stored
-    /// `PoolId` (REQ-AMM-V4-007).
-    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-103
+    /// @dev The record names this module's pool (or v4 `PoolId`), a `TickRange` shape and the stored range.
     function _isOwnMarket(
         uint256 poolWord,
         uint256 poolIdWord,

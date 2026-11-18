@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-/// @notice One debt of an account to repay before it closes (REQ-LENS-056).
-/// @custom:spec REQ-LENS-056
+/// @notice One debt of an account to repay before it closes.
 struct DebtClose {
     uint256 reserveId;
     address asset;
@@ -14,8 +13,7 @@ struct DebtClose {
     uint256 maxRepaySpend;
 }
 
-/// @notice One record an account withdraws when it closes (REQ-LENS-056).
-/// @custom:spec REQ-LENS-056
+/// @notice One record an account withdraws when it closes.
 struct RecordClose {
     bytes32 positionKey;
     // Credited units after reconciliation, the `units` of `AaveAdapter.withdraw`.
@@ -24,10 +22,8 @@ struct RecordClose {
     uint256[] amounts;
 }
 
-/// @notice Everything an account repays and withdraws to close (REQ-LENS-056).
-/// @dev Repay is open in every state; once every debt is repaid each withdrawal is debt-free and open in every state, so
-/// the account can always close in `debts.length + records.length` calls.
-/// @custom:spec REQ-LENS-056, REQ-LENS-005
+/// @notice Everything an account repays and withdraws to close.
+/// @dev Repay and debt-free withdrawal are open in every state, so an account can always close.
 struct CloseAccountView {
     uint256 blockNumber;
     uint256 timestamp;

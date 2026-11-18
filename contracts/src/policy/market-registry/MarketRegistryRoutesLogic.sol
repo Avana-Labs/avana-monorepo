@@ -19,42 +19,28 @@ import {MarketStatus} from "./types/MarketStatus.sol";
 import {TokenDef} from "./types/TokenDef.sol";
 
 /// @title MarketRegistryRoutesLogic
-/// @notice Bodies of the swap-route writes (`setRoute` normal delay, `disableRoute` and `restoreRoute` short delay),
-/// of the AMM integration contract record (`recordIntegrationContracts`, `finalizeIntegrationContracts`, normal delay)
-/// and of the standby switch (`useStandbyRoute`, `cancelStandbySwitch`, `restorePriceRoute`).
-/// @dev Reached only by delegatecall from the MarketRegistry, which checks the caller first; see
-/// `IMarketRegistryLogic`. Every external call is a view. A standby switch changes only the registry's record and
-/// `priceRouteVersion`; each oracle sees the new routes on its next read (REQ-CONFIG-003).
-/// @custom:spec REQ-CONFIG-039, REQ-CONFIG-040, REQ-CONFIG-059, REQ-CONFIG-060, REQ-CONFIG-061, REQ-CONFIG-062, REQ-MREG-011, REQ-MREG-012, REQ-MREG-013, REQ-MREG-020, REQ-MREG-028, REQ-MREG-035, REQ-ROUTE-002, REQ-ROUTE-005, REQ-ROUTE-019, Q-248, Q-341, Q-342, Q-379
-// Each function carries the body of a selector declared in an IMarketRegistry piece that the MarketRegistry itself
-// implements; this contract inherits only `IMarketRegistryRoutes`, the one piece it serves in full.
+/// @notice Bodies of the swap-route writes, the AMM integration contract record and the standby switch.
+/// @dev Runs only by delegatecall from the MarketRegistry, which checks the caller first.
+// Bodies of IMarketRegistry selectors; inherits only `IMarketRegistryRoutes`, the one piece it serves in full.
 // solhint-disable comprehensive-interface
-// Every external call made here is a view (STATICCALL), so none can re-enter the registry or reorder its events.
+// Every external call here is a view, so none can re-enter the registry.
 // forge-lint: disable-start(reentrancy-events)
-// An addition to a finalized integration record reads `dependencies()` of each route set for the integration's
-// markets: bounded by MAX_MARKET_COUNT markets and the slots governance set, views only, and a reverting route is
-// disabled rather than reverting the governance call.
+// Route re-checks read `dependencies()` per slot: views only, bounded by MAX_MARKET_COUNT and the slots set.
 // forge-lint: disable-start(calls-loop)
 contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistryRoutes, IMarketRegistryLogic {
-    /// @dev Most AMM contracts one `recordIntegrationContracts` call records (Slipstream's four generations need 8).
+    /// @dev Most AMM contracts one `recordIntegrationContracts` call records.
     uint256 internal constant _MAX_INTEGRATION_CONTRACTS = 16;
 
-    /// @notice Fixes the implementation immutables; they must equal the MarketRegistry's.
-    /// @param im The per-chain Avana addresses.
-    /// @custom:spec REQ-CONFIG-005
     constructor(
         MarketRegistryImmutables memory im
     ) MarketRegistryStorage(im) {}
 
     /// @inheritdoc IMarketRegistryLogic
-    /// @custom:spec REQ-CONFIG-005
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("MarketRegistryRoutesLogic"), _IMMUTABLES_HASH);
     }
 
     /// @inheritdoc IMarketRegistryRoutes
-    /// @dev Body of `setRoute`.
-    /// @custom:spec REQ-CONFIG-039, REQ-CONFIG-040, REQ-CONFIG-059, REQ-CONFIG-060, REQ-ROUTE-002, REQ-ROUTE-005, REQ-ROUTE-017, Q-341, Q-342, Q-379
     function setRoute(
         uint256 marketId,
         address token,
@@ -66,14 +52,13 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         Layout storage l = _s();
         _checkRoute(marketId, token, debtAsset, kind, route);
         bytes32 key = _slotKey(marketId, token, debtAsset, kind);
-        // REQ-ROUTE-017: a route this call replaces leaves the slot's approved set, so `restoreRoute` cannot bring it
-        // back at the short delay; returning to it is a change and takes `setRoute` at the normal delay again.
+        // A replaced route loses its approval, so `restoreRoute` cannot bring it back.
         address replaced = l.routes[key].route;
         if (replaced != address(0) && replaced != route) delete l.approvedBefore[key][replaced];
         l.routes[key] = RouteRecord({route: route, active: true});
         l.approvedBefore[key][route] = true;
         l.knownRoute[route] = true;
-        // REQ-MREG-035: the slot is listed once per market, so a later addition to the integration record re-checks it.
+        // List the slot once per market, so a later integration-record addition re-checks it.
         bytes32 slotId = keccak256(abi.encode(marketId, token, debtAsset, kind));
         if (!l.routeSlotListed[slotId]) {
             l.routeSlotListed[slotId] = true;
@@ -82,8 +67,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         emit RouteSet(marketId, token, debtAsset, kind, route);
     }
 
-    /// @notice Body of `recordIntegrationContracts`.
-    /// @custom:spec REQ-MREG-020, REQ-MREG-035, REQ-CONFIG-040
     function recordIntegrationContracts(
         uint32 integrationId,
         address[] calldata contracts
@@ -112,8 +95,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         if (rec.finalized) _recheckRoutes(integrationId, contracts);
     }
 
-    /// @notice Body of `finalizeIntegrationContracts`.
-    /// @custom:spec REQ-MREG-035, REQ-CONFIG-040
     function finalizeIntegrationContracts(
         uint32 integrationId
     ) external {
@@ -130,8 +111,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
     }
 
     /// @inheritdoc IMarketRegistryRoutes
-    /// @dev Body of `disableRoute`.
-    /// @custom:spec REQ-CONFIG-061, REQ-MREG-012
     function disableRoute(
         uint256 marketId,
         address token,
@@ -146,8 +125,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
     }
 
     /// @inheritdoc IMarketRegistryRoutes
-    /// @dev Body of `restoreRoute`.
-    /// @custom:spec REQ-CONFIG-062, REQ-MREG-012, REQ-ROUTE-019, Q-151, Q-341, Q-342
     function restoreRoute(
         uint256 marketId,
         address token,
@@ -164,8 +141,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         emit RouteRestored(marketId, token, debtAsset, kind, route);
     }
 
-    /// @notice Body of `useStandbyRoute`.
-    /// @custom:spec REQ-MREG-028, REQ-CONFIG-021, Q-248, Q-262
     function useStandbyRoute(
         address token,
         RouteSlot slot
@@ -187,8 +162,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         emit StandbyRouteActivated(token, slot, msg.sender);
     }
 
-    /// @notice Body of `cancelStandbySwitch`.
-    /// @custom:spec REQ-MREG-028, Q-248
     function cancelStandbySwitch(
         address token
     ) external {
@@ -200,8 +173,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         emit StandbySwitchCancelled(token, msg.sender);
     }
 
-    /// @notice Body of `restorePriceRoute`.
-    /// @custom:spec REQ-MREG-028, Q-248
     function restorePriceRoute(
         address token
     ) external {
@@ -210,7 +181,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         emit PriceRouteRestored(token);
     }
 
-    /// @dev Returns the replaced slot to its recorded route; `StandbyNotActive` when none is replaced.
     function _clearStandby(
         address token
     ) private {
@@ -221,11 +191,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         ++l.priceRouteVersion[token];
     }
 
-    /// @dev The route checks of REQ-CONFIG-039, REQ-CONFIG-040 and REQ-CONFIG-060 for one slot, the route-type and
-    /// GSM checks of REQ-ROUTE-002 and Q-341 and the ERC-777 check of Q-342 (`MarketRegistryRouteChecks`, run by
-    /// `setRoute` and again by `restoreRoute`, REQ-ROUTE-019), and REQ-ROUTE-008's listing check: no token the route pays into a contract requiring the exact amount (`exactAmountInputs`) is a
-    /// listed token whose issuer can switch on a transfer fee (a probe that reads `basisPointsRate()`: `UsdtFeeRate` or
-    /// `UsdtFeeRateAndPaused`).
     function _checkRoute(
         uint256 marketId,
         address token,
@@ -241,9 +206,7 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         ) revert InvalidRoute();
         address[] memory deps = r.dependencies();
         if (_touchesMarketAmm(m, deps)) revert InvalidRoute();
-        // REQ-ROUTE-002: the route type is admitted in the slot; a GSM route only as a live backup (Q-341).
         if (!_routeTypeAdmitted(route, kind, deps)) revert InvalidRoute();
-        // Q-342: no token the route holds is an ERC-777 token.
         if (!_noErc777(token, debtAsset, r.intermediates())) revert InvalidRoute();
         if (kind == _BACKUP && _touchesPegModule(m.tokens, deps)) revert InvalidRoute();
         address[] memory exact = r.exactAmountInputs();
@@ -251,11 +214,10 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         for (uint256 i = 0; i < exact.length && !feeSwitch; ++i) {
             feeSwitch = IssuerProbes.readsFeeRate(_s().tokens[exact[i]].issuerProbe);
         }
-        // A transfer fee switched on would revert that leg, possibly in both slots at once (REQ-ROUTE-003, REQ-ROUTE-008).
+        // A transfer fee switched on would revert an exact-amount leg, possibly in both slots at once.
         if (feeSwitch) revert InvalidRoute();
         address other = _s().routes[_slotKey(marketId, token, debtAsset, kind == _PRIMARY ? _BACKUP : _PRIMARY)].route;
-        // REQ-ROUTE-003: the primary and the backup of a slot share no dependency and no intermediate token other than
-        // the debt asset (decided 2026-11-12), so one failing pool or token cannot stop both.
+        // Primary and backup share no dependency or intermediate, so one failing pool or token cannot stop both.
         if (
             other != address(0)
                 && (other == route
@@ -264,7 +226,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         ) revert InvalidRoute();
     }
 
-    /// @dev True when two routes' intermediate tokens share an address other than `debtAsset` (REQ-ROUTE-003).
     function _shareIntermediate(
         address[] memory a,
         address[] memory b,
@@ -279,9 +240,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         return false;
     }
 
-    /// @dev The slot's keys: a market that is neither unknown, Cancelled nor Closed, one of its pool tokens, a debt
-    /// asset of its Spoke (an enabled reserve's asset, a listed token, or an asset with a First-Loss Reserve on the home
-    /// Hub, so routes can be set in the batch that enables the reserve), the kind and a non-zero route.
     function _checkSlot(
         uint256 marketId,
         address token,
@@ -303,9 +261,7 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         if (kind > _BACKUP || route == address(0) || token == debtAsset) revert InvalidRoute();
     }
 
-    /// @dev REQ-CONFIG-040 and REQ-MREG-035: true when the market's integration has no finalized record that still
-    /// matches it (no route is accepted then), or when `deps` names the market's own pool, its integration's LPVault
-    /// or an AMM contract recorded for its integration.
+    /// @dev Also true (fail closed) when the integration record is not final and current.
     function _touchesMarketAmm(
         Market storage m,
         address[] memory deps
@@ -321,10 +277,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         return false;
     }
 
-    /// @dev REQ-MREG-035: the key of an integration's record of AMM protocol contracts, from the chain, the LPVault's
-    /// address and code hash (its version: an LPVault is immutable, so a new build is a new address and hash), its AMM
-    /// protocol tag and its pool keying. A replacement integration has another key and needs its own record.
-    /// `InvalidIntegration` for an unregistered integration.
     function _integrationRecordKey(
         uint32 integrationId
     ) private view returns (bytes32) {
@@ -337,10 +289,7 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
             );
     }
 
-    /// @dev REQ-MREG-035: after an addition to a finalized record, disables every active route of the integration's
-    /// markets (not Cancelled or Closed) whose `dependencies()` names an added contract or cannot be read, so a newly
-    /// protected address leaves no approved unsafe route usable. Each market's slots of its current registration are
-    /// read through `routeEpoch`.
+    /// @dev Disables every active route of the integration's markets whose dependencies name an added contract.
     function _recheckRoutes(
         uint32 integrationId,
         address[] calldata added
@@ -372,7 +321,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         }
     }
 
-    /// @dev True when `deps` holds any address of `list`.
     function _namesAny(
         address[] memory deps,
         address[] memory list
@@ -383,7 +331,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         return false;
     }
 
-    /// @dev True when `list` holds `a`.
     function _recorded(
         address[] storage list,
         address a
@@ -394,7 +341,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         return false;
     }
 
-    /// @dev True when any dependency is the peg module of one of the market's pool tokens.
     function _touchesPegModule(
         address[] storage tokens,
         address[] memory deps
@@ -406,7 +352,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         return false;
     }
 
-    /// @dev True when `list` holds `a` (a zero `a` never matches).
     function _contains(
         address[] memory list,
         address a
@@ -418,7 +363,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         return false;
     }
 
-    /// @dev True when `token` is one of the market's pool tokens.
     function _isPoolToken(
         address[] storage tokens,
         address token

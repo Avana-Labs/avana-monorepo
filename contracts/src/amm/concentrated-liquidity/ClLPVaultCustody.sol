@@ -12,25 +12,13 @@ import {IClPositionManager} from "./IClPositionManager.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title ClLPVaultCustody
-/// @notice Custody of concentrated-liquidity NFT positions: pledge, return, exact-unit removal of principal only, fee
-/// collection for the depositor of record, stray NFTs, and the custody views. The removal and fee calls themselves are
-/// the integration's hooks (`_removePrincipal`, `_collectAll`).
-/// @dev Every position-moving function requires `msg.sender == COLLATERALIZATION` and a held Lock; `returnStray` is
-/// timelock-only with the Lock free. An NFT moves only by `transferFrom` (no receiver hook runs) and only to its
-/// depositor of record or, as a stray, to the timelock's recipient. Every reported amount is a return value of the
-/// position manager; no function reads a token balance. The LPVault never approves anyone on the position manager.
-/// @custom:spec REQ-VAULT-003, REQ-VAULT-004, REQ-VAULT-093, REQ-VAULT-094, REQ-VAULT-095, REQ-VAULT-097, REQ-VAULT-098, REQ-VAULT-099, REQ-VAULT-154, REQ-AMM-V3-004, SPEC-BACK-008, INV-007, ATTACK-003, ATTACK-006, ATTACK-007, ATTACK-008, ATTACK-015
-// The custody events report what the position manager's own call returned (units read after the pull, removed and
-// collected amounts), so they follow that call. Every function that emits one runs only for Collateralization inside a
-// Lock session; a pool token that re-enters during the payout reaches custody functions that refuse any caller but
-// Collateralization and views that refuse while the Lock is held, so no log can be reordered or fabricated.
+/// @notice Custody of concentrated-liquidity NFT positions: pledge, return, removal, fees, strays and views.
+/// @dev NFTs move only by `transferFrom`, so no receiver hook runs.
+// Events report the position manager's return values, so they follow the call; emitters run only under the Lock.
 // forge-lint: disable-start(reentrancy-events)
 abstract contract ClLPVaultCustody is ClLPVaultBase {
     /// @inheritdoc IAmmIntegration
-    /// @dev Custody entry written before the pull (checks-effects-interactions); the pull is `transferFrom`, so no code
-    /// of the owner or of the LPVault runs, and the units are read after custody. A stray the LPVault holds can never
-    /// become a record: its owner is the LPVault, which is refused as `owner`.
-    /// @custom:spec REQ-AMM-CORE-005, REQ-AMM-CORE-006, REQ-VAULT-147, REQ-VAULT-167, REQ-VAULT-008, REQ-VAULT-009, REQ-VAULT-011, REQ-VAULT-101, REQ-VAULT-173, REQ-AMM-CORE-016, REQ-AMM-V3-009, REQ-AMM-V3-010, INV-005, ATTACK-001, ATTACK-003, ATTACK-007
+    /// @dev Custody entry is written before the pull.
     function receivePosition(
         uint256 marketId,
         address owner,
@@ -51,7 +39,6 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @custom:spec REQ-AMM-CORE-005, REQ-AMM-CORE-006, REQ-RISK-031
     function validatePosition(
         uint256 marketId,
         address owner,
@@ -64,9 +51,6 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @dev The entry is deleted before the NFT leaves; the NFT carries all its live liquidity, donated liquidity
-    /// included, and every owed fee.
-    /// @custom:spec REQ-AMM-CORE-007, REQ-VAULT-148, REQ-VAULT-168, REQ-VAULT-072, REQ-VAULT-094, REQ-VAULT-158, INV-045
     function returnPosition(
         bytes32 positionKey
     ) external override returns (address depositor) {
@@ -79,9 +63,6 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @dev Anyone can add liquidity to an NFT position with the position manager's `increaseLiquidity`, and a
-    /// re-credit credits it, so a concentrated-liquidity LPVault never tops up.
-    /// @custom:spec REQ-AMM-CORE-011, REQ-COLL-037
     function topUpPosition(
         bytes32,
         address,
@@ -92,10 +73,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @dev The integration's `_removePrincipal` (`SPEC-BACK-008`) under the Lock: principal to `recipient`, any fee the
-    /// removal pays out to the depositor of record. Returns the removal's amounts; the recipient measures what it
-    /// received by balance delta.
-    /// @custom:spec REQ-AMM-CORE-008, REQ-VAULT-149, REQ-VAULT-169, REQ-VAULT-057, REQ-VAULT-058, REQ-VAULT-067, REQ-VAULT-095, REQ-VAULT-158, REQ-VAULT-159, REQ-VAULT-164, SPEC-BACK-008, ATTACK-015
+    /// @dev Principal to `recipient`; any fee the removal pays out goes to the depositor of record.
     function unwind(
         bytes32 positionKey,
         uint128 units,
@@ -114,7 +92,6 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @custom:spec REQ-AMM-CORE-008, REQ-VAULT-161, REQ-VAULT-170, REQ-VAULT-099, REQ-VAULT-163, REQ-AMM-V3-011, SPEC-BACK-008
     function releaseToDepositor(
         bytes32 positionKey,
         uint128 units,
@@ -131,11 +108,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @dev Collateralization only, while the AaveAdapter holds the Lock (`LockNotHeld` for a free Lock or LPVaultSwap
-    /// as holder). The integration's `_collectAll` pays every owed fee to the depositor of record and nothing else
-    /// (Uniswap v3 and Slipstream: one uncapped `collect`, which reads no pool state, and inside a pool callback the
-    /// pool's own lock makes it revert).
-    /// @custom:spec REQ-AMM-CORE-010, REQ-VAULT-064, REQ-VAULT-150, REQ-VAULT-065, REQ-VAULT-066, REQ-VAULT-120, REQ-VAULT-126, REQ-VAULT-172, FEE-001, FEE-002, FEE-006, INV-044
+    /// @dev Collateralization only, while the AaveAdapter (not LPVaultSwap) holds the Lock.
     function collectFees(
         bytes32 positionKey,
         address depositor
@@ -151,9 +124,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
     }
 
     /// @inheritdoc ILPVault
-    /// @dev The stray condition is evaluated here, at execution: the LPVault owns the NFT and has no custody entry.
-    /// A token the position manager does not know is not stray.
-    /// @custom:spec REQ-VAULT-165, REQ-VAULT-079, REQ-VAULT-080, REQ-VAULT-081, REQ-VAULT-082, REQ-VAULT-083, REQ-VAULT-084, REQ-VAULT-122, REQ-VAULT-123, INV-007, ATTACK-006
+    /// @dev Stray: the LPVault owns the NFT and has no custody entry for it.
     function returnStray(
         bytes32 positionKey,
         address recipient
@@ -167,8 +138,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
     }
 
     /// @inheritdoc IClIntegration
-    /// @dev Records nothing: a pushed NFT is a stray, never a record (`REQ-VAULT-093`).
-    /// @custom:spec REQ-VAULT-078, REQ-VAULT-093, REQ-VAULT-124
+    /// @dev Records nothing: a pushed NFT is a stray, never a record.
     function onERC721Received(
         address operator,
         address from,
@@ -181,10 +151,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         return this.onERC721Received.selector;
     }
 
-    // ─── Custody views ───
-
     /// @inheritdoc IAmmIntegration
-    /// @custom:spec REQ-AMM-CORE-005, REQ-RISK-031
     function positionOwner(
         bytes32 positionKey
     ) external view override returns (address owner) {
@@ -196,7 +163,6 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @custom:spec REQ-VAULT-151, REQ-VAULT-152, REQ-VAULT-160, REQ-AMM-CORE-009
     function depositorOf(
         bytes32 positionKey
     ) external view override returns (address) {
@@ -205,7 +171,6 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @custom:spec REQ-VAULT-151, REQ-VAULT-160, REQ-AMM-CORE-009
     function marketOfPosition(
         bytes32 positionKey
     ) external view override returns (uint256) {
@@ -214,7 +179,6 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
     }
 
     /// @inheritdoc ILPVault
-    /// @custom:spec REQ-VAULT-151, REQ-VAULT-152, REQ-VAULT-160
     function isInCustody(
         bytes32 positionKey
     ) external view override returns (bool) {
@@ -223,9 +187,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @dev Under the Lock (Collateralization's re-credit) the pool lock is checked first, so no liquidity read runs
-    /// inside a pool callback.
-    /// @custom:spec REQ-AMM-CORE-009, REQ-VAULT-162, REQ-VAULT-171, REQ-VAULT-151, REQ-VAULT-158, REQ-VAULT-160, REQ-AMM-V3-003, REQ-AMM-V3-010
+    /// @dev Under the Lock the pool lock is checked first, so no read runs inside a pool callback.
     function unitsOf(
         bytes32 positionKey
     ) external view override returns (uint128 units) {
@@ -236,9 +198,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
         units = _liveUnits(m, positionKey);
     }
 
-    // ─── Internal ───
-
-    /// @dev The position's live liquidity in vault-token units, `⌊liquidity / 10^k⌋` (`SPEC-UNIT-002`).
+    /// @dev The position's live liquidity in vault-token units, floored.
     function _liveUnits(
         Market storage m,
         bytes32 positionKey

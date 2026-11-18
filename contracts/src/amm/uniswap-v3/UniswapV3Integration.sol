@@ -13,40 +13,20 @@ import {ClMarketConfig} from "../types/ClMarketConfig.sol";
 import {IUniswapV3Integration} from "./IUniswapV3Integration.sol";
 
 /// @title UniswapV3Integration
-/// @notice The Uniswap v3 LPVault: immutable custodian of canonical NonfungiblePositionManager positions in
-/// exact-range markets, `AMM_PROTOCOL() = keccak256("UNISWAP_V3")`, `positionKey = bytes32(tokenId)`, units are the
-/// position's liquidity.
-/// @dev The AMM-neutral custody, binding and pricing code is the shared concentrated-liquidity base
-/// (`src/amm/concentrated-liquidity/`); this contract supplies what names Uniswap v3: the NFPM and factory immutables,
-/// the 12-field `positions` and 7-field `slot0` layouts, the pool derivation `FACTORY.getPool(token0, token1, fee)`,
-/// and the listing check of a pool against the factory, its CREATE2 address and the standard fee tiers.
-/// @custom:spec REQ-AMM-V3-001, REQ-AMM-V3-002, REQ-AMM-V3-003, REQ-AMM-V3-004, REQ-AMM-V3-005, REQ-AMM-V3-006, REQ-AMM-V3-007, REQ-AMM-V3-012, REQ-VAULT-155, REQ-VAULT-174, REQ-AMM-CORE-002, Q-226, Q-291, Q-305, Q-371
+/// @notice Uniswap v3 LPVault: custodian of canonical NonfungiblePositionManager positions in exact-range markets.
 contract UniswapV3Integration is ClNfpmLPVault, IUniswapV3Integration {
-    /// @notice `keccak256("UNISWAP_V3")`.
     bytes32 public constant UNISWAP_V3 = keccak256("UNISWAP_V3");
     /// @notice Init code hash of the canonical Uniswap v3 pool, from which `FACTORY` derives every pool address.
     bytes32 public constant POOL_INIT_CODE_HASH = 0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54;
-    /// @notice Largest block interval accepted, seconds: Ethereum's.
+    /// @notice Largest block interval accepted, seconds.
     uint256 public constant MAX_BLOCK_TIME = 12;
     address private immutable _NFPM;
     address private immutable _FACTORY;
-    /// @dev The chain's minimum block interval, seconds (`SPEC-ORC-022`, `REQ-AMM-V3-012`).
     uint256 private immutable _BLOCK_TIME;
 
-    /// @notice Fixes the integration identifier, the Avana bindings and the canonical NFPM and factory.
-    /// @dev Reverts `InvalidDeployment` for a zero NFPM or factory, either equal to an Avana binding, an NFPM whose
-    /// `factory()` is not `factory` (`REQ-AMM-V3-001`), or a block time of 0, above 12 s, or other than the known
-    /// interval of the chain Avana deploys on (12 s on Ethereum and Sepolia, 2 s on Base, Base Sepolia and OP
-    /// Mainnet; `REQ-AMM-V3-012`).
-    /// @param integrationId Identifier registered for this LPVault in the VaultTokenFactory.
-    /// @param collateralization The chain's Collateralization.
-    /// @param marketRegistry The chain's MarketRegistry proxy.
-    /// @param lock The chain's Lock.
-    /// @param timelock The chain's AvanaTimelock.
-    /// @param nfpm Canonical Uniswap v3 NonfungiblePositionManager.
-    /// @param factory Canonical Uniswap v3 factory.
+    /// @notice Fixes the Avana bindings and the canonical NFPM and factory.
+    /// @dev Reverts `InvalidDeployment` for a bad NFPM/factory pair or a block time that does not match a known chain.
     /// @param blockTime The chain's minimum block interval, seconds.
-    /// @custom:spec REQ-AMM-V3-001, REQ-AMM-V3-012, REQ-VAULT-155
     constructor(
         uint32 integrationId,
         address collateralization,
@@ -75,46 +55,37 @@ contract UniswapV3Integration is ClNfpmLPVault, IUniswapV3Integration {
     }
 
     /// @inheritdoc IUniswapV3Integration
-    /// @custom:spec REQ-AMM-V3-012, SPEC-ORC-022
     function BLOCK_TIME() external view override returns (uint256) {
         return _BLOCK_TIME;
     }
 
     /// @inheritdoc IUniswapV3Integration
-    /// @custom:spec REQ-AMM-V3-001, REQ-VAULT-155
     function NFPM() external view override returns (address) {
         return _NFPM;
     }
 
     /// @inheritdoc IUniswapV3Integration
-    /// @custom:spec REQ-AMM-V3-002, REQ-VAULT-155
     function FACTORY() external view override returns (address) {
         return _FACTORY;
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @custom:spec REQ-AMM-CORE-009
     function AMM_PROTOCOL() external pure override returns (bytes32) {
         return UNISWAP_V3;
     }
 
-    // ─── Hooks of the concentrated-liquidity base ───
-
-    /// @dev Every Uniswap v3 position belongs to the one canonical NFPM.
     function _positionManager(
         bytes32
     ) internal view override returns (address) {
         return _NFPM;
     }
 
-    /// @dev `positionKey = bytes32(tokenId)` (`SPEC-AMM-CORE-002`).
     function _tokenId(
         bytes32 positionKey
     ) internal pure override returns (uint256) {
         return uint256(positionKey);
     }
 
-    /// @dev Only the canonical NFPM's NFTs are accepted.
     function _positionKeyOf(
         address manager,
         uint256 tokenId
@@ -122,16 +93,14 @@ contract UniswapV3Integration is ClNfpmLPVault, IUniswapV3Integration {
         return (bytes32(tokenId), manager == _NFPM);
     }
 
-    /// @dev The 12-field `positions` layout; the pool is `FACTORY.getPool(token0, token1, fee)` of the position's own
-    /// fields, never a caller-supplied pool (`REQ-VAULT-008`).
-    /// @custom:spec REQ-VAULT-008, REQ-VAULT-162, REQ-AMM-V3-003
+    /// @dev The pool is derived from the position's own fields, never caller-supplied.
     function _readPoolPosition(
         bytes32 positionKey
     ) internal view override returns (address pool, int24 tickLower, int24 tickUpper, uint128 liquidity) {
         address token0;
         address token1;
         uint24 fee;
-        // The 12-field layout of REQ-AMM-V3-003; only the pair, fee, ticks and liquidity are used.
+        // Only the pair, fee, ticks and liquidity are used.
         // forge-lint: disable-start(unused-return)
         (,, token0, token1, fee, tickLower, tickUpper, liquidity,,,,) =
             INonfungiblePositionManager(_NFPM).positions(uint256(positionKey));
@@ -139,20 +108,16 @@ contract UniswapV3Integration is ClNfpmLPVault, IUniswapV3Integration {
         pool = IUniswapV3Factory(_FACTORY).getPool(token0, token1, fee);
     }
 
-    /// @dev The 7-field Uniswap v3 `slot0` layout (`REQ-AMM-V3-003`).
+    /// @dev The 7-field Uniswap v3 `slot0` layout.
     function _slot0(
         address pool
     ) internal view override returns (int24 tick, uint16 observationCardinality, bool unlocked) {
-        // The 7-field layout of REQ-AMM-V3-003; only the tick, the cardinality and the lock flag are used.
+        // Only the tick, the cardinality and the lock flag are used.
         // forge-lint: disable-next-line(unused-return)
         (, tick,, observationCardinality,,, unlocked) = IUniswapV3Pool(pool).slot0();
     }
 
-    /// @dev `REQ-AMM-V3-002`: `pool.factory() == FACTORY`, `FACTORY.getPool(token0, token1, fee) == pool`, `pool` is the
-    /// CREATE2 address of `(token0, token1, fee)` under the pool init code hash, and the tick spacing is the standard
-    /// spacing of the fee tier. `integrationData = abi.encode(uint256 price0, uint256 price1)`, the listing valuation
-    /// prices (8 decimals).
-    /// @custom:spec REQ-AMM-V3-002, REQ-AMM-V3-008, REQ-AMM-CORE-017
+    /// @dev Checks the pool against the factory, its CREATE2 address and the standard fee tiers.
     function _validatePool(
         address pool,
         bytes calldata integrationData
@@ -174,8 +139,7 @@ contract UniswapV3Integration is ClNfpmLPVault, IUniswapV3Integration {
         ) revert InvalidPool();
     }
 
-    /// @dev No Uniswap v3 position is encumbered from the LPVault's view: a staked NFT is owned by its staking
-    /// contract and fails the owner check.
+    /// @dev A staked v3 NFT is owned by its staking contract and already fails the owner check.
     function _isEncumbered(
         Market storage,
         bytes32
@@ -183,13 +147,11 @@ contract UniswapV3Integration is ClNfpmLPVault, IUniswapV3Integration {
         return false;
     }
 
-    /// @dev The constructor's block interval (`REQ-AMM-V3-012`).
     function _blockTime() internal view override returns (uint256) {
         return _BLOCK_TIME;
     }
 
-    /// @dev The block interval of a chain Avana deploys on: 12 s for Ethereum (1) and Sepolia (11155111), 2 s for Base
-    /// (8453), Base Sepolia (84532) and OP Mainnet (10); 0 for any other chain, where the constructor's value stands.
+    /// @dev The block interval of a known chain; 0 for any other, where the constructor's value stands.
     function _knownBlockTime(
         uint256 chainId
     ) private pure returns (uint256) {
@@ -198,8 +160,6 @@ contract UniswapV3Integration is ClNfpmLPVault, IUniswapV3Integration {
         return 0;
     }
 
-    /// @dev The CREATE2 address `FACTORY` deploys the pool of `(token0, token1, fee)` at, Uniswap v3-periphery
-    /// `PoolAddress.computeAddress`.
     function _poolAddress(
         address token0,
         address token1,
@@ -216,7 +176,7 @@ contract UniswapV3Integration is ClNfpmLPVault, IUniswapV3Integration {
         return POOL_INIT_CODE_HASH;
     }
 
-    /// @dev Tick spacing of the standard fee tiers: 100 → 1, 500 → 10, 3,000 → 60, 10,000 → 200; 0 for any other.
+    /// @dev Tick spacing of the standard fee tiers; 0 for any other.
     function _standardSpacing(
         uint24 fee
     ) private pure returns (int24) {

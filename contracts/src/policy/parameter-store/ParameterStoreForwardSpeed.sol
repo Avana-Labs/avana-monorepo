@@ -10,12 +10,9 @@ import {MarketSpeedLimits} from "./types/MarketSpeedLimits.sol";
 import {SpeedLimit} from "./types/SpeedLimit.sol";
 
 /// @title ParameterStoreForwardSpeed
-/// @notice The speed-limit views and setters (Q-411): the views read the store, each setter checks the caller's role
-/// and delegatecalls the tighten or loosen logic contract with the unchanged calldata.
-/// @custom:spec REQ-PSTORE-035, REQ-PSTORE-036, REQ-PSTORE-002, Q-411
+/// @notice Speed-limit views and setters; each setter checks the caller's role and delegatecalls the logic contract.
 abstract contract ParameterStoreForwardSpeed is ParameterStoreRouter, IParameterStoreSpeed {
     /// @inheritdoc IParameterStoreSpeed
-    /// @custom:spec REQ-PSTORE-035
     function marketSpeedLimits(
         uint256 marketId
     ) external view override returns (MarketSpeedLimits memory limits) {
@@ -23,7 +20,6 @@ abstract contract ParameterStoreForwardSpeed is ParameterStoreRouter, IParameter
     }
 
     /// @inheritdoc IParameterStoreSpeed
-    /// @custom:spec REQ-PSTORE-035
     function debtSpeedLimit(
         address hub,
         address asset
@@ -32,7 +28,6 @@ abstract contract ParameterStoreForwardSpeed is ParameterStoreRouter, IParameter
     }
 
     /// @inheritdoc IParameterStoreSpeed
-    /// @custom:spec REQ-PSTORE-036, REQ-PSTORE-002
     function tightenMarketSpeedLimits(
         uint256,
         MarketSpeedLimits calldata
@@ -41,7 +36,6 @@ abstract contract ParameterStoreForwardSpeed is ParameterStoreRouter, IParameter
     }
 
     /// @inheritdoc IParameterStoreSpeed
-    /// @custom:spec REQ-PSTORE-036
     function loosenMarketSpeedLimits(
         uint256,
         MarketSpeedLimits calldata
@@ -50,7 +44,6 @@ abstract contract ParameterStoreForwardSpeed is ParameterStoreRouter, IParameter
     }
 
     /// @inheritdoc IParameterStoreSpeed
-    /// @custom:spec REQ-PSTORE-036, REQ-PSTORE-002
     function tightenDebtSpeedLimit(
         address,
         address,
@@ -60,7 +53,6 @@ abstract contract ParameterStoreForwardSpeed is ParameterStoreRouter, IParameter
     }
 
     /// @inheritdoc IParameterStoreSpeed
-    /// @custom:spec REQ-PSTORE-036
     function loosenDebtSpeedLimit(
         address,
         address,

@@ -5,7 +5,7 @@
 ## Checklist
 
 - [ ] Spec first: where code and spec disagreed, the spec page and its Z3/SymPy/Hypothesis model changed in this PR, and `trace.py` reports 0 errors with `traceability.md` regenerated.
-- [ ] Every new or changed function carries `/// @custom:spec` IDs; every new test carries a `TEST-NNN verifies:` tag.
+- [ ] Every new or changed function has its rule IDs in `docs/spec/05-verification/solidity-links.json`; every new test carries a `TEST-NNN verifies:` tag.
 - [ ] `forge fmt --check`, `forge build -D warnings`, `forge test` and `script/security-fast.sh` pass locally.
 - [ ] Gas: `make gas` was run and the changed `contracts/snapshots/*.json` are committed, or no gas suite changed.
 - [ ] Contract sizes: `script/check-sizes.sh` passes; any margin change in `security/size-margins.json` gives its reason.

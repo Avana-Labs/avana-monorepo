@@ -1109,7 +1109,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: "Every @custom:spec and verifies: tag names a defined ID and sits on a test"
+      - name: "Every Solidity link and verifies: tag names a defined ID and sits on its declaration or test"
         continue-on-error: true
         # Fails on an undefined ID and on a tag that sits on no test function or CVL rule. The strict check, which
         # needs the run's results, is the evidence job's.

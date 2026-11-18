@@ -21,38 +21,22 @@ import {LiquidationResult} from "./types/LiquidationResult.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-// activeKeeperCount reads the MarketRegistry freeze list once per registered keeper, at most MAX_KEEPERS (32);
-// a view, so a revert only fails the read.
+// activeKeeperCount reads the freeze list once per keeper, at most MAX_KEEPERS; a view.
 // forge-lint: disable-start(calls-loop)
-// KeeperAdded and KeeperRemoved follow the registry's freeze read (a view); the setters are timelock-only.
+// The keeper events follow a view read; the setters are timelock-only.
 // forge-lint: disable-start(reentrancy-events)
-// initialize registers each initial keeper through the same check as addKeeper; a zero or repeated entry must
-// revert the initialisation.
+// A zero or repeated initial keeper must revert the initialisation.
 // forge-lint: disable-start(require-revert-in-loop)
 /// @title LPVaultSwap
-/// @notice The chain's only Avana liquidator, behind its fixed ERC-1967 proxy: roles, the committed-operator registry,
-/// the implementation immutables and the dispatch of `liquidate`, `settlePending`, `deleverage` and `onFlashLoan` to
-/// their logic contracts.
-/// @dev UUPS: `_authorizeUpgrade` requires `APPLICATION_ADMIN`, and `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` can be
-/// held only by the timelock `initialize` names (`AdminRoleOnlyTimelock`). The three logic contracts are
-/// implementation immutables checked at construction (kind and immutables hash), so a new body is a new
-/// implementation and waits the normal delay. Each dispatch runs the logic by delegatecall with the unchanged calldata
-/// in the proxy's storage and returns its return data unchanged; a call to the implementation itself reverts
-/// `NotDelegated`. The registry gates no call: `liquidate` is open to every address that is not frozen (Q-404).
-/// @custom:spec REQ-SWAP-001, REQ-SWAP-032, REQ-SWAP-033, REQ-SWAP-034, REQ-SWAP-035, REQ-SWAP-036, REQ-SWAP-037, REQ-SWAP-038, REQ-SWAP-040, REQ-SWAP-043, REQ-SWAP-048, REQ-SWAP-065, REQ-SWAP-069, REQ-SWAP-072, REQ-SWAP-080, REQ-SWAP-085, REQ-SWAP-107, REQ-SWAP-113, REQ-SWAP-117, REQ-ACCESS-153, Q-259, Q-400, Q-404
+/// @notice The chain's liquidator: roles, the committed-operator registry, and dispatch of `liquidate`,
+/// `settlePending`, `deleverage` and `onFlashLoan` to their logic contracts by delegatecall.
+/// @dev UUPS proxy; only the timelock can upgrade it.
 contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeable, UUPSUpgradeable {
-    /// @dev Body of `liquidate`.
     address internal immutable _LIQUIDATION_LOGIC;
-    /// @dev Body of `settlePending`.
     address internal immutable _PENDING_LOGIC;
-    /// @dev Bodies of `deleverage` and `onFlashLoan`.
     address internal immutable _DELEVERAGE_LOGIC;
 
-    /// @notice Fixes the implementation immutables, checks each logic contract and disables initializers on the
-    /// implementation itself.
-    /// @param im The per-chain addresses and the keeper floor (for example `keeperFloor = 1`).
-    /// @param logics The three logic contracts, each built with `im`.
-    /// @custom:spec REQ-SWAP-034, REQ-SWAP-040
+    /// @notice Fixes the implementation immutables, checks each logic contract and disables initializers.
     constructor(
         LPVaultSwapImmutables memory im,
         LPVaultSwapLogics memory logics
@@ -66,10 +50,7 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
         _disableInitializers();
     }
 
-    // ───────────────────────────────────────────────────────────────────────────────────────────── entry points
-
     /// @inheritdoc ILPVaultSwapLiquidation
-    /// @custom:spec REQ-SWAP-001, REQ-SWAP-072, REQ-SWAP-085, REQ-SWAP-086
     function liquidate(
         LiquidationParams calldata
     )
@@ -83,7 +64,6 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
     }
 
     /// @inheritdoc ILPVaultSwapLiquidation
-    /// @custom:spec REQ-SWAP-066
     function settlePending(
         uint256,
         uint256
@@ -100,7 +80,6 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
     }
 
     /// @inheritdoc ILPVaultSwapDeleverage
-    /// @custom:spec REQ-SWAP-106
     function deleverage(
         DeleverageRequest calldata
     )
@@ -115,7 +94,6 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
     }
 
     /// @inheritdoc IFlashReceiver
-    /// @custom:spec REQ-SWAP-013, REQ-FLASH-004
     function onFlashLoan(
         address,
         uint256,
@@ -131,10 +109,7 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
         _delegate(_DELEVERAGE_LOGIC);
     }
 
-    // ───────────────────────────────────────────────────────────────────────────────────────────── governance
-
     /// @inheritdoc ILPVaultSwapAdmin
-    /// @custom:spec REQ-SWAP-032, REQ-SWAP-034, REQ-SWAP-040, REQ-ACCESS-153
     function initialize(
         address timelock,
         address[] calldata initialKeepers
@@ -154,7 +129,6 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
     }
 
     /// @inheritdoc ILPVaultSwapAdmin
-    /// @custom:spec REQ-SWAP-033, REQ-SWAP-069, REQ-SWAP-107, REQ-SWAP-117
     function addKeeper(
         address keeper
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
@@ -166,7 +140,6 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
     }
 
     /// @inheritdoc ILPVaultSwapAdmin
-    /// @custom:spec REQ-SWAP-035, REQ-SWAP-038, REQ-SWAP-065, REQ-SWAP-069, REQ-SWAP-107
     function removeKeeper(
         address keeper
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
@@ -187,10 +160,7 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
         emit KeeperRemoved(keeper);
     }
 
-    // ───────────────────────────────────────────────────────────────────────────────────────────────── views
-
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-001, REQ-SWAP-032
     function isApprovedKeeper(
         address keeper
     ) external view override returns (bool approved) {
@@ -198,13 +168,11 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
     }
 
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-034
     function approvedKeeperCount() external view override returns (uint256 count) {
         count = _s().keeperList.length;
     }
 
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-034, REQ-SWAP-039, REQ-SWAP-107
     function activeKeeperCount() public view override returns (uint256 count) {
         address[] storage list = _s().keeperList;
         IMarketRegistry mr = IMarketRegistry(_MARKET_REGISTRY);
@@ -215,86 +183,70 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
     }
 
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-032
     function getKeepers() external view override returns (address[] memory keepers) {
         keepers = _s().keeperList;
     }
 
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-122
     function MAX_REPAY_TRANSFERS() external pure override returns (uint256 count) {
         count = _MAX_REPAY_TRANSFERS;
     }
 
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-034
     function KEEPER_FLOOR() external view override returns (uint256 floor) {
         floor = _KEEPER_FLOOR;
     }
 
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-033
     function MAX_KEEPERS() external pure override returns (uint256 max) {
         max = _MAX_KEEPERS;
     }
 
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-040
     function APPLICATION_ADMIN() external pure override returns (bytes32 role) {
         role = AvanaRoles.APPLICATION_ADMIN;
     }
 
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-040
     function TIMELOCK() external view override returns (address timelock) {
         timelock = _s().timelock;
     }
 
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-002
     function LOCK() external view override returns (address lock) {
         lock = _LOCK;
     }
 
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-020, REQ-SWAP-092
     function AAVE_ADAPTER() external view override returns (address adapter) {
         adapter = _AAVE_ADAPTER;
     }
 
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-015, REQ-SWAP-020
     function COLLATERALIZATION() external view override returns (address collateralization) {
         collateralization = _COLLATERALIZATION;
     }
 
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-004, REQ-SWAP-047
     function MARKET_REGISTRY() external view override returns (address registry) {
         registry = _MARKET_REGISTRY;
     }
 
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-047
     function PARAMETER_STORE() external view override returns (address store) {
         store = _PARAMETER_STORE;
     }
 
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-076
     function PAYOUT_ESCROW() external view override returns (address escrow) {
         escrow = _PAYOUT_ESCROW;
     }
 
     /// @inheritdoc ILPVaultSwapViews
-    /// @custom:spec REQ-SWAP-076
     function PAYOUT_TRANSFER_GAS() external pure override returns (uint256 gas) {
         gas = _PAYOUT_TRANSFER_GAS;
     }
 
-    // ────────────────────────────────────────────────────────────────────────────────────────────────── internal
-
-    /// @dev Registers `keeper` (`InvalidKeeper` for zero or a duplicate) and emits `KeeperAdded`.
     function _register(
         address keeper
     ) private {
@@ -306,7 +258,6 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
     }
 
     /// @dev Either admin role can be held only by the timelock `initialize` set.
-    /// @custom:spec REQ-SWAP-040, REQ-ACCESS-153, Q-259
     function _grantRole(
         bytes32 role,
         address account
@@ -317,19 +268,15 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
         granted = super._grantRole(role, account);
     }
 
-    /// @dev UUPS: only `APPLICATION_ADMIN` (the timelock, normal delay).
-    /// @custom:spec REQ-SWAP-040, REQ-SWAP-069
     function _authorizeUpgrade(
         address
     ) internal override onlyRole(AvanaRoles.APPLICATION_ADMIN) {}
 
-    /// @dev Runs the current call in `logic` by delegatecall with the unchanged calldata and returns or reverts with
-    /// its data unchanged; refuses to run at the implementation's own address.
     function _delegate(
         address logic
     ) private {
         _onlyDelegated();
-        // Forwarding to an implementation immutable: the return data is passed through unchanged, as a proxy does.
+        // Passes the return data through unchanged, as a proxy does.
         // solhint-disable-next-line no-inline-assembly
         assembly {
             calldatacopy(0, 0, calldatasize())
@@ -341,7 +288,6 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
         }
     }
 
-    /// @dev `InvalidLogic` unless `logic` reports `kind` and the same implementation immutables.
     function _requireLogic(
         address logic,
         bytes32 kind

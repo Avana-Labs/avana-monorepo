@@ -20,18 +20,11 @@ import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title RiskModulePreview
-/// @notice The pledge context shared with `checkPledge`, and `previewPledge`: the same checks run before custody, with
-/// the position's owner, shape and units from the market's AMM integration and the counters from Collateralization.
-/// @dev `previewPledge` runs `checkPledge` itself through an external call to this logic contract, so the reason it
-/// reports is exactly the error `checkPledge` would raise (REQ-RISK-031). Before custody it also reports
-/// `NotPositionOwner`, the integration's own shape, pool or units error, and `TooManyRecords` for a 17th record. It is
-/// called outside the Lock (Collateralization's views revert `Locked` inside one); the RiskModule turns any revert of
-/// this body into a non-reverting preview.
-/// @custom:spec REQ-RISK-010, REQ-RISK-027, REQ-RISK-031, REQ-RISK-057, REQ-RISK-008
+/// @notice The pledge context shared with `checkPledge`, and `previewPledge`: the same checks run before custody.
+/// @dev `previewPledge` runs `checkPledge` by external call, so it reports exactly the error `checkPledge` raises.
 // View calls in a loop over at most 8 pool tokens.
 // forge-lint: disable-start(calls-loop)
 abstract contract RiskModulePreview is RiskModuleBase, IRiskModulePledgeLogic {
-    /// @dev Values of one pledge check.
     struct Ctx {
         Market m;
         uint256 marketId;
@@ -45,21 +38,14 @@ abstract contract RiskModulePreview is RiskModuleBase, IRiskModulePledgeLogic {
         uint256 charge;
         bool eligible;
         uint256 restore;
-        // The market's fresh price from the eligibility read, 0 when failed (REQ-RISK-026 booking price).
+        // The market's fresh price from the eligibility read, 0 when failed.
         uint256 fresh;
     }
 
-    /// @dev The drift logic.
     address internal immutable _DRIFT;
-    /// @dev The breaker logic.
     address internal immutable _BREAKER;
 
-    /// @notice Fixes the implementation immutables and the drift and breaker logic.
-    /// @param im The per-chain Avana addresses.
-    /// @param drift The drift logic built with `im`.
-    /// @param breaker The breaker logic built with `im`.
-    /// @custom:spec REQ-RISK-002
-    // `_requireLogic` checks each logic address, which rejects zero (REQ-RISK-002).
+    // `_requireLogic` checks each logic address, which rejects zero.
     // forge-lint: disable-next-item(missing-zero-check)
     constructor(
         RiskModuleImmutables memory im,
@@ -73,7 +59,6 @@ abstract contract RiskModulePreview is RiskModuleBase, IRiskModulePledgeLogic {
     }
 
     /// @inheritdoc IRiskModulePledgeLogic
-    /// @custom:spec REQ-RISK-031, REQ-RISK-057, REQ-RISK-010
     function previewPledge(
         address depositor,
         uint256 marketId,
@@ -92,7 +77,6 @@ abstract contract RiskModulePreview is RiskModuleBase, IRiskModulePledgeLogic {
         if (p.reason != bytes4(0)) return p;
         p.usdCharge =
             RiskModuleMath.usdCharge(units, _capPrice(m.lpOracle), _store().stressFloorUsd(marketId), m.decimals);
-        // The integration's record cap (REQ-AMM-CORE-020), never above the global bound.
         uint256 cap = Math.min(
             IAmmIntegration(m.integration).maxRecordsPerAccountMarket(), AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET
         );
@@ -114,7 +98,6 @@ abstract contract RiskModulePreview is RiskModuleBase, IRiskModulePledgeLogic {
         }
     }
 
-    /// @dev Owner, then the integration's validation of shape, pool and units (REQ-RISK-010, REQ-RISK-031).
     function _position(
         Market memory m,
         uint256 marketId,
@@ -132,7 +115,6 @@ abstract contract RiskModulePreview is RiskModuleBase, IRiskModulePledgeLogic {
         }
     }
 
-    /// @dev Remaining room of every cap (REQ-RISK-031).
     function _rooms(
         PledgePreview memory p,
         Market memory m,
@@ -162,7 +144,6 @@ abstract contract RiskModulePreview is RiskModuleBase, IRiskModulePledgeLogic {
         }
     }
 
-    /// @dev `cap - used`, floored at 0.
     function _room(
         uint256 cap,
         uint256 used
@@ -170,7 +151,6 @@ abstract contract RiskModulePreview is RiskModuleBase, IRiskModulePledgeLogic {
         room = cap > used ? cap - used : 0;
     }
 
-    /// @dev `ceil(a * b / c)`.
     function _mulDivUp(
         uint256 a,
         uint256 b,

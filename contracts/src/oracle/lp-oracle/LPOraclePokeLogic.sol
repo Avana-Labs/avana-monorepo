@@ -10,12 +10,9 @@ import {LPOracleLogicBase} from "./LPOracleLogicBase.sol";
 import {InitParams} from "./types/InitParams.sol";
 
 /// @title LPOraclePokeLogic
-/// @notice The LPOracle's writing call (`LPOraclePoke`), run by delegatecall from the implementation, which checks
-/// `pokeMinGas` at entry before forwarding (`REQ-ORACLE-024`).
-/// @custom:spec REQ-ORACLE-106, REQ-ORACLE-024, REQ-ORACLE-025, REQ-ORACLE-026
+/// @notice The LPOracle's writing call, run by delegatecall; the implementation checks `pokeMinGas` first.
 abstract contract LPOraclePokeLogic is LPOracleLogicBase {
     /// @inheritdoc ILPOracleLogic
-    /// @custom:spec REQ-ORACLE-026
     function poke() external override onlyDelegated returns (PriceState state) {
         state = _poke();
     }

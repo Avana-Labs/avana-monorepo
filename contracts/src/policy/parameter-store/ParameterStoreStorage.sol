@@ -18,14 +18,8 @@ import {MarketSpeedLimits} from "./types/MarketSpeedLimits.sol";
 import {SpeedLimit} from "./types/SpeedLimit.sol";
 
 /// @title ParameterStoreStorage
-/// @notice Storage layout, implementation immutables, hard bounds and shared checks of the ParameterStore and of its
-/// five logic contracts.
-/// @dev All mutable state sits in one ERC-7201 namespace, `avana.storage.ParameterStore`, which the ParameterStore
-/// proxy owns; a logic contract reads and writes it only while the ParameterStore delegatecalls it. The implementation
-/// immutables are the timelock, the MarketRegistry, the chain's block time and whether the chain has a sequencer;
-/// every hard bound of 1.5 and every liveness bound is a constant, so each changes only by an upgrade at the normal
-/// delay.
-/// @custom:spec REQ-PSTORE-001, REQ-CONFIG-050, REQ-CONFIG-052, REQ-PSTORE-017, Q-226
+/// @notice Storage layout, immutables, hard bounds and shared checks of the ParameterStore and its logic contracts.
+/// @dev Hard and liveness bounds are constants, so each changes only by an upgrade.
 abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStoreErrors {
     /// @custom:storage-location erc7201:avana.storage.ParameterStore
     struct Layout {
@@ -52,14 +46,12 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         mapping(address spoke => uint256) targetHealthFactor;
         mapping(address spoke => uint16) minLiquidationBonus;
         mapping(bytes32 paramKey => uint64) lastLoosenedAt;
-        // Appended for Q-411 (REQ-PSTORE-035); earlier members keep their slots.
+        // Appended members follow; earlier members keep their slots.
         mapping(uint256 marketId => MarketSpeedLimits) marketSpeed;
         mapping(address hub => mapping(address asset => SpeedLimit)) debtSpeed;
-        // Appended for REQ-ORACLE-056: true for a market with a token that is not USD-pegged, which gets no USD band.
+        // True for a market with a token that is not USD-pegged, which gets no USD band.
         mapping(uint256 marketId => bool) unbanded;
-        // Appended for REQ-PSTORE-026: true once `setInitialTokenCap` has written the (Hub, token) cap. A cap tightened
-        // to 0 stays set, so it reopens only by `USD_CAP_REOPEN_BASE` and the loosening steps, never by a second
-        // initial write; a pair never set cannot be loosened.
+        // True once `setInitialTokenCap` has written the (Hub, token) cap; stays set when tightened to 0.
         mapping(address hub => mapping(address token => bool)) tokenCapSet;
     }
 
@@ -92,9 +84,7 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
     uint32 internal constant SEQUENCER_GRACE_MIN = 600;
     uint32 internal constant SEQUENCER_GRACE_MAX = 7200;
     uint256 internal constant USD_CAP_MAX = type(uint128).max;
-    /// @dev The value a `marketUsdCap` or `tokenUsdCap` below it may be loosened to in one step, $1,000 in 8-decimal USD
-    /// (REQ-RISK-043): a cap tightened to 0 (or to dust) reopens to at most $1,000 and then grows by the normal
-    /// ×1.5 steps, since a step from 0 alone could never leave 0.
+    /// @dev Value a USD cap below it may be loosened to in one step, so a zero cap can reopen.
     uint256 internal constant USD_CAP_REOPEN_BASE = 1000e8;
     uint16 internal constant SECOND_SOURCE_TOLERANCE_MAX_BPS = 500;
     uint16 internal constant MIN_LIQUIDATION_BONUS_FLOOR = 200;
@@ -102,34 +92,23 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
     uint256 internal constant ONE_USD = 1e8;
     uint256 internal constant ROUNDING_ALLOWANCE_USD_MAX = 1e8;
 
-    /// @dev Setter scopes of the oracle-configuration re-check: every listed market, the markets of one token, or the
-    /// markets whose routes in force use one feed.
+    /// @dev Scopes of the oracle-configuration re-check: all markets, one token's markets, or one feed's markets.
     uint8 internal constant SCOPE_ALL = 0;
     uint8 internal constant SCOPE_TOKEN = 1;
     uint8 internal constant SCOPE_FEED = 2;
 
-    /// @dev The chain's AvanaTimelock, the only holder of the two admin roles.
     address internal immutable _TIMELOCK;
 
-    /// @dev The chain's MarketRegistry proxy.
     IMarketRegistry internal immutable _REGISTRY;
 
-    /// @dev Seconds per block on this chain (12 on Ethereum, 2 on Base).
     uint32 internal immutable _BLOCK_TIME;
 
-    /// @dev True on a chain with an L2 sequencer (Base), false on Ethereum.
     bool internal immutable _HAS_SEQUENCER;
 
-    /// @dev This contract's own address: a logic contract body running here, not in the ParameterStore proxy, was
-    /// called directly.
+    /// @dev This contract's own address, to detect a direct call to a logic contract.
     address private immutable _SELF;
 
     /// @notice Fixes the implementation immutables.
-    /// @param timelock The chain's AvanaTimelock.
-    /// @param marketRegistry The chain's MarketRegistry proxy (may be a predicted address without code yet).
-    /// @param chainBlockTime Seconds per block, > 0.
-    /// @param hasSequencer Whether the chain runs an L2 sequencer.
-    /// @custom:spec REQ-PSTORE-001, REQ-PSTORE-023, REQ-PSTORE-027
     constructor(
         address timelock,
         address marketRegistry,
@@ -144,14 +123,10 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         _SELF = address(this);
     }
 
-    /// @dev Reverts `NotDelegated` unless the call runs by delegatecall in another contract's storage: every setter
-    /// body of a logic contract starts with it, so a logic contract cannot be called directly.
-    /// @custom:spec REQ-PSTORE-001
     function _onlyDelegated() internal view {
         if (address(this) == _SELF) revert NotDelegated();
     }
 
-    /// @dev The ERC-7201 namespace.
     function _s() internal pure returns (Layout storage $) {
         // ERC-7201 namespaced storage: the slot is a compile-time constant.
         // solhint-disable-next-line no-inline-assembly
@@ -160,8 +135,6 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         }
     }
 
-    /// @dev The market record, reverting `UnknownMarket` for an identifier the MarketRegistry never assigned.
-    /// @custom:spec REQ-PSTORE-011
     function _market(
         uint256 marketId
     ) internal view returns (Market memory m) {
@@ -169,8 +142,6 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         if (m.status == MarketStatus.None) revert UnknownMarket(marketId);
     }
 
-    /// @dev Reverts `UnknownMarket` for an identifier the MarketRegistry never assigned.
-    /// @custom:spec REQ-PSTORE-011
     function _requireMarket(
         uint256 marketId
     ) internal view {
@@ -191,22 +162,18 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         return status == MarketStatus.Active || status == MarketStatus.Offboarding;
     }
 
-    /// @custom:spec REQ-RISK-044
     function _requireHub(
         address hub
     ) internal view {
         if (hub == address(0) || !_REGISTRY.isRecordedHub(hub)) revert UnknownHub(hub);
     }
 
-    /// @custom:spec REQ-PSTORE-012, REQ-PSTORE-020
     function _requireListedToken(
         address token
     ) internal view {
         if (!_REGISTRY.getToken(token).listed) revert TokenNotListed(token);
     }
 
-    /// @dev The stored definition, reverting `UnknownFeed` for a feed with none (`feedHeartbeat == 0`).
-    /// @custom:spec REQ-PSTORE-009
     function _feed(
         address feed
     ) internal view returns (FeedDef storage def) {
@@ -215,15 +182,12 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
     }
 
     /// @dev `keccak256(abi.encode(integrationId, pool, poolId))` of a market, as Collateralization keys pool units.
-    /// @custom:spec SPEC-CAP-005, Q-383
     function _poolKey(
         Market memory m
     ) internal pure returns (bytes32) {
         return keccak256(abi.encode(m.integrationId, m.pool, m.poolId));
     }
 
-    /// @dev Pool-share cap of a pool: `min(override, default)` with an override, else the default.
-    /// @custom:spec SPEC-CAP-005, REQ-RISK-042, Q-399
     function _poolShareOf(
         bytes32 poolKey
     ) internal view returns (uint16) {
@@ -232,9 +196,7 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         return o != 0 && o < d ? o : d;
     }
 
-    /// @dev Spacing of a step-limited loosening: reverts `LoosenTooSoon` within `normalDelay` of the key's previous
-    /// loosening, else records `block.timestamp`.
-    /// @custom:spec REQ-PSTORE-017, SPEC-GOV-011
+    /// @dev Reverts `LoosenTooSoon` within `normalDelay` of the key's previous loosening.
     function _spaceLoosening(
         bytes32 name,
         bytes32 scope
@@ -250,7 +212,6 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         _s().lastLoosenedAt[key] = uint64(block.timestamp);
     }
 
-    /// @dev Reverts `LoosenStepTooLarge` for the key of `(name, scope)` unless `ok`.
     function _step(
         bool ok,
         bytes32 name,
@@ -259,14 +220,12 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         if (!ok) revert LoosenStepTooLarge(keccak256(abi.encode(name, scope)));
     }
 
-    /// @dev `bytes32(uint256(uint160(a)))`, the scope of an address-keyed parameter.
     function _a(
         address a
     ) internal pure returns (bytes32) {
         return bytes32(uint256(uint160(a)));
     }
 
-    /// @dev `keccak256(abi.encode(a, b))`, the scope of a (Hub, token) or (Hub, asset) parameter.
     function _pair(
         address a,
         address b
@@ -274,8 +233,6 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         return keccak256(abi.encode(a, b));
     }
 
-    /// @dev The USD band of market `marketId` (REQ-ORACLE-056, SPEC-ORC-011): the chain's band when every token of the
-    /// market is a USD-pegged stable, else `0` and `type(uint256).max`, which every price passes.
     function _usdBand(
         uint256 marketId
     ) internal view returns (uint256 low, uint256 high) {
@@ -284,12 +241,10 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         return ($.g.usdBandLow, $.g.usdBandHigh);
     }
 
-    /// @dev True unless every token is listed as a USD-pegged stable in the MarketRegistry.
     function _hasNonStableToken(
         address[] memory tokens
     ) internal view returns (bool) {
-        // One registry view per market token (at most 8, REQ-COLL-028), at listing only; a reverting registry
-        // reverts the listing (fail closed).
+        // A reverting registry reverts the listing (fail closed).
         for (uint256 i = 0; i < tokens.length; ++i) {
             // forge-lint: disable-next-line(calls-loop)
             if (!_REGISTRY.getToken(tokens[i]).isUsdStable) return true;

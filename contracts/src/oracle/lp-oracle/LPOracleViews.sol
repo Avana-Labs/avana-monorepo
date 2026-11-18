@@ -11,21 +11,16 @@ import {Evaluation, LPOracleCodes, RouteEval, TokenEval} from "./LPOracleTypes.s
 import {LPPriceMath} from "./LPPriceMath.sol";
 
 /// @title LPOracleViews
-/// @notice Builds the `getPriceState()` report from an evaluation (`REQ-ORACLE-042`).
-/// @dev The report is computed by the same evaluation as `latestAnswer()`, so `answer == latestAnswer()` in a block.
-/// A route value or age that cannot be read is reported as 0 and `type(uint64).max`; deviations of unreadable values
-/// are `type(uint256).max`.
-/// @custom:spec REQ-ORACLE-042, REQ-ORACLE-021, REQ-ORACLE-082
+/// @notice Builds the `getPriceState()` report from an evaluation.
+/// @dev An unreadable route value or age is reported as 0 and `type(uint64).max`.
 abstract contract LPOracleViews is LPOraclePoke {
-    /// @dev The report of evaluation `e`.
-    /// @custom:spec REQ-ORACLE-042, REQ-ORACLE-016, REQ-ORACLE-022, REQ-ORACLE-034, REQ-ORACLE-090, REQ-ORACLE-100
     function _report(
         Evaluation memory e
     ) internal view returns (PriceStateView memory v) {
         Layout storage $ = _s();
         v.state = e.state;
         v.reasons = e.reasons;
-        // served >= 1 and below 2^255 (SPEC-ORC-017).
+        // served >= 1 and below 2^255.
         // forge-lint: disable-next-line(unsafe-typecast)
         v.answer = int256(e.served);
         v.servedUpdatedAt = e.servedUpdatedAt;
@@ -46,7 +41,7 @@ abstract contract LPOracleViews is LPOraclePoke {
         v.inGrace = e.inGrace;
         v.borrowPriceMaxAge = e.borrowMaxAge;
         v.liquidationPriceMaxAge = e.liquidationMaxAge;
-        // fresh < 2^255 (SPEC-ORC-008 bounds).
+        // fresh < 2^255.
         // forge-lint: disable-next-line(unsafe-typecast)
         v.freshAnswer = e.failed ? int256(0) : int256(e.fresh);
         v.acceptedAnswer = $.accepted.answer;
@@ -58,7 +53,6 @@ abstract contract LPOracleViews is LPOraclePoke {
         }
     }
 
-    /// @dev The per-token part of the report.
     function _tokenReport(
         TokenPriceView memory v,
         TokenEval memory t,

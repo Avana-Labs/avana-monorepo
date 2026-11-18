@@ -14,20 +14,12 @@ import {DebtReserveDef} from "../market-registry/types/DebtReserveDef.sol";
 import {ParameterStoreOracle} from "./ParameterStoreOracle.sol";
 
 /// @title ParameterStoreRisk
-/// @notice The checks that read Aave and the Avana Umbrella: liquidation liveness of a (market, debt reserve) pair,
-/// the Hub `addCap` sizing of SPEC-CAP-006, and the approved debt reserves of a debt asset (their First-Loss Reserve
-/// minimums and price sources).
-/// @dev Every call is a view; a call that reverts or returns an unusable value counts as a failed check, so the
-/// setter that needs it reverts and the view that reports it returns false.
-/// @custom:spec REQ-PSTORE-021, SPEC-CAP-006, REQ-RISK-044, REQ-RISK-045, REQ-PSTORE-016, REQ-CONFIG-050
-// The loops below walk the MarketRegistry's markets, Spokes and debt reserves with view calls at execution of a
-// governance setter (or in a view); their length is the registry's size, which only timelock operations grow.
+/// @notice Checks that read Aave and the First-Loss Reserves: liquidation liveness, `addCap` sizing, debt reserves.
+/// @dev A call that reverts or returns an unusable value counts as a failed check.
+// Loop lengths are the registry's size, which only timelock operations grow.
 // forge-lint: disable-start(calls-loop)
 abstract contract ParameterStoreRisk is ParameterStoreOracle {
-    /// @dev `minLB = 10⁴ + ⌊(maxLiquidationBonus − 10⁴) × liquidationBonusFactor / 10⁴⌋` of the latest dynamic key of
-    /// the market's reserve on its Spoke, resolved through its Hub (so it answers before activation); 0 when any read
-    /// fails or `maxLiquidationBonus < 10⁴`.
-    /// @custom:spec REQ-PSTORE-021, SPEC-HUB-005
+    /// @dev Smallest liquidation bonus of the market's reserve, bps; 0 when any read fails.
     function _minLb(
         Market memory m
     ) internal view returns (uint256) {
@@ -66,7 +58,6 @@ abstract contract ParameterStoreRisk is ParameterStoreOracle {
     }
 
     /// @dev `minLB × (10⁴ − sMin) ≥ 10⁴ × (10⁴ + f)`, false for `sMin ≥ 10⁴` or `f ≥ 10⁴`.
-    /// @custom:spec REQ-PSTORE-021
     function _inequality(
         uint256 minLb,
         uint256 sMin,
@@ -76,8 +67,7 @@ abstract contract ParameterStoreRisk is ParameterStoreOracle {
         return minLb * (BPS - sMin) >= BPS * (BPS + f);
     }
 
-    /// @dev LIQ-I1 fee bound: `s × minLB ≤ (10⁴ − f) × (minLB − 10⁴)`, false for `minLB < 10⁴` or `f > 10⁴`. The same
-    /// bound the MarketRegistry checks at activation.
+    /// @dev Fee bound `s × minLB ≤ (10⁴ − f) × (minLB − 10⁴)`, false for `minLB < 10⁴` or `f > 10⁴`.
     function _feeBoundHolds(
         uint256 minLb,
         uint256 s,
@@ -87,7 +77,6 @@ abstract contract ParameterStoreRisk is ParameterStoreOracle {
         return s * minLb <= (BPS - f) * (minLb - BPS);
     }
 
-    /// @dev Whether the Spoke has at least one enabled debt reserve.
     function _hasEnabledReserve(
         address spoke
     ) private view returns (bool any) {
@@ -97,9 +86,7 @@ abstract contract ParameterStoreRisk is ParameterStoreOracle {
         }
     }
 
-    /// @dev The liveness inequality of market `m` against every enabled debt reserve of its Spoke. Every pair of one
-    /// market shares `minLB`, the floor and the flash ceiling, so one evaluation covers all of them.
-    /// @custom:spec REQ-PSTORE-021, REQ-CONFIG-052
+    /// @dev Liveness of market `m`; one evaluation covers every debt reserve of its Spoke.
     function _requireLiveness(
         Market memory m,
         uint256 sMin,
@@ -109,7 +96,6 @@ abstract contract ParameterStoreRisk is ParameterStoreOracle {
     }
 
     /// @dev The liveness inequality with flash ceiling `f` for every Active or Offboarding market of every CDP Spoke.
-    /// @custom:spec REQ-PSTORE-021, REQ-PSTORE-024
     function _requireLivenessEverywhere(
         uint256 f
     ) internal view {
@@ -127,9 +113,7 @@ abstract contract ParameterStoreRisk is ParameterStoreOracle {
         if (!ok) revert LivenessBound();
     }
 
-    /// @dev LIQ-I1's fee bound (`_feeBoundHolds`) with fee share `f` for every Active or Offboarding market of every CDP
-    /// Spoke, at the market's `slippageAllowanceBps` and smallest bonus; reverts `OutOfBounds` if any market fails.
-    /// @custom:spec REQ-PSTORE-010, REQ-CONFIG-071
+    /// @dev `_feeBoundHolds` with fee share `f` for every Active or Offboarding market; reverts `OutOfBounds`.
     function _requireFeeBoundEverywhere(
         uint256 f
     ) internal view {
@@ -146,11 +130,7 @@ abstract contract ParameterStoreRisk is ParameterStoreOracle {
         if (!ok) revert OutOfBounds();
     }
 
-    /// @dev SPEC-CAP-006 for an Active or Offboarding market: `addCap ≥ ⌈(max(cap, R) + max(slice, S)) / floor⌉`
-    /// whole vault tokens, or `addCap == MAX_ALLOWED_SPOKE_CAP`, with `R`, `S` the market's booked counters. A
-    /// Registered market has no Hub asset yet; `activateMarket` checks the bound. Reverts `AddCapTooSmall`, also for a
-    /// zero floor, which no setter writes.
-    /// @custom:spec SPEC-CAP-006, REQ-RISK-044, REQ-RISK-045
+    /// @dev For a live market: `addCap ≥ ⌈(max(cap, R) + max(slice, S)) / floor⌉` or unlimited, else `AddCapTooSmall`.
     function _requireAddCap(
         Market memory m,
         uint256 cap,
@@ -158,8 +138,7 @@ abstract contract ParameterStoreRisk is ParameterStoreOracle {
         uint256 floor
     ) internal view {
         if (!_live(m.status)) return;
-        // Every written floor is > 0 (setInitialMarketCaps, setStressFloorUsd); a zero floor fails closed before the
-        // division below.
+        // A zero floor fails closed before the division below.
         if (floor == 0) revert AddCapTooSmall();
         IAaveV4Hub hub = IAaveV4Hub(m.hub);
         uint256 addCap = hub.getSpokeConfig(m.hubAssetId, m.spoke).addCap;
@@ -170,11 +149,7 @@ abstract contract ParameterStoreRisk is ParameterStoreOracle {
         if (addCap < (usd + floor - 1) / floor) revert AddCapTooSmall();
     }
 
-    /// @dev Walks every approved debt reserve of `asset` on every CDP Spoke (funded by `hub` when `hub` is not zero):
-    /// whether one exists, the smallest `firstLossReserveMinimum()` of their First-Loss Reserves (only when `hub` is set),
-    /// the largest 8-decimal price their price sources report (only when `hub` is zero; a failed or non-positive read
-    /// counts as unbounded) and the asset's decimals.
-    /// @custom:spec REQ-PSTORE-016, REQ-CONFIG-050, REQ-PSTORE-006
+    /// @dev With `hub` unset, a failed price read counts as unbounded.
     function _scanReserves(
         address asset,
         address hub
@@ -211,10 +186,6 @@ abstract contract ParameterStoreRisk is ParameterStoreOracle {
         }
     }
 
-    /// @dev A rounding allowance worth at most $1 at the largest price of the asset's approved debt reserves,
-    /// `v × price ≤ 10⁸ × 10^decimals` (exact, as `v ≤ ⌊10⁸ × 10^decimals / price⌋`). Reverts `TokenNotListed` when no
-    /// approved debt reserve uses the asset and `OutOfBounds` outside `(0, max]`.
-    /// @custom:spec REQ-CONFIG-050, REQ-PSTORE-006, Q-380, Q-397
     function _requireRoundingAllowance(
         address asset,
         uint256 v

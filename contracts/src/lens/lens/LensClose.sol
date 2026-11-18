@@ -16,15 +16,10 @@ import {RecordRemoval} from "./types/RemovalSizing.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensClose
-/// @notice `ILensSizing.previewCloseAccount`: every debt an account repays, with its repay-all spend cap, and every record
-/// it withdraws to close.
-/// @dev Bounded by the Spoke's enabled debt reserves and the 16 records of an account-market.
-/// @custom:spec REQ-LENS-056, REQ-LENS-036
-// View calls in loops over the Spoke's debt reserves and the at most 16 records of one account-market (REQ-LENS-020).
+/// @notice `ILensSizing.previewCloseAccount`: every debt an account repays and every record it withdraws to close.
+// Loops over the Spoke's debt reserves and the at most 16 records of one account-market.
 // forge-lint: disable-start(calls-loop)
 abstract contract LensClose is LensDeleverage {
-    /// @notice `ILensSizing.previewCloseAccount`.
-    /// @custom:spec REQ-LENS-056, REQ-LENS-036, REQ-LENS-005, REQ-LENS-006
     function previewCloseAccount(
         address wallet,
         uint256 marketId,
@@ -56,10 +51,6 @@ abstract contract LensClose is LensDeleverage {
         }
     }
 
-    // ------------------------------------------------------------------------------------------------------ internal
-
-    /// @dev One entry per debt reserve the account owes on, with the repay-all spend cap of REQ-LENS-036.
-    /// @custom:spec REQ-LENS-056, REQ-LENS-036
     function _debtCloses(
         Market memory m,
         address proxy,

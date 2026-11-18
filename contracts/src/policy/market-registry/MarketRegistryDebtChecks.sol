@@ -24,15 +24,11 @@ import {RiskTier} from "./types/RiskTier.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /// @title MarketRegistryDebtChecks
-/// @notice The checks `enableDebtReserve` runs on a debt-reserve definition (REQ-MREG-006, REQ-MREG-008,
-/// REQ-CONFIG-081) and the liveness check against the Spoke's live markets (REQ-MREG-032).
-/// @dev Every call made here is a view. Each check reverts with the named error of the interface.
-/// @custom:spec REQ-MREG-006, REQ-MREG-008, REQ-MREG-009, REQ-MREG-032, REQ-CONFIG-079, REQ-CONFIG-081, INV-095
+/// @notice The checks `enableDebtReserve` runs on a debt-reserve definition, and its liveness check.
+/// @dev Every call made here is a view.
 // ParameterStore liveness views over the Spoke's live markets; views only.
 // forge-lint: disable-start(calls-loop)
 abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
-    /// @dev Same-Hub or cross-Hub funding (REQ-MREG-009, REQ-CONFIG-081): `def.crossHub` must say which, a cross-Hub
-    /// line needs the chain switch on, an open line for the Spoke and a line recorded by the funding Hub.
     function _checkFunding(
         address spoke,
         address homeHub,
@@ -51,8 +47,6 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         }
     }
 
-    /// @dev The Aave reserve matches `def` (underlying, funding Hub, Hub asset ID, decimals equal to the token's own),
-    /// is borrowable and has collateral factor 0 on its latest key.
     function _checkAaveReserve(
         address spoke,
         DebtReserveDef calldata def
@@ -69,11 +63,6 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         }
     }
 
-    /// @dev REQ-MREG-006, REQ-MREG-008: the asset is a listed token (so its issuer probe is recorded, a fixed-price
-    /// asset included); the AaveOracle source is `def.priceSource`, an 8-decimal source; without a fixed price the asset
-    /// has its three price routes (a monitoring-only listing, REQ-CONFIG-021, serves only a fixed-price reserve), the
-    /// source is the asset's DebtOracle bound to this registry and the ParameterStore and the asset's
-    /// `debtStressRiseBps` is at least 100.
     function _checkPriceSource(
         address spoke,
         DebtReserveDef calldata def
@@ -88,7 +77,7 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
             if (IAaveV4PriceFeed(src).latestAnswer() <= 0) revert InvalidDebtReserve("priceSource");
             return;
         }
-        // A listed token without an alternate route is a monitoring-only listing (REQ-CONFIG-021).
+        // A listed token without an alternate route is a monitoring-only listing.
         if (_s().tokens[def.asset].alternateRoute.length == 0) revert InvalidDebtReserve("routes");
         IDebtOracle o = IDebtOracle(src);
         if (o.ASSET() != def.asset || o.MARKET_REGISTRY() != address(this) || o.PARAMETER_STORE() != _PARAMETER_STORE) {
@@ -99,8 +88,6 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         }
     }
 
-    /// @dev REQ-CONFIG-081: `def.firstLossReserve` is the recorded First-Loss Reserve of `(fundingHub, asset)`, reports the
-    /// same asset, Hub and Hub asset ID, and holds at least its `firstLossReserveMinimum`.
     function _checkAvanaFirstLossReserve(
         DebtReserveDef calldata def
     ) internal view {
@@ -115,10 +102,6 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         if (c.isBelowMinimum()) revert IMarketRegistryCreditLines.CoverageNotFunded(def.fundingHub, def.asset);
     }
 
-    /// @dev The chain's IFlashSource lends the asset from a lender that is no recorded Hub, at a premium within
-    /// `maxFlashFeeBps` (`phi × 10^4 ≤ maxFlashFeeBps × F` on `F = maxFlashLoan(asset)`), and the asset's transfer
-    /// fee reads exactly one zero word when its probe reads `basisPointsRate()` (`UsdtFeeRate` or `UsdtFeeRateAndPaused`;
-    /// the pause read is not part of enablement for either kind, REQ-MREG-006, Q-386, Q-388, Q-390).
     function _checkFlashAndFee(
         DebtReserveDef calldata def
     ) internal view {
@@ -138,10 +121,7 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         }
     }
 
-    /// @dev `basisPointsRate()` read as the RiskModule's breaker reads it (SPEC-BRK-003): a static call with
-    /// `ISSUER_PROBE_GAS` after the `ceil(64 × G / 63) + POST_CALL_GAS` floor, copying at most 33 bytes. Only exactly
-    /// one zero word reads 0; a revert, an address without code, a shorter or longer answer, or less gas left than
-    /// the floor refuses the asset (REQ-MREG-006).
+    /// @dev Reads `basisPointsRate()` as the RiskModule's breaker does; only exactly one zero word counts as zero.
     function _feeRateZero(
         address token
     ) internal view returns (bool zero) {
@@ -152,9 +132,6 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         zero = ok && ret.length == 32 && abi.decode(ret, (uint256)) == 0;
     }
 
-    /// @dev REQ-MREG-032 and REQ-CONFIG-039 for a newly enabled reserve: every Active or Offboarding market of the
-    /// Spoke has a usable primary and backup route from each pool token other than the asset into it, and the
-    /// liquidation liveness bound holds; else `LivenessBound` on the first failing market.
     function _checkMarketsLive(
         address spoke,
         uint256 reserveId,

@@ -7,14 +7,8 @@ import {IUniswapV4PoolManager} from "../../interfaces/external/uniswap-v4/IUnisw
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title UniswapV4State
-/// @notice Reads of Uniswap v4 PoolManager state through `extsload` and `exttload` with the slot layout of v4-core's
-/// `StateLibrary` and `Lock` (v4.0.0, e50237c), and the fee arithmetic of its `Pool.getFeeGrowthInside` and
-/// `Position.update`.
-/// @dev Pool state of `poolId` sits at `keccak256(abi.encode(poolId, 6))`: word 0 is `slot0` (`sqrtPriceX96` in the low
-/// 160 bits, `tick` in the next 24), words 1 and 2 the global fee growths, word 3 the in-range liquidity, then the
-/// `ticks` mapping at +4 and the `positions` mapping at +6. Fee-growth differences are taken unchecked modulo 2^256, as
-/// the PoolManager does, so a wrapped accumulator never panics (`REQ-AMM-V4-010`).
-/// @custom:spec REQ-AMM-V4-003, REQ-AMM-V4-010, SPEC-AMM-V4-003
+/// @notice Reads Uniswap v4 PoolManager state through `extsload` and `exttload`, plus its fee-growth arithmetic.
+/// @dev Fee-growth differences are unchecked modulo 2^256, as in the PoolManager, so a wrapped value never panics.
 library UniswapV4State {
     /// @dev `StateLibrary.POOLS_SLOT`.
     uint256 internal constant POOLS_SLOT = 6;
@@ -25,7 +19,6 @@ library UniswapV4State {
     uint256 internal constant POSITIONS_OFFSET = 6;
     /// @dev `Lock.IS_UNLOCKED_SLOT`: non-zero while the PoolManager is inside an `unlock` callback.
     bytes32 internal constant IS_UNLOCKED_SLOT = 0xc090fc4683624cfc3884e9d8de5eca132f2d0ec062aff75d43c0465d5ceeab23;
-    /// @dev 2^128, the fixed-point base of fee growth.
     uint256 internal constant Q128 = 1 << 128;
 
     /// @notice A position's fee inputs: its liquidity and the fee growth inside its range at its last update.
@@ -35,14 +28,12 @@ library UniswapV4State {
         uint256 feeGrowthInside1LastX128;
     }
 
-    /// @notice Whether the PoolManager is inside an `unlock` callback (`REQ-AMM-V4-003`).
     function isUnlocked(
         IUniswapV4PoolManager manager
     ) internal view returns (bool) {
         return manager.exttload(IS_UNLOCKED_SLOT) != bytes32(0);
     }
 
-    /// @notice Storage slot of a pool's state.
     function poolStateSlot(
         bytes32 poolId
     ) internal pure returns (bytes32) {
@@ -54,7 +45,7 @@ library UniswapV4State {
         IUniswapV4PoolManager manager,
         bytes32 poolId
     ) internal view returns (uint160 sqrtPriceX96, int24 tick) {
-        // A view read; the Lens calls it in its loop over at most 16 records of one account-market.
+        // A view read in the Lens's loop over at most 16 records.
         // forge-lint: disable-next-line(calls-loop)
         uint256 word = uint256(manager.extsload(poolStateSlot(poolId)));
         // Low 160 bits, then the 24-bit two's-complement tick above them.
@@ -64,7 +55,6 @@ library UniswapV4State {
         tick = int24(int256(word >> 160));
     }
 
-    /// @notice The pool's in-range liquidity.
     function liquidity(
         IUniswapV4PoolManager manager,
         bytes32 poolId
@@ -84,14 +74,13 @@ library UniswapV4State {
         return keccak256(abi.encodePacked(owner, tickLower, tickUpper, salt));
     }
 
-    /// @notice A position's liquidity and last fee growth inside, read from the PoolManager (`REQ-AMM-V4-003`).
     function position(
         IUniswapV4PoolManager manager,
         bytes32 poolId,
         bytes32 id
     ) internal view returns (PositionState memory p) {
         bytes32 mappingSlot = _offset(poolStateSlot(poolId), POSITIONS_OFFSET);
-        // A view read; the Lens calls it in its loop over at most 16 records of one account-market.
+        // A view read in the Lens's loop over at most 16 records.
         // forge-lint: disable-next-line(calls-loop)
         bytes32[] memory w = manager.extsload(keccak256(abi.encode(id, mappingSlot)), 3);
         // The struct's first word holds only the uint128 liquidity.
@@ -100,7 +89,6 @@ library UniswapV4State {
         (p.feeGrowthInside0LastX128, p.feeGrowthInside1LastX128) = (uint256(w[1]), uint256(w[2]));
     }
 
-    /// @notice A position's liquidity only.
     function positionLiquidity(
         IUniswapV4PoolManager manager,
         bytes32 poolId,
@@ -126,15 +114,14 @@ library UniswapV4State {
         unchecked {
             if (tick < tickLower) return (lo0 - hi0, lo1 - hi1);
             if (tick >= tickUpper) return (hi0 - lo0, hi1 - lo1);
-            // A view read; the Lens calls it in its loop over at most 16 records of one account-market.
+            // A view read in the Lens's loop over at most 16 records.
             // forge-lint: disable-next-line(calls-loop)
             bytes32[] memory g = manager.extsload(_offset(state, FEE_GROWTH_GLOBAL0_OFFSET), 2);
             return (uint256(g[0]) - lo0 - hi0, uint256(g[1]) - lo1 - hi1);
         }
     }
 
-    /// @notice Fees `Position.update` would credit now: `mulDiv(inside - last, liquidity, 2^128)` per token, with the
-    /// difference unchecked (`REQ-AMM-V4-010`).
+    /// @notice Fees `Position.update` would credit now, with the growth difference unchecked.
     function feesOwed(
         PositionState memory p,
         uint256 inside0,
@@ -157,7 +144,7 @@ library UniswapV4State {
         int24 tick
     ) private view returns (uint256 g0, uint256 g1) {
         bytes32 slot = keccak256(abi.encode(int256(tick), _offset(state, TICKS_OFFSET)));
-        // A view read; the Lens calls it in its loop over at most 16 records of one account-market.
+        // A view read in the Lens's loop over at most 16 records.
         // forge-lint: disable-next-line(calls-loop)
         bytes32[] memory w = manager.extsload(_offset(slot, 1), 2);
         (g0, g1) = (uint256(w[0]), uint256(w[1]));

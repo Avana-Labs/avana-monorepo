@@ -3,19 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-/// @notice Market-level backing and Aave configuration check.
-/// @dev Raw values: `totalSupply` (vault token), `totalCredited` (Collateralization), `pendingUnits` and
-/// `pendingAmounts` (Collateralization pending-settlement balance, raw units of each pool token in the market's token
-/// order), `unsettledSeizedUnits` (vault-token balance of
-/// LPVaultSwap), `hubBalance` (vault-token balance of the Hub), `hubLiquidity` (`getAssetLiquidity`),
-/// `stranded` (`hubBalance - hubLiquidity`, never backing), `addedAssets`, `addedShares`, `drawnShares`. Flags:
-/// `supplyEqualsCredited` (`totalSupply == totalCredited + pendingUnits`), `hubHoldsSupplied`,
-/// `sharesEqualAssets`, `noDrawnShares`, `noDrawCap` (every Spoke on the asset), `singleBorrowSpoke` (Spokes are
-/// exactly the market's CDP Spoke and the fee receiver with `addCap == 0`), `noLiquidityFee` (the Hub asset's
-/// `liquidityFee == 0`), `noReinvestment` (no reinvestment controller), `reserveFlags` (the three standard Spoke
-/// settings the drift check enforces on the vault-token reserve: `borrowable == false`, `receiveSharesEnabled ==
-/// false` and `liquidationFee == 0` on every dynamic configuration key). Hub values are the market's home Hub's.
-/// @custom:spec REQ-LENS-012, Q-378
+/// @notice Market-level backing and Aave configuration check: raw values and pass/fail flags.
+/// @dev Hub values are the market's home Hub's; `stranded` never counts as backing.
 struct BackingView {
     uint256 blockNumber;
     uint256 timestamp;

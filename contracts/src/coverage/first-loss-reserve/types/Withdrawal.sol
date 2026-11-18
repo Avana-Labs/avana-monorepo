@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-/// @notice State of a First-Loss Reserve withdrawal request (2.14 Storage). `None` is an ID never requested.
-/// @custom:spec REQ-FLR-023, REQ-FLR-024, REQ-FLR-025
+/// @notice State of a First-Loss Reserve withdrawal request. `None` is an ID never requested.
 enum WithdrawalStatus {
     None,
     Pending,
@@ -13,11 +12,8 @@ enum WithdrawalStatus {
 }
 
 /// @notice A withdrawal request of the Aave DAO on a First-Loss Reserve.
-/// @param amount Asset base units requested; execution withdraws `min(amount, fundedBalance())` (SPEC-FLR-003).
-/// @param to Recipient the Hub pays directly.
-/// @param executableAt Earliest execution time, `requestTime + RESERVE_WITHDRAWAL_DELAY`, seconds.
-/// @param status Request state.
-/// @custom:spec REQ-FLR-023, SPEC-FLR-003
+/// @param amount Asset base units requested; execution withdraws at most `fundedBalance()`.
+/// @param executableAt Earliest execution time, seconds.
 struct Withdrawal {
     uint256 amount;
     address to;

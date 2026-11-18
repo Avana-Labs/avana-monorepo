@@ -14,23 +14,13 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title LPOracleReads
-/// @notice The external reads of an LPOracle evaluation other than its configuration and their decoding: the
-/// aggregators' rounds and decimals, the tokens' decimals (listing only) and the oracle-network second sources
-/// (`REQ-ORACLE-001`).
-/// @dev Each read is a gas-guarded static call (`LPOracleCalls.staticRead`) whose return data is decoded word by word
-/// with range checks, so a revert, a short or malformed return or an out-of-range value is a failed read and never a
-/// revert of the view. Leg classes follow `REQ-ORACLE-002` and `REQ-ORACLE-003`: `Invalid` for any failed condition
-/// other than age, `Stale` when only the age fails, `Error` when the read itself failed.
-/// @custom:spec REQ-ORACLE-001, REQ-ORACLE-002, REQ-ORACLE-003, REQ-ORACLE-004, REQ-ORACLE-017, REQ-ORACLE-094, REQ-ORACLE-102, SPEC-ORC-002, SPEC-ORC-013, SPEC-ORC-019, SPEC-ORC-023
+/// @notice External reads of an LPOracle evaluation: aggregator rounds and decimals, token decimals and second sources.
+/// @dev A failed or malformed read is a failed read, never a revert.
 abstract contract LPOracleReads is LPOracleStorage {
     /// @dev ABI length of `latestRoundData()` / `getRoundData()` and of a one-word return.
     uint256 internal constant ROUND_LENGTH = 160;
     uint256 internal constant WORD = 32;
 
-    // ─── Tokens ───
-
-    /// @dev `decimals()` of `token`; false on a failed or malformed read.
-    /// @custom:spec REQ-ORACLE-017
     function _tokenDecimals(
         address token
     ) internal view returns (bool ok, uint8 dec) {
@@ -41,10 +31,6 @@ abstract contract LPOracleReads is LPOracleStorage {
         dec = SafeCast.toUint8(value);
     }
 
-    // ─── Aggregators ───
-
-    /// @dev `latestRoundData()` of `feed`: `ok` false on a failed or malformed read.
-    /// @custom:spec REQ-ORACLE-001
     function _latestRound(
         address feed
     ) internal view returns (bool ok, uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt) {
@@ -55,8 +41,7 @@ abstract contract LPOracleReads is LPOracleStorage {
         (ok, roundId, answer, startedAt, updatedAt) = _decodeRound(ok, ret);
     }
 
-    /// @dev Decodes `(uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)`:
-    /// at least 160 bytes, `roundId` and `answeredInRound` within 80 bits; anything else is a failed read.
+    /// @dev Decodes a `latestRoundData()` return; round ids beyond 80 bits are a failed read.
     function _decodeRound(
         bool called,
         bytes memory ret
@@ -80,8 +65,6 @@ abstract contract LPOracleReads is LPOracleStorage {
         (ok, roundId, answer) = (true, uint80(id), int256(rawAnswer));
     }
 
-    /// @dev `decimals()` of an aggregator: `ok` false on a failed or malformed read.
-    /// @custom:spec REQ-ORACLE-001
     function _feedDecimals(
         address feed
     ) internal view returns (bool ok, uint8 dec) {
@@ -92,9 +75,7 @@ abstract contract LPOracleReads is LPOracleStorage {
         dec = SafeCast.toUint8(value);
     }
 
-    /// @dev Reads and classifies one leg (`REQ-ORACLE-002`, `REQ-ORACLE-003`). `oneLeg` adds the normalised-answer
-    /// condition of a one-leg route.
-    /// @custom:spec REQ-ORACLE-001, REQ-ORACLE-002, REQ-ORACLE-003, SPEC-ORC-001, SPEC-ORC-019
+    /// @dev Reads and classifies one leg. `oneLeg` adds the normalised-answer condition of a one-leg route.
     function _readLeg(
         LegEval memory leg,
         bool oneLeg
@@ -118,8 +99,7 @@ abstract contract LPOracleReads is LPOracleStorage {
         leg.status = _classify(leg, oneLeg);
     }
 
-    /// @dev `Invalid` unless decimals match, `minAnswer < answer < maxAnswer`, `0 < updatedAt <= now` and (one-leg
-    /// route) the normalised answer is at least 1; then `Stale` when `now - updatedAt > feedMaxAge`; else valid.
+    /// @dev `Invalid` if any condition but age fails; `Stale` if only age fails; else valid.
     function _classify(
         LegEval memory leg,
         bool oneLeg
@@ -133,9 +113,6 @@ abstract contract LPOracleReads is LPOracleStorage {
         return LPOracleCodes.VALID;
     }
 
-    /// @dev Reads every leg of `route` and sets its value, timestamp, class and `staleFrom` (`REQ-ORACLE-004`,
-    /// `SPEC-ORC-002`, `SPEC-ORC-013`).
-    /// @custom:spec REQ-ORACLE-004, SPEC-ORC-002, SPEC-ORC-013
     function _readRoute(
         RouteEval memory route
     ) internal view {
@@ -154,8 +131,7 @@ abstract contract LPOracleReads is LPOracleStorage {
         route.status = _routeStatus(route, oneLeg);
     }
 
-    /// @dev The route's class from its legs: `Error` if a leg is `Error`, else `Invalid` if a leg is `Invalid` or the
-    /// value is the failing condition, else `Stale` if a leg is `Stale`, else valid.
+    /// @dev The route's class from its legs, worst first: `Error`, `Invalid` (or zero value), `Stale`, valid.
     function _routeStatus(
         RouteEval memory route,
         bool oneLeg
@@ -179,12 +155,7 @@ abstract contract LPOracleReads is LPOracleStorage {
         return LPOracleCodes.STALE;
     }
 
-    // ─── Second source ───
-
-    /// @dev Value of token `t`'s oracle-network second source: valid under the leg rules with the source's own pinned
-    /// decimals and bounds (its feed definition, read with the configuration) and `maxAge`; a source with no feed
-    /// definition is unavailable; `PoolTwap` sources come from the pricing module.
-    /// @custom:spec SPEC-ORC-020, REQ-ORACLE-100
+    /// @dev Token `t`'s second source: an oracle network under the leg rules, or a `PoolTwap` from the module.
     function _readSecondSource(
         TokenEval memory t,
         uint256 index,

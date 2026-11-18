@@ -24,42 +24,25 @@ import {IClPositionManager} from "./IClPositionManager.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title ClNfpmLPVault
-/// @notice The layer of the concentrated-liquidity LPVault shared by the AMM protocols whose positions live in a
-/// NonfungiblePositionManager and whose pools are contracts with their own `slot0` lock and `observe` buffer (Uniswap v3
-/// on Ethereum, Aerodrome Slipstream on Base): address-keyed binding, `decreaseLiquidity` plus a principal-capped
-/// `collect`, an uncapped `collect` for fees, the `slot0().unlocked` read guard, and risk metadata, depth and the
-/// consistency read from the pool itself.
-/// @dev Each integration supplies the pool's `slot0` layout (`_slot0`), the listing check against its factory
-/// (`_validatePool`) and the position read through its manager (`_readPoolPosition`).
-/// @custom:spec REQ-AMM-CORE-003, REQ-AMM-CORE-004, REQ-AMM-CORE-013, REQ-AMM-V3-002, REQ-AMM-V3-003, REQ-AMM-V3-004, REQ-AMM-V3-006, REQ-AMM-SLIP-003, SPEC-BACK-001, SPEC-BACK-008
-// The removal events report what the position manager's own calls returned; see `ClLPVaultCustody`.
+/// @notice LPVault layer shared by NonfungiblePositionManager protocols with address-keyed pools.
+// Events report the position manager's return values, so they follow the call; emitters run only under the Lock.
 // forge-lint: disable-start(reentrancy-events)
 abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
-    // ─── Integration hooks ───
-
-    /// @dev The position's pool, derived through the pinned factory from the position's own fields (address(0) when
-    /// the factory has none), its ticks and its live liquidity, read from the position manager.
+    /// @dev The position's pool via the pinned factory (address(0) when none), ticks and live liquidity.
     function _readPoolPosition(
         bytes32 positionKey
     ) internal view virtual returns (address pool, int24 tickLower, int24 tickUpper, uint128 liquidity);
 
-    /// @dev The pool's current tick, observation cardinality and reentrancy flag, decoded with the AMM protocol's own
-    /// `slot0` layout.
     function _slot0(
         address pool
     ) internal view virtual returns (int24 tick, uint16 observationCardinality, bool unlocked);
 
-    /// @dev Validates a pool against the pinned factory at listing and returns its configuration (pool, position
-    /// manager, factory, tokens, fee, tick spacing) and the listing valuation prices decoded from `integrationData`;
-    /// reverts `InvalidPool` for anything else.
+    /// @dev Validates a pool against the pinned factory and returns its configuration and listing prices.
     function _validatePool(
         address pool,
         bytes calldata integrationData
     ) internal view virtual returns (ClMarketConfig memory cfg, uint256 price0, uint256 price1);
 
-    // ─── Base hooks ───
-
-    /// @dev The pool address as the pool reference.
     function _readPosition(
         bytes32 positionKey
     ) internal view override returns (bytes32 poolRef, int24 tickLower, int24 tickUpper, uint128 liquidity) {
@@ -68,8 +51,6 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
         poolRef = bytes32(uint256(uint160(pool)));
     }
 
-    /// @dev `PoolLocked` while `slot0().unlocked` is false.
-    /// @custom:spec REQ-AMM-V3-003, REQ-AMM-CORE-018, REQ-VAULT-010
     function _requireReadSafe(
         Market storage market
     ) internal view override {
@@ -77,10 +58,7 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
         if (!unlocked) revert PoolLocked();
     }
 
-    /// @dev `decreaseLiquidity` with the given minimums, then `collect` capped at exactly the amounts it returned
-    /// (`SPEC-BACK-008`), skipped when both are 0, back to back inside one call under the Lock; every owed fee stays
-    /// with the NFT, so `depositor` receives nothing here.
-    /// @custom:spec SPEC-BACK-008, REQ-AMM-V3-004, REQ-VAULT-057, REQ-VAULT-058
+    /// @dev `decreaseLiquidity`, then `collect` capped at exactly the removed amounts; owed fees stay with the NFT.
     function _removePrincipal(
         Market storage,
         bytes32 positionKey,
@@ -103,8 +81,7 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
         if (a0 < minAmounts[0]) revert BelowMinimum(0, a0, minAmounts[0]);
         if (a1 < minAmounts[1]) revert BelowMinimum(1, a1, minAmounts[1]);
         if (a0 != 0 || a1 != 0) {
-            // The collect is capped at exactly (a0, a1), which the position owes after the removal, so it collects
-            // exactly them (SPEC-BACK-008); the reported amounts are the removal's.
+            // Capped at exactly (a0, a1), which the position now owes, so it collects exactly them.
             // forge-lint: disable-start(unused-return)
             manager.collect(
                 IClPositionManager.CollectParams({
@@ -119,9 +96,6 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
         amounts = _pair(a0, a1);
     }
 
-    /// @dev One `collect` with both caps at `type(uint128).max` to `depositor`, and nothing else on the position
-    /// manager.
-    /// @custom:spec REQ-VAULT-064, REQ-VAULT-065, FEE-001
     function _collectAll(
         Market storage,
         bytes32 positionKey,
@@ -138,15 +112,8 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
             );
     }
 
-    // ─── Binding ───
-
     /// @inheritdoc IAmmIntegration
-    /// @dev `integrationData` carries the listing valuation prices of the two tokens (8 decimals). The pool's unit
-    /// exponent `k` (one vault-token unit = `10^k` liquidity) is fixed by its first market and shared by every later
-    /// one; `unitDecimals` is the smallest `d` in `[6, 18]` whose whole token, `10^(d + k)` liquidity, is worth at least
-    /// $1 (`SPEC-UNIT-001`, `SPEC-UNIT-002`, `SPEC-ORC-005`). Refuses `marketId == 0` (0 means "not in custody" in `marketOfPosition`), a `poolId`, any shape
-    /// other than an aligned `TickRange` inside the usable ticks, and token decimals above 18.
-    /// @custom:spec REQ-AMM-CORE-003, REQ-AMM-CORE-004, REQ-AMM-CORE-017, REQ-VAULT-166, REQ-AMM-V3-002, REQ-AMM-V3-007, REQ-AMM-V3-008, SPEC-BACK-001, SPEC-UNIT-001, SPEC-ORC-005
+    /// @dev Refuses `marketId == 0`, which means "not in custody" in `marketOfPosition`.
     function bindMarket(
         uint256 marketId,
         address pool,
@@ -166,14 +133,12 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
         unitDecimals = _storeMarket(marketId, bytes32(uint256(uint160(pool))), cfg, price0, price1);
         tokens = new address[](TOKEN_COUNT);
         (tokens[0], tokens[1]) = (cfg.token0, cfg.token1);
-        // Every call before the event is a view (STATICCALL) of the pool, the factory or a token, so no code can run
-        // between the checks and the log.
+        // Every call before the event is a view, so no code can run between the checks and the log.
         // forge-lint: disable-next-line(reentrancy-events)
         emit MarketBound(marketId, pool, bytes32(0), shape.tickLower, shape.tickUpper);
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @custom:spec REQ-AMM-CORE-004
     function marketOf(
         uint256 marketId
     )
@@ -190,7 +155,6 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @custom:spec REQ-AMM-CORE-009, REQ-AMM-CORE-010, REQ-AMM-CORE-011, REQ-AMM-CORE-012, REQ-AMM-CORE-013
     function capabilities() external pure override returns (IntegrationCapabilities memory) {
         return IntegrationCapabilities({
             poolKeying: PoolKeying.Address,
@@ -205,21 +169,11 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @dev The global bound of 16: a Uniswap v3 or Slipstream removal is one NFPM decrease and one collect.
-    /// @custom:spec REQ-AMM-CORE-020
     function maxRecordsPerAccountMarket() external pure override returns (uint256) {
         return AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET;
     }
 
-    // ─── Risk metadata and hooks ───
-
     /// @inheritdoc IAmmIntegration
-    /// @dev `inRange = tickLower <= slot0.tick < tickUpper`, `readSafe = slot0.unlocked`, `poolUnits = liquidity()` in
-    /// vault-token units (`⌊liquidity / 10^k⌋`).
-    /// The LPVault keeps no unit counter, so `avanaUnits` and `poolShareBps` are 0: Avana's units in a market are
-    /// Collateralization's credited total, which the RiskModule reads (`SPEC-CAP-005`, `SPEC-BRK-002`).
-    /// `positionUnits` is the named position's live liquidity in vault-token units.
-    /// @custom:spec REQ-AMM-CORE-008, REQ-AMM-CORE-013, REQ-AMM-V3-006, SPEC-UNIT-002
     function riskMetadata(
         uint256 marketId,
         bytes32 positionKey
@@ -239,10 +193,6 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @dev Harmonic-mean in-range liquidity of `observe([window, 0])` (`OracleLibrary.consult`) in vault-token units
-    /// (`⌊liquidity / 10^k⌋`); unavailable for a zero window, a failed `observe` or a zero seconds-per-liquidity
-    /// difference.
-    /// @custom:spec REQ-AMM-CORE-013, REQ-AMM-V3-006, SPEC-CAP-005, SPEC-UNIT-002
     function riskStatus(
         uint256 marketId,
         uint32 window
@@ -256,7 +206,6 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
     }
 
     /// @inheritdoc IAmmIntegrationHooks
-    /// @custom:spec REQ-AMM-CORE-013, REQ-AMM-CORE-018, REQ-AMM-V3-003, REQ-AMM-V3-006, REQ-VAULT-010
     function checkReadSafe(
         uint256 marketId
     ) external view override {
@@ -264,10 +213,7 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
     }
 
     /// @inheritdoc IAmmIntegrationHooks
-    /// @dev `SPEC-ORC-010`: `|meanTick - tickRef|` with `tickRef` the tick of the unclamped oracle square-root price.
-    /// Unavailable for a zero window, an observation cardinality below `ceil(window / blockTime) + 1`
-    /// (`SPEC-ORC-022`) or a failed `observe`.
-    /// @custom:spec REQ-AMM-CORE-009, SPEC-ORC-010, SPEC-ORC-022, REQ-ORACLE-046, REQ-ORACLE-103
+    /// @dev Measured against the unclamped oracle tick.
     function consistencyDeviation(
         uint256 marketId,
         uint32 window,
@@ -289,13 +235,11 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
     }
 
     /// @inheritdoc IAmmIntegrationHooks
-    /// @custom:spec REQ-AMM-CORE-010
     function wrappedNative() external pure override returns (address) {
         return address(0);
     }
 
     /// @inheritdoc IAmmIntegrationHooks
-    /// @custom:spec REQ-AMM-CORE-014
     function isAllowedPoolHook(
         address hooks
     ) external pure override returns (bool) {

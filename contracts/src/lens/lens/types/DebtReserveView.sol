@@ -5,10 +5,8 @@ pragma solidity 0.8.28;
 
 import {PauseState} from "../../../types/PauseState.sol";
 
-/// @notice One enabled debt reserve with its Hub totals, rates and rate curve (REQ-LENS-046).
-/// @dev Rates in RAY per year; the strategy parameters in bps as Aave stores them; `utilizationBps` and
-/// `supplyRateRay` rounded down; `drawHeadroom` as `DrawHeadroom`.
-/// @custom:spec REQ-LENS-046, REQ-LENS-005
+/// @notice One enabled debt reserve with its Hub totals, rates and rate curve.
+/// @dev Rates RAY per year; strategy parameters bps; `utilizationBps` and `supplyRateRay` rounded down.
 struct DebtReserveView {
     uint256 blockNumber;
     uint256 timestamp;

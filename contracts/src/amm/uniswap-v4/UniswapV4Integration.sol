@@ -29,42 +29,24 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title UniswapV4Integration
-/// @notice The Uniswap v4 LPVault: immutable custodian of PositionManager positions of hookless v4 pools in exact-range
-/// markets keyed by `PoolId`, `AMM_PROTOCOL() = keccak256("UNISWAP_V4")`, `positionKey = bytes32(tokenId)`, units are
-/// the position's liquidity read from the PoolManager.
-/// @dev The AMM-neutral custody and pricing code is the shared concentrated-liquidity base
-/// (`src/amm/concentrated-liquidity/`); this contract supplies what names Uniswap v4: PoolKey binding with the hook
-/// mask, `getPoolAndPositionInfo` and PoolManager `extsload` reads, the `exttload` read guard, removal and fee
-/// collection as one fixed `modifyLiquidities` batch each (fees to the depositor first, then the principal, native ETH
-/// wrapped by the PositionManager), and the reference Uniswap v3 pool for the consistency read and the depth. The
-/// LPVault never calls `subscribe`, `approve`, `setApprovalForAll`, `mint`, `increaseLiquidity` or `burn`, implements
-/// no `unlockCallback` and never holds native ETH.
-/// @custom:spec REQ-AMM-V4-001, REQ-AMM-V4-002, REQ-AMM-V4-003, REQ-AMM-V4-004, REQ-AMM-V4-005, REQ-AMM-V4-007, REQ-AMM-V4-008, REQ-AMM-V4-009, SPEC-AMM-V4-001, SPEC-AMM-V4-002, SPEC-AMM-V4-003, REQ-VAULT-155, REQ-AMM-CORE-002
-// The removal events report what the batch removed; see `ClLPVaultCustody`.
+/// @notice Uniswap v4 LPVault: custodian of PositionManager positions of hookless v4 pools, keyed by `PoolId`.
+/// @dev Native ETH is wrapped by the PositionManager, so the LPVault never holds ETH.
+// Events report the batch's results, so they follow the call; emitters run only under the Lock.
 // forge-lint: disable-start(reentrancy-events)
 contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4Integration {
-    /// @notice `keccak256("UNISWAP_V4")`.
     bytes32 public constant UNISWAP_V4 = keccak256("UNISWAP_V4");
-    /// @notice Largest block interval accepted, seconds: Ethereum's.
+    /// @notice Largest block interval accepted, seconds.
     uint256 public constant MAX_BLOCK_TIME = 12;
-    /// @dev `BEFORE_REMOVE_LIQUIDITY | AFTER_REMOVE_LIQUIDITY | BEFORE_SWAP_RETURNS_DELTA | AFTER_SWAP_RETURNS_DELTA |
-    /// AFTER_REMOVE_LIQUIDITY_RETURNS_DELTA` (`REQ-AMM-V4-001`).
+    /// @dev Before/after-remove-liquidity and every delta-returning permission bit.
     uint160 internal constant _HOOK_MASK = (1 << 9) | (1 << 8) | (1 << 3) | (1 << 2) | (1 << 0);
-    /// @dev Largest tick spacing a market accepts, as for Slipstream: the per-tick liquidity bound of every listed pool
-    /// keeps a market's credited liquidity below 2^120.
+    /// @dev Largest tick spacing whose per-tick liquidity bound stays below 2^120.
     int24 internal constant MAX_TICK_SPACING = 6931;
-    /// @dev Token supply bound at listing (`REQ-AMM-V4-009`).
     uint256 internal constant SUPPLY_BOUND = 1 << 127;
-    /// @notice Open records per account and market (`REQ-AMM-V4-012`): a v4 record's removal costs about 253k gas in a
-    /// whole-account seizure against 167k for Uniswap v3, 279k when it pays fees in both tokens, and 344k when the
-    /// depositor's fee transfer reverts and the fallback batch runs (`REQ-AMM-V4-013`), so 8 such records with 4 debts
-    /// stay within the 7.5M liquidation budget where 10 would not.
     uint256 internal constant MAX_RECORDS = 8;
-    /// @dev Bytes of `bindMarket`'s `integrationData`: `abi.encode(UniswapV4PoolKey key, address referencePool,
-    /// uint256 price0, uint256 price1)`.
+    /// @dev Bytes of `abi.encode(UniswapV4PoolKey key, address referencePool, uint256 price0, uint256 price1)`.
     uint256 internal constant INTEGRATION_DATA_LENGTH = 8 * 32;
 
-    /// @dev PositionManager actions (v4-periphery 1.0.1 `Actions`) and constants (`ActionConstants`).
+    /// @dev PositionManager actions and constants (v4-periphery `Actions`, `ActionConstants`).
     uint8 internal constant DECREASE_LIQUIDITY = 0x01;
     uint8 internal constant TAKE = 0x0e;
     uint8 internal constant TAKE_PAIR = 0x11;
@@ -74,7 +56,6 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     uint256 internal constant CONTRACT_BALANCE = 1 << 255;
     address internal constant ADDRESS_THIS = address(2);
 
-    /// @dev Pool key and reference pool of a `PoolId`, written by the pool's first `bindMarket`.
     mapping(bytes32 poolId => V4Market pool) internal _v4Pools;
 
     IUniswapV4PoolManager internal immutable _PM;
@@ -83,21 +64,9 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     address internal immutable _REF_FACTORY;
     uint256 internal immutable _BLOCK_TIME;
 
-    /// @notice Fixes the integration identifier, the Avana bindings, the PositionManager (and through it the PoolManager
-    /// and the wrapped native token) and the reference Uniswap v3 factory.
-    /// @dev Reverts `InvalidDeployment` for a zero or code-less PositionManager or factory, either equal to an Avana
-    /// binding, a PositionManager whose PoolManager or WETH9 is zero, or a block time of 0, above 12 s, or other than
-    /// the known interval of the chain (12 s on Ethereum and Sepolia, 2 s on Base, Base Sepolia and OP Mainnet, 1 s on
-    /// Unichain).
-    /// @param integrationId Identifier registered for this LPVault in the VaultTokenFactory.
-    /// @param collateralization The chain's Collateralization.
-    /// @param marketRegistry The chain's MarketRegistry proxy.
-    /// @param lock The chain's Lock.
-    /// @param timelock The chain's AvanaTimelock.
-    /// @param positionManager Canonical Uniswap v4 PositionManager.
-    /// @param referenceFactory Canonical Uniswap v3 factory of the chain.
+    /// @notice Fixes the Avana bindings, the PositionManager and the reference Uniswap v3 factory.
+    /// @dev Reverts `InvalidDeployment` for a bad address or a block time that does not match a known chain.
     /// @param blockTime The chain's minimum block interval, seconds.
-    /// @custom:spec REQ-VAULT-155, REQ-AMM-V4-007
     constructor(
         uint32 integrationId,
         address collateralization,
@@ -133,8 +102,6 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         _BLOCK_TIME = blockTime;
     }
 
-    // ─── Immutable getters ───
-
     /// @inheritdoc IUniswapV4Integration
     function POOL_MANAGER() external view override returns (address) {
         return address(_PM);
@@ -161,20 +128,12 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @custom:spec REQ-AMM-CORE-009
     function AMM_PROTOCOL() external pure override returns (bytes32) {
         return UNISWAP_V4;
     }
 
-    // ─── Binding ───
-
     /// @inheritdoc IAmmIntegration
-    /// @dev `pool` must be address(0) and `poolId` the hash of the PoolKey in `integrationData` (`abi.encode(key,
-    /// referencePool, price0, price1)`, prices with 8 decimals). Refuses a hook outside the allowlist (`HookNotAllowed`),
-    /// an uninitialized pool, a tick spacing outside `[1, 6931]`, an ETH/WETH pool, a token whose `totalSupply` is
-    /// 2^127 or more (`REQ-AMM-V4-009`), a reference pool other than the factory's pool of the two tokens
-    /// (`REQ-AMM-V4-007`), and later markets of the same pool naming another reference pool (`InvalidPool`).
-    /// @custom:spec REQ-AMM-CORE-003, REQ-AMM-CORE-004, REQ-AMM-V4-001, REQ-AMM-V4-006, REQ-AMM-V4-007, REQ-AMM-V4-009, SPEC-BACK-001, SPEC-UNIT-001, SPEC-ORC-005
+    /// @dev Later markets of the same pool must name the same reference pool.
     function bindMarket(
         uint256 marketId,
         address pool,
@@ -212,7 +171,6 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @custom:spec REQ-AMM-CORE-004
     function marketOf(
         uint256 marketId
     )
@@ -236,8 +194,6 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @dev `hasTwap` is true: the consistency read and the depth come from the reference pool (`REQ-AMM-V4-005`).
-    /// @custom:spec REQ-AMM-CORE-009, REQ-AMM-CORE-010, REQ-AMM-V4-005
     function capabilities() external pure override returns (IntegrationCapabilities memory) {
         return IntegrationCapabilities({
             poolKeying: PoolKeying.Id,
@@ -252,17 +208,11 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @custom:spec REQ-AMM-CORE-020, REQ-AMM-V4-012
     function maxRecordsPerAccountMarket() external pure override returns (uint256) {
         return MAX_RECORDS;
     }
 
-    // ─── Risk metadata and hooks ───
-
     /// @inheritdoc IAmmIntegration
-    /// @dev `inRange` from the pool's `slot0` tick, `readSafe` false while the PoolManager is unlocked, `poolUnits` the
-    /// pool's spot in-range liquidity in vault-token units.
-    /// @custom:spec REQ-AMM-CORE-008, REQ-AMM-V4-003
     function riskMetadata(
         uint256 marketId,
         bytes32 positionKey
@@ -281,10 +231,6 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     }
 
     /// @inheritdoc IAmmIntegration
-    /// @dev The reference pool's harmonic-mean in-range liquidity over `window` in vault-token units
-    /// (`REQ-AMM-V4-008`); unavailable for a zero window, a failed `observe` or a zero seconds-per-liquidity
-    /// difference.
-    /// @custom:spec REQ-AMM-CORE-013, REQ-AMM-V4-008, SPEC-CAP-005, SPEC-UNIT-002
     function riskStatus(
         uint256 marketId,
         uint32 window
@@ -298,7 +244,6 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     }
 
     /// @inheritdoc IAmmIntegrationHooks
-    /// @custom:spec REQ-AMM-CORE-013, REQ-AMM-V4-003
     function checkReadSafe(
         uint256 marketId
     ) external view override {
@@ -306,11 +251,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     }
 
     /// @inheritdoc IAmmIntegrationHooks
-    /// @dev `SPEC-AMM-V4-002`: the larger of the spot gate `|tickSpot - tickRef|` and the reference pool's
-    /// `|tickTwap - tickRef|`, the mean tick negated when the reference pool orders the tokens the other way.
-    /// Unavailable for a zero window, while the PoolManager is unlocked (`REQ-AMM-V4-003`), for a reference cardinality
-    /// below `ceil(window / blockTime) + 1` or a failed `observe`.
-    /// @custom:spec REQ-AMM-CORE-009, REQ-AMM-V4-005, SPEC-AMM-V4-002, SPEC-ORC-010, SPEC-ORC-022
+    /// @dev The larger of the v4 spot and the reference pool's TWAP deviation from the oracle tick.
     function consistencyDeviation(
         uint256 marketId,
         uint32 window,
@@ -338,37 +279,29 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
     }
 
     /// @inheritdoc IAmmIntegrationHooks
-    /// @custom:spec REQ-AMM-CORE-010
     function wrappedNative() external view override returns (address) {
         return _WETH;
     }
 
     /// @inheritdoc IAmmIntegrationHooks
-    /// @dev The allowlist is empty: only `address(0)` is allowed (`REQ-AMM-V4-001`).
-    /// @custom:spec REQ-AMM-CORE-014, REQ-AMM-V4-001
     function isAllowedPoolHook(
         address hooks
     ) external pure override returns (bool) {
         return _hookAllowed(hooks);
     }
 
-    // ─── Hooks of the concentrated-liquidity base ───
-
-    /// @dev Every position belongs to the one PositionManager.
     function _positionManager(
         bytes32
     ) internal view override returns (address) {
         return address(_POSM);
     }
 
-    /// @dev `positionKey = bytes32(tokenId)`.
     function _tokenId(
         bytes32 positionKey
     ) internal pure override returns (uint256) {
         return uint256(positionKey);
     }
 
-    /// @dev Only the PositionManager's NFTs are accepted.
     function _positionKeyOf(
         address manager,
         uint256 tokenId
@@ -376,9 +309,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         return (bytes32(tokenId), manager == address(_POSM));
     }
 
-    /// @dev The PoolKey's hash and the ticks from `getPoolAndPositionInfo`, the liquidity from the PoolManager with the
-    /// PositionManager as owner and `bytes32(tokenId)` as salt (`REQ-AMM-V4-003`); a token never minted reads as pool 0.
-    /// @custom:spec REQ-AMM-V4-003, REQ-VAULT-008, REQ-VAULT-162
+    /// @dev A token never minted reads as pool 0.
     function _readPosition(
         bytes32 positionKey
     ) internal view override returns (bytes32 poolRef, int24 tickLower, int24 tickUpper, uint128 liquidity) {
@@ -391,9 +322,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         );
     }
 
-    /// @dev Never true: a position with a subscriber reverts `SubscribedPosition` (`REQ-AMM-V4-002`), and the market's
-    /// hook is checked again (`HookNotAllowed`, `REQ-AMM-V4-001`).
-    /// @custom:spec REQ-AMM-V4-001, REQ-AMM-V4-002, REQ-AMM-V4-006
+    /// @dev Never true: reverts `SubscribedPosition` for a subscribed position and rechecks the market's hook.
     function _isEncumbered(
         Market storage market,
         bytes32 positionKey
@@ -407,27 +336,17 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         return false;
     }
 
-    /// @dev The constructor's block interval.
     function _blockTime() internal view override returns (uint256) {
         return _BLOCK_TIME;
     }
 
-    /// @dev `PoolLocked` while the PoolManager is unlocked (`REQ-AMM-V4-003`).
-    /// @custom:spec REQ-AMM-V4-003, REQ-AMM-CORE-018
     function _requireReadSafe(
         Market storage
     ) internal view override {
         if (UniswapV4State.isUnlocked(_PM)) revert PoolLocked();
     }
 
-    /// @dev `REQ-AMM-V4-004`: the amounts of `SPEC-AMM-V4-003` at the pool's `slot0`, checked against the minimums, then
-    /// one batch: the fee step to `depositor` and the principal step to `recipient`. When `recipient` is not the
-    /// depositor (a seizure, a deleverage release or a reconciliation) and that batch reverts, for example because a
-    /// token refuses the depositor's address, a second batch takes the principal and the fees together to `recipient`
-    /// and the returned amounts include the fees (`REQ-AMM-V4-013`), so a token that blocks the depositor cannot block
-    /// the removal. Forcing the second batch by gas is not possible: the first call receives 63/64 of the gas left, so
-    /// a first call that runs out leaves too little for the second.
-    /// @custom:spec REQ-AMM-V4-004, REQ-AMM-V4-013, SPEC-AMM-V4-003, SPEC-BACK-008
+    /// @dev If fees to a blocking depositor fail the batch, a fallback sends fees and principal to `recipient`.
     function _removePrincipal(
         Market storage m,
         bytes32 positionKey,
@@ -439,7 +358,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         amounts = _principalAmounts(m, liquidity);
         if (amounts[0] < minAmounts[0]) revert BelowMinimum(0, amounts[0], minAmounts[0]);
         if (amounts[1] < minAmounts[1]) revert BelowMinimum(1, amounts[1], minAmounts[1]);
-        // The position holds at least the liquidity removed, so the fee step's zero decrease always has a position.
+        // The position holds at least the liquidity removed, so the zero decrease always has a position.
         Batch memory b = _batch(10);
         UniswapV4PoolKey storage key = _v4Pools[m.poolRef].key;
         _decrease(b, positionKey, 0, 0, 0);
@@ -452,6 +371,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
             _run(b);
             return amounts;
         }
+        // Gas cannot force the fallback: an out-of-gas first call leaves too little (1/64) for the second.
         try _POSM.modifyLiquidities(_payload(b), block.timestamp) {}
         catch {
             (uint256 fee0, uint256 fee1,) = _feesOwed(m, positionKey);
@@ -464,7 +384,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         }
     }
 
-    /// @dev `SPEC-AMM-V4-003`: the amounts removing `liquidity` credits at the pool's `slot0`, rounded down.
+    /// @dev The amounts removing `liquidity` credits at the pool's `slot0`, rounded down.
     function _principalAmounts(
         Market storage m,
         uint128 liquidity
@@ -479,9 +399,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         amounts = _pair(a0, a1);
     }
 
-    /// @dev `REQ-AMM-V4-004` step 1 alone; the fees the PoolManager credits are computed first with unchecked fee
-    /// growth (`REQ-AMM-V4-010`). A position without liquidity accrues no fee and is not touched.
-    /// @custom:spec REQ-AMM-V4-004, REQ-AMM-V4-010, REQ-VAULT-064
+    /// @dev The fee step alone; a position without liquidity is not touched.
     function _collectAll(
         Market storage m,
         bytes32 positionKey,
@@ -496,8 +414,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         _run(b);
     }
 
-    /// @dev The fees the PoolManager credits the position on its next liquidity change, with unchecked fee growth
-    /// (`REQ-AMM-V4-010`), and the position's liquidity; no fees for a position without liquidity.
+    /// @dev The fees the PoolManager credits on the position's next liquidity change, and its liquidity.
     function _feesOwed(
         Market storage m,
         bytes32 positionKey
@@ -511,9 +428,6 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         (amount0, amount1) = UniswapV4State.feesOwed(p, in0, in1);
     }
 
-    // ─── Internal ───
-
-    /// @dev A PositionManager action list being built.
     struct Batch {
         bytes actions;
         bytes[] params;
@@ -545,8 +459,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         _push(b, DECREASE_LIQUIDITY, abi.encode(uint256(positionKey), liquidity, min0, min1, bytes("")));
     }
 
-    /// @dev Takes both currencies' credit to `to`; a native-ETH leg is taken to the PositionManager, wrapped there
-    /// and swept to `to` as WETH, so no Avana contract receives ETH.
+    /// @dev Takes both currencies to `to`; native ETH is wrapped in the PositionManager and swept as WETH.
     function _takeTo(
         Batch memory b,
         UniswapV4PoolKey storage key,
@@ -570,7 +483,6 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         _POSM.modifyLiquidities(_payload(b), block.timestamp);
     }
 
-    /// @dev The `unlockData` of `b`: its actions and their parameters, the array shrunk to the actions pushed.
     function _payload(
         Batch memory b
     ) private pure returns (bytes memory) {
@@ -603,7 +515,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         cfg.tickSpacing = key.tickSpacing;
     }
 
-    /// @dev `REQ-AMM-V4-007`: the factory's pool of the two tokens at the reference pool's own fee tier.
+    /// @dev The reference pool must be the factory's pool of the two tokens at its own fee tier.
     function _checkReference(
         address ref,
         address t0,
@@ -625,7 +537,6 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         }
     }
 
-    /// @dev `totalSupply() < 2^127` (`REQ-AMM-V4-009`); false for a failed read.
     function _supplyOk(
         address token
     ) private view returns (bool) {
@@ -636,14 +547,13 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         }
     }
 
-    /// @dev `REQ-AMM-V4-001`: the allowlist is empty, so only a hookless pool passes.
+    /// @dev The allowlist is empty, so only a hookless pool passes.
     function _hookAllowed(
         address hooks
     ) private pure returns (bool) {
         return hooks == address(0);
     }
 
-    /// @dev `(tickLower, tickUpper)` of a packed `PositionInfo`.
     function _ticksOf(
         uint256 info
     ) private pure returns (int24 tickLower, int24 tickUpper) {
@@ -662,9 +572,7 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         return x < 0 ? uint256(-x) : uint256(x);
     }
 
-    /// @dev The block interval of a chain Avana deploys on: 12 s for Ethereum (1) and Sepolia (11155111), 2 s for Base
-    /// (8453), Base Sepolia (84532) and OP Mainnet (10), 1 s for Unichain (130); 0 for any other chain, where the constructor's
-    /// value stands.
+    /// @dev The block interval of a known chain; 0 for any other, where the constructor's value stands.
     function _knownBlockTime(
         uint256 chainId
     ) private pure returns (uint256) {

@@ -36,40 +36,16 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title RiskModule
-/// @notice Avana's risk checks on one chain, holding no funds: the pledge check, the borrow-side pre- and post-checks,
-/// the borrow-speed and pledge-speed limits, the Aave configuration drift check, the breaker pokes and their
-/// non-reverting status views.
-/// @dev UUPS implementation behind one fixed ERC-1967 proxy; `_authorizeUpgrade` requires `APPLICATION_ADMIN`, held only
-/// by the timelock. Its state is the speed windows in the ERC-7201 namespace `avana.storage.RiskModule.speed`, written
-/// only by the AaveAdapter's `preBorrowCheck` and Collateralization's `checkPledge` (REQ-RISK-095), and the OpenZeppelin
-/// `AccessControl` roles in their ERC-7201 namespace; the AaveAdapter's `creditRepay` and Collateralization's
-/// `creditWithdraw` take from the windows. The check bodies run in six immutable, stateless logic contracts
-/// by plain calls, because the whole surface does not fit the
-/// 24,576-byte code limit; the logic addresses are implementation immutables whose `logicConfig()` the constructor
-/// checks, so a new logic contract is part of a new implementation and waits the normal delay. The RiskModule itself
-/// writes nothing but its roles and the speed windows and makes one state-changing call, `MarketRegistry.recordBreach` from `pokeBreakers`
-/// and `pokeConfig`; the logic contracts' only state-changing calls are LPOracle and DebtOracle `poke()`. No token, NFT
-/// or debt asset moves through it, and no exit or liquidation path calls it (REQ-RISK-005).
-/// @custom:spec REQ-RISK-001, REQ-RISK-002, REQ-RISK-003, REQ-RISK-004, REQ-RISK-005, REQ-RISK-007, REQ-RISK-008, REQ-RISK-039, REQ-RISK-040, REQ-RISK-053, REQ-RISK-054, REQ-RISK-055, REQ-RISK-072, REQ-RISK-095, Q-226, Q-229, Q-240, Q-259, Q-411
+/// @notice Avana's risk checks on one chain: pledge, borrow-side, speed-limit, drift and breaker checks.
+/// @dev UUPS proxy; only the timelock can upgrade it. Check bodies run in six stateless logic contracts.
 contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpeed, IRiskModule {
-    /// @dev Drift, Hub shares and the expected collateral factor.
     address internal immutable _DRIFT_LOGIC;
-    /// @dev Breaker conditions and states.
     address internal immutable _BREAKER_LOGIC;
-    /// @dev The pledge check and its preview.
     address internal immutable _PLEDGE_LOGIC;
-    /// @dev The borrow-side checks.
     address internal immutable _BORROW_LOGIC;
-    /// @dev The account status.
     address internal immutable _STATUS_LOGIC;
-    /// @dev The speed-limit reads.
     address internal immutable _SPEED_LOGIC;
 
-    /// @notice Fixes the implementation immutables, checks each logic contract and disables initializers on the
-    /// implementation itself.
-    /// @param im The per-chain Avana addresses.
-    /// @param logics The six logic contracts, each built with `im`.
-    /// @custom:spec REQ-RISK-002
     constructor(
         RiskModuleImmutables memory im,
         RiskModuleLogics memory logics
@@ -90,7 +66,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleAdmin
-    /// @custom:spec REQ-RISK-002, REQ-RISK-072, Q-226, Q-228
     function initialize(
         address timelock
     ) external override initializer {
@@ -101,15 +76,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         _grantRole(AvanaRoles.APPLICATION_ADMIN, timelock);
     }
 
-    // ---------------------------------------------------------------------------------------------------------------
-    // Checks
-    // ---------------------------------------------------------------------------------------------------------------
-
     /// @inheritdoc IRiskModuleChecks
-    /// @dev After the pledge logic approves, a pledge that is not a rescue top-up is tested against the market's pledge
-    /// window on its booked value before the pledge, `regularUsed + sliceUsed`; only Collateralization's call adds the
-    /// charge (REQ-RISK-093, REQ-RISK-095).
-    /// @custom:spec REQ-RISK-006, REQ-RISK-009, REQ-RISK-025, REQ-RISK-057, REQ-RISK-058, REQ-RISK-065, REQ-RISK-066, REQ-RISK-067, REQ-RISK-093, REQ-RISK-095, REQ-RISK-099
     function checkPledge(
         address depositor,
         address proxy,
@@ -130,9 +97,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleChecks
-    /// @dev Every gate of the borrow logic first, then the two borrow-speed windows; only the AaveAdapter's call adds
-    /// the charges (REQ-RISK-092, REQ-RISK-095).
-    /// @custom:spec REQ-ADAPTER-009, REQ-ADAPTER-024, REQ-RISK-056, REQ-RISK-061, REQ-RISK-062, REQ-RISK-065, REQ-RISK-071, REQ-RISK-077, REQ-RISK-081, REQ-RISK-082, REQ-RISK-092, REQ-RISK-095, REQ-RISK-098
     function preBorrowCheck(
         address proxy,
         uint256 debtReserveId,
@@ -145,7 +109,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleChecks
-    /// @custom:spec REQ-RISK-005, REQ-RISK-092, REQ-RISK-095
     function creditRepay(
         address proxy,
         uint256 debtReserveId,
@@ -158,7 +121,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleChecks
-    /// @custom:spec REQ-RISK-005, REQ-RISK-093, REQ-RISK-095
     function creditWithdraw(
         uint256 marketId,
         uint256 usd
@@ -168,7 +130,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         _putWindow(SpeedScope.MarketPledge, bytes32(marketId), w);
     }
 
-    /// @dev Stores both borrow windows of a charge or a credit.
     function _putBorrowWindows(
         uint256 marketId,
         bytes32 debtKey,
@@ -180,7 +141,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleChecks
-    /// @custom:spec REQ-ADAPTER-025, REQ-RISK-056, REQ-RISK-065, REQ-RISK-081
     function preWithdrawCheck(
         address proxy
     ) external override {
@@ -188,7 +148,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleChecks
-    /// @custom:spec REQ-ADAPTER-026, REQ-ADAPTER-027, REQ-RISK-059, REQ-RISK-068, SPEC-CF-005
     function postHealthCheck(
         address proxy,
         uint256 minHealthFactor
@@ -197,7 +156,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleChecks
-    /// @custom:spec REQ-ADAPTER-028, REQ-ADAPTER-036, REQ-RISK-063, REQ-RISK-069, REQ-RISK-076
     function checkAaveConfig(
         address spoke,
         uint256[] calldata marketIds
@@ -208,7 +166,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleChecks
-    /// @custom:spec REQ-RISK-090, REQ-RISK-078, SPEC-BRK-008
     function pokeConfig(
         address spoke
     ) external override returns (DriftReason reason) {
@@ -222,27 +179,25 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         for (uint256 i = 0; i < ids.length; ++i) {
             MarketStatus status = _market(ids[i]).status;
             if (status != MarketStatus.Active && status != MarketStatus.Offboarding) continue;
-            // The breach record of a permissionless poke, bounded by the Spoke's markets (REQ-RISK-090).
+            // Bounded by the Spoke's markets.
             // forge-lint: disable-next-line(calls-loop)
             _registry().recordBreach(bytes32(ids[i]), BreakerReasons.CONFIG_DRIFT);
         }
     }
 
     /// @inheritdoc IRiskModuleChecks
-    /// @custom:spec REQ-RISK-091, SPEC-BRK-007, SPEC-BRK-008, Q-399
     function pokeBreakers(
         uint256 marketId
     ) external override returns (uint32 reasons) {
         Market memory m = _market(marketId);
         IRiskModuleBreakerLogic b = IRiskModuleBreakerLogic(_BREAKER_LOGIC);
-        // The conditions are read after the pokes a borrow would make.
         b.pokeOracles(marketId);
         uint32 live = b.marketConditions(marketId, false, 0);
         if (live != 0) _registry().recordBreach(bytes32(marketId), live);
         reasons = live;
         uint256[] memory ids = _registry().getDebtReserveIds(m.spoke);
         for (uint256 i = 0; i < ids.length; ++i) {
-            // Debt reserves of the market's Spoke, bounded by the timelock's listings (REQ-RISK-091).
+            // Bounded by the Spoke's listed debt reserves.
             // forge-lint: disable-next-line(calls-loop)
             uint32 d = b.debtConditions(m.spoke, ids[i]);
             if (d == 0) continue;
@@ -256,7 +211,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleChecks
-    /// @custom:spec REQ-ADAPTER-037, Q-189
     function isHubSharesEqualAssets(
         uint256 marketId
     ) external view override returns (bool equal) {
@@ -264,7 +218,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleChecks
-    /// @custom:spec REQ-RISK-070, REQ-RISK-075, WDR-031
     function checkRemainingRecord(
         uint256 marketId,
         uint128 remainingUnits
@@ -272,13 +225,8 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         IRiskModulePledgeLogic(_PLEDGE_LOGIC).checkRemainingRecord(marketId, remainingUnits);
     }
 
-    // ---------------------------------------------------------------------------------------------------------------
-    // Views
-    // ---------------------------------------------------------------------------------------------------------------
-
     /// @inheritdoc IRiskModuleViews
     /// @dev Never reverts: a failure of the preview body is reported as `eligible = false` with its selector.
-    /// @custom:spec REQ-RISK-031, REQ-RISK-057
     function previewPledge(
         address depositor,
         uint256 marketId,
@@ -296,10 +244,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @dev Never reverts. The status body reads no pause state; the pause state and reason of the market's Hub come
-    /// from `pauseOf` and are copied into `pauseState` and `pauseReason` only, so no other field depends on them. A
-    /// revert of either call returns the unavailable status (`_unavailable`).
-    /// @custom:spec REQ-ADAPTER-038, REQ-RISK-060
     function getAccountGateStatus(
         address proxy
     ) external view override returns (AccountGateStatus memory status) {
@@ -316,8 +260,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         }
     }
 
-    /// @dev The status when it cannot be computed (REQ-ADAPTER-038): `statusUnavailable`, every reserve field at the
-    /// no-reserve value `type(uint256).max` (reserve 0 is a valid identifier), nothing allowed, every other field zero.
+    /// @dev The status when it cannot be computed: nothing allowed, every reserve field `type(uint256).max`.
     function _unavailable() internal pure returns (AccountGateStatus memory status) {
         status.statusUnavailable = true;
         status.unknownCollateralReserveId = type(uint256).max;
@@ -329,7 +272,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @custom:spec SPEC-CAP-003
     function usdToRestore(
         address proxy
     ) external view override returns (uint256 usd) {
@@ -337,7 +279,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @custom:spec SPEC-CF-001
     function expectedCollateralFactorBps(
         uint256 marketId
     ) external view override returns (uint256 cfBps) {
@@ -345,8 +286,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @dev Never reverts: a failed evaluation reports every temporary and security reason, with no reopening time.
-    /// @custom:spec REQ-RISK-065, REQ-RISK-078, SPEC-BRK-007, Q-399
     function getBreakerStatus(
         uint256 marketId
     ) external view override returns (uint32 reasons, uint64 reopensAt) {
@@ -358,8 +297,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @dev Never reverts: a failed evaluation reports every temporary and security reason, with no reopening time.
-    /// @custom:spec REQ-RISK-065, SPEC-BRK-004, SPEC-BRK-007, Q-399
     function getDebtBreakerStatus(
         address spoke,
         uint256 debtReserveId
@@ -373,7 +310,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
 
     /// @inheritdoc IRiskModuleViews
     /// @dev Never reverts: a failed evaluation reports every security reason, so a reset is refused.
-    /// @custom:spec REQ-MREG-025, SPEC-BRK-008, Q-399
     function liveBreakerReasons(
         uint256 marketId
     ) external view override returns (uint32 reasons) {
@@ -386,7 +322,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
 
     /// @inheritdoc IRiskModuleViews
     /// @dev Never reverts: a failed evaluation reports every security reason, so a reset is refused.
-    /// @custom:spec REQ-MREG-025, SPEC-BRK-008, Q-399
     function liveDebtBreakerReasons(
         address spoke,
         uint256 debtReserveId
@@ -399,7 +334,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @custom:spec REQ-RISK-060, REQ-RISK-061, REQ-RISK-062
     function checkBorrowGate(
         address proxy,
         uint256 debtReserveId
@@ -408,7 +342,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @custom:spec SPEC-CAP-009, REQ-RISK-077
     function debtValueUsd(
         address proxy
     ) external view override returns (uint256 usd) {
@@ -416,7 +349,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @custom:spec REQ-RISK-097, SPEC-CAP-011, Q-411
     function getBorrowSpeed(
         uint256 marketId,
         uint256 debtReserveId
@@ -431,7 +363,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @custom:spec REQ-RISK-097, SPEC-CAP-011, Q-411
     function getPledgeSpeed(
         uint256 marketId
     ) external view override returns (SpeedView memory pledge) {
@@ -443,7 +374,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @custom:spec REQ-RISK-095, REQ-RISK-097, SPEC-CAP-011
     function getSpeedWindow(
         SpeedScope scope,
         bytes32 key
@@ -452,59 +382,46 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @custom:spec REQ-RISK-059, SPEC-PROXY-001, SPEC-CAP-003, Q-398
     function rescueHealthFactor() external pure override returns (uint256 value) {
         value = RiskModuleConstants.RESCUE_HEALTH_FACTOR;
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @custom:spec REQ-RISK-067, Q-252
     function RESCUE_MIN_PLEDGE_USD() external pure override returns (uint256 usd) {
         usd = RiskModuleConstants.RESCUE_MIN_PLEDGE_USD;
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @custom:spec REQ-RISK-029, REQ-RISK-055
     function MARKET_REGISTRY() external view override returns (address marketRegistry) {
         marketRegistry = _MARKET_REGISTRY;
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @custom:spec REQ-RISK-055
     function PARAMETER_STORE() external view override returns (address parameterStore) {
         parameterStore = _PARAMETER_STORE;
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @custom:spec REQ-RISK-004, REQ-RISK-058
     function COLLATERALIZATION() external view override returns (address collateralization) {
         collateralization = _COLLATERALIZATION;
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @custom:spec REQ-ADAPTER-009, REQ-RISK-031
     function ADAPTER() external view override returns (address adapter) {
         adapter = _ADAPTER;
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @custom:spec REQ-RISK-071
     function LP_VAULT_SWAP() external view override returns (address lpVaultSwap) {
         lpVaultSwap = _LP_VAULT_SWAP;
     }
 
     /// @inheritdoc IRiskModuleViews
-    /// @custom:spec REQ-RISK-072, Q-259
     function TIMELOCK() external view override returns (address timelock) {
         timelock = _TIMELOCK;
     }
 
-    // ---------------------------------------------------------------------------------------------------------------
-    // Roles and upgrades
-    // ---------------------------------------------------------------------------------------------------------------
-
     /// @dev Either admin role can be held only by `TIMELOCK`, through `initialize` or any later grant.
-    /// @custom:spec REQ-RISK-072, REQ-ACCESS-153, Q-259
     function _grantRole(
         bytes32 role,
         address account
@@ -515,8 +432,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         granted = super._grantRole(role, account);
     }
 
-    /// @dev Upgrades need `APPLICATION_ADMIN`, held only by the timelock (normal delay).
-    /// @custom:spec REQ-RISK-002
+    /// @dev Upgrades need `APPLICATION_ADMIN`, held only by the timelock.
     function _authorizeUpgrade(
         address
     ) internal view override onlyRole(AvanaRoles.APPLICATION_ADMIN) {}

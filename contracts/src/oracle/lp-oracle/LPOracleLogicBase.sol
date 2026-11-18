@@ -11,17 +11,12 @@ import {LPOracleStorage} from "./LPOracleStorage.sol";
 import {InitParams} from "./types/InitParams.sol";
 
 /// @title LPOracleLogicBase
-/// @notice Shared part of the two LPOracle logic contracts: the chain constants, the delegatecall guard and
-/// `logicConfig()`.
-/// @dev A logic contract runs only in a feed proxy's storage by delegatecall from the LPOracle implementation; its own
-/// storage is never used. Each AMM protocol's implementation deploys its two logic contracts with its pricing module.
-/// @custom:spec REQ-ORACLE-106, REQ-ORACLE-078, REQ-ORACLE-080, Q-240
+/// @notice Shared part of the LPOracle logic contracts: chain constants, delegatecall guard and `logicConfig()`.
 abstract contract LPOracleLogicBase is LPOracleListing, ILPOracleLogic {
-    /// @dev This contract's own address: a call executing here, not in a proxy, is not delegated.
+    /// @dev This contract's own address, to detect a non-delegated call.
     address private immutable _SELF;
 
-    /// @notice Fixes the chain constants; they must equal the implementation's (`logicConfig`).
-    /// @custom:spec REQ-ORACLE-080
+    /// @notice Sets the chain constants; they must equal the implementation's.
     constructor(
         address timelock,
         uint32 chainBlockTime,
@@ -39,7 +34,6 @@ abstract contract LPOracleLogicBase is LPOracleListing, ILPOracleLogic {
     }
 
     /// @inheritdoc ILPOracleLogic
-    /// @custom:spec REQ-ORACLE-080
     function logicConfig() external view override returns (bytes32 config) {
         config = keccak256(
             abi.encode(_TIMELOCK, _CHAIN_BLOCK_TIME, _POKE_MIN_GAS_FLOOR, _POKE_MIN_GAS_CEILING, _HAS_SEQUENCER)

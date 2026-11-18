@@ -22,43 +22,19 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-// Every external call of the LPOracle is a static call (STATICCALL, or a delegatecall into its own logic, which makes
-// only static calls), so no call can reenter and reorder the events emitted after it (REQ-ORACLE-025).
+// Every external call is a static call or a delegatecall into this feed's own logic, so none can reenter.
 // forge-lint: disable-start(reentrancy-events)
 /// @title LPOracle
-/// @notice AMM-neutral price-state core of one market's price feed (2.10): validates Chainlink legs, selects a quote per
-/// token with automatic failover, checks agreement, the USD band, the pricing module's consistency check, second
-/// sources and the sequencer, serves the USD value of one whole vault token with 8 decimals to the CDP Spoke's
-/// AaveOracle, and reports the price state the RiskModule and LPVaultSwap enforce their gates from.
-/// @dev Abstract: each AMM protocol's LPOracle implementation (concentrated liquidity: `LPOracleCL`) inherits it and
-/// supplies the pricing-module hooks of `LPOracleStorage`. UUPS behind one ERC-1967 proxy per market; `_authorizeUpgrade`
-/// requires `APPLICATION_ADMIN`, held only by `TIMELOCK`. Only `initialize` and `poke()` write price, timer, latch,
-/// route-version or checkpoint storage; views never revert except `InsufficientGas` and return the same result for
-/// every caller in a block. No token, ETH or approval moves through it. Example: a USDC/USDT market at $1.00 per
-/// token holding 1 USDC + 1 USDT per whole vault token serves 200,000,000 ($2.00) while Live; once Cached it serves
-/// the accepted price, once Expired 1.
-/// @custom:spec REQ-ORACLE-106, REQ-ORACLE-107, REQ-ORACLE-016, REQ-ORACLE-020, REQ-ORACLE-040, REQ-ORACLE-041, REQ-ORACLE-042, REQ-ORACLE-043, REQ-ORACLE-044, REQ-ORACLE-045, REQ-ORACLE-058, REQ-ORACLE-059, REQ-ORACLE-060, REQ-ORACLE-061, REQ-ORACLE-062, REQ-ORACLE-063, REQ-ORACLE-064, REQ-ORACLE-078, REQ-ORACLE-080, REQ-ORACLE-082, REQ-ORACLE-087, REQ-ORACLE-088, REQ-ORACLE-097, REQ-ORACLE-101, Q-128, Q-247, Q-259, Q-321
+/// @notice AMM-neutral price-state core of one market's price feed.
+/// @dev UUPS proxy; only the timelock can upgrade it. Only `initialize` and `poke()` write price state.
 abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeable, UUPSUpgradeable, LPOracleListing {
-    /// @dev Poke logic contract (`LPOraclePokeLogic` with this implementation's pricing module).
     address internal immutable _POKE_LOGIC;
-    /// @dev Listing logic contract (`LPOracleListingLogic` with this implementation's pricing module): `checkConfig`.
     address internal immutable _LISTING_LOGIC;
-    /// @dev Initialization logic contract: `initialize`'s market part (the listing logic itself where both fit one
-    /// contract).
     address internal immutable _INIT_LOGIC;
-    /// @dev View logic contract (`LPOracleViewLogic` with this implementation's pricing module).
     address internal immutable _VIEW_LOGIC;
 
-    /// @notice Fixes the implementation constants of the chain and the three logic contracts, and disables initializers
-    /// on the implementation.
-    /// @dev Reverts `MarketMismatch(0)` unless the three logic contracts report the same chain constants (`logicConfig`).
-    /// @param timelock The chain's AvanaTimelock (`TIMELOCK`).
-    /// @param chainBlockTime Seconds per block (12 on Ethereum, 2 on Base).
-    /// @param pokeMinGasFloor `POKE_MIN_GAS_FLOOR`.
-    /// @param pokeMinGasCeiling `POKE_MIN_GAS_CEILING`.
-    /// @param hasSequencer True on an L2 with a sequencer-uptime feed.
-    /// @param logics The poke, initialization, listing and view logic contracts.
-    /// @custom:spec REQ-ORACLE-078, REQ-ORACLE-080, REQ-ORACLE-097
+    /// @notice Sets the chain constants and logic contracts, and disables initializers on the implementation.
+    /// @dev Reverts `MarketMismatch(0)` unless every logic contract reports the same chain constants.
     constructor(
         address timelock,
         uint32 chainBlockTime,
@@ -78,7 +54,6 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
         _disableInitializers();
     }
 
-    /// @dev `logic` has code and reports the chain constants `config`.
     function _logicOk(
         address logic,
         bytes32 config
@@ -87,10 +62,6 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
     }
 
     /// @inheritdoc ILPOracle
-    /// @dev Grants the admin roles here, then runs the market part in the listing logic (`LPOracleListingLogic`): the
-    /// market from the arguments (`MKT-019`), `d` (`SPEC-ORC-005`), `checkConfig == 0`, a Live seed evaluation and the
-    /// seeded accepted price and checkpoint.
-    /// @custom:spec REQ-ORACLE-010, REQ-ORACLE-047, REQ-ORACLE-058, REQ-ORACLE-059, REQ-ORACLE-076, REQ-ORACLE-088, REQ-ORACLE-097, SPEC-ORC-005
     function initialize(
         InitParams calldata params
     ) external override initializer {
@@ -106,7 +77,7 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
         Address.functionDelegateCall(_INIT_LOGIC, bytes.concat(ILPOracleLogic.initializeMarket.selector, msg.data[4:]));
     }
 
-    /// @dev Stores the market identity from `params`; reverts `MarketMismatch` for a malformed market.
+    /// @dev Reverts `MarketMismatch` for a malformed market.
     function _storeMarket(
         InitParams calldata params
     ) private {
@@ -140,7 +111,7 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
         $.decimalsCheckedAt = _now64();
     }
 
-    /// @dev The registry's route version of `token`, 0 when it cannot be read (a token not yet listed).
+    /// @dev The registry's route version of `token`, 0 when it cannot be read.
     function _routeVersion(
         address token
     ) private view returns (uint64 version) {
@@ -155,29 +126,23 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
         if (ok) version = SafeCast.toUint64(value);
     }
 
-    // ─── Aave price feed and price state: evaluated in the view logic, run by `_forward` ───
-
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-020, REQ-ORACLE-060, REQ-ORACLE-061, REQ-ORACLE-085, REQ-ORACLE-086, SPEC-ORC-017
     function latestAnswer() external view override returns (int256 answer) {
         _forward(_VIEW_LOGIC);
         return answer;
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-040
     function decimals() external pure override returns (uint8) {
         return DECIMALS;
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-040
     function description() external view override returns (string memory) {
         return _s().descriptionText;
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-041, REQ-ORACLE-021
     function latestRoundData()
         external
         view
@@ -189,14 +154,12 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-042
     function getPriceState() external view override returns (PriceStateView memory report) {
         _forward(_VIEW_LOGIC);
         return report;
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-044, REQ-ORACLE-009
     function getTokenPrices()
         external
         view
@@ -208,21 +171,18 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-043, SPEC-ORC-015
     function borrowPriceMaxAge() external view override returns (uint32 age) {
         _forward(_VIEW_LOGIC);
         return age;
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-043, REQ-ORACLE-090, SPEC-ORC-015
     function liquidationPriceMaxAge() external view override returns (uint32 age) {
         _forward(_VIEW_LOGIC);
         return age;
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-024, REQ-ORACLE-025, REQ-ORACLE-026, REQ-ORACLE-082
     function poke() external override returns (PriceState state) {
         uint32 minGas = _s().pokeMinGas;
         if (gasleft() < minGas) revert InsufficientGas(gasleft(), minGas);
@@ -230,23 +190,19 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-087
     function lastAcceptedPrice() external view override returns (uint256 price8, uint64 updatedAt) {
         Accepted storage a = _s().accepted;
-        // The accepted answer is a positive price8.
         // forge-lint: disable-next-line(unsafe-typecast)
         (price8, updatedAt) = (uint256(a.answer), a.updatedAt);
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-088
     function priceCheckpoint() external view override returns (uint256 price8, uint64 at) {
         Checkpoint storage c = _s().checkpoint;
         (price8, at) = (c.price8, c.at);
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-100
     function checkConfig(
         OracleConfig calldata
     ) external view override returns (uint256 failedChecks) {
@@ -254,20 +210,13 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
         return failedChecks;
     }
 
-    /// @dev Runs the current view's calldata in `logic` (the view logic, or the listing logic for `checkConfig`) by
-    /// delegatecall in this feed's storage and ends the call with the logic's return data. A failed call re-raises its
-    /// revert data; a call that ran out of gas with no revert data reverts `InsufficientGas`, the only revert a view
-    /// may produce (`REQ-ORACLE-061`). Only view entry points are forwarded, and a view body of a logic contract writes
-    /// nothing and makes only static calls, so the call stays read-only whatever the caller's call type.
-    /// The call never comes back here, so the `return` after each `_forward` only names the view's return values.
-    /// @custom:spec REQ-ORACLE-039, REQ-ORACLE-061, REQ-ORACLE-106
+    /// @dev Delegatecalls the calldata into `logic` and ends the call with its return or revert data; never returns.
     function _forward(
         address logic
     ) internal view {
         _asView(_delegateAndReturn)(logic);
     }
 
-    /// @dev The delegatecall of `_forward`; it never returns to its caller.
     function _delegateAndReturn(
         address logic
     ) internal {
@@ -293,7 +242,7 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
         }
     }
 
-    /// @dev `fn` typed as a view: `_delegateAndReturn` runs only the view entry points of a logic contract (`_forward`).
+    /// @dev `fn` typed as a view; `_forward` forwards only view entry points.
     function _asView(
         function(address) internal fn
     ) private pure returns (function(address) internal view out) {
@@ -305,33 +254,26 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
     }
 
     /// @inheritdoc ILPOracleRouter
-    /// @custom:spec REQ-ORACLE-080
     function POKE_LOGIC() external view override returns (address logic) {
         logic = _POKE_LOGIC;
     }
 
     /// @inheritdoc ILPOracleRouter
-    /// @custom:spec REQ-ORACLE-080
     function LISTING_LOGIC() external view override returns (address logic) {
         logic = _LISTING_LOGIC;
     }
 
     /// @inheritdoc ILPOracleRouter
-    /// @custom:spec REQ-ORACLE-080
     function INIT_LOGIC() external view override returns (address logic) {
         logic = _INIT_LOGIC;
     }
 
     /// @inheritdoc ILPOracleRouter
-    /// @custom:spec REQ-ORACLE-080
     function VIEW_LOGIC() external view override returns (address logic) {
         logic = _VIEW_LOGIC;
     }
 
-    // ─── Governance ───
-
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-038
     function setPokeMinGas(
         uint32 value
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
@@ -342,8 +284,7 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
         emit PokeMinGasUpdated(previous, value);
     }
 
-    /// @dev Either admin role can be held only by `TIMELOCK` (`REQ-ORACLE-097`).
-    /// @custom:spec REQ-ORACLE-097, Q-259
+    /// @dev Either admin role can be held only by `TIMELOCK`.
     function _grantRole(
         bytes32 role,
         address account
@@ -354,70 +295,56 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
         granted = super._grantRole(role, account);
     }
 
-    /// @dev Upgrades require `APPLICATION_ADMIN`, the timelock at the normal delay (`REQ-ORACLE-078`).
-    /// @custom:spec REQ-ORACLE-078
     function _authorizeUpgrade(
         address
     ) internal view override onlyRole(AvanaRoles.APPLICATION_ADMIN) {}
 
-    // ─── Identity ───
-
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-038
     function pokeMinGas() external view override returns (uint32 value) {
         value = _s().pokeMinGas;
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-107
     function decimalsStatus() external view override returns (bool invalid, uint64 verifiedAt) {
         Layout storage $ = _s();
         (invalid, verifiedAt) = ($.decimalsInvalid, $.decimalsCheckedAt);
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-014
     function marketId() external view override returns (uint256 id) {
         id = _s().marketId;
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-014
     function integration() external view override returns (address amm) {
         amm = _s().integration;
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-048
     function tokens() external view override returns (address[] memory list) {
         list = _s().tokens;
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-017
     function parameterStore() external view override returns (address store) {
         store = _s().parameterStore;
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-094
     function marketRegistry() external view override returns (address registry) {
         registry = _s().marketRegistry;
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec SPEC-ORC-004
     function stableCeilingUsd() external pure override returns (uint256 value) {
         value = LPPriceMath.STABLE_CEILING_USD;
     }
 
     /// @inheritdoc ILPOracle
-    /// @custom:spec REQ-ORACLE-097
     function TIMELOCK() external view override returns (address timelock) {
         timelock = _TIMELOCK;
     }
 
-    /// @dev The stored tokens as a memory copy.
     function _tokenList() private view returns (address[] memory list) {
         list = _s().tokens;
     }

@@ -9,12 +9,9 @@ import {LPOracleLogicBase} from "./LPOracleLogicBase.sol";
 import {LPOraclePokeLogic} from "./LPOraclePokeLogic.sol";
 
 /// @title LPOracleCLPokeLogic
-/// @notice `poke()` of the concentrated-liquidity LPOracle, run by delegatecall from `LPOracleCL` (2.10 `poke()`).
-/// @custom:spec REQ-ORACLE-026, REQ-ORACLE-080, REQ-ORACLE-103
+/// @notice `poke()` of the concentrated-liquidity LPOracle, run by delegatecall.
 contract LPOracleCLPokeLogic is LPOraclePokeLogic, LPOracleCLModuleCaller {
-    /// @notice Fixes the chain constants, the `slot0` layout and the module contract; they must equal the
-    /// implementation's.
-    /// @custom:spec REQ-ORACLE-080
+    /// @notice Sets the chain constants, `slot0` layout and module contract; they must match the implementation.
     constructor(
         address timelock,
         uint32 chainBlockTime,

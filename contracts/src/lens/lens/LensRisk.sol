@@ -21,15 +21,8 @@ import {TailCoverageView} from "./types/TailCoverageView.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensRisk
-/// @notice Risk views of the Lens: breaker status passed through from the RiskModule, address freezes, the cap-based
-/// tail coverage of each (funding Hub, debt asset) First-Loss Reserve, the uncovered deficit and the exposure of a
-/// (Hub, asset) pair across its Spokes, with both loss layers of the pair: the First-Loss Reserve and the DAO deficit
-/// offset behind it.
-/// @dev Loops over the MarketRegistry's Spokes, their enabled debt reserves and its markets, and over the Spokes
-/// registered on a Hub asset, all bounded by governance listings.
-/// @custom:spec REQ-LENS-034, REQ-LENS-037, REQ-LENS-039, REQ-LENS-042, REQ-LENS-043, REQ-FLR-046
-// View calls in loops over listings bounded by governance (Spokes, debt reserves, markets, pool tokens), one
-// page of at most LENS_MAX_PAGE records or the caller's own arrays (REQ-LENS-020).
+/// @notice Risk views of the Lens: breaker status, address freezes, tail coverage, uncovered deficit and exposure.
+// Loops are bounded by governance listings, one page of at most LENS_MAX_PAGE records, or the caller's arrays.
 // forge-lint: disable-start(calls-loop)
 abstract contract LensRisk is LensBase, ILensRisk {
     /// @dev Aave's `MAX_ALLOWED_SPOKE_CAP`, which leaves a Spoke's draw unlimited.
@@ -47,7 +40,6 @@ abstract contract LensRisk is LensBase, ILensRisk {
     }
 
     /// @inheritdoc ILensRisk
-    /// @custom:spec REQ-LENS-037, REQ-LENS-006
     function getBreakerStatus(
         uint256 marketId
     ) external view override returns (uint32 reasons, uint64 reopensAt) {
@@ -56,7 +48,6 @@ abstract contract LensRisk is LensBase, ILensRisk {
     }
 
     /// @inheritdoc ILensRisk
-    /// @custom:spec REQ-LENS-037, REQ-LENS-006
     function getDebtBreakerStatus(
         address spoke,
         uint256 debtReserveId
@@ -66,7 +57,6 @@ abstract contract LensRisk is LensBase, ILensRisk {
     }
 
     /// @inheritdoc ILensRisk
-    /// @custom:spec REQ-LENS-037, REQ-LENS-006
     function isFrozenAddress(
         address account
     ) external view override returns (bool frozen) {
@@ -75,7 +65,6 @@ abstract contract LensRisk is LensBase, ILensRisk {
     }
 
     /// @inheritdoc ILensRisk
-    /// @custom:spec REQ-LENS-034, REQ-LENS-039, SPEC-CAP-008, REQ-LENS-005, REQ-LENS-006
     function getTailCoverage(
         address hub,
         address debtAsset
@@ -100,7 +89,6 @@ abstract contract LensRisk is LensBase, ILensRisk {
     }
 
     /// @inheritdoc ILensRisk
-    /// @custom:spec REQ-LENS-042, REQ-LENS-006
     function uncoveredDeficit(
         address hub,
         address asset
@@ -110,7 +98,6 @@ abstract contract LensRisk is LensBase, ILensRisk {
     }
 
     /// @inheritdoc ILensRisk
-    /// @custom:spec REQ-LENS-043, REQ-LENS-005, REQ-LENS-006
     function getHubAssetExposure(
         address hub,
         address asset
@@ -134,11 +121,6 @@ abstract contract LensRisk is LensBase, ILensRisk {
         v.spokes = _spokeDraws(hub, assetId);
     }
 
-    // ------------------------------------------------------------------------------------------------------ internal
-
-    /// @dev Marks the Spokes with an enabled reserve of `t.debtAsset` funded by `t.hub`, sets the First-Loss Reserve from
-    /// the first such reserve and `drawCapUsd`, and returns the asset's served price and decimals.
-    /// @custom:spec REQ-LENS-034
     function _drawCaps(
         TailCoverageView memory t,
         address[] memory spokes,
@@ -165,10 +147,6 @@ abstract contract LensRisk is LensBase, ILensRisk {
         t.drawCapUsd = unlimited ? type(uint256).max : capSum * price;
     }
 
-    /// @dev Exposure per pool token other than the debt asset over every listed market whose CDP Spoke draws the
-    /// asset from the Hub: `tokenUsdCap(h, t)` once per home Hub `h`, every holding market's `topUpSliceUsd`, and the
-    /// largest collateral factor (latest dynamic configuration of the vault-token reserve) of a market holding `t`.
-    /// @custom:spec REQ-LENS-034, SPEC-CAP-008
     function _tails(
         address debtAsset,
         address[] memory spokes,
@@ -190,8 +168,7 @@ abstract contract LensRisk is LensBase, ILensRisk {
         }
     }
 
-    /// @dev Adds one market's slice and CF to token `token`, and the Hub-token cap the first time `(token, home)` is
-    /// met.
+    /// @dev Adds one market's slice and CF to `token`, and the Hub-token cap the first time `(token, home)` is met.
     function _addToken(
         Tails memory x,
         address token,
@@ -215,14 +192,12 @@ abstract contract LensRisk is LensBase, ILensRisk {
         x.usd[j] += _store().tokenUsdCap(home, token);
     }
 
-    /// @dev A market whose listing is in force: Registered, Active or Offboarding.
     function _listed(
         MarketStatus s
     ) internal pure returns (bool) {
         return s == MarketStatus.Registered || s == MarketStatus.Active || s == MarketStatus.Offboarding;
     }
 
-    /// @dev Whether `spoke` is one of the marked Spokes.
     function _drawsFrom(
         address spoke,
         address[] memory spokes,
@@ -234,7 +209,6 @@ abstract contract LensRisk is LensBase, ILensRisk {
         return false;
     }
 
-    /// @dev `_deficit` with the pair's First-Loss Reserve and its DAO deficit offset named.
     function _exposure(
         address hub,
         address asset
@@ -254,10 +228,6 @@ abstract contract LensRisk is LensBase, ILensRisk {
         firstLossReserve = _registry().firstLossReserveOf(hub, asset);
     }
 
-    /// @dev The Hub asset of `asset`, the uncovered deficit `max(0, Σ ⌈deficitRay / 1e27⌉ − funded − offsetFunded)` over
-    /// every Spoke registered on it, the funded balance of `firstLossReserveOf(hub, asset)` (0 when none is set), and the
-    /// pair's DAO deficit offset with its added assets (`_offset`).
-    /// @custom:spec REQ-LENS-042, REQ-FLR-046
     function _deficit(
         address hub,
         address asset
@@ -276,10 +246,7 @@ abstract contract LensRisk is LensBase, ILensRisk {
         uncovered = deficit > layers ? deficit - layers : 0;
     }
 
-    /// @dev The DAO deficit offset of a pair: every Spoke listed on the Hub asset whose `FIRST_LOSS_LAYER()` returns
-    /// `firstLossReserve`, summing their added assets; `offset` is the first in the Hub's order (0 when none, or when the
-    /// pair has no First-Loss Reserve).
-    /// @custom:spec REQ-LENS-042, REQ-FLR-046
+    /// @dev The pair's DAO deficit offset: Spokes whose `FIRST_LOSS_LAYER()` is `firstLossReserve`.
     function _offset(
         address hub,
         uint256 assetId,
@@ -295,10 +262,7 @@ abstract contract LensRisk is LensBase, ILensRisk {
         }
     }
 
-    /// @dev Whether `spoke.FIRST_LOSS_LAYER()` returns exactly the 32-byte word of `layer`. A revert, a return of any
-    /// other length or any other word (an address with dirty upper bits included) is no match, and at most 32 bytes
-    /// of return data are copied.
-    /// @custom:spec REQ-LENS-042, REQ-FLR-046
+    /// @dev Exact 32-byte match of `FIRST_LOSS_LAYER()`; a revert or other return is no match, 32 bytes copied max.
     function _standsBehind(
         address spoke,
         address layer
@@ -313,8 +277,6 @@ abstract contract LensRisk is LensBase, ILensRisk {
         }
     }
 
-    /// @dev Every Spoke registered on the Hub asset, in the Hub's order, with its slice of the asset (REQ-LENS-059).
-    /// @custom:spec REQ-LENS-043, REQ-LENS-059
     function _spokeDraws(
         address hub,
         uint256 assetId
@@ -334,10 +296,7 @@ abstract contract LensRisk is LensBase, ILensRisk {
         }
     }
 
-    /// @dev One Spoke's slice: configuration, owed split, deficit (rounded up), added assets and shares, drawn and
-    /// premium shares, and its kind from `roles` (First-Loss Reserve, fee receiver, and a non-zero third entry for a
-    /// market's vault-token asset); a Spoke standing behind the First-Loss Reserve is the DAO deficit offset.
-    /// @custom:spec REQ-LENS-059, REQ-HUB-015, REQ-FLR-046
+    /// @dev One Spoke's slice of the asset (deficit rounded up) and its kind from `roles`.
     function _slice(
         address hub,
         uint256 assetId,

@@ -25,34 +25,21 @@ import {SpeedWindow} from "./types/SpeedWindow.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title RiskModuleSpeedLogic
-/// @notice The net-flow speed limits (Q-411): the market window's base, the USD debt of the market's CDP Spoke at the
-/// AaveOracle price of each of its debt reserves; the debt window's base, the asset every CDP Spoke the MarketRegistry
-/// records owes the funding Hub; the pledge window's base, the market's booked value from Collateralization's counters;
-/// the charges and credits; the parameters from the ParameterStore; and each new window, rolled to now and tested
-/// against its limit on the window-start base (SPEC-CAP-011, SPEC-CAP-012).
-/// @dev Stateless and view-only: it writes nothing and makes only static calls. It reads a window from its caller's
-/// `getSpeedWindow` (the RiskModule proxy, which stores what it returns), so a call from anywhere else sees that
-/// caller's answer and changes nothing. Its loops run over the MarketRegistry's Spokes and a Spoke's debt reserves, both
-/// bounded by timelock listings.
-/// @custom:spec REQ-RISK-092, REQ-RISK-093, REQ-RISK-095, REQ-RISK-096, REQ-RISK-097, SPEC-CAP-011, SPEC-CAP-012, SPEC-CAP-013, Q-411
+/// @notice The net-flow speed limits: window bases, charges, credits and each new window.
+/// @dev Reads windows from the caller's `getSpeedWindow`; only the RiskModule proxy stores them.
 // View calls in loops over the registry's Spokes and a Spoke's debt reserves, bounded by listings.
 // forge-lint: disable-start(calls-loop)
 contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
-    /// @notice Fixes the implementation immutables.
-    /// @param im The per-chain Avana addresses, equal to the RiskModule's.
-    /// @custom:spec REQ-RISK-002
     constructor(
         RiskModuleImmutables memory im
     ) RiskModuleBase(im) {}
 
     /// @inheritdoc IRiskModuleLogic
-    /// @custom:spec REQ-RISK-002
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("RiskModuleSpeedLogic"), _IMMUTABLES_HASH);
     }
 
     /// @inheritdoc IRiskModuleSpeedLogic
-    /// @custom:spec REQ-RISK-092, SPEC-CAP-011, SPEC-CAP-012, SPEC-CAP-013
     function borrowCharge(
         address proxy,
         uint256 debtReserveId,
@@ -93,7 +80,6 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
     }
 
     /// @inheritdoc IRiskModuleSpeedLogic
-    /// @custom:spec REQ-RISK-093, SPEC-CAP-011, SPEC-CAP-012
     function pledgeCharge(
         uint256 marketId,
         uint256 bookedUsd,
@@ -117,7 +103,6 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
     }
 
     /// @inheritdoc IRiskModuleSpeedLogic
-    /// @custom:spec REQ-RISK-092, SPEC-CAP-011
     function repayCredit(
         address proxy,
         uint256 debtReserveId,
@@ -141,7 +126,6 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
     }
 
     /// @inheritdoc IRiskModuleSpeedLogic
-    /// @custom:spec REQ-RISK-093, SPEC-CAP-011
     function withdrawCredit(
         uint256 marketId,
         uint256 usd
@@ -150,7 +134,6 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
     }
 
     /// @inheritdoc IRiskModuleSpeedLogic
-    /// @custom:spec REQ-RISK-097
     function borrowViews(
         uint256 marketId,
         uint256 debtReserveId
@@ -173,7 +156,6 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
     }
 
     /// @inheritdoc IRiskModuleSpeedLogic
-    /// @custom:spec REQ-RISK-097
     function pledgeView(
         uint256 marketId
     ) external view override returns (SpeedView memory pledge) {
@@ -190,8 +172,7 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
         pledge = SpeedLimitMath.viewOf(w, p.window, lim);
     }
 
-    /// @dev The caller's stored window rolled to now, its limit and the window-start base it is computed on; a
-    /// never-written scope (`window == 0`) has limit 0 (REQ-RISK-096).
+    /// @dev The stored window rolled to now, its limit and its base; a never-written scope has limit 0.
     function _rolled(
         SpeedScope scope,
         bytes32 key,
@@ -207,7 +188,6 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
         if (window != 0) lim = SpeedLimitMath.limit(rateBps, min, max, base);
     }
 
-    /// @dev The caller's stored window after a credit of `x` (`SpeedLimitMath.credit`).
     function _credited(
         SpeedScope scope,
         bytes32 key,
@@ -218,7 +198,6 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
             SpeedLimitMath.credit(IRiskModuleViews(msg.sender).getSpeedWindow(scope, key), window, block.timestamp, x);
     }
 
-    /// @dev A market's speed limits and its booked value `regularUsed + sliceUsed`.
     function _pledgeInputs(
         uint256 marketId
     ) internal view returns (MarketSpeedLimits memory limits, uint256 bookedUsd) {
@@ -229,7 +208,6 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
         bookedUsd = uint256(c.regularUsed) + c.sliceUsed;
     }
 
-    /// @dev Keys, charge, bases and parameters of reserve `r` in market `marketId` (REQ-RISK-092, SPEC-CAP-013).
     function _inputs(
         uint256 marketId,
         uint256 r,
@@ -252,8 +230,7 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
         inputs.debt = _store().debtSpeedLimit(def.fundingHub, def.asset);
     }
 
-    /// @dev `D_m = Σ_r ⌊owed(r) × price8(r) / 10^dec(r)⌋` over the Spoke's debt reserves, each owed amount read from
-    /// the reserve's funding Hub; a reserve the Spoke owes nothing on is skipped without a price read.
+    /// @dev USD debt of the Spoke over its debt reserves, each rounded down.
     function _spokeDebtUsd(
         address spoke,
         address oracle
@@ -267,7 +244,7 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
         }
     }
 
-    /// @dev `D_ha = Σ_s hub.getSpokeTotalOwed(assetId, s)` over the MarketRegistry's Spokes listed on the Hub asset.
+    /// @dev Asset owed to the Hub by every MarketRegistry Spoke listed on the Hub asset.
     function _owedToHub(
         address hub,
         uint256 assetId

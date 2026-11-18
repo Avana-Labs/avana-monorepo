@@ -14,19 +14,9 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title DebtOracleReads
 /// @notice Gas-guarded static reads of the DebtOracle and their decoding into fixed-width values.
-/// @dev Every external read follows `SPEC-ORC-023`: immediately before it, `gasleft()` must be at least
-/// `ceil(64 * G / 63) + POST_CALL_GAS`, otherwise the call reverts `InsufficientGas`, so the read receives exactly its
-/// explicit gas `G` whatever the transaction's gas limit; a read that then fails is the source's own failure. The return
-/// data is copied up to the ABI length the caller names and never beyond (`REQ-ORACLE-001`), so a source that returns
-/// a huge buffer cannot charge the oracle for copying it. Words are decoded by hand: a word that does not fit its ABI
-/// type is a failed decode, never a revert, because a revert in a view would break `REQ-ORACLE-061`.
-/// @custom:spec SPEC-ORC-023, REQ-ORACLE-001, REQ-ORACLE-039, REQ-ORACLE-061, REQ-ORACLE-098, REQ-ORACLE-102
+/// @dev A read reverts `InsufficientGas` unless it can forward its full gas; a malformed word is a failed decode.
 abstract contract DebtOracleReads is DebtOracleStorage {
     /// @dev One gas-guarded static call; copies at most `maxWords` whole words of the return data.
-    /// @return ok The call did not revert.
-    /// @return size Full `returndatasize()`.
-    /// @return words The first `min(size / 32, maxWords)` words.
-    /// @custom:spec SPEC-ORC-023, REQ-ORACLE-001, REQ-ORACLE-102
     function _call(
         address target,
         uint256 callGas,
@@ -38,8 +28,7 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         // forge-lint: disable-next-line(require-revert-in-loop)
         if (gasleft() < required) revert IDebtOracleErrors.InsufficientGas(gasleft(), required);
         words = new uint256[](maxWords);
-        // A static call that copies no return data, then a bounded copy of at most `maxWords` words into the array
-        // allocated above; the array length is lowered to the words copied, never raised.
+        // Bounded copy of at most `maxWords` words; the array length is only ever lowered.
         // solhint-disable-next-line no-inline-assembly
         assembly ("memory-safe") {
             ok := staticcall(callGas, target, add(data, 32), mload(data), 0, 0)
@@ -52,9 +41,6 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         }
     }
 
-    /// @dev `_call` with `CONFIG_CALL_GAS` of a registry or store view taking one address argument, `selector(arg)`: the
-    /// selector followed by the address as one ABI word, the same bytes `abi.encodeCall` gives for that view.
-    /// @custom:spec SPEC-ORC-023
     function _callOf(
         address target,
         bytes4 selector,
@@ -64,9 +50,7 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         return _call(target, CONFIG_CALL_GAS, abi.encodePacked(selector, uint256(uint160(arg))), maxWords);
     }
 
-    /// @dev One configuration word of at most `maxValue` from a registry or store getter with no argument and a single
-    /// return value; the calldata is the bare selector.
-    /// @custom:spec SPEC-ORC-023, REQ-ORACLE-017
+    /// @dev One configuration word of at most `maxValue` from a getter with no argument.
     function _readWord(
         address target,
         bytes4 selector,
@@ -76,8 +60,6 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         return _boundedWord(s, w, maxValue);
     }
 
-    /// @dev `_readWord` of a getter taking one address argument, `selector(arg)`.
-    /// @custom:spec SPEC-ORC-023, REQ-ORACLE-017
     function _readWordOf(
         address target,
         bytes4 selector,
@@ -88,7 +70,6 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         return _boundedWord(s, w, maxValue);
     }
 
-    /// @dev The first word of a successful read when it is at most `maxValue`; `ok` false otherwise.
     function _boundedWord(
         bool called,
         uint256[] memory w,
@@ -98,9 +79,7 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         return (true, w[0]);
     }
 
-    /// @dev Pinned decimals, bounds and age limits of a feed from `ParameterStore.getFeed` (10 static words). A record
-    /// with `decimals == 0` is no feed definition.
-    /// @custom:spec REQ-ORACLE-094, REQ-ORACLE-017, SPEC-ORC-019
+    /// @dev A feed's pinned decimals, bounds and age limits from `ParameterStore.getFeed`; `decimals == 0` means none.
     function _readFeedDef(
         address store,
         LegRead memory leg
@@ -119,8 +98,6 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         return true;
     }
 
-    /// @dev `decimals()` of an aggregator (one word, at most 255).
-    /// @custom:spec REQ-ORACLE-001
     function _readDecimals(
         address feed
     ) internal view returns (bool ok, uint8 value) {
@@ -129,10 +106,7 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         return (true, SafeCast.toUint8(w[0]));
     }
 
-    /// @dev A `latestRoundData()` or `getRoundData()` return (five words): round identifiers within `uint80`, an
-    /// `updatedAt` below `2^64`; `startedAt` is returned unchecked. `size` is the full `returndatasize()`: a price read
-    /// decodes the first five words of a longer answer, the sequencer read (`SPEC-ORC-021`) requires exactly 160 bytes.
-    /// @custom:spec REQ-ORACLE-001, SPEC-ORC-014, SPEC-ORC-021
+    /// @dev A `latestRoundData()` or `getRoundData()` read; `size` is the full `returndatasize()`.
     function _readRound(
         address feed,
         bytes memory data
@@ -149,7 +123,6 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         return (true, SafeCast.toUint80(w[0]), _signed(w[1]), w[2], SafeCast.toUint64(w[3]), size);
     }
 
-    /// @dev `latestRoundData()` of a feed, with the full return size (`_readRound`).
     function _readLatest(
         address feed
     )
@@ -160,8 +133,6 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         return _readRound(feed, abi.encodeCall(IAggregatorV3.latestRoundData, ()));
     }
 
-    /// @dev `phaseAggregators(phaseId)` of a Chainlink proxy (one address word).
-    /// @custom:spec REQ-ORACLE-089
     function _readPhaseAggregator(
         address proxy,
         uint16 phaseId
@@ -172,9 +143,7 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         return (true, address(SafeCast.toUint160(w[0])));
     }
 
-    /// @dev Reads and classifies one leg under `REQ-ORACLE-002` and `REQ-ORACLE-003`; `leg` already holds its feed
-    /// record. `oneLeg` adds the condition that the normalised answer is at least 1.
-    /// @custom:spec REQ-ORACLE-001, REQ-ORACLE-002, REQ-ORACLE-003, SPEC-ORC-001, SPEC-ORC-019
+    /// @dev Reads and classifies one leg; `oneLeg` also requires a normalised answer of at least 1.
     function _readLeg(
         LegRead memory leg,
         bool oneLeg
@@ -195,7 +164,6 @@ abstract contract DebtOracleReads is DebtOracleStorage {
         else leg.status = ReadStatus.Valid;
     }
 
-    /// @dev Reinterprets an ABI word as the signed `int256` it encodes.
     function _signed(
         uint256 word
     ) internal pure returns (int256 value) {

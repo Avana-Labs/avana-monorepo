@@ -5,20 +5,10 @@ pragma solidity 0.8.28;
 
 import {RouteSlot} from "./RouteSlot.sol";
 
-/// @notice Per-token part of an LPOracle price-state report: route in use, quote, valuation price, agreement tolerance,
-/// second-source agreement, standby slot and route version, and the feed address, source timestamp and age limits of
-/// every Chainlink leg of the route in use.
-/// @dev Prices are 8-decimal USD per whole token; ages and timestamps are seconds. A route value or age that cannot be
-/// read is reported as 0 and `type(uint64).max`. The `leg*` arrays list the legs of the route in use (one or two); an
-/// unused slot is `address(0)` and 0. `reasons` is the token's reason bitmap: bit 0 NO_ROUTE, 1 DISAGREE,
-/// 2 ON_ALTERNATE, 3 ON_STANDBY, 4 SECOND_SOURCE_DISAGREE, 5 SECOND_SOURCE_UNAVAILABLE. The RiskModule checks each leg
-/// against `ParameterStore.borrowPriceMaxAge(feed)`, LPVaultSwap against `liquidationPriceMaxAge(feed)`, and the Lens
-/// reports both limits.
-/// @custom:spec REQ-ORACLE-042, REQ-ORACLE-094, REQ-ORACLE-100, SPEC-ORC-015, SPEC-ORC-020, Q-182, Q-229, Q-248, Q-322, Q-323
+/// @notice Per-token part of an LPOracle price-state report.
+/// @dev Prices are 8-decimal USD per whole token; ages and timestamps are seconds.
 struct TokenPriceView {
-    // Pool token.
     address token;
-    // Token reason bitmap (see @dev).
     uint32 reasons;
     // Route used for the quote: 0 None, 1 Primary, 2 Alternate.
     uint8 routeUsed;
@@ -52,8 +42,7 @@ struct TokenPriceView {
     uint32[2] legBorrowPriceMaxAge;
     // liquidationPriceMaxAge of each leg (seconds).
     uint32[2] legLiquidationPriceMaxAge;
-    // Slot the token's standby route replaces in MarketRegistry.activePriceRoutes (None when both recorded routes are in
-    // force).
+    // Slot the token's standby route replaces (None when both recorded routes are in force).
     RouteSlot replaced;
     // MarketRegistry.priceRouteVersion(token) read in this evaluation.
     uint64 routeVersion;

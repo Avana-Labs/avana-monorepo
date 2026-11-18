@@ -6,11 +6,7 @@ pragma solidity 0.8.28;
 import {UniswapV4PoolKey} from "../../interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 
 /// @title ILensV4FeeReads
-/// @notice The Uniswap v4 PoolManager and PositionManager views the Lens's fee reader calls (same ABI as v4-core
-/// v4.0.0 and v4-periphery 1.0.1): the PoolManager's raw storage reads, through which the reader takes the pool's tick,
-/// fee growth globals, the range's ticks and the position's liquidity and last fee growth (`StateLibrary` layout), and
-/// the PositionManager's pool key and packed position info of a token ID.
-/// @custom:spec REQ-LENS-050, REQ-AMM-V4-010
+/// @notice Uniswap v4 PoolManager storage reads and PositionManager position info used by the Lens fee reader.
 interface ILensV4FeeReads {
     /// @notice The word at a PoolManager storage slot.
     function extsload(

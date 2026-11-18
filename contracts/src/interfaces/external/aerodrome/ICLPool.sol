@@ -2,40 +2,31 @@
 pragma solidity 0.8.28;
 
 /// @title ICLPool
-/// @notice Subset of the Aerodrome Slipstream pool interface that Avana reads, copied from
-/// `contracts/core/interfaces/pool/ICLPoolConstants.sol`, `ICLPoolState.sol` and `ICLPoolDerivedState.sol` of
-/// aerodrome-finance/slipstream `main` (read 2026-11-10), with identical selectors.
-/// @dev Called by: the Slipstream LPVault and the LPOracle of a Slipstream market. `slot0()` returns six fields (no
-/// `feeProtocol`); a Uniswap v3 decoder of seven fields mis-decodes it, so the Slipstream integration uses this
-/// interface only.
+/// @notice Subset of the Aerodrome Slipstream pool that Avana reads.
+/// @dev `slot0()` returns six fields (no `feeProtocol`), so a Uniswap v3 decoder mis-decodes it.
 interface ICLPool {
-    /// @notice Returns the factory that created the pool. Source: `ICLPoolConstants.sol`.
+    /// @notice Returns the factory that created the pool.
     function factory() external view returns (address);
 
-    /// @notice Returns the first token of the pool. Source: `ICLPoolConstants.sol`.
+    /// @notice Returns the first token of the pool.
     function token0() external view returns (address);
 
-    /// @notice Returns the second token of the pool. Source: `ICLPoolConstants.sol`.
+    /// @notice Returns the second token of the pool.
     function token1() external view returns (address);
 
-    /// @notice Returns the pool's gauge, or address 0. Source: `ICLPoolConstants.sol`.
-    /// @dev Called by: Slipstream LPVault to refuse gauge-staked positions.
+    /// @notice Returns the pool's gauge, or address 0.
     function gauge() external view returns (address);
 
-    /// @notice Returns the NPM bound to the pool. Source: `ICLPoolConstants.sol`.
-    /// @dev Called by: Slipstream LPVault (`bindMarket` requires it to equal the market's NPM).
+    /// @notice Returns the NPM bound to the pool.
     function nft() external view returns (address);
 
-    /// @notice Returns the pool's tick spacing. Source: `ICLPoolConstants.sol`.
+    /// @notice Returns the pool's tick spacing.
     function tickSpacing() external view returns (int24);
 
-    /// @notice Returns the maximum liquidity per tick. Source: `ICLPoolConstants.sol`.
-    /// @dev Called by: listing check, to bound `L / (S * 2^96)` (AMM-A3e).
+    /// @notice Returns the maximum liquidity per tick.
     function maxLiquidityPerTick() external view returns (uint128);
 
-    /// @notice Returns the packed pool state (six fields). Source: `ICLPoolState.sol`.
-    /// @dev Called by: Slipstream LPVault (`unlocked`, observation cardinality); the fair price never reads
-    /// `sqrtPriceX96` or `tick`.
+    /// @notice Returns the packed pool state (six fields).
     function slot0()
         external
         view
@@ -48,18 +39,16 @@ interface ICLPool {
             bool unlocked
         );
 
-    /// @notice Returns the current swap fee in pips. Source: `ICLPoolState.sol`.
+    /// @notice Returns the current swap fee in pips.
     function fee() external view returns (uint24);
 
-    /// @notice Returns the in-range liquidity. Source: `ICLPoolState.sol`.
-    /// @dev Called by: Slipstream LPVault for the pool-share risk metadata.
+    /// @notice Returns the in-range liquidity.
     function liquidity() external view returns (uint128);
 
-    /// @notice Returns the in-range liquidity staked in the gauge. Source: `ICLPoolState.sol`.
+    /// @notice Returns the in-range liquidity staked in the gauge.
     function stakedLiquidity() external view returns (uint128);
 
-    /// @notice Returns tick cumulatives for each `secondsAgos` entry. Source: `ICLPoolDerivedState.sol`.
-    /// @dev Called by: LPOracle consistency check; reverts when the buffer does not reach back far enough.
+    /// @notice Returns tick cumulatives for each `secondsAgos` entry.
     function observe(
         uint32[] calldata secondsAgos
     ) external view returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s);

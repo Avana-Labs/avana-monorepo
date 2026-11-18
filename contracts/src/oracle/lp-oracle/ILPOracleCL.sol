@@ -6,22 +6,12 @@ pragma solidity 0.8.28;
 import {ClPriceStateView} from "./types/ClPriceStateView.sol";
 
 /// @title ILPOracleCL
-/// @notice Concentrated-liquidity extension of the LPOracle of a Uniswap v3 or Slipstream market: the oracle sqrt price,
-/// its clamp to the market's range and the tick-based consistency check.
-/// @dev Implemented, next to `ILPOracle`, by the LPOracle implementation for concentrated-liquidity markets. The core
-/// `ILPOracle` carries no pool, token0, token1 or tick field. The consistency check reads the pool's TWAP over
-/// `twapWindow` and requires `|meanTick - tickRef| <= consistencyToleranceBps` (one tick is a price ratio of 1.0001,
-/// so a tolerance of 50 ticks admits a 0.501 % gap, about 50 bps); it gates the price and never feeds it.
-/// @custom:spec REQ-ORACLE-042, REQ-ORACLE-046, REQ-AMM-V3-005, REQ-AMM-SLIP-005, Q-325, Q-330
+/// @notice Concentrated-liquidity extension of the LPOracle for Uniswap v3 or Slipstream markets.
 interface ILPOracleCL {
-    /// @notice Returns the concentrated-liquidity detail of the current evaluation.
-    /// @dev Computed by the same code as `latestAnswer()` in the same block. Never reverts except `InsufficientGas`.
-    /// @return report Range, oracle and clamped sqrt prices, TWAP and reference ticks, tolerance and cardinality.
-    /// @custom:spec REQ-ORACLE-042, REQ-AMM-V3-005, REQ-AMM-SLIP-005
+    /// @notice Concentrated-liquidity detail of the current evaluation.
+    /// @dev Never reverts except `InsufficientGas`.
     function getClPriceState() external view returns (ClPriceStateView memory report);
 
-    /// @notice The module contract every logic contract of this implementation delegates its pricing hooks to.
-    /// @return moduleLogic The `LPOracleCLModuleLogic` fixed at deployment.
-    /// @custom:spec REQ-ORACLE-080
+    /// @notice The module contract the logic contracts delegate their pricing hooks to.
     function MODULE_LOGIC() external view returns (address moduleLogic);
 }

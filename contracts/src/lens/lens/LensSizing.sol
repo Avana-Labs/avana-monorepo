@@ -9,15 +9,9 @@ import {LensDeleverage} from "./LensDeleverage.sol";
 import {DeleverageSizing} from "./types/DeleverageSizing.sol";
 
 /// @title LensSizing
-/// @notice `ILensSizing.previewDeleverageTo`: the smallest repay with collateral of one record that reaches a target
-/// health factor.
-/// @dev Bisects over the record's units with pure arithmetic on inputs read once (`LensDeleverage`); every result it
-/// returns reaches the target when evaluated with the arithmetic of `previewRepayWithCollateral`. At most 2 × 128
-/// bisection steps.
-/// @custom:spec REQ-LENS-055
+/// @notice `ILensSizing.previewDeleverageTo`: the smallest repay with collateral that reaches a target health factor.
+/// @dev Bisects over the record's units on inputs read once; at most 2 × 128 steps.
 abstract contract LensSizing is LensDeleverage {
-    /// @notice `ILensSizing.previewDeleverageTo`.
-    /// @custom:spec REQ-LENS-055, REQ-LENS-005, REQ-LENS-006, REQ-LENS-032, SPEC-LIQ-020
     function previewDeleverageTo(
         address wallet,
         uint256 marketId,
@@ -58,10 +52,7 @@ abstract contract LensSizing is LensDeleverage {
         v.debtAssetToWallet = value > v.debtRepaid + premium ? value - v.debtRepaid - premium : 0;
     }
 
-    // ------------------------------------------------------------------------------------------------------ internal
-
-    /// @dev The fewest units in `[1, limit]` whose repayment reaches the account's whole debt on the reserve, or `limit`
-    /// when none does: `x` grows with the units, so the first full repayment bounds the search for the target.
+    /// @dev Fewest units in `[1, limit]` that repay the whole debt on the reserve, else `limit`; bounds the search.
     function _fullRepayUnits(
         Delev memory d,
         uint256 limit
@@ -80,7 +71,6 @@ abstract contract LensSizing is LensDeleverage {
         }
     }
 
-    /// @dev Whether a repay with collateral of `units` repays something and leaves the account at or above `target`.
     function _reaches(
         Delev memory d,
         uint256 units,

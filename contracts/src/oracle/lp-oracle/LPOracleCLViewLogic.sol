@@ -11,18 +11,11 @@ import {LPOracleViewLogic} from "./LPOracleViewLogic.sol";
 import {ClPriceStateView} from "./types/ClPriceStateView.sol";
 
 /// @title LPOracleCLViewLogic
-/// @notice The evaluation views of the concentrated-liquidity LPOracle and its extension view `getClPriceState()`,
-/// run by delegatecall from `LPOracleCL` (2.10 Views and freshness exposure).
-/// @dev `getClPriceState()` runs the same evaluation as `latestAnswer()` in the block and adds the module's detail:
-/// the oracle and clamped square-root prices of the valuation prices, the pool's mean tick against the tick of the
-/// uncapped quotes, the tolerance and the observation cardinality (`REQ-ORACLE-104`).
-/// @custom:spec REQ-ORACLE-042, REQ-ORACLE-080, REQ-ORACLE-104
+/// @notice Evaluation views of the concentrated-liquidity LPOracle, including `getClPriceState()`, run by delegatecall.
 // Its `latestRoundData` is the LPOracle's Chainlink-compatible view, not a sequencer-uptime feed.
 // forge-lint: disable-next-line(missing-inheritance)
 contract LPOracleCLViewLogic is LPOracleViewLogic, LPOracleCLModuleCaller {
-    /// @notice Fixes the chain constants, the `slot0` layout and the module contract; they must equal the
-    /// implementation's.
-    /// @custom:spec REQ-ORACLE-080
+    /// @notice Sets the chain constants, `slot0` layout and module contract; they must match the implementation.
     constructor(
         address timelock,
         uint32 chainBlockTime,
@@ -37,10 +30,8 @@ contract LPOracleCLViewLogic is LPOracleViewLogic, LPOracleCLModuleCaller {
         LPOracleCLModuleCaller(moduleLogic)
     {}
 
-    /// @notice Concentrated-liquidity detail of the current evaluation (`ILPOracleCL.getClPriceState`).
-    /// @custom:spec REQ-ORACLE-042, REQ-ORACLE-104, REQ-AMM-V3-005, REQ-AMM-SLIP-005
-    // The body of the `ILPOracleCL` selector that `LPOracleCL` declares and forwards here; this logic contract does not
-    // inherit `ILPOracleCL`, whose `MODULE_LOGIC` the implementation serves itself.
+    /// @notice Concentrated-liquidity detail of the current evaluation.
+    // Body of the `ILPOracleCL` selector that `LPOracleCL` forwards here; this contract does not inherit `ILPOracleCL`.
     // solhint-disable-next-line comprehensive-interface
     function getClPriceState() external view returns (ClPriceStateView memory report) {
         Evaluation memory e = _evaluate(false);

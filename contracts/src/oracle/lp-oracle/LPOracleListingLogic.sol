@@ -11,15 +11,10 @@ import {Evaluation, LPOracleCodes} from "./LPOracleTypes.sol";
 import {LPPriceMath} from "./LPPriceMath.sol";
 import {InitParams} from "./types/InitParams.sol";
 
-// Every external call of the LPOracle is a static call (STATICCALL, or a delegatecall into its own logic, which makes
-// only static calls), so no call can reenter and reorder the events emitted after it (REQ-ORACLE-025).
+// Every external call is a static call or a delegatecall into this feed's own logic, so none can reenter.
 // forge-lint: disable-start(reentrancy-events)
 /// @title LPOracleListingLogic
 /// @notice The market part of `initialize` and `checkConfig`, run by delegatecall from the implementation.
-/// @dev `initializeMarket` runs after the implementation stored the market from the arguments (`MKT-019`); it computes `d` (`SPEC-ORC-005`) at the
-/// listing valuation prices; requires `checkConfig == 0` and a Live evaluation of the configuration; and seeds the
-/// accepted price, `seen`, the last routes and the checkpoint.
-/// @custom:spec REQ-ORACLE-106, REQ-ORACLE-010, REQ-ORACLE-047, REQ-ORACLE-058, REQ-ORACLE-059, REQ-ORACLE-076, REQ-ORACLE-088, SPEC-ORC-005, MKT-019
 abstract contract LPOracleListingLogic is LPOracleLogicBase {
     /// @inheritdoc ILPOracleLogic
     function poke() external pure override returns (PriceState) {
@@ -27,7 +22,6 @@ abstract contract LPOracleListingLogic is LPOracleLogicBase {
     }
 
     /// @inheritdoc ILPOracleLogic
-    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-100
     function checkConfig(
         OracleConfig calldata config
     ) external view virtual override returns (uint256 failedChecks) {
@@ -35,7 +29,6 @@ abstract contract LPOracleListingLogic is LPOracleLogicBase {
     }
 
     /// @inheritdoc ILPOracleLogic
-    /// @custom:spec REQ-ORACLE-058, REQ-ORACLE-059, REQ-ORACLE-076, REQ-ORACLE-088
     function initializeMarket(
         InitParams calldata params
     ) external virtual override onlyDelegated {
@@ -56,16 +49,14 @@ abstract contract LPOracleListingLogic is LPOracleLogicBase {
         _storeCheckpoint();
     }
 
-    /// @dev `checkConfig` of `config` for `initialize`, run here; an implementation whose listing checks live in
-    /// another logic contract overrides it to run that contract's `checkConfig`.
+    /// @dev `checkConfig` of `config` for `initialize`; overridden where the listing checks live in another contract.
     function _initCheck(
         OracleConfig calldata config
     ) internal virtual returns (uint256 failed) {
         failed = _checkConfig(config);
     }
 
-    /// @dev `d`: the smallest decimals in `[6, 18]` whose whole token is worth at least $1 at the listing valuation
-    /// prices (`SPEC-ORC-005`); reverts `ConfigCheckFailed` when no route quotes a token or no `d` exists.
+    /// @dev Stores `d`; reverts `ConfigCheckFailed` when no route quotes a token or no `d` exists.
     function _storeVaultDecimals(
         OracleConfig calldata config
     ) private {
@@ -80,7 +71,7 @@ abstract contract LPOracleListingLogic is LPOracleLogicBase {
         $.vaultDecimals = d;
         uint256 n = e.prices.length;
         for (uint256 i = 0; i < n; ++i) {
-            // Valuation prices are route values of at most MAX_ROUTE_ANSWER = 10^18 < 2^128.
+            // Valuation prices are at most MAX_ROUTE_ANSWER < 2^128.
             // forge-lint: disable-next-line(unsafe-typecast)
             $.listingPrices.push(uint128(e.prices[i]));
         }

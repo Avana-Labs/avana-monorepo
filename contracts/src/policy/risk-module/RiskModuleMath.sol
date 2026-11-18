@@ -7,44 +7,31 @@ import {RiskModuleConstants} from "./RiskModuleConstants.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title RiskModuleMath
-/// @notice The RiskModule's formulas, one pure function each: the cap charge and minimum value (SPEC-CAP-001), the cap
-/// split (SPEC-CAP-002), the restore amount (SPEC-CAP-003), the pool-share test (SPEC-CAP-005), the debt value
-/// (SPEC-CAP-009), the LP collateral factor and bonus bound (SPEC-CF-001, SPEC-CF-002), the rescue-excluded health
-/// factor (SPEC-CF-005), the peg product of the concentration gate (SPEC-BRK-002), the probe gas floor (REQ-RISK-089) and
-/// the exemption outcome of a pledge (REQ-RISK-066).
-/// @dev USD amounts are 8-decimal integers, health factors WAD, Aave values USD × 1e26 and debt values Aave value × RAY.
-/// Every rounding is against the borrower: charges, restore amounts and the rescue exclusion round up, the minimum value
-/// rounds down. The Halmos suite checks these functions symbolically.
-/// @custom:spec SPEC-CAP-001, SPEC-CAP-002, SPEC-CAP-003, SPEC-CAP-005, SPEC-CAP-009, SPEC-CF-001, SPEC-CF-002, SPEC-CF-005, SPEC-BRK-002, REQ-RISK-066, REQ-RISK-067, REQ-RISK-089
+/// @notice The RiskModule's pure formulas: caps, restore amount, pool share, debt value and health factors.
+/// @dev Every rounding is against the borrower.
 library RiskModuleMath {
     uint256 internal constant WAD = 1e18;
     uint256 internal constant RAY = 1e27;
     uint256 internal constant BPS = 1e4;
-    /// @dev `totalDebtValueRay / 1e45` is 8-decimal USD (SPEC-CAP-009).
+    /// @dev `totalDebtValueRay / 1e45` is 8-decimal USD.
     uint256 internal constant DEBT_RAY_PER_USD8 = 1e45;
     /// @dev `1e8` per token of an `n`-token peg product: `10^{8n}`, `n <= 8`.
     uint256 internal constant PEG8 = 1e8;
 
-    /// @notice Outcome of the exemption step of a pledge (REQ-RISK-066).
+    /// @notice Outcome of the exemption step of a pledge.
     enum Outcome {
-        // The pledge needs no exemption.
         Pass,
         // The pledge needs an exemption and is admitted as a rescue top-up.
         Rescue,
-        // `BelowMinPledge(pledgeUsd, minPledgeUsd)`: the minimum is the only exemption reason.
+        // The minimum is the only exemption reason.
         BelowMinimum,
-        // `NotRescueTopUp(hf, usdCharge, restoreBooked)`.
         NotRescue,
-        // `PoolShareUnavailable`.
         PoolShareUnavailable,
-        // `PoolShareExceeded`.
         PoolShareExceeded,
-        // `BreakerTripped(marketId, reasons)`.
         Breaker
     }
 
-    /// @notice SPEC-CAP-001 minimum-test value `mulDiv(L, price8, 10^d, Floor)`.
-    /// @custom:spec SPEC-CAP-001, REQ-RISK-057, REQ-RISK-070
+    /// @notice Minimum-test value of a pledge, rounded down.
     function pledgeUsd(
         uint256 units,
         uint256 price8,
@@ -53,8 +40,7 @@ library RiskModuleMath {
         usd = Math.mulDiv(units, price8, 10 ** uint256(d));
     }
 
-    /// @notice SPEC-CAP-001 charge `mulDiv(L, max(price8, stressFloorUsd), 10^d, Ceil)`.
-    /// @custom:spec SPEC-CAP-001, REQ-RISK-021, REQ-RISK-026
+    /// @notice Cap charge of a pledge at `max(price8, stressFloorUsd)`, rounded up.
     function usdCharge(
         uint256 units,
         uint256 price8,
@@ -65,12 +51,8 @@ library RiskModuleMath {
         usd = Math.mulDiv(units, p, 10 ** uint256(d), Math.Rounding.Ceil);
     }
 
-    /// @notice SPEC-CAP-003 `usdToRestore`: 8-decimal USD of collateral at the oracle price that restores
-    /// `rescueHealthFactor`; 0 with no debt, at or above the target, or with `CF_m = 0`.
+    /// @notice USD of collateral that restores `rescueHealthFactor`, rounded up; 0 when none is needed.
     /// @param hf Aave health factor before the pledge, WAD.
-    /// @param debtRay `totalDebtValueRay`.
-    /// @param cfBps The reserve's collateral factor on its latest dynamic key, bps.
-    /// @custom:spec SPEC-CAP-003
     function usdToRestore(
         uint256 hf,
         uint256 debtRay,
@@ -82,9 +64,7 @@ library RiskModuleMath {
         usd = Math.mulDiv(x, BPS, cfBps * WAD, Math.Rounding.Ceil);
     }
 
-    /// @notice SPEC-CAP-003 restore amount on the booking basis `mulDiv(usdToRestore, max(price8, floor), served8,
-    /// Ceil)`; a served price of 0 is read as 1, the LPOracle's minimum.
-    /// @custom:spec SPEC-CAP-003, REQ-RISK-026
+    /// @notice Restore amount on the booking basis, rounded up; a served price of 0 is read as 1.
     function restoreBooked(
         uint256 restoreUsd,
         uint256 price8,
@@ -95,11 +75,8 @@ library RiskModuleMath {
         usd = Math.mulDiv(restoreUsd, p, served8 == 0 ? 1 : served8, Math.Rounding.Ceil);
     }
 
-    /// @notice SPEC-CAP-002 split of a charge `c` between the regular room and the slice.
-    /// @dev `room = K > R ? K - R : 0`. Not eligible: `sliceUsd = 0` and `marketOk = c <= room`. Eligible:
-    /// `sliceUsd = c > room ? c - room : 0` and `marketOk = true`; the slice cap and the restore bound are tested by the
-    /// caller.
-    /// @custom:spec SPEC-CAP-002, REQ-RISK-022
+    /// @notice Split of a charge `c` between the regular room and the slice.
+    /// @dev The caller tests the slice cap and the restore bound.
     function split(
         uint256 c,
         uint256 regularUsed,
@@ -113,7 +90,6 @@ library RiskModuleMath {
     }
 
     /// @notice `used + add <= cap` without overflow.
-    /// @custom:spec SPEC-CAP-002
     function fits(
         uint256 used,
         uint256 add,
@@ -122,8 +98,7 @@ library RiskModuleMath {
         ok = used <= cap && add <= cap - used;
     }
 
-    /// @notice SPEC-CAP-005 failure `units * 1e4 > capBps * depth`; a product that does not fit 256 bits fails.
-    /// @custom:spec SPEC-CAP-005, SPEC-BRK-002
+    /// @notice Whether `units * 1e4 > capBps * depth`; an overflowing `units * 1e4` fails.
     function poolShareExceeds(
         uint256 units,
         uint256 capBps,
@@ -136,8 +111,7 @@ library RiskModuleMath {
         exceeds = lhs > rhs;
     }
 
-    /// @notice Units still admissible under SPEC-CAP-005: `floor(capBps * depth / 1e4) - units`, floored at 0.
-    /// @custom:spec SPEC-CAP-005, REQ-RISK-031
+    /// @notice Units still admissible under the pool-share cap, floored at 0.
     function poolShareRoom(
         uint256 units,
         uint256 capBps,
@@ -147,9 +121,7 @@ library RiskModuleMath {
         room = max > units ? max - units : 0;
     }
 
-    /// @notice SPEC-BRK-002 peg test `prod_i q_i <= 10^{8n}`, stopping once the product exceeds the bound, so it never
-    /// overflows; a missing quote (0) anywhere makes the product 0, so the test holds.
-    /// @custom:spec SPEC-BRK-002
+    /// @notice Peg test `prod_i q_i <= 10^{8n}`, overflow-safe; a missing quote (0) passes.
     function atOrBelowPeg(
         uint256[] memory quotes
     ) internal pure returns (bool below) {
@@ -167,16 +139,14 @@ library RiskModuleMath {
         below = true;
     }
 
-    /// @notice SPEC-CAP-009 debt value `floor(totalDebtValueRay / 1e45)`, 8-decimal USD.
-    /// @custom:spec SPEC-CAP-009
+    /// @notice Debt value, 8-decimal USD, rounded down.
     function debtUsd(
         uint256 debtRay
     ) internal pure returns (uint256 usd) {
         usd = debtRay / DEBT_RAY_PER_USD8;
     }
 
-    /// @notice SPEC-CF-001 `floor(min_i CF_i * poolRiskFactor / 1e4)`.
-    /// @custom:spec SPEC-CF-001
+    /// @notice LP collateral factor: the weakest token's factor times `poolRiskFactor`, rounded down.
     function lpCollateralFactor(
         uint256 minTokenCfBps,
         uint256 poolRiskFactorBps
@@ -184,11 +154,6 @@ library RiskModuleMath {
         cfBps = (minTokenCfBps * poolRiskFactorBps) / BPS;
     }
 
-    /// @notice SPEC-CF-002 and REQ-RISK-069: `ceil(maxLB * CF / 1e4) >= 1e4`, or the Spoke's minimum bonus above par
-    /// `(maxLB - 1e4) * liquidationBonusFactor / 1e4` (floor, bps) below `minBonusBps`, the ParameterStore's
-    /// `minLiquidationBonus(spoke)`; a `maxLB` below 1e4 violates. Example: `maxLB = 10,500`, factor 1,000 gives 50 bps,
-    /// below a 100 bps minimum.
-    /// @custom:spec SPEC-CF-002, REQ-RISK-069
     function bonusBoundViolated(
         uint256 maxLiquidationBonus,
         uint256 cfBps,
@@ -200,10 +165,8 @@ library RiskModuleMath {
         violated = ((maxLiquidationBonus - BPS) * liquidationBonusFactor) / BPS < minBonusBps;
     }
 
-    /// @notice SPEC-CF-005 value `E = mulDiv(u * p, CF * 1e18, 10^d * 1e4, Ceil)` of rescue units, Aave value.
-    /// @dev Computed as `mulDiv(u, p * CF * 1e18, 10^d * 1e4, Ceil)`, the same exact quotient; a price of `2^128` or
-    /// more saturates `E`, which only lowers `hfEx`.
-    /// @custom:spec SPEC-CF-005
+    /// @notice Aave value of rescue units at the collateral factor, rounded up.
+    /// @dev A price of `2^128` or more, or a factor above 1e4, saturates the value, which only lowers `hfEx`.
     function rescueValue(
         uint256 units,
         uint256 price8,
@@ -215,13 +178,7 @@ library RiskModuleMath {
         e = Math.mulDiv(units, price8 * cfBps * WAD, 10 ** uint256(d) * BPS, Math.Rounding.Ceil);
     }
 
-    /// @notice The price a borrow is held to and a pledge's minimum is tested at (REQ-RISK-026, SPEC-ORC-017): `min(fresh,
-    /// accepted)`, the accepted price alone when there is no fresh price (`fresh = 0`, a failed market). The cap charge
-    /// uses `capPrice`.
-    /// @dev The accepted price bounds borrowing only: a rally since the last accepted price adds no borrowing power until
-    /// the LPOracle accepts it, while liquidation sees the fresh price. Example: accepted 199,999,899 and fresh
-    /// 219,999,899 give 199,999,899; fresh 189,999,899 gives 189,999,899.
-    /// @custom:spec REQ-RISK-026, SPEC-ORC-017
+    /// @notice The price a borrow is held to: `min(fresh, accepted)`, or the accepted price when `fresh = 0`.
     function bookingPrice(
         uint256 accepted,
         uint256 fresh
@@ -229,13 +186,7 @@ library RiskModuleMath {
         return fresh != 0 && fresh < accepted ? fresh : accepted;
     }
 
-    /// @notice The price a pledge's cap charge is booked at (REQ-RISK-026): the fresh price, the accepted price
-    /// alone when there is no fresh price (`fresh = 0`, a failed market).
-    /// @dev The caps track the value Aave lends against, which is the served price (`fresh` outside a failure), so a
-    /// rally the accepted price has not caught up with is charged in full and adds no cap room. The minimum and the
-    /// rescue minimum keep `bookingPrice` (`min(fresh, accepted)`). Example: accepted 200,000,000 and fresh 230,000,000
-    /// give 230,000,000; fresh 189,999,899 gives 189,999,899.
-    /// @custom:spec REQ-RISK-026, SPEC-CAP-001
+    /// @notice The price a pledge's cap charge is booked at: the fresh price, or the accepted price when there is none.
     function capPrice(
         uint256 accepted,
         uint256 fresh
@@ -243,12 +194,8 @@ library RiskModuleMath {
         return fresh != 0 ? fresh : accepted;
     }
 
-    /// @notice The health factor after a borrow-side action held to the booking price (REQ-RISK-059, SPEC-CF-005):
-    /// `hf * min(served, accepted) / served`, rounded down; `hf` when `accepted >= served` or `served = 0`.
-    /// @dev An account's only collateral is its market's vault token, so Aave's health factor (and the rescue-excluded
-    /// one) is linear in that token's price; scaling by `accepted / served` is the health factor Aave would compute at
-    /// the accepted price. Example: `hf = 1.10e18`, served 219,999,899, accepted 199,999,899 gives 0.99999...e18.
-    /// @custom:spec REQ-RISK-059, REQ-RISK-026, SPEC-CF-005
+    /// @notice The health factor held to the booking price: `hf * min(served, accepted) / served`, rounded down.
+    /// @dev Valid because the vault token is the account's only collateral.
     function boundedHealthFactor(
         uint256 hf,
         uint256 served,
@@ -258,8 +205,7 @@ library RiskModuleMath {
         return Math.mulDiv(hf, accepted, served);
     }
 
-    /// @notice SPEC-CF-005 `hfEx = hf - mulDiv(E, WAD * RAY, D, Ceil)`, saturating at 0; `hf` when `E = 0` or `D = 0`.
-    /// @custom:spec SPEC-CF-005, REQ-RISK-068
+    /// @notice `hfEx = hf - mulDiv(E, WAD * RAY, D, Ceil)`, saturating at 0; `hf` when `E = 0` or `D = 0`.
     function healthExcludingRescue(
         uint256 hf,
         uint256 e,
@@ -278,8 +224,6 @@ library RiskModuleMath {
         hfEx = hf > rescueHf ? hf - rescueHf : 0;
     }
 
-    /// @notice `max(1e18, hardHealthFloor, minHealthFactor)` (REQ-RISK-059, REQ-RISK-068).
-    /// @custom:spec REQ-RISK-059, REQ-RISK-068, SPEC-CF-005
     function requiredHealthFactor(
         uint256 hardHealthFloor,
         uint256 minHealthFactor
@@ -289,16 +233,13 @@ library RiskModuleMath {
         if (minHealthFactor > required) required = minHealthFactor;
     }
 
-    /// @notice REQ-RISK-089 gas floor before a probe with explicit gas `g`: `ceil(64 * g / 63) + POST_CALL_GAS`.
-    /// @custom:spec REQ-RISK-089
+    /// @notice Gas floor before a probe with explicit gas `g`: `ceil(64 * g / 63) + POST_CALL_GAS`.
     function gasFloor(
         uint256 g
     ) internal pure returns (uint256 required) {
         required = Math.ceilDiv(64 * g, 63) + RiskModuleConstants.POST_CALL_GAS;
     }
 
-    /// @notice The minimum a pledge must reach when it needs an exemption: `min(minPledgeUsd, RESCUE_MIN_PLEDGE_USD)`.
-    /// @custom:spec REQ-RISK-067
     function rescueMinimum(
         uint256 minPledgeUsd
     ) internal pure returns (uint256 usd) {
@@ -306,13 +247,11 @@ library RiskModuleMath {
         usd = minPledgeUsd < cap ? minPledgeUsd : cap;
     }
 
-    /// @notice Inputs of the exemption step of a pledge (REQ-RISK-066).
+    /// @notice Inputs of the exemption step of a pledge.
     struct Exemption {
-        // `requireRescue` from the Adapter (`Paused(General)` or a frozen depositor).
         bool requireRescue;
-        // SPEC-CAP-005 cannot be evaluated: the pool's depth is unavailable.
+        // The pool-share cap cannot be evaluated: the pool's depth is unavailable.
         bool depthUnavailable;
-        // SPEC-CAP-005 fails for this pledge.
         bool capFail;
         // The market breaker without `ORACLE`: live, recovering or latched.
         uint32 brk;
@@ -326,13 +265,7 @@ library RiskModuleMath {
         uint256 restore;
     }
 
-    /// @notice REQ-RISK-066 exemption step.
-    /// @dev `needsExemption = requireRescue || capFail || depthUnavailable || brk != 0 || belowMinimum`. Not needed:
-    /// `Pass`. Needed and `eligible && charge <= restore`: `Rescue`. Otherwise, in order: the minimum as the only reason
-    /// gives `BelowMinimum`; `requireRescue` or the minimum among several reasons gives `NotRescue`; else the first
-    /// failing gate: `PoolShareUnavailable`, `PoolShareExceeded`, `Breaker`. The rescue minimum is tested before this
-    /// step (`rescueMinimum`).
-    /// @custom:spec REQ-RISK-023, REQ-RISK-057, REQ-RISK-066, REQ-RISK-073, REQ-RISK-074
+    /// @dev A pledge needing an exemption passes only as a rescue top-up (`eligible && charge <= restore`).
     function exemption(
         Exemption memory x
     ) internal pure returns (Outcome outcome) {
