@@ -482,6 +482,8 @@ contract RiskLPOracleMock {
     uint256 public pokes;
     uint256 public accepted = 2e8;
     bool public pokeReverts;
+    /// @notice The legs' borrow age limit; 0 leaves the legs' ages out of `borrowFresh`.
+    uint64 public legMaxAge;
     PriceStateView internal _pv;
 
     constructor(
@@ -518,6 +520,14 @@ contract RiskLPOracleMock {
         _pv.state = s;
         _pv.reasons = reasons;
         _pv.borrowAllowed = borrowAllowed;
+    }
+
+    /// @notice As the LPOracle reads each leg's round age against its borrow limit: a leg older than `age` fails
+    /// `borrowFresh`.
+    function setLegMaxAge(
+        uint64 age
+    ) external {
+        legMaxAge = age;
     }
 
     function setPokeReverts(
@@ -574,8 +584,17 @@ contract RiskLPOracleMock {
     function getPriceStatus() external view returns (ILPOracle.PriceStatus memory s) {
         s.answer = _pv.answer;
         s.updatedAt = uint64(block.timestamp);
-        s.borrowFresh = _pv.state == PriceState.Live && _pv.borrowAllowed;
+        s.borrowFresh = _pv.state == PriceState.Live && _pv.borrowAllowed && _legsFresh();
         s.liquidationFresh = _pv.state == PriceState.Live || _pv.state == PriceState.Drifting;
+    }
+
+    function _legsFresh() internal view returns (bool) {
+        if (legMaxAge == 0) return true;
+        for (uint256 i = 0; i < _pv.tokens.length; ++i) {
+            uint64 at = _pv.tokens[i].legUpdatedAt[0];
+            if (at > block.timestamp || block.timestamp - at > legMaxAge) return false;
+        }
+        return true;
     }
 
     function getTokenPrices() external view returns (uint256[] memory prices, uint64 updatedAt) {
