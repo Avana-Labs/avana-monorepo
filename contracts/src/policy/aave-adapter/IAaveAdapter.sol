@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PositionRef} from "../../types/PositionRef.sol";
+import {PositionRef} from "../../types/PositionTypes.sol";
 import {IAaveAdapterBase} from "./IAaveAdapterBase.sol";
 import {RepayWithCollateralParams} from "./types/AaveAdapterTypes.sol";
 

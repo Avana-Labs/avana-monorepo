@@ -5,11 +5,8 @@ pragma solidity 0.8.28;
 
 import {OracleInputsLayout} from "../../../src/policy/parameter-store/types/OracleInputsLayout.sol";
 import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {OracleConfig} from "../../../src/types/OracleConfig.sol";
-import {RouteSlot} from "../../../src/types/RouteSlot.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
+import {OracleConfig, RouteSlot, SecondSource, SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 
 /// @notice Behaviour of a mocked read: normal, revert, short (malformed) return, gas burn, oversized return.
 enum ReadMode {

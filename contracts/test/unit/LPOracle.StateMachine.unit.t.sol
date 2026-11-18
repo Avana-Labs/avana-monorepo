@@ -5,10 +5,7 @@ pragma solidity 0.8.28;
 
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {InitParams} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {OracleConfig, PriceState, PriceStateView, RouteSlot} from "../../src/types/OracleTypes.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 import {LPOracleHarness, LPOracleHarnessDeployer} from "../utils/harness/LPOracleHarness.sol";
 import {OracleFeedMock, ReadMode} from "../utils/mocks/LPOracleMocks.sol";

@@ -11,10 +11,8 @@ import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.s
 import {PositionFeesView} from "../../src/lens/lens/types/PositionFeesView.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PledgePreview} from "../../src/types/PledgePreview.sol";
-import {PositionRef} from "../../src/types/PositionRef.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
+import {PledgePreview, PositionRef} from "../../src/types/PositionTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackUniswapV4} from "../utils/fixtures/RealStackUniswapV4.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";

@@ -9,10 +9,8 @@ import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequenc
 import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {DeleverageRequest} from "../../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
-import {Market} from "../../types/Market.sol";
-import {PauseReason} from "../../types/PauseReason.sol";
-import {PauseState} from "../../types/PauseState.sol";
-import {PositionRef} from "../../types/PositionRef.sol";
+import {Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {PositionRef} from "../../types/PositionTypes.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";

@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 
 /// @title MarketRegistryGuardianRehearsalUnitTest

@@ -7,10 +7,8 @@ import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {FeedDef, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {Market} from "../../src/types/Market.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
+import {OracleConfig, SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockAggregator, MockLPOracle} from "../utils/mocks/ParameterStoreMocks.sol";
 

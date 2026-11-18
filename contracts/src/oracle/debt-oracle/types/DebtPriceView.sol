@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PriceState} from "../../../types/PriceState.sol";
-import {RouteSlot} from "../../../types/RouteSlot.sol";
+import {PriceState, RouteSlot} from "../../../types/OracleTypes.sol";
 
 /// @notice Full price-state report of one DebtOracle, returned by `getPriceState()`.
 /// @dev Unreadable route values are 0 and unreadable ages `type(uint64).max`.

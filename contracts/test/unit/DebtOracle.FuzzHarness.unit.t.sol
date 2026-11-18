@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {DebtPriceView} from "../../src/oracle/debt-oracle/types/DebtPriceView.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {DebtOracleProperties} from "../invariant/echidna/DebtOracleProperties.sol";
 import {Test} from "forge-std/Test.sol";
 

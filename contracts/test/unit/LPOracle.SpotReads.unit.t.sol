@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
 import {IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {LPOracleCLDeployer, LPOracleCLFixture} from "../utils/fixtures/LPOracleCLFixture.sol";
 import {ReadMode} from "../utils/mocks/LPOracleMocks.sol";

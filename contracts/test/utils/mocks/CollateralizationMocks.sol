@@ -7,9 +7,7 @@ import {IntegrationCapabilities, PoolKeying} from "../../../src/amm/types/AmmTyp
 import {ILPVaultBase} from "../../../src/custody/lp-vault/ILPVaultBase.sol";
 import {ILock} from "../../../src/lock/lock/ILock.sol";
 import {PledgeCharge} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
-import {PledgeCounters} from "../../../src/types/PledgeCounters.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {PledgeCounters, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @notice Pool token for the Collateralization suites: open mint, an optional sender-side transfer fee (an issuer that

@@ -6,9 +6,8 @@ pragma solidity 0.8.28;
 import {IntegrationCapabilities, RiskStatus} from "../../../src/amm/types/AmmTypes.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {OracleConfig} from "../../../src/types/OracleConfig.sol";
-import {PledgeCounters} from "../../../src/types/PledgeCounters.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {OracleConfig} from "../../../src/types/OracleTypes.sol";
+import {PledgeCounters, ShapeKind} from "../../../src/types/PositionTypes.sol";
 
 /// @notice LPOracle `checkConfig` with a settable result; records nothing (the call is a view). Beside the fixed
 /// bitmap `failed`, it can fail check `4` when the consistency tolerance is below a floor, check `8` when token 0's

@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DriftReason} from "../../types/DriftReason.sol";
-import {PriceState} from "../../types/PriceState.sol";
+import {DriftReason} from "../../types/MarketTypes.sol";
+import {PriceState} from "../../types/OracleTypes.sol";
 
 /// @title IRiskModuleErrors
 /// @notice Errors of the RiskModule's pledge check and borrow-side checks.

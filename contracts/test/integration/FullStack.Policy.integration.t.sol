@@ -13,8 +13,8 @@ import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegis
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {FullStackMarkets} from "../utils/fixtures/FullStackMarkets.sol";
 import {RegistryRouteMock} from "../utils/mocks/MarketRegistryMocks.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";

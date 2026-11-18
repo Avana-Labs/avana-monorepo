@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {PriceState, RouteSlot} from "../../src/types/OracleTypes.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
 import {LPOracleGasFixture} from "../utils/fixtures/LPOracleGasFixture.sol";
 import {OcrAggregatorMock} from "../utils/mocks/ChainlinkCostMocks.sol";

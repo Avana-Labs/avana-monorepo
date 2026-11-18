@@ -4,9 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
-import {MarketDef} from "../../types/MarketDef.sol";
-import {PauseReason} from "../../types/PauseReason.sol";
-import {RouteSlot} from "../../types/RouteSlot.sol";
+import {MarketDef, PauseReason} from "../../types/MarketTypes.sol";
+import {RouteSlot} from "../../types/OracleTypes.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {IMarketRegistryRoutes} from "./IMarketRegistryRoutes.sol";

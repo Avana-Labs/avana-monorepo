@@ -10,7 +10,7 @@ import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {DebtReserveDef, MarketStatus} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
-import {Market} from "../../types/Market.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {ILensHubReads} from "./ILensHubReads.sol";
 import {ILensRisk} from "./ILensRisk.sol";
 import {LensBase} from "./LensBase.sol";

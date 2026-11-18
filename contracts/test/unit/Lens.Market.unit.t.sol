@@ -11,9 +11,8 @@ import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {BackingView} from "../../src/lens/lens/types/BackingView.sol";
 import {RecordBackingView} from "../../src/lens/lens/types/RecordBackingView.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
-import {CapView} from "../../src/types/CapView.sol";
-import {PendingView} from "../../src/types/PendingView.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
+import {CapView} from "../../src/types/MarketTypes.sol";
+import {PendingView, PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensMarketUnitTest

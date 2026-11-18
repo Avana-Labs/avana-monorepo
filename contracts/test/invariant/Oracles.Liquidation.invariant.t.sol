@@ -7,9 +7,7 @@ import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol"
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {DebtPriceView} from "../../src/oracle/debt-oracle/types/DebtPriceView.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {PriceState, PriceStateView, RouteSlot} from "../../src/types/OracleTypes.sol";
 import {RealOraclesFixture} from "../utils/fixtures/RealOraclesFixture.sol";
 import {OracleFeedMock, ReadMode} from "../utils/mocks/LPOracleMocks.sol";
 import {MockAggregator} from "../utils/mocks/MockAggregator.sol";

@@ -6,15 +6,17 @@ pragma solidity 0.8.28;
 import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
 import {InitParams} from "../../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {OracleConfig} from "../../../src/types/OracleConfig.sol";
-import {OracleLeg} from "../../../src/types/OracleLeg.sol";
-import {OracleRoute} from "../../../src/types/OracleRoute.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
-import {PriceStateView} from "../../../src/types/PriceStateView.sol";
-import {RouteSlot} from "../../../src/types/RouteSlot.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
-import {TokenOracleConfig} from "../../../src/types/TokenOracleConfig.sol";
+import {
+    OracleConfig,
+    OracleLeg,
+    OracleRoute,
+    PriceState,
+    PriceStateView,
+    RouteSlot,
+    SecondSource,
+    SecondSourceKind,
+    TokenOracleConfig
+} from "../../../src/types/OracleTypes.sol";
 import {AvanaTest} from "../AvanaTest.sol";
 import {LPOracleHarness, LPOracleHarnessDeployer} from "../harness/LPOracleHarness.sol";
 import {OracleFeedMock, OracleRegistryMock, OracleStoreMock, OracleTokenMock} from "../mocks/LPOracleMocks.sol";

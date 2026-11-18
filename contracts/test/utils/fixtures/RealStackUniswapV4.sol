@@ -21,10 +21,8 @@ import {InitParams, LPOracleLogicSet} from "../../../src/oracle/lp-oracle/LPOrac
 import {LPOracleV4} from "../../../src/oracle/lp-oracle/LPOracleV4.sol";
 import {LPOracleV4ModuleLogic} from "../../../src/oracle/lp-oracle/LPOracleV4ModuleLogic.sol";
 import {DebtReserveDef, RiskTier, SpokeDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {MarketDef} from "../../../src/types/MarketDef.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {MarketDef} from "../../../src/types/MarketTypes.sol";
+import {PositionRef, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {IAvanaAaveV4Roles, ISpokeInstanceBatch} from "./AaveV4Fixture.sol";
 import {ClTestToken, IClPool} from "./ClPoolFixture.sol";
 import {

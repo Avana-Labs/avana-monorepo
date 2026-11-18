@@ -7,8 +7,7 @@ import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.s
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {DebtPriceView} from "../../src/oracle/debt-oracle/types/DebtPriceView.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {PriceState, RouteSlot} from "../../src/types/OracleTypes.sol";
 import {RealStackVolatile} from "../utils/fixtures/RealStackVolatile.sol";
 import {OracleFeedMock} from "../utils/mocks/LPOracleMocks.sol";
 

@@ -4,9 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAvanaTimelock} from "../../governance/timelock/IAvanaTimelock.sol";
-import {Market} from "../../types/Market.sol";
-import {SecondSource} from "../../types/SecondSource.sol";
-import {SequencerConfig} from "../../types/SequencerConfig.sol";
+import {Market} from "../../types/MarketTypes.sol";
+import {SecondSource, SequencerConfig} from "../../types/OracleTypes.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreBase} from "./IParameterStoreBase.sol";

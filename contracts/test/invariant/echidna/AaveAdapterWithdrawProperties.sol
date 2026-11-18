@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {AaveAdapterExitLogic} from "../../../src/policy/aave-adapter/AaveAdapterExitLogic.sol";
 import {AdapterAccount} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
+import {PauseState} from "../../../src/types/MarketTypes.sol";
+import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {AaveAdapterPathHarness} from "./AaveAdapterPathStandIns.sol";
 
 /// @title AaveAdapterWithdrawProperties

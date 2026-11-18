@@ -7,8 +7,7 @@ import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.s
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {ClTestToken} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackUniswapV4Journeys} from "../utils/fixtures/RealStackUniswapV4Journeys.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

@@ -7,10 +7,7 @@ import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {InitParams, LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
-import {TokenOracleConfig} from "../../src/types/TokenOracleConfig.sol";
+import {OracleConfig, PriceState, RouteSlot, TokenOracleConfig} from "../../src/types/OracleTypes.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 import {
     LPOracleHarness,

@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IDebtOracle} from "../../../src/oracle/debt-oracle/IDebtOracle.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
-import {RouteSlot} from "../../../src/types/RouteSlot.sol";
+import {PriceState, RouteSlot} from "../../../src/types/OracleTypes.sol";
 import {DebtRegistryMock} from "../../utils/mocks/DebtOracleConfigMocks.sol";
 import {MockAggregator} from "../../utils/mocks/MockAggregator.sol";
 import {CommonBase} from "forge-std/Base.sol";

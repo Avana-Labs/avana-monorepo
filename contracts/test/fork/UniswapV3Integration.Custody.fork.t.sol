@@ -7,8 +7,7 @@ import {UniswapV3Integration} from "../../src/amm/uniswap-v3/UniswapV3Integratio
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {ClPoolMover, IClPoolActions} from "../utils/ClPoolMover.sol";
 import {ForkConstants} from "../utils/fixtures/ForkConstants.sol";

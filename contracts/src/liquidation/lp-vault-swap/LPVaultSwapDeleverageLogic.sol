@@ -11,7 +11,7 @@ import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
-import {Market} from "../../types/Market.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {ILPVaultSwapLogic} from "./ILPVaultSwapLogic.sol";
 import {LPVaultSwapSettlement} from "./LPVaultSwapSettlement.sol";
 import {LPVaultSwapStorage} from "./LPVaultSwapStorage.sol";

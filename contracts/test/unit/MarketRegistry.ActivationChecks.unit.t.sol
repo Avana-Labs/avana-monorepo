@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryLPOracleMock} from "../utils/mocks/MarketRegistryMocks.sol";
 

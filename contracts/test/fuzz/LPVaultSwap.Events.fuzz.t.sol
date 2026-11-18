@@ -8,7 +8,7 @@ import {
     LiquidationResult,
     RouteMode
 } from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {SettlementReport} from "../../src/types/SettlementReport.sol";
+import {SettlementReport} from "../../src/types/PositionTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 import {Vm} from "forge-std/Vm.sol";
 

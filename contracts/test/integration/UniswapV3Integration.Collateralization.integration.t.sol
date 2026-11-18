@@ -8,9 +8,7 @@ import {BackingRecord} from "../../src/custody/collateralization/types/Collatera
 import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {PledgeCounters, PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {VaultToken} from "../../src/vault-token/vault-token/VaultToken.sol";
 import {

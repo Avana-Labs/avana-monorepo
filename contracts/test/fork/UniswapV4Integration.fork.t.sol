@@ -11,8 +11,7 @@ import {
     UniswapV4PoolKey
 } from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {ForkConstants} from "../utils/fixtures/ForkConstants.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

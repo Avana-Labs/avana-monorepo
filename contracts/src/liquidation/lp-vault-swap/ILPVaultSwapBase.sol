@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {SettlementReport} from "../../types/SettlementReport.sol";
+import {SettlementReport} from "../../types/PositionTypes.sol";
 
 /// @title ILPVaultSwapBase
 /// @notice Errors and events of LPVaultSwap, shared with its contracts.

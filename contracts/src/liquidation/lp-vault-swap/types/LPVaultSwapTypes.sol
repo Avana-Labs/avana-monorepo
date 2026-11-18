@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PositionRef} from "../../../types/PositionRef.sol";
+import {PositionRef} from "../../../types/PositionTypes.sol";
 
 /// @notice Arguments of `deleverage`, built by the AaveAdapter from the borrower's `repayWithCollateral` call.
 /// @dev Amounts are in base units of the debt reserve's asset.

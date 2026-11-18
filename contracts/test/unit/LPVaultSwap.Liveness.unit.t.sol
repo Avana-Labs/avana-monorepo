@@ -8,8 +8,8 @@ import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap
 import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {Market} from "../../src/types/Market.sol";
-import {SettlementReport} from "../../src/types/SettlementReport.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
+import {SettlementReport} from "../../src/types/PositionTypes.sol";
 import {AccessTrace} from "../utils/AccessTrace.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 import {Vm, VmSafe} from "forge-std/Vm.sol";

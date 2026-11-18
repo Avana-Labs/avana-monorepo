@@ -10,7 +10,7 @@ import {
     RouteMode
 } from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
-import {SettlementReport} from "../../src/types/SettlementReport.sol";
+import {SettlementReport} from "../../src/types/PositionTypes.sol";
 import {LVSLyingRoute, LVSRevertingRoute} from "../utils/mocks/LPVaultSwapMocks.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 import {Vm} from "forge-std/Vm.sol";

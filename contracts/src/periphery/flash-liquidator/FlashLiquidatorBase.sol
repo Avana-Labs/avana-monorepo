@@ -13,7 +13,7 @@ import {IPayoutEscrow} from "../../liquidation/payout-escrow/IPayoutEscrow.sol";
 import {ISettlementRoute} from "../../liquidation/settlement-routes/ISettlementRoute.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
-import {Market} from "../../types/Market.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {FlashLiquidationRequest, IFlashLiquidator} from "./IFlashLiquidator.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";

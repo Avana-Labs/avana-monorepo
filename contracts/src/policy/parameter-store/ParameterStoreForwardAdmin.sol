@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
-import {SecondSource} from "../../types/SecondSource.sol";
+import {SecondSource} from "../../types/OracleTypes.sol";
 import {IParameterStore} from "./IParameterStore.sol";
 import {IParameterStoreListing} from "./IParameterStoreListing.sol";
 import {ParameterStoreRouter} from "./ParameterStoreRouter.sol";

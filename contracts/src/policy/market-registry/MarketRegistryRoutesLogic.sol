@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {ISettlementRoute} from "../../liquidation/settlement-routes/ISettlementRoute.sol";
-import {Market} from "../../types/Market.sol";
-import {RouteSlot} from "../../types/RouteSlot.sol";
+import {Market} from "../../types/MarketTypes.sol";
+import {RouteSlot} from "../../types/OracleTypes.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {IMarketRegistryRoutes} from "./IMarketRegistryRoutes.sol";

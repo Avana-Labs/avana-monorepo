@@ -8,10 +8,9 @@ import {SettlementMath} from "../../src/liquidation/lp-vault-swap/SettlementMath
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
 import {InitParams, LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {Market} from "../../src/types/Market.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
+import {RouteSlot} from "../../src/types/OracleTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {ClTestToken} from "../utils/fixtures/ClPoolFixture.sol";
 import {ClIntegrationStub, LPOracleCLDeployer, LPOracleCLFixture} from "../utils/fixtures/LPOracleCLFixture.sol";
 import {UniswapV3IntegrationHarness} from "../utils/harness/UniswapV3IntegrationHarness.sol";

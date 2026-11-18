@@ -7,10 +7,8 @@ import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
 import {RiskTier} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {MarketDef, PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 

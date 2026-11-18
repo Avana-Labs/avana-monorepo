@@ -18,8 +18,8 @@ import {
     MarketParams,
     ParameterStoreLogics
 } from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {Market} from "../../src/types/Market.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
+import {ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MockMarketRegistry} from "../utils/mocks/MockMarketRegistry.sol";
 import {MockIntegration, MockLPOracle, MockPool} from "../utils/mocks/ParameterStoreMocks.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";

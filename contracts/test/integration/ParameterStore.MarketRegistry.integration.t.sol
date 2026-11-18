@@ -12,11 +12,9 @@ import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterSt
 import {IPoolObservations} from "../../src/policy/parameter-store/IPoolObservations.sol";
 import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
 import {FeedDef, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {MarketDef} from "../../src/types/MarketTypes.sol";
+import {RouteSlot} from "../../src/types/OracleTypes.sol";
+import {PledgeCounters, PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {ParameterStoreRegistryFixture} from "../utils/fixtures/ParameterStoreRegistryFixture.sol";
 import {RegistryLPOracleMock, RegistryRouteMock} from "../utils/mocks/MarketRegistryMocks.sol";
 import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";

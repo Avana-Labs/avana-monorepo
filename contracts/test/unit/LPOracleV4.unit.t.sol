@@ -7,8 +7,7 @@ import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswa
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {ClPriceStateView, InitParams, LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
 import {LPOracleV4Fixture} from "../utils/fixtures/LPOracleV4Fixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 

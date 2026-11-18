@@ -5,9 +5,7 @@ pragma solidity 0.8.28;
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {PriceState} from "../../types/PriceState.sol";
-import {PriceStateView} from "../../types/PriceStateView.sol";
+import {OracleConfig, PriceState, PriceStateView} from "../../types/OracleTypes.sol";
 import {ILPOracle} from "./ILPOracle.sol";
 import {ILPOracleLogic} from "./ILPOracleLogic.sol";
 import {LPOracleCalls} from "./LPOracleCalls.sol";

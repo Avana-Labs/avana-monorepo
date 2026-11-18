@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
-import {PositionRef} from "../../src/types/PositionRef.sol";
+import {PositionRef} from "../../src/types/PositionTypes.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 
 /// @title AaveAdapterReentryRowsUnitTest

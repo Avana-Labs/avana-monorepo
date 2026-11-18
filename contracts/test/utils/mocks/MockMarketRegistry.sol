@@ -9,8 +9,8 @@ import {
     SpokeDef,
     TokenDef
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {RouteSlot} from "../../../src/types/RouteSlot.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
+import {RouteSlot} from "../../../src/types/OracleTypes.sol";
 
 /// @title MockMarketRegistry
 /// @notice The MarketRegistry views the ParameterStore reads, backed by settable storage: a stand-in for the

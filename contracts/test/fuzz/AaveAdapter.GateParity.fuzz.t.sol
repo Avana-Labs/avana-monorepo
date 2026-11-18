@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
 
 interface IParitySpokeConfigurator {

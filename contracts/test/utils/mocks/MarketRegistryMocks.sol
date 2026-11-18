@@ -5,11 +5,8 @@ pragma solidity 0.8.28;
 
 import {IntegrationCapabilities, PoolKeying} from "../../../src/amm/types/AmmTypes.sol";
 import {FeedDef, MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {OracleConfig} from "../../../src/types/OracleConfig.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
-import {PriceStateView} from "../../../src/types/PriceStateView.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {OracleConfig, PriceState, PriceStateView} from "../../../src/types/OracleTypes.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 
 /// @title RegistryParameterStoreMock
 /// @notice The ParameterStore views the MarketRegistry reads, backed by settable storage.

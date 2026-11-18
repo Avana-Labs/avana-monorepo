@@ -6,8 +6,7 @@ pragma solidity 0.8.28;
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ActionPreview} from "../../src/lens/lens/types/ActionPreview.sol";
 import {RemovalSizing} from "../../src/lens/lens/types/RemovalSizing.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
 

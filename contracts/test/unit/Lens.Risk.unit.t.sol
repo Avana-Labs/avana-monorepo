@@ -8,7 +8,7 @@ import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {HubAssetExposureView} from "../../src/lens/lens/types/HubAssetExposureView.sol";
 import {TailCoverageView} from "../../src/lens/lens/types/TailCoverageView.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {Market} from "../../src/types/Market.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensRiskUnitTest

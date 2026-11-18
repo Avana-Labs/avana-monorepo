@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {TailCoverageView} from "../../src/lens/lens/types/TailCoverageView.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {Market} from "../../src/types/Market.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensReserveSizingUnitTest

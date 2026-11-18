@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {UniswapV4IntegrationFixture} from "../utils/fixtures/UniswapV4IntegrationFixture.sol";
 import {IPermit2Approve, IV4TestPositionManager} from "../utils/fixtures/UniswapV4WorldFixture.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";

@@ -19,9 +19,8 @@ import {
     MarketSpeedLimits,
     SpeedLimit
 } from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {MarketDef} from "../../../src/types/MarketDef.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {MarketDef} from "../../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {OracleFeedMock} from "../mocks/LPOracleMocks.sol";
 import {IAvanaAaveV4Roles, IHubInstanceBatch, ISpokeInstanceBatch} from "./AaveV4Fixture.sol";
 import {ClTestToken, IClPool} from "./ClPoolFixture.sol";

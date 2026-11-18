@@ -7,7 +7,7 @@ import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.s
 import {IUniswapV4Integration} from "../../../src/amm/uniswap-v4/IUniswapV4Integration.sol";
 import {ILPVault} from "../../../src/custody/lp-vault/ILPVault.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
+import {PositionShape} from "../../../src/types/PositionTypes.sol";
 import {IV4TestPositionManager, V4PoolActor} from "../../utils/fixtures/UniswapV4WorldFixture.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";

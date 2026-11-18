@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {DebtOracleInitParams} from "../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {PriceState, RouteSlot} from "../../src/types/OracleTypes.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
 import {LPOracleGasFixture} from "../utils/fixtures/LPOracleGasFixture.sol";
 import {OcrAggregatorMock} from "../utils/mocks/ChainlinkCostMocks.sol";

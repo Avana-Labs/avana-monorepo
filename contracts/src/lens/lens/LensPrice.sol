@@ -4,10 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {PauseState} from "../../types/PauseState.sol";
-import {PriceState} from "../../types/PriceState.sol";
-import {PriceStateView} from "../../types/PriceStateView.sol";
-import {PriceView} from "../../types/PriceView.sol";
+import {PauseState} from "../../types/MarketTypes.sol";
+import {PriceState, PriceStateView, PriceView} from "../../types/OracleTypes.sol";
 import {LensBase} from "./LensBase.sol";
 import {DebtPriceView} from "./types/DebtPriceView.sol";
 

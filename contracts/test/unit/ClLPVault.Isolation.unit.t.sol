@@ -9,8 +9,7 @@ import {ICollateralization} from "../../src/custody/collateralization/ICollatera
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
 import {GovernedTargets, SelectorPair} from "../../src/governance/timelock/IAvanaTimelock.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {VaultTokenFactory} from "../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";

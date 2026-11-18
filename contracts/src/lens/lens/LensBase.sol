@@ -18,9 +18,8 @@ import {IMarketRegistryBase} from "../../policy/market-registry/IMarketRegistryB
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
-import {Market} from "../../types/Market.sol";
-import {PriceState} from "../../types/PriceState.sol";
-import {TokenPriceView} from "../../types/TokenPriceView.sol";
+import {Market} from "../../types/MarketTypes.sol";
+import {PriceState, TokenPriceView} from "../../types/OracleTypes.sol";
 import {ILensErrors} from "./ILensErrors.sol";
 import {LensConstants} from "./LensConstants.sol";
 import {DebtPriceView} from "./types/DebtPriceView.sol";

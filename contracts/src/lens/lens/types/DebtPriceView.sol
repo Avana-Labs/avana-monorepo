@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PriceState} from "../../../types/PriceState.sol";
+import {PriceState} from "../../../types/OracleTypes.sol";
 
 /// @notice Price report of one debt reserve.
 /// @dev Prices USD 8 decimals; freshness flags follow execution's rules.

@@ -4,10 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {RouteSlot} from "../../types/RouteSlot.sol";
-import {SecondSource} from "../../types/SecondSource.sol";
-import {SecondSourceKind} from "../../types/SecondSourceKind.sol";
+import {OracleConfig, RouteSlot, SecondSource, SecondSourceKind} from "../../types/OracleTypes.sol";
 import {IParameterStore} from "./IParameterStore.sol";
 import {ParameterStoreForwardAdmin} from "./ParameterStoreForwardAdmin.sol";
 import {ParameterStoreForwardRisk} from "./ParameterStoreForwardRisk.sol";

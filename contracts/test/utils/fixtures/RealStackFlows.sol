@@ -14,11 +14,8 @@ import {DebtOracleInitParams} from "../../../src/oracle/debt-oracle/types/DebtOr
 import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
 import {DebtReserveDef, TokenDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
-import {RouteSlot} from "../../../src/types/RouteSlot.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
+import {PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {RouteSlot, SecondSource, SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {OracleFeedMock} from "../mocks/LPOracleMocks.sol";
 import {ClTestToken, IClPool} from "./ClPoolFixture.sol";
 import {FullStackMarkets} from "./FullStackMarkets.sol";

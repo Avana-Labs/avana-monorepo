@@ -33,7 +33,7 @@ import {
     GlobalParams,
     ParameterStoreLogics
 } from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {RouteSlot} from "../../../src/types/RouteSlot.sol";
+import {RouteSlot} from "../../../src/types/OracleTypes.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {
     RegistryAaveOracleMock,

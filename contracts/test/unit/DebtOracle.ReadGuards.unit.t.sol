@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {IDebtOracleErrors} from "../../src/oracle/debt-oracle/IDebtOracleErrors.sol";
 import {DebtPriceView} from "../../src/oracle/debt-oracle/types/DebtPriceView.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {DebtOracleFixture} from "../utils/fixtures/DebtOracleFixture.sol";
 
 /// @title DebtOracleReadGuardsUnitTest

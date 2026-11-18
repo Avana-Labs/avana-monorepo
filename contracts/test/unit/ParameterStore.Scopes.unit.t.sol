@@ -7,8 +7,7 @@ import {DebtReserveDef, MarketStatus} from "../../src/policy/market-registry/typ
 import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
 import {DebtReserveParams, FeedDef, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
+import {SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {
     MockAggregator,

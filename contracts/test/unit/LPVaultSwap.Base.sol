@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {SettlementReport} from "../../src/types/SettlementReport.sol";
+import {SettlementReport} from "../../src/types/PositionTypes.sol";
 import {LPVaultSwapFixture} from "../utils/fixtures/LPVaultSwapFixture.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 import {Vm} from "forge-std/Vm.sol";

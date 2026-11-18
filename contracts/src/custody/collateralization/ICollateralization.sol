@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PledgeCounters} from "../../types/PledgeCounters.sol";
+import {PledgeCounters} from "../../types/PositionTypes.sol";
 import {ICollateralizationBase} from "./ICollateralizationBase.sol";
 import {BackingRecord, Pending} from "./types/CollateralizationTypes.sol";
 

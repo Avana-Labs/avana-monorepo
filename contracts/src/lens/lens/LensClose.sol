@@ -8,7 +8,7 @@ import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
-import {Market} from "../../types/Market.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {LensConstants} from "./LensConstants.sol";
 import {LensDeleverage} from "./LensDeleverage.sol";
 import {CloseAccountView, DebtClose, RecordClose} from "./types/CloseAccountView.sol";

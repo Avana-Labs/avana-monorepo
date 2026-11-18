@@ -9,7 +9,7 @@ import {ILPVaultSwapBase} from "../../../src/liquidation/lp-vault-swap/ILPVaultS
 import {DeleverageRequest} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ILock} from "../../../src/lock/lock/ILock.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
+import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IMintableToken {

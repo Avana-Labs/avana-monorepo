@@ -3,10 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PriceState} from "../../types/PriceState.sol";
-import {PriceStateView} from "../../types/PriceStateView.sol";
-import {RouteSlot} from "../../types/RouteSlot.sol";
-import {TokenPriceView} from "../../types/TokenPriceView.sol";
+import {PriceState, PriceStateView, RouteSlot, TokenPriceView} from "../../types/OracleTypes.sol";
 import {LPOracleRecovery} from "./LPOracleRecovery.sol";
 import {Evaluation, LPOracleCodes, LegEval, RouteEval, TokenEval} from "./LPOracleTypes.sol";
 import {LPPriceMath} from "./LPPriceMath.sol";

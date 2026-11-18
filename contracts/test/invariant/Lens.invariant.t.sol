@@ -8,7 +8,7 @@ import {AccountView} from "../../src/lens/lens/types/AccountView.sol";
 import {BackingView} from "../../src/lens/lens/types/BackingView.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
 import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";

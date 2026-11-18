@@ -7,9 +7,8 @@ import {BackingRecord} from "../../../src/custody/collateralization/types/Collat
 import {ILens} from "../../../src/lens/lens/ILens.sol";
 import {Lens} from "../../../src/lens/lens/Lens.sol";
 import {MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {AaveAdapterLensMock} from "../mocks/AaveAdapterLensMock.sol";
 import {LensRegistryMock} from "../mocks/LensMocks.sol";
 import {SlipstreamIntegrationFixture} from "./SlipstreamIntegrationFixture.sol";

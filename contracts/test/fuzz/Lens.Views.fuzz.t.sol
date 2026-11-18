@@ -9,7 +9,7 @@ import {DebtReserveView} from "../../src/lens/lens/types/DebtReserveView.sol";
 import {MarketView} from "../../src/lens/lens/types/MarketView.sol";
 import {RecordBackingView} from "../../src/lens/lens/types/RecordBackingView.sol";
 import {WithdrawPreview} from "../../src/lens/lens/types/WithdrawPreview.sol";
-import {CapView} from "../../src/types/CapView.sol";
+import {CapView} from "../../src/types/MarketTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 

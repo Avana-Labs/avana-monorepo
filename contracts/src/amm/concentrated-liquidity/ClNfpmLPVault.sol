@@ -6,8 +6,7 @@ pragma solidity 0.8.28;
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
-import {PositionShape} from "../../types/PositionShape.sol";
-import {ShapeKind} from "../../types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
 import {
     ClMarketConfig,
     FeeMode,

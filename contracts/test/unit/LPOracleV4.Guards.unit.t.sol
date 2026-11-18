@@ -20,8 +20,7 @@ import {LPOracleV4} from "../../src/oracle/lp-oracle/LPOracleV4.sol";
 import {LPOracleV4Module} from "../../src/oracle/lp-oracle/LPOracleV4Module.sol";
 import {LPOracleV4ModuleLogic} from "../../src/oracle/lp-oracle/LPOracleV4ModuleLogic.sol";
 import {LPPriceMath} from "../../src/oracle/lp-oracle/LPPriceMath.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
 import {LPOracleV4Fixture} from "../utils/fixtures/LPOracleV4Fixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 

@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {DebtReserveParams, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {Market} from "../../src/types/Market.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 
 /// @notice REQ-PSTORE-017 for each of the six step-limited parameters: the exact step edge with integer

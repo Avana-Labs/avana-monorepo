@@ -7,7 +7,7 @@ import {ICollateralizationBase} from "../../src/custody/collateralization/IColla
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 
 /// @title CollateralizationRescueUnitTest

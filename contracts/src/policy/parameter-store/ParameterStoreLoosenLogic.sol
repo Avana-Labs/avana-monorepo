@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {Market} from "../../types/Market.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {IParameterStore} from "./IParameterStore.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
 import {IParameterStoreLoosen} from "./IParameterStoreLoosen.sol";

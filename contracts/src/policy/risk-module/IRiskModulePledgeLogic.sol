@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PledgeCounters} from "../../types/PledgeCounters.sol";
-import {PledgePreview} from "../../types/PledgePreview.sol";
+import {PledgeCounters, PledgePreview} from "../../types/PositionTypes.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 import {PledgeCharge} from "./types/RiskModuleTypes.sol";
 

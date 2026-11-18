@@ -10,7 +10,7 @@ import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 import {CollOracleMock} from "../utils/mocks/CollateralizationMocks.sol";
 

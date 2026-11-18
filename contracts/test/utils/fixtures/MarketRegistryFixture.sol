@@ -22,10 +22,9 @@ import {
     SpokeDef,
     TokenDef
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {MarketDef} from "../../../src/types/MarketDef.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {RouteSlot} from "../../../src/types/RouteSlot.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {MarketDef} from "../../../src/types/MarketTypes.sol";
+import {RouteSlot} from "../../../src/types/OracleTypes.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {
     RegistryAaveOracleMock,

@@ -8,7 +8,7 @@ import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
-import {Market} from "../../types/Market.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {ILensActions} from "./ILensActions.sol";
 import {ILensHubReads} from "./ILensHubReads.sol";
 import {ILensSpokeReads} from "./ILensSpokeReads.sol";

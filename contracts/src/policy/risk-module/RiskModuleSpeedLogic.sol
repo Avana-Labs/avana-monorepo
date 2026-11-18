@@ -7,8 +7,8 @@ import {ICollateralization} from "../../custody/collateralization/ICollateraliza
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {Market} from "../../types/Market.sol";
-import {PledgeCounters} from "../../types/PledgeCounters.sol";
+import {Market} from "../../types/MarketTypes.sol";
+import {PledgeCounters} from "../../types/PositionTypes.sol";
 import {DebtReserveDef} from "../market-registry/types/MarketRegistryTypes.sol";
 import {MarketSpeedLimits, SpeedLimit} from "../parameter-store/types/ParameterStoreTypes.sol";
 import {IRiskModule} from "./IRiskModule.sol";

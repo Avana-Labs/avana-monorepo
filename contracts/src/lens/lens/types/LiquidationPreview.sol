@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {LiquidationParams} from "../../../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {PauseState} from "../../../types/PauseState.sol";
+import {PauseState} from "../../../types/MarketTypes.sol";
 import {RouteStatus} from "./RouteStatus.sol";
 
 /// @notice Liquidation gates, Aave sizing and ready-to-send parameters for one account and one debt reserve.

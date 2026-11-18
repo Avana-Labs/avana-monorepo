@@ -10,8 +10,8 @@ import {
     MarketRegistryImmutables,
     MarketRegistryLogics
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {PauseReason} from "../../src/types/MarketTypes.sol";
+import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryTokenMock} from "../utils/mocks/MarketRegistryMocks.sol";
 

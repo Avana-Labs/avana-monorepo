@@ -14,7 +14,7 @@ import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
-import {Market} from "../../types/Market.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {ILensAccount} from "./ILensAccount.sol";
 import {ILensHubReads} from "./ILensHubReads.sol";
 import {ILensSpokeReads} from "./ILensSpokeReads.sol";

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PauseState} from "../../../types/PauseState.sol";
+import {PauseState} from "../../../types/MarketTypes.sol";
 
 /// @notice One enabled debt reserve with its Hub totals, rates and rate curve.
 /// @dev Rates RAY per year; strategy parameters bps; `utilizationBps` and `supplyRateRay` rounded down.

@@ -9,7 +9,7 @@ pragma solidity 0.8.28;
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
 import {PledgeCharge} from "../../policy/risk-module/types/RiskModuleTypes.sol";
-import {PledgeCounters} from "../../types/PledgeCounters.sol";
+import {PledgeCounters} from "../../types/PositionTypes.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {ILPVault} from "../lp-vault/ILPVault.sol";
 import {CollateralizationLedger} from "./CollateralizationLedger.sol";

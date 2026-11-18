@@ -7,10 +7,8 @@ import {ICollateralization} from "../../custody/collateralization/ICollateraliza
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
-import {Market} from "../../types/Market.sol";
-import {PauseReason} from "../../types/PauseReason.sol";
-import {PauseState} from "../../types/PauseState.sol";
-import {PositionRef} from "../../types/PositionRef.sol";
+import {Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {PositionRef} from "../../types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";

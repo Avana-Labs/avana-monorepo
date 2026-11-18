@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
 import {RiskModuleMath} from "../../src/policy/risk-module/RiskModuleMath.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
 import {LPOracleCLFixture} from "../utils/fixtures/LPOracleCLFixture.sol";
 import {DifferentialTest} from "./utils/DifferentialTest.sol";
 

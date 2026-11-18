@@ -7,7 +7,7 @@ import {PoolKeying} from "../../src/amm/types/AmmTypes.sol";
 import {UniswapV3Integration} from "../../src/amm/uniswap-v3/UniswapV3Integration.sol";
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {ShapeKind} from "../../src/types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {VaultTokenFactoryFixture} from "../utils/fixtures/VaultTokenFactoryFixture.sol";
 import {MockNFPM, MockV3Factory} from "../utils/mocks/UniswapV3Mocks.sol";

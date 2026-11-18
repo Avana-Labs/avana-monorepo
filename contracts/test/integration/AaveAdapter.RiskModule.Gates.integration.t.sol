@@ -7,11 +7,9 @@ import {ICollateralization} from "../../src/custody/collateralization/ICollatera
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {DriftReason, PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
 
 interface IGatesSpokeConfigurator {

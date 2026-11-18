@@ -3,10 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
-import {DriftReason} from "../../types/DriftReason.sol";
-import {PledgeCounters} from "../../types/PledgeCounters.sol";
-import {PledgePreview} from "../../types/PledgePreview.sol";
+import {AccountGateStatus, DriftReason} from "../../types/MarketTypes.sol";
+import {PledgeCounters, PledgePreview} from "../../types/PositionTypes.sol";
 import {IRiskModuleErrors} from "./IRiskModuleErrors.sol";
 import {PledgeCharge, SpeedScope, SpeedView, SpeedWindow} from "./types/RiskModuleTypes.sol";
 

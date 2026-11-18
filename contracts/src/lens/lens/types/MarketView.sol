@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {MarketStatus} from "../../../policy/market-registry/types/MarketRegistryTypes.sol";
-import {PauseState} from "../../../types/PauseState.sol";
-import {PriceState} from "../../../types/PriceState.sol";
+import {PauseState} from "../../../types/MarketTypes.sol";
+import {PriceState} from "../../../types/OracleTypes.sol";
 
 /// @notice One market for the app's market list, with its risk configuration.
 /// @dev Prices and caps USD 8 decimals; health factors WAD; rates RAY per year.

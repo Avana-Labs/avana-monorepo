@@ -12,11 +12,8 @@ import {
     TokenDef,
     WindDownState
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
-import {Market} from "../../src/types/Market.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {DriftReason, Market, PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistrySpokeImplMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
 import {RegistryLPOracleMock} from "../utils/mocks/MarketRegistryMocks.sol";

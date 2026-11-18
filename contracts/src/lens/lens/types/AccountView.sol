@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AccountGateStatus} from "../../../types/AccountGateStatus.sol";
+import {AccountGateStatus} from "../../../types/MarketTypes.sol";
 import {DebtPosition} from "./DebtPosition.sol";
 import {MarketPosition} from "./MarketPosition.sol";
 

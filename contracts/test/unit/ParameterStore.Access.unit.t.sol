@@ -18,7 +18,7 @@ import {
     MarketParams,
     ParameterStoreLogics
 } from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
+import {SecondSource} from "../../src/types/OracleTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {
     MockAvanaComponent,

@@ -9,9 +9,8 @@ import {DebtReserveView} from "../../src/lens/lens/types/DebtReserveView.sol";
 import {MarketView} from "../../src/lens/lens/types/MarketView.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 

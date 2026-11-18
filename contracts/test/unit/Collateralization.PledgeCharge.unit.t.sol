@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 import {CollOracleMock, CollRiskModuleMock} from "../utils/mocks/CollateralizationMocks.sol";
 import {Vm} from "forge-std/Vm.sol";

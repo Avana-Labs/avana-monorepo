@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {ILPVaultBase} from "../../../src/custody/lp-vault/ILPVaultBase.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {AvanaTest} from "../AvanaTest.sol";
 import {UniswapV3IntegrationHarness} from "../harness/UniswapV3IntegrationHarness.sol";
 import {MintableToken, MockNFPM, MockV3Factory, MockV3Pool} from "../mocks/UniswapV3Mocks.sol";

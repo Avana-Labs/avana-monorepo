@@ -21,9 +21,7 @@ import {
     FeedDef,
     SpeedLimit
 } from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {RouteSlot} from "../../../src/types/RouteSlot.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
+import {RouteSlot, SecondSource, SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {FullStackAvanaFirstLossReserveMock} from "../mocks/FullStackLPVaultMock.sol";
 import {OracleFeedMock} from "../mocks/LPOracleMocks.sol";
 import {RegistryFlashSourceMock} from "../mocks/MarketRegistryMocks.sol";

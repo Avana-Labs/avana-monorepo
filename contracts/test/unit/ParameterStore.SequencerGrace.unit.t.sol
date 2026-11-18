@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
+import {SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
 

@@ -17,9 +17,8 @@ import {IAaveAdapterBase} from "../../../src/policy/aave-adapter/IAaveAdapterBas
 import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
+import {PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {ClTestToken} from "../../utils/fixtures/ClPoolFixture.sol";
 import {MockAaveV3Pool} from "../../utils/mocks/AaveV3PoolMocks.sol";
 import {DeficitFunding} from "./DeficitFunding.sol";

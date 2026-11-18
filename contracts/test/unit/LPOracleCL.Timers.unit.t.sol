@@ -4,9 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {PriceState, PriceStateView, RouteSlot} from "../../src/types/OracleTypes.sol";
 import {LPOracleCLFixture} from "../utils/fixtures/LPOracleCLFixture.sol";
 import {OracleFeedMock} from "../utils/mocks/LPOracleMocks.sol";
 import {Vm} from "forge-std/Vm.sol";

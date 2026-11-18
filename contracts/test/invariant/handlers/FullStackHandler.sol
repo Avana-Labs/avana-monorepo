@@ -13,10 +13,8 @@ import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreTighten} from "../../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
-import {PledgeCounters} from "../../../src/types/PledgeCounters.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
+import {PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {PledgeCounters, PositionRef} from "../../../src/types/PositionTypes.sol";
 import {ClTestToken} from "../../utils/fixtures/ClPoolFixture.sol";
 import {FullStackLPVaultMock} from "../../utils/mocks/FullStackLPVaultMock.sol";
 import {OracleFeedMock} from "../../utils/mocks/LPOracleMocks.sol";

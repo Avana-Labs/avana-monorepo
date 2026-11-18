@@ -6,9 +6,7 @@ pragma solidity 0.8.28;
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {PriceState, PriceStateView, RouteSlot} from "../../src/types/OracleTypes.sol";
 import {LPOracleCLDeployer, LPOracleCLFixture} from "../utils/fixtures/LPOracleCLFixture.sol";
 import {OracleFeedMock, ReadMode} from "../utils/mocks/LPOracleMocks.sol";
 

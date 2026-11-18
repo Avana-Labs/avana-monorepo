@@ -8,8 +8,7 @@ import {UniswapV4Integration} from "../../src/amm/uniswap-v4/UniswapV4Integratio
 import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {V4StandInManager, V4StandInReference, V4StandInToken} from "../invariant/echidna/UniswapV4StandIns.sol";
 import {Test} from "forge-std/Test.sol";
 

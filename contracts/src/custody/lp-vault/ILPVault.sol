@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IntegrationCapabilities, RiskMetadata, RiskStatus} from "../../amm/types/AmmTypes.sol";
-import {PositionShape} from "../../types/PositionShape.sol";
+import {PositionShape} from "../../types/PositionTypes.sol";
 import {ILPVaultBase} from "./ILPVaultBase.sol";
 
 /// @title ILPVault

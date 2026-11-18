@@ -4,13 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
-import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
-import {DriftReason} from "../../types/DriftReason.sol";
-import {Market} from "../../types/Market.sol";
-import {PauseReason} from "../../types/PauseReason.sol";
-import {PauseState} from "../../types/PauseState.sol";
-import {PledgeCounters} from "../../types/PledgeCounters.sol";
-import {PledgePreview} from "../../types/PledgePreview.sol";
+import {AccountGateStatus, DriftReason, Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {PledgeCounters, PledgePreview} from "../../types/PositionTypes.sol";
 import {BreakerReasons} from "../market-registry/types/Breaker.sol";
 import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "./IRiskModule.sol";

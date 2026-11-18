@@ -4,10 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {FeedDef} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
-import {TokenPriceView} from "../../src/types/TokenPriceView.sol";
+import {PriceState, PriceStateView, RouteSlot, TokenPriceView} from "../../src/types/OracleTypes.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 import {OracleFeedMock, ReadMode} from "../utils/mocks/LPOracleMocks.sol";
 

@@ -5,14 +5,16 @@ pragma solidity 0.8.28;
 
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {InitParams, LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {Market} from "../../src/types/Market.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {OracleLeg} from "../../src/types/OracleLeg.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
-import {TokenOracleConfig} from "../../src/types/TokenOracleConfig.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
+import {
+    OracleConfig,
+    OracleLeg,
+    PriceState,
+    RouteSlot,
+    SecondSource,
+    SecondSourceKind,
+    TokenOracleConfig
+} from "../../src/types/OracleTypes.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {LPOracleHarness, LPOracleHarnessDeployer} from "../utils/harness/LPOracleHarness.sol";

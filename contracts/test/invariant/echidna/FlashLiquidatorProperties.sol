@@ -12,7 +12,7 @@ import {
 import {FlashLiquidator} from "../../../src/periphery/flash-liquidator/FlashLiquidator.sol";
 import {FlashLiquidationRequest, IFlashLiquidator} from "../../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {Market} from "../../../src/types/Market.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
 import {MockFlashFeeCap} from "../../utils/mocks/MockFlashReceiver.sol";
 import {PayoutToken} from "../../utils/mocks/PayoutToken.sol";
 

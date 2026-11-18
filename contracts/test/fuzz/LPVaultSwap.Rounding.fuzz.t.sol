@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {SettlementReport} from "../../src/types/SettlementReport.sol";
+import {SettlementReport} from "../../src/types/PositionTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 

@@ -11,9 +11,7 @@ import {LPOracleCLModuleLogic} from "../../src/oracle/lp-oracle/LPOracleCLModule
 import {LPOracleCLPokeLogic} from "../../src/oracle/lp-oracle/LPOracleCLPokeLogic.sol";
 import {LPOracleCLViewLogic} from "../../src/oracle/lp-oracle/LPOracleCLViewLogic.sol";
 import {InitParams, LPOracleCodes, LPOracleLogicSet} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {OracleConfig, PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
 import {BytecodeInspector} from "../utils/BytecodeInspector.sol";
 import {LPOracleCLDeployer, LPOracleCLFixture} from "../utils/fixtures/LPOracleCLFixture.sol";
 import {OracleFeedMock} from "../utils/mocks/LPOracleMocks.sol";

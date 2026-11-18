@@ -10,8 +10,7 @@ import {ICLFactory} from "../../src/interfaces/external/aerodrome/ICLFactory.sol
 import {ICLPool} from "../../src/interfaces/external/aerodrome/ICLPool.sol";
 import {INonfungiblePositionManager} from "../../src/interfaces/external/aerodrome/INonfungiblePositionManager.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {ForkConstants} from "../utils/fixtures/ForkConstants.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

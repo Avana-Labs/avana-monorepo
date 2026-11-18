@@ -4,9 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.sol";
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {PriceState} from "../../types/PriceState.sol";
-import {PriceStateView} from "../../types/PriceStateView.sol";
+import {OracleConfig, PriceState, PriceStateView} from "../../types/OracleTypes.sol";
 import {ILPOracleBase} from "./ILPOracleBase.sol";
 import {InitParams} from "./LPOracleTypes.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";

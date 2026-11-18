@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IAaveV4ExtSload} from "../../src/interfaces/external/aave/IAaveV4ExtSload.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
+import {DriftReason} from "../../src/types/MarketTypes.sol";
 import {AaveV4Fixture} from "../utils/fixtures/AaveV4Fixture.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryLPVaultMock} from "../utils/mocks/MarketRegistryMocks.sol";

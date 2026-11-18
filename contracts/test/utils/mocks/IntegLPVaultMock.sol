@@ -6,8 +6,7 @@ pragma solidity 0.8.28;
 import {ClMarketConfig, IntegrationCapabilities, PoolKeying, RiskStatus} from "../../../src/amm/types/AmmTypes.sol";
 import {ILPVaultBase} from "../../../src/custody/lp-vault/ILPVaultBase.sol";
 import {ILock} from "../../../src/lock/lock/ILock.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @title IntegLPVaultMock

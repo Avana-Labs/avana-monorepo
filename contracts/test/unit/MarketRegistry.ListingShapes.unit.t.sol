@@ -8,7 +8,7 @@ import {ITetherFee} from "../../src/interfaces/external/tether/ITetherFee.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
 import {DebtReserveDef, TokenDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {MarketRegistryDebtChecksHarness} from "../utils/harness/MarketRegistryDebtChecksHarness.sol";
 import {

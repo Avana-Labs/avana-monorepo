@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RouteSlot} from "../../../types/RouteSlot.sol";
+import {RouteSlot} from "../../../types/OracleTypes.sol";
 import {IssuerProbe} from "./IssuerProbe.sol";
 
 /// @notice Enabled debt reserve of a CDP Spoke.

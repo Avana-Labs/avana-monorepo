@@ -7,8 +7,7 @@ import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveV4SpokePositionManagers} from "../../src/interfaces/external/aave/IAaveV4SpokePositionManagers.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {
     CollHubSpokeConfig,

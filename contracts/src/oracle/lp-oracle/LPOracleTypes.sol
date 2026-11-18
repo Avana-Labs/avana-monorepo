@@ -3,9 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {PriceState} from "../../types/PriceState.sol";
-import {SecondSource} from "../../types/SecondSource.sol";
+import {OracleConfig, PriceState, SecondSource} from "../../types/OracleTypes.sol";
 
 /// @title LPOracleCodes
 /// @notice Leg and route classes, route slots, reason bits and `checkConfig` bits of the LPOracle.

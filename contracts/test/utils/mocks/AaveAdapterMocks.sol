@@ -14,9 +14,7 @@ import {
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {IPositionProxy} from "../../../src/proxy/position-proxy/IPositionProxy.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
+import {Market, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @notice UUPS stand-in that lets the fixture deploy the Adapter's ERC-1967 proxy first, so the Lock, Collateralization,

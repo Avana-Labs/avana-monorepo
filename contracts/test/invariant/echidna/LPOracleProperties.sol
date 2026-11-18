@@ -5,10 +5,7 @@ pragma solidity 0.8.28;
 
 import {Evaluation} from "../../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {OracleInputsLayout} from "../../../src/policy/parameter-store/types/OracleInputsLayout.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
-import {RouteSlot} from "../../../src/types/RouteSlot.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
+import {PriceState, RouteSlot, SecondSource, SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {LPOracleHarnessPokeLogicBase} from "../../utils/harness/LPOracleHarness.sol";
 import {OracleFeedMock, OracleTokenMock, ReadMode} from "../../utils/mocks/LPOracleMocks.sol";
 

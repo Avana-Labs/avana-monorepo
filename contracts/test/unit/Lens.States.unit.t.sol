@@ -9,9 +9,8 @@ import {ILensMarket} from "../../src/lens/lens/ILensMarket.sol";
 import {ILensPreview} from "../../src/lens/lens/ILensPreview.sol";
 import {ILensRisk} from "../../src/lens/lens/ILensRisk.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensStatesUnitTest

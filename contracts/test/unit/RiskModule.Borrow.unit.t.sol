@@ -7,8 +7,8 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {DriftReason} from "../../src/types/MarketTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {RiskSequencerFeed} from "../utils/mocks/RiskModuleMocks.sol";
 

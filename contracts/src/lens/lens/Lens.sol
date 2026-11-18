@@ -4,10 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {SpeedView} from "../../policy/risk-module/types/RiskModuleTypes.sol";
-import {CapView} from "../../types/CapView.sol";
-import {PauseState} from "../../types/PauseState.sol";
-import {PendingView} from "../../types/PendingView.sol";
-import {PriceView} from "../../types/PriceView.sol";
+import {CapView, PauseState} from "../../types/MarketTypes.sol";
+import {PriceView} from "../../types/OracleTypes.sol";
+import {PendingView} from "../../types/PositionTypes.sol";
 import {ILens} from "./ILens.sol";
 import {ILensAccount} from "./ILensAccount.sol";
 import {ILensActions} from "./ILensActions.sol";

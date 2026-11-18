@@ -7,7 +7,7 @@ import {DebtPriceView} from "../../src/lens/lens/types/DebtPriceView.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
+import {DriftReason} from "../../src/types/MarketTypes.sol";
 import {RealStackVolatile} from "../utils/fixtures/RealStackVolatile.sol";
 import {OracleFeedMock} from "../utils/mocks/LPOracleMocks.sol";
 

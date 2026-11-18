@@ -26,13 +26,9 @@ import {
     MarketSpeedLimits,
     SpeedLimit
 } from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
-import {TokenOracleConfig} from "../../src/types/TokenOracleConfig.sol";
+import {MarketDef} from "../../src/types/MarketTypes.sol";
+import {OracleConfig, RouteSlot, SecondSource, TokenOracleConfig} from "../../src/types/OracleTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {ChainInputs} from "./lib/DeployTypes.sol";
 import {IPoolTokens, ListingBase} from "./lib/ListingBase.sol";

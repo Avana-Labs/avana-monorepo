@@ -7,7 +7,7 @@ import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {DeleverageRequest} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LVSLyingRoute} from "../utils/mocks/LPVaultSwapMocks.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";

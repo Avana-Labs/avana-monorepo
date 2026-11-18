@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {OracleConfig} from "../../types/OracleConfig.sol";
+import {OracleConfig} from "../../types/OracleTypes.sol";
 import {ILPOracle} from "./ILPOracle.sol";
 import {ILPOracleLogic} from "./ILPOracleLogic.sol";
 import {LPOracleCLModuleCaller} from "./LPOracleCLModuleCaller.sol";

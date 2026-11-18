@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PriceState} from "../../types/PriceState.sol";
+import {PriceState} from "../../types/OracleTypes.sol";
 
 /// @title ILPOracleBase
 /// @notice Errors and events of LPOracle, shared with its contracts.

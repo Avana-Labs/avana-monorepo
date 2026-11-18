@@ -3,11 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {Market} from "../../types/Market.sol";
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {OracleLeg} from "../../types/OracleLeg.sol";
-import {OracleRoute} from "../../types/OracleRoute.sol";
-import {TokenOracleConfig} from "../../types/TokenOracleConfig.sol";
+import {Market} from "../../types/MarketTypes.sol";
+import {OracleConfig, OracleLeg, OracleRoute, TokenOracleConfig} from "../../types/OracleTypes.sol";
 import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
 import {ParameterStoreRisk} from "./ParameterStoreRisk.sol";

@@ -8,7 +8,7 @@ import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PledgeCharge, SpeedView} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @title RiskModuleSpeedUnitTest

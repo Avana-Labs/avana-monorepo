@@ -5,9 +5,7 @@ pragma solidity 0.8.28;
 
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
-import {PriceState} from "../../types/PriceState.sol";
-import {RouteSlot} from "../../types/RouteSlot.sol";
-import {SecondSourceKind} from "../../types/SecondSourceKind.sol";
+import {PriceState, RouteSlot, SecondSourceKind} from "../../types/OracleTypes.sol";
 import {LPPriceMath} from "../lp-oracle/LPPriceMath.sol";
 import {DebtOracleReads} from "./DebtOracleReads.sol";
 import {DebtEvaluation, LegRead, ReadStatus, RouteRead} from "./types/DebtEvaluation.sol";

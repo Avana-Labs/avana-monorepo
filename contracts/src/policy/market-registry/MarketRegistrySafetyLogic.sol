@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IFlashSource} from "../../flash/IFlashSource.sol";
-import {PauseReason} from "../../types/PauseReason.sol";
-import {PauseState} from "../../types/PauseState.sol";
+import {PauseReason, PauseState} from "../../types/MarketTypes.sol";
 import {IAaveAdapter} from "../aave-adapter/IAaveAdapter.sol";
 import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";

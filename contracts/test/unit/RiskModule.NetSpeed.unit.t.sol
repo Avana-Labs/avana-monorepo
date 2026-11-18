@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {MarketSpeedLimits, SpeedLimit} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PledgeCharge, SpeedScope, SpeedView, SpeedWindow} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @title RiskModuleNetSpeedUnitTest

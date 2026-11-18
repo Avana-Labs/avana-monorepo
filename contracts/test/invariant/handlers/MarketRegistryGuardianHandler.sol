@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IMarketRegistryBase} from "../../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
+import {PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 import {Vm} from "forge-std/Vm.sol";

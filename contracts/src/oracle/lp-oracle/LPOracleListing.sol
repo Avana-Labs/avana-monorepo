@@ -7,12 +7,14 @@ import {IAggregatorProxy} from "../../interfaces/external/chainlink/IAggregatorP
 import {IOffchainAggregator} from "../../interfaces/external/chainlink/IOffchainAggregator.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {OracleLeg} from "../../types/OracleLeg.sol";
-import {OracleRoute} from "../../types/OracleRoute.sol";
-import {SecondSource} from "../../types/SecondSource.sol";
-import {SecondSourceKind} from "../../types/SecondSourceKind.sol";
-import {TokenOracleConfig} from "../../types/TokenOracleConfig.sol";
+import {
+    OracleConfig,
+    OracleLeg,
+    OracleRoute,
+    SecondSource,
+    SecondSourceKind,
+    TokenOracleConfig
+} from "../../types/OracleTypes.sol";
 import {LPOracleCalls} from "./LPOracleCalls.sol";
 import {Evaluation, LPOracleCodes} from "./LPOracleTypes.sol";
 import {LPOracleViews} from "./LPOracleViews.sol";

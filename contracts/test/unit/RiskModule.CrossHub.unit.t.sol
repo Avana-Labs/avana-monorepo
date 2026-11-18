@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
-import {AccountGateStatus} from "../../src/types/AccountGateStatus.sol";
+import {AccountGateStatus} from "../../src/types/MarketTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {RegistryAvanaFirstLossReserveMock} from "../utils/mocks/MarketRegistryMocks.sol";
 

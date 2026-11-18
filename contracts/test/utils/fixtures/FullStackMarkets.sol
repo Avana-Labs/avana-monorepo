@@ -16,15 +16,9 @@ import {
     MarketParams,
     MarketSpeedLimits
 } from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {MarketDef} from "../../../src/types/MarketDef.sol";
-import {OracleConfig} from "../../../src/types/OracleConfig.sol";
-import {OracleRoute} from "../../../src/types/OracleRoute.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
-import {TokenOracleConfig} from "../../../src/types/TokenOracleConfig.sol";
+import {MarketDef, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {OracleConfig, OracleRoute, TokenOracleConfig} from "../../../src/types/OracleTypes.sol";
+import {PositionRef, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {RegistryRouteMock} from "../mocks/MarketRegistryMocks.sol";
 import {ClTestToken, IClFactory, IClPool} from "./ClPoolFixture.sol";
 import {

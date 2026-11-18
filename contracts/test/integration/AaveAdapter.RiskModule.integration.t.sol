@@ -8,8 +8,8 @@ import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.s
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {DriftReason} from "../../src/types/MarketTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
 import {RiskSequencerFeed} from "../utils/mocks/RiskModuleMocks.sol";
 

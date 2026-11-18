@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {CollRiskModuleMock} from "../utils/mocks/CollateralizationMocks.sol";
 import {LPVaultSwapMock} from "../utils/mocks/LPVaultSwapMock.sol";

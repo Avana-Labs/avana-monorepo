@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
 import {LPOracleCLFixture} from "../utils/fixtures/LPOracleCLFixture.sol";
 import {Vm} from "forge-std/Vm.sol";
 

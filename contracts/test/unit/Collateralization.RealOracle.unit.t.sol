@@ -9,8 +9,7 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {VaultToken} from "../../src/vault-token/vault-token/VaultToken.sol";
 import {AccessTrace} from "../utils/AccessTrace.sol";
 import {

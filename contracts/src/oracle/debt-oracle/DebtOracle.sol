@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
-import {PriceState} from "../../types/PriceState.sol";
-import {RouteSlot} from "../../types/RouteSlot.sol";
+import {PriceState, RouteSlot} from "../../types/OracleTypes.sol";
 import {LPPriceMath} from "../lp-oracle/LPPriceMath.sol";
 import {DebtOracleRecovery} from "./DebtOracleRecovery.sol";
 import {IDebtOracle} from "./IDebtOracle.sol";

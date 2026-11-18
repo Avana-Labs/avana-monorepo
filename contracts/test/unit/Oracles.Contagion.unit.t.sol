@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {RealOraclesFixture} from "../utils/fixtures/RealOraclesFixture.sol";
 import {OracleFeedMock, ReadMode} from "../utils/mocks/LPOracleMocks.sol";
 

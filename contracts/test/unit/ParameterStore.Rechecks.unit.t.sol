@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {FeedDef} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {Market} from "../../src/types/Market.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
 import {Vm} from "forge-std/Vm.sol";

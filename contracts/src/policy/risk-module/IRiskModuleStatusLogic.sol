@@ -3,9 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
-import {PauseReason} from "../../types/PauseReason.sol";
-import {PauseState} from "../../types/PauseState.sol";
+import {AccountGateStatus, PauseReason, PauseState} from "../../types/MarketTypes.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 
 /// @title IRiskModuleStatusLogic

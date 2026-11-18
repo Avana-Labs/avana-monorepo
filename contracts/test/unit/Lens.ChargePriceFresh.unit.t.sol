@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {CapView} from "../../src/types/CapView.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {CapView} from "../../src/types/MarketTypes.sol";
+import {PriceStateView} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensChargePriceFreshUnitTest

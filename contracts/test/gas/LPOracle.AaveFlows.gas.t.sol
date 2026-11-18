@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
 import {IGasAaveOracle, LPOracleGasFixture} from "../utils/fixtures/LPOracleGasFixture.sol";
 
 /// @notice Measures of the LPOracle price-read path inside the Aave V4 flows that read it: the single reads

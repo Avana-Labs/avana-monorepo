@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {DriftReason} from "../../types/DriftReason.sol";
-import {Market} from "../../types/Market.sol";
+import {DriftReason, Market} from "../../types/MarketTypes.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {MarketParams} from "../parameter-store/types/ParameterStoreTypes.sol";
 import {IRiskModule} from "../risk-module/IRiskModule.sol";

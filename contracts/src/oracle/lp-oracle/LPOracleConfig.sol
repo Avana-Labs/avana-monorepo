@@ -7,12 +7,14 @@ import {IAggregatorV3} from "../../interfaces/external/chainlink/IAggregatorV3.s
 import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequencerUptimeFeed.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {OracleInputsLayout} from "../../policy/parameter-store/types/OracleInputsLayout.sol";
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {OracleLeg} from "../../types/OracleLeg.sol";
-import {OracleRoute} from "../../types/OracleRoute.sol";
-import {SecondSource} from "../../types/SecondSource.sol";
-import {SecondSourceKind} from "../../types/SecondSourceKind.sol";
-import {TokenOracleConfig} from "../../types/TokenOracleConfig.sol";
+import {
+    OracleConfig,
+    OracleLeg,
+    OracleRoute,
+    SecondSource,
+    SecondSourceKind,
+    TokenOracleConfig
+} from "../../types/OracleTypes.sol";
 import {LPOracleCalls} from "./LPOracleCalls.sol";
 import {LPOracleStorage} from "./LPOracleStorage.sol";
 import {ConfigEval, Evaluation, LPOracleCodes, LegEval, RouteEval, TokenEval} from "./LPOracleTypes.sol";

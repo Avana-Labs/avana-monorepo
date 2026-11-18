@@ -7,7 +7,7 @@ import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.s
 import {UniswapV4State} from "../../../src/amm/uniswap-v4/UniswapV4State.sol";
 import {IUniswapV4PoolManager} from "../../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
+import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {ClTestToken, IClPool} from "./ClPoolFixture.sol";
 import {RealStackUniswapV4} from "./RealStackUniswapV4.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

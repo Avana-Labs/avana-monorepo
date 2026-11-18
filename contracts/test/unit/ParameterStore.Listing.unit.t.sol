@@ -7,8 +7,8 @@ import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistr
 import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {FeedDef, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {Market} from "../../src/types/Market.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
+import {ShapeKind} from "../../src/types/PositionTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {
     MockAggregator,

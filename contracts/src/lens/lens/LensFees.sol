@@ -13,7 +13,7 @@ import {BackingRecord} from "../../custody/collateralization/types/Collateraliza
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IUniswapV4PoolManager} from "../../interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
-import {Market} from "../../types/Market.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {ILensFees} from "./ILensFees.sol";
 import {ILensSlipstreamFeeReads} from "./ILensSlipstreamFeeReads.sol";
 import {ILensV3FeeReads} from "./ILensV3FeeReads.sol";

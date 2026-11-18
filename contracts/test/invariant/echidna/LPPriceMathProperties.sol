@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {LPPriceMath} from "../../../src/oracle/lp-oracle/LPPriceMath.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
+import {PriceState} from "../../../src/types/OracleTypes.sol";
 
 /// @title LPPriceMathProperties
 /// @notice Echidna and Medusa properties of the internal library LPPriceMath (2.10). Assertion entry points check each

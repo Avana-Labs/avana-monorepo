@@ -11,8 +11,7 @@ import {DeleverageSizing} from "../../src/lens/lens/types/DeleverageSizing.sol";
 import {RemovalSizing} from "../../src/lens/lens/types/RemovalSizing.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {RiskModuleMath} from "../../src/policy/risk-module/RiskModuleMath.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensInverseSizingUnitTest

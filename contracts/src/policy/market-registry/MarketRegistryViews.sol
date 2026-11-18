@@ -3,11 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DriftReason} from "../../types/DriftReason.sol";
-import {Market} from "../../types/Market.sol";
-import {PauseReason} from "../../types/PauseReason.sol";
-import {PauseState} from "../../types/PauseState.sol";
-import {RouteSlot} from "../../types/RouteSlot.sol";
+import {DriftReason, Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {RouteSlot} from "../../types/OracleTypes.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryDriftLogic} from "./IMarketRegistryDriftLogic.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";

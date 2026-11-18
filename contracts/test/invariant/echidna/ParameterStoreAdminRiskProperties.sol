@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {ParameterStoreAdminRiskLogic} from "../../../src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
+import {SecondSource, SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {MockAggregator} from "../../utils/mocks/ParameterStoreMocks.sol";
 import {ParameterStoreHarnessBase} from "./ParameterStoreHarnessBase.sol";
 

@@ -10,7 +10,7 @@ import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap
 import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {DebtReserveDef, MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {Market} from "../../src/types/Market.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapEntryChecksUnitTest

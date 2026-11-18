@@ -23,12 +23,8 @@ import {
     SpokeDef
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {Market, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {PositionRef, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {VaultToken} from "../../../src/vault-token/vault-token/VaultToken.sol";
 import {
     AdapterParameterStoreMock,

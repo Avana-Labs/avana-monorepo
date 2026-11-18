@@ -8,9 +8,8 @@ import {AccountView} from "../../src/lens/lens/types/AccountView.sol";
 import {BackingView} from "../../src/lens/lens/types/BackingView.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
 import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {PendingView} from "../../src/types/PendingView.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {PendingView} from "../../src/types/PositionTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensJourneyIntegrationTest

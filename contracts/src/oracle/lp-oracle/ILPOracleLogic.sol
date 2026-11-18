@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {PriceState} from "../../types/PriceState.sol";
+import {OracleConfig, PriceState} from "../../types/OracleTypes.sol";
 import {InitParams} from "./LPOracleTypes.sol";
 
 /// @title ILPOracleLogic

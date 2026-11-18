@@ -12,11 +12,8 @@ import {LPOracleCLModuleLogic} from "../../src/oracle/lp-oracle/LPOracleCLModule
 import {LPOracleCLPokeLogic} from "../../src/oracle/lp-oracle/LPOracleCLPokeLogic.sol";
 import {LPOracleCLViewLogic} from "../../src/oracle/lp-oracle/LPOracleCLViewLogic.sol";
 import {ClPriceStateView, LPOracleLogicSet} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {Market} from "../../src/types/Market.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
+import {OracleConfig, PriceState, PriceStateView, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {LPOracleCLDeployer, LPOracleCLFixture} from "../utils/fixtures/LPOracleCLFixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";

@@ -11,9 +11,7 @@ import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.s
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {Market} from "../../src/types/Market.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {Market, PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {FullStackMarkets} from "../utils/fixtures/FullStackMarkets.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 

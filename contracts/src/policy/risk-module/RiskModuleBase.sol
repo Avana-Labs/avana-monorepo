@@ -8,7 +8,7 @@ import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequenc
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
-import {Market} from "../../types/Market.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {IRiskModuleErrors} from "./IRiskModuleErrors.sol";

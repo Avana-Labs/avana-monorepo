@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PositionShape} from "../../../src/types/PositionShape.sol";
+import {PositionShape} from "../../../src/types/PositionTypes.sol";
 import {IntegLPVaultMock} from "./IntegLPVaultMock.sol";
 import {RegistryAvanaFirstLossReserveMock} from "./MarketRegistryMocks.sol";
 

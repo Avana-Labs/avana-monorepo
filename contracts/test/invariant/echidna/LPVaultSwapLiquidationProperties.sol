@@ -14,8 +14,8 @@ import {
 } from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
+import {PriceState} from "../../../src/types/OracleTypes.sol";
 
 /// @notice An ERC-20 with open mint and burn (only the harness's entry points are fuzzed), a per-recipient block that
 /// makes a transfer to that address revert (so a payout goes to the PayoutEscrow), and the four vault-token views

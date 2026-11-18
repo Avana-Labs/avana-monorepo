@@ -19,9 +19,8 @@ import {
     MarketRegistryLogics,
     RiskTier
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {DriftReason, PauseReason} from "../../src/types/MarketTypes.sol";
+import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 

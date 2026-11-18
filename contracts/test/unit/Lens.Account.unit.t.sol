@@ -8,7 +8,7 @@ import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {AccountView} from "../../src/lens/lens/types/AccountView.sol";
 import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
 

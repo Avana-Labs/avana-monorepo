@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PositionRef} from "../../../types/PositionRef.sol";
+import {PositionRef} from "../../../types/PositionTypes.sol";
 
 /// @notice The chain's fixed dependencies of the AaveAdapter implementation and of each of its logic contracts.
 /// @dev Every field is non-zero; the router checks each logic contract was built with the same values.

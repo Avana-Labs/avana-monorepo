@@ -9,8 +9,7 @@ import {IDebtOracleErrors} from "../../src/oracle/debt-oracle/IDebtOracleErrors.
 import {IDebtOracleEvents} from "../../src/oracle/debt-oracle/IDebtOracleEvents.sol";
 import {DebtOracleInitParams} from "../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
 import {DebtPriceView} from "../../src/oracle/debt-oracle/types/DebtPriceView.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {PriceState, RouteSlot} from "../../src/types/OracleTypes.sol";
 import {DebtOracleFixture} from "../utils/fixtures/DebtOracleFixture.sol";
 import {TimelockFixture} from "../utils/fixtures/TimelockFixture.sol";
 import {MockAggregator} from "../utils/mocks/MockAggregator.sol";

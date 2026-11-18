@@ -9,8 +9,7 @@ import {IUniswapV4PositionManager} from "../../interfaces/external/uniswap-v4/IU
 import {IUniswapV3Factory} from "../../interfaces/external/uniswap/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.sol";
 import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
-import {PositionShape} from "../../types/PositionShape.sol";
-import {ShapeKind} from "../../types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
 import {ClLPVaultBase} from "../concentrated-liquidity/ClLPVaultBase.sol";
 import {ClLPVaultCustody} from "../concentrated-liquidity/ClLPVaultCustody.sol";
 import {ClLPVaultMarkets} from "../concentrated-liquidity/ClLPVaultMarkets.sol";

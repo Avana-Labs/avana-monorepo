@@ -5,9 +5,8 @@ pragma solidity 0.8.28;
 
 import {PoolKeying} from "../../src/amm/types/AmmTypes.sol";
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
-import {VaultTokenBindings} from "../../src/types/VaultTokenBindings.sol";
+import {VaultTokenBindings} from "../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {VaultTokenFactory} from "../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";

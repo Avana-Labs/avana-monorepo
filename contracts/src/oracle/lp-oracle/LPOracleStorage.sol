@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {SecondSource} from "../../types/SecondSource.sol";
+import {OracleConfig, SecondSource} from "../../types/OracleTypes.sol";
 import {ILPOracleBase} from "./ILPOracleBase.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 

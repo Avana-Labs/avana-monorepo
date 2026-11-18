@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
-import {PositionRef} from "../../types/PositionRef.sol";
+import {PositionRef} from "../../types/PositionTypes.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapter} from "./IAaveAdapter.sol";

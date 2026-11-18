@@ -8,8 +8,8 @@ import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.s
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {BreakerReasons} from "../../../src/policy/market-registry/types/Breaker.sol";
 import {MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
+import {PriceState} from "../../../src/types/OracleTypes.sol";
+import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {AdapterRegistryMock} from "../../utils/mocks/AaveAdapterMocks.sol";
 import {CollLPVaultMock, CollPoolToken} from "../../utils/mocks/CollateralizationMocks.sol";
 import {RiskDebtOracleMock, RiskLPOracleMock} from "../../utils/mocks/RiskModuleMocks.sol";

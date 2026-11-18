@@ -3372,92 +3372,42 @@
     "ProxyManager._salt": ["REQ-PROXY-001", "REQ-PROXY-052"],
     "ProxyManager._initCode": ["REQ-PROXY-001", "REQ-PROXY-004", "REQ-PROXY-052"]
   },
-  "contracts/src/types/AccountGateStatus.sol": {
-    "AccountGateStatus": ["REQ-ADAPTER-038", "REQ-RISK-060", "REQ-RISK-065", "REQ-RISK-068", "REQ-RISK-071", "Q-241", "Q-248", "Q-252", "Q-253"]
-  },
   "contracts/src/types/AmmConstants.sol": {
     "AmmConstants": ["REQ-AMM-CORE-002", "REQ-VAULT-025", "Q-369", "Q-370"]
   },
-  "contracts/src/types/CapView.sol": {
-    "CapView": ["REQ-LENS-018", "REQ-LENS-019", "Q-370"]
+  "contracts/src/types/MarketTypes.sol": {
+    "Market": ["REQ-CONFIG-006", "REQ-CONFIG-008", "REQ-CONFIG-009", "REQ-CONFIG-010", "REQ-CONFIG-013", "REQ-AMM-CORE-002", "REQ-AMM-CORE-003", "Q-370"],
+    "MarketDef": ["REQ-CONFIG-028", "REQ-CONFIG-029", "REQ-AMM-CORE-003", "REQ-AMM-CORE-010", "Q-370", "Q-371"],
+    "MarketGateStatus": ["REQ-ADAPTER-038", "REQ-RISK-065", "Q-241"],
+    "AccountGateStatus": ["REQ-ADAPTER-038", "REQ-RISK-060", "REQ-RISK-065", "REQ-RISK-068", "REQ-RISK-071", "Q-241", "Q-248", "Q-252", "Q-253"],
+    "CapView": ["REQ-LENS-018", "REQ-LENS-019", "Q-370"],
+    "DriftReason": ["REQ-ADAPTER-014", "REQ-ADAPTER-022", "REQ-ADAPTER-028", "REQ-ADAPTER-029", "REQ-ADAPTER-030", "REQ-ADAPTER-031", "REQ-ADAPTER-032", "REQ-ADAPTER-033", "REQ-ADAPTER-034", "REQ-ADAPTER-035", "REQ-ADAPTER-063", "REQ-ADAPTER-064", "REQ-RISK-063", "REQ-RISK-069", "Q-270", "Q-281", "Q-378"],
+    "PauseReason": ["REQ-MREG-024", "Q-252"],
+    "PauseState": ["REQ-MREG-001", "REQ-MREG-002", "REQ-MREG-024", "Q-227", "Q-252"],
+    "VaultTokenBindings": ["REQ-VTOKEN-003", "REQ-VTOKEN-022", "REQ-VTOKEN-046"]
   },
-  "contracts/src/types/DriftReason.sol": {
-    "DriftReason": ["REQ-ADAPTER-014", "REQ-ADAPTER-022", "REQ-ADAPTER-028", "REQ-ADAPTER-029", "REQ-ADAPTER-030", "REQ-ADAPTER-031", "REQ-ADAPTER-032", "REQ-ADAPTER-033", "REQ-ADAPTER-034", "REQ-ADAPTER-035", "REQ-ADAPTER-063", "REQ-ADAPTER-064", "REQ-RISK-063", "REQ-RISK-069", "Q-270", "Q-281", "Q-378"]
-  },
-  "contracts/src/types/Market.sol": {
-    "Market": ["REQ-CONFIG-006", "REQ-CONFIG-008", "REQ-CONFIG-009", "REQ-CONFIG-010", "REQ-CONFIG-013", "REQ-AMM-CORE-002", "REQ-AMM-CORE-003", "Q-370"]
-  },
-  "contracts/src/types/MarketDef.sol": {
-    "MarketDef": ["REQ-CONFIG-028", "REQ-CONFIG-029", "REQ-AMM-CORE-003", "REQ-AMM-CORE-010", "Q-370", "Q-371"]
-  },
-  "contracts/src/types/MarketGateStatus.sol": {
-    "MarketGateStatus": ["REQ-ADAPTER-038", "REQ-RISK-065", "Q-241"]
-  },
-  "contracts/src/types/OracleConfig.sol": {
-    "OracleConfig": ["REQ-ORACLE-005", "REQ-ORACLE-007", "REQ-ORACLE-046", "REQ-ORACLE-083", "REQ-ORACLE-094", "REQ-ORACLE-099", "REQ-ORACLE-100", "REQ-ORACLE-103", "REQ-CONFIG-072", "SPEC-ORC-003", "SPEC-ORC-011", "SPEC-ORC-020", "SPEC-ORC-021", "SPEC-ORC-022", "Q-322", "Q-323", "Q-324", "Q-326", "Q-329"]
-  },
-  "contracts/src/types/OracleLeg.sol": {
-    "OracleLeg": ["REQ-ORACLE-002", "REQ-ORACLE-049", "REQ-CONFIG-022", "REQ-CONFIG-023", "REQ-CONFIG-072", "Q-322"]
-  },
-  "contracts/src/types/OracleRoute.sol": {
-    "OracleRoute": ["SPEC-ORC-002", "REQ-ORACLE-004", "REQ-CONFIG-021"]
-  },
-  "contracts/src/types/PauseReason.sol": {
-    "PauseReason": ["REQ-MREG-024", "Q-252"]
-  },
-  "contracts/src/types/PauseState.sol": {
-    "PauseState": ["REQ-MREG-001", "REQ-MREG-002", "REQ-MREG-024", "Q-227", "Q-252"]
-  },
-  "contracts/src/types/PendingView.sol": {
-    "PendingView": ["REQ-LENS-026", "Q-370"]
-  },
-  "contracts/src/types/PledgeCounters.sol": {
-    "PledgeCounters": ["SPEC-CAP-002", "REQ-RISK-004", "Q-209", "Q-369", "Q-370"]
-  },
-  "contracts/src/types/PledgePreview.sol": {
-    "PledgePreview": ["REQ-RISK-031", "REQ-RISK-057", "Q-370"]
-  },
-  "contracts/src/types/PositionRef.sol": {
-    "PositionRef": ["REQ-AMM-CORE-001", "SPEC-AMM-CORE-002", "Q-369"]
-  },
-  "contracts/src/types/PositionShape.sol": {
-    "PositionShape": ["REQ-AMM-CORE-003", "REQ-AMM-CORE-004", "Q-370"]
-  },
-  "contracts/src/types/PriceState.sol": {
-    "PriceState": ["REQ-ORACLE-016", "REQ-ORACLE-092", "Q-128", "Q-248"]
-  },
-  "contracts/src/types/PriceStateView.sol": {
-    "PriceStateView": ["REQ-ORACLE-042", "REQ-ORACLE-107", "REQ-ORACLE-016", "REQ-ORACLE-021", "REQ-ORACLE-022", "REQ-ORACLE-034", "REQ-ORACLE-084", "REQ-ORACLE-090", "REQ-ORACLE-099", "REQ-ORACLE-100", "SPEC-ORC-011", "SPEC-ORC-012", "SPEC-ORC-015", "SPEC-ORC-016", "SPEC-ORC-017", "SPEC-ORC-020", "SPEC-ORC-021", "Q-128", "Q-208", "Q-247", "Q-323", "Q-324"]
-  },
-  "contracts/src/types/PriceView.sol": {
-    "PriceView": ["REQ-LENS-015", "Q-247", "Q-370", "Q-323"]
-  },
-  "contracts/src/types/RouteSlot.sol": {
-    "RouteSlot": ["REQ-MREG-027", "REQ-MREG-028", "REQ-ORACLE-091", "Q-248"]
-  },
-  "contracts/src/types/SecondSource.sol": {
-    "SecondSource": ["REQ-ORACLE-100", "SPEC-ORC-020", "Q-323"]
-  },
-  "contracts/src/types/SecondSourceKind.sol": {
-    "SecondSourceKind": ["REQ-ORACLE-100", "SPEC-ORC-020", "Q-323"]
-  },
-  "contracts/src/types/SequencerConfig.sol": {
-    "SequencerConfig": ["REQ-CHAIN-001", "REQ-ORACLE-099", "SPEC-ORC-021", "Q-324"]
-  },
-  "contracts/src/types/SettlementReport.sol": {
-    "SettlementReport": ["SPEC-LIQ-001", "SPEC-LIQ-003", "SPEC-LIQ-005", "SPEC-LIQ-006", "SPEC-LIQ-008", "SPEC-LIQ-009", "SPEC-LIQ-010", "SPEC-LIQ-017", "SPEC-LIQ-019", "SPEC-LIQ-022", "REQ-SWAP-026", "REQ-SWAP-089", "REQ-SWAP-101", "Q-370", "Q-373", "Q-404"]
-  },
-  "contracts/src/types/ShapeKind.sol": {
-    "ShapeKind": ["REQ-AMM-CORE-003", "Q-370"]
-  },
-  "contracts/src/types/TokenOracleConfig.sol": {
-    "TokenOracleConfig": ["REQ-ORACLE-005", "REQ-ORACLE-007", "REQ-ORACLE-100", "SPEC-ORC-003", "SPEC-ORC-020", "Q-323"]
-  },
-  "contracts/src/types/TokenPriceView.sol": {
+  "contracts/src/types/OracleTypes.sol": {
+    "OracleConfig": ["REQ-ORACLE-005", "REQ-ORACLE-007", "REQ-ORACLE-046", "REQ-ORACLE-083", "REQ-ORACLE-094", "REQ-ORACLE-099", "REQ-ORACLE-100", "REQ-ORACLE-103", "REQ-CONFIG-072", "SPEC-ORC-003", "SPEC-ORC-011", "SPEC-ORC-020", "SPEC-ORC-021", "SPEC-ORC-022", "Q-322", "Q-323", "Q-324", "Q-326", "Q-329"],
+    "OracleLeg": ["REQ-ORACLE-002", "REQ-ORACLE-049", "REQ-CONFIG-022", "REQ-CONFIG-023", "REQ-CONFIG-072", "Q-322"],
+    "OracleRoute": ["SPEC-ORC-002", "REQ-ORACLE-004", "REQ-CONFIG-021"],
+    "RouteSlot": ["REQ-MREG-027", "REQ-MREG-028", "REQ-ORACLE-091", "Q-248"],
+    "SecondSource": ["REQ-ORACLE-100", "SPEC-ORC-020", "Q-323"],
+    "SecondSourceKind": ["REQ-ORACLE-100", "SPEC-ORC-020", "Q-323"],
+    "SequencerConfig": ["REQ-CHAIN-001", "REQ-ORACLE-099", "SPEC-ORC-021", "Q-324"],
+    "TokenOracleConfig": ["REQ-ORACLE-005", "REQ-ORACLE-007", "REQ-ORACLE-100", "SPEC-ORC-003", "SPEC-ORC-020", "Q-323"],
+    "PriceState": ["REQ-ORACLE-016", "REQ-ORACLE-092", "Q-128", "Q-248"],
+    "PriceStateView": ["REQ-ORACLE-042", "REQ-ORACLE-107", "REQ-ORACLE-016", "REQ-ORACLE-021", "REQ-ORACLE-022", "REQ-ORACLE-034", "REQ-ORACLE-084", "REQ-ORACLE-090", "REQ-ORACLE-099", "REQ-ORACLE-100", "SPEC-ORC-011", "SPEC-ORC-012", "SPEC-ORC-015", "SPEC-ORC-016", "SPEC-ORC-017", "SPEC-ORC-020", "SPEC-ORC-021", "Q-128", "Q-208", "Q-247", "Q-323", "Q-324"],
+    "PriceView": ["REQ-LENS-015", "Q-247", "Q-370", "Q-323"],
     "TokenPriceView": ["REQ-ORACLE-042", "REQ-ORACLE-094", "REQ-ORACLE-100", "SPEC-ORC-015", "SPEC-ORC-020", "Q-182", "Q-229", "Q-248", "Q-322", "Q-323"]
   },
-  "contracts/src/types/VaultTokenBindings.sol": {
-    "VaultTokenBindings": ["REQ-VTOKEN-003", "REQ-VTOKEN-022", "REQ-VTOKEN-046"]
+  "contracts/src/types/PositionTypes.sol": {
+    "PositionRef": ["REQ-AMM-CORE-001", "SPEC-AMM-CORE-002", "Q-369"],
+    "PositionShape": ["REQ-AMM-CORE-003", "REQ-AMM-CORE-004", "Q-370"],
+    "ShapeKind": ["REQ-AMM-CORE-003", "Q-370"],
+    "PledgeCounters": ["SPEC-CAP-002", "REQ-RISK-004", "Q-209", "Q-369", "Q-370"],
+    "PledgePreview": ["REQ-RISK-031", "REQ-RISK-057", "Q-370"],
+    "PendingView": ["REQ-LENS-026", "Q-370"],
+    "SettlementReport": ["SPEC-LIQ-001", "SPEC-LIQ-003", "SPEC-LIQ-005", "SPEC-LIQ-006", "SPEC-LIQ-008", "SPEC-LIQ-009", "SPEC-LIQ-010", "SPEC-LIQ-017", "SPEC-LIQ-019", "SPEC-LIQ-022", "REQ-SWAP-026", "REQ-SWAP-089", "REQ-SWAP-101", "Q-370", "Q-373", "Q-404"]
   },
   "contracts/src/vault-token/vault-token-factory/IVaultTokenFactory.sol": {
     "IVaultTokenFactory": ["REQ-VTOKEN-019", "REQ-VTOKEN-020", "REQ-VTOKEN-021", "REQ-VTOKEN-023", "REQ-VTOKEN-028", "REQ-VTOKEN-038", "REQ-AMM-CORE-001", "Q-068", "Q-228", "Q-299", "Q-355", "Q-374"],

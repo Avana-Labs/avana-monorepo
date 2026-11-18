@@ -5,9 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
-import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
-import {Market} from "../../types/Market.sol";
-import {PauseState} from "../../types/PauseState.sol";
+import {AccountGateStatus, Market, PauseState} from "../../types/MarketTypes.sol";
 import {LensAccountMath} from "./LensAccountMath.sol";
 import {RecordRemoval, RemovalSizing} from "./types/RemovalSizing.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";

@@ -16,15 +16,16 @@ import {ParameterStoreListingLogic} from "../../../src/policy/parameter-store/Pa
 import {ParameterStoreLoosenLogic} from "../../../src/policy/parameter-store/ParameterStoreLoosenLogic.sol";
 import {ParameterStoreTightenLogic} from "../../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
 import {FeedDef, ParameterStoreLogics} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {OracleConfig} from "../../../src/types/OracleConfig.sol";
-import {OracleLeg} from "../../../src/types/OracleLeg.sol";
-import {OracleRoute} from "../../../src/types/OracleRoute.sol";
-import {RouteSlot} from "../../../src/types/RouteSlot.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
-import {TokenOracleConfig} from "../../../src/types/TokenOracleConfig.sol";
-import {VaultTokenBindings} from "../../../src/types/VaultTokenBindings.sol";
+import {Market, VaultTokenBindings} from "../../../src/types/MarketTypes.sol";
+import {
+    OracleConfig,
+    OracleLeg,
+    OracleRoute,
+    RouteSlot,
+    SecondSource,
+    SecondSourceKind,
+    TokenOracleConfig
+} from "../../../src/types/OracleTypes.sol";
 import {VaultToken} from "../../../src/vault-token/vault-token/VaultToken.sol";
 import {EacProxyMock, OcrAggregatorMock} from "../mocks/ChainlinkCostMocks.sol";
 import {GasMarketRegistry} from "../mocks/GasMarketRegistry.sol";

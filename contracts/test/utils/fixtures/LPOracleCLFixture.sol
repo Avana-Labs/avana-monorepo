@@ -13,15 +13,17 @@ import {LPOracleCLPokeLogic} from "../../../src/oracle/lp-oracle/LPOracleCLPokeL
 import {LPOracleCLViewLogic} from "../../../src/oracle/lp-oracle/LPOracleCLViewLogic.sol";
 import {InitParams, LPOracleLogicSet} from "../../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {OracleConfig} from "../../../src/types/OracleConfig.sol";
-import {OracleLeg} from "../../../src/types/OracleLeg.sol";
-import {OracleRoute} from "../../../src/types/OracleRoute.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
-import {PriceStateView} from "../../../src/types/PriceStateView.sol";
-import {RouteSlot} from "../../../src/types/RouteSlot.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
-import {TokenOracleConfig} from "../../../src/types/TokenOracleConfig.sol";
+import {
+    OracleConfig,
+    OracleLeg,
+    OracleRoute,
+    PriceState,
+    PriceStateView,
+    RouteSlot,
+    SecondSource,
+    SecondSourceKind,
+    TokenOracleConfig
+} from "../../../src/types/OracleTypes.sol";
 import {OracleFeedMock, OracleRegistryMock, OracleStoreMock} from "../mocks/LPOracleMocks.sol";
 import {ClPoolFixture, ClTestToken, IClPool} from "./ClPoolFixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";

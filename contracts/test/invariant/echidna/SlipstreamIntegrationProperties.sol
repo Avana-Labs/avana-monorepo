@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {SlipstreamIntegration} from "../../../src/amm/slipstream/SlipstreamIntegration.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {EchidnaToken, IHarnessReceiver} from "./UniswapV3IntegrationProperties.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 

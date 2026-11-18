@@ -6,10 +6,8 @@ pragma solidity 0.8.28;
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {DebtPriceView} from "../../src/lens/lens/types/DebtPriceView.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceView} from "../../src/types/PriceView.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {PriceState, PriceView} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensPriceUnitTest

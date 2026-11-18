@@ -14,8 +14,8 @@ import {
 import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {PauseReason} from "../../src/types/MarketTypes.sol";
+import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";

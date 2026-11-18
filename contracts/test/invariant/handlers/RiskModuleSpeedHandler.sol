@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {RiskModule} from "../../../src/policy/risk-module/RiskModule.sol";
 import {PledgeCharge, SpeedView} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
-import {PledgeCounters} from "../../../src/types/PledgeCounters.sol";
+import {PledgeCounters} from "../../../src/types/PositionTypes.sol";
 import {RiskHubMock, RiskLPOracleMock} from "../../utils/mocks/RiskModuleMocks.sol";
 import {Test} from "forge-std/Test.sol";
 

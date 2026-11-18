@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PriceState} from "../../../types/PriceState.sol";
-import {RouteSlot} from "../../../types/RouteSlot.sol";
+import {PriceState, RouteSlot} from "../../../types/OracleTypes.sol";
 
 /// @notice Classification of one leg or route read by the DebtOracle; ordinal values are fixed.
 enum ReadStatus {

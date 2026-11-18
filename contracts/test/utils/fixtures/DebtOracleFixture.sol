@@ -5,9 +5,7 @@ pragma solidity 0.8.28;
 
 import {IDebtOracle} from "../../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {DebtOracleInitParams} from "../../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
+import {PriceState, SecondSource, SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {DebtRegistryMock, DebtStoreMock} from "../mocks/DebtOracleConfigMocks.sol";
 import {MockAggregator} from "../mocks/MockAggregator.sol";
 import {TimelockFixture} from "./TimelockFixture.sol";

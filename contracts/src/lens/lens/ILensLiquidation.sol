@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PauseState} from "../../types/PauseState.sol";
-import {PriceView} from "../../types/PriceView.sol";
+import {PauseState} from "../../types/MarketTypes.sol";
+import {PriceView} from "../../types/OracleTypes.sol";
 import {DebtPriceView} from "./types/DebtPriceView.sol";
 import {LiquidationPreview} from "./types/LiquidationPreview.sol";
 

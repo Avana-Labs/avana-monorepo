@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAggregatorProxy} from "../../interfaces/external/chainlink/IAggregatorProxy.sol";
 import {IAggregatorV3} from "../../interfaces/external/chainlink/IAggregatorV3.sol";
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {PriceState} from "../../types/PriceState.sol";
+import {OracleConfig, PriceState} from "../../types/OracleTypes.sol";
 import {LPOracleCalls} from "./LPOracleCalls.sol";
 import {LPOracleConfig} from "./LPOracleConfig.sol";
 import {Evaluation, LPOracleCodes, LegEval, RouteEval, TokenEval} from "./LPOracleTypes.sol";

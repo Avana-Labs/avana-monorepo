@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
-import {CapView} from "../../src/types/CapView.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
+import {CapView} from "../../src/types/MarketTypes.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensCapHeadroomCountersUnitTest

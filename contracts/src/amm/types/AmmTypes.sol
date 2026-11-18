@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ShapeKind} from "../../types/ShapeKind.sol";
+import {ShapeKind} from "../../types/PositionTypes.sol";
 
 /// @notice Integration-specific configuration of a concentrated-liquidity market, stored by `bindMarket`.
 /// @dev Read on-chain at listing and never changed.

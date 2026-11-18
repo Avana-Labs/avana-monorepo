@@ -8,9 +8,8 @@ import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
 import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {MarketParams as MarketParamsLike} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
 

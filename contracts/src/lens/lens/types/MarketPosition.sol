@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PriceState} from "../../../types/PriceState.sol";
+import {PriceState} from "../../../types/OracleTypes.sol";
 
 /// @notice One collateral market of an account.
 /// @dev `shortfall` are units seized on Aave and not yet reconciled; `rescueUnits` never support new debt.

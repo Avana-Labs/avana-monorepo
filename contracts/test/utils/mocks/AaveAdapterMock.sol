@@ -10,7 +10,7 @@ import {DeleverageRequest} from "../../../src/liquidation/lp-vault-swap/types/LP
 import {ILock} from "../../../src/lock/lock/ILock.sol";
 import {IAaveAdapterBase} from "../../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {PositionProxy} from "../../../src/proxy/position-proxy/PositionProxy.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
+import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {IVaultToken} from "../../../src/vault-token/vault-token/IVaultToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";

@@ -8,7 +8,7 @@ import {RiskModuleDriftLogic} from "../../src/policy/risk-module/RiskModuleDrift
 import {RiskModuleImmutables} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
+import {DriftReason} from "../../src/types/MarketTypes.sol";
 import {AaveV4Fixture} from "../utils/fixtures/AaveV4Fixture.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryLPVaultMock} from "../utils/mocks/MarketRegistryMocks.sol";

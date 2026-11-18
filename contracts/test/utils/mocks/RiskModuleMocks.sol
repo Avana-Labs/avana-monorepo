@@ -7,11 +7,8 @@ import {RiskStatus} from "../../../src/amm/types/AmmTypes.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {DebtPriceView} from "../../../src/oracle/debt-oracle/types/DebtPriceView.sol";
 import {MarketSpeedLimits, SpeedLimit} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {OracleConfig} from "../../../src/types/OracleConfig.sol";
-import {PledgeCounters} from "../../../src/types/PledgeCounters.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
-import {PriceStateView} from "../../../src/types/PriceStateView.sol";
-import {TokenPriceView} from "../../../src/types/TokenPriceView.sol";
+import {OracleConfig, PriceState, PriceStateView, TokenPriceView} from "../../../src/types/OracleTypes.sol";
+import {PledgeCounters} from "../../../src/types/PositionTypes.sol";
 import {RegistryHubMock, RegistrySpokeMock} from "./MarketRegistryAaveMocks.sol";
 import {
     RegistryAdapterMock,

@@ -8,7 +8,7 @@ import {IAggregatorV3} from "../../interfaces/external/chainlink/IAggregatorV3.s
 import {IOffchainAggregator} from "../../interfaces/external/chainlink/IOffchainAggregator.sol";
 import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequencerUptimeFeed.sol";
 import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
-import {Market} from "../../types/Market.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "./IParameterStore.sol";
 import {IParameterStoreListing} from "./IParameterStoreListing.sol";

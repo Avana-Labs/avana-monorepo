@@ -7,7 +7,7 @@ import {IParameterStore} from "../../../src/policy/parameter-store/IParameterSto
 import {IParameterStoreListing} from "../../../src/policy/parameter-store/IParameterStoreListing.sol";
 import {ParameterStoreListingLogic} from "../../../src/policy/parameter-store/ParameterStoreListingLogic.sol";
 import {FeedDef, MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
+import {SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {MockAggregator} from "../../utils/mocks/ParameterStoreMocks.sol";
 import {ParameterStoreHarnessBase} from "./ParameterStoreHarnessBase.sol";
 

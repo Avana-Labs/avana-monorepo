@@ -13,8 +13,7 @@ import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVau
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackVolatile} from "../utils/fixtures/RealStackVolatile.sol";

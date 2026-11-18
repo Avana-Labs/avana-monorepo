@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AmmConstants} from "../../types/AmmConstants.sol";
-import {PriceState} from "../../types/PriceState.sol";
+import {PriceState} from "../../types/OracleTypes.sol";
 import {DebtPriceView} from "../debt-oracle/types/DebtPriceView.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";

@@ -22,10 +22,8 @@ import {DexPathRoute} from "../../../src/liquidation/settlement-routes/DexPathRo
 import {DexHop, HopKind, RouteConfig} from "../../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
 import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
+import {PositionRef, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {VaultToken} from "../../../src/vault-token/vault-token/VaultToken.sol";
 import {AaveAdapterMock} from "../mocks/AaveAdapterMock.sol";

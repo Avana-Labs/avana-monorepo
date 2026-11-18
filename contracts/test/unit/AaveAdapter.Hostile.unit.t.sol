@@ -12,8 +12,7 @@ import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.s
 import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {IProxyManager} from "../../src/proxy/proxy-manager/IProxyManager.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {AdapterRiskModuleMock} from "../utils/mocks/AaveAdapterMocks.sol";
