@@ -2,40 +2,25 @@
 pragma solidity 0.8.28;
 
 /// @title IUniswapV3Pool
-/// @notice Subset of the Uniswap v3 pool interface that Avana contracts call on a market pool or a fixed route pool.
-/// Declarations are copied from `contracts/interfaces/pool/IUniswapV3PoolImmutables.sol`,
-/// `IUniswapV3PoolState.sol`, `IUniswapV3PoolDerivedState.sol` and `IUniswapV3PoolActions.sol` of Uniswap/v3-core at
-/// commit 5ea68a77cb541c6b3812df783be71ba8c081e25f, with identical selectors.
-/// @dev Called by: Uniswap v3 LPVault, LPOracle (consistency check), swap routes, Lens.
+/// @notice Subset of the Uniswap v3 pool that Avana calls on a market pool or a fixed route pool.
+/// @dev Copied from Uniswap/v3-core pool interfaces (5ea68a7), identical selectors.
 interface IUniswapV3Pool {
-    /// @notice Returns the factory that deployed the pool. Source:
-    /// `contracts/interfaces/pool/IUniswapV3PoolImmutables.sol` (v3-core 5ea68a7).
-    /// @dev Called by: Uniswap v3 LPVault (`bindMarket`).
+    /// @notice Returns the factory that deployed the pool.
     function factory() external view returns (address);
 
-    /// @notice Returns the first of the two tokens of the pool, sorted by address. Source:
-    /// `contracts/interfaces/pool/IUniswapV3PoolImmutables.sol` (v3-core 5ea68a7).
-    /// @dev Called by: Uniswap v3 LPVault, LPOracle.
+    /// @notice Returns the first of the two tokens of the pool, sorted by address.
     function token0() external view returns (address);
 
-    /// @notice Returns the second of the two tokens of the pool, sorted by address. Source:
-    /// `contracts/interfaces/pool/IUniswapV3PoolImmutables.sol` (v3-core 5ea68a7).
-    /// @dev Called by: Uniswap v3 LPVault, LPOracle.
+    /// @notice Returns the second of the two tokens of the pool, sorted by address.
     function token1() external view returns (address);
 
-    /// @notice Returns the pool's fee in hundredths of a bip. Source:
-    /// `contracts/interfaces/pool/IUniswapV3PoolImmutables.sol` (v3-core 5ea68a7).
-    /// @dev Called by: Uniswap v3 LPVault.
+    /// @notice Returns the pool's fee in hundredths of a bip.
     function fee() external view returns (uint24);
 
-    /// @notice Returns the pool tick spacing. Source: `contracts/interfaces/pool/IUniswapV3PoolImmutables.sol`
-    /// (v3-core 5ea68a7).
-    /// @dev Called by: Uniswap v3 LPVault, LPOracle.
+    /// @notice Returns the pool tick spacing.
     function tickSpacing() external view returns (int24);
 
-    /// @notice Returns the pool's packed slot 0; `unlocked` is false while the pool is inside a call. Source:
-    /// `contracts/interfaces/pool/IUniswapV3PoolState.sol` (v3-core 5ea68a7).
-    /// @dev Called by: Uniswap v3 LPVault.
+    /// @notice Returns the pool's packed slot 0; `unlocked` is false while the pool is inside a call.
     function slot0()
         external
         view
@@ -49,22 +34,16 @@ interface IUniswapV3Pool {
             bool unlocked
         );
 
-    /// @notice Returns the currently in-range liquidity available to the pool. Source:
-    /// `contracts/interfaces/pool/IUniswapV3PoolState.sol` (v3-core 5ea68a7).
-    /// @dev Called by: Lens.
+    /// @notice Returns the currently in-range liquidity available to the pool.
     function liquidity() external view returns (uint128);
 
     /// @notice Returns the cumulative tick and seconds-per-liquidity values as of each `secondsAgos` before now; the
-    /// call reverts if an observation older than the oldest stored one is requested. Source:
-    /// `contracts/interfaces/pool/IUniswapV3PoolDerivedState.sol` (v3-core 5ea68a7).
-    /// @dev Called by: LPOracle (consistency check), Uniswap v3 LPVault (`bindMarket` observation check).
+    /// call reverts if an observation older than the oldest stored one is requested.
     function observe(
         uint32[] calldata secondsAgos
     ) external view returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s);
 
     /// @notice Swaps token0 for token1, or token1 for token0, paying through `uniswapV3SwapCallback` on the caller.
-    /// Source: `contracts/interfaces/pool/IUniswapV3PoolActions.sol` (v3-core 5ea68a7).
-    /// @dev Called by: swap routes of kind `DexPath`.
     function swap(
         address recipient,
         bool zeroForOne,
@@ -73,9 +52,7 @@ interface IUniswapV3Pool {
         bytes calldata data
     ) external returns (int256 amount0, int256 amount1);
 
-    /// @notice Increases the maximum number of price and liquidity observations the pool will store. Source:
-    /// `contracts/interfaces/pool/IUniswapV3PoolActions.sol` (v3-core 5ea68a7).
-    /// @dev Called by: the market listing script run by Avana's deployer.
+    /// @notice Increases the maximum number of price and liquidity observations the pool will store.
     function increaseObservationCardinalityNext(
         uint16 observationCardinalityNext
     ) external;

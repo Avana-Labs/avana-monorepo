@@ -25,33 +25,22 @@ import {RiskTier} from "./types/RiskTier.sol";
 import {SpokeDef} from "./types/SpokeDef.sol";
 
 /// @title MarketRegistryHubsLogic
-/// @notice Bodies of the Hub, AMM-integration registration, First-Loss Reserve, cross-Hub line, flash source, CDP Spoke and debt
-/// reserve writes of the MarketRegistry. Normal delay.
-/// @dev Reached only by delegatecall from the MarketRegistry, which checks `APPLICATION_ADMIN` first; see
-/// `IMarketRegistryLogic`. Every external call is a view: these bodies read Aave, the integration, the factory, the
-/// First-Loss Reserves, the flash source, the RiskModule and the ParameterStore, and write only the registry's storage.
-/// @custom:spec REQ-CONFIG-005, REQ-CONFIG-016, REQ-CONFIG-074, REQ-CONFIG-075, REQ-CONFIG-077, REQ-CONFIG-079, REQ-CONFIG-081, REQ-CONFIG-083, REQ-MREG-006, REQ-MREG-007, REQ-MREG-008, REQ-MREG-009, REQ-MREG-010, REQ-MREG-018, REQ-MREG-032, REQ-MREG-033, Q-312, Q-313, Q-378, Q-379, Q-386, Q-388
-// Each function carries the body of a selector declared in an IMarketRegistry piece that the MarketRegistry itself
-// implements; this contract inherits no piece, since each piece also declares functions another contract serves.
+/// @notice Bodies of the MarketRegistry's Hub, integration, cross-Hub line, flash source, Spoke and debt-reserve writes.
+/// @dev Runs only by delegatecall from the MarketRegistry, which checks `APPLICATION_ADMIN` first.
+// Bodies of IMarketRegistry selectors; this contract inherits no interface piece.
 // solhint-disable comprehensive-interface
-// Every external call made here is a view (STATICCALL), so none can re-enter the registry or reorder its events.
+// Every external call here is a view, so none can re-enter the registry.
 // forge-lint: disable-start(reentrancy-events)
 contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLogic {
-    /// @notice Fixes the implementation immutables; they must equal the MarketRegistry's.
-    /// @param im The per-chain Avana addresses.
-    /// @custom:spec REQ-CONFIG-005
     constructor(
         MarketRegistryImmutables memory im
     ) MarketRegistryStorage(im) {}
 
     /// @inheritdoc IMarketRegistryLogic
-    /// @custom:spec REQ-CONFIG-005
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("MarketRegistryHubsLogic"), _IMMUTABLES_HASH);
     }
 
-    /// @notice Body of `recordHub`.
-    /// @custom:spec REQ-CONFIG-083, REQ-CONFIG-005, Q-378, Q-388
     function recordHub(
         address hub,
         RiskTier tier
@@ -68,8 +57,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         emit IMarketRegistryHubs.HubRecorded(hub, tier);
     }
 
-    /// @notice Body of `registerIntegration`.
-    /// @custom:spec REQ-CONFIG-075, Q-376
     function registerIntegration(
         uint32 integrationId,
         address lpVault,
@@ -93,8 +80,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         emit IMarketRegistryHubs.IntegrationRegistered(integrationId, lpVault, pricing);
     }
 
-    /// @notice Body of `setAvanaFirstLossReserve`.
-    /// @custom:spec REQ-MREG-009, Q-379
     function setAvanaFirstLossReserve(
         address hub,
         address asset,
@@ -114,8 +99,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         emit IMarketRegistryHubs.AvanaFirstLossReserveSet(hub, asset, firstLossReserve);
     }
 
-    /// @notice Body of `setCrossHubLine`.
-    /// @custom:spec Q-378, REQ-FLR-043
     function setCrossHubLine(
         address fundingHub,
         address asset,
@@ -141,8 +124,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         emit IMarketRegistryHubs.CrossHubLineSet(fundingHub, asset, spoke, cap, total);
     }
 
-    /// @notice Body of `setCrossHubLinesEnabled`.
-    /// @custom:spec REQ-CONFIG-081, Q-378
     function setCrossHubLinesEnabled(
         bool enabled
     ) external {
@@ -151,8 +132,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         emit IMarketRegistryHubs.CrossHubLinesEnabledSet(enabled);
     }
 
-    /// @notice Body of `setFlashSource`.
-    /// @custom:spec REQ-CONFIG-005, REQ-FLASH-006, INV-095, Q-386, Q-388
     function setFlashSource(
         address newSource
     ) external {
@@ -166,8 +145,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         emit IMarketRegistryHubs.FlashSourceSet(previous, newSource);
     }
 
-    /// @notice Body of `approveSpokeCodeHash`.
-    /// @custom:spec REQ-CONFIG-074
     function approveSpokeCodeHash(
         bytes32 codeHash
     ) external {
@@ -179,9 +156,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         emit IMarketRegistryApprovals.SpokeCodeHashApproved(codeHash);
     }
 
-    /// @notice Body of `deployCdpSpoke`: records the standard Aave V4 Spoke that the Aave payload deployed with
-    /// `def.aaveOracle`, or re-approves a recorded Spoke after an Aave DAO upgrade of its implementation.
-    /// @custom:spec REQ-CONFIG-077, REQ-CONFIG-074, REQ-CONFIG-016, REQ-CONFIG-076, REQ-CONFIG-083, Q-281, Q-312, Q-378
     function deployCdpSpoke(
         SpokeDef calldata def
     ) external returns (address spoke) {
@@ -198,8 +172,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
             rec.implementation = def.implementation;
             l.spokeCodeHash[spoke] = def.implementation.codehash;
         } else {
-            // Several CDP Spokes may serve one (Hub, integration, tier): markets that need their own liquidation
-            // settings (REQ-CONFIG-045) get their own Spoke.
             if (
                 l.hubTier[def.hub] != def.riskTier || def.riskTier == RiskTier.None
                     || l.integrationLpVault[def.integrationId] == address(0)
@@ -223,8 +195,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         emit SpokeApproved(spoke, def.hub, def.integrationId, def.implementation, def.aaveOracle);
     }
 
-    /// @notice Body of `enableDebtReserve`.
-    /// @custom:spec REQ-MREG-006, REQ-MREG-007, REQ-MREG-008, REQ-MREG-009, REQ-MREG-032, REQ-CONFIG-079, REQ-CONFIG-081, INV-095, Q-233, Q-386, Q-388, Q-390
     function enableDebtReserve(
         address spoke,
         DebtReserveDef calldata def
@@ -241,10 +211,7 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         _checkAvanaFirstLossReserve(def);
         _checkFlashAndFee(def);
         uint256 cap = _drawCapOf(def.fundingHub, def.hubAssetId, spoke);
-        // REQ-HUB-103 (a): a foreign Spoke's draw cap stays within its cross-Hub line (`_checkFunding` has already
-        // required the line to be open), decided 2026-11-12. The draw cap is in whole asset units and the line in base
-        // units (it is bounded by the First-Loss Reserve's balance); `def.decimals` is the token's own (`_checkAaveReserve`),
-        // and the unbounded cap 2^128 times 10^18 cannot overflow.
+        // A cross-Hub draw cap (whole units) must fit its line (base units); 2^128 * 10^18 cannot overflow.
         if (def.crossHub) {
             uint256 capBase = cap * 10 ** uint256(def.decimals);
             uint256 lineCap = l.crossHubLineCap[def.fundingHub][def.asset][spoke];
@@ -273,8 +240,7 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         l.isDebtAsset[def.asset] = true;
         l.recordedDrawCap[spoke][def.reserveId] = cap;
         cl.drawCapSum = sum;
-        // The liveness bound is read from the ParameterStore, which accepts only an enabled reserve, so it runs after
-        // the record is written; a failure reverts the whole call.
+        // Runs after the record is written: the ParameterStore accepts only an enabled reserve.
         _checkMarketsLive(spoke, def.reserveId, def.asset);
         emit DebtReserveApproved(
             spoke, def.reserveId, def.asset, def.fundingHub, def.hubAssetId, def.priceSource, def.firstLossReserve
@@ -282,8 +248,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         emit IMarketRegistryCreditLines.CreditLineRecorded(def.fundingHub, def.asset, spoke, cap, sum);
     }
 
-    /// @notice Body of `removeDebtReserve`.
-    /// @custom:spec REQ-MREG-010, REQ-MREG-033, Q-233, Q-260, Q-397
     function removeDebtReserve(
         address spoke,
         uint256 reserveId
@@ -313,7 +277,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         emit DebtReserveRemoved(spoke, reserveId);
     }
 
-    /// @dev The Spoke an AaveOracle serves; `InvalidSpoke` when the oracle reports none or cannot be read.
     function _spokeOfOracle(
         address aaveOracle
     ) private view returns (address spoke) {
@@ -326,9 +289,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         if (spoke == address(0)) revert InvalidSpoke(address(0));
     }
 
-    /// @dev REQ-CONFIG-074 and REQ-CONFIG-016: the Spoke's oracle is `def.aaveOracle` with 8 decimals, and the
-    /// implementation in its proxy's EIP-1967 slot (read through `extSload` in the proxy's storage) is
-    /// `def.implementation`, whose code hash is approved.
     function _requireStandardSpoke(
         address spoke,
         SpokeDef calldata def
@@ -342,7 +302,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         ) revert InvalidSpoke(spoke);
     }
 
-    /// @dev Removes `id` from `ids`, keeping the order of the others.
     function _removeId(
         uint256[] storage ids,
         uint256 id

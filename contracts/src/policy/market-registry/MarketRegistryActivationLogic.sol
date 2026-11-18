@@ -24,36 +24,24 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title MarketRegistryActivationLogic
 /// @notice Bodies of `activateMarket`, `cancelRegistration` and `setMarketOffboarding`. Short delay.
-/// @dev Reached only by delegatecall from the MarketRegistry, which checks `APPLICATION_ADMIN` first; see
-/// `IMarketRegistryLogic`. Every external call is a view. Activation writes the reserve identifiers first, because the
-/// RiskModule's drift check reads them from the market record; any failed check reverts the whole call, so a market
-/// that fails activation stays `Registered` with no identifiers (REQ-CONFIG-066).
-/// @custom:spec REQ-CONFIG-012, REQ-CONFIG-013, REQ-CONFIG-036, REQ-CONFIG-042, REQ-CONFIG-043, REQ-CONFIG-044, REQ-CONFIG-045, REQ-CONFIG-046, REQ-CONFIG-047, REQ-CONFIG-048, REQ-CONFIG-066, REQ-CONFIG-073, REQ-CONFIG-076, REQ-MREG-015, REQ-MREG-030, REQ-MREG-032
-// Each function carries the body of a selector declared in an IMarketRegistry piece that the MarketRegistry itself
-// implements; this contract inherits no piece, since each piece also declares functions another contract serves.
+/// @dev Runs by delegatecall from the MarketRegistry, except `marketDrift`, which is called directly.
+// Bodies of IMarketRegistry selectors; this contract inherits no interface piece.
 // solhint-disable comprehensive-interface
-// Every external call made here is a view (STATICCALL), so none can re-enter the registry or reorder its events.
+// Every external call here is a view, so none can re-enter the registry.
 // forge-lint: disable-start(reentrancy-events)
 // ParameterStore liveness views over the Spoke's enabled debt reserves; views only.
 // forge-lint: disable-start(calls-loop)
 contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketRegistryLogic, IMarketRegistryDriftLogic {
-    /// @notice Fixes the implementation immutables; they must equal the MarketRegistry's.
-    /// @param im The per-chain Avana addresses.
-    /// @custom:spec REQ-CONFIG-005
     constructor(
         MarketRegistryImmutables memory im
     ) MarketRegistryStorage(im) {}
 
     /// @inheritdoc IMarketRegistryLogic
-    /// @custom:spec REQ-CONFIG-005
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("MarketRegistryActivationLogic"), _IMMUTABLES_HASH);
     }
 
     /// @inheritdoc IMarketRegistryDriftLogic
-    /// @dev Called directly by the registry's `spokeSettingsDrift` (not delegatecalled): it reads no registry storage.
-    /// Every Aave read is a `try`, so a failed read reports `ReserveIdentity` and the view fails closed.
-    /// @custom:spec REQ-CONFIG-076, REQ-ADAPTER-028, REQ-ADAPTER-029, REQ-ADAPTER-030
     function marketDrift(
         address spoke,
         address homeHub,
@@ -88,8 +76,6 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
         return DriftReason.None;
     }
 
-    /// @notice Body of `activateMarket`.
-    /// @custom:spec REQ-CONFIG-042, REQ-CONFIG-043, REQ-CONFIG-044, REQ-CONFIG-045, REQ-CONFIG-046, REQ-CONFIG-047, REQ-CONFIG-036, REQ-CONFIG-076, REQ-MREG-032, REQ-CONFIG-073
     function activateMarket(
         uint256 marketId
     ) external {
@@ -125,8 +111,6 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
         emit MarketActivated(marketId, block.chainid, m.spoke, reserveId, m.hub, assetId);
     }
 
-    /// @notice Body of `cancelRegistration`.
-    /// @custom:spec REQ-CONFIG-048, REQ-MREG-030, Q-265
     function cancelRegistration(
         uint256 marketId
     ) external {
@@ -141,8 +125,6 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
         emit MarketRegistrationCancelled(marketId);
     }
 
-    /// @notice Body of `setMarketOffboarding`.
-    /// @custom:spec REQ-CONFIG-013, REQ-MREG-015, REQ-CONFIG-080, Q-227
     function setMarketOffboarding(
         uint256 marketId
     ) external {
@@ -166,8 +148,6 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
         emit MarketOffboarding(marketId);
     }
 
-    /// @dev REQ-CONFIG-042: the vault token's Hub asset and its CDP Spoke reserve; Aave reverts for either missing,
-    /// reported as `ActivationCheckFailed`.
     function _resolveReserve(
         uint256 marketId,
         Market storage m
@@ -184,9 +164,6 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
         }
     }
 
-    /// @dev REQ-CONFIG-044, REQ-CONFIG-045, REQ-CONFIG-047 and REQ-CONFIG-076 on the reserve's latest dynamic key: not
-    /// paused or frozen, `0 < CF ≤ CF_LP`, `⌈maxLB × CF / 10^4⌉ < 10^4`, liquidation fee 0, Hub liquidity fee 0,
-    /// target health factor above 1 and equal to the ParameterStore's, and the minimum bonus at least the expected.
     function _checkReserve(
         uint256 marketId,
         Market storage m,
@@ -218,10 +195,7 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
         _checkFeeBound(marketId, _BPS + (maxLb - _BPS) * lc.liquidationBonusFactor / _BPS);
     }
 
-    /// @dev LIQ-I1: the slippage allowance `s` leaves the Avana fee intact at the smallest bonus `b = minLB`,
-    /// `s × b ≤ (10^4 − f) × (b − 10^4)` in bps with `f = avanaFeeShareBps`. A keeper that sandwiches its own legs down
-    /// to the recovery floor `V(1 − s) − U − ε` pays `A = min(f(V − D), V(1 − s) − U − ε − D)`, with `V = bD`; above
-    /// this bound the second term is the smaller and the fee shrinks. Example: `b = 10,500`, `f = 2,000`: `s ≤ 380`.
+    /// @dev The slippage allowance must leave the Avana fee intact at the smallest liquidation bonus.
     function _checkFeeBound(
         uint256 marketId,
         uint256 minLb
@@ -231,9 +205,7 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
         if (f > _BPS || s * minLb > (_BPS - f) * (minLb - _BPS)) revert ActivationCheckFailed(marketId, "feeBound");
     }
 
-    /// @dev REQ-CONFIG-046: market parameters, caps and `minPledgeUsd` set, and the Hub `addCap` at least
-    /// `⌈(marketUsdCap + topUpSliceUsd) / stressFloorUsd⌉` whole tokens, or `MAX_ALLOWED_SPOKE_CAP` (SPEC-CAP-006 at
-    /// listing, counters 0).
+    /// @dev Market parameters and caps are set, and the Hub `addCap` covers the market's USD cap at its stress floor.
     function _checkParamsAndCap(
         uint256 marketId,
         Market storage m
@@ -253,9 +225,6 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
         }
     }
 
-    /// @dev REQ-CONFIG-036, REQ-CONFIG-047: listing margin on every route, the registration checks still holding
-    /// (tokens listed, common-mode guard), the LPOracle's configuration check and Live state, and an Active primary
-    /// and backup swap route from every pool token into every enabled debt asset of the Spoke other than itself.
     function _checkOracleAndRoutes(
         uint256 marketId,
         Market storage m,
@@ -278,7 +247,6 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
         if (!covered) revert ActivationCheckFailed(marketId, "routes");
     }
 
-    /// @dev REQ-MREG-032: the liquidation liveness bound against every enabled debt reserve of the Spoke.
     function _checkLiveness(
         uint256 marketId,
         address spoke

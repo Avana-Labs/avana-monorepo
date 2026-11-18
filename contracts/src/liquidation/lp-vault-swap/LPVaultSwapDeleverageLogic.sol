@@ -24,27 +24,15 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-// The repayment loop makes at most MAX_REPAY_TRANSFERS (4) transfers to the flash source (REQ-SWAP-122); a revert
-// reverts the deleverage.
+// The repayment loop makes at most MAX_REPAY_TRANSFERS transfers to the flash source.
 // forge-lint: disable-start(calls-loop)
-// FlashLoanUsed and Deleveraged report the premium and amounts known only after the loan; the body runs under the
-// AaveAdapter's Lock, and onFlashLoan accepts only the registry's source inside the stored context (REQ-SWAP-013).
+// The events report amounts known only after the loan; the body runs under the AaveAdapter's Lock.
 // forge-lint: disable-start(reentrancy-events)
 /// @title LPVaultSwapDeleverageLogic
 /// @notice Bodies of `deleverage` and its flash callback `onFlashLoan`, run by delegatecall from the LPVaultSwap
-/// implementation in the proxy's storage: the swap side of the AaveAdapter's `repayWithCollateral`, the only LPVaultSwap
-/// path that takes a flash loan.
-/// @dev `deleverage` checks the caller and the Lock holder (`NotAdapter`), the market, the debt reserve, both price
-/// rules and Hub shares, sizes `x` (SPEC-LIQ-020), checks the flash source (`FlashSourceIsHub`, `FlashLiquidityShort`,
-/// `FlashFeeTooHigh`), opens a transient context bound to the hash of the encoded sizing context and calls
-/// `flashLoan`. `onFlashLoan` checks the context and the measured principal `Fr`, repays `Fr` of the debt through the
-/// AaveAdapter, has it release `units` to LPVaultSwap, swaps the released tokens at `sLeg = slippageAllowanceBps`,
-/// requires `R >= x + φ`, brings the flash source up to `x + φ` by at most `MAX_REPAY_TRANSFERS` balance-delta
-/// transfers and sends route residues and dust legs to the borrower's wallet. After `flashLoan` returns, `deleverage`
-/// sends the debt asset left, measured by balance, to the wallet. No bonus, fee, keeper payout or escrow applies.
-/// @custom:spec REQ-SWAP-013, REQ-SWAP-106, REQ-SWAP-116, REQ-SWAP-122, REQ-SWAP-124, REQ-FLASH-002, REQ-FLASH-004, REQ-FLASH-005, REQ-FLASH-006, REQ-FLASH-009, SPEC-LIQ-015, SPEC-LIQ-020, Q-255
-// The selectors of ILPVaultSwapDeleverage and IFlashReceiver are served by LPVaultSwap, which delegates them here;
-// this body inherits neither, since LPVaultSwap declares them.
+/// implementation in the proxy's storage.
+/// @dev The callback is bound to a transient context opened by `deleverage` and keyed to the hash of its data.
+// LPVaultSwap declares these selectors and delegates them here, so this contract inherits neither interface.
 // solhint-disable comprehensive-interface
 // forge-lint: disable-next-item(missing-inheritance)
 contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
@@ -57,15 +45,11 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
     /// @notice Value `onFlashLoan` returns: `keccak256("IFlashReceiver.onFlashLoan")`.
     bytes32 internal constant _ON_FLASH_LOAN_MAGIC = 0xc99b2efbd4a3126f78eb0b8a8822446a13d4407f62732d30b5cc5cb0f957115c;
 
-    /// @notice Context states: none, a loan requested and awaiting the callback, the callback ran.
     uint256 private constant _STATE_NONE = 0;
     uint256 private constant _STATE_OPEN = 1;
     uint256 private constant _STATE_CALLED = 2;
 
-    /// @notice ERC-7201 transient base slot of the deleverage context:
-    /// `keccak256(abi.encode(uint256(keccak256("avana.lpvaultswap.deleverage")) - 1)) & ~bytes32(uint256(0xff))`. The
-    /// state sits at the base; the context hash, flash source, asset, amount `F`, LPVaultSwap's balance before the
-    /// loan, the recovery `R`, the premium and the debt repaid at the next eight slots.
+    /// @notice ERC-7201 transient base slot of the deleverage context; the other values sit at the next eight slots.
     bytes32 private constant _STATE_SLOT = 0x2fedc8c0c549405a7945459f775cbb80cfe11288ab144f5ef2460ebaf39ee400;
     bytes32 private constant _HASH_SLOT = 0x2fedc8c0c549405a7945459f775cbb80cfe11288ab144f5ef2460ebaf39ee401;
     bytes32 private constant _SOURCE_SLOT = 0x2fedc8c0c549405a7945459f775cbb80cfe11288ab144f5ef2460ebaf39ee402;
@@ -76,7 +60,6 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
     bytes32 private constant _PREMIUM_SLOT = 0x2fedc8c0c549405a7945459f775cbb80cfe11288ab144f5ef2460ebaf39ee407;
     bytes32 private constant _REPAID_SLOT = 0x2fedc8c0c549405a7945459f775cbb80cfe11288ab144f5ef2460ebaf39ee408;
 
-    /// @dev The sizing context `deleverage` passes through the flash source to its callback, bound by its hash.
     struct FlashContext {
         DeleverageRequest r;
         address hub;
@@ -93,21 +76,16 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
     }
 
     /// @notice Fixes the implementation immutables; they must equal the implementation's.
-    /// @param im The per-chain addresses and the keeper floor.
-    /// @custom:spec REQ-SWAP-040
     constructor(
         LPVaultSwapImmutables memory im
     ) LPVaultSwapStorage(im) {}
 
     /// @inheritdoc ILPVaultSwapLogic
-    /// @custom:spec REQ-SWAP-040
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("LPVaultSwapDeleverageLogic"), _IMMUTABLES_HASH);
     }
 
     /// @notice Body of `deleverage`.
-    /// @dev See `ILPVaultSwapDeleverage.deleverage`; the implementation forwards its calldata unchanged.
-    /// @custom:spec REQ-SWAP-106, REQ-SWAP-116, REQ-FLASH-002, REQ-FLASH-005, REQ-FLASH-009
     function deleverage(
         DeleverageRequest calldata r
     ) external returns (uint256 debtRepaid, uint256 assetOut) {
@@ -116,9 +94,6 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
         (debtRepaid, assetOut) = _runFlash(_prepare(r));
     }
 
-    /// @dev Opens the context, takes the flash loan, reads the callback's results, clears the context, sends the debt
-    /// asset left to the wallet and emits `Deleveraged`.
-    /// @custom:spec REQ-SWAP-106, REQ-SWAP-013, SPEC-LIQ-020
     function _runFlash(
         FlashContext memory fc
     ) private returns (uint256 debtRepaid, uint256 assetOut) {
@@ -140,17 +115,13 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
         uint256 premium = _PREMIUM_SLOT.asUint256().tload();
         debtRepaid = _REPAID_SLOT.asUint256().tload();
         _clear();
-        // SPEC-LIQ-020: the borrower receives R − x − φ, with x the debt the AaveAdapter repaid (the flash amount F,
-        // less any part Aave returned unconsumed, which then stays the borrower's); `_settleLoan` already required
-        // R ≥ F + φ. It is paid out of the balance change over the loan: a donation above it is not paid out, and a
-        // transfer fee that made the source's repayment cost more (REQ-SWAP-122) comes out of it.
+        // Capped at the balance change over the loan, so a donation is not paid out.
         uint256 afterLoan = asset.balanceOf(address(this));
         assetOut = Math.min(
             afterLoan - Math.min(afterLoan, before), SettlementMath.deleverageAssetOut(recovered, debtRepaid, premium)
         );
         if (assetOut != 0) asset.safeTransfer(fc.r.wallet, assetOut);
-        // The flash source is the registry's, the Lock is the AaveAdapter's and the context is cleared above, so no
-        // reentrant call can interleave with this log.
+        // The context is cleared and the Lock is the AaveAdapter's, so no reentrant call can interleave.
         // forge-lint: disable-next-line(reentrancy-events)
         emit Deleveraged(
             fc.r.proxy, fc.r.marketId, fc.r.debtReserveId, fc.r.units, debtRepaid, recovered, premium, assetOut
@@ -158,8 +129,6 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
     }
 
     /// @notice Body of `onFlashLoan`.
-    /// @dev See `IFlashReceiver.onFlashLoan` and REQ-SWAP-013; the implementation forwards its calldata unchanged.
-    /// @custom:spec REQ-SWAP-013, REQ-SWAP-054, REQ-SWAP-106, REQ-SWAP-122, REQ-FLASH-004
     function onFlashLoan(
         address asset,
         uint256 amount,
@@ -177,10 +146,6 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
         magic = _ON_FLASH_LOAN_MAGIC;
     }
 
-    /// @dev `InvalidFlashCallback` unless the context is open, the caller is the context's and the registry's flash
-    /// source, the Lock is the AaveAdapter's, the data hashes to the context, the asset and amount match and the
-    /// principal received `Fr` (balance rise since the loan was requested) is in `(0, amount]`. Returns `Fr`.
-    /// @custom:spec REQ-SWAP-013, REQ-SWAP-054, REQ-SWAP-108
     function _checkCallback(
         address asset,
         uint256 amount,
@@ -198,9 +163,6 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
         if (received == 0 || received > amount) revert InvalidFlashCallback();
     }
 
-    /// @dev Inside the loan: repays `Fr` of the debt through the AaveAdapter, releases and swaps, requires
-    /// `R >= x + φ`, repays the flash source by balance delta and sends residues and dust legs to the wallet.
-    /// @custom:spec REQ-SWAP-106, REQ-SWAP-121, REQ-SWAP-122
     function _settleLoan(
         FlashContext memory fc,
         uint256 received,
@@ -221,8 +183,6 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
         }
     }
 
-    /// @dev Market, debt reserve, price rules, Hub shares and the sizing of `x` (SPEC-LIQ-020).
-    /// @custom:spec REQ-SWAP-106, SPEC-LIQ-020
     function _prepare(
         DeleverageRequest calldata r
     ) private returns (FlashContext memory fc) {
@@ -255,9 +215,6 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
         );
     }
 
-    /// @dev The registry's flash source: `FlashSourceIsHub` if its lender is a recorded Hub, `FlashLiquidityShort` if
-    /// it cannot lend `x`, `FlashFeeTooHigh` if its quote breaks the exact cap.
-    /// @custom:spec REQ-FLASH-002, REQ-FLASH-005, REQ-FLASH-006, REQ-FLASH-009, REQ-SWAP-097, REQ-SWAP-099
     function _checkSource(
         FlashContext memory fc
     ) private view returns (address source) {
@@ -270,9 +227,6 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
         if (!SettlementMath.flashPremiumWithinCap(quote, fc.repayment, fc.maxFlashFeeBps)) revert FlashFeeTooHigh();
     }
 
-    /// @dev The AaveAdapter releases `units` to LPVaultSwap; the released tokens are swapped at `sLeg = s`; returns `R`
-    /// over the release and the route calls, and the tracked residues.
-    /// @custom:spec REQ-SWAP-106, REQ-SWAP-121, SPEC-LIQ-018
     function _releaseAndSwap(
         FlashContext memory fc
     ) private returns (uint256 recovered, Tracked memory t) {
@@ -281,7 +235,7 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
         t = _snapshot(fc.tokens, fc.asset);
         uint256 r0 = asset.balanceOf(address(this));
         uint256[] memory mins = fc.r.minAmounts.length == 0 ? new uint256[](n) : fc.r.minAmounts;
-        // The released amounts are measured as LPVaultSwap balance changes (REQ-SWAP-108), never read from returns.
+        // The released amounts are measured as balance changes, never read from returns.
         // forge-lint: disable-next-line(unused-return)
         IAaveAdapter(_AAVE_ADAPTER).deleverageRelease(fc.r.proxy, fc.r.position, fc.r.units, mins);
         _swapLegs(_legArgs(fc, _released(t, n)), t);
@@ -289,7 +243,6 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
         recovered = r1 > r0 ? r1 - r0 : 0;
     }
 
-    /// @dev Leg inputs of `deleverage`: `sLeg = slippageAllowanceBps`, `PrimaryThenBackup`.
     function _legArgs(
         FlashContext memory fc,
         uint256[] memory amounts
@@ -309,15 +262,7 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
         });
     }
 
-    /// @dev REQ-SWAP-122: at most `MAX_REPAY_TRANSFERS` times, read the source's balance, stop at `owed`, else send
-    /// the difference; then `FlashRepayShort(balance, owed)` unless the source holds `owed`.
-    /// A balance donated to the source counts toward `owed` (LIQ-I2): it reduces this repayment, so LPVaultSwap's
-    /// balance change over the loan exceeds `R − x − φ` by the donation. `_runFlash` pays `assetOut` capped at
-    /// `SettlementMath.deleverageAssetOut(R, x, φ)`, so the donation is not paid to this borrower: it stays in
-    /// LPVaultSwap, outside every later before/after delta. Kept on purpose: only the donor loses, the source forwards
-    /// only what the Pool delivered, and topping up to `owed + donation` would strand the donation in a source with no
-    /// sweep. Pinned by TEST-080 `donationDoesNotBlockFlashPath`.
-    /// @custom:spec REQ-SWAP-122, REQ-SWAP-124, REQ-SWAP-108
+    /// @dev A balance donated to the source counts toward `owed`; the saving stays in LPVaultSwap.
     function _repaySource(
         IERC20 asset,
         uint256 owed
@@ -332,7 +277,6 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
         if (balance < owed) revert FlashRepayShort(balance, owed);
     }
 
-    /// @dev Empties the transient context.
     function _clear() private {
         _STATE_SLOT.asUint256().tstore(_STATE_NONE);
         _HASH_SLOT.asBytes32().tstore(bytes32(0));

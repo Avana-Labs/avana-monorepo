@@ -4,12 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 /// @notice Bounds shared by every AMM integration, the ledger and the oracles.
-/// @dev `MAX_POOL_TOKENS` bounds every n-token array: a market lists between 2 and 8 tokens (Curve StableSwap-NG and
-/// Balancer pools hold at most 8). `MAX_RECORDS_PER_ACCOUNT_MARKET` bounds the open backing records of one
-/// (PositionProxy, market): a seizure walks at most 16 records, about 4.61M + 16 x 0.17M = 7.33M gas, within the 7.5M
-/// liquidation gas budget and under half the 16.78M per-transaction gas cap, so every account stays liquidatable in
-/// one transaction (AMMN-GAS-01).
-/// @custom:spec REQ-AMM-CORE-002, REQ-VAULT-025, Q-369, Q-370
+/// @dev `MAX_RECORDS_PER_ACCOUNT_MARKET` keeps a seizure within one transaction's gas.
 library AmmConstants {
     uint256 internal constant MIN_POOL_TOKENS = 2;
     uint256 internal constant MAX_POOL_TOKENS = 8;

@@ -16,24 +16,14 @@ import {FeedDef} from "./types/FeedDef.sol";
 import {MarketParams} from "./types/MarketParams.sol";
 
 /// @title ParameterStoreAdminOracleLogic
-/// @notice Bodies of the structural setters of the oracle configuration: feed age limits, tolerances, the consistency window, the USD band, the Cached and disagreement timers, grace and the feed-agreement margin; of the two setters checked against liquidation liveness, the slippage floor and the flash-fee ceiling; and of the views `getOracleConfig` and `liquidationLivenessHolds`. Normal delay, either direction.
-/// @dev Each setter writes, then re-runs `checkConfig` of every LPOracle whose configuration it changes (`OracleConfigRejected`), so no LPOracle is left with a configuration it refuses; the slippage floor and the flash-fee ceiling are in no LPOracle's configuration, and a raise of either re-checks the liquidation-liveness inequality instead (`LivenessBound`). Reached only by delegatecall from the ParameterStore, which checks the caller's role; see
-/// `IParameterStoreLogic`.
-/// @custom:spec REQ-CONFIG-049, REQ-CONFIG-052, REQ-CONFIG-054, REQ-CONFIG-055, REQ-PSTORE-009, REQ-PSTORE-021, REQ-PSTORE-024, REQ-PSTORE-034, SPEC-GOV-012
-// Each function here carries the body of a selector declared in an IParameterStore piece, which the ParameterStore
-// itself implements; this contract inherits only a piece it implements in full, since each other piece also declares
-// functions another contract serves.
+/// @notice Bodies of the structural oracle setters and the views `getOracleConfig` and `liquidationLivenessHolds`.
+/// @dev Runs only by delegatecall from the ParameterStore, which checks the caller's role.
+// Bodies of selectors the ParameterStore declares; only fully implemented pieces are inherited.
 // solhint-disable comprehensive-interface
-// Every external call made by these setters is a view (STATICCALL), so none can re-enter the store or reorder its
-// events; the events follow the checks that need those reads.
+// Every external call here is a view (STATICCALL), so none can re-enter the store or reorder its events.
 // forge-lint: disable-start(reentrancy-events)
 contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLogic {
     /// @notice Fixes the implementation immutables; they must equal the ParameterStore's.
-    /// @param timelock The chain's AvanaTimelock.
-    /// @param marketRegistry The chain's MarketRegistry proxy.
-    /// @param chainBlockTime Seconds per block.
-    /// @param hasSequencer Whether the chain runs an L2 sequencer.
-    /// @custom:spec REQ-PSTORE-001
     constructor(
         address timelock,
         address marketRegistry,
@@ -42,7 +32,6 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
     ) ParameterStoreStorage(timelock, marketRegistry, chainBlockTime, hasSequencer) {}
 
     /// @inheritdoc IParameterStoreLogic
-    /// @custom:spec REQ-PSTORE-001
     function logicConfig()
         external
         view
@@ -52,8 +41,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         return (keccak256("ParameterStoreAdminOracleLogic"), _TIMELOCK, address(_REGISTRY), _BLOCK_TIME, _HAS_SEQUENCER);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setBorrowPriceMaxAge`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-CONFIG-023, REQ-CONFIG-054, REQ-PSTORE-009, SPEC-ORC-019
+    /// @notice Body of `IParameterStoreAdmin.setBorrowPriceMaxAge`.
     function setBorrowPriceMaxAge(
         address feed,
         uint32 value
@@ -67,8 +55,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         _emitFeed(feed, d);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setConsistencyToleranceBps`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-CONFIG-052, REQ-CONFIG-054, REQ-PSTORE-009, SPEC-GOV-012
+    /// @notice Body of `IParameterStoreAdmin.setConsistencyToleranceBps`.
     function setConsistencyToleranceBps(
         uint256 marketId,
         uint16 value
@@ -84,8 +71,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("consistencyToleranceBps", bytes32(marketId), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setFeedAgreementToleranceBps`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-CONFIG-024, REQ-CONFIG-054, REQ-PSTORE-009
+    /// @notice Body of `IParameterStoreAdmin.setFeedAgreementToleranceBps`.
     function setFeedAgreementToleranceBps(
         address token,
         uint16 value
@@ -100,8 +86,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("feedAgreementToleranceBps", _a(token), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setCachedWindow`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-CONFIG-049, REQ-PSTORE-009, Q-183
+    /// @notice Body of `IParameterStoreAdmin.setCachedWindow`.
     function setCachedWindow(
         uint32 value
     ) external {
@@ -113,8 +98,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("cachedWindow", bytes32(0), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setDisagreementPauseMax`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-CONFIG-052, REQ-PSTORE-009, Q-183
+    /// @notice Body of `IParameterStoreAdmin.setDisagreementPauseMax`.
     function setDisagreementPauseMax(
         uint32 value
     ) external {
@@ -126,8 +110,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("disagreementPauseMax", bytes32(0), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setTwapWindow`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-CONFIG-038, REQ-CONFIG-054, REQ-PSTORE-009, REQ-PSTORE-027, REQ-PSTORE-034
+    /// @notice Body of `IParameterStoreAdmin.setTwapWindow`.
     function setTwapWindow(
         uint256 marketId,
         uint32 value
@@ -142,8 +125,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("twapWindow", bytes32(marketId), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setUsdBand`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-CONFIG-055, REQ-CONFIG-054, REQ-PSTORE-009
+    /// @notice Body of `IParameterStoreAdmin.setUsdBand`.
     function setUsdBand(
         uint256 low,
         uint256 high
@@ -159,8 +141,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("usdBandHigh", bytes32(0), oldHigh, high);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setLiquidationPriceMaxAge`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-CONFIG-023, REQ-CONFIG-052, SPEC-ORC-019
+    /// @notice Body of `IParameterStoreAdmin.setLiquidationPriceMaxAge`.
     function setLiquidationPriceMaxAge(
         address feed,
         uint32 value
@@ -171,13 +152,11 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         if (value < formula) revert LivenessBound();
         if (value > formula) revert OutOfBounds();
         d.liquidationPriceMaxAge = value;
-        // An age limit moves no tolerance bound, so only the LPOracles' checks run again.
         _recheck(SCOPE_FEED, feed, false);
         _emitFeed(feed, d);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setFeedMaxAge`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-CONFIG-023, REQ-CONFIG-054, REQ-ORACLE-002, SPEC-ORC-019
+    /// @notice Body of `IParameterStoreAdmin.setFeedMaxAge`.
     function setFeedMaxAge(
         address feed,
         uint32 value
@@ -186,13 +165,11 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         FeedDef storage d = _feed(feed);
         if (value != uint256(d.feedHeartbeat) + d.heartbeatMargin) revert OutOfBounds();
         d.feedMaxAge = value;
-        // An age limit moves no tolerance bound, so only the LPOracles' checks run again.
         _recheck(SCOPE_FEED, feed, false);
         _emitFeed(feed, d);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setGraceDuration`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-CONFIG-052, REQ-PSTORE-009, SPEC-GOV-012, Q-246
+    /// @notice Body of `IParameterStoreAdmin.setGraceDuration`.
     function setGraceDuration(
         uint32 value
     ) external {
@@ -204,8 +181,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("graceDuration", bytes32(0), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setGraceHealthFactor`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-CONFIG-052, SPEC-GOV-012, Q-246
+    /// @notice Body of `IParameterStoreAdmin.setGraceHealthFactor`.
     function setGraceHealthFactor(
         uint256 value
     ) external {
@@ -216,8 +192,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("graceHealthFactor", bytes32(0), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setFeedAgreementMarginBps`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-CONFIG-024, REQ-CONFIG-049
+    /// @notice Body of `IParameterStoreAdmin.setFeedAgreementMarginBps`.
     function setFeedAgreementMarginBps(
         uint16 value
     ) external {
@@ -229,8 +204,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("feedAgreementMarginBps", bytes32(0), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setMaxFlashFeeBps`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-PSTORE-021, REQ-PSTORE-024, REQ-CONFIG-052, Q-335
+    /// @notice Body of `IParameterStoreAdmin.setMaxFlashFeeBps`.
     function setMaxFlashFeeBps(
         uint16 value
     ) external {
@@ -242,8 +216,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("maxFlashFeeBps", bytes32(0), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setSlippageAllowanceMinBps`; the ParameterStore checks the caller's role first.
-    /// @custom:spec REQ-CONFIG-041, REQ-PSTORE-015, REQ-PSTORE-021, Q-261
+    /// @notice Body of `IParameterStoreAdmin.setSlippageAllowanceMinBps`.
     function setSlippageAllowanceMinBps(
         uint256 marketId,
         uint16 value
@@ -258,11 +231,9 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("slippageAllowanceMinBps", bytes32(marketId), old, value);
     }
 
-    // The loop below reads each token's routes in force from the MarketRegistry with view calls; its length is the
-    // market's token count, at most MAX_POOL_TOKENS (8).
+    // The loop below makes one registry view call per market token.
     // forge-lint: disable-start(calls-loop)
-    /// @notice Body of `IParameterStoreViews.getOracleConfig`, run by delegatecall from the ParameterStore's view.
-    /// @custom:spec REQ-CONFIG-072, REQ-PSTORE-011
+    /// @notice Body of `IParameterStoreViews.getOracleConfig`.
     function getOracleConfig(
         address lpOracle
     ) external view returns (OracleConfig memory config) {
@@ -272,9 +243,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         config = _buildConfig(marketId, _REGISTRY.getMarket(marketId));
     }
 
-    /// @notice Body of `IParameterStoreLiquidation.liquidationLivenessHolds`, run by delegatecall from the
-    /// ParameterStore's view.
-    /// @custom:spec REQ-PSTORE-021, Q-261
+    /// @notice Body of `IParameterStoreLiquidation.liquidationLivenessHolds`.
     function liquidationLivenessHolds(
         address spoke,
         uint256 marketId,
@@ -287,11 +256,6 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         holds = _inequality(_minLb(m), _s().market[marketId].slippageAllowanceMinBps, _s().g.maxFlashFeeBps);
     }
 
-    /// @dev Builds the configuration of market `marketId` from storage: routes in force, legs from the feed
-    /// definitions, each token's tolerance and second source in force, the market's window and tolerance, and the
-    /// market's USD band (the chain's band for an all-stable market, none otherwise, REQ-ORACLE-056), the chain's
-    /// timers and sequencer check.
-    /// @custom:spec REQ-CONFIG-072, REQ-PSTORE-011, REQ-PSTORE-029
     function _buildConfig(
         uint256 marketId,
         Market memory m
@@ -339,7 +303,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
             l.aggregator = feeds[i];
             l.decimals = d.decimals;
             l.heartbeat = d.feedHeartbeat;
-            // setFeed bounds the margin by MAX_HEARTBEAT_MARGIN (3,600), so it fits uint16.
+            // setFeed bounds the margin by MAX_HEARTBEAT_MARGIN, so it fits uint16.
             // forge-lint: disable-next-line(unsafe-typecast)
             l.heartbeatMargin = uint16(d.heartbeatMargin);
             l.feedDeviationThresholdBps = d.feedDeviationThresholdBps;
@@ -350,9 +314,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         }
     }
 
-    /// @dev Saturates a pinned bound into `int128`: a minimum below the range rises and a maximum above it falls, so
-    /// the leg accepts no answer the aggregator's own bounds reject.
-    /// @custom:spec REQ-CONFIG-072
+    /// @dev Saturates into `int128` toward the inside of the range, so the leg accepts nothing the aggregator rejects.
     function _clamp(
         int256 v
     ) private pure returns (int128) {

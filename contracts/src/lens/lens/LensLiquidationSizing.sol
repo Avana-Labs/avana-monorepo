@@ -11,23 +11,13 @@ import {ILensSpokeReads} from "./ILensSpokeReads.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensLiquidationSizing
-/// @notice Aave V4's liquidation sizing at the pinned Spoke version (a3ef63e), from the pinned `LiquidationLogic` source
-/// rather than rewritten (`LensAaveSizing`, built with Aave's settings, called by STATICCALL): the debt to restore the target health factor at the current bonus,
-/// capped by the account's debt and by the collateral, raised by Aave's dust rule, and the shares Aave seizes for it.
-/// @dev Inputs are the Spoke's own reads of the same block: account data, positions, the account's dynamic
-/// configuration key, the AaveOracle prices, the drawn index and the premium debt in RAY. The caller's `debtToCover` is
-/// unbounded here, so the result is Aave's sizing before its `MustNotLeaveDust` check; a call sending at least
-/// `debtRepaid` executes with the same sizing.
-/// @custom:spec REQ-LENS-017, REQ-LENS-029, REQ-LENS-003, Q-232, Q-268
+/// @notice Aave V4's liquidation sizing, called on `LensAaveSizing` built from Aave's own `LiquidationLogic`.
+/// @dev `debtToCover` is unbounded here, so the result is Aave's sizing before its `MustNotLeaveDust` check.
 library LensLiquidationSizing {
-    /// @dev RAY, Aave's 27-decimal unit.
     uint256 internal constant RAY = 1e27;
 
-    /// @notice One sizing.
-    /// @param debtRepaid `D`: drawn shares times the drawn index rounded up plus the premium rounded up, debt-asset base
-    /// units, as Aave pulls it.
-    /// @param unitsSeized `c`: the vault-token units Aave removes from the Hub for the liquidator (fee shares excluded).
-    /// @param drawnShares Drawn shares Aave liquidates.
+    /// @param debtRepaid Debt Aave pulls, debt-asset base units, rounded up.
+    /// @param unitsSeized Vault-token units Aave seizes for the liquidator (fee shares excluded).
     /// @param premiumDebtRay Premium debt Aave liquidates, RAY.
     /// @param wholeDebt Every drawn share is liquidated.
     /// @param allCollateral Every supplied share is seized.
@@ -40,16 +30,8 @@ library LensLiquidationSizing {
         bool allCollateral;
     }
 
-    /// @notice Aave's sizing of a liquidation of `proxy` seizing `collateralReserveId` to repay `debtReserveId`; zero
-    /// when Aave would refuse it (health factor at or above 1e18, nothing supplied or borrowed, collateral disabled or
-    /// at a zero collateral factor).
+    /// @notice Aave's sizing of a liquidation of `proxy`; zero when Aave would refuse it.
     /// @param sizing `LensAaveSizing`.
-    /// @param spoke The CDP Spoke.
-    /// @param proxy The account.
-    /// @param collateralReserveId The vault-token reserve.
-    /// @param debtReserveId The debt reserve.
-    /// @return s The sizing.
-    /// @custom:spec REQ-LENS-017, REQ-LENS-029
     function size(
         address sizing,
         address spoke,
@@ -70,8 +52,7 @@ library LensLiquidationSizing {
         s.allCollateral = r.collateralSharesToLiquidate == a.suppliedShares;
     }
 
-    /// @dev The sizing inputs as `liquidationCall` builds them; `ok` is false when Aave's validation would refuse
-    /// the call for a reason sizing cannot change.
+    /// @dev Sizing inputs as `liquidationCall` builds them; `ok` false when Aave's validation would refuse the call.
     function _inputs(
         address spoke,
         address proxy,

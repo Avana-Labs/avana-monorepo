@@ -25,24 +25,16 @@ import {PositionFeesView} from "./types/PositionFeesView.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensFees
-/// @notice Uncollected fees of Uniswap v3 and Aerodrome Slipstream positions, computed from the pool's fee growth as the
-/// position manager computes them inside `collect`, so the amount shown is the amount `collectFees` pays.
-/// @dev `feeGrowthInside` is v3-core's `Tick.getFeeGrowthInside` and the owed update is v3-periphery's
-/// `NonfungiblePositionManager.collect`, both in wrapping arithmetic as in the 0.7 sources (Slipstream keeps the same
-/// two steps). Bounded by the 16 records of an account-market.
-/// @custom:spec REQ-LENS-050, REQ-LENS-051
-// View calls in a loop over the at most 16 records of one account-market (REQ-LENS-020).
+/// @notice Uncollected fees of concentrated-liquidity positions, as the position manager computes them on `collect`.
+/// @dev Uses wrapping arithmetic, as the 0.7 Uniswap sources do.
+// Loops over the at most 16 records of one account-market.
 // forge-lint: disable-start(calls-loop)
 abstract contract LensFees is LensBase, ILensFees {
-    /// @dev `AMM_PROTOCOL()` of the Uniswap v3 LPVault.
     bytes32 internal constant UNISWAP_V3 = keccak256("UNISWAP_V3");
-    /// @dev `AMM_PROTOCOL()` of the Aerodrome Slipstream LPVault.
     bytes32 internal constant AERODROME_SLIPSTREAM = keccak256("AERODROME_SLIPSTREAM");
     bytes32 internal constant UNISWAP_V4 = keccak256("UNISWAP_V4");
-    /// @dev 2^128, the fixed-point base of fee growth.
     uint256 internal constant Q128 = 1 << 128;
 
-    /// @dev A concentrated-liquidity position and its pool, as read for the fee update.
     struct ClFees {
         address token0;
         address token1;
@@ -60,7 +52,6 @@ abstract contract LensFees is LensBase, ILensFees {
     }
 
     /// @inheritdoc ILensFees
-    /// @custom:spec REQ-LENS-050, REQ-LENS-005, REQ-LENS-006, REQ-LENS-022
     function getPositionFees(
         uint256 marketId,
         bytes32 positionKey
@@ -70,7 +61,6 @@ abstract contract LensFees is LensBase, ILensFees {
     }
 
     /// @inheritdoc ILensFees
-    /// @custom:spec REQ-LENS-051, REQ-LENS-005, REQ-LENS-006, REQ-LENS-022
     function getAccountFees(
         address wallet,
         uint256 marketId
@@ -89,10 +79,7 @@ abstract contract LensFees is LensBase, ILensFees {
         }
     }
 
-    // ------------------------------------------------------------------------------------------------------ internal
-
-    /// @dev The fee view of one position; `supported` false (amounts 0) for an AMM protocol without a fee reader, fees
-    /// that roll into the position, or a position outside the market's pool.
+    /// @dev The fee view of one position; `supported` false for an unsupported protocol or a position outside the pool.
     function _positionFees(
         uint256 marketId,
         Market memory m,
@@ -132,7 +119,6 @@ abstract contract LensFees is LensBase, ILensFees {
         }
     }
 
-    /// @dev Reads a Uniswap v3 position and its pool's fee growth.
     function _v3Fees(
         ClMarketConfig memory c,
         uint256 tokenId
@@ -149,7 +135,6 @@ abstract contract LensFees is LensBase, ILensFees {
         f.outsideUpper = [upper.feeGrowthOutside0X128, upper.feeGrowthOutside1X128];
     }
 
-    /// @dev Reads a Slipstream position and its pool's fee growth.
     function _slipstreamFees(
         ClMarketConfig memory c,
         uint256 tokenId
@@ -166,11 +151,7 @@ abstract contract LensFees is LensBase, ILensFees {
         f.outsideUpper = [upper.feeGrowthOutside0X128, upper.feeGrowthOutside1X128];
     }
 
-    /// @dev Copies the position's tokens, pool parameter, range, liquidity, snapshots and owed tokens.
-    /// @dev `REQ-AMM-V4-010`: a v4 position of the market's PoolId and range; its liquidity and last fee growth from the
-    /// PoolManager (owner the PositionManager, salt the token ID), `feeGrowthInside` at the pool's tick and the fees
-    /// `Position.update` would credit, all unchecked as the PoolManager computes them. v4 keeps no `tokensOwed`, so
-    /// `tokensOwed` stays 0 and `amounts` are the accrued fees.
+    /// @dev Fees of a v4 position, computed unchecked as the PoolManager does.
     function _v4Fees(
         PositionFeesView memory v,
         IUniswapV4Integration integration,
@@ -209,8 +190,7 @@ abstract contract LensFees is LensBase, ILensFees {
         f.owed = [p.tokensOwed0, p.tokensOwed1];
     }
 
-    /// @dev Token `i` owed after the position manager's update: `tokensOwed + liquidity × (inside − last) / 2^128`, each
-    /// step in the 0.7 sources' wrapping arithmetic (differences mod 2^256, the owed sum mod 2^128).
+    /// @dev Token `i` owed after the position manager's update, in the 0.7 sources' wrapping arithmetic.
     function _owedAfterUpdate(
         ClFees memory f,
         uint256 i
@@ -225,8 +205,7 @@ abstract contract LensFees is LensBase, ILensFees {
         }
     }
 
-    /// @dev v3-core `Tick.getFeeGrowthInside` for one token: global minus the growth below `lower` and above `upper`,
-    /// mod 2^256.
+    /// @dev v3-core `Tick.getFeeGrowthInside` for one token, mod 2^256.
     function _feeGrowthInside(
         int24 tick,
         int24 lower,

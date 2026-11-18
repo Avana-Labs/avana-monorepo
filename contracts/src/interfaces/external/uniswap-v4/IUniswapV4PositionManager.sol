@@ -4,12 +4,8 @@ pragma solidity 0.8.28;
 import {UniswapV4PoolKey} from "./IUniswapV4PoolManager.sol";
 
 /// @title IUniswapV4PositionManager
-/// @notice Subset of the Uniswap v4 PositionManager that Avana contracts call. Declarations are copied from
-/// `src/PositionManager.sol` and `src/interfaces/IPositionManager.sol` of Uniswap/v4-periphery 1.0.1 (ea2bf2e), with
-/// `PoolKey` as `UniswapV4PoolKey` and `PositionInfo` as its underlying `uint256` (same ABI and selectors).
-/// @dev Called by: Uniswap v4 LPVault, Lens. `PositionInfo` packs, from the most significant bit: the first 25 bytes
-/// of the `PoolId`, `tickUpper` (24 bits at offset 32), `tickLower` (24 bits at offset 8) and `hasSubscriber` (the low
-/// 8 bits).
+/// @notice Subset of the Uniswap v4 PositionManager that Avana calls.
+/// @dev Copied from Uniswap/v4-periphery 1.0.1, with `PositionInfo` as its underlying `uint256` (same ABI).
 interface IUniswapV4PositionManager {
     /// @notice Runs a batch of actions inside one `PoolManager.unlock`; `unlockData = abi.encode(bytes actions,
     /// bytes[] params)`. Reverts after `deadline`.

@@ -17,23 +17,15 @@ import {RecordRemoval} from "./types/RemovalSizing.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensAccountMath
-/// @notice The account arithmetic the position, action and sizing views share: Aave's health factor of an account with
-/// one collateral market, its liquidation price, collateral factors, the rescue exclusion, Aave's repay arithmetic and
-/// the account's records.
-/// @dev Health factors in WAD, Aave values in USD × 1e26 (`amount × price × 10^(18 − decimals)`, Aave's `toValue`),
-/// debt values in Aave value × RAY. Aave's health factor of an account whose one collateral reserve has factor `CF`
-/// (bps) and value `C` is `⌊CF × C × 1e14 × RAY / debtRay⌋` (`Spoke._processUserAccountData`).
-/// @custom:spec REQ-LENS-047, REQ-LENS-049, REQ-LENS-052, REQ-LENS-053, REQ-LENS-054, REQ-LENS-056
-// View calls in a loop over the at most 16 records of one account-market (REQ-LENS-020).
+/// @notice Shared account arithmetic: Aave's health factor, liquidation price, collateral factors and repay math.
+/// @dev Health factors in WAD, Aave values as in Aave's `toValue`, debt values in Aave value × RAY.
+// Loops over the at most 16 records of one account-market.
 // forge-lint: disable-start(calls-loop)
 abstract contract LensAccountMath is LensBase {
-    /// @dev RAY.
     uint256 internal constant RAY_ = 1e27;
-    /// @dev WAD.
     uint256 internal constant WAD_ = 1e18;
 
-    /// @dev `CF × assets × 10^(18 − d)`: the account's collateral value per unit of 8-decimal price, times its CF (bps).
-    /// @custom:spec REQ-LENS-047
+    /// @dev `CF × assets × 10^(18 − d)`: collateral value per unit of 8-decimal price, times CF (bps).
     function _cfAssets(
         Market memory m,
         address proxy
@@ -59,8 +51,7 @@ abstract contract LensAccountMath is LensBase {
         return IAaveV4Spoke(m.spoke).getDynamicReserveConfig(m.reserveId, key).collateralFactor;
     }
 
-    /// @dev The collateral factor of the reserve's latest dynamic configuration, bps: the one Aave moves an account to
-    /// when a borrow, a withdrawal or `setUsingAsCollateral` refreshes it.
+    /// @dev Collateral factor of the reserve's latest dynamic configuration, bps.
     function _latestCf(
         Market memory m
     ) internal view returns (uint256) {
@@ -68,14 +59,12 @@ abstract contract LensAccountMath is LensBase {
         return IAaveV4Spoke(m.spoke).getDynamicReserveConfig(m.reserveId, key).collateralFactor;
     }
 
-    /// @dev The AaveOracle's served price of the vault-token reserve, 8 decimals.
     function _servedPrice(
         Market memory m
     ) internal view returns (uint256) {
         return IAaveV4Oracle(IAaveV4Spoke(m.spoke).ORACLE()).getReservePrice(m.reserveId);
     }
 
-    /// @dev SPEC-CF-005 rescue exclusion of the account at the served LPOracle price, with collateral factor `cf`.
     function _rescueAt(
         Market memory m,
         address proxy,
@@ -97,9 +86,6 @@ abstract contract LensAccountMath is LensBase {
         return Math.mulDiv(weighted * WAD_, RAY_, debtRay);
     }
 
-    /// @dev Aave's health factor of one collateral of value `collateralValue` and factor `cf` against `debtRay`:
-    /// `⌊cf × collateralValue × 1e14 × RAY / debtRay⌋`.
-    /// @custom:spec REQ-LENS-052, REQ-LENS-053
     function _hfOf(
         uint256 cf,
         uint256 collateralValue,
@@ -109,10 +95,7 @@ abstract contract LensAccountMath is LensBase {
         return Math.mulDiv(cf * collateralValue * 1e14, RAY_, debtRay);
     }
 
-    /// @dev The vault-token price at which the health factor reaches 1.00 with every debt price fixed (REQ-LENS-047):
-    /// `⌈debtRay × 10⁴ / (cf × assets × 10^(18 − d) × RAY)⌉`; 0 without debt, `type(uint256).max` with debt and no
-    /// counted collateral.
-    /// @custom:spec REQ-LENS-047, REQ-LENS-052
+    /// @dev Vault-token price at which the health factor reaches 1.00, rounded up.
     function _liquidationPrice(
         uint256 debtRay,
         uint256 cfAssets
@@ -122,11 +105,7 @@ abstract contract LensAccountMath is LensBase {
         return Math.mulDiv(debtRay, 1e4, cfAssets * RAY_, Math.Rounding.Ceil);
     }
 
-    /// @dev The reserve's debt (asset units × RAY) left after repaying `amount`, as
-    /// `UserPositionUtils.calculateRestoreAmount` and `Spoke.repay` compute it: the whole debt (drawn rounded up plus
-    /// premium rounded up) clears it; below the premium the premium falls by `amount`; otherwise the premium clears and
-    /// `⌊(amount − premium) × RAY / index⌋` drawn shares are restored.
-    /// @custom:spec REQ-LENS-052
+    /// @dev The reserve's debt (asset units × RAY) left after repaying `amount`; drawn shares round down.
     function _restRay(
         uint256 drawnShares,
         uint256 premiumRay,
@@ -141,7 +120,6 @@ abstract contract LensAccountMath is LensBase {
         return (drawnShares - restored) * index;
     }
 
-    /// @dev The account's records in seizure-list order with their credited units after reconciliation.
     function _removals(
         Market memory m,
         address proxy

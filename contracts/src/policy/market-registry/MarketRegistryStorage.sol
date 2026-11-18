@@ -27,38 +27,29 @@ import {WindDownState} from "./types/WindDownState.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /// @title MarketRegistryStorage
-/// @notice Storage layout, implementation immutables, constants and shared checks of the MarketRegistry and of its
-/// six logic contracts.
-/// @dev All mutable state sits in one ERC-7201 namespace, `avana.storage.MarketRegistry`, owned by the registry proxy;
-/// a logic contract reads and writes it only while the registry delegatecalls it. The immutables are the per-chain
-/// Avana addresses of `MarketRegistryImmutables`; Hubs, integrations, Spokes, debt assets, First-Loss Reserves and the
-/// flash source are records, so a new one needs no upgrade (REQ-CONFIG-005).
-/// @custom:spec REQ-CONFIG-001, REQ-CONFIG-002, REQ-CONFIG-005, REQ-CONFIG-014, Q-226, Q-313
+/// @notice Storage layout, immutables, constants and shared checks of the MarketRegistry and its logic contracts.
+/// @dev ERC-7201 namespace `avana.storage.MarketRegistry`; logic contracts touch it only by delegatecall.
 // ParameterStore feed-definition reads in loops over a route's one or two feeds and a market's tokens; views only.
 // forge-lint: disable-start(calls-loop)
 abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistrySafetyEvents, IMarketRegistryErrors {
-    /// @dev A swap-route slot.
     struct RouteRecord {
         address route;
         bool active;
     }
 
-    /// @dev One swap-route slot a market has had set, kept so a later integration-contract record can re-check it
-    /// (REQ-MREG-035).
+    /// @dev A swap-route slot a market has had set, kept for later re-checks.
     struct RouteSlotRef {
         address token;
         address debtAsset;
         uint8 kind;
     }
 
-    /// @dev The key of an integration's record of AMM protocol contracts and whether governance finalized it
-    /// (REQ-MREG-035).
     struct IntegrationRecord {
         bytes32 key;
         bool finalized;
     }
 
-    /// @dev A credit line of (funding Hub, asset): `line` in whole tokens, `drawCapSum` in whole tokens.
+    /// @dev A credit line of (funding Hub, asset), in whole tokens.
     struct CreditLine {
         uint256 line;
         uint256 drawCapSum;
@@ -85,8 +76,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         mapping(address pricing => bool) isPricing;
         address[] spokeList;
         mapping(address spoke => SpokeDef) spokes;
-        /// @dev No longer written or read: several CDP Spokes may share a (Hub, integration, tier). Kept so the layout
-        /// of every later field stays the same.
+        /// @dev Unused; kept for storage layout.
         mapping(bytes32 tripleKey => address) spokeOfTriple;
         address flashSource;
         mapping(address spoke => mapping(uint256 reserveId => DebtReserveDef)) debtReserves;
@@ -111,14 +101,13 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         mapping(bytes32 key => uint64) lastBreachAt;
         mapping(address account => bool) frozen;
         mapping(address caller => mapping(uint64 hour => uint16)) freezeBuckets;
-        // Appended 2026-11-11 (MarketRegistry review fixes); earlier fields keep their slots.
+        // Fields below are appended; earlier fields keep their slots.
         mapping(bytes32 codeHash => bool) approvedSpokeCodeHash;
         mapping(address spoke => bytes32) spokeCodeHash;
         mapping(uint32 integrationId => address[]) integrationContracts;
         mapping(address account => bool) knownIntegrationContract;
         mapping(address token => uint64) standbyCancelledAt;
         mapping(uint256 marketId => uint32) routeEpoch;
-        // Appended fields (integration-contract record, REQ-MREG-035); earlier fields keep their slots.
         mapping(uint32 integrationId => IntegrationRecord) integrationRecords;
         mapping(uint256 marketId => RouteSlotRef[]) routeSlots;
         mapping(bytes32 slotId => bool) routeSlotListed;
@@ -127,27 +116,20 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
     /// @dev `keccak256(abi.encode(uint256(keccak256("avana.storage.MarketRegistry")) - 1)) & ~bytes32(uint256(0xff))`.
     bytes32 private constant _STORAGE_SLOT = 0x598189494afc908fd08b2b882e497a0aa6147de6d30a80184ae623e37f6d8000;
 
-    /// @dev Most address freezes one caller can make in the 24 one-hour buckets ending with the current hour
-    /// (REQ-MREG-019).
+    /// @dev Most address freezes one caller can make in the 24 one-hour buckets ending with the current hour.
     uint256 internal constant _MAX_FREEZES_PER_DAY = 20;
-    /// @dev Decimals of every CDP Spoke's AaveOracle and of every LPOracle and DebtOracle.
     uint8 internal constant _ORACLE_DECIMALS = 8;
     uint256 internal constant _BPS = 10_000;
-    /// @dev Draw cap that stands for `MAX_ALLOWED_SPOKE_CAP` (unbounded) in the credit-line sum: above any line, small
-    /// enough that a sum over every drawing Spoke cannot overflow (SPEC-CAP-010).
+    /// @dev Stand-in for an unbounded draw cap: above any line, yet a sum of them cannot overflow.
     uint256 internal constant _UNBOUNDED_DRAW_CAP = 2 ** 128;
-    /// @dev EIP-1967 implementation slot read through the Spoke's `extSload` (REQ-CONFIG-074).
+    /// @dev EIP-1967 implementation slot read through the Spoke's `extSload`.
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
-    /// @dev Code hash of an account with no code: never an approved Spoke implementation (REQ-CONFIG-074).
     bytes32 internal constant _EMPTY_CODE_HASH = keccak256("");
-    /// @dev How long the Aave DAO's `cancelStandbySwitch` keeps the guardians from switching the same token again: the
-    /// normal delay, so a guardian cannot re-apply what the DAO undid before a timelocked review could (REQ-MREG-028).
+    /// @dev How long a `cancelStandbySwitch` keeps the guardians from switching the same token again.
     uint64 internal constant _STANDBY_RESWITCH_COOLDOWN = 5 days;
-    /// @dev Public notice from `offboardedAt` before the Aave DAO's one liquidation-threshold drop and before
-    /// `closeMarket`, at least the normal delay (REQ-CONFIG-080).
+    /// @dev Offboarding notice before the liquidation-threshold drop and `closeMarket`.
     uint64 internal constant OFFBOARD_NOTICE_SECONDS = 5 days;
-    /// @dev Share of its liquidation threshold at offboarding an offboarding market is lowered to, bps of that
-    /// threshold (`windDownFinalLtBps`, REQ-CONFIG-080): the target is `⌊startLt × 5,000 / 10,000⌋`.
+    /// @dev Target liquidation threshold after offboarding, as a share of the starting threshold, bps.
     uint16 internal constant OFFBOARD_TARGET_SHARE_BPS = 5000;
     uint8 internal constant _PRIMARY = 0;
     uint8 internal constant _BACKUP = 1;
@@ -165,16 +147,13 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
     address internal immutable _PAYOUT_ESCROW;
     address internal immutable _FLASH_LIQUIDATOR;
     address internal immutable _STANDARD_SPOKE_IMPLEMENTATION;
-    /// @dev The most markets the registry ever lists, closed and cancelled ones included (REQ-MREG-034).
+    /// @dev The most markets the registry ever lists, closed and cancelled ones included.
     uint256 internal immutable _MAX_MARKET_COUNT;
     /// @dev `keccak256(abi.encode(immutables))`, compared between the registry and each logic contract.
     bytes32 internal immutable _IMMUTABLES_HASH;
     /// @dev This contract's own address: a logic contract refuses every body unless delegatecalled.
     address internal immutable _SELF;
 
-    /// @notice Fixes the implementation immutables; every address and the market-count limit must be non-zero.
-    /// @param im The per-chain Avana addresses and the market-count limit.
-    /// @custom:spec REQ-CONFIG-005, REQ-MREG-034
     constructor(
         MarketRegistryImmutables memory im
     ) {
@@ -203,7 +182,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         _SELF = address(this);
     }
 
-    /// @dev The registry's ERC-7201 storage.
     function _s() internal pure returns (Layout storage l) {
         bytes32 slot = _STORAGE_SLOT;
         // Reason: binding a storage pointer to the fixed ERC-7201 slot needs one assignment of `.slot`.
@@ -213,13 +191,10 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         }
     }
 
-    /// @dev Reverts when a logic contract is called directly instead of by the registry's delegatecall.
     function _onlyDelegated() internal view {
         if (address(this) == _SELF) revert Unauthorized(msg.sender);
     }
 
-    /// @dev True when a key mapped to `marketId` is free: unmapped, or held by a Cancelled or Closed market
-    /// (REQ-CONFIG-007).
     function _keyFree(
         uint256 marketId
     ) internal view returns (bool) {
@@ -228,16 +203,13 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         return st == MarketStatus.Cancelled || st == MarketStatus.Closed;
     }
 
-    /// @dev True for a market that can still be liquidated (Active or Offboarding).
     function _liquidatable(
         MarketStatus st
     ) internal pure returns (bool) {
         return st == MarketStatus.Active || st == MarketStatus.Offboarding;
     }
 
-    /// @dev Key of one swap-route slot of the market's current registration: a relisting raises `routeEpoch`, so the
-    /// routes, previously approved routes and statuses of a cancelled registration are never read again
-    /// (REQ-MREG-030). The first registration keeps the epoch-free key.
+    /// @dev A relisting bumps `routeEpoch`, so the relisted market gets fresh slots.
     function _slotKey(
         uint256 marketId,
         address token,
@@ -249,7 +221,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         return keccak256(abi.encode(marketId, token, debtAsset, kind, epoch));
     }
 
-    /// @dev Clears the breach times of breaker `key`: the latest of any temporary reason and each reason's own.
     function _clearBreachTimes(
         Layout storage l,
         bytes32 key
@@ -260,7 +231,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         delete l.lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_DEPTH)];
     }
 
-    /// @dev Breaker key of a debt reserve (REQ-MREG-025).
     function _debtKey(
         address spoke,
         uint256 reserveId
@@ -268,7 +238,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         return keccak256(abi.encode(spoke, reserveId));
     }
 
-    /// @dev True when the slot holds a route with status Active.
     function _routeUsable(
         uint256 marketId,
         address token,
@@ -279,8 +248,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         return r.route != address(0) && r.active;
     }
 
-    /// @dev True when every pool token of the market other than `debtAsset` has a usable primary and backup route
-    /// into `debtAsset` (REQ-CONFIG-039).
     function _routesCover(
         uint256 marketId,
         address debtAsset
@@ -296,7 +263,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         return true;
     }
 
-    /// @dev True when `asset` is the asset of an enabled debt reserve of `spoke`.
     function _isDebtAssetOf(
         address spoke,
         address asset
@@ -308,8 +274,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         return false;
     }
 
-    /// @dev Route-leg checks of REQ-CONFIG-021 on one route: one or two non-zero feeds, each with a ParameterStore
-    /// feed definition and a heartbeat. Returns 0 when it passes, else the failed check's name.
+    /// @dev Returns 0 when the route passes, else the failed check's name.
     function _routeLegsCheck(
         address[] memory route
     ) internal view returns (bytes32) {
@@ -324,7 +289,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         return bytes32(0);
     }
 
-    /// @dev True when two feed lists share an address.
     function _shareFeed(
         address[] memory a,
         address[] memory b
@@ -337,7 +301,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         return false;
     }
 
-    /// @dev SPEC-CF-004 for one route: `10^4 - cfLp > Σ (feedDeviationThresholdBps + heartbeatDriftBps)`.
+    /// @dev Listing margin for one route: `10^4 - cfLp` exceeds the summed feed deviation and heartbeat drift.
     function _marginHolds(
         uint256 cfLp,
         address[] memory route
@@ -351,8 +315,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         return _BPS - cfLp > err;
     }
 
-    /// @dev SPEC-CF-004 for every route of every pool token of a market (the standby included, since a guardian can
-    /// put it in place of either slot at once).
     function _listingMarginHolds(
         uint256 cfLp,
         address[] memory tokens
@@ -365,8 +327,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         return true;
     }
 
-    /// @dev REQ-CONFIG-034 with the standby counted as a possible alternate: for every pair of distinct pool tokens,
-    /// no feed of one token's alternate or standby route is a feed of the other's.
+    /// @dev Common-mode guard: no two pool tokens share a feed across their alternate and standby routes.
     function _commonModeHolds(
         address[] memory tokens
     ) internal view returns (bool) {
@@ -385,8 +346,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         return true;
     }
 
-    /// @dev The Spoke's live `drawCap` on (fundingHub, hubAssetId) in whole tokens, with `MAX_ALLOWED_SPOKE_CAP`
-    /// counted as unbounded (SPEC-CAP-010).
+    /// @dev The Spoke's live draw cap in whole tokens; `MAX_ALLOWED_SPOKE_CAP` maps to `_UNBOUNDED_DRAW_CAP`.
     function _drawCapOf(
         address fundingHub,
         uint256 hubAssetId,
@@ -397,11 +357,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         cap = raw == hub.MAX_ALLOWED_SPOKE_CAP() ? _UNBOUNDED_DRAW_CAP : uint256(raw);
     }
 
-    /// @dev REQ-CONFIG-081 coverage of a line: `required = ⌈line × 10^dec × coverageRatioBps / 10^4⌉` base units (the
-    /// smallest balance that passes `line × 10^dec × coverageRatioBps ≤ fundedBalance × 10^4`) and `funded`, the asset
-    /// balance of `firstLossReserveOf(hub, asset)` (0 when the pair has none). A line of 0 needs nothing. A line so large
-    /// that `line × 10^dec × coverageRatioBps` would not fit 256 bits requires `type(uint256).max`, which no balance
-    /// meets, so the test fails closed instead of overflowing.
+    /// @dev Coverage of a line: `required` rounds up; on overflow it is `type(uint256).max`, so the check fails closed.
     function _coverage(
         address hub,
         address asset,
@@ -416,7 +372,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         required = (line * k + _BPS - 1) / _BPS;
     }
 
-    /// @dev Reverts `CoverageBelowRatio` unless the First-Loss Reserve of `(hub, asset)` covers `line` (REQ-CONFIG-081).
     function _requireCovered(
         address hub,
         address asset,
@@ -426,9 +381,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         if (required > funded) revert IMarketRegistryCreditLines.CoverageBelowRatio(hub, asset, required, funded);
     }
 
-    /// @dev True for a code hash governance approved for a CDP Spoke implementation: the hash of
-    /// `STANDARD_SPOKE_IMPLEMENTATION` or one added by `approveSpokeCodeHash`; never 0 or the empty-code hash
-    /// (REQ-CONFIG-074).
     function _spokeHashApproved(
         bytes32 codeHash
     ) internal view returns (bool) {
@@ -436,11 +388,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         return codeHash == _STANDARD_SPOKE_IMPLEMENTATION.codehash || _s().approvedSpokeCodeHash[codeHash];
     }
 
-    /// @dev The implementation behind a Spoke proxy: the address in the proxy's ERC-1967 implementation slot, read
-    /// through the Spoke's `extSload` (which runs in the proxy's storage), and its code hash; all zero for a Spoke that
-    /// is not recorded (so no call is made to an address that may hold no code) or when the read fails. `current` is true only for an approved Spoke whose slot still holds the recorded implementation with the
-    /// code hash recorded when `deployCdpSpoke` approved it (REQ-CONFIG-074, REQ-CONFIG-016); a recorded hash was
-    /// approved at that time, and approvals are never withdrawn.
+    /// @dev The implementation behind a recorded Spoke proxy; zeros if unrecorded or unreadable.
     function _spokeImplementation(
         address spoke
     ) internal view returns (address implementation, bytes32 codeHash, bool current) {
@@ -455,8 +403,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         current = implementation == sp.implementation && codeHash == _s().spokeCodeHash[spoke];
     }
 
-    /// @dev REQ-MREG-019: the caller's freezes in the 24 one-hour buckets ending with `hour` (hours `⌊t / 3,600⌋`), so
-    /// the window spans between 23 and 24 hours of wall-clock time.
     function _freezesInWindow(
         address caller,
         uint64 hour

@@ -22,26 +22,15 @@ import {RouteMode} from "./types/RouteMode.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-// PendingSettlementForwarded reports amounts known only after the release, the routes and the funding; the body runs
-// under the Lock (REQ-SWAP-002).
+// The event reports amounts known only after the external calls; the body runs under the Lock.
 // forge-lint: disable-start(reentrancy-events)
 /// @title LPVaultSwapPendingLogic
-/// @notice Body of `settlePending`, run by delegatecall from the LPVaultSwap implementation in the proxy's storage:
-/// burns vault tokens an earlier implementation seized and never settled against Collateralization's pending balance,
-/// swaps the released tokens into the market's settlement asset at the pending floor and adds the proceeds to the
-/// First-Loss Reserve of the settlement reserve's (funding Hub, asset), carrying an amount worth less than one Hub share.
-/// @dev The caller supplies nothing and receives nothing. Before the Lock: `UnknownMarket`, `InvalidFeeRecipient`,
-/// `LockHeld(holder)`, then the view reads of the pending units and LPVaultSwap's vault-token balance (`NothingPending`)
-/// and the settlement reserve (`UnknownDebtReserve`). Under the Lock: price rules (no grace), burn and release, legs at
-/// `s_P`, `minPending`, funding or carry, residues to `feeRecipient`.
-/// @custom:spec REQ-SWAP-066, REQ-SWAP-068, REQ-SWAP-070, REQ-SWAP-071, REQ-SWAP-092, SPEC-LIQ-014, Q-201, Q-211, Q-338
-// Each function carries the body of a selector LPVaultSwap declares and delegates here; this contract inherits no
-// LPVaultSwap interface piece, since each piece also declares functions another logic contract serves.
+/// @notice Body of `settlePending`, run by delegatecall from the LPVaultSwap implementation in the proxy's storage.
+// Inherits no LPVaultSwap interface piece: each piece also declares functions another logic contract serves.
 // solhint-disable comprehensive-interface
 contract LPVaultSwapPendingLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
     using SafeERC20 for IERC20;
 
-    /// @dev Working values of one pending settlement.
     struct Pend {
         Market m;
         DebtReserveDef d;
@@ -58,21 +47,16 @@ contract LPVaultSwapPendingLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
     }
 
     /// @notice Fixes the implementation immutables; they must equal the implementation's.
-    /// @param im The per-chain addresses and the keeper floor.
-    /// @custom:spec REQ-SWAP-040
     constructor(
         LPVaultSwapImmutables memory im
     ) LPVaultSwapStorage(im) {}
 
     /// @inheritdoc ILPVaultSwapLogic
-    /// @custom:spec REQ-SWAP-040
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("LPVaultSwapPendingLogic"), _IMMUTABLES_HASH);
     }
 
     /// @notice Body of `settlePending`.
-    /// @dev See `ILPVaultSwapLiquidation.settlePending`; the implementation forwards its calldata unchanged.
-    /// @custom:spec REQ-SWAP-002, REQ-SWAP-003, REQ-SWAP-066, REQ-SWAP-068, REQ-LOCK-007
     function settlePending(
         uint256 marketId,
         uint256 debtReserveId
@@ -107,8 +91,6 @@ contract LPVaultSwapPendingLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
         (units, amounts, added) = (c.units, c.amounts, c.recovered);
     }
 
-    /// @dev The checks before the Lock and the view reads they need (REQ-SWAP-066, REQ-LOCK-007).
-    /// @custom:spec REQ-SWAP-066, REQ-SWAP-068, REQ-MREG-033
     function _preLock(
         uint256 marketId,
         uint256 debtReserveId
@@ -128,9 +110,6 @@ contract LPVaultSwapPendingLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
         c.coverage = mr.firstLossReserveOf(c.d.fundingHub, c.d.asset);
     }
 
-    /// @dev Burn and release measured as deltas, the pending floor and the legs at `s_P`, then `R` in the settlement
-    /// asset over the burn, the release and the route calls.
-    /// @custom:spec REQ-SWAP-044, REQ-SWAP-045, REQ-SWAP-092, REQ-SWAP-121, SPEC-LIQ-014, SPEC-LIQ-018
     function _releaseAndSwap(
         Pend memory c,
         uint256 marketId,
@@ -141,7 +120,7 @@ contract LPVaultSwapPendingLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
         c.t = _snapshot(c.m.tokens, c.d.asset);
         uint256 r0 = asset.balanceOf(address(this));
         IAaveAdapter(_AAVE_ADAPTER).burnSeized(marketId, c.m.vaultToken, c.units);
-        // The released amounts are measured as LPVaultSwap balance changes (REQ-SWAP-108), never read from returns.
+        // The released amounts are measured as balance changes, never read from returns.
         // forge-lint: disable-next-line(unused-return)
         ICollateralization(_COLLATERALIZATION).settlePending(c.m.vaultToken, c.units);
         c.amounts = _released(c.t, n);
@@ -158,7 +137,6 @@ contract LPVaultSwapPendingLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
         c.recovered = r1 > r0 ? r1 - r0 : 0;
     }
 
-    /// @dev Leg inputs of `settlePending`: `sLeg = s_P = min(slippageAllowanceBps, 30)`, `PrimaryThenBackup`.
     function _legArgs(
         Pend memory c,
         uint256 marketId,
@@ -183,14 +161,7 @@ contract LPVaultSwapPendingLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
         });
     }
 
-    /// @dev Funds `Rt = R + carry` into the First-Loss Reserve when it is worth at least one Hub share, with an exact
-    /// approval reset to 0 and the balance falling by exactly `Rt` (`FundingMismatch`); otherwise carries `Rt`.
-    /// A `fund` that reverts (no First-Loss Reserve recorded, or a finite Hub add cap that is full) reverts the whole
-    /// settlement on purpose (LIQ-I3): the units stay pending and any caller retries once governance acts, while
-    /// carrying a larger `Rt` would leave LPVaultSwap holding more than one Hub share (`REQ-SWAP-070`). Neither case
-    /// arises from Avana's own configuration (the First-Loss Reserve is write-once and required before a debt reserve is
-    /// enabled; its add cap is unlimited, `REQ-FLR-007`), and liquidation never calls this path.
-    /// @custom:spec REQ-SWAP-070, REQ-SWAP-077, REQ-FLR-038
+    /// @dev Carries an amount worth less than one Hub share; a reverting `fund` reverts the settlement on purpose.
     function _fundCoverage(
         Pend memory c
     ) private {
@@ -201,7 +172,7 @@ contract LPVaultSwapPendingLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
             l.carry[asset] = 0;
             uint256 before = IERC20(asset).balanceOf(address(this));
             IERC20(asset).forceApprove(c.coverage, total);
-            // The First-Loss Reserve pulls exactly the amount; the pull is checked as LPVaultSwap balance fall right after.
+            // The pull is checked as a balance fall right after.
             // forge-lint: disable-next-line(unused-return)
             IAvanaFirstLossReserve(c.coverage).fund(total);
             IERC20(asset).forceApprove(c.coverage, 0);

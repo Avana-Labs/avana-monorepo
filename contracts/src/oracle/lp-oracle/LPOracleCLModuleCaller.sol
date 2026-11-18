@@ -10,25 +10,12 @@ import {LPOracleCLPool} from "./LPOracleCLPool.sol";
 import {ClPriceStateView} from "./types/ClPriceStateView.sol";
 
 /// @title LPOracleCLModuleCaller
-/// @notice The pricing-module hooks of the concentrated-liquidity poke, listing and view logic contracts: each hook runs
-/// in `LPOracleCLModuleLogic` by delegatecall, in the market proxy's storage, so the module's code is deployed once and
-/// each logic contract stays inside EIP-170.
-/// @dev The module contract is fixed in the immutable `_MODULE_LOGIC` at construction, which requires its `MODULE_ID()`,
-/// its `slot0` layout and its chain constants to match; there is no setter. A failed delegatecall re-raises its revert
-/// data (the module's only revert is `InsufficientGas` before a read), so a hook never turns a starved read into a
-/// market failure (`SPEC-ORC-023`).
-/// Every price vector the core passes has the market's two entries (`initialize` refuses any other token count, and the
-/// listing prices and every evaluation's vectors have that length), so the hooks pass them as scalars.
-/// @custom:spec REQ-ORACLE-080, REQ-ORACLE-103, REQ-ORACLE-106, SPEC-ORC-023
+/// @notice Runs a logic contract's concentrated-liquidity pricing hooks in `LPOracleCLModuleLogic` by delegatecall.
+/// @dev A failed delegatecall re-raises its revert data, so a starved read never becomes a market failure.
 abstract contract LPOracleCLModuleCaller is LPOracleCLPool {
-    /// @dev The implementation's `LPOracleCLModuleLogic`.
     address internal immutable _MODULE_LOGIC;
 
-    /// @notice Fixes the module contract; reverts `MarketMismatch(0)` unless it is an `LPOracleCLModuleLogic` (or the
-    /// Uniswap v4 `LPOracleV4ModuleLogic`, which has the same entry points) with this contract's `slot0` layout and
-    /// chain constants.
-    /// @param moduleLogic The implementation's `LPOracleCLModuleLogic`.
-    /// @custom:spec REQ-ORACLE-080
+    /// @notice Sets the module contract; reverts `MarketMismatch(0)` unless its id, layout and chain constants match.
     constructor(
         address moduleLogic
     ) {
@@ -46,8 +33,6 @@ abstract contract LPOracleCLModuleCaller is LPOracleCLPool {
     }
 
     /// @notice The module contract this logic contract delegates its pricing hooks to.
-    /// @return moduleLogic The `LPOracleCLModuleLogic` fixed at deployment.
-    /// @custom:spec REQ-ORACLE-080
     function MODULE_LOGIC() external view returns (address moduleLogic) {
         moduleLogic = _MODULE_LOGIC;
     }
@@ -60,7 +45,6 @@ abstract contract LPOracleCLModuleCaller is LPOracleCLPool {
         return false;
     }
 
-    /// @custom:spec SPEC-ORC-006, REQ-ORACLE-103
     function _composition(
         uint256 units,
         uint256[] memory prices
@@ -72,7 +56,6 @@ abstract contract LPOracleCLModuleCaller is LPOracleCLPool {
         (amounts[0], amounts[1]) = (_word(r, 1), _word(r, 2));
     }
 
-    /// @custom:spec REQ-ORACLE-103, SPEC-ORC-010, REQ-ORACLE-104
     function _poolCheck(
         uint256[] memory quotes,
         uint256[] memory prices,
@@ -88,7 +71,6 @@ abstract contract LPOracleCLModuleCaller is LPOracleCLPool {
         (p.pass, p.deviationBps, p.clamped) = (_word(r, 3) != 0, _word(r, 4), _word(r, 5) != 0);
     }
 
-    /// @custom:spec SPEC-ORC-020, REQ-ORACLE-100
     function _poolTwapPrice(
         uint256 index,
         SecondSource memory source,
@@ -102,14 +84,12 @@ abstract contract LPOracleCLModuleCaller is LPOracleCLPool {
         (ok, value) = (_word(r, 0) != 0, _word(r, 1));
     }
 
-    /// @custom:spec REQ-ORACLE-100
     function _isOwnPool(
         bytes32 poolRef
     ) internal view override returns (bool own) {
         own = _word(_module(abi.encodeCall(LPOracleCLModuleLogic.isOwnPool, (poolRef))), 0) != 0;
     }
 
-    /// @custom:spec REQ-ORACLE-105
     function _listingChecks(
         OracleConfig calldata config,
         uint256[] memory quotes
@@ -123,21 +103,17 @@ abstract contract LPOracleCLModuleCaller is LPOracleCLPool {
         );
     }
 
-    /// @dev Word `i` of the module's return data. The module is this implementation's own code, fixed at construction,
-    /// and each entry point returns a static tuple with at least `i + 1` words, so the read stays in the buffer.
+    /// @dev Word `i` of the module's return data; each entry point returns a static tuple of at least `i + 1` words.
     function _word(
         bytes memory r,
         uint256 i
     ) private pure returns (uint256 v) {
-        // Reads word i of a static tuple the module returned in full.
         // solhint-disable-next-line no-inline-assembly
         assembly ("memory-safe") {
             v := mload(add(r, add(0x20, mul(i, 0x20))))
         }
     }
 
-    /// @dev `getClPriceState()`'s report from the module.
-    /// @custom:spec REQ-ORACLE-104
     function _clReportOf(
         bool priced,
         uint256[] memory quotes,
@@ -151,7 +127,6 @@ abstract contract LPOracleCLModuleCaller is LPOracleCLPool {
         );
     }
 
-    /// @dev Runs `data` in the module contract by delegatecall and returns its return data.
     function _module(
         bytes memory data
     ) internal view returns (bytes memory ret) {
@@ -169,8 +144,7 @@ abstract contract LPOracleCLModuleCaller is LPOracleCLPool {
         (ok, ret) = _MODULE_LOGIC.delegatecall(data);
         // forge-lint: disable-end(controlled-delegatecall)
         if (ok) return ret;
-        // Re-raises the module's revert data unchanged: `InsufficientGas` before a read, or none when the call itself
-        // ran out of gas, which the implementation's entry point reports as `InsufficientGas` (`_forward`).
+        // Re-raises the module's revert data unchanged; an out-of-gas failure has none.
         // solhint-disable-next-line no-inline-assembly
         assembly ("memory-safe") {
             revert(add(ret, 0x20), mload(ret))

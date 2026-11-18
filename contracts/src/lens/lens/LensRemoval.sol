@@ -13,17 +13,11 @@ import {RecordRemoval, RemovalSizing} from "./types/RemovalSizing.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensRemoval
-/// @notice `ILensSizing.previewMaxWithdraw`: the largest collateral removal that keeps an account at or above a target
-/// health factor, and which of its records it can withdraw alone.
-/// @dev The bound is the exact maximum of the inequality the preview checks (REQ-LENS-054, MATH-AR-76), which counts the
-/// removal rounded up and the rescue exclusion in full, so it never exceeds what Aave and the RiskModule accept.
-/// Bounded by the 16 records of an account-market.
-/// @custom:spec REQ-LENS-054
-// View calls in a loop over the at most 16 records of one account-market (REQ-LENS-020).
+/// @notice `ILensSizing.previewMaxWithdraw`: the largest collateral removal that keeps a target health factor.
+/// @dev Rounds the removal up and subtracts the full rescue exclusion, so it never exceeds what execution accepts.
+// Loops over the at most 16 records of one account-market.
 // forge-lint: disable-start(calls-loop)
 abstract contract LensRemoval is LensAccountMath {
-    /// @notice `ILensSizing.previewMaxWithdraw`.
-    /// @custom:spec REQ-LENS-054, REQ-LENS-005, REQ-LENS-006, SPEC-CF-005
     function previewMaxWithdraw(
         address wallet,
         uint256 marketId,
@@ -56,10 +50,7 @@ abstract contract LensRemoval is LensAccountMath {
         }
     }
 
-    // ------------------------------------------------------------------------------------------------------ internal
-
-    /// @dev The withdraw-with-debt gates of the AaveAdapter: the RiskModule's `withdrawWithDebtAllowed`, the Hub not
-    /// `Paused` and the wallet not frozen.
+    /// @dev The AaveAdapter's withdraw-with-debt gates: RiskModule allows it, Hub not `Paused`, wallet not frozen.
     function _withdrawWithDebtOpen(
         address wallet,
         address proxy
@@ -68,11 +59,7 @@ abstract contract LensRemoval is LensAccountMath {
         return st.withdrawWithDebtAllowed && st.pauseState != PauseState.Paused && !_registry().isFrozenAddress(wallet);
     }
 
-    /// @dev REQ-LENS-054: with `W = ⌊CF × assets × v / 10⁴⌋`, `need = ⌈target × debtRay / (WAD × RAY)⌉` and the rescue
-    /// exclusion `E`, the largest `u ≤ assets` with `W − E − ⌈u × v × CF / 10⁴⌉ ≥ need` is
-    /// `⌊(W − E − need) × 10⁴ / (v × CF)⌋`; 0 when `W − E < need` or nothing is counted. `v` is the served value per
-    /// unit and `CF` the reserve's latest collateral factor, which the withdrawal moves the account to.
-    /// @custom:spec REQ-LENS-054, SPEC-CF-005
+    /// @dev Largest `u ≤ assets` with `W − E − ⌈u × v × CF / 10⁴⌉ ≥ need`, at the reserve's latest collateral factor.
     function _maxRemoval(
         Market memory m,
         address proxy,
@@ -89,10 +76,7 @@ abstract contract LensRemoval is LensAccountMath {
         units = _removalBound(assets, per, _rescueAt(m, proxy, cf), need);
     }
 
-    /// @dev REQ-LENS-054, MATH-AR-76: `min(assets, ⌊(W − E − need) × 10⁴ / per⌋)` with `W = ⌊assets × per / 10⁴⌋`, 0 when
-    /// `W < E + need` or `per = 0`. The quotient never exceeds `assets` (`W × 10⁴ ≤ assets × per`, MATH-AR-76e), so the
-    /// minimum needs no separate cap.
-    /// @custom:spec REQ-LENS-054
+    /// @dev Never exceeds `assets`, since `W × 10⁴ ≤ assets × per`; 0 when `W < E + need` or `per = 0`.
     function _removalBound(
         uint256 assets,
         uint256 per,

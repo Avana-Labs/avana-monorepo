@@ -12,24 +12,11 @@ import {ClPriceStateView} from "./types/ClPriceStateView.sol";
 import {LPOracleLogicSet} from "./types/LPOracleLogicSet.sol";
 
 /// @title LPOracleV4
-/// @notice The LPOracle implementation of every Uniswap v4 market on one chain: the concentrated-liquidity
-/// implementation with the v4 pricing module (`LPOracleV4Module`) compiled in for `initialize`, and the
-/// concentrated-liquidity poke, initialization, listing and view logic contracts delegating their pricing hooks to an
-/// `LPOracleV4ModuleLogic`. Every v4 market is an ERC-1967 proxy of it.
-/// @dev `slot0Words` is 7, the reference Uniswap v3 pool's layout. The constructor also requires the module logic to be
-/// an `LPOracleV4ModuleLogic` with the same wrapped native token (`MarketMismatch(0)` otherwise).
-/// @custom:spec REQ-ORACLE-080, REQ-ORACLE-103, REQ-AMM-V4-005, SPEC-AMM-V4-001
+/// @notice LPOracle implementation for the Uniswap v4 markets on one chain.
+/// @dev Reverts `MarketMismatch(0)` unless the module logic is an `LPOracleV4ModuleLogic` with the same wrapped native.
 contract LPOracleV4 is LPOracleCL, LPOracleV4Module {
-    /// @notice Fixes the chain constants, the module logic, the four logic contracts and the wrapped native token.
-    /// @param timelock The chain's AvanaTimelock.
-    /// @param chainBlockTime Seconds per block (12 on Ethereum).
-    /// @param pokeMinGasFloor `POKE_MIN_GAS_FLOOR`.
-    /// @param pokeMinGasCeiling `POKE_MIN_GAS_CEILING`.
-    /// @param hasSequencer True on an L2 with a sequencer-uptime feed.
-    /// @param moduleLogic The implementation's `LPOracleV4ModuleLogic`.
-    /// @param logics The concentrated-liquidity poke, initialization, listing and view logic contracts built with it.
-    /// @param wrappedNative The chain's wrapped native token.
-    /// @custom:spec REQ-ORACLE-080
+    /// @notice Sets the chain constants, the module logic, the logic contracts and the wrapped native token.
+    /// @param logics The poke, initialization, listing and view logic contracts.
     constructor(
         address timelock,
         uint32 chainBlockTime,

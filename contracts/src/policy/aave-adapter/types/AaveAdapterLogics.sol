@@ -3,9 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-/// @notice The four logic contracts of an AaveAdapter implementation, each built with the implementation's
-/// immutables.
-/// @custom:spec REQ-ADAPTER-004
+/// @notice The four logic contracts of an AaveAdapter implementation.
 struct AaveAdapterLogics {
     // pledge, borrow, repay.
     address user;

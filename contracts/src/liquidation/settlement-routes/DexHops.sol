@@ -21,15 +21,8 @@ import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title DexHops
-/// @notice The fixed DEX hops of a `DexPath` route and of the DEX part of a `WrapperThenDex` route (2.12): up to three
-/// hops over Uniswap v3, Aerodrome Slipstream, Curve StableSwap-NG or pinned legacy Curve pools, each on the whole output
-/// of the one before.
-/// @dev Every hop runs with a zero minimum and the extreme price limit; the route's single minimum-output check after
-/// the last leg (`SwapRouteBase.swap`) catches value lost on any hop (REQ-ROUTE-009). A concentrated-liquidity hop keeps
-/// its context (pool, input token, amount, direction) in transient storage under the ERC-7201 base `HOP_SLOT`; the
-/// callback pays only that pool, only once, at most the hop's amount, in the hop's input token, and the context is
-/// cleared after the hop. Hop legs are immutables (`_POOL0`…`_POOL2` and the rest), so the path cannot change.
-/// @custom:spec REQ-ROUTE-002, REQ-ROUTE-009, REQ-ROUTE-010, REQ-ROUTE-013, REQ-ROUTE-033, REQ-ROUTE-043, REQ-ROUTE-045, REQ-ROUTE-046, INV-040, Q-045, Q-148
+/// @notice Up to three fixed DEX hops of a swap route, each on the whole output of the one before.
+/// @dev Hops run with no minimum; the route's single `minOut` check after the last leg covers every hop.
 abstract contract DexHops is SwapRouteBase {
     using SafeERC20 for IERC20;
     using TransientSlot for bytes32;
@@ -37,30 +30,25 @@ abstract contract DexHops is SwapRouteBase {
     using TransientSlot for TransientSlot.BooleanSlot;
     using TransientSlot for TransientSlot.Uint256Slot;
 
-    /// @notice Largest number of hops; the Certora confs unroll the hop loop three times.
     uint256 internal constant MAX_HOPS = 3;
 
     /// @notice Largest pinned list of legacy Curve pools a route accepts, so the constructor's search is bounded.
     uint256 internal constant MAX_CURVE_LEGACY_POOLS = 8;
 
-    /// @dev Uniswap v3 `TickMath.MIN_SQRT_RATIO + 1` and `MAX_SQRT_RATIO - 1`, the extreme price limits (Slipstream uses
-    /// the same bounds).
+    /// @dev Uniswap v3 `TickMath.MIN_SQRT_RATIO + 1` and `MAX_SQRT_RATIO - 1`, the extreme price limits.
     uint160 internal constant MIN_PRICE_LIMIT = 4_295_128_740;
     uint160 internal constant MAX_PRICE_LIMIT = 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_341;
 
-    /// @dev ERC-7201 transient base of the hop context:
-    /// `keccak256(abi.encode(uint256(keccak256("avana.route.hop")) - 1)) & ~bytes32(uint256(0xff))`.
-    /// Slots: base + 0 pool, + 1 input token, + 2 amount, + 3 direction (zeroForOne).
+    /// @dev ERC-7201 transient base of the hop context: pool, input token, amount, direction.
     bytes32 private constant HOP_SLOT = 0x6d865b2c93e82c265bb1e2539020efdd77dadf34ac4a83a57dc0c79bbeeacf00;
     bytes32 private constant HOP_POOL_SLOT = HOP_SLOT;
     bytes32 private constant HOP_TOKEN_SLOT = bytes32(uint256(HOP_SLOT) + 1);
     bytes32 private constant HOP_AMOUNT_SLOT = bytes32(uint256(HOP_SLOT) + 2);
     bytes32 private constant HOP_ZERO_FOR_ONE_SLOT = bytes32(uint256(HOP_SLOT) + 3);
 
-    /// @dev First hop's input token: `TOKEN_IN` for a `DexPath`, the wrapper's output for a `WrapperThenDex`.
     address internal immutable _PATH_START;
 
-    /// @dev Number of hops, 0 to 3 (0 only for a `WrapperThenDex` whose wrapper yields the debt asset).
+    /// @dev Number of hops; 0 only for a `WrapperThenDex` whose wrapper yields the debt asset.
     uint256 internal immutable _HOP_COUNT;
 
     HopKind private immutable _KIND0;
@@ -78,26 +66,12 @@ abstract contract DexHops is SwapRouteBase {
     int128 private immutable _J0;
     int128 private immutable _J1;
     int128 private immutable _J2;
-    /// @dev Swap direction of a concentrated-liquidity hop, derived from the pool's `token0` in the constructor.
+    /// @dev Swap direction of a concentrated-liquidity hop.
     bool private immutable _ZFO0;
     bool private immutable _ZFO1;
     bool private immutable _ZFO2;
 
     /// @notice Checks the hops against their pools and fixes them.
-    /// @dev Reverts `InvalidRouteConfig` unless: there are at most 3 hops; each pool is non-zero, distinct from the other
-    /// pools and from every token of the path; the tokens of the path (`pathStart`, each hop's `tokenOut`) are distinct
-    /// from each other and from `TOKEN_IN`; the last hop yields `TOKEN_OUT` (with no hops, `pathStart == TOKEN_OUT`);
-    /// a concentrated-liquidity pool's tokens are the hop's input and output, the pool is the pinned Uniswap v3
-    /// factory's `getPool(token0, token1, fee)` or the pinned Slipstream factory's `getPool(token0, token1,
-    /// tickSpacing)`, and the hop's input has no transfer-fee switch; a Curve pool's `coins(i)` and `coins(j)` are the
-    /// hop's input and output, with `i ≠ j` and both non-negative, and the pinned Curve StableSwap-NG factory reports the
-    /// same indices for the pool; a legacy Curve pool is on `config.curveLegacyPools` (at most 8 entries) and its
-    /// `coins(i)` and `coins(j)` are the hop's input and output, with `i ≠ j` and both non-negative. A contract that does
-    /// not answer a read fails the check.
-    /// @param config Shared constructor arguments.
-    /// @param pathStart First hop's input token.
-    /// @param hops The hops, in order.
-    /// @custom:spec REQ-ROUTE-043, REQ-ROUTE-045, REQ-ROUTE-046
     constructor(
         RouteConfig memory config,
         address pathStart,
@@ -130,10 +104,7 @@ abstract contract DexHops is SwapRouteBase {
     }
 
     /// @inheritdoc ISettlementRoute
-    /// @dev Pays exactly the positive amount owed in the hop's input token, at most the hop's amount, once; reverts
-    /// `InvalidCallback` with no hop in progress, from any address but the hop's pool, for a non-positive owed amount on
-    /// the input side, or above the hop's amount.
-    /// @custom:spec REQ-ROUTE-013, REQ-ROUTE-029, REQ-ROUTE-033, INV-040, Q-045, Q-148
+    /// @dev Pays the hop's pool once, at most the hop's amount, in the hop's input token.
     function uniswapV3SwapCallback(
         int256 amount0Delta,
         int256 amount1Delta,
@@ -150,12 +121,7 @@ abstract contract DexHops is SwapRouteBase {
         IERC20(HOP_TOKEN_SLOT.asAddress().tload()).safeTransfer(pool, pay);
     }
 
-    /// @notice Runs every hop, each on the route's balance rise of the previous hop's output.
-    /// @dev Stops early when a hop yields nothing: the final check then reverts `MinOutNotMet(0, minOut)`. The loop runs
-    /// at most `MAX_HOPS` times over pools fixed and checked at construction; a reverting pool reverts the whole swap,
-    /// and LPVaultSwap then uses the other route slot.
-    /// @param amount Amount of `_PATH_START` the route received for the hops.
-    /// @custom:spec REQ-ROUTE-009, REQ-ROUTE-010, REQ-ROUTE-013
+    /// @dev Stops early when a hop yields nothing; the final check then reverts `MinOutNotMet`.
     function _runHops(
         uint256 amount
     ) internal {
@@ -168,13 +134,11 @@ abstract contract DexHops is SwapRouteBase {
             } else {
                 _approve(input, hop.pool, amount);
                 if (hop.kind == HopKind.CurveStableSwap) {
-                    // The hop's output is measured as the route's balance rise below, never taken from the pool's
-                    // return value (REQ-ROUTE-009, REQ-ROUTE-015); the pool is one of the at most three fixed hops.
+                    // The output is measured as the balance rise below, not taken from the return value.
                     // forge-lint: disable-next-line(unused-return, calls-loop)
                     ICurveStableSwapNG(hop.pool).exchange(hop.i, hop.j, amount, 0);
                 } else {
-                    // A pinned legacy pool (REQ-ROUTE-046): declared with no return value, so a pool that returns
-                    // nothing and one that returns the amount both succeed; the output is the balance rise below.
+                    // Declared with no return value, so legacy pools that return nothing also succeed.
                     // forge-lint: disable-next-line(calls-loop)
                     ICurveLegacyPool(hop.pool).exchange(hop.i, hop.j, amount, 0);
                 }
@@ -186,8 +150,6 @@ abstract contract DexHops is SwapRouteBase {
     }
 
     /// @inheritdoc ISettlementRoute
-    /// @dev The input of every concentrated-liquidity hop, in hop order; Curve hops measure what they receive.
-    /// @custom:spec REQ-ROUTE-003, REQ-ROUTE-005, REQ-ROUTE-008
     function exactAmountInputs() external view override returns (address[] memory tokens) {
         uint256 count = 0;
         address[MAX_HOPS] memory found = [address(0), address(0), address(0)];
@@ -204,7 +166,6 @@ abstract contract DexHops is SwapRouteBase {
     }
 
     /// @notice Every pool of the path, in hop order.
-    /// @return pools Hop pools.
     function _hopPools() internal view returns (address[] memory pools) {
         pools = new address[](_HOP_COUNT);
         for (uint256 k = 0; k < _HOP_COUNT; ++k) {
@@ -212,8 +173,6 @@ abstract contract DexHops is SwapRouteBase {
         }
     }
 
-    /// @notice Outputs of every hop but the last (the tokens held between hops).
-    /// @return tokens Intermediate tokens of the hops.
     function _hopIntermediates() internal view returns (address[] memory tokens) {
         uint256 n = _HOP_COUNT == 0 ? 0 : _HOP_COUNT - 1;
         tokens = new address[](n);
@@ -222,8 +181,6 @@ abstract contract DexHops is SwapRouteBase {
         }
     }
 
-    /// @notice One concentrated-liquidity hop with its transient context.
-    /// @custom:spec REQ-ROUTE-013
     function _concentratedHop(
         address pool,
         address input,
@@ -236,8 +193,7 @@ abstract contract DexHops is SwapRouteBase {
         HOP_ZERO_FOR_ONE_SLOT.asBoolean().tstore(zeroForOne);
         int256 amountSpecified = SafeCast.toInt256(amount);
         uint160 limit = zeroForOne ? MIN_PRICE_LIMIT : MAX_PRICE_LIMIT;
-        // The callback bounds the payment and the caller measures the output as a balance rise, so the pool's returned
-        // deltas are not used (REQ-ROUTE-009, REQ-ROUTE-013); the pool is one of the at most three fixed hops.
+        // The callback bounds the payment and the output is measured as a balance rise.
         // forge-lint: disable-next-line(unused-return, calls-loop)
         IUniswapV3Pool(pool).swap(address(this), zeroForOne, amountSpecified, limit, "");
         HOP_POOL_SLOT.asAddress().tstore(address(0));
@@ -246,7 +202,6 @@ abstract contract DexHops is SwapRouteBase {
         HOP_ZERO_FOR_ONE_SLOT.asBoolean().tstore(false);
     }
 
-    /// @notice Hop `k` from the immutables.
     function _hop(
         uint256 k
     ) private view returns (DexHop memory hop) {
@@ -255,7 +210,6 @@ abstract contract DexHops is SwapRouteBase {
         return DexHop({kind: _KIND2, pool: _POOL2, tokenOut: _OUT2, i: _I2, j: _J2});
     }
 
-    /// @notice Direction of hop `k`.
     function _zeroForOne(
         uint256 k
     ) private view returns (bool) {
@@ -264,10 +218,6 @@ abstract contract DexHops is SwapRouteBase {
         return _ZFO2;
     }
 
-    /// @notice Checks one hop against its pool and the pinned factories: `ok` is false on any failed check, and
-    /// `zeroForOne` is the hop's direction (true for token0 → token1).
-    /// @dev Runs only in the constructor, once per hop (at most `MAX_HOPS`); the reads go to the hop's own pool, the
-    /// pinned factories and the hop's input token, and a failed static check returns before any call.
     function _checkHop(
         RouteConfig memory config,
         DexHop memory hop,
@@ -276,8 +226,7 @@ abstract contract DexHops is SwapRouteBase {
         if (hop.pool == address(0) || hop.tokenOut == address(0) || hop.tokenOut == input) return (false, false);
         if (hop.kind == HopKind.ConcentratedLiquidity) {
             if (hop.i != 0 || hop.j != 0) return (false, false);
-            // The pool checks its balance after the callback, so a fee on the input would revert every hop
-            // (REQ-ROUTE-008).
+            // The pool checks its balance after the callback, so a fee on the input would revert every hop.
             if (RouteReads.hasFeeSwitch(input)) return (false, false);
             (bool ok0, address token0) = RouteReads.addressOf(hop.pool, abi.encodeCall(IUniswapV3Pool.token0, ()));
             (bool ok1, address token1) = RouteReads.addressOf(hop.pool, abi.encodeCall(IUniswapV3Pool.token1, ()));
@@ -290,10 +239,7 @@ abstract contract DexHops is SwapRouteBase {
         }
     }
 
-    /// @notice Checks a Curve hop (StableSwap-NG or legacy): non-negative distinct indices; provenance first, so a pool
-    /// of unknown provenance is never called (the NG factory set, or the pool on the pinned legacy list, REQ-ROUTE-045,
-    /// REQ-ROUTE-046); the pool's `coins(i)` and `coins(j)` are the hop's input and output; and, for an NG pool, the
-    /// factory's `get_coin_indices` reports the same indices with no underlying coin.
+    /// @notice Checks a Curve hop; provenance is checked first, so a pool of unknown provenance is never called.
     function _checkCurveHop(
         RouteConfig memory config,
         DexHop memory hop,
@@ -319,10 +265,6 @@ abstract contract DexHops is SwapRouteBase {
         return okIdx && w[0] == i && w[1] == j && w[2] == 0;
     }
 
-    /// @notice Whether `pool` is on the chain's pinned list of legacy Curve pools (REQ-ROUTE-046).
-    /// @param pinned The pinned list from the route's configuration (at most `MAX_CURVE_LEGACY_POOLS` entries, checked
-    /// before any hop).
-    /// @param pool The hop's pool, non-zero.
     function _pinnedLegacy(
         address[] memory pinned,
         address pool
@@ -333,8 +275,6 @@ abstract contract DexHops is SwapRouteBase {
         return false;
     }
 
-    /// @notice Whether `pool` is the pinned Uniswap v3 factory's pool for its tokens and fee, or the pinned Slipstream
-    /// factory's pool for its tokens and tick spacing (REQ-ROUTE-045).
     function _fromPinnedFactory(
         RouteConfig memory config,
         address pool,
@@ -367,15 +307,12 @@ abstract contract DexHops is SwapRouteBase {
         return false;
     }
 
-    /// @notice Checks that the path's tokens are distinct (and distinct from `TOKEN_IN`) and that every pool is distinct
-    /// from the other pools and from every token of the path.
     function _checkDistinct(
         address tokenIn_,
         address pathStart,
         DexHop[] memory hops
     ) private pure {
         uint256 n = hops.length;
-        // tokens = [tokenIn, pathStart (when it differs), each hop's tokenOut]; pools = each hop's pool.
         address[] memory tokens = new address[](n + 2);
         uint256 t = 0;
         tokens[t++] = tokenIn_;
@@ -400,7 +337,6 @@ abstract contract DexHops is SwapRouteBase {
         if (clash) revert InvalidRouteConfig();
     }
 
-    /// @notice A zero hop for unused immutables.
     function _emptyHop() private pure returns (DexHop memory hop) {
         hop = DexHop({kind: HopKind.ConcentratedLiquidity, pool: address(0), tokenOut: address(0), i: 0, j: 0});
     }

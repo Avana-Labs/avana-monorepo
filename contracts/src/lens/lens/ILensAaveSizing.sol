@@ -4,10 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 /// @title ILensAaveSizing
-/// @notice ABI of `LensAaveSizing` (`aave-deploy/`), Aave V4's pinned liquidation sizing compiled with Aave's settings.
-/// @dev The structs are the ABI of Aave's `LiquidationLogic.CalculateLiquidationAmountsParams` and
-/// `LiquidationAmounts` at a3ef63e, field for field (the collateral Hub as an address).
-/// @custom:spec REQ-LENS-017, REQ-LENS-029
+/// @notice ABI of `LensAaveSizing`, Aave V4's pinned liquidation sizing.
 interface ILensAaveSizing {
     /// @notice Sizing inputs, as `liquidationCall` builds them.
     struct Params {
@@ -41,8 +38,6 @@ interface ILensAaveSizing {
     }
 
     /// @notice `LiquidationLogic._calculateLiquidationAmounts(params)` at the pinned release.
-    /// @param params The sizing inputs.
-    /// @return amounts The amounts.
     function calculateLiquidationAmounts(
         Params calldata params
     ) external view returns (Amounts memory amounts);

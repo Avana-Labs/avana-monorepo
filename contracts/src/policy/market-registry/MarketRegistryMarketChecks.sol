@@ -23,16 +23,11 @@ import {TokenDef} from "./types/TokenDef.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title MarketRegistryMarketChecks
-/// @notice The registration checks of `listCollateralMarket` (REQ-CONFIG-029 to REQ-CONFIG-037, REQ-MREG-030) that
-/// do not need the market's own storage record.
+/// @notice The registration checks of `listCollateralMarket` that do not need the market's storage record.
 /// @dev Every call made here is a view.
-/// @custom:spec REQ-CONFIG-021, REQ-CONFIG-029, REQ-CONFIG-030, REQ-CONFIG-031, REQ-CONFIG-032, REQ-CONFIG-033, REQ-CONFIG-035, REQ-CONFIG-037, REQ-MREG-030
 // Chainlink and ParameterStore views over a primary route's one or two legs.
 // forge-lint: disable-start(calls-loop)
 abstract contract MarketRegistryMarketChecks is MarketRegistryStorage {
-    /// @dev Pool keying and canonical shape: exactly the key the integration's `poolKeying` requires, the
-    /// integration's shape kind, both ticks 0 for a full pool and `tickLower < tickUpper` for a tick range (the
-    /// integration's `bindMarket` checks tick spacing and the usable range).
     function _checkShape(
         address lpVault,
         MarketDef calldata def
@@ -47,15 +42,12 @@ abstract contract MarketRegistryMarketChecks is MarketRegistryStorage {
         if (sh.kind == ShapeKind.FullPool ? (sh.tickLower != 0 || sh.tickUpper != 0) : sh.tickLower >= sh.tickUpper) {
             revert ListingCheckFailed("shape");
         }
-        // REQ-AMM-CORE-020: the integration's record cap is between 1 and the global bound.
         uint256 records = IAmmIntegration(lpVault).maxRecordsPerAccountMarket();
         if (records == 0 || records > AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET) {
             revert ListingCheckFailed("records");
         }
     }
 
-    /// @dev REQ-MREG-030: the factory's token of (Spoke, market key) must be `def.vaultToken`; its `marketId()` is the
-    /// next identifier for a new listing, or the reserved identifier of the same pair's Cancelled market.
     function _resolveMarketId(
         MarketDef calldata def,
         bytes32 key
@@ -76,8 +68,6 @@ abstract contract MarketRegistryMarketChecks is MarketRegistryStorage {
         relisting = true;
     }
 
-    /// @dev REQ-CONFIG-032: the token's market key, integration, Hub, Spoke, market ID, LPOracle and decimals match
-    /// the market, and its AaveAdapter, Collateralization and LPVaultSwap are this chain's.
     function _checkVaultToken(
         MarketDef calldata def,
         bytes32 key,
@@ -97,10 +87,6 @@ abstract contract MarketRegistryMarketChecks is MarketRegistryStorage {
         ) revert VaultTokenMismatch();
     }
 
-    /// @dev REQ-CONFIG-017, REQ-CONFIG-018, REQ-CONFIG-021, REQ-CONFIG-031, REQ-CONFIG-033: between 2 and 8 pool tokens,
-    /// each listed with its three price routes (a monitoring-only listing, which has no alternate route, is refused
-    /// with `ListingCheckFailed("routeLength")`), each a USD stablecoin on a Stable-tier Spoke, and the vault-token
-    /// decimals inside the home Hub's range.
     function _checkTokens(
         address[] memory tokens,
         RiskTier tier,
@@ -129,12 +115,7 @@ abstract contract MarketRegistryMarketChecks is MarketRegistryStorage {
         }
     }
 
-    /// @dev REQ-CONFIG-035 for a two-token pool: with `a0`, `a1` the 8-decimal answers of each token's primary
-    /// route, `10^4 × a0 × 10^d1 < 2^128 × a1 × 10^d0`, so the TWAP reference price stays below `2^128`, the ratio up
-    /// to which `SPEC-ORC-009` computes the sqrt price without clamping, under a 100× shock. The former `2^64` bound
-    /// (the lower branch only) refused WBTC against an 18-decimal stable once BTC reached about $184,467 (INTEG-04);
-    /// at `2^128` that pair lists up to the `MAX_ROUTE_ANSWER` price. Answers are bounded below `2^96`, so the left
-    /// side and `2^128 × a1` fit in 256 bits.
+    /// @dev For a two-token pool, the raw price ratio stays below `2^128` under a 100x shock.
     function _checkRawPrice(
         address[] memory tokens,
         uint8[] memory decs
@@ -151,7 +132,6 @@ abstract contract MarketRegistryMarketChecks is MarketRegistryStorage {
         }
     }
 
-    /// @dev REQ-CONFIG-037: the LPOracle reports 8 decimals, a seeded answer above 0, this market and its integration.
     function _checkLpOracleSeed(
         address lpOracle,
         uint256 marketId,
@@ -164,16 +144,14 @@ abstract contract MarketRegistryMarketChecks is MarketRegistryStorage {
         if (o.marketId() != marketId || o.integration() != lpVault) revert ListingCheckFailed("lpOracle");
     }
 
-    /// @dev 8-decimal USD answer of a token's primary route, `a = 10^8 × Π answer_i / 10^dec_i` with each leg applied
-    /// by `mulDiv` (floor); 0 when a leg's answer is not positive, a leg or the result is not below `2^96`, or a
-    /// leg has more than 36 decimals.
+    /// @dev 8-decimal USD answer of a token's primary route, rounded down; 0 when a leg or the result is out of range.
     function _primaryAnswer8(
         address token
     ) internal view returns (uint256 a) {
         address[] storage route = _s().tokens[token].primaryRoute;
         a = 1e8;
         for (uint256 i = 0; i < route.length; ++i) {
-            // Only the answer is used: the raw-price bound is a listing-time magnitude check, not a price read.
+            // Only the answer is used: this is a listing-time magnitude check.
             // forge-lint: disable-next-line(unused-return)
             (, int256 answer,,,) = IAggregatorV3(route[i]).latestRoundData();
             uint8 dec = IParameterStoreViews(_PARAMETER_STORE).getFeed(route[i]).decimals;

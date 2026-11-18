@@ -18,19 +18,8 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title AvanaFirstLossReserve
-/// @notice Avana Umbrella (First-Loss Reserve): the First-Loss Reserve of one `(HUB, ASSET)`. A supply-only Spoke with
-/// zero draw capacity whose Hub added shares are Avana-funded first-loss capital; it burns them only through
-/// `Hub.eliminateDeficit` on its own asset, for recorded deficits of DAO-allowlisted CDP Spokes, never above the
-/// recorded deficit or its funded balance, and releases them otherwise only through a DAO withdrawal after
-/// `RESERVE_WITHDRAWAL_DELAY`.
-/// @dev Immutable (no proxy, owner or upgrade path); its only authority is the Aave DAO's AccessManager
-/// (OpenZeppelin `AccessManaged`), which maps `coverDeficit` to `COVERAGE_ROLE` and the `IAvanaFirstLossReserveAdmin`
-/// functions to `RESERVE_ADMIN_ROLE`. State-changing Hub calls: `add` (from `fund`), `eliminateDeficit` (from
-/// `coverDeficit`) and `remove` (from `executeWithdrawal`), each on `ASSET_ID` only. It holds no tokens between
-/// transactions: `fund` moves the asset from the caller straight to the Hub and `remove` pays the recipient from the
-/// Hub. Every state-changing function is non-reentrant (EIP-1153 transient guard) and writes its state before its
-/// external calls; the events that report the Hub's results (shares, balances after) follow those calls.
-/// @custom:spec REQ-FLR-001, REQ-FLR-002, REQ-FLR-003, REQ-FLR-004, REQ-FLR-005, REQ-FLR-006, REQ-FLR-012, REQ-FLR-015, REQ-FLR-020, REQ-FLR-022, REQ-FLR-035, REQ-FLR-036, REQ-FLR-040, REQ-FLR-042, INV-042, INV-071, Q-101, Q-142, Q-236
+/// @notice Avana Umbrella of one `(HUB, ASSET)`: a supply-only Spoke whose Hub shares cover allowlisted deficits.
+/// @dev Immutable; its only authority is the Aave DAO's AccessManager. Holds no tokens between transactions.
 contract AvanaFirstLossReserve is
     IAvanaFirstLossReserve,
     IAvanaFirstLossReserveAdmin,
@@ -42,25 +31,20 @@ contract AvanaFirstLossReserve is
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
-    /// @notice `reserveWithdrawalDelay` of 1.5 Parameters: 14 days.
+    /// @dev Required withdrawal delay: 14 days.
     uint256 internal constant RESERVE_WITHDRAWAL_DELAY_VALUE = 1_209_600;
 
-    /// @dev Aave's deficit scale: deficits are asset units × 1e27.
+    /// @dev Aave's deficit scale (asset units * 1e27).
     uint256 internal constant RAY = 1e27;
 
-    /// @dev The Hub whose asset this instance covers.
     IAaveV4Hub internal immutable _HUB;
 
-    /// @dev The covered debt asset.
     address internal immutable _ASSET;
 
-    /// @dev `_ASSET`'s asset ID on `_HUB`.
     uint256 internal immutable _ASSET_ID;
 
-    /// @dev Seconds from a withdrawal request to its earliest execution.
     uint256 internal immutable _RESERVE_WITHDRAWAL_DELAY;
 
-    /// @notice DAO-set allowlist of CDP Spokes whose deficits on the asset may be covered (2.14 Storage).
     mapping(address spoke => bool allowed) public override allowedBorrowSpoke;
 
     /// @inheritdoc IAvanaFirstLossReserve
@@ -78,18 +62,8 @@ contract AvanaFirstLossReserve is
     /// @inheritdoc IAvanaFirstLossReserveViews
     uint256 public override totalWithdrawn;
 
-    /// @dev Withdrawal requests by ID.
     mapping(uint256 id => Withdrawal request) internal _withdrawals;
 
-    /// @notice Fixes the instance's Hub, asset, asset ID, withdrawal delay and AccessManager.
-    /// @dev Reverts `ZeroAddress`, `InvalidHubAsset` unless the Hub lists `asset` under `assetId` with the token's own
-    /// decimals, and `InvalidWithdrawalDelay` unless the delay is `reserveWithdrawalDelay`.
-    /// @param hub The funding Hub.
-    /// @param asset The covered debt asset.
-    /// @param assetId `asset`'s asset ID on `hub`.
-    /// @param authority The Aave DAO's AccessManager.
-    /// @param reserveWithdrawalDelay Seconds; must be 1,209,600.
-    /// @custom:spec REQ-FLR-003, REQ-FLR-008, REQ-FLR-039
     constructor(
         address hub,
         address asset,
@@ -109,10 +83,7 @@ contract AvanaFirstLossReserve is
         if (underlying != asset || hubDecimals != IERC20Metadata(asset).decimals()) revert InvalidHubAsset(assetId);
     }
 
-    // ─── Funding (anyone) ───
-
     /// @inheritdoc IAvanaFirstLossReserve
-    /// @custom:spec REQ-FLR-005, REQ-FLR-006, REQ-FLR-010, REQ-FLR-011, REQ-FLR-035, REQ-FLR-037, REQ-FLR-038, Q-211
     function fund(
         uint256 amount
     ) external override nonReentrant returns (uint256 shares) {
@@ -129,10 +100,7 @@ contract AvanaFirstLossReserve is
         emit ReserveFunded(msg.sender, amount, shares, fundedBalance());
     }
 
-    // ─── Coverage (COVERAGE_ROLE) ───
-
     /// @inheritdoc IAvanaFirstLossReserve
-    /// @custom:spec REQ-FLR-004, REQ-FLR-006, REQ-FLR-014, REQ-FLR-016, REQ-FLR-018, REQ-FLR-019, REQ-FLR-022, REQ-FLR-027, REQ-FLR-029, REQ-FLR-030, REQ-FLR-031, REQ-FLR-032, REQ-FLR-040, REQ-FLR-048, SPEC-FLR-001, INV-042, INV-071
     function coverDeficit(
         address borrowSpoke,
         uint256 maxAmount
@@ -143,7 +111,7 @@ contract AvanaFirstLossReserve is
         _beforeCover();
         uint256 amount = Math.min(Math.min(maxAmount, Math.ceilDiv(deficitRayBefore, RAY)), fundedBalance());
         if (amount == 0) revert NothingToCover(borrowSpoke);
-        // SPEC-FLR-001: amount <= ceil(deficitRay / RAY), so the Hub eliminates exactly `amount` (MATH-ST-114).
+        // `amount <= ceil(deficitRay / RAY)`, so the Hub eliminates exactly `amount`.
         totalCovered += amount;
         (shares, covered) = _HUB.eliminateDeficit(_ASSET_ID, amount, borrowSpoke);
         uint256 balanceAfter = fundedBalance();
@@ -153,10 +121,7 @@ contract AvanaFirstLossReserve is
         _alertIfBelowMinimum(balanceAfter);
     }
 
-    // ─── Aave DAO (RESERVE_ADMIN_ROLE) ───
-
     /// @inheritdoc IAvanaFirstLossReserveAdmin
-    /// @custom:spec REQ-FLR-016, REQ-FLR-017
     function setAllowedBorrowSpoke(
         address spoke,
         bool allowed
@@ -171,7 +136,6 @@ contract AvanaFirstLossReserve is
     }
 
     /// @inheritdoc IAvanaFirstLossReserveAdmin
-    /// @custom:spec REQ-FLR-013
     function setFirstLossReserveMinimum(
         uint256 minimum
     ) external override nonReentrant restricted {
@@ -182,7 +146,6 @@ contract AvanaFirstLossReserve is
     }
 
     /// @inheritdoc IAvanaFirstLossReserveAdmin
-    /// @custom:spec REQ-FLR-023, SPEC-FLR-003
     function requestWithdrawal(
         uint256 amount,
         address to
@@ -198,7 +161,6 @@ contract AvanaFirstLossReserve is
     }
 
     /// @inheritdoc IAvanaFirstLossReserveAdmin
-    /// @custom:spec REQ-FLR-024
     function cancelWithdrawal(
         uint256 id
     ) external override nonReentrant restricted {
@@ -210,7 +172,6 @@ contract AvanaFirstLossReserve is
     }
 
     /// @inheritdoc IAvanaFirstLossReserveAdmin
-    /// @custom:spec REQ-FLR-004, REQ-FLR-006, REQ-FLR-014, REQ-FLR-025, REQ-FLR-026, REQ-FLR-033, REQ-FLR-034, REQ-FLR-035, REQ-FLR-045, SPEC-FLR-003
     function executeWithdrawal(
         uint256 id
     ) external override nonReentrant restricted returns (uint256 withdrawn) {
@@ -230,28 +191,22 @@ contract AvanaFirstLossReserve is
         _alertIfBelowMinimum(balanceAfter);
     }
 
-    // ─── Views ───
-
     /// @inheritdoc IAvanaFirstLossReserve
-    /// @custom:spec REQ-FLR-014, REQ-FLR-015, SPEC-FLR-002
     function fundedBalance() public view override returns (uint256 balance) {
         balance = _HUB.getSpokeAddedAssets(_ASSET_ID, address(this));
     }
 
     /// @inheritdoc IAvanaFirstLossReserve
-    /// @custom:spec REQ-FLR-013, REQ-FLR-014, Q-399
     function isBelowMinimum() external view override returns (bool below) {
         below = fundedBalance() < firstLossReserveMinimum;
     }
 
     /// @inheritdoc IAvanaFirstLossReserveViews
-    /// @custom:spec REQ-FLR-001
     function fundedShares() external view override returns (uint256 shares) {
         shares = _HUB.getSpokeAddedShares(_ASSET_ID, address(this));
     }
 
     /// @inheritdoc IAvanaFirstLossReserveViews
-    /// @custom:spec REQ-FLR-023
     function getWithdrawal(
         uint256 id
     ) external view override returns (Withdrawal memory withdrawal) {
@@ -259,39 +214,28 @@ contract AvanaFirstLossReserve is
     }
 
     /// @inheritdoc IAvanaFirstLossReserve
-    /// @custom:spec REQ-FLR-039
     function ASSET() external view override returns (address asset) {
         asset = _ASSET;
     }
 
     /// @inheritdoc IAvanaFirstLossReserve
-    /// @custom:spec REQ-FLR-039
     function HUB() external view override returns (address hub) {
         hub = address(_HUB);
     }
 
     /// @inheritdoc IAvanaFirstLossReserve
-    /// @custom:spec REQ-FLR-008, REQ-FLR-039
     function ASSET_ID() external view override returns (uint256 assetId) {
         assetId = _ASSET_ID;
     }
 
     /// @inheritdoc IAvanaFirstLossReserveViews
-    /// @custom:spec REQ-FLR-008, SPEC-FLR-003
     function RESERVE_WITHDRAWAL_DELAY() external view override returns (uint256 delay) {
         delay = _RESERVE_WITHDRAWAL_DELAY;
     }
 
-    // ─── Internal ───
-
-    /// @notice Reverts `DeficitOutstanding(spoke)` for the first Spoke of the Hub's list on `ASSET_ID` that is on the
-    /// allowlist and has a recorded deficit, so no withdrawal runs while a deficit this reserve can cover is open.
-    /// @dev Bounded by the Hub's Spoke count on the asset, which only the Aave DAO raises; views only.
-    /// @custom:spec REQ-FLR-026, REQ-FLR-045, SPEC-FLR-003
     function _requireNoAllowlistedDeficit() internal view {
         uint256 count = _HUB.getSpokeCount(_ASSET_ID);
         address open = address(0);
-        // Views of the instance's own Hub, one Spoke per iteration, bounded by the Spokes the Aave DAO lists on the asset.
         // forge-lint: disable-start(calls-loop)
         for (uint256 i = 0; i < count && open == address(0); ++i) {
             address spoke = _HUB.getSpokeAddress(_ASSET_ID, i);
@@ -301,14 +245,9 @@ contract AvanaFirstLossReserve is
         if (open != address(0)) revert DeficitOutstanding(open);
     }
 
-    /// @notice Loss-order hook run by `coverDeficit` after the allowlist and recorded-deficit checks and before the
-    /// amount is computed; the Avana Umbrella has no layer in front of it, so it accepts every call.
-    /// @dev `DaoDeficitOffset` overrides it to require a first-loss layer with a funded balance of zero.
-    /// @custom:spec REQ-FLR-048, Q-410
+    /// @notice Loss-order hook run by `coverDeficit`; `DaoDeficitOffset` overrides it.
     function _beforeCover() internal view virtual {}
 
-    /// @dev Emits `ReserveBelowMinimum` when the balance left by a coverage or withdrawal is below the minimum.
-    /// @custom:spec REQ-FLR-014, REQ-FLR-031
     function _alertIfBelowMinimum(
         uint256 balance
     ) internal {

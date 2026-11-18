@@ -7,92 +7,56 @@ import {IAvanaGasVaultErrors} from "./IAvanaGasVaultErrors.sol";
 import {IAvanaGasVaultEvents} from "./IAvanaGasVaultEvents.sol";
 
 /// @title IAvanaGasVault
-/// @notice One vault per chain holding that chain's native gas token for Avana's own keeper signers (2.24). Anyone can
-/// trigger a top-up, which pays only an allowlisted signer, only while it is below its `minBalance`, and at most
-/// `min(targetBalance − balance, periodCap − sent in the last 24 h, vault balance)`. `TIMELOCK` adds signers, raises
-/// values, unpauses and withdraws to `TREASURY`; `GUARDIAN` (or `TIMELOCK`) removes a signer, lowers values and pauses
-/// at once.
-/// @dev Periphery outside the audited core: immutable, no owner, no role storage, no upgrade; it holds no ERC-20,
-/// reads neither `tx.gasprice` nor `gasleft()`, and calls no Avana contract; no Avana contract calls or reads it. Any
-/// number of chains and Hubs share the design: one vault per chain serves every Hub on it.
-/// @custom:spec REQ-GASV-001, REQ-GASV-014
+/// @notice Per-chain vault of native gas for Avana's keeper signers; anyone may top up a signer below its minimum.
+/// @dev `TIMELOCK` raises and withdraws; `GUARDIAN` (or `TIMELOCK`) removes, lowers and pauses.
 interface IAvanaGasVault is IAvanaGasVaultErrors, IAvanaGasVaultEvents {
-    /// @notice A signer's refill rule. Values fit 80 bits (about 1.2 million ETH).
-    /// @param minBalance A top-up is allowed only while the signer's balance is below this.
-    /// @param targetBalance A top-up fills the signer to this, at most.
-    /// @param periodCap Most ETH sent to the signer in any 24 h.
+    /// @notice A signer's refill rule: top up below `minBalance`, to `targetBalance`, at most `periodCap` per `PERIOD`.
     struct SignerConfig {
         uint80 minBalance;
         uint80 targetBalance;
         uint80 periodCap;
     }
 
-    // ─── Immutables and constants ───
-
-    /// @notice The only withdrawal destination: the chain's `feeRecipient` treasury Safe (never `FUNDING_SAFE`).
-    /// @custom:spec REQ-GASV-002, REQ-GASV-012
+    /// @notice The only withdrawal destination: the chain's `feeRecipient` treasury Safe.
     function TREASURY() external view returns (address);
 
     /// @notice The chain's AvanaTimelock.
-    /// @custom:spec REQ-GASV-002
     function TIMELOCK() external view returns (address);
 
     /// @notice The chain's Emergency Guardian Safe: removes, lowers and pauses at once; cannot raise or withdraw.
-    /// @custom:spec REQ-GASV-002
     function GUARDIAN() external view returns (address);
 
     /// @notice Most signers on the allowlist, `1 ≤ MAX_SIGNERS ≤ MAX_SIGNERS_LIMIT`.
-    /// @custom:spec REQ-GASV-002, REQ-GASV-007
     function MAX_SIGNERS() external view returns (uint256);
 
-    /// @notice Hard bound on `MAX_SIGNERS`: 8, which bounds `topUpAll`'s gas.
-    /// @custom:spec REQ-GASV-002
+    /// @notice Hard bound on `MAX_SIGNERS`, which bounds `topUpAll`'s gas.
     function MAX_SIGNERS_LIMIT() external view returns (uint256);
 
-    /// @notice The rolling window of the cap: 86,400 s.
-    /// @custom:spec REQ-GASV-005
+    /// @notice The rolling window of the cap.
     function PERIOD() external view returns (uint256);
 
-    /// @notice Most top-ups recorded per signer in any `PERIOD`: 4.
-    /// @custom:spec REQ-GASV-005
+    /// @notice Most top-ups recorded per signer in any `PERIOD`.
     function MAX_SENDS_PER_PERIOD() external view returns (uint256);
 
-    /// @notice Most gas forwarded with each ETH transfer: 100,000, as LPVaultSwap's payouts. Ample for an EOA or a Safe's
-    /// `receive`; it bounds what a recipient's code can burn of the caller's gas, and no return data is copied.
-    /// @custom:spec REQ-GASV-013
+    /// @notice Most gas forwarded with each ETH transfer; bounds what a recipient's code can burn.
     function TRANSFER_GAS() external view returns (uint256);
 
-    // ─── Anyone ───
-
     /// @notice Accepts ETH from anyone, as `fund` does.
-    /// @custom:spec REQ-GASV-003
     receive() external payable;
 
     /// @notice Adds ETH to the vault (as does a plain transfer).
-    /// @custom:spec REQ-GASV-003
     function fund() external payable;
 
     /// @notice Tops `signer` up toward its `targetBalance`; pays `signer`, never the caller.
-    /// @dev Reverts `VaultPaused` while paused, `UnknownSigner` if not listed, `NotBelowMinimum` unless
-    /// `signer.balance < minBalance`, `NothingToSend` if the amount is 0, `SendFailed` if the transfer fails.
-    /// @param signer An allowlisted signer.
-    /// @return amount The ETH sent.
-    /// @custom:spec REQ-GASV-004, REQ-GASV-005, REQ-GASV-013
+    /// @dev Reverts `NotBelowMinimum` unless `signer.balance < minBalance`.
     function topUp(
         address signer
     ) external returns (uint256 amount);
 
-    /// @notice Tops up every listed signer below its `minBalance` with a non-zero amount; skips the rest and any signer
-    /// whose transfer fails (`TopUpFailed`). Reverts only `VaultPaused`.
-    /// @return count Signers paid.
-    /// @return total ETH sent.
-    /// @custom:spec REQ-GASV-006, REQ-GASV-013
+    /// @notice Tops up every listed signer below its minimum, skipping failed transfers; reverts only `VaultPaused`.
     function topUpAll() external returns (uint256 count, uint256 total);
 
-    // ─── TIMELOCK ───
-
-    /// @notice Adds an Avana keeper signer (D7: Avana's own signers only, primary and standby per chain).
-    /// @custom:spec REQ-GASV-007
+    /// @notice Adds an Avana keeper signer.
     function addSigner(
         address signer,
         uint256 minBalance,
@@ -101,7 +65,6 @@ interface IAvanaGasVault is IAvanaGasVaultErrors, IAvanaGasVaultEvents {
     ) external;
 
     /// @notice Sets a listed signer's three values, in either direction.
-    /// @custom:spec REQ-GASV-008
     function setSignerConfig(
         address signer,
         uint256 minBalance,
@@ -110,19 +73,14 @@ interface IAvanaGasVault is IAvanaGasVaultErrors, IAvanaGasVaultEvents {
     ) external;
 
     /// @notice Unpauses top-ups.
-    /// @custom:spec REQ-GASV-011
     function unpause() external;
 
     /// @notice Sends `amount` to `TREASURY`.
-    /// @custom:spec REQ-GASV-012, REQ-GASV-013
     function withdraw(
         uint256 amount
     ) external;
 
-    // ─── GUARDIAN or TIMELOCK ───
-
     /// @notice Lowers a listed signer's values; each new value must be at most the current one.
-    /// @custom:spec REQ-GASV-009
     function tightenSigner(
         address signer,
         uint256 minBalance,
@@ -131,46 +89,35 @@ interface IAvanaGasVault is IAvanaGasVaultErrors, IAvanaGasVaultEvents {
     ) external;
 
     /// @notice Removes a listed signer; it receives nothing afterwards.
-    /// @custom:spec REQ-GASV-010
     function removeSigner(
         address signer
     ) external;
 
     /// @notice Pauses top-ups (funding and withdrawal stay open).
-    /// @custom:spec REQ-GASV-011
     function pause() external;
 
-    // ─── Views ───
-
     /// @notice Whether top-ups are paused.
-    /// @custom:spec REQ-GASV-014
     function paused() external view returns (bool);
 
     /// @notice The allowlist, in storage order.
-    /// @custom:spec REQ-GASV-014
     function signers() external view returns (address[] memory);
 
     /// @notice Whether `account` is listed.
-    /// @custom:spec REQ-GASV-014
     function isSigner(
         address account
     ) external view returns (bool);
 
     /// @notice A listed signer's values (zeros if not listed).
-    /// @custom:spec REQ-GASV-014
     function signerConfig(
         address signer
     ) external view returns (SignerConfig memory);
 
-    /// @notice ETH sent to `signer` in the last `PERIOD` (`(now − PERIOD, now]`).
-    /// @custom:spec REQ-GASV-005, REQ-GASV-014
+    /// @notice ETH sent to `signer` in the last `PERIOD`.
     function sentInPeriod(
         address signer
     ) external view returns (uint256);
 
-    /// @notice What `topUp(signer)` would send now and what it would request; `(0, 0)` when not due or not listed, and
-    /// an amount of 0 while paused.
-    /// @custom:spec REQ-GASV-014
+    /// @notice What `topUp(signer)` would send and request now; `(0, 0)` if not due or listed, amount 0 while paused.
     function quoteTopUp(
         address signer
     ) external view returns (uint256 amount, uint256 requested);

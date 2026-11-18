@@ -4,17 +4,10 @@ pragma solidity 0.8.28;
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 /// @title INonfungiblePositionManager
-/// @notice Subset of the Uniswap v3 NonfungiblePositionManager interface that Avana contracts and test fixtures call
-/// on the canonical position manager. Declarations are copied from
-/// `contracts/interfaces/INonfungiblePositionManager.sol` of Uniswap/v3-periphery at commit
-/// 24ccf014fe7f81d74a14c1689d6fdf123f280e45, with identical selectors, struct layouts and state mutability.
-/// @dev The ERC-721 functions (`ownerOf`, `transferFrom`, `approve`) come from OpenZeppelin's `IERC721`, whose
-/// selectors equal those the position manager inherits from OpenZeppelin's ERC-721 interfaces.
-/// @dev Called by: Uniswap v3 LPVault (`ownerOf`, `positions`, `transferFrom`, `decreaseLiquidity`, `collect`), Lens
-/// (`positions`), borrower wallets (`approve`), test fixtures (`mint`, `increaseLiquidity`).
+/// @notice Subset of the Uniswap v3 NonfungiblePositionManager that Avana contracts and test fixtures call.
+/// @dev Copied from Uniswap/v3-periphery (24ccf01); the ERC-721 functions come from OpenZeppelin's `IERC721`.
 interface INonfungiblePositionManager is IERC721 {
-    /// @notice Parameters of `mint`. Source: `contracts/interfaces/INonfungiblePositionManager.sol`
-    /// (v3-periphery 24ccf01).
+    /// @notice Parameters of `mint`.
     struct MintParams {
         address token0;
         address token1;
@@ -29,8 +22,7 @@ interface INonfungiblePositionManager is IERC721 {
         uint256 deadline;
     }
 
-    /// @notice Parameters of `increaseLiquidity`. Source: `contracts/interfaces/INonfungiblePositionManager.sol`
-    /// (v3-periphery 24ccf01).
+    /// @notice Parameters of `increaseLiquidity`.
     struct IncreaseLiquidityParams {
         uint256 tokenId;
         uint256 amount0Desired;
@@ -40,8 +32,7 @@ interface INonfungiblePositionManager is IERC721 {
         uint256 deadline;
     }
 
-    /// @notice Parameters of `decreaseLiquidity`. Source: `contracts/interfaces/INonfungiblePositionManager.sol`
-    /// (v3-periphery 24ccf01).
+    /// @notice Parameters of `decreaseLiquidity`.
     struct DecreaseLiquidityParams {
         uint256 tokenId;
         uint128 liquidity;
@@ -50,8 +41,7 @@ interface INonfungiblePositionManager is IERC721 {
         uint256 deadline;
     }
 
-    /// @notice Parameters of `collect`. Source: `contracts/interfaces/INonfungiblePositionManager.sol`
-    /// (v3-periphery 24ccf01).
+    /// @notice Parameters of `collect`.
     struct CollectParams {
         uint256 tokenId;
         address recipient;
@@ -59,14 +49,10 @@ interface INonfungiblePositionManager is IERC721 {
         uint128 amount1Max;
     }
 
-    /// @notice Returns the Uniswap v3 factory the position manager derives pools from. Source:
-    /// `contracts/interfaces/IPeripheryImmutableState.sol` (v3-periphery 24ccf01).
-    /// @dev Called by: Uniswap v3 LPVault (constructor check, `REQ-AMM-V3-001`).
+    /// @notice Returns the Uniswap v3 factory the position manager derives pools from.
     function factory() external view returns (address);
 
-    /// @notice Returns the position data of a token ID; the call reverts if the token ID is not valid. Source:
-    /// `contracts/interfaces/INonfungiblePositionManager.sol` (v3-periphery 24ccf01).
-    /// @dev Called by: Uniswap v3 LPVault, Lens.
+    /// @notice Returns the position data of a token ID; the call reverts if the token ID is not valid.
     function positions(
         uint256 tokenId
     )
@@ -87,30 +73,22 @@ interface INonfungiblePositionManager is IERC721 {
             uint128 tokensOwed1
         );
 
-    /// @notice Creates a new position wrapped in an NFT. Source:
-    /// `contracts/interfaces/INonfungiblePositionManager.sol` (v3-periphery 24ccf01).
-    /// @dev Called by: test fixtures.
+    /// @notice Creates a new position wrapped in an NFT.
     function mint(
         MintParams calldata params
     ) external payable returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
 
-    /// @notice Increases the liquidity of a position, with tokens paid by `msg.sender`. Source:
-    /// `contracts/interfaces/INonfungiblePositionManager.sol` (v3-periphery 24ccf01).
-    /// @dev Called by: test fixtures.
+    /// @notice Increases the liquidity of a position, with tokens paid by `msg.sender`.
     function increaseLiquidity(
         IncreaseLiquidityParams calldata params
     ) external payable returns (uint128 liquidity, uint256 amount0, uint256 amount1);
 
-    /// @notice Decreases the liquidity of a position and accounts the removed tokens to the position. Source:
-    /// `contracts/interfaces/INonfungiblePositionManager.sol` (v3-periphery 24ccf01).
-    /// @dev Called by: Uniswap v3 LPVault.
+    /// @notice Decreases the liquidity of a position and accounts the removed tokens to the position.
     function decreaseLiquidity(
         DecreaseLiquidityParams calldata params
     ) external payable returns (uint256 amount0, uint256 amount1);
 
-    /// @notice Collects up to a maximum amount of the tokens owed to a position and sends them to `recipient`. Source:
-    /// `contracts/interfaces/INonfungiblePositionManager.sol` (v3-periphery 24ccf01).
-    /// @dev Called by: Uniswap v3 LPVault.
+    /// @notice Collects up to a maximum amount of the tokens owed to a position and sends them to `recipient`.
     function collect(
         CollectParams calldata params
     ) external payable returns (uint256 amount0, uint256 amount1);

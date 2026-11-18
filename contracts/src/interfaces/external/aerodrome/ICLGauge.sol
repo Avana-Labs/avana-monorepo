@@ -2,19 +2,16 @@
 pragma solidity 0.8.28;
 
 /// @title ICLGauge
-/// @notice Read-only subset of the Aerodrome Slipstream gauge interface, copied from
-/// `contracts/gauge/interfaces/ICLGauge.sol` of aerodrome-finance/slipstream `main` (read 2026-11-10), with identical selectors.
-/// @dev Called by: the Slipstream LPVault and the Lens, only to detect staking. A staked NFT is owned by the gauge, so
-/// `ownerOf(tokenId) == pool.gauge()` identifies it; Avana custodies unstaked NFTs only and never calls a gauge
-/// mutator.
+/// @notice Read-only subset of the Aerodrome Slipstream gauge, used only to detect staking.
+/// @dev Copied from aerodrome-finance/slipstream `ICLGauge.sol`, identical selectors.
 interface ICLGauge {
-    /// @notice Returns the pool of the gauge. Source: `ICLGauge.sol`.
+    /// @notice Returns the pool of the gauge.
     function pool() external view returns (address);
 
-    /// @notice Returns the NPM of the gauge. Source: `ICLGauge.sol`.
+    /// @notice Returns the NPM of the gauge.
     function nft() external view returns (address);
 
-    /// @notice Returns true when `depositor` has staked `tokenId`. Source: `ICLGauge.sol`.
+    /// @notice Returns true when `depositor` has staked `tokenId`.
     function stakedContains(
         address depositor,
         uint256 tokenId

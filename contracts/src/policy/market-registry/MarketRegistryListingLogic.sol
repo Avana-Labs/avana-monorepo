@@ -26,16 +26,11 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 
 /// @title MarketRegistryListingLogic
 /// @notice Bodies of `listToken`, `setPriceSource` and `listCollateralMarket`. Normal delay.
-/// @dev Reached only by delegatecall from the MarketRegistry, which checks `APPLICATION_ADMIN` first; see
-/// `IMarketRegistryLogic`. The one state-changing external call is the integration's `bindMarket` (REQ-VTOKEN-022),
-/// made to the registered, immutable LPVault of the market's AMM protocol; every other call is a view.
-/// @custom:spec REQ-CONFIG-006, REQ-CONFIG-007, REQ-CONFIG-008, REQ-CONFIG-011, REQ-CONFIG-017, REQ-CONFIG-021, REQ-CONFIG-025, REQ-CONFIG-026, REQ-CONFIG-027, REQ-CONFIG-028, REQ-CONFIG-029, REQ-CONFIG-032, REQ-CONFIG-033, REQ-CONFIG-034, REQ-CONFIG-065, REQ-CONFIG-076, REQ-CONFIG-078, REQ-MREG-027, REQ-MREG-030, REQ-MREG-033, REQ-MREG-034
-// Each function carries the body of a selector declared in an IMarketRegistry piece that the MarketRegistry itself
-// implements; this contract inherits no piece, since each piece also declares functions another contract serves.
+/// @dev Runs only by delegatecall from the MarketRegistry, which checks `APPLICATION_ADMIN` first.
+// Bodies of IMarketRegistry selectors; this contract inherits no interface piece.
 // solhint-disable comprehensive-interface
 // forge-lint: disable-start(reentrancy-events)
-// setPriceSource re-checks every market using the token (RiskModule, ParameterStore and LPOracle views); the loop
-// is bounded by the markets timelock operations list, and a reverting callee only reverts the governance call.
+// setPriceSource re-checks every market using the token with view calls; bounded by the market count.
 // forge-lint: disable-start(calls-loop)
 contract MarketRegistryListingLogic is
     MarketRegistryMarketChecks,
@@ -43,21 +38,15 @@ contract MarketRegistryListingLogic is
     MarketRegistryRouteChecks,
     IMarketRegistryLogic
 {
-    /// @notice Fixes the implementation immutables; they must equal the MarketRegistry's.
-    /// @param im The per-chain Avana addresses.
-    /// @custom:spec REQ-CONFIG-005
     constructor(
         MarketRegistryImmutables memory im
     ) MarketRegistryStorage(im) {}
 
     /// @inheritdoc IMarketRegistryLogic
-    /// @custom:spec REQ-CONFIG-005
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("MarketRegistryListingLogic"), _IMMUTABLES_HASH);
     }
 
-    /// @notice Body of `listToken`.
-    /// @custom:spec REQ-CONFIG-017, REQ-CONFIG-018, REQ-CONFIG-021, REQ-CONFIG-025, REQ-CONFIG-026, REQ-MREG-027, Q-342
     function listToken(
         address token,
         TokenDef calldata def
@@ -66,13 +55,10 @@ contract MarketRegistryListingLogic is
         TokenDef storage t = _s().tokens[token];
         if (token == address(0) || t.listed) revert ListingCheckFailed("listed");
         if (def.replacedSlot != RouteSlot.None) revert ListingCheckFailed("replacedSlot");
-        // Q-342: an ERC-777 token (an ERC-1820 `ERC777Token` implementer) is never listed, so its send and receive hooks
-        // never run inside a custody, settlement or route call.
+        // An ERC-777 token is never listed, so its hooks never run inside a custody, settlement or route call.
         if (_isErc777Token(token)) revert ListingCheckFailed("erc777");
         if (def.alternateRoute.length == 0 && def.standbyRoute.length == 0) {
-            // REQ-CONFIG-021: a monitoring-only listing (a fixed-price debt asset such as GHO) records its one route
-            // after the leg checks; it can serve only a fixed-price debt reserve and is never a pool token until
-            // `setPriceSource` gives it three routes.
+            // Monitoring-only listing: one route; serves only a fixed-price debt reserve.
             bytes32 bad = _routeLegsCheck(def.primaryRoute);
             if (bad != 0) revert ListingCheckFailed(bad);
         } else {
@@ -91,8 +77,6 @@ contract MarketRegistryListingLogic is
         emit TokenListed(token, dec, def.primaryRoute, def.alternateRoute, def.pegModule);
     }
 
-    /// @notice Body of `setPriceSource`.
-    /// @custom:spec REQ-CONFIG-021, REQ-CONFIG-026, REQ-CONFIG-027, REQ-CONFIG-034, REQ-CONFIG-036, REQ-MREG-027
     function setPriceSource(
         address token,
         address[] calldata primaryRoute,
@@ -110,8 +94,7 @@ contract MarketRegistryListingLogic is
         t.replacedSlot = RouteSlot.None;
         delete l.standbyCancelledAt[token];
         ++l.priceRouteVersion[token];
-        // The ParameterStore and every LPOracle read the routes from this registry, so the checks below run on the
-        // routes just written; a failure reverts the whole call.
+        // The checks below read the routes from this registry, so they run after the write.
         IParameterStoreViews ps = IParameterStoreViews(_PARAMETER_STORE);
         if (ps.feedAgreementToleranceBps(token) < ps.feedAgreementToleranceMinBps(token)) {
             revert ListingCheckFailed("tolerance");
@@ -128,8 +111,6 @@ contract MarketRegistryListingLogic is
         emit PriceSourceSet(token, primaryRoute, alternateRoute, standbyRoute);
     }
 
-    /// @notice Body of `listCollateralMarket`.
-    /// @custom:spec REQ-MREG-034, REQ-CONFIG-078, REQ-CONFIG-006, REQ-CONFIG-007, REQ-CONFIG-011, REQ-CONFIG-028, REQ-CONFIG-029, REQ-CONFIG-030, REQ-CONFIG-031, REQ-CONFIG-032, REQ-CONFIG-033, REQ-CONFIG-034, REQ-CONFIG-035, REQ-CONFIG-037, REQ-CONFIG-076, REQ-MREG-030, REQ-MREG-033
     function listCollateralMarket(
         MarketDef calldata def
     ) external returns (uint256 marketId) {
@@ -147,8 +128,7 @@ contract MarketRegistryListingLogic is
             l.marketCount = marketId;
             l.marketsOfSpoke[def.spoke].push(marketId);
         } else {
-            // REQ-MREG-030: the relisted market starts clean. A new route epoch hides every route slot, previously
-            // approved route and status of the cancelled registration; its breaker latch and breach time are cleared.
+            // A relisted market starts clean: a new route epoch hides old routes; breaker state is cleared.
             l.routeEpoch[marketId] += 1;
             delete l.latched[bytes32(marketId)];
             _clearBreachTimes(l, bytes32(marketId));
@@ -162,9 +142,6 @@ contract MarketRegistryListingLogic is
         );
     }
 
-    /// @dev REQ-CONFIG-033, REQ-CONFIG-007, REQ-MREG-030, REQ-MREG-034: the Spoke, Hub and integration, the canonical
-    /// pool keying and shape, no live market on the key, token or LPOracle, the market identifier within
-    /// `MAX_MARKET_COUNT`, and a debt reserve to settle in.
     function _preflight(
         MarketDef calldata def
     ) private view returns (address lpVault, bytes32 key, bool relisting, uint256 marketId) {
@@ -182,14 +159,11 @@ contract MarketRegistryListingLogic is
                 || !_keyFree(l.marketOfLpOracle[def.lpOracle])
         ) revert DuplicateMarketKey();
         (marketId, relisting) = _resolveMarketId(def, key);
-        // REQ-MREG-034: a new identifier is `marketCount + 1`, so this bounds every walk over 1..marketCount; a
-        // relisting reuses an identifier at or below `marketCount` and adds nothing.
+        // Bounds every walk over 1..marketCount; a relisting reuses an existing identifier.
         if (!relisting && marketId > _MAX_MARKET_COUNT) revert MarketCountLimit(_MAX_MARKET_COUNT);
         if (l.debtReserveIds[def.spoke].length == 0) revert ListingCheckFailed("settlementReserve");
     }
 
-    /// @dev Binds the shape, runs the token, vault-token, common-mode, raw-price and LPOracle checks and writes the
-    /// market record.
     function _bindAndCheck(
         MarketDef calldata def,
         address lpVault,
@@ -207,7 +181,6 @@ contract MarketRegistryListingLogic is
         _writeMarket(marketId, lpVault, tokens, decs, unitDecimals, def);
     }
 
-    /// @dev REQ-CONFIG-021 and REQ-MREG-027 on the three routes: each passes the leg checks and no two share a feed.
     function _checkThreeRoutes(
         address[] calldata primary,
         address[] calldata alternate,
@@ -222,8 +195,6 @@ contract MarketRegistryListingLogic is
         }
     }
 
-    /// @dev Binds a new market in its integration (REQ-VTOKEN-022), or, on a relisting, requires the integration's
-    /// existing binding of the reserved identifier to be the same pool and shape.
     function _bind(
         address lpVault,
         uint256 marketId,
@@ -244,7 +215,6 @@ contract MarketRegistryListingLogic is
         unitDecimals = _s().markets[marketId].decimals;
     }
 
-    /// @dev Writes the market record in `Registered` status (REQ-CONFIG-008: these fields never change afterwards).
     function _writeMarket(
         uint256 marketId,
         address lpVault,
@@ -278,9 +248,7 @@ contract MarketRegistryListingLogic is
         m.activatedAt = 0;
     }
 
-    /// @dev The checks `setPriceSource` re-runs for one market using the token: the common-mode guard with the
-    /// standby counted as an alternate, the listing margin on every route and the LPOracle's `checkConfig`; returns the
-    /// first failed check's name, 0 when all pass.
+    /// @dev Returns the first failed check's name, or 0.
     function _checkMarketRoutes(
         uint256 marketId,
         address[] memory tokens,
@@ -292,7 +260,6 @@ contract MarketRegistryListingLogic is
         if (!_oracleConfigPasses(lpOracle)) return "oracleConfig";
     }
 
-    /// @dev True when `list` holds `token`.
     function _holds(
         address[] storage list,
         address token

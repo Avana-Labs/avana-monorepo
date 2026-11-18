@@ -15,16 +15,12 @@ import {SpokeKind} from "./types/SpokeKind.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensHubAssets
-/// @notice The Hub-asset view of the Lend pages: the asset's totals as the Hub keeps them, its available liquidity, its
-/// drawn and supply rates and rate curve, its USD price from the Lend Spoke's AaveOracle, and one slice per Spoke.
-/// @dev Keyed by `(hub, assetId)`, so a lend asset that no CDP Spoke borrows yet has a view. Bounded by the Spokes the
-/// Hub lists on the asset.
-/// @custom:spec REQ-LENS-058, REQ-LENS-059
-// View calls in a loop over the Spokes the Hub lists on the asset, a governance listing (REQ-LENS-020).
+/// @notice Hub-asset view: totals, liquidity, rates, rate curve, USD price and one slice per Spoke.
+/// @dev Keyed by `(hub, assetId)`, so an asset no CDP Spoke borrows yet still has a view.
+// Loops over the Spokes the Hub lists on the asset.
 // forge-lint: disable-start(calls-loop)
 abstract contract LensHubAssets is LensRisk, ILensHubAssets {
     /// @inheritdoc ILensHubAssets
-    /// @custom:spec REQ-LENS-058, REQ-LENS-059, REQ-LENS-060, REQ-LENS-005, REQ-LENS-006
     function getHubAsset(
         address hub,
         uint256 assetId
@@ -46,10 +42,7 @@ abstract contract LensHubAssets is LensRisk, ILensHubAssets {
         }
     }
 
-    // ------------------------------------------------------------------------------------------------------ internal
-
-    /// @dev The Hub's totals of the asset: added assets and shares, owed (drawn, premium and their sum), drawn and
-    /// premium shares, liquidity, swept, deficit (rounded up) and accrued fees.
+    /// @dev The Hub's totals of the asset; deficit rounded up.
     function _totals(
         HubAssetView memory v
     ) internal view {
@@ -66,8 +59,6 @@ abstract contract LensHubAssets is LensRisk, ILensHubAssets {
         v.accruedFees = r.getAssetAccruedFees(v.assetId);
     }
 
-    /// @dev Utilization, drawn and supply rates (as REQ-LENS-046), the fee settings and the rate curve.
-    /// @custom:spec REQ-LENS-058, REQ-LENS-046
     function _rates(
         HubAssetView memory v
     ) internal view {

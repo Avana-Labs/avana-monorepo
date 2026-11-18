@@ -19,25 +19,9 @@ import {LPPriceMath} from "./LPPriceMath.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title LPOracleConfig
-/// @notice Loads the inputs of an evaluation: the configuration, every token's routes in force, route version and leg
-/// settings and, when asked, its second source, all from one `ParameterStore.getOracleInputs(address(this), tokens,
-/// withSecondSources)` read (live evaluation), or the same from the configuration passed to `initialize` and
-/// `checkConfig` (seed evaluation); then the sequencer feed and every leg's round.
-/// @dev The store resolves the routes in force and route versions from the MarketRegistry inside the same static call,
-/// so a standby switch reaches the feed in the same block. The return data is read as the words of
-/// `OracleInputsLayout`, each range-checked, so a malformed return is a failed read and never a decoder revert. A failed
-/// read, another market, a route with no leg or more than two legs, or a leg with no feed definition fails the market
-/// with reason bit 1 (`REQ-ORACLE-017`); an out-of-range second-source word only leaves that token unconfirmed
-/// (`REQ-ORACLE-100`). Token decimals are the values stored at `initialize` (`REQ-ORACLE-058`); `poke()` re-reads them
-/// (`REQ-ORACLE-107`) and every evaluation fails while the last `poke()` found one changed or unreadable. The
-/// quote-change cap is the chain constant `MAX_QUOTE_CHANGE_BPS` (`REQ-ORACLE-103`).
-/// @custom:spec REQ-ORACLE-017, REQ-ORACLE-083, REQ-ORACLE-094, REQ-ORACLE-095, REQ-ORACLE-099, REQ-ORACLE-100, REQ-ORACLE-107, SPEC-ORC-021, SPEC-ORC-023
+/// @notice Loads the inputs of an evaluation: configuration, routes, sequencer and every leg's round.
+/// @dev Every return word is range-checked, so a malformed return is a failed read, never a revert.
 abstract contract LPOracleConfig is LPOracleReads {
-    // ─── Live evaluation ───
-
-    /// @dev Loads the live inputs (with second sources when `secondSources`), the sequencer and every leg's round; a
-    /// failed configuration read sets reason bit 1.
-    /// @custom:spec REQ-ORACLE-017, REQ-ORACLE-094
     function _loadLive(
         Evaluation memory e,
         bool secondSources
@@ -58,7 +42,6 @@ abstract contract LPOracleConfig is LPOracleReads {
     }
 
     /// @dev Reads `getOracleInputs` into `e`; false on a failed or malformed read or another market.
-    /// @custom:spec REQ-ORACLE-017, REQ-ORACLE-083, REQ-ORACLE-094
     function _loadInputs(
         Evaluation memory e,
         bool secondSources
@@ -82,8 +65,7 @@ abstract contract LPOracleConfig is LPOracleReads {
             uint256 k = OracleInputsLayout.HEAD_WORDS + i * stride;
             TokenEval memory t = e.tokens[i];
             if (!_setToken(t, w, k)) return false;
-            // A second-source word beyond its type leaves the token's second source unset (`None`): the token is
-            // unconfirmed and the primary pricing goes on (`REQ-ORACLE-100`).
+            // A malformed second source leaves the token unconfirmed; primary pricing goes on.
             if (secondSources) _setSecond(t, w, k + OracleInputsLayout.TOKEN_WORDS);
         }
         e.cfg.ok = true;
@@ -92,8 +74,7 @@ abstract contract LPOracleConfig is LPOracleReads {
     // Every field below is range-checked against its type before the cast; the casts cannot fail.
     // forge-lint: disable-start(unsafe-typecast)
 
-    /// @dev The head words: `marketId`, `twapWindow`, `consistencyToleranceBps`, the band, the three timers and the
-    /// sequencer; false when a word exceeds its type.
+    /// @dev Head words of `getOracleInputs`; false when a word exceeds its type.
     function _setHead(
         ConfigEval memory c,
         uint256[] memory w
@@ -114,8 +95,7 @@ abstract contract LPOracleConfig is LPOracleReads {
         return true;
     }
 
-    /// @dev Token words from `k`: tolerance, route version, replaced slot and both routes' legs; false for a word
-    /// beyond its type, a route of 0 or more than 2 legs, or a leg with no aggregator or no feed definition.
+    /// @dev Token words from `k`; false for a word beyond its type, a route without 1 or 2 legs, or a bad leg.
     function _setToken(
         TokenEval memory t,
         uint256[] memory w,
@@ -135,7 +115,6 @@ abstract contract LPOracleConfig is LPOracleReads {
         return true;
     }
 
-    /// @dev One leg's words from `k`: aggregator, pinned decimals, bounds, heartbeat, margin and the two age limits.
     function _setLeg(
         LegEval memory leg,
         uint256[] memory w,
@@ -149,8 +128,7 @@ abstract contract LPOracleConfig is LPOracleReads {
         uint256 margin;
         uint256 borrowAge;
         uint256 liquidationAge;
-        // The eight leg words in one pass, and one range check over them: the aggregator is non-zero and 160 bits,
-        // the decimals non-zero and 8 bits, the heartbeat, margin and both age limits 32 bits.
+        // Loads the eight leg words and range-checks them in one pass.
         // solhint-disable-next-line no-inline-assembly
         assembly ("memory-safe") {
             let p := add(w, shl(5, add(k, 1)))
@@ -167,16 +145,12 @@ abstract contract LPOracleConfig is LPOracleReads {
         }
         if (!ok) return false;
         (leg.feed, leg.pinnedDecimals) = (address(uint160(feed)), uint8(dec));
-        // Two's complement words of the signed bounds.
         (leg.minAnswer, leg.maxAnswer) = (int256(lo), int256(hi));
         leg.maxAge = LPPriceMath.feedMaxAge(uint32(heartbeat), uint32(margin));
         (leg.borrowAge, leg.liquidationAge) = (uint32(borrowAge), uint32(liquidationAge));
     }
 
-    /// @dev The second source in force from `k`: kind, source, pool reference, maximum age, window, tolerance and the
-    /// source's pinned decimals and bounds. A word beyond its type sets nothing, so the token's second source stays
-    /// `None` and the token is unconfirmed (token bit 5); the ParameterStore's setters refuse such a configuration, and
-    /// this check keeps the rule for any store implementation behind the proxy.
+    /// @dev The second source from `k`. A word beyond its type sets nothing, leaving the token unconfirmed.
     function _setSecond(
         TokenEval memory t,
         uint256[] memory w,
@@ -201,7 +175,6 @@ abstract contract LPOracleConfig is LPOracleReads {
 
     // forge-lint: disable-end(unsafe-typecast)
 
-    /// @dev Word `i` of an array that `LPOracleCalls.wordArray` checked to hold every index the decoders above read.
     function _at(
         uint256[] memory w,
         uint256 i
@@ -213,16 +186,6 @@ abstract contract LPOracleConfig is LPOracleReads {
         }
     }
 
-    // ─── Seed evaluation (initialize and checkConfig) ───
-
-    /// @dev Loads `config` as the configuration, its routes as the routes in force and its legs' pinned settings, and
-    /// reads every leg; the stored route versions stand for the versions, so no version change is observed. Every
-    /// token's `decimals()` is read and compared with the stored value, so the seed relies on a verification at `now`.
-    /// The token-count and market check is defensive: `checkConfig` returns `CHECK_TOKENS` on the same condition
-    /// before it reaches the seed, and `initialize` stores the tokens and market from the configuration it seeds, so no
-    /// current path reaches it (recorded as unreachable in `security/coverage-thresholds.json`); it stays for any later
-    /// initialization or upgrade flow that calls this function, and is reviewed whenever that flow changes.
-    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-058, REQ-ORACLE-059
     function _loadSeed(
         Evaluation memory e,
         OracleConfig calldata config
@@ -256,7 +219,6 @@ abstract contract LPOracleConfig is LPOracleReads {
         e.decimalsCheckedAt = _now64();
     }
 
-    /// @dev Copies the market-wide fields of `config`.
     function _seedHead(
         ConfigEval memory c,
         OracleConfig calldata config
@@ -275,8 +237,7 @@ abstract contract LPOracleConfig is LPOracleReads {
         c.sequencerGracePeriod = config.sequencer.gracePeriod;
     }
 
-    /// @dev Copies one configured route's legs and pinned settings; false for a route of 0 or more than 2 legs or a
-    /// leg with no aggregator or no pinned decimals.
+    /// @dev Copies one configured route; false for a route without 1 or 2 legs or a leg without feed or decimals.
     function _seedRoute(
         RouteEval memory route,
         OracleRoute calldata rc
@@ -299,12 +260,7 @@ abstract contract LPOracleConfig is LPOracleReads {
         return true;
     }
 
-    // ─── Token decimals (poke) ───
-
-    /// @dev Reads every token's `decimals()` and compares it with the value stored at `initialize` (`REQ-ORACLE-107`).
-    /// A verified evaluation relies on `now`; a failed read or a different value fails the market with reason bit 1 and
-    /// records the first such token, what it read and whether it was readable. The stored decimals are never replaced.
-    /// @custom:spec REQ-ORACLE-107, REQ-ORACLE-017
+    /// @dev Reads every token's `decimals()`; a failed read or changed value fails the market.
     function _verifyDecimals(
         Evaluation memory e
     ) internal view {
@@ -322,11 +278,7 @@ abstract contract LPOracleConfig is LPOracleReads {
         e.decimalsCheckedAt = _now64();
     }
 
-    // ─── Sequencer ───
-
-    /// @dev Reads the chain's sequencer-uptime feed when the configuration names one (`SPEC-ORC-021`): an answer other
-    /// than exactly 160 bytes is `sequencerUnknown` (the read copies at most 161 bytes, so a longer one is seen).
-    /// @custom:spec SPEC-ORC-021, REQ-ORACLE-099
+    /// @dev Reads the sequencer-uptime feed, if any; an answer other than exactly 160 bytes is unknown.
     function _readSequencer(
         Evaluation memory e
     ) internal view {

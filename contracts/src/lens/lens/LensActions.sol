@@ -17,15 +17,7 @@ import {ActionPreview} from "./types/ActionPreview.sol";
 
 /// @title LensActions
 /// @notice Health factor and liquidation price before and after a borrow, a repay, a pledge or a withdrawal.
-/// @dev Each preview applies the action to the account's Aave state as the Spoke and Hub would at this block: a borrow
-/// adds `previewDrawByAssets` drawn shares (rounded up), a repay follows `UserPositionUtils.calculateRestoreAmount`
-/// (premium first, drawn shares restored rounded down), a pledge and a withdrawal move the account's vault-token assets
-/// by the units credited or withdrawn. The collateral factor after is the one Aave applies: the reserve's latest after a
-/// borrow or a withdrawal (both refresh the account's dynamic configuration) and after a pledge that enables the
-/// collateral, the account's own otherwise.
-/// @custom:spec REQ-LENS-052, REQ-LENS-053
 abstract contract LensActions is LensAccountMath, ILensActions {
-    /// @dev One account's starting state.
     struct Acct {
         Market m;
         address proxy;
@@ -38,7 +30,6 @@ abstract contract LensActions is LensAccountMath, ILensActions {
     }
 
     /// @inheritdoc ILensActions
-    /// @custom:spec REQ-LENS-052, REQ-LENS-005, REQ-LENS-006, REQ-LENS-032
     function previewBorrowAfter(
         address wallet,
         uint256 marketId,
@@ -57,7 +48,6 @@ abstract contract LensActions is LensAccountMath, ILensActions {
     }
 
     /// @inheritdoc ILensActions
-    /// @custom:spec REQ-LENS-052, REQ-LENS-005, REQ-LENS-006, REQ-LENS-032
     function previewRepayAfter(
         address wallet,
         uint256 marketId,
@@ -74,7 +64,6 @@ abstract contract LensActions is LensAccountMath, ILensActions {
     }
 
     /// @inheritdoc ILensActions
-    /// @custom:spec REQ-LENS-053, REQ-LENS-005, REQ-LENS-006
     function previewPledgeAfter(
         address wallet,
         uint256 marketId,
@@ -90,7 +79,6 @@ abstract contract LensActions is LensAccountMath, ILensActions {
     }
 
     /// @inheritdoc ILensActions
-    /// @custom:spec REQ-LENS-053, REQ-LENS-005, REQ-LENS-006
     function previewWithdrawAfter(
         address wallet,
         uint256 marketId,
@@ -108,9 +96,6 @@ abstract contract LensActions is LensAccountMath, ILensActions {
         _finish(a, v, cf, a.assets > v.amount ? a.assets - v.amount : 0, a.debtRay);
     }
 
-    // ------------------------------------------------------------------------------------------------------ internal
-
-    /// @dev The account's starting state and the `before` half of the preview.
     function _start(
         address wallet,
         uint256 marketId
@@ -129,7 +114,6 @@ abstract contract LensActions is LensAccountMath, ILensActions {
             _liquidationPrice(a.debtRay, _cf(a.m, a.proxy) * a.assets * 10 ** (18 - a.m.decimals));
     }
 
-    /// @dev Fills the `after` half from the collateral factor, assets and debt value after the action.
     function _finish(
         Acct memory a,
         ActionPreview memory v,
@@ -144,9 +128,7 @@ abstract contract LensActions is LensAccountMath, ILensActions {
         v.liquidationPriceAfter = _liquidationPrice(debtRay, cf * assets * scale);
     }
 
-    /// @dev The account's debt value (Aave value × RAY) after repaying `amount` of the reserve: its other debts plus the
-    /// reserve's debt left by `_restRay`, both valued as `Spoke._processUserAccountData` values them.
-    /// @custom:spec REQ-LENS-052
+    /// @dev The account's debt value (Aave value × RAY) after repaying `amount` of the reserve.
     function _debtAfterRepay(
         Acct memory a,
         DebtReserveDef memory def,

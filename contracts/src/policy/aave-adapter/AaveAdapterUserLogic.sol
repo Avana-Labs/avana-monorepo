@@ -28,34 +28,20 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title AaveAdapterUserLogic
 /// @notice Bodies of the borrower entry points `pledge`, `borrow` and `repay`.
-/// @dev Reached only by `delegatecall` from the AaveAdapter router (`IAaveAdapterLogic`); every body takes the Lock
-/// first and releases it last. New activity (`pledge`, `borrow`) reads the MarketRegistry; repay reads only the
-/// Adapter's own binding and Aave (Q-260).
-/// @custom:spec REQ-ADAPTER-065, REQ-ADAPTER-066, REQ-ADAPTER-067, REQ-ADAPTER-068, REQ-ADAPTER-069, REQ-ADAPTER-071, REQ-ADAPTER-082, REQ-ADAPTER-083, REQ-ADAPTER-085, REQ-ADAPTER-096, REQ-ADAPTER-097, REQ-ADAPTER-103, REQ-ADAPTER-104, REQ-PROXY-015, REQ-PROXY-017, REQ-PROXY-019, REQ-PROXY-021, REQ-PROXY-022, REQ-PROXY-024, REQ-PROXY-027, REQ-PROXY-028, REQ-PROXY-029, REQ-PROXY-031, REQ-PROXY-032, REQ-PROXY-033, REQ-PROXY-034, REQ-PROXY-035, REQ-PROXY-036, REQ-PROXY-038, REQ-PROXY-039, REQ-PROXY-048
-// Each function carries the body of a selector declared in an IAaveAdapter piece that the router implements; this
-// contract inherits no piece, since each piece also declares functions another logic contract serves.
+// The router implements the IAaveAdapter pieces; this contract only carries bodies.
 // solhint-disable comprehensive-interface
-// Every call made here runs under the Adapter's Lock, which no callee can take again, so none can re-enter the Adapter
-// between a call and the event that follows it.
+// Every call here runs under the Adapter's Lock, so no callee can re-enter before the following event.
 // forge-lint: disable-start(reentrancy-events)
 contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
-    /// @notice Fixes the implementation immutables; they must equal the router's.
-    /// @param im The chain's dependencies.
-    /// @custom:spec REQ-ADAPTER-004, REQ-ADAPTER-074
     constructor(
         AaveAdapterImmutables memory im
     ) AaveAdapterStorage(im) {}
 
     /// @inheritdoc IAaveAdapterLogic
-    /// @custom:spec REQ-ADAPTER-004
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("AaveAdapterUserLogic"), _IMMUTABLES_HASH);
     }
 
-    // ─── Pledge ───
-
-    /// @notice Body of `pledge` (REQ-ADAPTER-065).
-    /// @custom:spec REQ-ADAPTER-065, REQ-ADAPTER-066, REQ-ADAPTER-068, REQ-ADAPTER-069, REQ-ADAPTER-077, REQ-ADAPTER-083, REQ-ADAPTER-103
     function pledge(
         uint256 marketId,
         PositionRef calldata position,
@@ -68,8 +54,7 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         uint256 reserveId;
         (proxy, reserveId) = _proxyForPledge(marketId, m.spoke, m.vaultToken);
         if (state == PauseState.Frozen && _borrowCount(m.spoke, proxy) == 0) revert ApplicationFrozen();
-        // Paused here has reason General (MintPathSuspect reverted in the gates): only a rescue top-up passes, as for
-        // a frozen wallet (REQ-ADAPTER-083).
+        // Paused here means reason General: only a rescue top-up passes, as for a frozen wallet.
         bool requireRescue = state == PauseState.Paused || _isFrozen(msg.sender);
         (recordId, credited) = _custodyAndSupply(proxy, m, reserveId, position.positionKey, requireRescue);
         emit CollateralAdded(
@@ -78,8 +63,7 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _release();
     }
 
-    /// @dev The pledge gates before the proxy (REQ-ADAPTER-065): the market and its vault token, `ApplicationPaused`
-    /// under `Paused(MintPathSuspect)`, the approved Spoke and the integration. Returns the Hub's pause state.
+    /// @dev Pledge gates checked before the proxy exists; returns the Hub's pause state.
     function _pledgeGates(
         uint256 marketId,
         uint32 integrationId
@@ -92,8 +76,6 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (integrationId != m.integrationId) revert IntegrationMismatch(marketId, integrationId);
     }
 
-    /// @dev Registration of the proxy on the vault token, custody and credit through Collateralization, mint of exactly
-    /// `credited` and the supply step, between the two backing-gap reads (REQ-ADAPTER-068, REQ-ADAPTER-069).
     function _custodyAndSupply(
         address proxy,
         Market memory m,
@@ -112,8 +94,6 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _checkGap(m.vaultToken, gapBefore);
     }
 
-    /// @dev The registry's record of the market, refused (`UnknownMarket`) unless its vault token is a token of the
-    /// VaultTokenFactory whose own market, Spoke and Hub are the record's (REQ-ADAPTER-065, INV-017).
     function _marketForPledge(
         uint256 marketId
     ) private view returns (Market memory m) {
@@ -126,8 +106,6 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         ) revert UnknownMarket(marketId);
     }
 
-    /// @dev The caller's proxy for the market, created on its first pledge (REQ-ADAPTER-066) with an empty Spoke
-    /// account (REQ-ADAPTER-103); also the vault token's reserve, derived from its immutables and Aave.
     function _proxyForPledge(
         uint256 marketId,
         address spoke,
@@ -150,10 +128,6 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         emit UserProxyCreated(msg.sender, spoke, marketId, proxy);
     }
 
-    // ─── Borrow ───
-
-    /// @notice Body of `borrow` (REQ-PROXY-015).
-    /// @custom:spec REQ-PROXY-015, REQ-PROXY-016, REQ-PROXY-017, REQ-PROXY-019, REQ-PROXY-021, REQ-PROXY-022, REQ-PROXY-023, REQ-PROXY-024, REQ-ADAPTER-067, REQ-ADAPTER-082, SPEC-PROXY-004
     function borrow(
         uint256 marketId,
         uint256 debtReserveId,
@@ -187,8 +161,6 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         drawn = amount;
     }
 
-    /// @dev `ApplicationFrozen` or `ApplicationPaused` unless the market's Hub and, for a cross-Hub reserve, the
-    /// funding Hub are both None; returns the reserve's record for the receiver rule.
     function _borrowPauseGate(
         uint256 marketId,
         uint256 debtReserveId
@@ -199,7 +171,6 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (def.fundingHub != m.hub) _requireNone(def.fundingHub);
     }
 
-    /// @dev `ApplicationFrozen` under Frozen, `ApplicationPaused` under Paused (either reason).
     function _requireNone(
         address hub
     ) private view {
@@ -208,9 +179,6 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (state == PauseState.Paused) revert ApplicationPaused();
     }
 
-    /// @dev Receiver rule (REQ-PROXY-017): `InvalidReceiver` for zero, a registered proxy, an Avana contract the Adapter
-    /// knows, a registered LPVault, the PayoutEscrow, the flash source, a recorded Hub, an approved CDP Spoke, a Spoke
-    /// listed on the borrowed asset of the funding Hub, and any token listed on that Hub.
     function _checkReceiver(
         address receiver,
         DebtReserveDef memory def
@@ -232,8 +200,6 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (refused) revert InvalidReceiver(receiver);
     }
 
-    /// @dev Borrow step (REQ-PROXY-087, SPEC-PROXY-004): the proxy borrows on its own account, the drawn amount is its
-    /// balance delta (`UnitsMismatch` unless `amount`) and it forwards exactly that to the receiver, ending where it began.
     function _borrowStep(
         address proxy,
         address spoke,
@@ -248,15 +214,11 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         uint256 drawn = balanceAfter > balanceBefore ? balanceAfter - balanceBefore : 0;
         if (drawn != amount) revert UnitsMismatch(amount, drawn);
         _tokenCall(proxy, asset, abi.encodeCall(IERC20.transfer, (receiver, drawn)));
-        // The proxy ending at its start balance is the step's postcondition (REQ-PROXY-087).
+        // The proxy must end at its start balance.
         // forge-lint: disable-next-line(incorrect-strict-equality)
         if (IERC20(asset).balanceOf(proxy) != balanceBefore) revert BalanceDeltaMismatch();
     }
 
-    // ─── Repay ───
-
-    /// @notice Body of `repay` (REQ-PROXY-027): any payer, no MarketRegistry, pause, freeze, breaker or price read.
-    /// @custom:spec REQ-PROXY-027, REQ-PROXY-028, REQ-PROXY-029, REQ-PROXY-030, REQ-PROXY-031, REQ-PROXY-032, REQ-PROXY-083, REQ-PROXY-084, REQ-ADAPTER-085, SPEC-PROXY-003, SPEC-PROXY-007
     function repay(
         address borrower,
         uint256 marketId,
@@ -274,8 +236,7 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
             _repayDebt(msg.sender, proxy, account.spoke, debtReserveId, maxRepaySpend, repayAll);
         if (moved) {
             emit Repaid(msg.sender, borrower, marketId, debtReserveId, paid, debtAfter, repayAll);
-            // The reserve at zero debt is the only way this repay can leave `borrowCount == 0`; Collateralization
-            // reads `borrowCount` itself and clears the mark only at 0 (REQ-PROXY-032).
+            // Collateralization reads `borrowCount` itself and clears the mark only at 0.
             if (debtAfter == 0) ICollateralizationDebtMark(_COLLATERALIZATION).markDebtFree(proxy);
         }
         _release();

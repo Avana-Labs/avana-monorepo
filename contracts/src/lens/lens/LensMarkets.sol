@@ -25,15 +25,11 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensMarkets
-/// @notice The app's market list and debt-reserve views: identity, accepted price, Aave supply and its value, limits,
-/// headroom, Hub totals, drawn and supply rates and the rate curve.
-/// @dev Bounded by the caller's page, the market's pool tokens and the Spoke's enabled debt reserves.
-/// @custom:spec REQ-LENS-045, REQ-LENS-046, REQ-LENS-057
-// View calls in loops over a page of at most LENS_MAX_PAGE markets and a Spoke's enabled debt reserves (REQ-LENS-020).
+/// @notice Market list and debt-reserve views: identity, price, supply, limits, headroom, rates and rate curve.
+// Loops over a page of at most LENS_MAX_PAGE markets and a Spoke's enabled debt reserves.
 // forge-lint: disable-start(calls-loop)
 abstract contract LensMarkets is LensBase, ILensMarkets {
     /// @inheritdoc ILensMarkets
-    /// @custom:spec REQ-LENS-045, REQ-LENS-023, REQ-LENS-024, REQ-LENS-006
     function getMarkets(
         uint256 offset,
         uint256 limit
@@ -50,7 +46,6 @@ abstract contract LensMarkets is LensBase, ILensMarkets {
     }
 
     /// @inheritdoc ILensMarkets
-    /// @custom:spec REQ-LENS-045, REQ-LENS-022, REQ-LENS-006
     function getMarket(
         uint256 marketId
     ) external view override returns (MarketView memory market) {
@@ -59,7 +54,6 @@ abstract contract LensMarkets is LensBase, ILensMarkets {
     }
 
     /// @inheritdoc ILensMarkets
-    /// @custom:spec REQ-LENS-046, REQ-LENS-032, REQ-LENS-006
     function getDebtReserve(
         address spoke,
         uint256 debtReserveId
@@ -69,7 +63,6 @@ abstract contract LensMarkets is LensBase, ILensMarkets {
     }
 
     /// @inheritdoc ILensMarkets
-    /// @custom:spec REQ-LENS-046, REQ-LENS-006
     function getDebtReserves(
         address spoke
     ) external view override returns (DebtReserveView[] memory reserves) {
@@ -81,9 +74,6 @@ abstract contract LensMarkets is LensBase, ILensMarkets {
         }
     }
 
-    // ------------------------------------------------------------------------------------------------------ internal
-
-    /// @dev The market view of REQ-LENS-045.
     function _marketView(
         uint256 marketId,
         Market memory m
@@ -107,7 +97,6 @@ abstract contract LensMarkets is LensBase, ILensMarkets {
         _limits(v, m, marketId);
     }
 
-    /// @dev Collateral factor and bonus of the reserve's latest dynamic configuration, headroom, pause and breakers.
     function _limits(
         MarketView memory v,
         Market memory m,
@@ -128,11 +117,6 @@ abstract contract LensMarkets is LensBase, ILensMarkets {
         _riskConfig(v, m, marketId);
     }
 
-    /// @dev The risk configuration of REQ-LENS-057: collateral risk, liquidation configuration, the hard floor, the
-    /// Hub-keyed caps, the Hub's add cap and each enabled debt reserve's rate for the market's borrowers,
-    /// `⌈drawnRate × (10⁴ + collateralRisk) / 10⁴⌉` (with one collateral reserve, Aave's risk premium of every account of
-    /// the market is the reserve's `collateralRisk`).
-    /// @custom:spec REQ-LENS-057
     function _riskConfig(
         MarketView memory v,
         Market memory m,
@@ -158,7 +142,6 @@ abstract contract LensMarkets is LensBase, ILensMarkets {
         }
     }
 
-    /// @dev The debt-reserve view of REQ-LENS-046.
     function _reserveView(
         address spoke,
         DebtReserveDef memory def
@@ -177,8 +160,6 @@ abstract contract LensMarkets is LensBase, ILensMarkets {
         v.pauseState = _registry().pauseState(def.fundingHub);
     }
 
-    /// @dev Hub totals, utilization, the drawn and supply rates and the rate curve of the reserve's Hub asset.
-    /// @custom:spec REQ-LENS-046
     function _hubTotals(
         DebtReserveView memory v
     ) internal view {

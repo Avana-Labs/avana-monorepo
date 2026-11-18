@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-/// @notice A position of a concentrated-liquidity position manager: the 12 fields of `positions(tokenId)`, every one a
-/// static ABI word, so this struct decodes exactly the tuple the manager returns. `poolParam` is the Uniswap v3 fee
-/// tier (`uint24`) or the Slipstream tick spacing (`int24`, positive), both read as one word.
+/// @notice A concentrated-liquidity position: the 12 static fields of `positions(tokenId)`.
+/// @dev `poolParam` is the Uniswap v3 fee tier or the Slipstream tick spacing.
 struct LensClPosition {
     uint96 nonce;
     address operator;

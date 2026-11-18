@@ -26,16 +26,8 @@ import {PledgeCharge} from "./types/PledgeCharge.sol";
 import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
 
 /// @title RiskModulePledgeLogic
-/// @notice Body of `checkPledge`: eligibility, the sequencer gate and the new-account checks, the minimum value, the
-/// Aave pre-checks, the cap tests with the top-up slice, the pool-share cap, the market breaker and the rescue rule;
-/// also the restore amount and the remaining-record minimum.
-/// @dev A view safe under STATICCALL that makes no call to Collateralization or the LPVault (REQ-RISK-006): the
-/// counters arrive as arguments, the position was validated by the integration at custody, and Collateralization's
-/// own pledge refuses a 17th record (a re-credit passes its own record in the count, so the count is not tested here).
-/// Order: market Active, integration, units, account class, sequencer gate (new account), price state, Aave reserve
-/// and Hub availability, debt reserves paused, drift and Hub shares (new account), rescue minimum, Hub `addCap`, reserve
-/// limit, caps and slice, then the exemption step of REQ-RISK-066.
-/// @custom:spec REQ-RISK-006, REQ-RISK-009, REQ-RISK-010, REQ-RISK-011, REQ-RISK-012, REQ-RISK-013, REQ-RISK-014, REQ-RISK-016, REQ-RISK-017, REQ-RISK-018, REQ-RISK-019, REQ-RISK-020, REQ-RISK-021, REQ-RISK-022, REQ-RISK-023, REQ-RISK-024, REQ-RISK-025, REQ-RISK-026, REQ-RISK-027, REQ-RISK-028, REQ-RISK-029, REQ-RISK-030, REQ-RISK-047, REQ-RISK-057, REQ-RISK-058, REQ-RISK-066, REQ-RISK-067, REQ-RISK-070, REQ-RISK-073, REQ-RISK-074, REQ-RISK-079, REQ-RISK-081, SPEC-CAP-001, SPEC-CAP-002, SPEC-CAP-003, SPEC-CAP-005
+/// @notice Body of `checkPledge`, the restore amount and the remaining-record minimum.
+/// @dev Safe under STATICCALL: makes no call to Collateralization or the LPVault.
 // View calls in loops over the market's pool tokens and the Spoke's reserves, bounded by listings.
 // forge-lint: disable-start(calls-loop)
 contract RiskModulePledgeLogic is RiskModulePreview {
@@ -43,11 +35,6 @@ contract RiskModulePledgeLogic is RiskModulePreview {
     bytes32 internal constant CAP_SLICE = "SLICE";
     bytes32 internal constant CAP_TOKEN = "TOKEN";
 
-    /// @notice Fixes the implementation immutables and the drift and breaker logic.
-    /// @param im The per-chain Avana addresses.
-    /// @param drift The drift logic built with `im`.
-    /// @param breaker The breaker logic built with `im`.
-    /// @custom:spec REQ-RISK-002
     constructor(
         RiskModuleImmutables memory im,
         address drift,
@@ -55,13 +42,11 @@ contract RiskModulePledgeLogic is RiskModulePreview {
     ) RiskModulePreview(im, drift, breaker) {}
 
     /// @inheritdoc IRiskModuleLogic
-    /// @custom:spec REQ-RISK-002
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("RiskModulePledgeLogic"), _IMMUTABLES_HASH);
     }
 
     /// @inheritdoc IRiskModulePledgeLogic
-    /// @custom:spec REQ-RISK-006, REQ-RISK-025, REQ-RISK-066
     function checkPledge(
         address,
         address proxy,
@@ -94,7 +79,6 @@ contract RiskModulePledgeLogic is RiskModulePreview {
     }
 
     /// @inheritdoc IRiskModulePledgeLogic
-    /// @custom:spec SPEC-CAP-003
     function usdToRestore(
         address proxy
     ) external view override returns (uint256 usd) {
@@ -105,7 +89,6 @@ contract RiskModulePledgeLogic is RiskModulePreview {
     }
 
     /// @inheritdoc IRiskModulePledgeLogic
-    /// @custom:spec REQ-RISK-070, REQ-RISK-075, WDR-031
     function checkRemainingRecord(
         uint256 marketId,
         uint128 remainingUnits
@@ -116,9 +99,6 @@ contract RiskModulePledgeLogic is RiskModulePreview {
         if (usd < minUsd) revert RecordBelowMinPledge(usd, minUsd);
     }
 
-    /// @dev Market status and integration, units, account class, the sequencer gate and price state, the Aave reserve
-    /// and Hub availability and, for a new account, the debt reserves, drift and Hub shares (REQ-RISK-009 to
-    /// REQ-RISK-020, REQ-RISK-081).
     function _eligibility(
         Ctx memory c,
         uint32 integrationId
@@ -146,7 +126,6 @@ contract RiskModulePledgeLogic is RiskModulePreview {
         if (!c.topUp) _newAccount(c);
     }
 
-    /// @dev REQ-RISK-020: the vault-token reserve neither paused nor frozen, the Spoke active and not halted on the Hub.
     function _reserveAvailable(
         Ctx memory c
     ) internal view {
@@ -156,7 +135,6 @@ contract RiskModulePledgeLogic is RiskModulePreview {
         if (!sc.active || sc.halted) revert HubSpokeUnavailable();
     }
 
-    /// @dev REQ-RISK-018, REQ-RISK-019: every enabled debt reserve unpaused, no drift, Hub shares == assets.
     function _newAccount(
         Ctx memory c
     ) internal view {
@@ -174,8 +152,6 @@ contract RiskModulePledgeLogic is RiskModulePreview {
         }
     }
 
-    /// @dev Prices, value, charge and the rescue minimum (SPEC-CAP-001, REQ-RISK-057, REQ-RISK-067); the restore amount
-    /// of an eligible top-up (SPEC-CAP-003).
     function _value(
         Ctx memory c
     ) internal view {
@@ -196,8 +172,6 @@ contract RiskModulePledgeLogic is RiskModulePreview {
         }
     }
 
-    /// @dev REQ-RISK-020: the Hub `addCap` (whole vault tokens, unless the Hub's no-cap value) and the Spoke's
-    /// per-account collateral reserve limit when the reserve is not yet collateral of the account.
     function _hubRoom(
         Ctx memory c
     ) internal view {
@@ -224,11 +198,7 @@ contract RiskModulePledgeLogic is RiskModulePreview {
         if (used >= limit) revert UserReservesLimit();
     }
 
-    /// @dev SPEC-CAP-002 with the slice rule of REQ-RISK-022; returns the slice part. The regular room of an eligible
-    /// top-up is the smallest of the market room and every token room, and the slice takes the rest, so a token at or
-    /// above its cap (a cap tightened to 0 included) moves a rescue top-up to the slice instead of refusing it. The
-    /// token test applies to the regular part only: Collateralization books a slice top-up's full charge into every
-    /// token counter, so a counter at or above its cap must not refuse a top-up charged entirely to the slice.
+    /// @dev Returns the slice part. The token test covers only the regular part, so a rescue top-up can use the slice.
     function _caps(
         Ctx memory c,
         PledgeCounters calldata k
@@ -249,7 +219,7 @@ contract RiskModulePledgeLogic is RiskModulePreview {
         if (regular != 0) _tokenTest(c, k, tokens, regular);
     }
 
-    /// @dev The market room `K > R ? K - R : 0`; for an eligible top-up, the smallest of it and every token room.
+    /// @dev The market room; for an eligible top-up, the smallest of it and every token room.
     function _regularRoom(
         Ctx memory c,
         PledgeCounters calldata k,
@@ -265,8 +235,6 @@ contract RiskModulePledgeLogic is RiskModulePreview {
         }
     }
 
-    /// @dev `T_i + regular <= tokenUsdCap(hub, token_i)` for every pool token; one token over its cap refuses the
-    /// whole pledge.
     function _tokenTest(
         Ctx memory c,
         PledgeCounters calldata k,
@@ -281,7 +249,6 @@ contract RiskModulePledgeLogic is RiskModulePreview {
         }
     }
 
-    /// @dev Pool-share cap (SPEC-CAP-005), market breaker without `ORACLE` and the rescue rule (REQ-RISK-066).
     function _exemption(
         Ctx memory c,
         PledgeCounters calldata k,
@@ -299,7 +266,7 @@ contract RiskModulePledgeLogic is RiskModulePreview {
         // Only the reasons decide the pledge; the reopening time is not used.
         // forge-lint: disable-next-line(unused-return)
         (uint32 brk,) = IRiskModuleBreakerLogic(_BREAKER).marketBreaker(c.marketId, true, k.poolUnits);
-        // `ORACLE` is the price-state rule's own gate; `CONFIG_DRIFT` never stops a top-up (REQ-RISK-078).
+        // `ORACLE` is the price-state rule's own gate; `CONFIG_DRIFT` never stops a top-up.
         brk &= ~BreakerReasons.ORACLE;
         if (c.topUp) brk &= ~BreakerReasons.CONFIG_DRIFT;
         x.brk = brk;

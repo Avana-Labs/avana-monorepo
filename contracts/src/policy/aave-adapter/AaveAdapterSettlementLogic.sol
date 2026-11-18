@@ -16,36 +16,23 @@ import {AaveAdapterImmutables} from "./types/AaveAdapterImmutables.sol";
 import {AdapterAccount} from "./types/AdapterAccount.sol";
 
 /// @title AaveAdapterSettlementLogic
-/// @notice Bodies of the steps LPVaultSwap asks the Adapter to run: `burnSeized` inside a liquidation or a pending
-/// settlement, and `deleverageRepay` and `deleverageRelease` inside the Adapter's own repay-with-collateral session.
-/// @dev Reached only by `delegatecall` from the AaveAdapter router (`IAaveAdapterLogic`). None takes or releases the
-/// Lock (they are inner callees, REQ-LOCK-030) and none reads the MarketRegistry, the pause state, the address freeze, a
-/// breaker or the RiskModule (REQ-ADAPTER-047).
-/// @custom:spec REQ-ADAPTER-047, REQ-ADAPTER-070, REQ-ADAPTER-081, REQ-ADAPTER-086, REQ-ADAPTER-092, REQ-PROXY-075, REQ-LOCK-023, REQ-LOCK-030
-// Each function carries the body of a selector declared in an IAaveAdapter piece that the router implements; this
-// contract inherits no piece, since each piece also declares functions another logic contract serves.
+/// @notice Bodies of the LPVaultSwap steps `burnSeized`, `deleverageRepay` and `deleverageRelease`.
+/// @dev None takes the Lock or reads the MarketRegistry.
+// The router implements the IAaveAdapter pieces; this contract only carries bodies.
 // solhint-disable comprehensive-interface
-// Every call made here runs under the Lock held by the Adapter or LPVaultSwap, which no callee can take again.
+// Every call here runs under a Lock held by the Adapter or LPVaultSwap.
 // forge-lint: disable-start(reentrancy-events)
-// The router implements IAaveAdapterSettlement; this logic contract carries its bodies only (see above).
 // forge-lint: disable-next-line(missing-inheritance)
 contract AaveAdapterSettlementLogic is AaveAdapterSteps, IAaveAdapterLogic {
-    /// @notice Fixes the implementation immutables; they must equal the router's.
-    /// @param im The chain's dependencies.
-    /// @custom:spec REQ-ADAPTER-004, REQ-ADAPTER-074
     constructor(
         AaveAdapterImmutables memory im
     ) AaveAdapterStorage(im) {}
 
     /// @inheritdoc IAaveAdapterLogic
-    /// @custom:spec REQ-ADAPTER-004
     function logicConfig() external view override returns (bytes32 kind, bytes32 immutablesHash) {
         return (keccak256("AaveAdapterSettlementLogic"), _IMMUTABLES_HASH);
     }
 
-    /// @notice Body of `burnSeized` (REQ-ADAPTER-070): LPVaultSwap holding the Lock burns seized units from its own
-    /// balance; the vault token is checked against the immutable VaultTokenFactory and its own market immutable.
-    /// @custom:spec REQ-ADAPTER-070, REQ-ADAPTER-005, REQ-PROXY-075, REQ-LOCK-023
     function burnSeized(
         uint256 marketId,
         address vaultToken,
@@ -62,12 +49,7 @@ contract AaveAdapterSettlementLogic is AaveAdapterSteps, IAaveAdapterLogic {
         emit SeizedUnitsBurned(marketId, vaultToken, units);
     }
 
-    /// @notice Body of `deleverageRepay` (REQ-ADAPTER-081): LPVaultSwap's funds repay the session's reserve on the
-    /// session's proxy; the unconsumed part returns to LPVaultSwap. Before the repay it records the account's health
-    /// factor as the session's `hfBefore`: LPVaultSwap has poked the market's LPOracle and the reserve's DebtOracle by
-    /// now, and a poke can move the price Aave reads within the block (REQ-ORACLE-107), so `repayWithCollateral`
-    /// compares health factors read at the same prices.
-    /// @custom:spec REQ-ADAPTER-081, REQ-ADAPTER-092, REQ-PROXY-088, REQ-LOCK-023
+    /// @dev Records `hfBefore` first, after LPVaultSwap's oracle pokes, so both health factors use the same prices.
     function deleverageRepay(
         address proxy,
         uint256 debtReserveId,
@@ -88,9 +70,6 @@ contract AaveAdapterSettlementLogic is AaveAdapterSteps, IAaveAdapterLogic {
         repaid = _repayStep(proxy, spoke, asset, debtReserveId, received, _LP_VAULT_SWAP);
     }
 
-    /// @notice Body of `deleverageRelease` (REQ-ADAPTER-081): after the repay step, withdraws and burns the session's
-    /// units and has Collateralization unwind them to LPVaultSwap at the borrower's own per-token minimums.
-    /// @custom:spec REQ-ADAPTER-081, REQ-ADAPTER-092, REQ-PROXY-089, REQ-LOCK-023
     function deleverageRelease(
         address proxy,
         PositionRef calldata position,
@@ -107,13 +86,11 @@ contract AaveAdapterSettlementLogic is AaveAdapterSteps, IAaveAdapterLogic {
             .releaseForDeleverage(proxy, account.vaultToken, position.positionKey, units, minAmounts);
     }
 
-    /// @dev `NotLPVaultSwap` unless LPVaultSwap calls while the Adapter itself holds the Lock (REQ-ADAPTER-081).
+    /// @dev `NotLPVaultSwap` unless LPVaultSwap calls while the Adapter itself holds the Lock.
     function _onlySwapInSession() private view {
         if (msg.sender != _LP_VAULT_SWAP || ILock(_LOCK).holder() != address(this)) revert NotLPVaultSwap();
     }
 
-    /// @dev `NoDeleverageSession` unless the open session names this proxy, position, units and minimums, its repay
-    /// step ran and its release step has not, and the position is the market's integration.
     function _checkReleaseSession(
         address proxy,
         address vaultToken,

@@ -27,9 +27,7 @@ import {WindDownState} from "./types/WindDownState.sol";
 
 /// @title MarketRegistryViews
 /// @notice Every view of the MarketRegistry, served from its own storage.
-/// @dev Every view is `view`, never reverts and returns zeros and `false` for an unknown key, so every usability and
-/// approval check fails closed (REQ-CONFIG-064).
-/// @custom:spec REQ-CONFIG-063, REQ-CONFIG-064, REQ-MREG-014, REQ-MREG-031, Q-378
+/// @dev Views never revert; an unknown key returns zeros and `false`.
 abstract contract MarketRegistryViews is
     MarketRegistryDriftView,
     IMarketRegistryHubs,
@@ -44,7 +42,6 @@ abstract contract MarketRegistryViews is
     IMarketRegistryRouteViews
 {
     /// @inheritdoc IMarketRegistryViews
-    /// @custom:spec REQ-CONFIG-006, REQ-CONFIG-064
     function getMarket(
         uint256 marketId
     ) external view override returns (Market memory market) {
@@ -52,7 +49,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryViews
-    /// @custom:spec REQ-CONFIG-064
     function getToken(
         address token
     ) external view override returns (TokenDef memory def) {
@@ -60,7 +56,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryViews
-    /// @custom:spec REQ-CONFIG-016, REQ-CONFIG-064
     function getSpoke(
         address spoke
     ) external view override returns (SpokeDef memory def) {
@@ -68,13 +63,11 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryViews
-    /// @custom:spec REQ-CONFIG-064
     function getSpokes() external view override returns (address[] memory spokes) {
         spokes = _s().spokeList;
     }
 
     /// @inheritdoc IMarketRegistryViews
-    /// @custom:spec Q-378
     function marketsOfSpoke(
         address spoke
     ) external view override returns (uint256[] memory marketIds) {
@@ -82,7 +75,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryViews
-    /// @custom:spec REQ-CONFIG-007
     function marketOfKey(
         bytes32 key
     ) external view override returns (uint256 marketId) {
@@ -90,7 +82,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryViews
-    /// @custom:spec REQ-CONFIG-007
     function marketOfVaultToken(
         address vaultToken
     ) external view override returns (uint256 marketId) {
@@ -98,7 +89,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryViews
-    /// @custom:spec REQ-CONFIG-007
     function marketOfLpOracle(
         address lpOracle
     ) external view override returns (uint256 marketId) {
@@ -106,7 +96,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryViews
-    /// @custom:spec REQ-CONFIG-007
     function marketOfReserve(
         address spoke,
         uint256 reserveId
@@ -115,7 +104,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryViews
-    /// @custom:spec REQ-CONFIG-007
     function marketOfHubAsset(
         address hub,
         uint256 hubAssetId
@@ -124,13 +112,11 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryViews
-    /// @custom:spec REQ-CONFIG-006
     function marketCount() external view override returns (uint256 count) {
         count = _s().marketCount;
     }
 
     /// @inheritdoc IMarketRegistryRouteViews
-    /// @custom:spec REQ-MREG-006, REQ-MREG-009
     function getDebtReserve(
         address spoke,
         uint256 reserveId
@@ -139,7 +125,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryRouteViews
-    /// @custom:spec REQ-MREG-007
     function getDebtReserveIds(
         address spoke
     ) external view override returns (uint256[] memory reserveIds) {
@@ -147,7 +132,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryRouteViews
-    /// @custom:spec REQ-MREG-007
     function isApprovedDebtReserve(
         address spoke,
         uint256 reserveId
@@ -156,7 +140,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryRouteViews
-    /// @custom:spec REQ-CONFIG-063, REQ-MREG-014
     function getRoute(
         uint256 marketId,
         address token,
@@ -169,7 +152,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryHubs
-    /// @custom:spec REQ-CONFIG-083
     function hubTier(
         address hub
     ) external view override returns (RiskTier tier) {
@@ -177,7 +159,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryHubs
-    /// @custom:spec REQ-CONFIG-005, REQ-CONFIG-083, INV-095
     function isRecordedHub(
         address account
     ) external view override returns (bool recorded) {
@@ -185,13 +166,11 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryHubs
-    /// @custom:spec REQ-CONFIG-083
     function getHubs() external view override returns (address[] memory hubs) {
         hubs = _s().hubList;
     }
 
     /// @inheritdoc IMarketRegistryHubs
-    /// @custom:spec REQ-CONFIG-083
     function hubOf(
         address spoke
     ) external view override returns (address hub) {
@@ -199,7 +178,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryHubs
-    /// @custom:spec REQ-CONFIG-075
     function integrationOf(
         uint32 integrationId
     ) external view override returns (address lpVault, address pricing) {
@@ -208,7 +186,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryHubs
-    /// @custom:spec REQ-CONFIG-075
     function integrationIdOf(
         address lpVault
     ) external view override returns (uint32 integrationId) {
@@ -216,7 +193,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryHubs
-    /// @custom:spec REQ-MREG-009
     function firstLossReserveOf(
         address hub,
         address asset
@@ -225,7 +201,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryHubs
-    /// @custom:spec Q-378
     function crossHubLineCap(
         address fundingHub,
         address asset,
@@ -235,7 +210,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryHubs
-    /// @custom:spec Q-378
     function crossHubLineTotal(
         address fundingHub,
         address asset
@@ -244,13 +218,11 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryHubs
-    /// @custom:spec REQ-CONFIG-081
     function crossHubLinesEnabled() external view override returns (bool enabled) {
         enabled = _s().crossHubLinesEnabled;
     }
 
     /// @inheritdoc IMarketRegistryCreditLines
-    /// @custom:spec REQ-CONFIG-081
     function creditLine(
         address fundingHub,
         address asset
@@ -261,7 +233,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryCreditLines
-    /// @custom:spec REQ-CONFIG-081, REQ-RISK-082
     function creditLineCoverage(
         address fundingHub,
         address asset
@@ -270,7 +241,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryApprovals
-    /// @custom:spec REQ-CONFIG-074
     function isApprovedSpokeCodeHash(
         bytes32 codeHash
     ) external view override returns (bool approved) {
@@ -278,7 +248,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryApprovals
-    /// @custom:spec REQ-CONFIG-074, REQ-CONFIG-016, REQ-RISK-088
     function spokeImplementationStatus(
         address spoke
     ) external view override returns (address implementation, bytes32 codeHash, bool current) {
@@ -286,7 +255,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryApprovals
-    /// @custom:spec REQ-MREG-020
     function integrationContracts(
         uint32 integrationId
     ) external view override returns (address[] memory contracts) {
@@ -294,7 +262,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryPause
-    /// @custom:spec REQ-MREG-001, REQ-MREG-002, REQ-MREG-003
     function pauseState(
         address hub
     ) external view override returns (PauseState state) {
@@ -302,7 +269,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryPause
-    /// @custom:spec REQ-MREG-024
     function pauseReason(
         address hub
     ) external view override returns (PauseReason reason) {
@@ -310,7 +276,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryFreeze
-    /// @custom:spec REQ-MREG-022, REQ-MREG-023
     function isFrozenAddress(
         address account
     ) external view override returns (bool frozen) {
@@ -318,7 +283,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryFreeze
-    /// @custom:spec REQ-MREG-019
     function freezesInWindow(
         address caller
     ) external view override returns (uint256 count) {
@@ -328,13 +292,11 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryFreeze
-    /// @custom:spec REQ-MREG-019
     function MAX_ADDRESS_FREEZES_PER_DAY() external pure override returns (uint256 limit) {
         limit = _MAX_FREEZES_PER_DAY;
     }
 
     /// @inheritdoc IMarketRegistryBreakers
-    /// @custom:spec REQ-MREG-025
     function marketBreaker(
         uint256 marketId
     ) external view override returns (uint32 latchedReasons, uint64 lastBreach) {
@@ -344,7 +306,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryBreakers
-    /// @custom:spec REQ-MREG-025
     function debtBreaker(
         address spoke,
         uint256 debtReserveId
@@ -355,7 +316,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryBreakers
-    /// @custom:spec REQ-MREG-025
     function lastBreachAt(
         bytes32 key
     ) external view override returns (uint64 at) {
@@ -363,7 +323,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryBreakers
-    /// @custom:spec REQ-MREG-031
     function activeMarketCount(
         address spoke
     ) external view override returns (uint256 count) {
@@ -374,7 +333,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryStandby
-    /// @custom:spec REQ-MREG-028
     function activePriceRoutes(
         address token
     ) external view override returns (address[] memory primary, address[] memory alternate, RouteSlot replaced) {
@@ -385,7 +343,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryStandby
-    /// @custom:spec REQ-MREG-028
     function standbySwitchLockedUntil(
         address token
     ) external view override returns (uint256 until) {
@@ -394,7 +351,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryStandby
-    /// @custom:spec REQ-MREG-028
     function priceRouteVersion(
         address token
     ) external view override returns (uint64 version) {
@@ -402,7 +358,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryWindDown
-    /// @custom:spec REQ-CONFIG-080
     function windDownState(
         uint256 marketId
     ) external view override returns (WindDownState memory state) {
@@ -410,7 +365,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryWindDown
-    /// @custom:spec REQ-MREG-033
     function settlementReserve(
         uint256 marketId
     ) external view override returns (uint256 debtReserveId) {
@@ -418,7 +372,6 @@ abstract contract MarketRegistryViews is
     }
 
     /// @inheritdoc IMarketRegistryHubs
-    /// @custom:spec REQ-ADAPTER-028, REQ-ADAPTER-029, REQ-ADAPTER-030, REQ-CONFIG-076
     function spokeSettingsDrift(
         address spoke
     ) external view override returns (uint256 marketId, DriftReason reason) {

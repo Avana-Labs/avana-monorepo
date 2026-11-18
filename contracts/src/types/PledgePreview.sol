@@ -4,11 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 /// @notice Non-reverting outcome of the pledge checks for the app and the Lens.
-/// @dev `reason` is the selector of the custom error `checkPledge` would revert with (0 when eligible), including
-/// `BelowMinPledge.selector` and `TooManyRecords.selector`. Remaining room values are 8-decimal USD, except
-/// `poolShareRoomUnits` in vault-token base units. `tokenRoomUsd[i]` is `tokenUsdCap(hub, tokens[i])` minus its
-/// counter, floored at 0, in pool order.
-/// @custom:spec REQ-RISK-031, REQ-RISK-057, Q-370
+/// @dev Room values are 8-decimal USD, except `poolShareRoomUnits` in vault-token base units.
 struct PledgePreview {
     // True when checkPledge would pass.
     bool eligible;
@@ -28,6 +24,6 @@ struct PledgePreview {
     uint256[] tokenRoomUsd;
     // Units still admissible under the pool-share cap.
     uint256 poolShareRoomUnits;
-    // Open records the account may still add to the market (MAX_RECORDS_PER_ACCOUNT_MARKET minus open records).
+    // Open records the account may still add to the market.
     uint256 recordRoom;
 }

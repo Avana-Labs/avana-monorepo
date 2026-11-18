@@ -20,19 +20,11 @@ import {LPPriceMath} from "./LPPriceMath.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LPOracleListing
-/// @notice `checkConfig`: the on-chain listing and configuration checks of `REQ-ORACLE-046` to `REQ-ORACLE-056` on a
-/// candidate configuration, as a bitmap (0 = every check passes).
-/// @dev Reads the configuration from calldata field by field (never decoded into memory). Uses the current answers of
-/// the configured routes for the shock reference and the vault-token decimals, the pool's own token order and the
-/// tokens' `decimals()`; the pricing module adds its own bits from `MODULE_CHECKS_SHIFT` up. A failed read fails the
-/// check that needed it; the function never reverts except `InsufficientGas`.
-/// @custom:spec REQ-ORACLE-046, REQ-ORACLE-047, REQ-ORACLE-048, REQ-ORACLE-049, REQ-ORACLE-050, REQ-ORACLE-051, REQ-ORACLE-053, REQ-ORACLE-054, REQ-ORACLE-056, REQ-ORACLE-077, REQ-ORACLE-100, Q-091, Q-184, Q-191, Q-321
+/// @notice `checkConfig`: the on-chain listing and configuration checks, as a bitmap (0 = every check passes).
 abstract contract LPOracleListing is LPOracleViews {
     /// @dev ABI length of a `getMarket` return holding at most `MAX_POOL_TOKENS` tokens.
     uint256 private constant MARKET_LENGTH = 1248;
 
-    /// @dev The bitmap of failed checks for `config`.
-    /// @custom:spec REQ-ORACLE-046
     function _checkConfig(
         OracleConfig calldata config
     ) internal view returns (uint256 failed) {
@@ -55,10 +47,7 @@ abstract contract LPOracleListing is LPOracleViews {
         failed |= _checkPrices(config, readOk && registered != 0) | _checkMarket(config.marketId, readOk, registered);
     }
 
-    // ─── Legs and routes (REQ-ORACLE-049, REQ-ORACLE-054) ───
-
-    /// @dev Leg count, pinned decimals and bounds against the aggregator, heartbeat and ages, and the route's value
-    /// range at its legs' pinned bounds.
+    /// @dev Leg count, each leg, and the route's value range at its legs' pinned bounds.
     function _checkRoute(
         OracleRoute calldata rc
     ) private view returns (uint256 failed) {
@@ -82,9 +71,7 @@ abstract contract LPOracleListing is LPOracleViews {
         ) failed |= LPOracleCodes.CHECK_ROUTE_RANGE;
     }
 
-    /// @dev One leg: decimals and bounds pinned from the aggregator (`minAnswer` positive, normalising to at least 1
-    /// for a USD-quoted leg; `maxAnswer` at most the aggregator's), heartbeat in `(0, 86,400]`, margin in
-    /// `(0, 3,600]`, liquidation age equal to `feedMaxAge` and borrow age in `(0, feedMaxAge]`.
+    /// @dev Decimals and bounds match the aggregator; heartbeat, margin and age limits are within bounds.
     function _checkLeg(
         OracleLeg calldata leg,
         bool usdQuoted
@@ -111,7 +98,6 @@ abstract contract LPOracleListing is LPOracleViews {
         ) failed |= LPOracleCodes.CHECK_HEARTBEAT;
     }
 
-    /// @dev `aggregator().minAnswer()` and `maxAnswer()` of a Chainlink proxy.
     function _bounds(
         address proxy
     ) private view returns (bool ok, int256 minAnswer, int256 maxAnswer) {
@@ -133,10 +119,7 @@ abstract contract LPOracleListing is LPOracleViews {
         if (ok) (ok, maxAnswer) = LPOracleCalls.intAt(ret, 0, 192);
     }
 
-    // ─── Independence (REQ-ORACLE-051) ───
-
-    /// @dev No token's primary and alternate share an aggregator, no two tokens' alternates share one, and no
-    /// oracle-network second source shares one with its token's routes.
+    /// @dev No route shares an aggregator with its token's other route, another token's alternate or its second source.
     function _checkSharedFeeds(
         OracleConfig calldata config
     ) private pure returns (uint256) {
@@ -156,7 +139,6 @@ abstract contract LPOracleListing is LPOracleViews {
         return 0;
     }
 
-    /// @dev Two routes share an aggregator.
     function _share(
         OracleRoute calldata x,
         OracleRoute calldata y
@@ -168,7 +150,6 @@ abstract contract LPOracleListing is LPOracleViews {
         return false;
     }
 
-    /// @dev A route uses `feed`.
     function _holds(
         OracleRoute calldata route,
         address feed
@@ -180,10 +161,7 @@ abstract contract LPOracleListing is LPOracleViews {
         return false;
     }
 
-    // ─── Tolerances and second sources (REQ-ORACLE-053, SPEC-ORC-020) ───
-
-    /// @dev `T_i >= dev(primary legs) + dev(alternate legs) + feedAgreementMarginBps` and `S_i >= dev(primary legs) +
-    /// own deviation + feedAgreementMarginBps`; each second source has a kind, a source and a window or age.
+    /// @dev Each tolerance covers the feeds' published deviations plus `feedAgreementMarginBps`.
     function _checkTolerances(
         OracleConfig calldata config
     ) private view returns (uint256 failed) {
@@ -206,7 +184,6 @@ abstract contract LPOracleListing is LPOracleViews {
         }
     }
 
-    /// @dev Sum of the published deviation thresholds of a route's legs.
     function _deviation(
         OracleRoute calldata route
     ) private pure returns (uint256 total) {
@@ -216,11 +193,7 @@ abstract contract LPOracleListing is LPOracleViews {
         }
     }
 
-    /// @dev A second source is well formed and its own deviation threshold: an oracle network's feed definition
-    /// threshold, 0 for a pool TWAP (whose lag allowance the pricing module checks). A pool TWAP on the market's own
-    /// pool is not independent of the market and is refused (`REQ-ORACLE-100`), whatever the ParameterStore's record
-    /// says: the pool is the pricing module's, fixed at `initialize`.
-    /// @custom:spec REQ-ORACLE-046, REQ-ORACLE-053, REQ-ORACLE-100
+    /// @dev Whether a second source is well formed, and its deviation threshold; refuses a TWAP on the own pool.
     function _secondSourceDeviation(
         SecondSource calldata s
     ) private view returns (bool ok, uint256 deviation) {
@@ -238,9 +211,7 @@ abstract contract LPOracleListing is LPOracleViews {
         return (ok && dec != 0, deviation);
     }
 
-    // ─── Band (REQ-ORACLE-056) ───
-
-    /// @dev Every token a USD stable: `usdBandLow < 10^8 < usdBandHigh`; otherwise exactly `0` and `type(uint256).max`.
+    /// @dev All-stable markets need `usdBandLow < 10^8 < usdBandHigh`; others need the band disabled.
     function _checkBand(
         OracleConfig calldata config
     ) private view returns (uint256) {
@@ -255,14 +226,7 @@ abstract contract LPOracleListing is LPOracleViews {
         return ok ? 0 : LPOracleCodes.CHECK_USD_BAND;
     }
 
-    // ─── Prices: vault-token decimals, shock and the module (REQ-ORACLE-047, REQ-ORACLE-050) ───
-
-    /// @dev `d` re-derived at the listing price vector stored by `initialize` (`REQ-ORACLE-047`), so no later price move
-    /// changes it. Before the market is registered (at `initialize` and until `listCollateralMarket`), the configured
-    /// routes must quote every token now (`CHECK_QUOTES`) and the listing shock and the pricing module's checks run at
-    /// those current quotes. Once registered, they run at the listing price vector instead: a price move or another
-    /// feed's outage after listing changes no answer of `checkConfig`, so it never blocks the ParameterStore's setters,
-    /// the guardian's standby switches or `setPriceSource`, while every configuration check still runs.
+    /// @dev After registration the checks run at the stored listing prices, so a later price move cannot block config.
     function _checkPrices(
         OracleConfig calldata config,
         bool registered
@@ -283,7 +247,6 @@ abstract contract LPOracleListing is LPOracleViews {
         failed |= _listingChecks(config, quotes) << LPOracleCodes.MODULE_CHECKS_SHIFT;
     }
 
-    /// @dev The stored listing price vector.
     function _listingPrices() internal view returns (uint256[] memory prices) {
         uint128[] storage stored = _s().listingPrices;
         prices = new uint256[](stored.length);
@@ -292,9 +255,7 @@ abstract contract LPOracleListing is LPOracleViews {
         }
     }
 
-    /// @dev With each token's quote multiplied by `LISTING_SHOCK_FACTOR` and the others divided by it, and the
-    /// reverse, each shocked quote kept in `[1, MAX_ROUTE_ANSWER]` (the range `lpPrice` accepts), the composition is
-    /// valid and `price8 >= 10^6` (`REQ-ORACLE-050`).
+    /// @dev The price stays valid and at least `MIN_SHOCKED_PRICE8` with each token shocked by `LISTING_SHOCK_FACTOR`.
     function _shockHolds(
         uint256[] memory quotes
     ) private view returns (bool) {
@@ -316,7 +277,7 @@ abstract contract LPOracleListing is LPOracleViews {
         return true;
     }
 
-    /// @dev The pricing module's composition, or an empty array (which `lpPrice` rejects) for a failed read.
+    /// @dev The composition, or an empty array (which `lpPrice` rejects) for a failed read.
     function _compositionOrEmpty(
         uint256 units,
         uint256[] memory prices
@@ -326,9 +287,7 @@ abstract contract LPOracleListing is LPOracleViews {
         if (!ok) amounts = new uint256[](0);
     }
 
-    // ─── Registered market (REQ-ORACLE-047, REQ-ORACLE-048) ───
-
-    /// @dev `MarketRegistry.marketOfLpOracle(this)`: the market this feed is registered for, 0 before registration.
+    /// @dev The market this feed is registered for, 0 before registration.
     function _registeredMarket() private view returns (bool ok, uint256 registered) {
         bytes memory ret;
         (ok, ret) = LPOracleCalls.staticRead(
@@ -340,8 +299,7 @@ abstract contract LPOracleListing is LPOracleViews {
         if (ok) (ok, registered) = LPOracleCalls.wordAt(ret, 0);
     }
 
-    /// @dev Once the MarketRegistry maps this feed to a market, that market must be `marketId`, with this feed, this
-    /// integration, the vault-token decimals `d` and the tokens in this order. Before registration nothing is checked.
+    /// @dev Once registered, the registry's market must match this feed; before registration nothing is checked.
     function _checkMarket(
         uint256 marketId,
         bool readOk,
@@ -359,8 +317,6 @@ abstract contract LPOracleListing is LPOracleViews {
         return ok && _marketMatches(ret) ? 0 : LPOracleCodes.CHECK_MARKET;
     }
 
-    /// @dev The `Market` head words 5 to 9 (pool, pool identifier, shape kind, lower and upper tick) name the module's
-    /// own market (`_isOwnMarket`); a short answer does not.
     function _ownMarketWords(
         bytes memory ret,
         uint256 head
@@ -374,8 +330,7 @@ abstract contract LPOracleListing is LPOracleViews {
         return _isOwnMarket(w[0], w[1], w[2], w[3], w[4]);
     }
 
-    /// @dev Decodes the `Market` head words `integration` (4), `pool` (5), `poolId` (6), `shape` (7 to 9), `tokens` (10),
-    /// `decimals` (13) and `lpOracle` (14); the pool, pool identifier and shape must be the module's own market.
+    /// @dev Whether the registry's `Market` record matches this feed's integration, decimals, market and tokens.
     function _marketMatches(
         bytes memory ret
     ) private view returns (bool) {

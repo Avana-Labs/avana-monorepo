@@ -8,19 +8,8 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title AvanaGasVault
-/// @notice Holds the chain's native gas token and refills Avana's own keeper signers (2.24 `REQ-GASV-001`…). A top-up
-/// is permissionless and benefits nobody but the allowlisted signer: the destination and the amount
-/// `min(targetBalance − balance, periodCap − sentInPeriod, address(this).balance)` come from on-chain state alone.
-/// Example: `minBalance = 0.3 ETH`, `targetBalance = 1 ETH`, `periodCap = 1 ETH`, signer at 0.2 ETH and nothing sent in
-/// the last 24 h: `topUp` sends 0.8 ETH; a second call is refused (`NotBelowMinimum`) until the signer drops below
-/// 0.3 ETH again, and then sends at most the 0.2 ETH left of the 24 h cap.
-/// @dev The 24 h cap is exact over any window, not per calendar period: each signer keeps its last
-/// `MAX_SENDS_PER_PERIOD` sends (time and amount, two per slot), `sentInPeriod` sums those in `(now − PERIOD, now]`, and a
-/// send is allowed only into a slot whose entry is older. So the ETH sent to a signer in any `PERIOD` never exceeds the
-/// `periodCap` in force at each send, and a stolen signer key costs at most its balance (≤ `targetBalance`) plus one
-/// `periodCap` before `GUARDIAN` removes it. Immutable, with no role storage: privileged calls check
-/// `msg.sender == TIMELOCK` or `GUARDIAN` (`REQ-ROLE-001`).
-/// @custom:spec REQ-GASV-001, REQ-GASV-002, REQ-GASV-004, REQ-GASV-005, REQ-GASV-013
+/// @notice Holds the native gas token and refills Avana's keeper signers through permissionless top-ups.
+/// @dev The cap holds over any rolling `PERIOD` window, not per calendar period.
 contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
     /// @inheritdoc IAvanaGasVault
     uint256 public constant override PERIOD = 24 hours;
@@ -62,8 +51,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
 
     address[] private _signerList;
     mapping(address signer => Signer) private _signer;
-    /// @dev Each entry `(uint48 timestamp << 80) | uint80 amount`; 0 is an empty entry. Kept on removal, so a signer
-    /// removed and re-added inside 24 h keeps its window.
+    /// @dev Entries `(uint48 timestamp << 80) | uint80 amount`; kept on removal so a re-added signer keeps its window.
     mapping(address signer => uint128[MAX_SENDS_PER_PERIOD]) private _sends;
 
     modifier onlyTimelock() {
@@ -82,14 +70,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
     }
 
     /// @notice Fixes the treasury, the timelock, the guardian and the allowlist bound.
-    /// @dev Reverts `InvalidAddress` for a zero address or a `treasury` equal to `timelock` or `guardian`, and
-    /// `InvalidMaxSigners` unless `1 ≤ maxSigners ≤ 8`. The deploy script also checks that `treasury` is the
-    /// ParameterStore's `feeRecipient` and not `FUNDING_SAFE`.
     /// @param treasury The `feeRecipient` treasury Safe, the only withdrawal destination.
-    /// @param timelock The chain's AvanaTimelock.
-    /// @param guardian The chain's Emergency Guardian Safe.
-    /// @param maxSigners Most signers on the allowlist.
-    /// @custom:spec REQ-GASV-002
     constructor(
         address treasury,
         address timelock,
@@ -117,10 +98,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         emit Funded(msg.sender, msg.value);
     }
 
-    // ─── Top-ups ───
-
     /// @inheritdoc IAvanaGasVault
-    /// @dev `signer` needs no zero check: an unlisted address reverts `UnknownSigner`, and `addSigner` never lists 0.
     function topUp(
         address signer
     ) external override nonReentrant whenNotPaused returns (uint256 amount) {
@@ -142,10 +120,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
     /// @inheritdoc IAvanaGasVault
     function topUpAll() external override nonReentrant whenNotPaused returns (uint256 count, uint256 total) {
         uint256 n = _signerList.length;
-        // The loop is bounded by `MAX_SIGNERS ≤ 8`; each destination is a listed signer and each amount capped by
-        // `_quote`; a signer whose transfer fails is skipped, so no signer can block the others; reentry is refused by
-        // `nonReentrant`; the record is written before the transfer and restored (a storage write in the loop) only
-        // when the transfer fails, and `ToppedUp` follows the transfer because a failed one emits `TopUpFailed` instead.
+        // Bounded by `MAX_SIGNERS`; a failed transfer is skipped and its record restored, so no signer blocks others.
         // forge-lint: disable-start(costly-loop, reentrancy-events)
         for (uint256 i = 0; i < n; ++i) {
             address signer = _signerList[i];
@@ -168,8 +143,6 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         }
         // forge-lint: disable-end(costly-loop, reentrancy-events)
     }
-
-    // ─── TIMELOCK ───
 
     /// @inheritdoc IAvanaGasVault
     function addSigner(
@@ -223,8 +196,6 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         if (!_send(TREASURY, amount)) revert SendFailed(TREASURY, amount);
     }
 
-    // ─── GUARDIAN or TIMELOCK ───
-
     /// @inheritdoc IAvanaGasVault
     function tightenSigner(
         address signer,
@@ -261,8 +232,6 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         paused = true;
         emit PauseChanged(true, msg.sender);
     }
-
-    // ─── Views ───
 
     /// @inheritdoc IAvanaGasVault
     function signers() external view override returns (address[] memory) {
@@ -302,12 +271,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         if (paused) amount = 0;
     }
 
-    // ─── Internals ───
-
-    /// @dev The top-up for a signer below its minimum: `requested = targetBalance − balance`, never 0 because every
-    /// configuration keeps `minBalance ≤ targetBalance` (`_checkConfig`) and the callers pass only `balance < minBalance`;
-    /// `capRoom = periodCap − sent` (0 when sent ≥ cap or no slot is free); `amount = min(requested, capRoom,
-    /// address(this).balance)`.
+    /// @dev `amount = min(targetBalance − balance, cap room, vault balance)`; cap room is 0 when no slot is free.
     function _quote(
         address signer,
         Signer memory s,
@@ -322,8 +286,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         if (held < amount) amount = held;
     }
 
-    /// @dev Sum of the sends in `(now − PERIOD, now]` and the first slot free for a new send (`MAX_SENDS_PER_PERIOD`
-    /// if none): a slot is free when empty or older than `PERIOD`.
+    /// @dev Sum of the sends in the last `PERIOD` and the first free slot (`MAX_SENDS_PER_PERIOD` if none).
     function _window(
         address signer
     ) private view returns (uint256 sent, uint256 free) {
@@ -349,8 +312,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         _sends[signer][slot] = SafeCast.toUint128((uint256(SafeCast.toUint48(block.timestamp)) << AMOUNT_BITS) | amount);
     }
 
-    /// @dev Sends `amount` wei to `to` with empty calldata, forwarding at most `TRANSFER_GAS` and copying no return data
-    /// (as LPVaultSwap's payouts): a reverting, gas-burning or return-bombing recipient only makes the transfer fail.
+    /// @dev Forwards at most `TRANSFER_GAS` and copies no return data, so a hostile recipient only makes it fail.
     function _send(
         address to,
         uint256 amount
@@ -373,8 +335,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         emit SignerConfigChanged(signer, msg.sender, minBalance, targetBalance, periodCap);
     }
 
-    /// @dev `minBalance ≤ targetBalance`, every value ≤ 2^80 − 1, and (unless tightening) `minBalance > 0` and
-    /// `periodCap > 0`.
+    /// @dev `minBalance ≤ targetBalance`, values fit 80 bits, and (unless tightening) no zero `minBalance` or cap.
     function _checkConfig(
         uint256 minBalance,
         uint256 targetBalance,

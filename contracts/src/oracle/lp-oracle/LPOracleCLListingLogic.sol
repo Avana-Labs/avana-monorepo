@@ -10,14 +10,9 @@ import {LPOracleLogicBase} from "./LPOracleLogicBase.sol";
 import {InitParams} from "./types/InitParams.sol";
 
 /// @title LPOracleCLListingLogic
-/// @notice `checkConfig` of the concentrated-liquidity LPOracle, run by delegatecall from `LPOracleCL` (2.10 Listing and
-/// configuration requirements).
-/// @dev `initialize`'s market part runs in `LPOracleCLInitLogic`, so this contract carries only the checks.
-/// @custom:spec REQ-ORACLE-046, REQ-ORACLE-080, REQ-ORACLE-105
+/// @notice `checkConfig` of the concentrated-liquidity LPOracle, run by delegatecall.
 contract LPOracleCLListingLogic is LPOracleListingLogic, LPOracleCLModuleCaller {
-    /// @notice Fixes the chain constants, the `slot0` layout and the module contract; they must equal the
-    /// implementation's.
-    /// @custom:spec REQ-ORACLE-080
+    /// @notice Sets the chain constants, `slot0` layout and module contract; they must match the implementation.
     constructor(
         address timelock,
         uint32 chainBlockTime,

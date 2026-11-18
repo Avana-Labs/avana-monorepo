@@ -9,19 +9,10 @@ import {CollateralizationBase} from "./CollateralizationBase.sol";
 import {ICollateralizationDebtMark} from "./ICollateralizationDebtMark.sol";
 
 /// @title CollateralizationDebtMark
-/// @notice The indebted mark of an account and the per-market count `closeMarket` reads (Q-355).
-/// @dev The mark moves no charge. A proxy's market is the vault token of its first pledge. `markDebtFree` reads the
-/// Spoke only for a marked account; a failing read with at least `DEBT_MARK_GAS_FLOOR` gas left changes nothing, one with
-/// less reverts `InsufficientGas`, and so does one whose revert data is `InsufficientGas` (an oracle inside the read
-/// starved), so a caller cannot starve the read or an oracle it reads to keep a mark set. A mark left set by a
-/// failing read, or by a debt that left without an Avana call, is cleared by anyone through the AaveAdapter's
-/// `refreshDebtMark(proxy)`, so a stale mark only delays `closeMarket`. A repay or liquidation sent with too little
-/// gas for the read (or for an oracle the read calls) reverts `InsufficientGas`, and the caller resends it with more
-/// gas; no other failure of the read stops it.
-/// @custom:spec REQ-COLL-038, REQ-COLL-039, REQ-COLL-040, Q-355, Q-396
+/// @notice The indebted mark of an account and the per-market count `closeMarket` reads.
+/// @dev A stale mark only delays `closeMarket`; anyone clears it through the AaveAdapter's `refreshDebtMark`.
 abstract contract CollateralizationDebtMark is CollateralizationBase, ICollateralizationDebtMark {
     /// @inheritdoc ICollateralizationDebtMark
-    /// @custom:spec REQ-COLL-039, REQ-VAULT-086
     function markIndebted(
         address proxy
     ) external override {
@@ -34,7 +25,6 @@ abstract contract CollateralizationDebtMark is CollateralizationBase, ICollatera
     }
 
     /// @inheritdoc ICollateralizationDebtMark
-    /// @custom:spec REQ-COLL-040, REQ-VAULT-086
     function markDebtFree(
         address proxy
     ) external override {
@@ -43,16 +33,13 @@ abstract contract CollateralizationDebtMark is CollateralizationBase, ICollatera
         if (holder != msg.sender) revert LockNotHeld();
         if (!indebted[proxy]) return;
         address vt = proxyMarket[proxy];
-        // A failing or short read changes nothing: the mark only delays `closeMarket` until `refreshDebtMark`
-        // (REQ-COLL-040). A failure with little gas left may be the caller's starvation of the read, so it reverts.
+        // A failing read keeps the mark; a failure with little gas left may be caller starvation, so it reverts.
         (bool ok, bytes memory data) =
             IVaultToken(vt).spoke().staticcall(abi.encodeCall(IAaveV4Spoke.getUserAccountData, (proxy)));
         if (!ok) {
             uint256 left = gasleft();
             if (left < DEBT_MARK_GAS_FLOOR) revert InsufficientGas(left, DEBT_MARK_GAS_FLOOR);
-            // An oracle the Spoke reads reverts `InsufficientGas` below its own gas floor: the caller's limit starved
-            // it, so the whole call reverts instead of keeping the mark (all Avana `InsufficientGas` share a selector).
-            // The selector is the first four bytes of the revert data.
+            // An oracle inside the read starved by the caller's gas limit: revert rather than keep the mark.
             // forge-lint: disable-next-line(unsafe-typecast)
             if (data.length >= 4 && bytes4(data) == InsufficientGas.selector) {
                 revert InsufficientGas(left, DEBT_MARK_GAS_FLOOR);

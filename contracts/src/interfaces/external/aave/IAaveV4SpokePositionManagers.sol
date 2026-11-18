@@ -4,9 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 /// @title IAaveV4SpokePositionManagers
-/// @notice The position-manager surface of the pinned Aave V4 Spoke (a3ef63e), ABI-equal. Avana never calls it: the
-/// AaveAdapter's fixed selector set (REQ-PROXY-008) excludes every function here, which its selector-allowlist test and
-/// the Certora rule `noPositionManagerApproval` check.
+/// @notice The position-manager surface of the pinned Aave V4 Spoke (`a3ef63e`), ABI-equal. Avana never calls it.
 interface IAaveV4SpokePositionManagers {
     /// @notice One approval change of a signed batch.
     struct PositionManagerUpdate {

@@ -6,10 +6,7 @@ pragma solidity 0.8.28;
 import {LensClPosition, LensSlipstreamTick} from "./types/LensClReads.sol";
 
 /// @title ILensSlipstreamFeeReads
-/// @notice The Aerodrome Slipstream pool and position manager views the Lens's fee reader decodes: the 6-field
-/// `slot0`, the 10-field `ticks` (with `stakedLiquidityNet` in field 3 and `rewardGrowthOutsideX128` in field 6), the
-/// fee growth globals and the 12-field `positions` with `int24 tickSpacing` in field 5.
-/// @custom:spec REQ-LENS-050
+/// @notice Aerodrome Slipstream pool and position manager views used by the Lens fee reader.
 interface ILensSlipstreamFeeReads {
     /// @notice Pool price state; the Lens reads the current tick (field 2).
     function slot0() external view returns (uint160, int24, uint16, uint16, uint16, bool);

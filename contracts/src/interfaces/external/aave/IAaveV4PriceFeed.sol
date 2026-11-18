@@ -4,9 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 /// @title IAaveV4PriceFeed
-/// @notice Price source shape an Aave V4 oracle accepts for a reserve. Avana's LPOracle and DebtOracle implement it,
-/// and the MarketRegistry and ParameterStore read it from a debt reserve's source.
-/// @dev ABI checked against `src/spoke/interfaces/IPriceFeed.sol` of the pinned Aave V4 dependency (`a3ef63e`).
+/// @notice Price source shape an Aave V4 oracle accepts for a reserve; Avana's LPOracle and DebtOracle implement it.
+/// @dev ABI-equal to the pinned Aave V4 `IPriceFeed` (`a3ef63e`).
 interface IAaveV4PriceFeed {
     /// @notice Number of decimals of `latestAnswer`.
     /// @dev The Aave V4 oracle requires it to equal its own `decimals()` when the source is set.
