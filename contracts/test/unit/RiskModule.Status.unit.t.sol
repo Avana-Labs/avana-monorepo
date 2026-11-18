@@ -39,7 +39,6 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
         AccountGateStatus memory s
     ) internal pure {
         assertEq(s.unapprovedDebtReserveId, NONE);
-        assertEq(s.pausedDebtReserveId, NONE);
         assertEq(s.staleDebtReserveId, NONE);
         assertEq(s.haltedDebtReserveId, NONE);
         assertEq(s.breakerDebtReserveId, NONE);
@@ -54,15 +53,6 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
         IAaveV4Spoke.ReserveConfig memory c;
         (c.paused, c.frozen, c.receiveSharesEnabled) = (paused, frozen, receiveShares);
         rSpoke.setConfig(VT_RESERVE, c);
-    }
-
-    function _debtConfig(
-        uint256 r,
-        bool paused
-    ) internal {
-        IAaveV4Spoke.ReserveConfig memory c;
-        (c.borrowable, c.paused) = (true, paused);
-        rSpoke.setConfig(r, c);
     }
 
     // TEST-028 verifies: REQ-ADAPTER-038, REQ-RISK-060, REQ-ADAPTER-024, REQ-ADAPTER-025
@@ -87,8 +77,6 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
         assertEq(g.oldestFeedAge, 0);
         assertFalse(g.feedTooOld);
         assertFalse(g.offboarding);
-        assertFalse(g.aaveReservePaused);
-        assertFalse(g.aaveReserveFrozen);
         assertTrue(g.hubSharesEqualAssets);
         assertFalse(g.noSettlementPath);
         assertFalse(g.liquidationHalted);
@@ -128,30 +116,19 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
         // An unapproved reserve has no recorded route either, and is never priced or breaker-checked.
         assertEq(s.haltedDebtReserveId, 3);
         assertTrue(s.markets[0].noSettlementPath);
-        assertEq(s.pausedDebtReserveId, NONE);
         assertEq(s.staleDebtReserveId, NONE);
         assertEq(s.breakerDebtReserveId, NONE);
         _assertBlocked(s);
     }
 
     // TEST-201 verifies: REQ-ADAPTER-038, REQ-RISK-061, REQ-ADAPTER-062
-    function test_TEST_201_statusPausedAndStaleDebtReserves() public {
+    function test_TEST_201_statusStaleDebtReserves() public {
         rSpoke.setStatus(address(proxy), USDC_RESERVE, false, true);
         assertTrue(_status().borrowAllowed);
-        // Paused on Aave: the first paused reserve held, in reserve order.
-        _debtConfig(USDC_RESERVE, true);
-        AccountGateStatus memory s = _status();
-        assertEq(s.pausedDebtReserveId, USDC_RESERVE);
-        _assertBlocked(s);
-        _debtConfig(GHO_RESERVE, true);
-        assertEq(_status().pausedDebtReserveId, GHO_RESERVE);
-        _debtConfig(GHO_RESERVE, false);
-        _debtConfig(USDC_RESERVE, false);
         // Stale: the DebtOracle fails its borrow gate.
         usdcOracle.setReport(PriceState.Live, uint64(block.timestamp), false);
-        s = _status();
+        AccountGateStatus memory s = _status();
         assertEq(s.staleDebtReserveId, USDC_RESERVE);
-        assertEq(s.pausedDebtReserveId, NONE);
         _assertBlocked(s);
         usdcOracle.setReport(PriceState.Live, uint64(block.timestamp), true);
         assertEq(_status().staleDebtReserveId, NONE);
@@ -243,15 +220,9 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
     }
 
     // TEST-155 verifies: REQ-ADAPTER-038, REQ-ADAPTER-019, REQ-ADAPTER-061, REQ-ADAPTER-021
-    function test_TEST_155_statusAaveFlagsAndHubShares() public {
-        _vtConfig(true, false, false);
-        AccountGateStatus memory s = _status();
-        assertTrue(s.markets[0].aaveReservePaused);
-        assertFalse(s.markets[0].aaveReserveFrozen);
-        _assertBlocked(s);
-        _vtConfig(false, false, false);
+    function test_TEST_155_statusHubShares() public {
         rHub.setAdded(VT_ASSET, 1000, 999);
-        s = _status();
+        AccountGateStatus memory s = _status();
         assertFalse(s.markets[0].hubSharesEqualAssets);
         _assertBlocked(s);
     }
@@ -333,7 +304,6 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
         assertEq(s.markets.length, 0);
         assertEq(s.unknownCollateralReserveId, NONE);
         assertEq(s.unapprovedDebtReserveId, NONE);
-        assertEq(s.pausedDebtReserveId, NONE);
         assertEq(s.staleDebtReserveId, NONE);
         assertEq(s.haltedDebtReserveId, NONE);
         assertEq(s.breakerDebtReserveId, NONE);

@@ -94,7 +94,6 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
         _contained(tl, abi.encodeCall(store.setInitialMarketCaps, (M, 5_000_000e8, 500_000e8, 1e8)));
         _contained(tl, abi.encodeCall(store.setInitialTokenCap, (address(hub), usdt, 1e8)));
         _contained(tl, abi.encodeCall(store.setFeed, (address(fUsdc), _feedDef(86_400, 1800))));
-        _contained(tl, abi.encodeCall(store.setLiquidationExpectations, (address(spoke), 1.1e18, 200)));
         _contained(tl, abi.encodeCall(store.setCoverageRatioBps, (2000)));
     }
 

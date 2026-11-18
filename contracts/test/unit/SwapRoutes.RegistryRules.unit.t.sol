@@ -133,7 +133,6 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
         (d.collateralFactor, d.maxLiquidationBonus) = (7500, 10_500);
         spoke.setReserve(VT_RESERVE, r, c, d);
         spoke.setLiquidationConfig(1.1e18, 5000);
-        ps.setLiquidationExpectations(address(spoke), 1.1e18, 200);
         ps.setMarket(id, 9500, 10e8, 1_000_000e8, 100_000e8, 1e8);
     }
 

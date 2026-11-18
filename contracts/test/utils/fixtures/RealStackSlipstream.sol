@@ -221,7 +221,6 @@ abstract contract RealStackSlipstream is RealStackVolatile {
                 approved: false, hub: hub, integrationId: SLIP, riskTier: tier, implementation: impl, aaveOracle: oracle
             })
         );
-        store.setLiquidationExpectations(spoke, TARGET_HEALTH_FACTOR, 200);
         vm.stopPrank();
         vm.prank(aaveDao);
         ICollSpokeConfigurator(aave.spokeConfigurator)

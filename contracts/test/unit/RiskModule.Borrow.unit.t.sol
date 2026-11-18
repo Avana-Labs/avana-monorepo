@@ -70,38 +70,8 @@ contract RiskModuleBorrowUnitTest is RiskModuleFixture {
         _borrow(USDC_RESERVE);
     }
 
-    // TEST-158 verifies: REQ-ADAPTER-061, REQ-ADAPTER-062, REQ-RISK-061, INV-060, REQ-ACCESS-130
-    function test_TEST_158_aavePauses() public {
-        IAaveV4Spoke.ReserveConfig memory c;
-        (c.borrowable, c.paused) = (true, true);
-        rSpoke.setConfig(GHO_RESERVE, c);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.DebtReservePaused.selector, GHO_RESERVE));
-        _borrow(GHO_RESERVE);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.DebtReservePaused.selector, GHO_RESERVE));
-        riskModule.preWithdrawCheck(address(proxy));
-        c.paused = false;
-        rSpoke.setConfig(GHO_RESERVE, c);
-        IAaveV4Spoke.ReserveConfig memory v;
-        v.paused = true;
-        rSpoke.setConfig(VT_RESERVE, v);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.AaveReservePaused.selector, VT_RESERVE));
-        _borrow(GHO_RESERVE);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.AaveReservePaused.selector, VT_RESERVE));
-        riskModule.preWithdrawCheck(address(proxy));
-    }
-
     // TEST-155 verifies: REQ-ADAPTER-019, REQ-ADAPTER-025, REQ-ADAPTER-056, REQ-PROXY-079, INV-060, REQ-ACCESS-036, REQ-RISK-032, REQ-RISK-034
-    function test_TEST_155_frozenAndOffboardingBlockBorrowOnly() public {
-        IAaveV4Spoke.ReserveConfig memory v;
-        v.frozen = true;
-        rSpoke.setConfig(VT_RESERVE, v);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.ReserveFrozen.selector, VT_RESERVE));
-        _borrow(GHO_RESERVE);
-        riskModule.preWithdrawCheck(address(proxy));
-        // Frozen with no supplied shares does not block.
-        rSpoke.setSupplied(address(proxy), VT_RESERVE, 0);
-        _borrow(GHO_RESERVE);
-        rSpoke.setConfig(VT_RESERVE, IAaveV4Spoke.ReserveConfig(0, false, false, false, false));
+    function test_TEST_155_offboardingBlocksBorrowOnly() public {
         vm.prank(address(timelock));
         registry.setMarketOffboarding(mid);
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.MarketOffboarding.selector, mid));

@@ -18,8 +18,6 @@ contract RegistryParameterStoreMock {
     mapping(uint256 => uint256) public marketUsdCap;
     mapping(uint256 => uint256) public topUpSliceUsd;
     mapping(uint256 => uint256) public stressFloorUsd;
-    mapping(address => uint256) public aaveTargetHealthFactor;
-    mapping(address => uint16) public minLiquidationBonus;
     mapping(bytes32 => bool) public livenessFails;
     uint16 public maxFlashFeeBps = 10;
     uint16 public avanaFeeShareBps;
@@ -97,15 +95,6 @@ contract RegistryParameterStoreMock {
         marketUsdCap[id] = capUsd;
         topUpSliceUsd[id] = sliceUsd;
         stressFloorUsd[id] = floorUsd;
-    }
-
-    function setLiquidationExpectations(
-        address spoke,
-        uint256 target,
-        uint16 minBonus
-    ) external {
-        aaveTargetHealthFactor[spoke] = target;
-        minLiquidationBonus[spoke] = minBonus;
     }
 
     function setLivenessFails(

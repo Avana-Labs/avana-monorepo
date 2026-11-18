@@ -290,9 +290,7 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
     /// @notice A RiskModule pre-check error propagates unchanged and the nonce increment is undone.
     function test_TEST_028_riskModuleErrorPropagates() public {
         risk.setRefuse(true);
-        _expectBorrowRevert(
-            abi.encodeWithSelector(IRiskModuleErrors.AaveReserveUnavailable.selector), debtReserveId, 1, alice, 0
-        );
+        _expectBorrowRevert(abi.encodeWithSelector(IRiskModuleErrors.PoolMismatch.selector), debtReserveId, 1, alice, 0);
         assertEq(adapterC.borrowNonce(aliceProxy), 0, "nonce unchanged");
     }
 

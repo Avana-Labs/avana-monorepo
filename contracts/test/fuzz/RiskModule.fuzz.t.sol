@@ -173,38 +173,17 @@ contract RiskModuleFuzzTest is Test {
         assertTrue(r == 10e8 || r == minPledge);
     }
 
-    // TEST-125 verifies: SPEC-CAP-006, PROP-030
-    function testFuzz_TEST_125_budgetFitsAddCap(
-        uint120 u1,
-        uint120 u2,
-        uint64 p1,
-        uint64 p2,
-        uint64 floorSeed,
-        uint256 dSeed
-    ) public view {
-        uint8 d = _d(dSeed);
-        uint256 floorUsd = 1 + uint256(floorSeed) % 1e12;
-        uint256 c1 = h.usdCharge(u1, p1, floorUsd, d);
-        uint256 c2 = h.usdCharge(u2, p2, floorUsd, d);
-        // A budget of exactly c1 + c2 and an addCap of ceil(budget / floor) whole tokens holds both pledges.
-        uint256 addCap = (c1 + c2 + floorUsd - 1) / floorUsd;
-        assertLe(uint256(u1) + u2, addCap * 10 ** uint256(d));
-    }
-
     // TEST-249 verifies: SPEC-CF-002, REQ-RISK-069
     function testFuzz_TEST_249_bonusBound(
         uint32 maxLb,
-        uint16 cf,
-        uint16 factor,
-        uint16 minBonus
+        uint16 cf
     ) public view {
-        bool v = h.bonusBoundViolated(maxLb, cf, factor, minBonus);
+        bool v = h.bonusBoundViolated(maxLb, cf);
         if (maxLb < 1e4) {
             assertTrue(v);
             return;
         }
-        bool exact = (uint256(maxLb) * cf + 9999) / 1e4 >= 1e4 || (uint256(maxLb) - 1e4) * factor / 1e4 < minBonus;
-        assertEq(v, exact);
+        assertEq(v, (uint256(maxLb) * cf + 9999) / 1e4 >= 1e4);
     }
 
     // TEST-071 verifies: SPEC-CF-005, REQ-RISK-068

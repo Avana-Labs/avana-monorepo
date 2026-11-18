@@ -159,7 +159,6 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
                 approved: false, hub: hub, integrationId: V4, riskTier: tier, implementation: impl, aaveOracle: oracle
             })
         );
-        store.setLiquidationExpectations(spoke, TARGET_HEALTH_FACTOR, 200);
         vm.stopPrank();
         vm.prank(aaveDao);
         ICollSpokeConfigurator(aave.spokeConfigurator)

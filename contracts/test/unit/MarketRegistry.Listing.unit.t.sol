@@ -376,7 +376,7 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         (route,) = registry.getRoute(id, address(usdc), address(gho), 0);
         assertEq(route, address(0));
-        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(id), 34))), 2, "routeEpoch");
+        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(id), 29))), 2, "routeEpoch");
     }
 
     /// @dev Slot of `mapping[key]` at field `field` of the ERC-7201 layout.
@@ -400,18 +400,18 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         // Field 0 marketCount, 19 flashSource.
         assertEq(uint256(vm.load(address(registry), LAYOUT)), id);
         assertEq(address(uint160(uint256(vm.load(address(registry), bytes32(uint256(LAYOUT) + 19))))), address(flash));
-        // Appended: 31 approvedSpokeCodeHash, 32 spokeCodeHash, 33 integrationContracts.
+        // Appended: 26 approvedSpokeCodeHash, 27 spokeCodeHash, 28 integrationContracts.
         bytes32 h = keccak256("some implementation");
         vm.prank(address(timelock));
         registry.approveSpokeCodeHash(h);
-        assertEq(uint256(vm.load(address(registry), _mapSlot(h, 31))), 1);
-        bytes32 spokeHash = vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(address(spoke)))), 32));
+        assertEq(uint256(vm.load(address(registry), _mapSlot(h, 26))), 1);
+        bytes32 spokeHash = vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(address(spoke)))), 27));
         assertEq(spokeHash, address(spokeImpl).codehash);
         address[] memory amm = new address[](1);
         amm[0] = address(usdc);
         vm.prank(address(timelock));
         registry.recordIntegrationContracts(V3, amm);
         uint256 recorded = registry.integrationContracts(V3).length;
-        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(uint256(V3)), 33))), recorded);
+        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(uint256(V3)), 28))), recorded);
     }
 }

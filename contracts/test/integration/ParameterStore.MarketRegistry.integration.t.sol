@@ -96,13 +96,6 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         vm.prank(address(timelock));
         store.setInitialTokenCap(address(hub), address(usdc), 20_000_000e8);
         assertEq(store.tokenUsdCap(address(hub), address(usdc)), 20_000_000e8);
-        _refuses(
-            abi.encodeCall(store.setLiquidationExpectations, (other, 1.1e18, 200)),
-            abi.encodeWithSelector(IParameterStoreBase.UnknownSpoke.selector, other)
-        );
-        vm.prank(address(timelock));
-        store.setLiquidationExpectations(address(spoke), 1.1e18, 200);
-        assertEq(store.aaveTargetHealthFactor(address(spoke)), 1.1e18);
         // A token the registry never listed.
         address dai = makeAddr("DAI");
         _refuses(
@@ -198,7 +191,6 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         store.setTokenCollateralFactorBps(address(usdt), 7500);
         store.setInitialMarketParams(id, p);
         store.setInitialMarketCaps(id, 1_000_000e8, 100_000e8, 1e8);
-        store.setLiquidationExpectations(address(spoke), 1.1e18, 200);
         vm.stopPrank();
         hub.setAsset(vaultToken, VT_ASSET);
         hub.setSpokeConfig(VT_ASSET, address(spoke), 2_000_000, 0);

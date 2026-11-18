@@ -15,11 +15,6 @@ import {RiskDebtOracleMock, RiskLPOracleMock, RiskLPVaultMock} from "../../utils
 import {Test} from "forge-std/Test.sol";
 
 interface IRiskHandlerConfigurator {
-    function updateFrozen(
-        address spoke,
-        uint256 reserveId,
-        bool frozen
-    ) external;
     function updateReceiveSharesEnabled(
         address spoke,
         uint256 reserveId,
@@ -67,7 +62,6 @@ contract AaveAdapterRiskHandler is Test {
     bool public debtLive = true;
     bool public breakerHeld;
     bool public offboarding;
-    bool public reserveFrozen;
     bool public drift;
 
     mapping(address => bytes32[]) internal keys;
@@ -148,14 +142,6 @@ contract AaveAdapterRiskHandler is Test {
         w.registry.setMarketStatus(w.market, on ? MarketStatus.Offboarding : MarketStatus.Active);
     }
 
-    function setReserveFrozen(
-        bool on
-    ) external {
-        reserveFrozen = on;
-        vm.prank(w.aaveDao);
-        IRiskHandlerConfigurator(w.configurator).updateFrozen(address(w.spoke), w.vtReserve, on);
-    }
-
     function setDrift(
         bool on
     ) external {
@@ -179,7 +165,7 @@ contract AaveAdapterRiskHandler is Test {
         address wallet = wallets[actorSeed % 3];
         address proxy = w.adapter.proxyOf(wallet, w.market);
         amount = bound(amount, 1e18, 3000e18);
-        bool clean = _withDebtClean() && !offboarding && !reserveFrozen;
+        bool clean = _withDebtClean() && !offboarding;
         uint256 n = w.adapter.borrowNonce(proxy);
         vm.prank(wallet);
         try w.adapter.borrow(w.market, w.ghoReserve, amount, wallet, block.timestamp, 0, n) {

@@ -29,8 +29,6 @@ abstract contract ParameterStoreStorage is IParameterStoreBase {
         mapping(address asset => uint256) floorRoundingAllowance;
         mapping(address hub => mapping(address asset => uint256)) deficitMax;
         mapping(address asset => uint16) debtStressRiseBps;
-        mapping(address spoke => uint256) targetHealthFactor;
-        mapping(address spoke => uint16) minLiquidationBonus;
         mapping(bytes32 paramKey => uint64) lastLoosenedAt;
         // Appended members follow; earlier members keep their slots.
         mapping(uint256 marketId => MarketSpeedLimits) marketSpeed;
@@ -60,7 +58,6 @@ abstract contract ParameterStoreStorage is IParameterStoreBase {
     uint256 internal constant USD_CAP_MAX = type(uint128).max;
     /// @dev Value a USD cap below it may be loosened to in one step, so a zero cap can reopen.
     uint256 internal constant USD_CAP_REOPEN_BASE = 1000e8;
-    uint16 internal constant MIN_LIQUIDATION_BONUS_FLOOR = 200;
     uint256 internal constant ROUNDING_ALLOWANCE_USD_MAX = 1e8;
 
     /// @dev Scopes of the listing-margin re-check: one token's markets, or one feed's markets.

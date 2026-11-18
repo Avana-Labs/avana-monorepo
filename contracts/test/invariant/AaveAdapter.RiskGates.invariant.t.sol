@@ -51,20 +51,19 @@ contract AaveAdapterRiskGatesInvariantTest is AaveAdapterRiskFixture, HandlerRea
             _borrowAs(ws[i], MARKET_ID, usdcReserveId, 50e6);
         }
         targetContract(address(handler));
-        bytes4[] memory actions = new bytes4[](13);
+        bytes4[] memory actions = new bytes4[](12);
         actions[0] = AaveAdapterRiskHandler.setPrice.selector;
         actions[1] = AaveAdapterRiskHandler.report.selector;
         actions[2] = AaveAdapterRiskHandler.debtReport.selector;
         actions[3] = AaveAdapterRiskHandler.setBreaker.selector;
         actions[4] = AaveAdapterRiskHandler.setOffboarding.selector;
-        actions[5] = AaveAdapterRiskHandler.setReserveFrozen.selector;
-        actions[6] = AaveAdapterRiskHandler.setDrift.selector;
-        actions[7] = AaveAdapterRiskHandler.warp.selector;
+        actions[5] = AaveAdapterRiskHandler.setDrift.selector;
+        actions[6] = AaveAdapterRiskHandler.warp.selector;
+        actions[7] = AaveAdapterRiskHandler.borrow.selector;
         actions[8] = AaveAdapterRiskHandler.borrow.selector;
-        actions[9] = AaveAdapterRiskHandler.borrow.selector;
-        actions[10] = AaveAdapterRiskHandler.withdrawWithDebt.selector;
-        actions[11] = AaveAdapterRiskHandler.repay.selector;
-        actions[12] = AaveAdapterRiskHandler.pledge.selector;
+        actions[9] = AaveAdapterRiskHandler.withdrawWithDebt.selector;
+        actions[10] = AaveAdapterRiskHandler.repay.selector;
+        actions[11] = AaveAdapterRiskHandler.pledge.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
     }
 
@@ -79,19 +78,18 @@ contract AaveAdapterRiskGatesInvariantTest is AaveAdapterRiskFixture, HandlerRea
         (own[0], own[1]) = (address(handler), address(this));
         Reach memory r = _replayLanded(address(handler), actions, bytes4(0), 32, 50, 0, own, true);
         // Floors: 80 % of the landed share measured with these seeds, rounded down to 5 %; a check's normal return lands.
-        uint256[] memory floors = new uint256[](12);
-        bool[] memory check = new bool[](12);
+        uint256[] memory floors = new uint256[](11);
+        bool[] memory check = new bool[](11);
         floors[0] = 60; // setPrice
         floors[1] = 80; // report
         floors[2] = 80; // debtReport
         floors[3] = 40; // setBreaker
         floors[4] = 45; // setOffboarding
-        floors[5] = 35; // setReserveFrozen
-        floors[6] = 40; // setDrift
-        floors[7] = 80; // warp
-        check[7] = true; // warp
-        floors[10] = 80; // repay
-        floors[11] = 80; // pledge
+        floors[5] = 40; // setDrift
+        floors[6] = 80; // warp
+        check[6] = true; // warp
+        floors[9] = 80; // repay
+        floors[10] = 80; // pledge
         _check(r, names, new string[](0), floors, new uint256[](0), check);
     }
 
@@ -105,7 +103,7 @@ contract AaveAdapterRiskGatesInvariantTest is AaveAdapterRiskFixture, HandlerRea
         pure
         returns (bytes4[] memory actions, string[] memory names, int16[][] memory kinds)
     {
-        (actions, names, kinds) = (new bytes4[](12), new string[](12), new int16[][](12));
+        (actions, names, kinds) = (new bytes4[](11), new string[](11), new int16[][](11));
         (actions[0], names[0]) = (AaveAdapterRiskHandler.setPrice.selector, "setPrice");
         kinds[0] = new int16[](1);
         kinds[0][0] = 8;
@@ -122,29 +120,26 @@ contract AaveAdapterRiskGatesInvariantTest is AaveAdapterRiskFixture, HandlerRea
         (actions[4], names[4]) = (AaveAdapterRiskHandler.setOffboarding.selector, "setOffboarding");
         kinds[4] = new int16[](1);
         kinds[4][0] = 1;
-        (actions[5], names[5]) = (AaveAdapterRiskHandler.setReserveFrozen.selector, "setReserveFrozen");
+        (actions[5], names[5]) = (AaveAdapterRiskHandler.setDrift.selector, "setDrift");
         kinds[5] = new int16[](1);
         kinds[5][0] = 1;
-        (actions[6], names[6]) = (AaveAdapterRiskHandler.setDrift.selector, "setDrift");
+        (actions[6], names[6]) = (AaveAdapterRiskHandler.warp.selector, "warp");
         kinds[6] = new int16[](1);
-        kinds[6][0] = 1;
-        (actions[7], names[7]) = (AaveAdapterRiskHandler.warp.selector, "warp");
-        kinds[7] = new int16[](1);
-        kinds[7][0] = 32;
-        (actions[8], names[8]) = (AaveAdapterRiskHandler.borrow.selector, "borrow");
-        kinds[8] = new int16[](2);
+        kinds[6][0] = 32;
+        (actions[7], names[7]) = (AaveAdapterRiskHandler.borrow.selector, "borrow");
+        kinds[7] = new int16[](2);
+        kinds[7][0] = 8;
+        kinds[7][1] = 256;
+        (actions[8], names[8]) = (AaveAdapterRiskHandler.withdrawWithDebt.selector, "withdrawWithDebt");
+        kinds[8] = new int16[](1);
         kinds[8][0] = 8;
-        kinds[8][1] = 256;
-        (actions[9], names[9]) = (AaveAdapterRiskHandler.withdrawWithDebt.selector, "withdrawWithDebt");
-        kinds[9] = new int16[](1);
+        (actions[9], names[9]) = (AaveAdapterRiskHandler.repay.selector, "repay");
+        kinds[9] = new int16[](2);
         kinds[9][0] = 8;
-        (actions[10], names[10]) = (AaveAdapterRiskHandler.repay.selector, "repay");
-        kinds[10] = new int16[](2);
+        kinds[9][1] = 256;
+        (actions[10], names[10]) = (AaveAdapterRiskHandler.pledge.selector, "pledge");
+        kinds[10] = new int16[](1);
         kinds[10][0] = 8;
-        kinds[10][1] = 256;
-        (actions[11], names[11]) = (AaveAdapterRiskHandler.pledge.selector, "pledge");
-        kinds[11] = new int16[](1);
-        kinds[11][0] = 8;
     }
 
     function _calldata(
@@ -163,7 +158,7 @@ contract AaveAdapterRiskGatesInvariantTest is AaveAdapterRiskFixture, HandlerRea
     // TEST-106 verifies: REQ-PROXY-020; shared: the same campaign turns Aave drift (receiveSharesEnabled on the vault-token reserve) on and off and counts any borrow that completed while it held
     /// @notice No borrow and no withdrawal with debt completed while the market's price was not Live and borrowable,
     /// a feed or the USDC DebtOracle was stale, a breaker was latched or a drift held; no borrow while the market was
-    /// Offboarding or its reserve frozen on Aave.
+    /// Offboarding.
     function invariant_TEST_095_noRiskIncreaseThroughAClosedGate() public view {
         assertEq(handler.uncheckedSuccesses(), 0, "risk-increasing action through a closed gate");
     }
@@ -196,10 +191,6 @@ contract AaveAdapterRiskGatesInvariantTest is AaveAdapterRiskFixture, HandlerRea
         handler.borrow(0, 10e18);
         assertEq(handler.borrowsDone(), 0, "offboarding refuses");
         handler.setOffboarding(false);
-        handler.setReserveFrozen(true);
-        handler.borrow(0, 10e18);
-        assertEq(handler.borrowsDone(), 0, "frozen reserve refuses");
-        handler.setReserveFrozen(false);
         handler.setDrift(true);
         handler.borrow(0, 10e18);
         assertEq(handler.borrowsDone(), 0, "drift refuses");

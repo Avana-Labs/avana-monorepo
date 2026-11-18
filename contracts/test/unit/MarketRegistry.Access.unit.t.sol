@@ -158,7 +158,7 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
     /// added to the MarketRegistry or one of its logic contracts.
     // TEST-032 verifies: REQ-CONFIG-014
     function test_TEST_032_noRiskParameterModeAllowlistOrWalletCapSelectors() public {
-        bytes4[33] memory params = [
+        bytes4[32] memory params = [
             IParameterStore.marketUsdCap.selector,
             IParameterStore.topUpSliceUsd.selector,
             IParameterStore.stressFloorUsd.selector,
@@ -186,7 +186,6 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
             IParameterStore.tightenMaxShortfallBps.selector,
             IParameterStore.loosenMaxShortfallBps.selector,
             IParameterStore.debtStressRiseBps.selector,
-            IParameterStore.setLiquidationExpectations.selector,
             IParameterStore.deficitMax.selector,
             IParameterStore.tightenDeficitMax.selector,
             IParameterStore.loosenDeficitMax.selector,

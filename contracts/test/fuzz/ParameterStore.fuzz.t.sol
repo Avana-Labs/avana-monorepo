@@ -298,19 +298,6 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
         assertEq(d.feedMaxAge, uint256(d.feedHeartbeat) + d.heartbeatMargin);
     }
 
-    // TEST-249 verifies: REQ-PSTORE-022
-    function testFuzz_TEST_249_expectationsModel(
-        uint256 target,
-        uint16 bonus
-    ) public {
-        bytes memory err = target <= 1e18 || bonus < 200 || bonus >= 10_000 ? _oob() : bytes("");
-        _expect(abi.encodeCall(store.setLiquidationExpectations, (address(spoke), target, bonus)), err);
-        if (err.length == 0) {
-            assertEq(store.aaveTargetHealthFactor(address(spoke)), target);
-            assertEq(store.minLiquidationBonus(address(spoke)), bonus);
-        }
-    }
-
     // TEST-246 verifies: REQ-CONFIG-050, Q-397
     function testFuzz_TEST_246_roundingAllowanceWorthAtMostOneDollar(
         int256 price,

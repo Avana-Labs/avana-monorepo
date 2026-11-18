@@ -89,12 +89,6 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
     // TEST-138 verifies: REQ-CONFIG-044, REQ-CONFIG-045, REQ-CONFIG-047, REQ-CONFIG-076, Q-270, Q-309, REQ-ACCESS-034
     // Sources: 5.1 TEST-138, SYM-15
     function test_TEST_138_reserveConfigurationChecks() public {
-        IAaveV4Spoke.ReserveConfig memory c;
-        c.frozen = true;
-        spoke.setConfig(VT_RESERVE, c);
-        _expectCheck("reserveState");
-        c.frozen = false;
-        spoke.setConfig(VT_RESERVE, c);
         _dynamic(0, 10_500, 0);
         _expectCheck("collateralFactor");
         _dynamic(8001, 10_500, 0);
@@ -108,15 +102,6 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         hub.setLiquidityFee(VT_ASSET, 1);
         _expectCheck("liquidityFee");
         hub.setLiquidityFee(VT_ASSET, 0);
-        spoke.setLiquidationConfig(1e18, 5000);
-        _expectCheck("liquidationConfig");
-        spoke.setLiquidationConfig(1.2e18, 5000);
-        _expectCheck("liquidationConfig");
-        // Minimum bonus floor((10,500 - 10,000) x 5,000 / 10,000) = 250 bps against an expected 251.
-        spoke.setLiquidationConfig(1.1e18, 5000);
-        ps.setLiquidationExpectations(address(spoke), 1.1e18, 251);
-        _expectCheck("minBonus");
-        ps.setLiquidationExpectations(address(spoke), 1.1e18, 250);
         _activate();
     }
 
@@ -126,7 +111,6 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
     // s <= floor(8,000 x 250 / 10,250) = 195; at 196 a keeper sandwiching its own legs to the floor would pay less.
     function test_TEST_138_slippageAllowanceKeepsTheFeeAtTheBonus() public {
         spoke.setLiquidationConfig(1.1e18, 5000);
-        ps.setLiquidationExpectations(address(spoke), 1.1e18, 250);
         ps.setFeeBoundInputs(id, 196, 2000);
         _expectCheck("feeBound");
         ps.setFeeBoundInputs(id, 195, 2000);
@@ -141,20 +125,10 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         ps.setMarket(id, 9500, 10e8, 0, 100_000e8, 1e8);
         _expectCheck("caps");
         ps.setMarket(id, 9500, 10e8, 1_000_000e8, 100_000e8, 1e8);
-        // SPEC-CAP-006 example: ceil((1,000,000 + 100,000) / 1.00) = 1,100,000 whole tokens.
-        hub.setSpokeConfig(VT_ASSET, address(spoke), 1_099_999, 0);
-        _expectCheck("addCap");
-        hub.setSpokeConfig(VT_ASSET, address(spoke), 1_100_000, 0);
         // CF_LP 9,960: 1 - CF = 40 bps is not above the 50 bps of deviation plus drift.
         rm.setCfLp(9960);
         _expectCheck("listingMargin");
         rm.setCfLp(8000);
-        _activate();
-    }
-
-    // TEST-138 verifies: REQ-CONFIG-046
-    function test_TEST_138_uncappedAddCapPasses() public {
-        hub.setSpokeConfig(VT_ASSET, address(spoke), type(uint40).max, 0);
         _activate();
     }
 

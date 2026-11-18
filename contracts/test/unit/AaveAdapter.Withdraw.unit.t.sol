@@ -210,7 +210,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     function test_TEST_019_preWithdrawErrorPropagates() public {
         _borrowAs(alice, MARKET_ID, debtReserveId, 100e18);
         risk.setRefuse(true);
-        _expectWithdrawRevert(abi.encodeWithSelector(IRiskModuleErrors.AaveReserveUnavailable.selector), k2, UNITS / 2);
+        _expectWithdrawRevert(abi.encodeWithSelector(IRiskModuleErrors.PoolMismatch.selector), k2, UNITS / 2);
     }
 
     // TEST-203 verifies: REQ-PROXY-034, SPEC-PROXY-006

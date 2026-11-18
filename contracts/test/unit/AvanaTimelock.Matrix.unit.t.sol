@@ -105,7 +105,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         for (uint256 i; i < tighten.length; ++i) {
             rows.push(Row(ps, tighten[i], true, false));
         }
-        bytes4[31] memory normal = [
+        bytes4[30] memory normal = [
             IParameterStoreLoosen.loosenSlippageAllowanceBps.selector,
             IParameterStoreLoosen.loosenFloorRoundingAllowance.selector,
             IParameterStoreLoosen.loosenRouteDepthThreshold.selector,
@@ -132,7 +132,6 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStoreListing.setInitialMarketCaps.selector,
             IParameterStoreListing.setInitialTokenCap.selector,
             IParameterStoreListing.setFeed.selector,
-            IParameterStore.setLiquidationExpectations.selector,
             UUPSUpgradeable.upgradeToAndCall.selector,
             IAccessControl.grantRole.selector,
             IAccessControl.revokeRole.selector,

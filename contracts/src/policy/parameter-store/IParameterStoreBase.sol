@@ -60,9 +60,6 @@ interface IParameterStoreBase {
     /// @notice The Hub is not recorded in the MarketRegistry.
     error UnknownHub(address hub);
 
-    /// @notice The CDP Spoke is not approved in the MarketRegistry.
-    error UnknownSpoke(address spoke);
-
     /// @notice A logic contract was called directly instead of by the ParameterStore's delegatecall.
     error NotDelegated();
 

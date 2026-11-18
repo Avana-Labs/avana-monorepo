@@ -16,7 +16,7 @@ import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";
 import {DebtReserveParams, FeedDef, MarketParams} from "./types/ParameterStoreTypes.sol";
 
 /// @title ParameterStoreListingLogic
-/// @notice Bodies of the listing-batch, Spoke expectation and coverage-ratio setters.
+/// @notice Bodies of the listing-batch and coverage-ratio setters.
 /// @dev Reached only by delegatecall from the ParameterStore, which checks the caller's role.
 // Bodies of selectors the ParameterStore declares; only fully implemented pieces are inherited.
 // solhint-disable comprehensive-interface
@@ -187,26 +187,6 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
         _s().floorRoundingAllowance[asset] = p.floorRoundingAllowance;
         emit ParameterSet("floorRoundingAllowance", _a(asset), old, p.floorRoundingAllowance);
         emit DebtAssetParamsSet(asset, p.floorRoundingAllowance);
-    }
-
-    /// @notice Body of `IParameterStore.setLiquidationExpectations`.
-    function setLiquidationExpectations(
-        address spoke,
-        uint256 targetHealthFactor,
-        uint16 minLiquidationBonusBps
-    ) external {
-        _onlyDelegated();
-        if (!_REGISTRY.getSpoke(spoke).approved) revert UnknownSpoke(spoke);
-        if (
-            targetHealthFactor <= WAD || minLiquidationBonusBps < MIN_LIQUIDATION_BONUS_FLOOR
-                || minLiquidationBonusBps >= BPS
-        ) revert OutOfBounds();
-        uint256 oldTarget = _s().targetHealthFactor[spoke];
-        uint16 oldBonus = _s().minLiquidationBonus[spoke];
-        _s().targetHealthFactor[spoke] = targetHealthFactor;
-        _s().minLiquidationBonus[spoke] = minLiquidationBonusBps;
-        emit ParameterSet("aaveTargetHealthFactor", _a(spoke), oldTarget, targetHealthFactor);
-        emit ParameterSet("minLiquidationBonus", _a(spoke), oldBonus, minLiquidationBonusBps);
     }
 
     /// @notice Body of `IParameterStore.setCoverageRatioBps`.

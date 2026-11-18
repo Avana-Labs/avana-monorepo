@@ -355,7 +355,7 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         MarketParams memory mp;
         FeedDef memory fd;
         DebtReserveParams memory dp;
-        c = new bytes[](41);
+        c = new bytes[](40);
         uint256 k;
         c[k++] = abi.encodeCall(IParameterStoreTighten.tightenSlippageAllowanceBps, (M, 1));
         c[k++] = abi.encodeCall(IParameterStoreTighten.tightenFloorRoundingAllowance, (gho, 1));
@@ -395,7 +395,6 @@ contract ParameterStoreAccessUnitTest is ParameterStoreFixture {
         c[k++] = abi.encodeCall(IParameterStore.loosenMaxShortfallBps, (1));
         c[k++] = abi.encodeCall(IParameterStore.tightenDebtStressRiseBps, (gho, 1));
         c[k++] = abi.encodeCall(IParameterStore.loosenDebtStressRiseBps, (gho, 1));
-        c[k++] = abi.encodeCall(IParameterStore.setLiquidationExpectations, (address(spoke), 1, 1));
         c[k++] = abi.encodeCall(IParameterStore.setCoverageRatioBps, (1));
         c[k++] = abi.encodeCall(IAccessControl.grantRole, (STEWARD, alice));
         assert(k == c.length);

@@ -43,9 +43,6 @@ contract RiskModuleHandler is Test {
     }
 
     World internal w;
-    bool internal _vtPaused;
-    bool internal _debtPaused;
-    bool internal _frozen;
     bool internal _drift;
     bool internal _issuer;
     bool internal _offboarding;
@@ -70,15 +67,6 @@ contract RiskModuleHandler is Test {
         bool borrowAllowed
     ) external {
         w.oracle.setState(PriceState(s % 4), s % 4 == 1 ? 1 << 3 : 0, borrowAllowed);
-    }
-
-    function setPauses(
-        bool vtPaused,
-        bool debtPaused,
-        bool frozen
-    ) external {
-        (_vtPaused, _debtPaused, _frozen) = (vtPaused, debtPaused, frozen);
-        _config();
     }
 
     function setDrift(
@@ -126,7 +114,7 @@ contract RiskModuleHandler is Test {
     function borrow(
         uint256 seed
     ) external {
-        _steer(seed, true);
+        _steer(seed);
         bool clear = _clear(true);
         uint256 keepers = w.swap.activeKeeperCount();
         try w.rm.preBorrowCheck(w.proxy, w.debtReserve, 1) {
@@ -142,7 +130,7 @@ contract RiskModuleHandler is Test {
     function withdraw(
         uint256 seed
     ) external {
-        _steer(seed, false);
+        _steer(seed);
         bool clear = _clear(false);
         try w.rm.preWithdrawCheck(w.proxy) {
             ++withdrawals;
@@ -156,22 +144,21 @@ contract RiskModuleHandler is Test {
     /// @dev Seed bits from a hash, so the fuzzer's small dictionary values still spread over the modes: mode 0 leaves
     /// the state as the sequence made it; 1 opens every gate; 2 and 3 open every gate and close one.
     function _steer(
-        uint256 seed,
-        bool isBorrow
+        uint256 seed
     ) internal {
         uint256 h = uint256(keccak256(abi.encode(seed)));
         if (h % 4 == 0) return;
         _open();
         if (h % 4 == 1) return;
-        _closeOne((h >> 8) % (isBorrow ? 9 : 8));
+        _closeOne((h >> 8) % 6);
     }
 
-    /// @dev Opens every gate the handler controls: Live price with borrowing allowed, fresh feeds, no Aave pause,
-    /// freeze or drift, no issuer pause and one active keeper. Offboarding cannot be undone, so a borrow after it stays
+    /// @dev Opens every gate the handler controls: Live price with borrowing allowed, fresh feeds, no drift, no issuer
+    /// pause and one active keeper. Offboarding cannot be undone, so a borrow after it stays
     /// closed.
     function _open() internal {
         w.oracle.setState(PriceState.Live, 0, true);
-        (_vtPaused, _debtPaused, _frozen, _drift) = (false, false, false, false);
+        _drift = false;
         _config();
         _issuer = false;
         w.usdt.setPaused(false, false);
@@ -180,8 +167,8 @@ contract RiskModuleHandler is Test {
         _report();
     }
 
-    /// @dev Closes one gate: the price Cached or with borrowing disallowed, a stale feed, an Aave pause of either
-    /// reserve, drift, an issuer pause, no keeper, or (borrow only) a frozen vault-token reserve.
+    /// @dev Closes one gate: the price Cached or with borrowing disallowed, a stale feed, drift, an issuer pause or no
+    /// keeper.
     function _closeOne(
         uint256 gate
     ) internal {
@@ -191,17 +178,14 @@ contract RiskModuleHandler is Test {
             w.oracle.setState(PriceState.Live, 0, false);
         } else if (gate == 2) {
             vm.warp(block.timestamp + w.feedAge + 1);
-        } else if (gate == 6) {
+        } else if (gate == 3) {
+            _drift = true;
+            _config();
+        } else if (gate == 4) {
             _issuer = true;
             w.usdt.setPaused(true, false);
-        } else if (gate == 7) {
-            w.swap.setKeepers(0);
         } else {
-            if (gate == 3) _vtPaused = true;
-            else if (gate == 4) _debtPaused = true;
-            else if (gate == 5) _drift = true;
-            else _frozen = true;
-            _config();
+            w.swap.setKeepers(0);
         }
     }
 
@@ -211,17 +195,17 @@ contract RiskModuleHandler is Test {
     ) internal view returns (bool) {
         if (!w.oracle.getPriceStatus().borrowFresh) return false;
         if (block.timestamp - _reportAt > w.feedAge) return false;
-        if (_vtPaused || _debtPaused || _drift || _issuer) return false;
-        if (isBorrow && (_frozen || _offboarding)) return false;
+        if (_drift || _issuer) return false;
+        if (isBorrow && _offboarding) return false;
         return w.swap.activeKeeperCount() != 0;
     }
 
     function _config() internal {
         IAaveV4Spoke.ReserveConfig memory v;
-        (v.paused, v.frozen, v.receiveSharesEnabled) = (_vtPaused, _frozen, _drift);
+        v.receiveSharesEnabled = _drift;
         w.spoke.setConfig(w.vtReserve, v);
         IAaveV4Spoke.ReserveConfig memory d;
-        (d.paused, d.borrowable) = (_debtPaused, true);
+        d.borrowable = true;
         w.spoke.setConfig(w.debtReserve, d);
     }
 

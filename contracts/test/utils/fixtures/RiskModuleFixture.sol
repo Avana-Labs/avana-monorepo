@@ -232,7 +232,6 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         store.setTokenCf(address(usdc), 7800);
         store.setTokenCf(address(usdt), 7500);
         spoke.setLiquidationConfig(1.1e18, 5000);
-        store.setLiquidationExpectations(address(spoke), 1.1e18, 200);
     }
 
     /// @dev Issuer probe GHO is listed with; a suite that checks a probe on the GHO reserve overrides it.

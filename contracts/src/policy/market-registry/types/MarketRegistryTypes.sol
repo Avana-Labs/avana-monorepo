@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IssuerProbe} from "./IssuerProbe.sol";
 
 /// @notice Enabled debt reserve of a CDP Spoke.
-/// @dev Written by `enableDebtReserve`. `fundingHub` is the home Hub or, through a cross-Hub credit line, another Hub.
+/// @dev Written by `enableDebtReserve`. `fundingHub` is the Spoke's home Hub.
 struct DebtReserveDef {
     // CDP Spoke reserve identifier.
     uint256 reserveId;
@@ -57,7 +57,7 @@ struct MarketRegistryImmutables {
 /// @notice The five immutable logic contracts the MarketRegistry delegatecalls for its write bodies.
 /// @dev Each must be built with the same `MarketRegistryImmutables` as the MarketRegistry; the constructor checks this.
 struct MarketRegistryLogics {
-    // Hubs, integrations, First-Loss Reserves, cross-Hub lines, the flash source, CDP Spokes and debt reserves.
+    // Hubs, integrations, First-Loss Reserves, the flash source, CDP Spokes and debt reserves.
     address hubs;
     // Tokens, price sources and market listing.
     address listing;

@@ -289,12 +289,11 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         _activateExpect(id, "bonusBound");
         d.maxLiquidationBonus = 13_332;
         spoke.setDynamic(VT_RESERVE, d);
-        // The minimum bonus floor((13,332 - 10^4) x 5,000 / 10^4) = 1,666 clears the expected 200.
         _activateExpect(id, bytes32(0));
     }
 
     // TEST-138 verifies: REQ-CONFIG-044, REQ-CONFIG-047
-    // CF equal to CF_LP passes; one above fails; a bonus below 100 % (maxLB < 10^4) fails the minimum-bonus check.
+    // CF equal to CF_LP passes; one above fails; a bonus below 100 % (maxLB < 10^4) fails the bonus bound.
     function test_TEST_138_collateralFactorAndBonusEdges() public {
         uint256 id = _activationReady();
         IAaveV4Spoke.DynamicReserveConfig memory d;
@@ -303,7 +302,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         _activateExpect(id, "collateralFactor");
         (d.collateralFactor, d.maxLiquidationBonus) = (8000, 9999);
         spoke.setDynamic(VT_RESERVE, d);
-        _activateExpect(id, "minBonus");
+        _activateExpect(id, "bonusBound");
         (d.collateralFactor, d.maxLiquidationBonus) = (8000, 10_500);
         spoke.setDynamic(VT_RESERVE, d);
         _activateExpect(id, bytes32(0));

@@ -139,23 +139,8 @@ contract RiskModuleBoundariesUnitTest is RiskModuleFixture {
     }
 
     // -----------------------------------------------------------------------------------------------------------------
-    // Frozen reserve, Hub shares, keepers (REQ-ADAPTER-019, REQ-ADAPTER-021, REQ-ADAPTER-010)
+    // Hub shares, keepers (REQ-ADAPTER-021, REQ-ADAPTER-010)
     // -----------------------------------------------------------------------------------------------------------------
-
-    // TEST-155 verifies: REQ-ADAPTER-019, INV-023
-    function testFuzz_TEST_155_frozenReserveNeedsSuppliedShares(
-        uint256 shares
-    ) public {
-        shares = bound(shares, 0, 1e30);
-        IAaveV4Spoke.ReserveConfig memory v;
-        v.frozen = true;
-        rSpoke.setConfig(VT_RESERVE, v);
-        rSpoke.setSupplied(address(proxy), VT_RESERVE, shares);
-        if (shares > 0) vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.ReserveFrozen.selector, VT_RESERVE));
-        _borrow();
-        // A frozen reserve never blocks withdraw-with-debt.
-        _withdraw();
-    }
 
     // TEST-028 verifies: REQ-ADAPTER-021, REQ-ADAPTER-037
     function testFuzz_TEST_028_hubSharesExactlyEqual(

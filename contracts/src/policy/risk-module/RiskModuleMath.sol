@@ -184,13 +184,9 @@ library RiskModuleMath {
 
     function bonusBoundViolated(
         uint256 maxLiquidationBonus,
-        uint256 cfBps,
-        uint256 liquidationBonusFactor,
-        uint256 minBonusBps
+        uint256 cfBps
     ) internal pure returns (bool violated) {
-        if (maxLiquidationBonus < BPS) return true;
-        if (Math.mulDiv(maxLiquidationBonus, cfBps, BPS, Math.Rounding.Ceil) >= BPS) return true;
-        violated = ((maxLiquidationBonus - BPS) * liquidationBonusFactor) / BPS < minBonusBps;
+        violated = maxLiquidationBonus < BPS || Math.mulDiv(maxLiquidationBonus, cfBps, BPS, Math.Rounding.Ceil) >= BPS;
     }
 
     /// @notice Aave value of rescue units at the collateral factor, rounded up.

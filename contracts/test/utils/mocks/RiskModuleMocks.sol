@@ -134,7 +134,6 @@ contract RiskHubMock is RegistryHubMock {
 /// @notice The Aave V4 Spoke reads of the MarketRegistry and the RiskModule: reserves and per-account state.
 contract RiskSpokeMock is RegistrySpokeMock {
     uint256 public reserveCount;
-    uint16 public MAX_USER_RESERVES_LIMIT = type(uint16).max;
     mapping(address => IAaveV4Spoke.UserAccountData) internal _account;
     mapping(address => mapping(uint256 => bool)) public collateralOf;
     mapping(address => mapping(uint256 => bool)) public borrowingOf;
@@ -146,12 +145,6 @@ contract RiskSpokeMock is RegistrySpokeMock {
         uint256 n
     ) external {
         reserveCount = n;
-    }
-
-    function setUserLimit(
-        uint16 limit
-    ) external {
-        MAX_USER_RESERVES_LIMIT = limit;
     }
 
     function setDynamicAt(

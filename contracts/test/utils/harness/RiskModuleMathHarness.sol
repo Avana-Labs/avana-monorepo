@@ -94,11 +94,9 @@ contract RiskModuleMathHarness {
 
     function bonusBoundViolated(
         uint256 maxLb,
-        uint256 cf,
-        uint256 factor,
-        uint256 minBonus
+        uint256 cf
     ) external pure returns (bool) {
-        return RiskModuleMath.bonusBoundViolated(maxLb, cf, factor, minBonus);
+        return RiskModuleMath.bonusBoundViolated(maxLb, cf);
     }
 
     function boundedHealthFactor(

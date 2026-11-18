@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
@@ -11,7 +10,7 @@ import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol
 import {RegistryLPOracleMock} from "../utils/mocks/MarketRegistryMocks.sol";
 
 /// @notice The activation checks one condition at a time where the other suites test only one side: the Hub asset
-/// of the vault token, a paused reserve, each market parameter and cap, the Hub add cap rounded up, every LPOracle
+/// of the vault token, each market parameter and cap, every LPOracle
 /// state other than Live, and a failed activation leaving the market Registered with no identifiers.
 contract MarketRegistryActivationChecksUnitTest is MarketRegistryFixture {
     uint256 internal id;
@@ -60,18 +59,6 @@ contract MarketRegistryActivationChecksUnitTest is MarketRegistryFixture {
         _activate();
     }
 
-    // TEST-138 verifies: REQ-CONFIG-044, REQ-CONFIG-066
-    // A paused reserve fails like a frozen one.
-    function test_TEST_138_pausedReserveRefused() public {
-        IAaveV4Spoke.ReserveConfig memory c;
-        c.paused = true;
-        spoke.setConfig(VT_RESERVE, c);
-        _expectCheck("reserveState");
-        c.paused = false;
-        spoke.setConfig(VT_RESERVE, c);
-        _activate();
-    }
-
     // TEST-138 verifies: REQ-CONFIG-046, REQ-CONFIG-066
     // Each market parameter and cap must be set: poolRiskFactor and minPledgeUsd ("params"), marketUsdCap and
     // stressFloorUsd ("caps").
@@ -87,38 +74,6 @@ contract MarketRegistryActivationChecksUnitTest is MarketRegistryFixture {
         // A zero top-up slice is allowed.
         ps.setMarket(id, 9500, 10e8, 1_000_000e8, 0, 1e8);
         _activate();
-    }
-
-    // TEST-138 verifies: REQ-CONFIG-046, SPEC-CAP-006
-    // The add cap is compared with ceil((marketUsdCap + topUpSliceUsd) / stressFloorUsd): with 1,100,000 USD over a
-    // 3 USD floor the requirement is ceil(366,666.67) = 366,667 whole tokens; 366,666 fails, 366,667 passes.
-    function test_TEST_138_addCapRoundsUp() public {
-        ps.setMarket(id, 9500, 10e8, 1_000_000e8, 100_000e8, 3e8);
-        hub.setSpokeConfig(VT_ASSET, address(spoke), 366_666, 0);
-        _expectCheck("addCap");
-        hub.setSpokeConfig(VT_ASSET, address(spoke), 366_667, 0);
-        _activate();
-    }
-
-    // TEST-138 verifies: REQ-CONFIG-046, SPEC-CAP-006
-    function testFuzz_TEST_138_addCapRuleExact(
-        uint64 capSeed,
-        uint64 sliceSeed,
-        uint64 floorSeed,
-        uint32 addCapSeed
-    ) public {
-        uint256 capUsd = bound(capSeed, 1, 1e18);
-        uint256 slice = bound(sliceSeed, 0, 1e18);
-        uint256 floorUsd = bound(floorSeed, 1, 1e12);
-        uint40 addCap = uint40(bound(addCapSeed, 0, type(uint32).max));
-        ps.setMarket(id, 9500, 10e8, capUsd, slice, floorUsd);
-        hub.setSpokeConfig(VT_ASSET, address(spoke), addCap, 0);
-        uint256 need = (capUsd + slice + floorUsd - 1) / floorUsd;
-        if (addCap < need) {
-            _expectCheck("addCap");
-        } else {
-            _activate();
-        }
     }
 
     // TEST-138 verifies: REQ-CONFIG-047, REQ-CONFIG-038

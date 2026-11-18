@@ -60,7 +60,7 @@ interface IRelistedToken {
 ///   feed of the listed tokens (`setFeed`); the pool tokens and debt assets (`listToken`: two routes and the issuer
 ///   probe, GHO as a fixed-price monitoring-only listing), then their collateral factor and Hub token caps, USDC's
 ///   debt stress rise; each CDP Spoke (`approveSpokeCodeHash`,
-///   `deployCdpSpoke`, `setLiquidationExpectations`), whose debt reserves the Aave payload left not borrowable; each
+///   `deployCdpSpoke`), whose debt reserves the Aave payload left not borrowable; each
 ///   (Hub, debt asset)'s First-Loss Reserve and credit line.
 /// - `oracles` (Avana operators): GHO's fixed price source (a test-network stand-in) and the DebtOracle proxy of each
 ///   other debt asset, initialised in its deploying transaction once the asset is listed (`DebtOracle.initialize` reads
@@ -320,12 +320,6 @@ contract ListMarkets is ListingBase {
                 address(registry),
                 abi.encodeCall(registry.deployCdpSpoke, (d)),
                 string.concat("MR.deployCdpSpoke ", label)
-            );
-            _add(
-                op,
-                address(store),
-                abi.encodeCall(store.setLiquidationExpectations, (_spokeAddr(label), 1.1e18, uint16(200))),
-                "PS.setLiquidationExpectations"
             );
         }
     }

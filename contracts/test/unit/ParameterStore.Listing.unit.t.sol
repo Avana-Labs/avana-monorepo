@@ -236,24 +236,6 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         store.setCoverageRatioBps(10_001);
     }
 
-    // TEST-249 verifies: REQ-PSTORE-022, Q-270
-    function test_TEST_249_liquidationExpectations() public {
-        address s = address(spoke);
-        _tl();
-        store.setLiquidationExpectations(s, 1.1e18, 200);
-        assertEq(store.aaveTargetHealthFactor(s), 1.1e18);
-        assertEq(store.minLiquidationBonus(s), 200);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.setLiquidationExpectations(s, 1e18, 200);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.setLiquidationExpectations(s, 1.1e18, 199);
-        _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownSpoke.selector, alice));
-        store.setLiquidationExpectations(alice, 1.1e18, 200);
-    }
-
     // TEST-250 verifies: REQ-PSTORE-011
     function test_TEST_250_unknownMarketIsRefused() public {
         _tl();

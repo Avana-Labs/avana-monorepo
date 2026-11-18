@@ -115,13 +115,7 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
     ) internal view {
         _collateralPrice(s);
         _debtPrices(s);
-        IAaveV4Spoke sp = IAaveV4Spoke(s.spoke);
-        IAaveV4Spoke.ReserveConfig memory rc = sp.getReserveConfig(s.m.reserveId);
-        if (rc.paused) revert AaveReservePaused(s.m.reserveId);
-        if (borrow) {
-            if (s.m.status == MarketStatus.Offboarding) revert MarketOffboarding(s.marketId);
-            if (rc.frozen && sp.getUserSuppliedShares(s.m.reserveId, s.proxy) > 0) revert ReserveFrozen(s.m.reserveId);
-        }
+        if (borrow && s.m.status == MarketStatus.Offboarding) revert MarketOffboarding(s.marketId);
         uint256[] memory one = new uint256[](1);
         one[0] = s.marketId;
         (uint256 driftMarket, DriftReason reason) = IRiskModuleDriftLogic(_DRIFT).driftOf(s.spoke, one, s.proxy);
@@ -150,8 +144,6 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
         address oracle = sp.ORACLE();
         for (uint256 i = 0; i < s.debt.length; ++i) {
             uint256 r = s.debt[i];
-            // forge-lint: disable-next-line(require-revert-in-loop)
-            if (sp.getReserveConfig(r).paused) revert DebtReservePaused(r);
             address source = IAaveV4Oracle(oracle).getReserveSource(r);
             // forge-lint: disable-next-line(require-revert-in-loop)
             if (source != s.defs[i].priceSource) revert UnexpectedDebtPriceSource(r, source);

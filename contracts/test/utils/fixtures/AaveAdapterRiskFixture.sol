@@ -71,7 +71,6 @@ abstract contract AaveAdapterRiskFixture is AaveAdapterFixture {
         vm.warp(T0);
         super.setUp();
         rstore = new RiskStoreMock();
-        rstore.setLiquidationExpectations(aave.cdpSpoke, 1.1e18, 200);
         rstore.setTokenCf(address(usdc), 8000);
         rstore.setTokenCf(address(usdt), 8000);
         rstore.setMarket(MARKET_ID, 10_000, 0, 1e30, 0, 0);

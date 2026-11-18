@@ -6,7 +6,6 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {INonfungiblePositionManager} from "../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
@@ -264,21 +263,11 @@ contract RiskModuleHostileIntegrationTest is RealStackFlows {
 
     // TEST-156 verifies: Q-203, Q-229
     // Sources: 5.1 TEST-156 (Quint C-QNT-3, reviewed-implementation scope)
-    /// @notice With the reviewed RiskModule, a borrow against an account whose vault-token reserve Aave froze reverts
-    /// `ReserveFrozen`, and one against a Drifting market reverts `PriceNotLive`; after the approve-all implementation
-    /// is installed through the timelock both borrows pass, and each still ends at Aave HF >= 1.
-    function test_TEST_156_reviewedRefusesApproveAllStaysAaveBounded() public {
+    /// @notice After the approve-all implementation is installed through the timelock, borrows pass whether or not the
+    /// vault-token reserve is frozen on Aave, and each still ends at Aave HF >= 1.
+    function test_TEST_156_approveAllStaysAaveBounded() public {
         (address pA,) = _account(alice, UNITS, 2000e6);
         uint256 vtReserve = mkt[mA].reserveId;
-        vm.prank(aaveDao);
-        IHostileSpokeConfigurator(aave.spokeConfigurator).updateFrozen(aave.cdpSpoke, vtReserve, true);
-        uint256 nonce = adapterC.borrowNonce(pA);
-        uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.ReserveFrozen.selector, vtReserve));
-        vm.prank(alice);
-        adapterC.borrow(mA, usdcReserveId, 500e6, alice, d, 0, nonce);
-        vm.prank(aaveDao);
-        IHostileSpokeConfigurator(aave.spokeConfigurator).updateFrozen(aave.cdpSpoke, vtReserve, false);
 
         _install(address(new ApproveAllRiskModule()));
         uint256 debtBefore = _debtOf(pA, usdcReserveId);

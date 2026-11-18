@@ -33,14 +33,6 @@ contract RiskModuleBreakerRecoveryUnitTest is RiskModuleFixture {
         riskModule.checkAaveConfig(address(spoke), none);
         assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(DriftReason.None), "no drift");
         assertEq(riskModule.getBreakerStatus(mid), 0, "no breaker reason");
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.AaveReservePaused.selector, VT_RESERVE));
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        vm.expectRevert(IRiskModuleErrors.AaveReserveUnavailable.selector);
-        _pledge(TEN_K, _counters(), false);
-        // Unpaused, the market reopens at once.
-        c.paused = false;
-        rSpoke.setConfig(VT_RESERVE, c);
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
     }
 
     // ----------------------------------------------------------------------------------------- cap price

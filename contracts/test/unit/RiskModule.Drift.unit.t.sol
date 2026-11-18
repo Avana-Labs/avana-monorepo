@@ -92,9 +92,6 @@ contract RiskModuleDriftUnitTest is RiskModuleFixture {
         aaveOracle.setSource(VT_RESERVE, makeAddr("otherSource"));
         _expectDrift(mid, DriftReason.PriceSource);
         aaveOracle.setSource(VT_RESERVE, address(oracle));
-        rHub.setActive(VT_ASSET, address(spoke), true, true);
-        _expectDrift(mid, DriftReason.SpokeHalted);
-        rHub.setActive(VT_ASSET, address(spoke), true, false);
         // A paused vault-token reserve is not drift: the market's own gates refuse it (REQ-RISK-014).
         _vtConfig(false, false, true);
         riskModule.checkAaveConfig(address(spoke), _ids());
@@ -165,19 +162,13 @@ contract RiskModuleDriftUnitTest is RiskModuleFixture {
 
     // TEST-249 verifies: REQ-RISK-069, REQ-RISK-076, SPEC-CF-001, SPEC-CF-002
     // TEST-225 verifies: REQ-RISK-069, REQ-RISK-076; shared: TEST-225's Aave-side CF and bonus changes by the Aave executor, each detected as its DriftReason
-    // Sources: 2.7 REQ-RISK-069 example (CF 3,300 above 3,000; bonus 50 bps below 200; target 1.05e18)
+    // Sources: 2.7 REQ-RISK-069 example (CF 3,300 above 3,000; bonus bound ceil(40,000 x 3,000 / 10^4) = 12,000 >= 10^4)
     function test_TEST_249_riskConfiguration() public {
         _key(3300, 10_500, 0);
         _expectDrift(mid, DriftReason.CollateralFactorAboveExpected);
         _key(3000, 40_000, 0);
         _expectDrift(mid, DriftReason.BonusBoundViolated);
         _key(3000, 10_500, 0);
-        spoke.setLiquidationConfig(1.1e18, 1000);
-        _expectDrift(mid, DriftReason.BonusBoundViolated);
-        spoke.setLiquidationConfig(1.05e18, 5000);
-        _expectDrift(0, DriftReason.LiquidationConfigChanged);
-        // While `deployCdpSpoke` runs the expectation is not written yet (0) and the target is not compared.
-        store.setLiquidationExpectations(address(spoke), 0, 200);
         riskModule.checkAaveConfig(address(spoke), _ids());
     }
 

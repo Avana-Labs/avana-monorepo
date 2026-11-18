@@ -390,7 +390,7 @@ contract AdapterRiskModuleMock {
         uint256 amount
     ) external {
         if (broken) revert RiskModuleBroken();
-        if (refuse) revert IRiskModuleErrors.AaveReserveUnavailable();
+        if (refuse) revert IRiskModuleErrors.PoolMismatch();
         ++preBorrowCalls;
         lastProxy = proxy;
         lastDebtReserveId = debtReserveId;
@@ -401,7 +401,7 @@ contract AdapterRiskModuleMock {
         address proxy
     ) external {
         if (broken) revert RiskModuleBroken();
-        if (refuse) revert IRiskModuleErrors.AaveReserveUnavailable();
+        if (refuse) revert IRiskModuleErrors.PoolMismatch();
         ++preWithdrawCalls;
         lastProxy = proxy;
     }

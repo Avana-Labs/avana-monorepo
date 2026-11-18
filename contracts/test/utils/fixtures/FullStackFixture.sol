@@ -152,7 +152,6 @@ abstract contract FullStackFixture is FullStackDeploy {
                 aaveOracle: aave.cdpOracle
             })
         );
-        store.setLiquidationExpectations(aave.cdpSpoke, TARGET_HEALTH_FACTOR, 200);
         vm.stopPrank();
         vm.prank(aaveDao);
         ICollSpokeConfigurator(aave.spokeConfigurator)

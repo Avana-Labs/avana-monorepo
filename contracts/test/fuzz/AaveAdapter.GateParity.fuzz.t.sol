@@ -18,10 +18,9 @@ interface IParitySpokeConfigurator {
 
 /// @title AaveAdapterGateParityFuzzTest
 /// @notice Every combination of the conditions the reviewed RiskModule reads (market price not Live, a stale feed, a
-/// stale USDC price, a live breaker condition (no pool depth), `Offboarding`, the vault-token reserve frozen on Aave),
-/// on a healthy indebted account: a borrow passes exactly when none holds; a withdrawal that leaves debt passes exactly
-/// when none holds apart from `Offboarding` and the Aave freeze, which liquidation shares (REQ-PROXY-036); repay,
-/// `repayAllAndWithdraw` and a debt-free withdrawal pass whatever holds. forge-config: default.isolate = false
+/// stale USDC price, a live breaker condition (no pool depth), `Offboarding`) and the vault-token reserve frozen on
+/// Aave, on a healthy indebted account: repay, `repayAllAndWithdraw` and a debt-free withdrawal pass whatever holds.
+/// forge-config: default.isolate = false
 contract AaveAdapterGateParityFuzzTest is AaveAdapterRiskFixture {
     bytes32 internal k1;
     bytes32 internal k2;

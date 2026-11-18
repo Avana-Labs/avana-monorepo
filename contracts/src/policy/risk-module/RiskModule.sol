@@ -258,7 +258,6 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
         status.statusUnavailable = true;
         status.unknownCollateralReserveId = type(uint256).max;
         status.unapprovedDebtReserveId = type(uint256).max;
-        status.pausedDebtReserveId = type(uint256).max;
         status.staleDebtReserveId = type(uint256).max;
         status.haltedDebtReserveId = type(uint256).max;
         status.breakerDebtReserveId = type(uint256).max;

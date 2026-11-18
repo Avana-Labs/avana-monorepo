@@ -216,20 +216,6 @@ contract ParameterStore is UUPSUpgradeable, ParameterStoreForwardRisk, Parameter
     }
 
     /// @inheritdoc IParameterStore
-    function aaveTargetHealthFactor(
-        address spoke
-    ) external view override returns (uint256 value) {
-        value = _s().targetHealthFactor[spoke];
-    }
-
-    /// @inheritdoc IParameterStore
-    function minLiquidationBonus(
-        address spoke
-    ) external view override returns (uint16 value) {
-        value = _s().minLiquidationBonus[spoke];
-    }
-
-    /// @inheritdoc IParameterStore
     function deficitMax(
         address hub,
         address asset
@@ -300,15 +286,6 @@ contract ParameterStore is UUPSUpgradeable, ParameterStoreForwardRisk, Parameter
         uint16
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
         _forward(_LOOSEN_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function setLiquidationExpectations(
-        address,
-        uint256,
-        uint16
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_LISTING_LOGIC);
     }
 
     /// @inheritdoc IParameterStore

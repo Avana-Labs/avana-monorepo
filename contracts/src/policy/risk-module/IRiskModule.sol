@@ -63,7 +63,7 @@ interface IRiskModule is IRiskModuleErrors {
     ) external;
 
     /// @notice Pre-withdrawal gate for an account with debt.
-    /// @dev `preBorrowCheck`'s gates without the Offboarding and frozen-reserve refusals, over every debt reserve held.
+    /// @dev `preBorrowCheck`'s gates without the Offboarding refusal, over every debt reserve held.
     function preWithdrawCheck(
         address proxy
     ) external;

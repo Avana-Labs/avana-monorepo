@@ -48,12 +48,6 @@ interface IGateSpokeConfigurator {
 }
 
 interface IGateHubConfigurator {
-    function updateSpokeHalted(
-        address hub,
-        uint256 assetId,
-        address spoke,
-        bool halted
-    ) external;
     function updateSpokeDrawCap(
         address hub,
         uint256 assetId,
@@ -187,41 +181,17 @@ contract AaveAdapterRiskModuleIntegrationTest is AaveAdapterRiskFixture {
 
     // TEST-155 verifies: REQ-PROXY-079, REQ-PROXY-080, REQ-ADAPTER-049, INV-060, ATTACK-112, REQ-RISK-015, REQ-ADAPTER-017, REQ-RISK-032
     // Sources: 5.1 TEST-155, 2.6 two-reserve example (market B's reserve frozen)
-    /// @notice The vault-token reserve frozen on Aave refuses every borrow with `ReserveFrozen(reserveId)`; a
-    /// withdrawal with debt, repay and the debt-free exits still pass, since Aave still allows them.
+    /// @notice The vault-token reserve frozen on Aave: a withdrawal with debt and repay still pass, since Aave still
+    /// allows them.
     function test_TEST_155_frozenCollateralReserve() public {
         vm.prank(aaveDao);
         _configurator().updateFrozen(aave.cdpSpoke, vtReserveId, true);
-        bytes memory err = abi.encodeWithSelector(IRiskModuleErrors.ReserveFrozen.selector, vtReserveId);
-        _expectBorrow(err, debtReserveId, 1e18);
-        _expectBorrow(err, usdcReserveId, 1e6);
         vm.prank(alice);
         adapterC.withdraw(MARKET_ID, _ref(k2), UNITS / 2, _deadline(), 0);
         assertEq(lpVault.ownerOf(k2), alice, "withdraw with debt passes");
         _fund(alice, debtReserveId, 10e18);
         vm.prank(alice);
         adapterC.repay(alice, MARKET_ID, debtReserveId, 10e18, false, _deadline());
-    }
-
-    // TEST-158 verifies: REQ-PROXY-077, REQ-PROXY-020, ATTACK-112
-    /// @notice A paused vault-token or debt reserve refuses a borrow with the RiskModule's `AaveReservePaused` or
-    /// `DebtReservePaused` before any Spoke call.
-    function test_TEST_158_pausedReserves() public {
-        vm.prank(aaveDao);
-        _configurator().updatePaused(aave.cdpSpoke, usdcReserveId, true);
-        _expectBorrow(
-            abi.encodeWithSelector(IRiskModuleErrors.DebtReservePaused.selector, usdcReserveId), debtReserveId, 1e18
-        );
-        vm.startPrank(aaveDao);
-        _configurator().updatePaused(aave.cdpSpoke, usdcReserveId, false);
-        _configurator().updatePaused(aave.cdpSpoke, vtReserveId, true);
-        vm.stopPrank();
-        _expectBorrow(
-            abi.encodeWithSelector(IRiskModuleErrors.AaveReservePaused.selector, vtReserveId), debtReserveId, 1e18
-        );
-        _fund(alice, usdcReserveId, 1e6);
-        vm.prank(alice);
-        adapterC.repay(alice, MARKET_ID, usdcReserveId, 1e6, false, _deadline());
     }
 
     // ─── Offboarding and breakers ───
@@ -457,22 +427,6 @@ contract AaveAdapterRiskModuleIntegrationTest is AaveAdapterRiskFixture {
             1e18
         );
         _exitsPass();
-    }
-
-    // TEST-114 verifies: REQ-PROXY-020, INV-029
-    /// @notice The Hub halting the Spoke on the vault-token asset is drift (`SpokeHalted`) for borrowing; repay of a
-    /// debt asset is unaffected.
-    function test_TEST_114_spokeHaltedDrift() public {
-        vm.prank(aaveDao);
-        IGateHubConfigurator(aave.hubConfigurator).updateSpokeHalted(aave.hub, vtAssetId, aave.cdpSpoke, true);
-        _expectBorrow(
-            abi.encodeWithSelector(IRiskModuleErrors.ConfigDrift.selector, MARKET_ID, DriftReason.SpokeHalted),
-            debtReserveId,
-            1e18
-        );
-        _fund(carol, debtReserveId, 10e18);
-        vm.prank(carol);
-        adapterC.repay(alice, MARKET_ID, debtReserveId, 10e18, false, _deadline());
     }
 
     // TEST-114 verifies: REQ-PROXY-020, INV-029

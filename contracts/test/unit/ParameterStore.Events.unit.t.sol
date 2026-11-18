@@ -88,23 +88,6 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         store.setFeeRecipient(bob);
     }
 
-    // TEST-061 verifies: REQ-PSTORE-022
-    function test_TEST_061_expectationEventsCarryTheOldValues() public {
-        address s = address(spoke);
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("aaveTargetHealthFactor", _a(s), 0, 1.1e18);
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("minLiquidationBonus", _a(s), 0, 200);
-        store.setLiquidationExpectations(s, 1.1e18, 200);
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("aaveTargetHealthFactor", _a(s), 1.1e18, 1.05e18);
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("minLiquidationBonus", _a(s), 200, 300);
-        store.setLiquidationExpectations(s, 1.05e18, 300);
-    }
-
     // TEST-061 verifies: REQ-CONFIG-050, REQ-PSTORE-006
     function test_TEST_061_debtAssetParamsEmitsBoth() public {
         _tl();

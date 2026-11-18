@@ -73,10 +73,6 @@ struct MarketGateStatus {
     // True when some input is older than its borrowPriceMaxAge.
     bool feedTooOld;
     bool offboarding;
-    // The market's vault-token reserve is paused on the CDP Spoke.
-    bool aaveReservePaused;
-    // The market's vault-token reserve is frozen on the CDP Spoke.
-    bool aaveReserveFrozen;
     // HUB.getAddedAssets == HUB.getAddedShares for the vault-token asset.
     bool hubSharesEqualAssets;
     // Some pool token other than the debt asset has no usable swap route.
@@ -97,8 +93,6 @@ struct AccountGateStatus {
     uint256 unknownCollateralReserveId;
     // First debt reserve of the account that the MarketRegistry has not enabled for the Spoke.
     uint256 unapprovedDebtReserveId;
-    // First debt reserve of the account paused on Aave.
-    uint256 pausedDebtReserveId;
     // First debt reserve of the account on an unexpected price source or with a stale or non-Live DebtOracle.
     uint256 staleDebtReserveId;
     // First debt reserve of the account whose flash source and caller-funded path are both unavailable.
@@ -173,12 +167,8 @@ enum DriftReason {
     DebtPriceSource,
     // A dynamic configuration key's collateral factor is above expectedCollateralFactorBps(m).
     CollateralFactorAboveExpected,
-    // ceil(maxLiquidationBonus * CF / 1e4) >= 1e4, or the minimum bonus is below minLiquidationBonus.
-    BonusBoundViolated,
-    // The Spoke's liquidation target health factor differs from aaveTargetHealthFactor.
-    LiquidationConfigChanged,
-    // The home Hub reports the CDP Spoke inactive or halted, or an Avana reserve of it is paused.
-    SpokeHalted
+    // maxLiquidationBonus is below 1e4, or ceil(maxLiquidationBonus * CF / 1e4) >= 1e4.
+    BonusBoundViolated
 }
 
 /// @notice Constructor bindings of one market's vault token.

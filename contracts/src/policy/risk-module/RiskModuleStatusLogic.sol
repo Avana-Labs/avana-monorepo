@@ -52,7 +52,6 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
         (address spoke, uint256 marketId) = _account(proxy);
         st.unknownCollateralReserveId = NO_RESERVE;
         st.unapprovedDebtReserveId = NO_RESERVE;
-        st.pausedDebtReserveId = NO_RESERVE;
         st.staleDebtReserveId = NO_RESERVE;
         st.haltedDebtReserveId = NO_RESERVE;
         st.breakerDebtReserveId = NO_RESERVE;
@@ -112,9 +111,6 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
         g.oldestFeedAge = LPPriceMath.age(st.updatedAt);
         g.feedTooOld = !st.borrowFresh;
         g.offboarding = s.m.status == MarketStatus.Offboarding;
-        IAaveV4Spoke.ReserveConfig memory rc = IAaveV4Spoke(s.spoke).getReserveConfig(s.m.reserveId);
-        g.aaveReservePaused = rc.paused;
-        g.aaveReserveFrozen = rc.frozen;
         g.hubSharesEqualAssets = IRiskModuleDriftLogic(_DRIFT).isHubSharesEqualAssets(s.marketId);
         (g.noSettlementPath,) = _routeHalt(s);
         g.liquidationHalted = noKeeper || g.noSettlementPath;
@@ -135,7 +131,6 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
                 if (st.unapprovedDebtReserveId == NO_RESERVE) st.unapprovedDebtReserveId = r;
                 continue;
             }
-            if (sp.getReserveConfig(r).paused && st.pausedDebtReserveId == NO_RESERVE) st.pausedDebtReserveId = r;
             if (st.staleDebtReserveId == NO_RESERVE && _stale(oracle, r, i, s)) st.staleDebtReserveId = r;
             if (st.breakerDebtReserveId == NO_RESERVE) {
                 uint32 reasons = IRiskModuleBreakerLogic(_BREAKER).debtConditions(s.spoke, r);

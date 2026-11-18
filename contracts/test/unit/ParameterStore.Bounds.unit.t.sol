@@ -386,23 +386,6 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         assertEq(store.stressFloorUsd(M), 1);
     }
 
-    // ─── Spoke liquidation expectations ───
-
-    // TEST-249 verifies: REQ-PSTORE-022, REQ-CONFIG-050
-    function test_TEST_249_expectationsAtBothEnds() public {
-        address s = address(spoke);
-        _refuses(abi.encodeCall(store.setLiquidationExpectations, (s, 1e18, 200)), oob);
-        _refuses(abi.encodeCall(store.setLiquidationExpectations, (s, 1.1e18, 199)), oob);
-        _refuses(abi.encodeCall(store.setLiquidationExpectations, (s, 1.1e18, 10_000)), oob);
-        assertEq(store.aaveTargetHealthFactor(s), 0);
-        _accepts(abi.encodeCall(store.setLiquidationExpectations, (s, 1e18 + 1, 200)));
-        assertEq(store.aaveTargetHealthFactor(s), 1e18 + 1);
-        assertEq(store.minLiquidationBonus(s), 200);
-        _accepts(abi.encodeCall(store.setLiquidationExpectations, (s, type(uint256).max, 9999)));
-        assertEq(store.aaveTargetHealthFactor(s), type(uint256).max);
-        assertEq(store.minLiquidationBonus(s), 9999);
-    }
-
     // ─── Route depth thresholds ───
 
     // TEST-064 verifies: REQ-CONFIG-070, REQ-CONFIG-050, REQ-ROUTE-006
@@ -496,16 +479,6 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         (bool ok, bytes memory ret) = _relist(p);
         assertFalse(ok);
         assertEq(ret, oob);
-    }
-
-    // TEST-249 verifies: REQ-PSTORE-022, REQ-CONFIG-050
-    /// @notice The expectations bounds hold beyond their edges too: a target health factor below 1 and a bonus above
-    /// 10,000 bps are refused.
-    function test_TEST_249_expectationsRefusedPastBothEdges() public {
-        address s = address(spoke);
-        _refuses(abi.encodeCall(store.setLiquidationExpectations, (s, 0.99e18, 200)), oob);
-        _refuses(abi.encodeCall(store.setLiquidationExpectations, (s, 1.1e18, 10_001)), oob);
-        assertEq(store.aaveTargetHealthFactor(s), 0);
     }
 
     // TEST-246 verifies: REQ-CONFIG-050, REQ-PSTORE-006

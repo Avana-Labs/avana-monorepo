@@ -73,12 +73,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         mapping(address spoke => mapping(uint256 reserveId => DebtReserveDef)) debtReserves;
         mapping(address spoke => uint256[]) debtReserveIds;
         mapping(address hub => mapping(address asset => address)) firstLossReserveOf;
-        /// @dev Unused (the recorded credit lines and cross-Hub lines); kept for storage layout.
-        mapping(address hub => mapping(address asset => uint256[2])) unusedCreditLines;
-        mapping(address spoke => mapping(uint256 reserveId => uint256)) unusedRecordedDrawCap;
-        mapping(address hub => mapping(address asset => mapping(address spoke => uint256))) unusedCrossHubLineCap;
-        mapping(address hub => mapping(address asset => uint256)) unusedCrossHubLineTotal;
-        bool unusedCrossHubLinesEnabled;
         mapping(address token => TokenDef) tokens;
         mapping(bytes32 slotKey => RouteRecord) routes;
         mapping(bytes32 slotKey => mapping(address route => bool)) approvedBefore;

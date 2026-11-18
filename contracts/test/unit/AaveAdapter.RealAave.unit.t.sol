@@ -111,14 +111,14 @@ contract AaveAdapterRealAaveUnitTest is AaveAdapterFixture {
         assertEq(_borrowCountOf(p), 2, "two borrowed reserves");
         risk.setRefuse(true);
         uint256 d = _deadline();
-        vm.expectRevert(IRiskModuleErrors.AaveReserveUnavailable.selector);
+        vm.expectRevert(IRiskModuleErrors.PoolMismatch.selector);
         vm.prank(alice);
         adapterC.withdraw(MARKET_ID, _ref(k1), UNITS, d, 0);
         _fund(alice, debtReserveId, 1);
         vm.prank(alice);
         adapterC.repay(alice, MARKET_ID, debtReserveId, 1, true, d);
         assertEq(_borrowCountOf(p), 1, "USDC still borrowed");
-        vm.expectRevert(IRiskModuleErrors.AaveReserveUnavailable.selector);
+        vm.expectRevert(IRiskModuleErrors.PoolMismatch.selector);
         vm.prank(alice);
         adapterC.withdraw(MARKET_ID, _ref(k1), UNITS, d, 0);
         _fund(alice, usdcReserveId, 1);

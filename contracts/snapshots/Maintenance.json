@@ -1,7 +1,7 @@
 {
-  "flashLiquidate_operator_1market": "2045538",
-  "flashLiquidate_overhead": "309141",
-  "liquidate_direct_1market": "1736397",
+  "flashLiquidate_operator_1market": "2045443",
+  "flashLiquidate_overhead": "309185",
+  "liquidate_direct_1market": "1736258",
   "refreshDebtMark_clears": "198731",
-  "settlePending_1market": "964285"
+  "settlePending_1market": "964146"
 }

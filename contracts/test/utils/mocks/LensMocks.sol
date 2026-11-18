@@ -310,7 +310,6 @@ contract LensRiskModuleMock {
         Gate memory g = _gates[proxy];
         st.unknownCollateralReserveId = type(uint256).max;
         st.unapprovedDebtReserveId = type(uint256).max;
-        st.pausedDebtReserveId = type(uint256).max;
         st.staleDebtReserveId = type(uint256).max;
         st.haltedDebtReserveId = type(uint256).max;
         st.breakerDebtReserveId = type(uint256).max;

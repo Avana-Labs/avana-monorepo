@@ -218,18 +218,6 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
 
     // ─── Spokes and debt reserves ───
 
-    // TEST-249 verifies: REQ-PSTORE-022
-    function test_TEST_249_expectationsNeedAnApprovedSpoke() public {
-        address[2] memory bad = [address(0), makeAddr("unapprovedSpoke")];
-        for (uint256 i = 0; i < bad.length; ++i) {
-            _refuses(
-                abi.encodeCall(store.setLiquidationExpectations, (bad[i], 1.1e18, 200)),
-                abi.encodeWithSelector(IParameterStoreBase.UnknownSpoke.selector, bad[i])
-            );
-            assertEq(store.aaveTargetHealthFactor(bad[i]), 0);
-        }
-    }
-
     // TEST-228 verifies: REQ-PSTORE-016
     function test_TEST_228_deficitLoosenNeedsAReserveFundedByTheHub() public {
         bytes memory err = abi.encodeWithSelector(IParameterStoreBase.UnknownDebtReserve.selector, address(0), 0);
@@ -269,8 +257,6 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         assertEq(store.debtAssetParams(unlisted).floorRoundingAllowance, 0);
         assertEq(store.deficitMax(stray, unlisted), 0);
         assertEq(store.debtStressRiseBps(unlisted), 0);
-        assertEq(store.aaveTargetHealthFactor(stray), 0);
-        assertEq(store.minLiquidationBonus(stray), 0);
         assertEq(store.lastLoosenedAt(keccak256("unknown")), 0);
         assertFalse(store.liquidationLivenessHolds(address(spoke), UNKNOWN, 1));
     }

@@ -176,7 +176,7 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         // Only the collateral flag matters here; the account is debt-free.
         // forge-lint: disable-next-line(unused-return)
         (bool enabled,) = sp.getUserReserveStatus(reserveId, proxy);
-        if (!enabled || sp.getReserveConfig(reserveId).paused) return;
+        if (!enabled) return;
         _exec(proxy, spoke, abi.encodeCall(IAaveV4Spoke.setUsingAsCollateral, (reserveId, false, proxy)));
         emit CollateralDisabled(proxy, reserveId);
     }

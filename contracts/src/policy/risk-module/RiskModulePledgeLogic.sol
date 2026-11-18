@@ -10,7 +10,6 @@ pragma solidity 0.8.28;
 
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
-import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
@@ -184,7 +183,6 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         c.units = units;
         _eligibility(c, integrationId);
         _value(c);
-        _hubRoom(c);
         charge.usdCharge = c.charge;
         charge.sliceUsd = _caps(c, counters);
         RiskModuleMath.Outcome o = _exemption(c, requireRescue);
@@ -238,27 +236,12 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         // `getPriceStatus` serves at least 1.
         // forge-lint: disable-next-line(unsafe-typecast)
         c.fresh = uint256(st.answer);
-        _reserveAvailable(c);
         if (!c.topUp) _newAccount(c);
-    }
-
-    function _reserveAvailable(
-        Ctx memory c
-    ) internal view {
-        IAaveV4Spoke.ReserveConfig memory rc = IAaveV4Spoke(c.m.spoke).getReserveConfig(c.m.reserveId);
-        if (rc.paused || rc.frozen) revert AaveReserveUnavailable();
-        IAaveV4Hub.SpokeConfig memory sc = IAaveV4Hub(c.m.hub).getSpokeConfig(c.m.hubAssetId, c.m.spoke);
-        if (!sc.active || sc.halted) revert HubSpokeUnavailable();
     }
 
     function _newAccount(
         Ctx memory c
     ) internal view {
-        uint256[] memory ids = _registry().getDebtReserveIds(c.m.spoke);
-        for (uint256 i = 0; i < ids.length; ++i) {
-            // forge-lint: disable-next-line(require-revert-in-loop)
-            if (IAaveV4Spoke(c.m.spoke).getReserveConfig(ids[i]).paused) revert DebtReservePaused(ids[i]);
-        }
         uint256[] memory one = new uint256[](1);
         one[0] = c.marketId;
         (uint256 driftMarket, DriftReason reason) = IRiskModuleDriftLogic(_DRIFT).driftOf(c.m.spoke, one, address(0));
@@ -286,32 +269,6 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
             uint256 restore = RiskModuleMath.usdToRestore(c.hf, c.debtRay, _latestCf(c.m.spoke, c.m));
             c.restore = RiskModuleMath.restoreBooked(restore, capPrice8, floorUsd, _served(c.m.lpOracle));
         }
-    }
-
-    function _hubRoom(
-        Ctx memory c
-    ) internal view {
-        IAaveV4Hub hub = IAaveV4Hub(c.m.hub);
-        uint256 addCap = hub.getSpokeConfig(c.m.hubAssetId, c.m.spoke).addCap;
-        if (addCap != hub.MAX_ALLOWED_SPOKE_CAP()) {
-            uint256 room = addCap * 10 ** uint256(c.m.decimals);
-            if (!RiskModuleMath.fits(hub.getAddedAssets(c.m.hubAssetId), c.units, room)) revert HubAddCapReached();
-        }
-        IAaveV4Spoke sp = IAaveV4Spoke(c.m.spoke);
-        // Only the collateral flag is used; the borrowing flag is not.
-        // forge-lint: disable-next-line(unused-return)
-        (bool collateral,) = sp.getUserReserveStatus(c.m.reserveId, c.proxy);
-        if (collateral) return;
-        uint256 limit = sp.MAX_USER_RESERVES_LIMIT();
-        if (limit == type(uint16).max) return;
-        uint256 count = sp.getReserveCount();
-        uint256 used = 0;
-        for (uint256 r = 0; r < count; ++r) {
-            // forge-lint: disable-next-line(unused-return)
-            (bool isCollateral,) = sp.getUserReserveStatus(r, c.proxy);
-            if (isCollateral) ++used;
-        }
-        if (used >= limit) revert UserReservesLimit();
     }
 
     /// @dev Returns the slice part. The token test covers only the regular part, so a rescue top-up can use the slice.

@@ -193,27 +193,6 @@ interface IParameterStore is
         uint16 value
     ) external;
 
-    /// @notice Target health factor Avana's sizing assumes for a CDP Spoke.
-    /// @return value WAD (0 for a Spoke with no value written).
-    function aaveTargetHealthFactor(
-        address spoke
-    ) external view returns (uint256 value);
-
-    /// @notice Minimum liquidation bonus Avana's sizing assumes for a CDP Spoke.
-    /// @return value bps (0 for a Spoke with no value written).
-    function minLiquidationBonus(
-        address spoke
-    ) external view returns (uint16 value);
-
-    /// @notice Writes a CDP Spoke's expected Aave liquidation configuration, in either direction.
-    /// @dev Reverts `UnknownSpoke` unless the MarketRegistry approves the Spoke.
-    /// @param targetHealthFactor Expected `targetHealthFactor`, WAD.
-    function setLiquidationExpectations(
-        address spoke,
-        uint256 targetHealthFactor,
-        uint16 minLiquidationBonusBps
-    ) external;
-
     /// @notice Regular pledge budget of a market.
     /// @return value 8-decimal USD.
     function marketUsdCap(

@@ -336,7 +336,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
     function _timelockOnlyCalls() internal view returns (bytes[] memory c) {
         MarketParams memory mp;
         FeedDef memory fd;
-        c = new bytes[](28);
+        c = new bytes[](27);
         uint256 k;
         c[k++] = abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 101));
         c[k++] = abi.encodeCall(store.loosenFloorRoundingAllowance, (gho, 1));
@@ -362,7 +362,6 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         c[k++] = abi.encodeCall(store.setInitialTokenCap, (address(hub), usdt, 1));
         c[k++] = abi.encodeCall(store.setFeed, (address(fUsdc), fd));
         c[k++] = abi.encodeCall(store.setDebtAssetParams, (gho, DebtReserveParams(1)));
-        c[k++] = abi.encodeCall(store.setLiquidationExpectations, (address(spoke), 1.1e18, 200));
         c[k++] = abi.encodeCall(store.setCoverageRatioBps, (2000));
         c[k++] = abi.encodeCall(store.grantRole, (STEWARD, alice));
         c[k++] = abi.encodeCall(store.revokeRole, (STEWARD, safe));

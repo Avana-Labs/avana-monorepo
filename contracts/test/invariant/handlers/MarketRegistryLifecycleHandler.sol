@@ -263,7 +263,6 @@ contract MarketRegistryLifecycleHandler is MarketRegistryFixture {
             (d.collateralFactor, d.maxLiquidationBonus) = (7000, 10_500);
             spoke.setReserve(a, r, c, d);
             spoke.setLiquidationConfig(1.1e18, 5000);
-            ps.setLiquidationExpectations(address(spoke), 1.1e18, 200);
             ps.setMarket(s.id, 9500, 10e8, 1_000_000e8, 100_000e8, 1e8);
             s.prepared = true;
         }

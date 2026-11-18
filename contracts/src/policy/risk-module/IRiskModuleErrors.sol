@@ -30,18 +30,6 @@ interface IRiskModuleErrors {
     /// @notice The pledged market's price state is not accepted for this pledge class.
     error PriceNotAccepted(uint8 state);
 
-    /// @notice The market's vault-token reserve is paused or frozen on the CDP Spoke (pledge).
-    error AaveReserveUnavailable();
-
-    /// @notice The CDP Spoke is inactive or halted on the vault-token Hub asset.
-    error HubSpokeUnavailable();
-
-    /// @notice The pledge would exceed the Spoke's Hub `addCap` on the vault-token asset.
-    error HubAddCapReached();
-
-    /// @notice Enabling the reserve would exceed the Spoke's per-account reserve limit (collateral and debt reserves).
-    error UserReservesLimit();
-
     /// @notice A pledge cap test failed.
     error CapExceeded(bytes32 capKind);
 
@@ -82,15 +70,6 @@ interface IRiskModuleErrors {
 
     /// @notice A debt reserve's Aave price source differs from the recorded one.
     error UnexpectedDebtPriceSource(uint256 debtReserveId, address source);
-
-    /// @notice A collateral reserve of the account is paused on Aave.
-    error AaveReservePaused(uint256 reserveId);
-
-    /// @notice A debt reserve of the account (or an approved debt reserve, for a new-account pledge) is paused.
-    error DebtReservePaused(uint256 debtReserveId);
-
-    /// @notice A collateral reserve of the account with supplied shares is frozen on Aave at a borrow.
-    error ReserveFrozen(uint256 reserveId);
 
     /// @notice Hub added shares differ from added assets for the market's vault-token asset.
     error HubSharesNotEqualAssets(uint256 marketId);

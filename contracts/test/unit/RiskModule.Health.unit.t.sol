@@ -122,15 +122,9 @@ contract RiskModuleHealthUnitTest is RiskModuleFixture {
         assertEq(s.markets[0].marketId, mid);
         assertEq(s.unknownCollateralReserveId, type(uint256).max);
         assertFalse(s.noApprovedKeeper);
-        // A frozen reserve with shares blocks borrowing only; the status does not poke.
+        // The status does not poke.
         uint256 pokes = oracle.pokes();
-        IAaveV4Spoke.ReserveConfig memory v;
-        v.frozen = true;
-        rSpoke.setConfig(VT_RESERVE, v);
         s = riskModule.getAccountGateStatus(address(proxy));
-        assertFalse(s.borrowAllowed);
-        assertTrue(s.withdrawWithDebtAllowed);
-        assertTrue(s.markets[0].aaveReserveFrozen);
         assertEq(oracle.pokes(), pokes);
         // A broken account never reverts the view.
         s = riskModule.getAccountGateStatus(makeAddr("notAProxy"));

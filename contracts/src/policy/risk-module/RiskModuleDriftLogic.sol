@@ -25,8 +25,6 @@ contract RiskModuleDriftLogic is RiskModuleBase, IRiskModuleDriftLogic {
         address hub;
         address oracle;
         uint256 minThreshold;
-        uint256 liquidationBonusFactor;
-        uint256 minBonus;
     }
 
     constructor(
@@ -113,12 +111,6 @@ contract RiskModuleDriftLogic is RiskModuleBase, IRiskModuleDriftLogic {
         s.hub = sd.hub;
         s.oracle = sp.ORACLE();
         if (s.oracle != sd.aaveOracle) return DriftReason.PriceSource;
-        IAaveV4Spoke.LiquidationConfig memory lc = sp.getLiquidationConfig();
-        // 0 means `deployCdpSpoke` is still running; activation requires the two equal.
-        uint256 target = _store().aaveTargetHealthFactor(spoke);
-        if (target != 0 && lc.targetHealthFactor != target) return DriftReason.LiquidationConfigChanged;
-        s.liquidationBonusFactor = lc.liquidationBonusFactor;
-        s.minBonus = _store().minLiquidationBonus(spoke);
         uint256 count = sp.getReserveCount();
         for (uint256 r = 0; r < count; ++r) {
             if (sp.getReserveConfig(r).borrowable != _registry().isApprovedDebtReserve(spoke, r)) {
@@ -187,7 +179,6 @@ contract RiskModuleDriftLogic is RiskModuleBase, IRiskModuleDriftLogic {
         IAaveV4Spoke.ReserveConfig memory c = sp.getReserveConfig(m.reserveId);
         if (c.receiveSharesEnabled) return (DriftReason.ReceiveSharesOn, 0);
         if (c.borrowable) return (DriftReason.Borrowable, 0);
-        // A paused vault-token reserve is not drift: the gates refuse that market alone.
         if (r.collateralRisk + 1 > s.minThreshold) return (DriftReason.CollateralRiskAboveThreshold, 0);
         return (DriftReason.None, r.dynamicConfigKey);
     }
@@ -199,7 +190,6 @@ contract RiskModuleDriftLogic is RiskModuleBase, IRiskModuleDriftLogic {
         IAaveV4Hub h = IAaveV4Hub(s.hub);
         uint256 a = m.hubAssetId;
         IAaveV4Hub.SpokeConfig memory sc = h.getSpokeConfig(a, s.spoke);
-        if (!sc.active || sc.halted) return DriftReason.SpokeHalted;
         IAaveV4Hub.AssetConfig memory ac = h.getAssetConfig(a);
         if (h.getSpokeCount(a) != 2) return DriftReason.ExtraSpoke;
         address s0 = h.getSpokeAddress(a, 0);
@@ -223,9 +213,9 @@ contract RiskModuleDriftLogic is RiskModuleBase, IRiskModuleDriftLogic {
         IAaveV4Spoke.DynamicReserveConfig memory d = IAaveV4Spoke(s.spoke).getDynamicReserveConfig(reserveId, key);
         if (d.liquidationFee != 0) return DriftReason.LiquidationFeeNonZero;
         if (d.collateralFactor > expectedCf) return DriftReason.CollateralFactorAboveExpected;
-        if (RiskModuleMath.bonusBoundViolated(
-                d.maxLiquidationBonus, d.collateralFactor, s.liquidationBonusFactor, s.minBonus
-            )) return DriftReason.BonusBoundViolated;
+        if (RiskModuleMath.bonusBoundViolated(d.maxLiquidationBonus, d.collateralFactor)) {
+            return DriftReason.BonusBoundViolated;
+        }
         return DriftReason.None;
     }
 }

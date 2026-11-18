@@ -179,7 +179,6 @@ abstract contract RealStackVolatile is RealStackFlows {
                 aaveOracle: spokeVOracle
             })
         );
-        store.setLiquidationExpectations(spokeV, TARGET_HEALTH_FACTOR, 200);
         vm.stopPrank();
         vm.prank(aaveDao);
         ICollSpokeConfigurator(aave.spokeConfigurator)

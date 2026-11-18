@@ -7,7 +7,6 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
-import {Vm} from "forge-std/Vm.sol";
 
 /// @notice Re-arms a token's one-shot transfer hook, so the hook fires on the transfer after the next one: a token
 /// that calls back on a later leg of the same step.
@@ -24,7 +23,7 @@ contract HookRearmer {
 /// @title AaveAdapterDefensesUnitTest
 /// @notice The Adapter's own checks around each account step against a token or Spoke that does not behave as the
 /// pinned Aave V4 and a plain ERC-20 do: a token that credits the proxy during a step, a Spoke that reports a debt it
-/// did not clear, a borrow count with no borrowed reserve, a paused reserve at cleanup, supplied shares that do not
+/// did not clear, a borrow count with no borrowed reserve, supplied shares that do not
 /// fall. Each must revert with the Adapter's error or skip the step, never move value.
 /// forge-config: default.isolate = false
 contract AaveAdapterDefensesUnitTest is AaveAdapterFixture {
@@ -115,25 +114,6 @@ contract AaveAdapterDefensesUnitTest is AaveAdapterFixture {
         vm.prank(alice);
         adapterC.repayAllAndWithdraw(MARKET_ID, _ref(k1), UNITS, new uint256[](0), new uint256[](0), d);
         assertEq(lpVault.depositorOf(k1), alice, "still in custody");
-    }
-
-    // TEST-018 verifies: REQ-PROXY-046
-    /// @notice The collateral cleanup skips a paused reserve: the last withdrawal succeeds and the reserve stays
-    /// enabled, with no `CollateralDisabled`.
-    function test_TEST_018_cleanupSkipsPausedReserve() public {
-        IAaveV4Spoke.ReserveConfig memory cfg = IAaveV4Spoke(aave.cdpSpoke).getReserveConfig(vtReserveId);
-        cfg.paused = true;
-        vm.mockCall(aave.cdpSpoke, abi.encodeCall(IAaveV4Spoke.getReserveConfig, (vtReserveId)), abi.encode(cfg));
-        vm.recordLogs();
-        vm.prank(alice);
-        adapterC.withdraw(MARKET_ID, _ref(k1), UNITS, _deadline(), 0);
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        for (uint256 i = 0; i < logs.length; ++i) {
-            assertTrue(logs[i].topics[0] != IAaveAdapterBase.CollateralDisabled.selector, "no cleanup");
-        }
-        (bool enabled,) = IAaveV4Spoke(aave.cdpSpoke).getUserReserveStatus(vtReserveId, p);
-        assertTrue(enabled, "still enabled");
-        assertEq(lpVault.ownerOf(k1), alice, "position returned");
     }
 
     // TEST-239 verifies: REQ-ADAPTER-080, REQ-PROXY-072

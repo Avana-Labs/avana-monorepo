@@ -62,15 +62,6 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
         _debt(1.5e18, 1000);
         _pledge(TEN_K, k, false);
         rHub.setAdded(VT_ASSET, 0, 0);
-        // A paused enabled debt reserve.
-        rSpoke.setAccount(address(proxy), 0, 0, 0);
-        IAaveV4Spoke.ReserveConfig memory c;
-        (c.borrowable, c.paused) = (true, true);
-        rSpoke.setConfig(GHO_RESERVE, c);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.DebtReservePaused.selector, GHO_RESERVE));
-        _pledge(TEN_K, k, false);
-        _debt(1.5e18, 1000);
-        _pledge(TEN_K, k, false);
     }
 
     // TEST-033 verifies: REQ-RISK-018, REQ-RISK-069, REQ-RISK-076, INV-029
@@ -88,51 +79,6 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
         // A top-up of an indebted account passes the drift.
         _debt(1.5e18, 1000);
         _pledge(TEN_K, k, false);
-    }
-
-    // TEST-012 verifies: REQ-RISK-020
-    function test_TEST_012_aavePreChecks() public {
-        PledgeCounters memory k = _counters();
-        IAaveV4Spoke.ReserveConfig memory c;
-        c.frozen = true;
-        rSpoke.setConfig(VT_RESERVE, c);
-        vm.expectRevert(IRiskModuleErrors.AaveReserveUnavailable.selector);
-        _pledge(TEN_K, k, false);
-        c.frozen = false;
-        rSpoke.setConfig(VT_RESERVE, c);
-        rHub.setActive(VT_ASSET, address(spoke), true, true);
-        vm.expectRevert(IRiskModuleErrors.HubSpokeUnavailable.selector);
-        _pledge(TEN_K, k, false);
-        rHub.setActive(VT_ASSET, address(spoke), true, false);
-        // addCap 2,000,000 whole tokens: 1,999,999 added + 2 tokens exceeds it.
-        rHub.setAdded(VT_ASSET, 1_999_999e18, 1_999_999e18);
-        vm.expectRevert(IRiskModuleErrors.HubAddCapReached.selector);
-        _pledge(2e18 + 5e18, k, false);
-        rHub.setAdded(VT_ASSET, 0, 0);
-        // Reserve limit when the reserve is not yet collateral.
-        rSpoke.setStatus(address(proxy), VT_RESERVE, false, false);
-        rSpoke.setStatus(address(proxy), GHO_RESERVE, true, false);
-        rSpoke.setUserLimit(1);
-        vm.expectRevert(IRiskModuleErrors.UserReservesLimit.selector);
-        _pledge(TEN_K, k, false);
-    }
-
-    // TEST-012 verifies: REQ-RISK-020
-    function test_TEST_012_reserveLimitOnlyForNewCollateral() public {
-        PledgeCounters memory k = _counters();
-        // Not yet collateral, and the Spoke sets no per-account limit: no count is taken.
-        rSpoke.setStatus(address(proxy), VT_RESERVE, false, false);
-        rSpoke.setStatus(address(proxy), GHO_RESERVE, true, false);
-        assertEq(_pledge(TEN_K, k, false).usdCharge, 20_000e8);
-        // A limit of 2 with one collateral reserve in use leaves room for this one.
-        rSpoke.setUserLimit(2);
-        assertEq(_pledge(TEN_K, k, false).usdCharge, 20_000e8);
-        rSpoke.setUserLimit(1);
-        vm.expectRevert(IRiskModuleErrors.UserReservesLimit.selector);
-        _pledge(TEN_K, k, false);
-        // Already collateral: the limit is not read.
-        rSpoke.setStatus(address(proxy), VT_RESERVE, true, false);
-        assertEq(_pledge(TEN_K, k, false).usdCharge, 20_000e8);
     }
 
     // TEST-196 verifies: REQ-RISK-057, REQ-RISK-064, SPEC-CAP-001, INV-069, REQ-RISK-008

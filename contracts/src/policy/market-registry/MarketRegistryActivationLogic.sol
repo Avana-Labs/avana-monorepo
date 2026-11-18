@@ -94,7 +94,7 @@ contract MarketRegistryActivationLogic is MarketRegistryStorage, IMarketRegistry
         if (!rm.isHubSharesEqualAssets(marketId)) revert ActivationCheckFailed(marketId, "hubShares");
         uint256 cfLp = IRiskModule(_RISK_MODULE).expectedCollateralFactorBps(marketId);
         _checkReserve(marketId, m, cfLp);
-        _checkParamsAndCap(marketId, m);
+        _checkParams(marketId);
         _checkOracleAndRoutes(marketId, m, cfLp);
         _checkLiveness(marketId, m.spoke);
         m.status = MarketStatus.Active;
@@ -164,13 +164,11 @@ contract MarketRegistryActivationLogic is MarketRegistryStorage, IMarketRegistry
     ) private view {
         IAaveV4Spoke s = IAaveV4Spoke(m.spoke);
         uint256 rid = m.reserveId;
-        IAaveV4Spoke.ReserveConfig memory rc = s.getReserveConfig(rid);
-        if (rc.paused || rc.frozen) revert ActivationCheckFailed(marketId, "reserveState");
         IAaveV4Spoke.DynamicReserveConfig memory dc = s.getDynamicReserveConfig(rid, s.getReserve(rid).dynamicConfigKey);
         uint256 cf = dc.collateralFactor;
         uint256 maxLb = dc.maxLiquidationBonus;
         if (cf == 0 || cf > cfLp) revert ActivationCheckFailed(marketId, "collateralFactor");
-        if (Math.mulDiv(maxLb, cf, _BPS, Math.Rounding.Ceil) >= _BPS) {
+        if (maxLb < _BPS || Math.mulDiv(maxLb, cf, _BPS, Math.Rounding.Ceil) >= _BPS) {
             revert ActivationCheckFailed(marketId, "bonusBound");
         }
         if (dc.liquidationFee != 0) revert ActivationCheckFailed(marketId, "liquidationFee");
@@ -178,13 +176,6 @@ contract MarketRegistryActivationLogic is MarketRegistryStorage, IMarketRegistry
             revert ActivationCheckFailed(marketId, "liquidityFee");
         }
         IAaveV4Spoke.LiquidationConfig memory lc = s.getLiquidationConfig();
-        IParameterStore ps = IParameterStore(_PARAMETER_STORE);
-        if (lc.targetHealthFactor <= 1e18 || lc.targetHealthFactor != ps.aaveTargetHealthFactor(m.spoke)) {
-            revert ActivationCheckFailed(marketId, "liquidationConfig");
-        }
-        if (maxLb < _BPS || (maxLb - _BPS) * lc.liquidationBonusFactor / _BPS < ps.minLiquidationBonus(m.spoke)) {
-            revert ActivationCheckFailed(marketId, "minBonus");
-        }
         _checkFeeBound(marketId, _BPS + (maxLb - _BPS) * lc.liquidationBonusFactor / _BPS);
     }
 
@@ -198,10 +189,9 @@ contract MarketRegistryActivationLogic is MarketRegistryStorage, IMarketRegistry
         if (f > _BPS || s * minLb > (_BPS - f) * (minLb - _BPS)) revert ActivationCheckFailed(marketId, "feeBound");
     }
 
-    /// @dev Market parameters and caps are set, and the Hub `addCap` covers the market's USD cap at its stress floor.
-    function _checkParamsAndCap(
-        uint256 marketId,
-        Market storage m
+    /// @dev Market parameters and caps are set.
+    function _checkParams(
+        uint256 marketId
     ) private view {
         MarketParams memory p = IParameterStore(_PARAMETER_STORE).getMarketParams(marketId);
         if (p.poolRiskFactor == 0 || p.minPledgeUsd == 0) revert ActivationCheckFailed(marketId, "params");
@@ -209,13 +199,6 @@ contract MarketRegistryActivationLogic is MarketRegistryStorage, IMarketRegistry
         uint256 capUsd = r.marketUsdCap(marketId);
         uint256 floorUsd = r.stressFloorUsd(marketId);
         if (capUsd == 0 || floorUsd == 0) revert ActivationCheckFailed(marketId, "caps");
-        IAaveV4Hub hub = IAaveV4Hub(m.hub);
-        uint256 addCap = hub.getSpokeConfig(m.hubAssetId, m.spoke).addCap;
-        if (
-            addCap != hub.MAX_ALLOWED_SPOKE_CAP() && addCap < Math.ceilDiv(capUsd + r.topUpSliceUsd(marketId), floorUsd)
-        ) {
-            revert ActivationCheckFailed(marketId, "addCap");
-        }
     }
 
     function _checkOracleAndRoutes(
