@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {ILock} from "../../lock/lock/ILock.sol";
 import {ISettlementRoute} from "./ISettlementRoute.sol";
-import {RouteReads} from "./RouteReads.sol";
-import {RouteConfig} from "./types/RouteConfig.sol";
+import {RouteMath} from "./RouteMath.sol";
+import {RouteConfig} from "./types/SettlementRouteTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -46,9 +46,8 @@ abstract contract SwapRouteBase is ISettlementRoute {
         ) revert InvalidRouteConfig();
         // Bits 1 to 3 only, at least one: 0x0E = 0b1110.
         if (config.tokenClassMask == 0 || config.tokenClassMask & ~uint8(0x0E) != 0) revert InvalidRouteConfig();
-        (bool okSwap, address lockSwap) = RouteReads.addressOf(config.lock, abi.encodeCall(ILock.LP_VAULT_SWAP, ()));
-        (bool okAdapter, address lockAdapter) =
-            RouteReads.addressOf(config.lock, abi.encodeCall(ILock.AAVE_ADAPTER, ()));
+        (bool okSwap, address lockSwap) = RouteMath.addressOf(config.lock, abi.encodeCall(ILock.LP_VAULT_SWAP, ()));
+        (bool okAdapter, address lockAdapter) = RouteMath.addressOf(config.lock, abi.encodeCall(ILock.AAVE_ADAPTER, ()));
         if (!okSwap || !okAdapter || lockSwap != config.lpVaultSwap || lockAdapter != config.aaveAdapter) {
             revert InvalidRouteConfig();
         }

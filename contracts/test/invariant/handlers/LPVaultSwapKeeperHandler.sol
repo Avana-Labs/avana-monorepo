@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {ILPVaultSwapAdmin} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
-import {ILPVaultSwapErrors} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LVSMarketRegistryMock} from "../../utils/mocks/LPVaultSwapMocks.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
@@ -65,14 +64,14 @@ contract LPVaultSwapKeeperHandler is CommonBase, StdUtils {
         address k = candidate(seed);
         bytes memory expected;
         if (modelRegistered[k]) {
-            expected = abi.encodeWithSelector(ILPVaultSwapErrors.InvalidKeeper.selector);
+            expected = abi.encodeWithSelector(ILPVaultSwapBase.InvalidKeeper.selector);
         } else if (REGISTRY.isFrozenAddress(k)) {
-            expected = abi.encodeWithSelector(ILPVaultSwapErrors.AddressIsFrozen.selector, k);
+            expected = abi.encodeWithSelector(ILPVaultSwapBase.AddressIsFrozen.selector, k);
         } else if (modelCount >= MAX_KEEPERS) {
-            expected = abi.encodeWithSelector(ILPVaultSwapErrors.TooManyKeepers.selector, MAX_KEEPERS);
+            expected = abi.encodeWithSelector(ILPVaultSwapBase.TooManyKeepers.selector, MAX_KEEPERS);
         }
         vm.prank(TIMELOCK);
-        (bool ok, bytes memory ret) = address(LVS).call(abi.encodeCall(ILPVaultSwapAdmin.addKeeper, (k)));
+        (bool ok, bytes memory ret) = address(LVS).call(abi.encodeCall(ILPVaultSwap.addKeeper, (k)));
         if (expected.length == 0) {
             if (!ok) ++mismatches;
             else (modelRegistered[k], modelCount, adds) = (true, modelCount + 1, adds + 1);
@@ -87,16 +86,16 @@ contract LPVaultSwapKeeperHandler is CommonBase, StdUtils {
         address k = candidate(seed);
         bytes memory expected;
         if (!modelRegistered[k]) {
-            expected = abi.encodeWithSelector(ILPVaultSwapErrors.InvalidKeeper.selector);
+            expected = abi.encodeWithSelector(ILPVaultSwapBase.InvalidKeeper.selector);
         } else {
             uint256 active = modelActive();
             uint256 after_ = REGISTRY.isFrozenAddress(k) ? active : active - 1;
             if (after_ < FLOOR) {
-                expected = abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, after_, FLOOR);
+                expected = abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, after_, FLOOR);
             }
         }
         vm.prank(TIMELOCK);
-        (bool ok, bytes memory ret) = address(LVS).call(abi.encodeCall(ILPVaultSwapAdmin.removeKeeper, (k)));
+        (bool ok, bytes memory ret) = address(LVS).call(abi.encodeCall(ILPVaultSwap.removeKeeper, (k)));
         if (expected.length == 0) {
             if (!ok) ++mismatches;
             else (modelRegistered[k], modelCount, removes) = (false, modelCount - 1, removes + 1);
@@ -124,9 +123,9 @@ contract LPVaultSwapKeeperHandler is CommonBase, StdUtils {
         if (caller == TIMELOCK) revert Skipped();
         address k = candidate(seed);
         vm.prank(caller);
-        (bool okAdd,) = address(LVS).call(abi.encodeCall(ILPVaultSwapAdmin.addKeeper, (k)));
+        (bool okAdd,) = address(LVS).call(abi.encodeCall(ILPVaultSwap.addKeeper, (k)));
         vm.prank(caller);
-        (bool okRemove,) = address(LVS).call(abi.encodeCall(ILPVaultSwapAdmin.removeKeeper, (k)));
+        (bool okRemove,) = address(LVS).call(abi.encodeCall(ILPVaultSwap.removeKeeper, (k)));
         if (okAdd || okRemove) ++outsiderSuccesses;
     }
 }

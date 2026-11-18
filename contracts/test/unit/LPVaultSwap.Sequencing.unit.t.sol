@@ -6,10 +6,8 @@ pragma solidity 0.8.28;
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {ILPVaultSwapEvents} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapEvents.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LVSRevertingRoute} from "../utils/mocks/LPVaultSwapMocks.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
@@ -162,7 +160,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
         usdtUsdcPool2.setRate(9880, 10_000);
         _fund(usdc, keeper, 1950e6);
         vm.prank(keeper);
-        vm.expectRevert(ILPVaultSwapErrors.NoRouteAvailable.selector);
+        vm.expectRevert(ILPVaultSwapBase.NoRouteAvailable.selector);
         lvs.liquidate(_params(proxy, 1950e6));
         uint256[] memory prices = new uint256[](2);
         (prices[0], prices[1]) = (PRICE_UNIT, 98_500_000);
@@ -295,9 +293,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
         p.debtReserveId = ghoReserveId;
         _fund(gho, keeper, 1950e18);
         vm.expectEmit(address(lvs));
-        emit ILPVaultSwapEvents.RouteFailed(
-            MARKET_ID, address(usdc), address(gsm), LVSRevertingRoute.RouteDown.selector
-        );
+        emit ILPVaultSwapBase.RouteFailed(MARKET_ID, address(usdc), address(gsm), LVSRevertingRoute.RouteDown.selector);
         vm.prank(keeper);
         LiquidationResult memory r = lvs.liquidate(p);
         assertEq(r.debtAsset, address(gho), "GHO debt settled through the backup");

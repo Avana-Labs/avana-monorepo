@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapAdmin} from "../../liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
+import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
@@ -53,8 +53,7 @@ library TimelockSelectors {
             || selector == IMarketRegistry.pause.selector || selector == IMarketRegistry.freezeAddress.selector
             || selector == IMarketRegistry.tripMarketBreaker.selector
             || selector == IMarketRegistry.tripDebtBreaker.selector
-            || selector == IMarketRegistry.useStandbyRoute.selector
-            || selector == ILPVaultSwapAdmin.removeKeeper.selector;
+            || selector == IMarketRegistry.useStandbyRoute.selector || selector == ILPVaultSwap.removeKeeper.selector;
     }
 
     /// @notice Whether `selector` is in the DAO-only cancel set.
@@ -63,7 +62,7 @@ library TimelockSelectors {
     ) internal pure returns (bool) {
         return selector == IMarketRegistryRoutes.restoreRoute.selector
             || selector == IMarketRegistry.useStandbyRoute.selector
-            || selector == IMarketRegistry.unfreezeAddress.selector || selector == ILPVaultSwapAdmin.addKeeper.selector;
+            || selector == IMarketRegistry.unfreezeAddress.selector || selector == ILPVaultSwap.addKeeper.selector;
     }
 
     /// @notice Owner of a short-eligible or DAO-only selector: 1 ParameterStore, 2 MarketRegistry, 3 LPVaultSwap,
@@ -72,7 +71,7 @@ library TimelockSelectors {
         bytes4 selector
     ) internal pure returns (uint8) {
         if (_isTightenSelector(selector)) return 1;
-        if (selector == ILPVaultSwapAdmin.removeKeeper.selector || selector == ILPVaultSwapAdmin.addKeeper.selector) {
+        if (selector == ILPVaultSwap.removeKeeper.selector || selector == ILPVaultSwap.addKeeper.selector) {
             return 3;
         }
         if (isShortDelayListSelector(selector) || isDaoCancelSelector(selector)) return 2;
@@ -111,6 +110,6 @@ library TimelockSelectors {
         return selector == IAaveAdapter.initialize.selector || selector == IRiskModule.initialize.selector
             || selector == IMarketRegistry.initialize.selector || selector == IParameterStore.initialize.selector
             || selector == ILPOracle.initialize.selector || selector == IDebtOracle.initialize.selector
-            || selector == ILPVaultSwapAdmin.initialize.selector;
+            || selector == ILPVaultSwap.initialize.selector;
     }
 }

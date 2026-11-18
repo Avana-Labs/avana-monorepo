@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {SettlementMath} from "../../src/liquidation/lp-vault-swap/SettlementMath.sol";
 import {SettlementMathHarness} from "../utils/harness/SettlementMathHarness.sol";
 import {DifferentialTest} from "./utils/DifferentialTest.sol";
@@ -176,8 +176,8 @@ contract SettlementMathDifferentialTest is DifferentialTest {
             assertEq(shortfall, ref[1], "shortfall");
         } catch (bytes memory err) {
             bytes4 expected = ref[0] == 1
-                ? ILPVaultSwapErrors.RecoveryBelowFloor.selector
-                : ILPVaultSwapErrors.InsufficientProceeds.selector;
+                ? ILPVaultSwapBase.RecoveryBelowFloor.selector
+                : ILPVaultSwapBase.InsufficientProceeds.selector;
             assertGt(ref[0], 0, "Solidity reverts, reference does not");
             assertEq(bytes4(err), expected, "revert reason");
         }
@@ -210,7 +210,7 @@ contract SettlementMathDifferentialTest is DifferentialTest {
             assertEq(r[0], 1, "Solidity reverts, reference does not");
             assertEq(
                 keccak256(err),
-                keccak256(abi.encodeWithSelector(ILPVaultSwapErrors.InvalidFeeShare.selector, share)),
+                keccak256(abi.encodeWithSelector(ILPVaultSwapBase.InvalidFeeShare.selector, share)),
                 "revert data"
             );
         }
@@ -258,7 +258,7 @@ contract SettlementMathDifferentialTest is DifferentialTest {
         } catch (bytes memory err) {
             // With Kf >= D the gap never exceeds the floor gap, so only RecoveryBelowFloor can fire.
             assertEq(r[0], 1, "Solidity reverts, reference does not");
-            assertEq(bytes4(err), ILPVaultSwapErrors.RecoveryBelowFloor.selector, "revert reason");
+            assertEq(bytes4(err), ILPVaultSwapBase.RecoveryBelowFloor.selector, "revert reason");
         }
     }
 
@@ -311,7 +311,7 @@ contract SettlementMathDifferentialTest is DifferentialTest {
             assertEq(out, ref[1], "keeperOut");
         } catch (bytes memory err) {
             assertEq(ref[0], 1, "Solidity reverts, reference does not");
-            assertEq(bytes4(err), ILPVaultSwapErrors.InsufficientProceeds.selector, "revert reason");
+            assertEq(bytes4(err), ILPVaultSwapBase.InsufficientProceeds.selector, "revert reason");
         }
     }
 
@@ -347,7 +347,7 @@ contract SettlementMathDifferentialTest is DifferentialTest {
             assertEq(ref[0], 1, "Solidity reverts, reference does not");
             assertEq(
                 keccak256(err),
-                keccak256(abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageTooSmall.selector, ref[1], premium)),
+                keccak256(abi.encodeWithSelector(ILPVaultSwapBase.DeleverageTooSmall.selector, ref[1], premium)),
                 "revert data"
             );
         }

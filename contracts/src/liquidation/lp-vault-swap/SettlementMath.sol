@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "./ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "./ILPVaultSwapBase.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 // A token with an invalid price or decimals must stop the settlement inside the callers' leg loops.
@@ -179,8 +179,8 @@ library SettlementMath {
         uint256 maxShortfall
     ) internal pure returns (uint256 shortfall) {
         shortfall = minRec > recovered ? minRec - recovered : 0;
-        if (shortfall > maxShortfall) revert ILPVaultSwapErrors.RecoveryBelowFloor();
-        if (gap > maxShortfall) revert ILPVaultSwapErrors.InsufficientProceeds();
+        if (shortfall > maxShortfall) revert ILPVaultSwapBase.RecoveryBelowFloor();
+        if (gap > maxShortfall) revert ILPVaultSwapBase.InsufficientProceeds();
         if (gap > shortfall) shortfall = gap;
     }
 
@@ -191,7 +191,7 @@ library SettlementMath {
         uint256 recoveredWithFloor,
         uint256 feeShareBps
     ) internal pure returns (Payouts memory p) {
-        if (feeShareBps > BPS) revert ILPVaultSwapErrors.InvalidFeeShare(feeShareBps);
+        if (feeShareBps > BPS) revert ILPVaultSwapBase.InvalidFeeShare(feeShareBps);
         p.surplus = _subFloor(recoveredWithFloor, debtRepaid, 0);
         p.oracleGain = _subFloor(value, debtRepaid, 0);
         uint256 feeOnGain = p.oracleGain * feeShareBps / BPS;
@@ -210,7 +210,7 @@ library SettlementMath {
     ) internal pure returns (uint256) {
         uint256 inflow = callerFunds + recoveredWithTopUp;
         uint256 outflow = debtRepaid + avanaFee + borrowerSurplus;
-        if (inflow < outflow) revert ILPVaultSwapErrors.InsufficientProceeds();
+        if (inflow < outflow) revert ILPVaultSwapBase.InsufficientProceeds();
         return inflow - outflow;
     }
 
@@ -243,7 +243,7 @@ library SettlementMath {
         uint256 minDebtRepaid
     ) internal pure returns (uint256 x) {
         x = debt < cap ? debt : cap;
-        if (x == 0 || x < minDebtRepaid) revert ILPVaultSwapErrors.DeleverageTooSmall(x, minDebtRepaid);
+        if (x == 0 || x < minDebtRepaid) revert ILPVaultSwapBase.DeleverageTooSmall(x, minDebtRepaid);
     }
 
     /// @notice Debt asset left to the borrower, `recovered − repaid − premium`; reverts `DeleverageShortfall` if < 0.
@@ -253,7 +253,7 @@ library SettlementMath {
         uint256 premium
     ) internal pure returns (uint256) {
         uint256 owed = repaid + premium;
-        if (recovered < owed) revert ILPVaultSwapErrors.DeleverageShortfall(recovered, owed);
+        if (recovered < owed) revert ILPVaultSwapBase.DeleverageShortfall(recovered, owed);
         return recovered - owed;
     }
 
@@ -266,10 +266,10 @@ library SettlementMath {
         uint256 quotePrice,
         Math.Rounding rounding
     ) private pure returns (uint256) {
-        if (fromDecimals > MAX_DECIMALS) revert ILPVaultSwapErrors.InvalidDecimals(fromDecimals);
-        if (toDecimals > MAX_DECIMALS) revert ILPVaultSwapErrors.InvalidDecimals(toDecimals);
-        if (price == 0) revert ILPVaultSwapErrors.ZeroCollateralPrice();
-        if (quotePrice == 0) revert ILPVaultSwapErrors.ZeroDebtPrice();
+        if (fromDecimals > MAX_DECIMALS) revert ILPVaultSwapBase.InvalidDecimals(fromDecimals);
+        if (toDecimals > MAX_DECIMALS) revert ILPVaultSwapBase.InvalidDecimals(toDecimals);
+        if (price == 0) revert ILPVaultSwapBase.ZeroCollateralPrice();
+        if (quotePrice == 0) revert ILPVaultSwapBase.ZeroDebtPrice();
         return Math.mulDiv(amount, price * 10 ** toDecimals, 10 ** fromDecimals * quotePrice, rounding);
     }
 

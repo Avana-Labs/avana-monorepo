@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {DeleverageRequest} from "../../src/liquidation/lp-vault-swap/types/DeleverageRequest.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {DeleverageRequest} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {LVSLyingRoute} from "../utils/mocks/LPVaultSwapMocks.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
@@ -93,13 +93,13 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
     function test_TEST_239_tooSmall() public {
         uint256 x = 2_075_924_073;
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageTooSmall.selector, x, x + 1));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DeleverageTooSmall.selector, x, x + 1));
         adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), x + 1);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageTooSmall.selector, 0, 0));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DeleverageTooSmall.selector, 0, 0));
         adapter.deleverageRaw(_request(0));
         DeleverageRequest memory r = _request(1000e6);
         r.debtReserveId = ghoReserveId; // no GHO debt
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageTooSmall.selector, 0, 0));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DeleverageTooSmall.selector, 0, 0));
         adapter.deleverageRaw(r);
     }
 
@@ -123,15 +123,15 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
     // TEST-060 verifies: REQ-SWAP-106, REQ-LOCK-023
     function test_TEST_239_onlyAdapterUnderItsLock() public {
         vm.prank(attacker);
-        vm.expectRevert(_err(ILPVaultSwapErrors.NotAdapter.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.NotAdapter.selector));
         lvs.deleverage(_request(1000e6));
-        vm.expectRevert(_err(ILPVaultSwapErrors.NotAdapter.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.NotAdapter.selector));
         adapter.deleverageUnlocked(_request(1000e6));
         // LPVaultSwap itself holding the Lock does not count.
         vm.prank(address(lvs));
         lock.acquire();
         vm.prank(address(adapter));
-        vm.expectRevert(_err(ILPVaultSwapErrors.NotAdapter.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.NotAdapter.selector));
         lvs.deleverage(_request(1000e6));
         vm.prank(address(lvs));
         lock.release();
@@ -143,15 +143,15 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
     function test_TEST_239_requestBindings() public {
         DeleverageRequest memory r = _request(1000e6);
         r.vaultToken = address(usdc);
-        vm.expectRevert(_err(ILPVaultSwapErrors.UnknownMarket.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.UnknownMarket.selector));
         adapter.deleverageRaw(r);
         r = _request(1000e6);
         r.spoke = aave.lendSpoke;
-        vm.expectRevert(_err(ILPVaultSwapErrors.UnknownMarket.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.UnknownMarket.selector));
         adapter.deleverageRaw(r);
         r = _request(1000e6);
         r.debtReserveId = 77;
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.UnknownDebtReserve.selector, 77));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.UnknownDebtReserve.selector, 77));
         adapter.deleverageRaw(r);
     }
 
@@ -161,18 +161,18 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
     function test_TEST_239_priceAndSharesGates() public {
         lpOracle.setState(PriceState.Expired);
         vm.prank(alice);
-        vm.expectRevert(_err(ILPVaultSwapErrors.StalePrice.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.StalePrice.selector));
         adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         lpOracle.setState(PriceState.Live);
         usdcOracle.setState(PriceState.Cached, true);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveId));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DebtPriceStale.selector, usdcReserveId));
         adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         usdcOracle.setState(PriceState.Live, false);
         uint256 assets = IAaveV4Hub(aave.hub).getAddedAssets(vtAssetId);
         vm.mockCall(aave.hub, abi.encodeCall(IAaveV4Hub.getAddedAssets, (vtAssetId)), abi.encode(assets + 1));
         vm.prank(alice);
-        vm.expectRevert(_err(ILPVaultSwapErrors.SharesNotEqualAssets.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.SharesNotEqualAssets.selector));
         adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         vm.clearMockedCalls();
         lpOracle.setFlags(false, false, false, true);
@@ -187,17 +187,17 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
         uint256 x = 2_075_924_073;
         v3Pool.setVirtualBalance(address(usdc), uint128(x - 1));
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.FlashLiquidityShort.selector, x - 1, x));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.FlashLiquidityShort.selector, x - 1, x));
         adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         v3Pool.setVirtualBalance(address(usdc), uint128(18_000_000e6));
         v3Pool.setFlags(address(usdc), true, false, true, true);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.FlashLiquidityShort.selector, 0, x));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.FlashLiquidityShort.selector, 0, x));
         adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         v3Pool.setFlags(address(usdc), true, false, false, true);
         store.setMaxFlashFeeBps(4);
         vm.prank(alice);
-        vm.expectRevert(_err(ILPVaultSwapErrors.FlashFeeTooHigh.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.FlashFeeTooHigh.selector));
         adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
     }
 
@@ -208,7 +208,7 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
     function test_TEST_285_lenderIsRecordedHubRefused() public {
         registry.setRecordedHub(address(v3Pool), true);
         vm.prank(alice);
-        vm.expectRevert(_err(ILPVaultSwapErrors.FlashSourceIsHub.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.FlashSourceIsHub.selector));
         adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         (address bobProxy,) = _bobAccount();
         _liquidateAs(keeper, _params(bobProxy, 1950e6));
@@ -235,7 +235,7 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
         uint256 recovered = 900e6 + uint256(1_036_000_000) * 9995 / 10_000;
         uint256 debt = _debtOf(proxy, usdcReserveId);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageShortfall.selector, recovered, x + phi));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DeleverageShortfall.selector, recovered, x + phi));
         adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
         assertEq(_debtOf(proxy, usdcReserveId), debt, "unchanged");
     }
@@ -302,7 +302,7 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
                 )
             );
         assertFalse(ok, "reverts");
-        assertEq(bytes4(ret), ILPVaultSwapErrors.FlashRepayShort.selector, "FlashRepayShort");
+        assertEq(bytes4(ret), ILPVaultSwapBase.FlashRepayShort.selector, "FlashRepayShort");
     }
 
     /// @notice The loop stops at four transfers exactly: with a 1 % fee the source is 20 raw USDC short after four
@@ -337,7 +337,7 @@ contract LPVaultSwapDeleverageUnitTest is LPVaultSwapUnitBase {
                 )
             );
         assertFalse(ok, "reverts");
-        assertEq(ret, abi.encodeWithSelector(ILPVaultSwapErrors.FlashRepayShort.selector, held, owed), "exact data");
+        assertEq(ret, abi.encodeWithSelector(ILPVaultSwapBase.FlashRepayShort.selector, held, owed), "exact data");
     }
 
     /// @notice A source already holding more than `x + φ` (a donation) needs no transfer: the loop stops at once and

@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {LVSLyingRoute} from "../utils/mocks/LPVaultSwapMocks.sol";
@@ -103,16 +103,16 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
     /// view reads give `NothingPending`; then `UnknownDebtReserve` unless the reserve is the market's settlement reserve.
     // TEST-170 verifies: REQ-SWAP-066, REQ-SWAP-068, REQ-LOCK-007, Q-201
     function test_TEST_170_unknownMarketAndNothingPending() public {
-        vm.expectRevert(_err(ILPVaultSwapErrors.UnknownMarket.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.UnknownMarket.selector));
         lvs.settlePending(99, usdcReserveId);
         store.setFeeRecipient(address(0));
-        vm.expectRevert(_err(ILPVaultSwapErrors.InvalidFeeRecipient.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.InvalidFeeRecipient.selector));
         lvs.settlePending(MARKET_ID, usdcReserveId);
         store.setFeeRecipient(feeRecipient);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.UnknownDebtReserve.selector, ghoReserveId));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.UnknownDebtReserve.selector, ghoReserveId));
         lvs.settlePending(MARKET_ID, ghoReserveId);
         lvs.settlePending(MARKET_ID, usdcReserveId);
-        vm.expectRevert(_err(ILPVaultSwapErrors.NothingPending.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.NothingPending.selector));
         lvs.settlePending(MARKET_ID, usdcReserveId);
     }
 
@@ -121,8 +121,8 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
     // TEST-170 verifies: REQ-SWAP-002, REQ-SWAP-066, REQ-LOCK-007
     // TEST-060 verifies: REQ-SWAP-002, REQ-LOCK-007
     function test_TEST_170_readsPendingBeforeLock() public {
-        bytes memory call = abi.encodeCall(ILPVaultSwapLiquidation.settlePending, (MARKET_ID, usdcReserveId));
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.LockHeld.selector, address(adapter)));
+        bytes memory call = abi.encodeCall(ILPVaultSwap.settlePending, (MARKET_ID, usdcReserveId));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.LockHeld.selector, address(adapter)));
         adapter.callUnderLock(call);
         vm.expectCall(address(coll), abi.encodeWithSignature("getPending(address)", address(vt)), 1);
         lvs.settlePending(MARKET_ID, usdcReserveId);
@@ -142,7 +142,7 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
         (uint256 units,,) = lvs.settlePending(MARKET_ID, usdcReserveId);
         assertEq(units, kept / 2, "settles only what it holds");
         assertEq(coll.getPending(address(vt)).units, kept - kept / 2, "the rest stays pending");
-        vm.expectRevert(_err(ILPVaultSwapErrors.NothingPending.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.NothingPending.selector));
         lvs.settlePending(MARKET_ID, usdcReserveId);
     }
 
@@ -187,7 +187,7 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
     function test_TEST_232_pendingAt30Bps() public {
         usdtUsdcPool.setRate(9900, 10_000);
         usdtUsdcPool2.setRate(9900, 10_000);
-        vm.expectRevert(_err(ILPVaultSwapErrors.NoRouteAvailable.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.NoRouteAvailable.selector));
         lvs.settlePending(MARKET_ID, usdcReserveId);
         assertEq(coll.getPending(address(vt)).units, kept, "still pending");
         store.setSlippage(MARKET_ID, 20);
@@ -205,7 +205,7 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
         usdc.mint(address(liar), 1);
         liar.setOut(1);
         registry.setRoute(MARKET_ID, address(usdt), address(usdc), 0, address(liar), true);
-        vm.expectRevert(_err(ILPVaultSwapErrors.RecoveryBelowFloor.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.RecoveryBelowFloor.selector));
         lvs.settlePending(MARKET_ID, usdcReserveId);
     }
 
@@ -216,7 +216,7 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
         registry.setSettlementReserve(MARKET_ID, ghoReserveId);
         uint256 usdcCov = usdcCoverage.fundedBalance();
         uint256 ghoCov = ghoCoverage.fundedBalance();
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.UnknownDebtReserve.selector, usdcReserveId));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.UnknownDebtReserve.selector, usdcReserveId));
         lvs.settlePending(MARKET_ID, usdcReserveId);
         (,, uint256 added) = lvs.settlePending(MARKET_ID, ghoReserveId);
         (uint256 a0, uint256 a1) = _released(kept);
@@ -257,7 +257,7 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
     // TEST-170 verifies: REQ-SWAP-066, REQ-SWAP-091
     function test_TEST_170_settlementReserveDebtPriceGate() public {
         usdcOracle.setState(PriceState.Expired, true);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveId));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DebtPriceStale.selector, usdcReserveId));
         lvs.settlePending(MARKET_ID, usdcReserveId);
     }
 
@@ -274,7 +274,7 @@ contract LPVaultSwapSettlePendingUnitTest is LPVaultSwapUnitBase {
         ];
         for (uint256 i = 0; i < faulty.length; ++i) {
             skimmer.setMode(faulty[i]);
-            vm.expectRevert(_err(ILPVaultSwapErrors.FundingMismatch.selector));
+            vm.expectRevert(_err(ILPVaultSwapBase.FundingMismatch.selector));
             lvs.settlePending(MARKET_ID, usdcReserveId);
             assertEq(coll.getPending(address(vt)).units, kept, "pending unchanged");
             assertEq(vt.balanceOf(address(lvs)), kept, "units still held");

@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapEntryChecksFuzzTest
@@ -45,7 +44,7 @@ contract LPVaultSwapEntryChecksFuzzTest is LPVaultSwapUnitBase {
         lpOracle.setAnswer(int256(price8));
         uint256 hf = _hf(proxy);
         if (hf >= 1e18) {
-            _refusedWithNothingMoved(_params(proxy, 1950e6), _err(ILPVaultSwapErrors.NotLiquidatable.selector));
+            _refusedWithNothingMoved(_params(proxy, 1950e6), _err(ILPVaultSwapBase.NotLiquidatable.selector));
         } else {
             // Above $2.09 the vault is priced over its released tokens' leg value: a budget tops up the floor gap.
             LiquidationParams memory p = _params(proxy, 1950e6);
@@ -67,7 +66,7 @@ contract LPVaultSwapEntryChecksFuzzTest is LPVaultSwapUnitBase {
         vm.assume(marketId != MARKET_ID);
         LiquidationParams memory p = _params(proxy, 1950e6);
         p.marketId = marketId;
-        _refusedWithNothingMoved(p, _err(ILPVaultSwapErrors.UnknownMarket.selector));
+        _refusedWithNothingMoved(p, _err(ILPVaultSwapBase.UnknownMarket.selector));
     }
 
     /// @notice Any address that is not a proxy of the market reverts `UnknownProxy`.
@@ -76,7 +75,7 @@ contract LPVaultSwapEntryChecksFuzzTest is LPVaultSwapUnitBase {
         address stranger
     ) public {
         vm.assume(stranger != proxy);
-        _refusedWithNothingMoved(_params(stranger, 1950e6), _err(ILPVaultSwapErrors.UnknownProxy.selector));
+        _refusedWithNothingMoved(_params(stranger, 1950e6), _err(ILPVaultSwapBase.UnknownProxy.selector));
     }
 
     /// @notice Any debt reserve ID other than the USDC and GHO reserves reverts `UnknownDebtReserve(id)`.
@@ -87,7 +86,7 @@ contract LPVaultSwapEntryChecksFuzzTest is LPVaultSwapUnitBase {
         vm.assume(reserveId != usdcReserveId && reserveId != ghoReserveId);
         LiquidationParams memory p = _params(proxy, 1950e6);
         p.debtReserveId = reserveId;
-        _refusedWithNothingMoved(p, abi.encodeWithSelector(ILPVaultSwapErrors.UnknownDebtReserve.selector, reserveId));
+        _refusedWithNothingMoved(p, abi.encodeWithSelector(ILPVaultSwapBase.UnknownDebtReserve.selector, reserveId));
     }
 
     /// @notice A `debtToCover` far above the debt is capped by Aave at the debt it can repay; the unused funding

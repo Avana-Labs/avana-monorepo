@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapViews} from "../../liquidation/lp-vault-swap/ILPVaultSwapViews.sol";
+import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
 import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
@@ -66,7 +66,7 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
         s.m = _market(marketId);
         s.borrowed = NO_RESERVE;
         _accountReserves(st, s);
-        st.noApprovedKeeper = ILPVaultSwapViews(_LP_VAULT_SWAP).activeKeeperCount() == 0;
+        st.noApprovedKeeper = ILPVaultSwap(_LP_VAULT_SWAP).activeKeeperCount() == 0;
         st.hardHealthFloor = _store().hardHealthFloor(marketId);
         (st.healthFactor, st.healthFactorExcludingRescue) = IRiskModuleBorrowLogic(_BORROW).healthFactors(proxy);
         uint256[] memory one = new uint256[](1);

@@ -7,17 +7,15 @@ import {IFlashReceiver} from "../../flash/IFlashReceiver.sol";
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {ILPVaultSwap} from "./ILPVaultSwap.sol";
-import {ILPVaultSwapAdmin} from "./ILPVaultSwapAdmin.sol";
-import {ILPVaultSwapDeleverage} from "./ILPVaultSwapDeleverage.sol";
-import {ILPVaultSwapLiquidation} from "./ILPVaultSwapLiquidation.sol";
 import {ILPVaultSwapLogic} from "./ILPVaultSwapLogic.sol";
-import {ILPVaultSwapViews} from "./ILPVaultSwapViews.sol";
 import {LPVaultSwapStorage} from "./LPVaultSwapStorage.sol";
-import {DeleverageRequest} from "./types/DeleverageRequest.sol";
-import {LPVaultSwapImmutables} from "./types/LPVaultSwapImmutables.sol";
-import {LPVaultSwapLogics} from "./types/LPVaultSwapLogics.sol";
-import {LiquidationParams} from "./types/LiquidationParams.sol";
-import {LiquidationResult} from "./types/LiquidationResult.sol";
+import {
+    DeleverageRequest,
+    LPVaultSwapImmutables,
+    LPVaultSwapLogics,
+    LiquidationParams,
+    LiquidationResult
+} from "./types/LPVaultSwapTypes.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -50,7 +48,7 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
         _disableInitializers();
     }
 
-    /// @inheritdoc ILPVaultSwapLiquidation
+    /// @inheritdoc ILPVaultSwap
     function liquidate(
         LiquidationParams calldata
     )
@@ -63,7 +61,7 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
         _delegate(_LIQUIDATION_LOGIC);
     }
 
-    /// @inheritdoc ILPVaultSwapLiquidation
+    /// @inheritdoc ILPVaultSwap
     function settlePending(
         uint256,
         uint256
@@ -79,7 +77,7 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
         _delegate(_PENDING_LOGIC);
     }
 
-    /// @inheritdoc ILPVaultSwapDeleverage
+    /// @inheritdoc ILPVaultSwap
     function deleverage(
         DeleverageRequest calldata
     )
@@ -109,7 +107,7 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
         _delegate(_DELEVERAGE_LOGIC);
     }
 
-    /// @inheritdoc ILPVaultSwapAdmin
+    /// @inheritdoc ILPVaultSwap
     function initialize(
         address timelock,
         address[] calldata initialKeepers
@@ -128,7 +126,7 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
         }
     }
 
-    /// @inheritdoc ILPVaultSwapAdmin
+    /// @inheritdoc ILPVaultSwap
     function addKeeper(
         address keeper
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
@@ -139,7 +137,7 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
         _register(keeper);
     }
 
-    /// @inheritdoc ILPVaultSwapAdmin
+    /// @inheritdoc ILPVaultSwap
     function removeKeeper(
         address keeper
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
@@ -160,19 +158,19 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
         emit KeeperRemoved(keeper);
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function isApprovedKeeper(
         address keeper
     ) external view override returns (bool approved) {
         approved = _s().keepers[keeper];
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function approvedKeeperCount() external view override returns (uint256 count) {
         count = _s().keeperList.length;
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function activeKeeperCount() public view override returns (uint256 count) {
         address[] storage list = _s().keeperList;
         IMarketRegistry mr = IMarketRegistry(_MARKET_REGISTRY);
@@ -182,67 +180,67 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
         }
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function getKeepers() external view override returns (address[] memory keepers) {
         keepers = _s().keeperList;
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function MAX_REPAY_TRANSFERS() external pure override returns (uint256 count) {
         count = _MAX_REPAY_TRANSFERS;
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function KEEPER_FLOOR() external view override returns (uint256 floor) {
         floor = _KEEPER_FLOOR;
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function MAX_KEEPERS() external pure override returns (uint256 max) {
         max = _MAX_KEEPERS;
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function APPLICATION_ADMIN() external pure override returns (bytes32 role) {
         role = AvanaRoles.APPLICATION_ADMIN;
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function TIMELOCK() external view override returns (address timelock) {
         timelock = _s().timelock;
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function LOCK() external view override returns (address lock) {
         lock = _LOCK;
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function AAVE_ADAPTER() external view override returns (address adapter) {
         adapter = _AAVE_ADAPTER;
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function COLLATERALIZATION() external view override returns (address collateralization) {
         collateralization = _COLLATERALIZATION;
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function MARKET_REGISTRY() external view override returns (address registry) {
         registry = _MARKET_REGISTRY;
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function PARAMETER_STORE() external view override returns (address store) {
         store = _PARAMETER_STORE;
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function PAYOUT_ESCROW() external view override returns (address escrow) {
         escrow = _PAYOUT_ESCROW;
     }
 
-    /// @inheritdoc ILPVaultSwapViews
+    /// @inheritdoc ILPVaultSwap
     function PAYOUT_TRANSFER_GAS() external pure override returns (uint256 gas) {
         gas = _PAYOUT_TRANSFER_GAS;
     }

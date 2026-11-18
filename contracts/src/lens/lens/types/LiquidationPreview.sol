@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LiquidationParams} from "../../../liquidation/lp-vault-swap/types/LiquidationParams.sol";
+import {LiquidationParams} from "../../../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {PauseState} from "../../../types/PauseState.sol";
 import {RouteStatus} from "./RouteStatus.sol";
 

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapDeleverageFuzzTest
@@ -40,9 +40,8 @@ contract LPVaultSwapDeleverageFuzzTest is LPVaultSwapUnitBase {
         bytes memory reason
     ) internal pure returns (bool) {
         bytes4 s = bytes4(reason);
-        return s == ILPVaultSwapErrors.DeleverageShortfall.selector
-            || s == ILPVaultSwapErrors.DeleverageTooSmall.selector || s == ILPVaultSwapErrors.NoRouteAvailable.selector
-            || s == ILPVaultSwapErrors.FlashFeeTooHigh.selector
+        return s == ILPVaultSwapBase.DeleverageShortfall.selector || s == ILPVaultSwapBase.DeleverageTooSmall.selector
+            || s == ILPVaultSwapBase.NoRouteAvailable.selector || s == ILPVaultSwapBase.FlashFeeTooHigh.selector
             // The AaveAdapter's own rule (2.6): a repay with collateral that would lower the health factor reverts.
             || s == bytes4(keccak256("HealthFactorNotImproved(uint256,uint256)"))
             // Aave's own rule: the release withdraws collateral, refused while the account stays below HF 1.
@@ -93,7 +92,7 @@ contract LPVaultSwapDeleverageFuzzTest is LPVaultSwapUnitBase {
         } catch (bytes memory reason) {
             assertTrue(_known(reason) || premiumBps > MAX_FLASH_FEE_BPS, "unexpected refusal");
             if (premiumBps > MAX_FLASH_FEE_BPS && x != 0) {
-                assertEq(bytes4(reason), ILPVaultSwapErrors.FlashFeeTooHigh.selector, "premium above the cap");
+                assertEq(bytes4(reason), ILPVaultSwapBase.FlashFeeTooHigh.selector, "premium above the cap");
             }
             assertEq(_debtOf(proxy, usdcReserveId), debt, "a refusal repays nothing");
         }
@@ -110,7 +109,7 @@ contract LPVaultSwapDeleverageFuzzTest is LPVaultSwapUnitBase {
         uint256 debt = _debtOf(proxy, usdcReserveId);
         uint256 x = debt < cap ? debt : cap;
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageTooSmall.selector, x, x + 1));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DeleverageTooSmall.selector, x, x + 1));
         adapter.repayWithCollateral(proxy, _position(key), uint128(units), usdcReserveId, new uint256[](2), x + 1);
         vm.prank(alice);
         (uint256 repaid,) =

@@ -4,10 +4,12 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {
+    LiquidationParams,
+    LiquidationResult,
+    RouteMode
+} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
@@ -125,7 +127,7 @@ contract LiquidationLensPreviewIntegrationTest is RealStackVolatile {
         raised.minPayout = p.expectedPayout;
         uint256 debtBefore = _debtOf(proxy, usdcReserveId);
         _fundCaller(keeper, raised);
-        vm.expectPartialRevert(ILPVaultSwapErrors.PayoutTooLow.selector);
+        vm.expectPartialRevert(ILPVaultSwapBase.PayoutTooLow.selector);
         vm.prank(keeper);
         lvs.liquidate(raised);
         assertEq(_debtOf(proxy, usdcReserveId), debtBefore, "nothing repaid");
@@ -202,7 +204,7 @@ contract LiquidationLensPreviewIntegrationTest is RealStackVolatile {
         LiquidationPreview memory p = lens.previewLiquidation(proxy, usdcReserveId, _deadlineIn());
         assertFalse(p.pricesUsable, "preview: collateral price unusable");
         assertTrue(p.debtPriceFresh, "preview: the debt price is fresh");
-        _expectRefused(p.params, abi.encodeWithSelector(ILPVaultSwapErrors.StalePrice.selector));
+        _expectRefused(p.params, abi.encodeWithSelector(ILPVaultSwapBase.StalePrice.selector));
         _refreshAndPoke();
         // Every USDC feed left past its liquidationPriceMaxAge: the DebtOracle is stale, and so is the USDC leg of the
         // collateral price; the collateral rule runs first.
@@ -211,7 +213,7 @@ contract LiquidationLensPreviewIntegrationTest is RealStackVolatile {
         p = lens.previewLiquidation(proxy, usdcReserveId, _deadlineIn());
         assertFalse(p.debtPriceFresh, "preview: debt price stale");
         assertFalse(p.pricesUsable, "preview: prices unusable");
-        _expectRefused(p.params, abi.encodeWithSelector(ILPVaultSwapErrors.StalePrice.selector));
+        _expectRefused(p.params, abi.encodeWithSelector(ILPVaultSwapBase.StalePrice.selector));
         _refreshAndPoke();
         // The repaid reserve paused on Aave.
         vm.prank(aaveDao);
@@ -255,7 +257,7 @@ contract LiquidationLensPreviewIntegrationTest is RealStackVolatile {
         ClTestToken(address(usdc)).mint(keeper, p.params.debtToCover);
         vm.startPrank(keeper);
         usdc.approve(lpVaultSwap, p.params.debtToCover);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveIdV));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DebtPriceStale.selector, usdcReserveIdV));
         lvs.liquidate(p.params);
         usdc.approve(lpVaultSwap, 0);
         vm.stopPrank();

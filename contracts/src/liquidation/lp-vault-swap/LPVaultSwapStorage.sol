@@ -3,15 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "./ILPVaultSwapErrors.sol";
-import {ILPVaultSwapEvents} from "./ILPVaultSwapEvents.sol";
-import {LPVaultSwapImmutables} from "./types/LPVaultSwapImmutables.sol";
+import {ILPVaultSwapBase} from "./ILPVaultSwapBase.sol";
+import {LPVaultSwapImmutables} from "./types/LPVaultSwapTypes.sol";
 
 /// @title LPVaultSwapStorage
 /// @notice The implementation immutables, constants and ERC-7201 storage shared by the LPVaultSwap implementation and
 /// its three logic contracts.
 /// @dev No liquidation or deleverage value is kept across calls.
-abstract contract LPVaultSwapStorage is ILPVaultSwapEvents, ILPVaultSwapErrors {
+abstract contract LPVaultSwapStorage is ILPVaultSwapBase {
     /// @notice Gas forwarded to each gas-limited escrowable payout transfer.
     uint256 internal constant _PAYOUT_TRANSFER_GAS = 100_000;
     /// @notice `⌈_PAYOUT_TRANSFER_GAS × 64 / 63⌉` plus 10,000 kept for the work after the transfer returns.

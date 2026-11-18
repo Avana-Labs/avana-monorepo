@@ -9,7 +9,7 @@ import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ITetherFee} from "../../interfaces/external/tether/ITetherFee.sol";
-import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
+import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {RiskModuleMath} from "../risk-module/RiskModuleMath.sol";
@@ -122,7 +122,7 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         address token
     ) internal view returns (bool zero) {
         if (gasleft() < RiskModuleMath.gasFloor(RiskModuleMath.ISSUER_PROBE_GAS)) return false;
-        (bool ok, bytes memory ret) = RouteReads._staticRead(
+        (bool ok, bytes memory ret) = RouteMath._staticRead(
             token, RiskModuleMath.ISSUER_PROBE_GAS, abi.encodeCall(ITetherFee.basisPointsRate, ()), 33
         );
         zero = ok && ret.length == 32 && abi.decode(ret, (uint256)) == 0;

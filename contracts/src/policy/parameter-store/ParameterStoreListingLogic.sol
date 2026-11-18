@@ -7,7 +7,7 @@ import {IAggregatorProxy} from "../../interfaces/external/chainlink/IAggregatorP
 import {IAggregatorV3} from "../../interfaces/external/chainlink/IAggregatorV3.sol";
 import {IOffchainAggregator} from "../../interfaces/external/chainlink/IOffchainAggregator.sol";
 import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequencerUptimeFeed.sol";
-import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
+import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
 import {Market} from "../../types/Market.sol";
 import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "./IParameterStore.sol";
@@ -178,9 +178,9 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
         decimals = IAggregatorV3(feed).decimals();
         address aggregator = IAggregatorProxy(feed).aggregator();
         (bool minOk, uint256[3] memory lo) =
-            RouteReads.words(aggregator, abi.encodeCall(IOffchainAggregator.minAnswer, ()), false);
+            RouteMath.words(aggregator, abi.encodeCall(IOffchainAggregator.minAnswer, ()), false);
         (bool maxOk, uint256[3] memory hi) =
-            RouteReads.words(aggregator, abi.encodeCall(IOffchainAggregator.maxAnswer, ()), false);
+            RouteMath.words(aggregator, abi.encodeCall(IOffchainAggregator.maxAnswer, ()), false);
         if (decimals == 0 || decimals > FEED_DECIMALS_MAX) revert InvalidFeed(feed, "decimals");
         // A word above type(int192).max is a negative int192 or no int192 at all: either way no positive minimum.
         if (!minOk || lo[0] == 0 || lo[0] > INT192_MAX) revert InvalidFeed(feed, "minAnswer");

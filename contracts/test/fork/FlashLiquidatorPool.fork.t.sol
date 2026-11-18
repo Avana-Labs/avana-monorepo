@@ -4,10 +4,12 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV3Pool} from "../../src/interfaces/external/aave/IAaveV3Pool.sol";
-import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {
+    LiquidationParams,
+    LiquidationResult,
+    RouteMode
+} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {FlashLiquidator} from "../../src/periphery/flash-liquidator/FlashLiquidator.sol";
 import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
 import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
@@ -20,7 +22,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 /// @notice LPVaultSwap's caller-facing settlement on a fork, for any debt asset: pulls `X`, sends `D` to a sink (the
 /// Spoke's pull) and pays `keeperOut = X - D + gain` from a balance the test deals it.
-contract ForkLiquidationSwap is ILPVaultSwapLiquidation {
+contract ForkLiquidationSwap {
     using SafeERC20 for IERC20;
 
     address public constant SINK = address(0x5B0CE);
@@ -38,7 +40,7 @@ contract ForkLiquidationSwap is ILPVaultSwapLiquidation {
 
     function liquidate(
         LiquidationParams calldata params
-    ) external override returns (LiquidationResult memory result) {
+    ) external returns (LiquidationResult memory result) {
         asset.safeTransferFrom(msg.sender, address(this), params.debtToCover);
         asset.safeTransfer(SINK, debtRepaid);
         uint256 keeperOut = params.debtToCover + gain;
@@ -51,7 +53,7 @@ contract ForkLiquidationSwap is ILPVaultSwapLiquidation {
     function settlePending(
         uint256,
         uint256
-    ) external pure override returns (uint256, uint256[] memory, uint256) {
+    ) external pure returns (uint256, uint256[] memory, uint256) {
         revert("not modelled");
     }
 }

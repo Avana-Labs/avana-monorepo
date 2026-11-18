@@ -8,7 +8,7 @@ import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
 import {IAvanaTimelockGovernance} from "../../src/governance/timelock/IAvanaTimelockGovernance.sol";
 import {GovernedTargets} from "../../src/governance/timelock/types/GovernedTargets.sol";
 import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
-import {ILPVaultSwapAdmin} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {TimelockShortDelayLists} from "../utils/fixtures/TimelockShortDelayLists.sol";
 import {CallRecorder} from "../utils/mocks/CallRecorder.sol";
@@ -188,7 +188,7 @@ contract AvanaTimelockHalmosTest is Test {
         if (kind % 3 == 0) {
             calls = _one(address(other), abi.encodeCall(IAccessControl.grantRole, (keccak256("R"), address(2))));
         } else if (kind % 3 == 1) {
-            calls = _one(address(lpVaultSwap), abi.encodeWithSelector(ILPVaultSwapAdmin.addKeeper.selector, address(3)));
+            calls = _one(address(lpVaultSwap), abi.encodeWithSelector(ILPVaultSwap.addKeeper.selector, address(3)));
         } else {
             calls =
                 _one(address(marketRegistry), abi.encodeWithSelector(IMarketRegistryRoutes.disableRoute.selector, 7));

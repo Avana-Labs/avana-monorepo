@@ -5,8 +5,11 @@ pragma solidity 0.8.28;
 
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
 import {PegModuleRoute} from "../../src/liquidation/settlement-routes/PegModuleRoute.sol";
-import {PegModuleKind, PegModuleStep} from "../../src/liquidation/settlement-routes/types/PegModuleStep.sol";
-import {RouteConfig} from "../../src/liquidation/settlement-routes/types/RouteConfig.sol";
+import {
+    PegModuleKind,
+    PegModuleStep,
+    RouteConfig
+} from "../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
 import {RouteMathHarness} from "../utils/harness/RouteMathHarness.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";

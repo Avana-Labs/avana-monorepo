@@ -9,7 +9,7 @@ import {IAvanaTimelockEvents} from "../../src/governance/timelock/IAvanaTimelock
 import {IAvanaTimelockGovernance} from "../../src/governance/timelock/IAvanaTimelockGovernance.sol";
 import {GovernedTargets} from "../../src/governance/timelock/types/GovernedTargets.sol";
 import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
-import {ILPVaultSwapAdmin} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
@@ -223,7 +223,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         address lvs = address(lpVaultSwap);
         bytes4 cap = IParameterStoreTighten.tightenMarketUsdCap.selector;
         bytes4 disable = IMarketRegistryRoutes.disableRoute.selector;
-        bytes4 remove = ILPVaultSwapAdmin.removeKeeper.selector;
+        bytes4 remove = ILPVaultSwap.removeKeeper.selector;
         _expectShort(mr, cap);
         _expectShort(lvs, cap);
         _expectShort(address(other), cap);
@@ -233,7 +233,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         _expectShort(mr, remove);
         bytes4 restore = IMarketRegistryRoutes.restoreRoute.selector;
         bytes4 unfreeze = IMarketRegistry.unfreezeAddress.selector;
-        bytes4 add = ILPVaultSwapAdmin.addKeeper.selector;
+        bytes4 add = ILPVaultSwap.addKeeper.selector;
         _expectDao(lvs, restore);
         _expectDao(ps, restore);
         _expectDao(lvs, unfreeze);
@@ -509,7 +509,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
     // TEST-244 verifies: REQ-ACCESS-156
     function test_TEST_244_addKeeperAloneIsRestoringAtNormalDelay() public {
         TimelockFixture.Call[] memory add =
-            _one(address(lpVaultSwap), abi.encodeWithSelector(ILPVaultSwapAdmin.addKeeper.selector, keeper));
+            _one(address(lpVaultSwap), abi.encodeWithSelector(ILPVaultSwap.addKeeper.selector, keeper));
         assertEq(_required(add), NORMAL_DELAY);
         bytes32 id = _schedule(aaveGovernanceExecutor, add, NORMAL_DELAY, SALT);
         assertTrue(timelock.isRestoringOperation(id));

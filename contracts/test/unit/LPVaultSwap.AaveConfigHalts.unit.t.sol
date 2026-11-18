@@ -6,9 +6,8 @@ pragma solidity 0.8.28;
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 
@@ -164,7 +163,7 @@ contract LPVaultSwapAaveConfigHaltsUnitTest is LPVaultSwapUnitBase {
         vm.mockCall(
             aave.hub, abi.encodeWithSelector(IAaveV4Hub.getAddedAssets.selector, vtAssetId), abi.encode(uint256(1))
         );
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.SharesNotEqualAssets.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.SharesNotEqualAssets.selector));
         vm.clearMockedCalls();
     }
 

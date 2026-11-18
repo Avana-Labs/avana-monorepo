@@ -98,7 +98,6 @@
     "src/liquidation/settlement-routes/DexHops.sol": 100,
     "src/liquidation/settlement-routes/PegModuleRoute.sol": 100,
     "src/liquidation/settlement-routes/RouteMath.sol": 100,
-    "src/liquidation/settlement-routes/RouteReads.sol": 100,
     "src/liquidation/settlement-routes/SwapRouteBase.sol": 100,
     "src/liquidation/settlement-routes/WrapperThenDexRoute.sol": 91,
     "src/lock/lock/Lock.sol": 100,

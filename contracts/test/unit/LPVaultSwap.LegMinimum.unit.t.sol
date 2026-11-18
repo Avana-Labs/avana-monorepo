@@ -3,10 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {
+    LiquidationParams,
+    LiquidationResult,
+    RouteMode
+} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
 import {SettlementReport} from "../../src/types/SettlementReport.sol";
 import {LVSLyingRoute, LVSRevertingRoute} from "../utils/mocks/LPVaultSwapMocks.sol";
@@ -80,7 +82,7 @@ contract LPVaultSwapLegMinimumUnitTest is LPVaultSwapUnitBase {
         assertEq(_count(vm.getRecordedLogs(), RouteFailed.selector), 0, "no RouteFailed for an unusable primary");
         assertEq(usdtUsdcPool.swaps(), primarySwaps, "primary not called");
         registry.setRoute(MARKET_ID, address(usdt), address(usdc), 1, address(usdtBackup), false);
-        bytes memory noRoute = _err(ILPVaultSwapErrors.NoRouteAvailable.selector);
+        bytes memory noRoute = _err(ILPVaultSwapBase.NoRouteAvailable.selector);
         _expectLiquidateRevert(keeper, _params(proxy, 1950e6), noRoute);
         registry.setRoute(MARKET_ID, address(usdt), address(usdc), 0, address(usdtPrimary), true);
         usdtUsdcPool.setRate(1, 2);
@@ -123,7 +125,7 @@ contract LPVaultSwapLegMinimumUnitTest is LPVaultSwapUnitBase {
         usdc.mint(address(liar), 1);
         liar.setOut(1);
         registry.setRoute(MARKET_ID, address(usdt), address(usdc), 0, address(liar), true);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.RecoveryBelowFloor.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.RecoveryBelowFloor.selector));
     }
 
     /// @notice A sandwich of every route up to the slippage the leg minimum allows settles; one unit more and both
@@ -134,7 +136,7 @@ contract LPVaultSwapLegMinimumUnitTest is LPVaultSwapUnitBase {
         uint256 minOut = _usdtLegMinOut(a1, 100, 1);
         usdtUsdcPool.setRate(minOut - 1, a1);
         usdtUsdcPool2.setRate(minOut - 1, a1);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.NoRouteAvailable.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.NoRouteAvailable.selector));
         usdtUsdcPool2.setRate(minOut, a1);
         LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, 1950e6));
         uint256 legValue = a1 * P_USDT / PRICE_UNIT;

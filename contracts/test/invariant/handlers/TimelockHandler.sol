@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {AvanaTimelock} from "../../../src/governance/timelock/AvanaTimelock.sol";
 import {IAvanaTimelockGovernance} from "../../../src/governance/timelock/IAvanaTimelockGovernance.sol";
-import {ILPVaultSwapAdmin} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
+import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {IMarketRegistryRoutes} from "../../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStoreTighten} from "../../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -216,7 +216,7 @@ contract TimelockHandler is CommonBase, StdUtils {
         }
         if (kind == 3) return _pack(OTHER, abi.encodeCall(IAccessControl.grantRole, (keccak256("R"), address(2))));
         if (kind == 4) return _pack(MR, abi.encodeWithSelector(IMarketRegistryRoutes.restoreRoute.selector, 7));
-        if (kind == 5) return _pack(SWAP, abi.encodeWithSelector(ILPVaultSwapAdmin.addKeeper.selector, address(3)));
+        if (kind == 5) return _pack(SWAP, abi.encodeWithSelector(ILPVaultSwap.addKeeper.selector, address(3)));
         if (kind == 6) {
             uint256 d = TL.normalDelay() == TL.MAX_DELAY() ? TL.MIN_NORMAL_DELAY() : TL.MAX_DELAY();
             return _pack(address(TL), abi.encodeCall(IAvanaTimelockGovernance.setNormalDelay, (d)));

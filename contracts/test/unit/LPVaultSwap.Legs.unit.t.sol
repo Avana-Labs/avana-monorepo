@@ -3,10 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {ILPVaultSwapEvents} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapEvents.sol";
-import {LPVaultSwapImmutables} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
-import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LPVaultSwapImmutables, RouteMode} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {
     LPVaultSwapSettlementHarness,
     LVSHarnessRegistry,
@@ -25,7 +23,7 @@ import {Test} from "forge-std/Test.sol";
 /// never calls the primary; no usable route reverts `NoRouteAvailable`; a route that takes less than its input, or
 /// sends back an intermediate token, leaves a residue measured per token; each route's approval is exact during the
 /// call and zero after it.
-contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapEvents {
+contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapBase {
     uint256 internal constant BPS = 10_000;
 
     LPVaultSwapSettlementHarness internal harness;
@@ -182,7 +180,7 @@ contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapEvents {
         assertEq(recovered, 1000e6, "backup output");
         usdtBackup.setBehaviour(BPS, true, false);
         Legs memory again = _four(0, 1000e6, 0, 0);
-        vm.expectRevert(ILPVaultSwapErrors.NoRouteAvailable.selector);
+        vm.expectRevert(ILPVaultSwapBase.NoRouteAvailable.selector);
         _run(again, 100, 1e6);
     }
 
@@ -214,7 +212,7 @@ contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapEvents {
         assertEq(usdtPrimary.calls(), 0, "BackupOnly never calls the primary");
         registry.setUsable(address(usdt), address(usdc), 1, false);
         Legs memory c = _four(0, 300e6, 0, 0);
-        vm.expectRevert(ILPVaultSwapErrors.NoRouteAvailable.selector);
+        vm.expectRevert(ILPVaultSwapBase.NoRouteAvailable.selector);
         harness.swapLegsIn(RouteMode.BackupOnly, _h(c, 100));
     }
 
@@ -229,7 +227,7 @@ contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapEvents {
         assertEq(recovered, 1000e6, "backup at par");
         usdtBackup.setRate(98, 100);
         Legs memory again = _four(0, 1000e6, 0, 0);
-        vm.expectRevert(ILPVaultSwapErrors.NoRouteAvailable.selector);
+        vm.expectRevert(ILPVaultSwapBase.NoRouteAvailable.selector);
         _run(again, 100, 1e6);
     }
 
@@ -266,7 +264,7 @@ contract LPVaultSwapLegsUnitTest is Test, ILPVaultSwapEvents {
         usdtPrimary.setRate(97, 100);
         usdtBackup.setRate(97, 100);
         Legs memory l = _four(0, 1000e6, 0, 0);
-        vm.expectRevert(ILPVaultSwapErrors.NoRouteAvailable.selector);
+        vm.expectRevert(ILPVaultSwapBase.NoRouteAvailable.selector);
         _run(l, 100, 1e6);
         Legs memory relaxed = _four(0, 1000e6, 0, 0);
         (, uint256 recovered,) = _run(relaxed, 400, 1e6);

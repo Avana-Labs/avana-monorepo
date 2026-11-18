@@ -5,10 +5,9 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {DebtReserveDef, MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../src/types/Market.sol";
@@ -36,7 +35,7 @@ contract LPVaultSwapEntryChecksUnitTest is LPVaultSwapUnitBase {
         p.deadline = block.timestamp - 1;
         registry.setFrozen(keeper, true);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DeadlineExpired.selector, p.deadline));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DeadlineExpired.selector, p.deadline));
         lvs.liquidate(p);
         // The last valid second is the deadline itself.
         registry.setFrozen(keeper, false);
@@ -54,7 +53,7 @@ contract LPVaultSwapEntryChecksUnitTest is LPVaultSwapUnitBase {
     function test_TEST_229_frozenCallerRefusedFrozenBorrowerLiquidated() public {
         registry.setFrozen(keeper, true);
         _expectLiquidateRevert(
-            keeper, _params(proxy, 1950e6), abi.encodeWithSelector(ILPVaultSwapErrors.AddressIsFrozen.selector, keeper)
+            keeper, _params(proxy, 1950e6), abi.encodeWithSelector(ILPVaultSwapBase.AddressIsFrozen.selector, keeper)
         );
         registry.setFrozen(bob, true);
         registry.setFrozen(proxy, true);
@@ -67,7 +66,7 @@ contract LPVaultSwapEntryChecksUnitTest is LPVaultSwapUnitBase {
     /// amount check.
     // TEST-055 verifies: REQ-SWAP-005, REQ-SWAP-041
     function test_TEST_055_invalidAmounts() public {
-        bytes memory err = _err(ILPVaultSwapErrors.InvalidAmount.selector);
+        bytes memory err = _err(ILPVaultSwapBase.InvalidAmount.selector);
         LiquidationParams memory p = _params(proxy, 0);
         vm.prank(keeper);
         vm.expectRevert(err);
@@ -117,7 +116,7 @@ contract LPVaultSwapEntryChecksUnitTest is LPVaultSwapUnitBase {
     /// or market ID; Registered and Offboarding markets stay liquidatable.
     // TEST-055 verifies: REQ-SWAP-004
     function test_TEST_055_unknownMarket() public {
-        bytes memory err = _err(ILPVaultSwapErrors.UnknownMarket.selector);
+        bytes memory err = _err(ILPVaultSwapBase.UnknownMarket.selector);
         LiquidationParams memory p = _params(proxy, 1950e6);
         p.marketId = 99;
         _expectLiquidateRevert(keeper, p, err);
@@ -144,8 +143,8 @@ contract LPVaultSwapEntryChecksUnitTest is LPVaultSwapUnitBase {
     // TEST-055 verifies: REQ-SWAP-004
     function test_TEST_055_unknownProxy() public {
         address stranger = adapter.createProxy(carol, aave.cdpSpoke, MARKET_ID, vtReserveId);
-        _expectLiquidateRevert(keeper, _params(stranger, 1950e6), _err(ILPVaultSwapErrors.UnknownProxy.selector));
-        _expectLiquidateRevert(keeper, _params(carol, 1950e6), _err(ILPVaultSwapErrors.UnknownProxy.selector));
+        _expectLiquidateRevert(keeper, _params(stranger, 1950e6), _err(ILPVaultSwapBase.UnknownProxy.selector));
+        _expectLiquidateRevert(keeper, _params(carol, 1950e6), _err(ILPVaultSwapBase.UnknownProxy.selector));
     }
 
     /// @notice `UnknownDebtReserve(r)` for a reserve the MarketRegistry has not enabled for the Spoke and for an enabled
@@ -156,12 +155,12 @@ contract LPVaultSwapEntryChecksUnitTest is LPVaultSwapUnitBase {
         DebtReserveDef memory d = registry.getDebtReserve(aave.cdpSpoke, usdcReserveId);
         registry.setDebtReserve(aave.cdpSpoke, usdcReserveId, d, false);
         _expectLiquidateRevert(
-            keeper, p, abi.encodeWithSelector(ILPVaultSwapErrors.UnknownDebtReserve.selector, usdcReserveId)
+            keeper, p, abi.encodeWithSelector(ILPVaultSwapBase.UnknownDebtReserve.selector, usdcReserveId)
         );
         DebtReserveDef memory empty;
         registry.setDebtReserve(aave.cdpSpoke, usdcReserveId, empty, true);
         _expectLiquidateRevert(
-            keeper, p, abi.encodeWithSelector(ILPVaultSwapErrors.UnknownDebtReserve.selector, usdcReserveId)
+            keeper, p, abi.encodeWithSelector(ILPVaultSwapBase.UnknownDebtReserve.selector, usdcReserveId)
         );
         registry.setDebtReserve(aave.cdpSpoke, usdcReserveId, d, true);
         IAaveV4Spoke.ReserveConfig memory cfg = IAaveV4Spoke(aave.cdpSpoke).getReserveConfig(usdcReserveId);
@@ -178,11 +177,11 @@ contract LPVaultSwapEntryChecksUnitTest is LPVaultSwapUnitBase {
     function test_TEST_055_healthyAccountRefused() public {
         lpOracle.setAnswer(250_000_000);
         assertGe(_hf(proxy), 1e18, "healthy");
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.NotLiquidatable.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.NotLiquidatable.selector));
         IAaveV4Spoke.UserAccountData memory data = IAaveV4Spoke(aave.cdpSpoke).getUserAccountData(proxy);
         data.healthFactor = 1e18;
         vm.mockCall(aave.cdpSpoke, abi.encodeCall(IAaveV4Spoke.getUserAccountData, (proxy)), abi.encode(data));
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.NotLiquidatable.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.NotLiquidatable.selector));
     }
 
     /// @notice `SharesNotEqualAssets` unless the vault-token asset's added shares equal its added assets on the Hub.
@@ -190,15 +189,15 @@ contract LPVaultSwapEntryChecksUnitTest is LPVaultSwapUnitBase {
     function test_TEST_055_sharesNotEqualAssets() public {
         uint256 assets = IAaveV4Hub(aave.hub).getAddedAssets(vtAssetId);
         vm.mockCall(aave.hub, abi.encodeCall(IAaveV4Hub.getAddedAssets, (vtAssetId)), abi.encode(assets + 1));
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.SharesNotEqualAssets.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.SharesNotEqualAssets.selector));
     }
 
     /// @notice `LockHeld(holder)` while the AaveAdapter holds the Lock: nothing is pulled from the caller.
     // TEST-060 verifies: REQ-SWAP-002, REQ-LOCK-005
     function test_TEST_060_lockHeldByAdapter() public {
         _fund(usdc, address(adapter), 1950e6);
-        bytes memory call = abi.encodeCall(ILPVaultSwapLiquidation.liquidate, (_params(proxy, 1950e6)));
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.LockHeld.selector, address(adapter)));
+        bytes memory call = abi.encodeCall(ILPVaultSwap.liquidate, (_params(proxy, 1950e6)));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.LockHeld.selector, address(adapter)));
         adapter.callUnderLock(call);
         assertEq(usdc.balanceOf(address(adapter)), 1950e6, "nothing pulled");
     }
@@ -210,16 +209,16 @@ contract LPVaultSwapEntryChecksUnitTest is LPVaultSwapUnitBase {
         LiquidationParams memory p = _params(attacker, 0);
         p.marketId = 99;
         p.debtReserveId = 77;
-        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapErrors.InvalidAmount.selector));
+        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapBase.InvalidAmount.selector));
         p.debtToCover = 1;
-        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapErrors.UnknownMarket.selector));
+        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapBase.UnknownMarket.selector));
         p.marketId = MARKET_ID;
-        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapErrors.UnknownProxy.selector));
+        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapBase.UnknownProxy.selector));
         p.proxy = proxy;
-        _expectLiquidateRevert(keeper, p, abi.encodeWithSelector(ILPVaultSwapErrors.UnknownDebtReserve.selector, 77));
+        _expectLiquidateRevert(keeper, p, abi.encodeWithSelector(ILPVaultSwapBase.UnknownDebtReserve.selector, 77));
         p.debtReserveId = usdcReserveId;
         lpOracle.setAnswer(250_000_000);
-        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapErrors.NotLiquidatable.selector));
+        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapBase.NotLiquidatable.selector));
     }
 
     /// @notice A refused call changes nothing: no Lock left held, no funds pulled, no debt or collateral moved.
@@ -229,7 +228,7 @@ contract LPVaultSwapEntryChecksUnitTest is LPVaultSwapUnitBase {
         uint256 debt = _debtOf(proxy, usdcReserveId);
         uint256 units = _suppliedUnits(proxy);
         Snap memory s0 = _snap(keeper);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.NotLiquidatable.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.NotLiquidatable.selector));
         assertEq(_debtOf(proxy, usdcReserveId), debt, "debt");
         assertEq(_suppliedUnits(proxy), units, "collateral");
         assertEq(usdc.balanceOf(keeper), s0.callerUsdc + 1950e6, "funding never pulled");

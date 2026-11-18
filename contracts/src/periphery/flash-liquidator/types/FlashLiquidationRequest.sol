@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LiquidationParams} from "../../../liquidation/lp-vault-swap/types/LiquidationParams.sol";
+import {LiquidationParams} from "../../../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 
 /// @notice Arguments of a flash liquidation helper's `flashLiquidate`.
 /// @dev Amounts are in base units of the debt asset. The helper takes no route, recipient, lender or calldata from it.

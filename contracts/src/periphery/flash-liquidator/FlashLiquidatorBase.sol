@@ -3,11 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapLiquidation} from "../../liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
-import {ILPVaultSwapViews} from "../../liquidation/lp-vault-swap/ILPVaultSwapViews.sol";
+import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol";
-import {LiquidationParams} from "../../liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {LiquidationParams, LiquidationResult} from "../../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IPayoutEscrow} from "../../liquidation/payout-escrow/IPayoutEscrow.sol";
 import {ISettlementRoute} from "../../liquidation/settlement-routes/ISettlementRoute.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
@@ -154,7 +152,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         // Not while a call is open, so a token callback cannot divert that call's new credit.
         if (STATE_SLOT.asUint256().tload() != STATE_NONE) revert ContextActive();
         address recipient = _claimRecipient();
-        address escrow = ILPVaultSwapViews(LP_VAULT_SWAP).PAYOUT_ESCROW();
+        address escrow = ILPVaultSwap(LP_VAULT_SWAP).PAYOUT_ESCROW();
         amount = IPayoutEscrow(escrow).claim(token, recipient);
     }
 
@@ -242,7 +240,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         uint256 approved = params.debtToCover + params.maxShortfall;
         asset.forceApprove(LP_VAULT_SWAP, approved);
         uint256 balanceBefore = asset.balanceOf(address(this));
-        LiquidationResult memory result = ILPVaultSwapLiquidation(LP_VAULT_SWAP).liquidate(params);
+        LiquidationResult memory result = ILPVaultSwap(LP_VAULT_SWAP).liquidate(params);
         unused = asset.allowance(address(this), LP_VAULT_SWAP);
         asset.forceApprove(LP_VAULT_SWAP, 0);
         keeperOut = asset.balanceOf(address(this)) + (approved - unused) - balanceBefore;
@@ -315,7 +313,7 @@ abstract contract FlashLiquidatorBase is FlashLiquidatorLenders {
         address[] memory tokens,
         address asset
     ) private view returns (Watch memory w) {
-        w.escrow = ILPVaultSwapViews(LP_VAULT_SWAP).PAYOUT_ESCROW();
+        w.escrow = ILPVaultSwap(LP_VAULT_SWAP).PAYOUT_ESCROW();
         w.tokens = new address[](tokens.length);
         for (uint256 i = 0; i < tokens.length; ++i) {
             _add(w, tokens[i], asset);

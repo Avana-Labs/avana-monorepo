@@ -7,7 +7,7 @@ import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {PoolKeying} from "../../amm/types/PoolKeying.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
-import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
+import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
 import {PositionShape} from "../../types/PositionShape.sol";
 import {ShapeKind} from "../../types/ShapeKind.sol";
 import {VaultTokenBindings} from "../../types/VaultTokenBindings.sol";
@@ -328,7 +328,7 @@ contract VaultTokenFactory is IVaultTokenFactory {
         bytes memory data,
         uint256 size
     ) private view returns (bool ok, bytes memory ret) {
-        (ok, ret) = RouteReads._staticRead(target, READ_GAS, data, size + 32);
+        (ok, ret) = RouteMath._staticRead(target, READ_GAS, data, size + 32);
         ok = ok && ret.length == size;
     }
 

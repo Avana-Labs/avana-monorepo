@@ -7,10 +7,9 @@ import {ICollateralization} from "../../src/custody/collateralization/ICollatera
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {AccessTrace} from "../utils/AccessTrace.sol";
@@ -21,7 +20,7 @@ import {Vm} from "forge-std/Vm.sol";
 /// @notice Re-enters Avana from a pool token's transfer hook during an unwind and records how each attempt ended.
 /// Every attempt is caught, so the outer call goes on; the test reads the recorded errors.
 contract LVSReentryProbe {
-    ILPVaultSwapLiquidation internal immutable LVS;
+    ILPVaultSwap internal immutable LVS;
     ICollateralization internal immutable COLL;
     address internal immutable PROXY;
     address internal immutable VT;
@@ -40,8 +39,7 @@ contract LVSReentryProbe {
         address vt_,
         address usdc_
     ) {
-        (LVS, COLL, PROXY, VT, USDC) =
-        (ILPVaultSwapLiquidation(lvs_), ICollateralization(coll_), proxy_, vt_, IERC20(usdc_));
+        (LVS, COLL, PROXY, VT, USDC) = (ILPVaultSwap(lvs_), ICollateralization(coll_), proxy_, vt_, IERC20(usdc_));
     }
 
     function arm(
@@ -177,7 +175,7 @@ contract LPVaultSwapCustodyUnitTest is LPVaultSwapUnitBase {
         assertEq(usdc.balanceOf(address(coll)) + usdt.balanceOf(address(coll)), 0, "every pending token released");
         assertEq(_gap(), gap, "backing gap unchanged");
         vm.prank(stranger);
-        vm.expectRevert(ILPVaultSwapErrors.NothingPending.selector);
+        vm.expectRevert(ILPVaultSwapBase.NothingPending.selector);
         lvs.settlePending(MARKET_ID, usdcReserveId);
     }
 
@@ -214,7 +212,7 @@ contract LPVaultSwapCustodyUnitTest is LPVaultSwapUnitBase {
         uint256 shares = IAaveV4Hub(aave.hub).getAddedShares(vtAssetId);
         vm.mockCall(aave.hub, abi.encodeCall(IAaveV4Hub.getAddedAssets, (vtAssetId)), abi.encode(shares + 1));
         uint256 before = _suppliedUnits(proxy);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.SharesNotEqualAssets.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.SharesNotEqualAssets.selector));
         assertEq(_suppliedUnits(proxy), before, "nothing seized");
     }
 

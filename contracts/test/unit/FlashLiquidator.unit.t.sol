@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {FlashLiquidator} from "../../src/periphery/flash-liquidator/FlashLiquidator.sol";
 import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
@@ -356,7 +356,7 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
         FlashLiquidationRequest memory request = _exampleRequest();
         request.params.minPayout = EXAMPLE_KEEPER_OUT + 1;
         vm.expectRevert(
-            abi.encodeWithSelector(ILPVaultSwapErrors.PayoutTooLow.selector, EXAMPLE_KEEPER_OUT, EXAMPLE_KEEPER_OUT + 1)
+            abi.encodeWithSelector(ILPVaultSwapBase.PayoutTooLow.selector, EXAMPLE_KEEPER_OUT, EXAMPLE_KEEPER_OUT + 1)
         );
         _liquidate(request);
     }
@@ -418,14 +418,14 @@ contract FlashLiquidatorUnitTest is FlashLiquidatorFixture {
         lvs.setFrozen(z, true);
         LiquidationParams memory p = _params(1950e6);
         vm.prank(z);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.AddressIsFrozen.selector, z));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.AddressIsFrozen.selector, z));
         lvs.liquidate(p);
         vm.prank(z);
         uint256 payout = helper.flashLiquidate(_exampleRequest());
         assertEq(payout, EXAMPLE_PAYOUT);
         assertEq(usdcToken.balanceOf(z), EXAMPLE_PAYOUT);
         lvs.setFrozen(address(helper), true);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.AddressIsFrozen.selector, address(helper)));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.AddressIsFrozen.selector, address(helper)));
         _liquidate(_exampleRequest());
     }
 

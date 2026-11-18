@@ -6,8 +6,8 @@ pragma solidity 0.8.28;
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequencerUptimeFeed.sol";
-import {ILPVaultSwapDeleverage} from "../../liquidation/lp-vault-swap/ILPVaultSwapDeleverage.sol";
-import {DeleverageRequest} from "../../liquidation/lp-vault-swap/types/DeleverageRequest.sol";
+import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {DeleverageRequest} from "../../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
 import {Market} from "../../types/Market.sol";
 import {PauseReason} from "../../types/PauseReason.sol";
@@ -164,7 +164,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _acquire();
         Before memory b = _repayWithCollateralGates(p);
         _openSession(b.proxy, p.marketId, p.position.positionKey, p.units, p.debtReserveId, _minsHash(p));
-        (debtRepaid, debtAssetToWallet) = ILPVaultSwapDeleverage(_LP_VAULT_SWAP)
+        (debtRepaid, debtAssetToWallet) = ILPVaultSwap(_LP_VAULT_SWAP)
             .deleverage(
                 DeleverageRequest({
                     proxy: b.proxy,

@@ -1102,95 +1102,85 @@
     "WithdrawPreview": ["REQ-LENS-049", "REQ-LENS-005"]
   },
   "contracts/src/liquidation/lp-vault-swap/ILPVaultSwap.sol": {
-    "ILPVaultSwap": ["REQ-SWAP-002", "REQ-SWAP-003", "REQ-SWAP-019", "REQ-SWAP-032", "REQ-SWAP-040", "REQ-SWAP-041", "REQ-SWAP-042", "REQ-SWAP-043", "REQ-SWAP-044", "REQ-SWAP-045", "REQ-SWAP-046", "REQ-SWAP-047", "REQ-SWAP-077", "REQ-SWAP-084", "REQ-SWAP-085", "REQ-SWAP-100", "REQ-SWAP-104", "REQ-SWAP-108", "Q-148", "Q-201", "Q-211", "Q-213", "Q-214", "Q-216", "Q-217", "Q-281", "Q-224", "Q-226", "Q-227", "Q-235", "Q-240", "Q-241", "Q-242", "Q-247", "Q-250", "Q-256", "Q-271", "Q-377", "Q-379", "Q-404"]
+    "ILPVaultSwap": ["REQ-SWAP-002", "REQ-SWAP-003", "REQ-SWAP-019", "REQ-SWAP-032", "REQ-SWAP-040", "REQ-SWAP-041", "REQ-SWAP-042", "REQ-SWAP-043", "REQ-SWAP-044", "REQ-SWAP-045", "REQ-SWAP-046", "REQ-SWAP-047", "REQ-SWAP-077", "REQ-SWAP-084", "REQ-SWAP-085", "REQ-SWAP-100", "REQ-SWAP-104", "REQ-SWAP-108", "Q-148", "Q-201", "Q-211", "Q-213", "Q-214", "Q-216", "Q-217", "Q-281", "Q-224", "Q-226", "Q-227", "Q-235", "Q-240", "Q-241", "Q-242", "Q-247", "Q-250", "Q-256", "Q-271", "Q-377", "Q-379", "Q-404"],
+    "ILPVaultSwap.initialize": ["REQ-SWAP-032", "REQ-SWAP-034", "REQ-SWAP-040", "Q-226", "Q-228"],
+    "ILPVaultSwap.addKeeper": ["REQ-SWAP-033", "REQ-SWAP-085", "REQ-SWAP-107", "REQ-SWAP-117", "Q-228", "Q-242", "Q-263", "Q-400", "Q-404"],
+    "ILPVaultSwap.removeKeeper": ["REQ-SWAP-035", "REQ-SWAP-038", "REQ-SWAP-065", "REQ-SWAP-085", "REQ-SWAP-107", "Q-228", "Q-242", "Q-404"],
+    "ILPVaultSwap.deleverage": ["REQ-SWAP-106", "REQ-SWAP-013", "REQ-SWAP-100", "REQ-SWAP-116", "SPEC-LIQ-018", "SPEC-LIQ-020", "Q-255", "Q-250", "Q-379"],
+    "ILPVaultSwap.liquidate": ["REQ-SWAP-001", "REQ-SWAP-002", "REQ-SWAP-003", "REQ-SWAP-004", "REQ-SWAP-005", "REQ-SWAP-006", "REQ-SWAP-007", "REQ-SWAP-008", "REQ-SWAP-009", "REQ-SWAP-010", "REQ-SWAP-011", "REQ-SWAP-012", "REQ-SWAP-014", "REQ-SWAP-015", "REQ-SWAP-016", "REQ-SWAP-017", "REQ-SWAP-018", "REQ-SWAP-020", "REQ-SWAP-021", "REQ-SWAP-022", "REQ-SWAP-023", "REQ-SWAP-024", "REQ-SWAP-025", "REQ-SWAP-026", "REQ-SWAP-027", "REQ-SWAP-028", "REQ-SWAP-029", "REQ-SWAP-030", "REQ-SWAP-055", "REQ-SWAP-057", "REQ-SWAP-061", "REQ-SWAP-062", "REQ-SWAP-064", "REQ-SWAP-067", "REQ-SWAP-072", "REQ-SWAP-073", "REQ-SWAP-074", "REQ-SWAP-075", "REQ-SWAP-076", "REQ-SWAP-077", "REQ-SWAP-078", "REQ-SWAP-079", "REQ-SWAP-082", "REQ-SWAP-083", "REQ-SWAP-085", "REQ-SWAP-086", "REQ-SWAP-087", "REQ-SWAP-088", "REQ-SWAP-089", "REQ-SWAP-090", "REQ-SWAP-091", "REQ-SWAP-092", "REQ-SWAP-093", "REQ-SWAP-094", "REQ-SWAP-098", "REQ-SWAP-100", "REQ-SWAP-101", "REQ-SWAP-103", "REQ-SWAP-104", "REQ-SWAP-105", "REQ-SWAP-108", "REQ-SWAP-121", "SPEC-LIQ-001", "SPEC-LIQ-002", "SPEC-LIQ-003", "SPEC-LIQ-004", "SPEC-LIQ-005", "SPEC-LIQ-006", "SPEC-LIQ-007", "SPEC-LIQ-008", "SPEC-LIQ-009", "SPEC-LIQ-010", "SPEC-LIQ-011", "SPEC-LIQ-012", "SPEC-LIQ-013", "SPEC-LIQ-016", "SPEC-LIQ-017", "SPEC-LIQ-018", "SPEC-LIQ-019", "SPEC-LIQ-022", "LIQ-011", "LIQ-013", "LIQ-061", "LIQ-069", "LIQ-070", "Q-208", "Q-214", "Q-216", "Q-217", "Q-224", "Q-235", "Q-241", "Q-242", "Q-247", "Q-250", "Q-251", "Q-256", "Q-267", "Q-350", "Q-379", "Q-380", "Q-404"],
+    "ILPVaultSwap.settlePending": ["REQ-SWAP-042", "REQ-SWAP-043", "REQ-SWAP-044", "REQ-SWAP-045", "REQ-SWAP-066", "REQ-SWAP-068", "REQ-SWAP-070", "REQ-SWAP-071", "REQ-SWAP-092", "REQ-SWAP-100", "REQ-SWAP-104", "REQ-SWAP-121", "SPEC-LIQ-014", "SPEC-LIQ-018", "REQ-FLR-038", "Q-201", "Q-211", "Q-224", "Q-236", "Q-241", "Q-250", "Q-379"],
+    "ILPVaultSwap.isApprovedKeeper": ["REQ-SWAP-001", "REQ-SWAP-032"],
+    "ILPVaultSwap.approvedKeeperCount": ["REQ-SWAP-034", "REQ-SWAP-039"],
+    "ILPVaultSwap.activeKeeperCount": ["REQ-SWAP-034", "REQ-SWAP-107", "Q-242", "Q-404"],
+    "ILPVaultSwap.MAX_REPAY_TRANSFERS": ["REQ-SWAP-122"],
+    "ILPVaultSwap.getKeepers": ["REQ-SWAP-032"],
+    "ILPVaultSwap.KEEPER_FLOOR": ["REQ-SWAP-034", "Q-400"],
+    "ILPVaultSwap.MAX_KEEPERS": ["REQ-SWAP-032", "REQ-SWAP-033", "Q-400"],
+    "ILPVaultSwap.APPLICATION_ADMIN": ["REQ-SWAP-040"],
+    "ILPVaultSwap.TIMELOCK": ["REQ-SWAP-040", "REQ-ACCESS-153", "Q-259"],
+    "ILPVaultSwap.LOCK": ["REQ-SWAP-002"],
+    "ILPVaultSwap.AAVE_ADAPTER": ["REQ-SWAP-020", "REQ-SWAP-092"],
+    "ILPVaultSwap.COLLATERALIZATION": ["REQ-SWAP-015", "REQ-SWAP-020"],
+    "ILPVaultSwap.MARKET_REGISTRY": ["REQ-SWAP-004", "REQ-SWAP-047"],
+    "ILPVaultSwap.PARAMETER_STORE": ["REQ-SWAP-047"],
+    "ILPVaultSwap.PAYOUT_ESCROW": ["REQ-SWAP-076", "REQ-SWAP-082", "REQ-ESCROW-002", "Q-214"],
+    "ILPVaultSwap.PAYOUT_TRANSFER_GAS": ["REQ-SWAP-076", "REQ-SWAP-083", "Q-214"]
   },
-  "contracts/src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol": {
-    "ILPVaultSwapAdmin.initialize": ["REQ-SWAP-032", "REQ-SWAP-034", "REQ-SWAP-040", "Q-226", "Q-228"],
-    "ILPVaultSwapAdmin.addKeeper": ["REQ-SWAP-033", "REQ-SWAP-085", "REQ-SWAP-107", "REQ-SWAP-117", "Q-228", "Q-242", "Q-263", "Q-400", "Q-404"],
-    "ILPVaultSwapAdmin.removeKeeper": ["REQ-SWAP-035", "REQ-SWAP-038", "REQ-SWAP-065", "REQ-SWAP-085", "REQ-SWAP-107", "Q-228", "Q-242", "Q-404"]
-  },
-  "contracts/src/liquidation/lp-vault-swap/ILPVaultSwapDeleverage.sol": {
-    "ILPVaultSwapDeleverage.deleverage": ["REQ-SWAP-106", "REQ-SWAP-013", "REQ-SWAP-100", "REQ-SWAP-116", "SPEC-LIQ-018", "SPEC-LIQ-020", "Q-255", "Q-250", "Q-379"]
-  },
-  "contracts/src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol": {
-    "ILPVaultSwapErrors.LockHeld": ["REQ-SWAP-002", "REQ-SWAP-066"],
-    "ILPVaultSwapErrors.UnknownProxy": ["REQ-SWAP-004"],
-    "ILPVaultSwapErrors.UnknownMarket": ["REQ-SWAP-004"],
-    "ILPVaultSwapErrors.UnknownDebtReserve": ["REQ-SWAP-087", "REQ-SWAP-095"],
-    "ILPVaultSwapErrors.InvalidAmount": ["REQ-SWAP-005"],
-    "ILPVaultSwapErrors.NotLiquidatable": ["REQ-SWAP-006"],
-    "ILPVaultSwapErrors.SharesNotEqualAssets": ["REQ-SWAP-007", "REQ-SWAP-052"],
-    "ILPVaultSwapErrors.StalePrice": ["REQ-SWAP-008", "REQ-SWAP-050", "REQ-SWAP-071", "Q-208"],
-    "ILPVaultSwapErrors.DebtPriceStale": ["REQ-SWAP-091", "REQ-SWAP-096"],
-    "ILPVaultSwapErrors.GraceHealthFactor": ["REQ-SWAP-009", "REQ-SWAP-051"],
-    "ILPVaultSwapErrors.FundingMismatch": ["REQ-SWAP-011", "REQ-SWAP-070", "REQ-SWAP-098", "REQ-SWAP-112"],
-    "ILPVaultSwapErrors.FlashFeeTooHigh": ["REQ-SWAP-013", "REQ-SWAP-053", "REQ-FLASH-002"],
-    "ILPVaultSwapErrors.FlashSourceIsHub": ["REQ-FLASH-005", "REQ-SWAP-097", "INV-095"],
-    "ILPVaultSwapErrors.FlashRepayShort": ["REQ-SWAP-122", "REQ-SWAP-124"],
-    "ILPVaultSwapErrors.InvalidFlashCallback": ["REQ-SWAP-013", "REQ-SWAP-054"],
-    "ILPVaultSwapErrors.NothingSeized": ["REQ-SWAP-017", "REQ-SWAP-056"],
-    "ILPVaultSwapErrors.NoRouteAvailable": ["REQ-SWAP-022", "REQ-SWAP-059", "REQ-SWAP-071"],
-    "ILPVaultSwapErrors.FlashLiquidityShort": ["REQ-FLASH-002", "REQ-SWAP-099", "REQ-SWAP-106", "Q-379"],
-    "ILPVaultSwapErrors.RecoveryBelowFloor": ["REQ-SWAP-025", "REQ-SWAP-060", "REQ-SWAP-071", "REQ-SWAP-101", "SPEC-LIQ-014", "SPEC-LIQ-019"],
-    "ILPVaultSwapErrors.InsufficientProceeds": ["SPEC-LIQ-010", "SPEC-LIQ-019", "REQ-SWAP-029", "REQ-SWAP-061", "REQ-SWAP-062", "REQ-BUDGET-002", "REQ-BUDGET-014", "Q-261", "Q-397", "Q-404"],
-    "ILPVaultSwapErrors.InvalidFeeRecipient": ["REQ-SWAP-028", "REQ-SWAP-066"],
-    "ILPVaultSwapErrors.InvalidKeeper": ["REQ-SWAP-033", "REQ-SWAP-035"],
-    "ILPVaultSwapErrors.KeeperFloor": ["REQ-SWAP-034", "REQ-SWAP-035", "REQ-SWAP-065"],
-    "ILPVaultSwapErrors.TooManyKeepers": ["REQ-SWAP-033", "Q-400"],
-    "ILPVaultSwapErrors.NothingPending": ["REQ-SWAP-066", "REQ-SWAP-068", "Q-201"],
-    "ILPVaultSwapErrors.DeadlineExpired": ["REQ-SWAP-074", "REQ-SWAP-078", "Q-216"],
-    "ILPVaultSwapErrors.PayoutTooLow": ["REQ-SWAP-075", "REQ-SWAP-079", "Q-216", "Q-345"],
-    "ILPVaultSwapErrors.InsufficientGas": ["REQ-SWAP-076", "REQ-SWAP-083", "REQ-SWAP-104", "REQ-SWAP-114", "Q-214", "Q-241"],
-    "ILPVaultSwapErrors.AddressIsFrozen": ["REQ-SWAP-105", "REQ-SWAP-107", "REQ-SWAP-109", "REQ-SWAP-117", "Q-242"],
-    "ILPVaultSwapErrors.DeleverageTooSmall": ["REQ-SWAP-106", "REQ-SWAP-116", "SPEC-LIQ-020", "Q-255"],
-    "ILPVaultSwapErrors.DeleverageShortfall": ["REQ-SWAP-106", "REQ-SWAP-116", "SPEC-LIQ-020", "Q-255"],
-    "ILPVaultSwapErrors.NotAdapter": ["REQ-SWAP-106", "REQ-SWAP-116", "Q-255"],
-    "ILPVaultSwapErrors.AdminRoleOnlyTimelock": ["REQ-SWAP-040", "REQ-ACCESS-153", "Q-259"],
-    "ILPVaultSwapErrors.ZeroCollateralPrice": ["SPEC-LIQ-004", "SPEC-LIQ-005", "SPEC-LIQ-014", "SPEC-LIQ-018"],
-    "ILPVaultSwapErrors.ZeroDebtPrice": ["SPEC-LIQ-004", "SPEC-LIQ-005", "SPEC-LIQ-014", "SPEC-LIQ-018"],
-    "ILPVaultSwapErrors.InvalidDecimals": ["SPEC-LIQ-004"],
-    "ILPVaultSwapErrors.InvalidFeeShare": ["SPEC-LIQ-009"],
-    "ILPVaultSwapErrors.ZeroAddress": ["REQ-SWAP-040"],
-    "ILPVaultSwapErrors.InvalidLogic": ["REQ-SWAP-040"],
-    "ILPVaultSwapErrors.NotDelegated": ["REQ-SWAP-040", "REQ-SWAP-043"]
-  },
-  "contracts/src/liquidation/lp-vault-swap/ILPVaultSwapEvents.sol": {
-    "ILPVaultSwapEvents.LiquidationSettled": ["REQ-SWAP-026", "REQ-SWAP-072", "REQ-SWAP-075", "Q-076", "Q-213", "Q-216", "Q-379", "Q-404"],
-    "ILPVaultSwapEvents.BorrowerSurplusPaid": ["REQ-SWAP-026", "REQ-SWAP-027", "REQ-SWAP-076", "LIQ-085", "Q-337"],
-    "ILPVaultSwapEvents.DeficitSurplusFunded": ["REQ-SWAP-027", "SPEC-LIQ-022"],
-    "ILPVaultSwapEvents.FlashLoanUsed": ["REQ-SWAP-013", "REQ-SWAP-106", "Q-379"],
-    "ILPVaultSwapEvents.RouteFailed": ["REQ-SWAP-058", "Q-379"],
-    "ILPVaultSwapEvents.ResidueReturned": ["REQ-SWAP-024", "REQ-SWAP-076", "REQ-SWAP-077", "REQ-SWAP-121"],
-    "ILPVaultSwapEvents.KeeperAdded": ["REQ-SWAP-033"],
-    "ILPVaultSwapEvents.KeeperRemoved": ["REQ-SWAP-035"],
-    "ILPVaultSwapEvents.PendingSettlementForwarded": ["REQ-SWAP-066", "REQ-SWAP-070", "SPEC-LIQ-014", "Q-201", "Q-211", "Q-236", "Q-379"],
-    "ILPVaultSwapEvents.Deleveraged": ["REQ-SWAP-106", "SPEC-LIQ-020", "Q-255", "Q-379"]
-  },
-  "contracts/src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol": {
-    "ILPVaultSwapLiquidation.liquidate": ["REQ-SWAP-001", "REQ-SWAP-002", "REQ-SWAP-003", "REQ-SWAP-004", "REQ-SWAP-005", "REQ-SWAP-006", "REQ-SWAP-007", "REQ-SWAP-008", "REQ-SWAP-009", "REQ-SWAP-010", "REQ-SWAP-011", "REQ-SWAP-012", "REQ-SWAP-014", "REQ-SWAP-015", "REQ-SWAP-016", "REQ-SWAP-017", "REQ-SWAP-018", "REQ-SWAP-020", "REQ-SWAP-021", "REQ-SWAP-022", "REQ-SWAP-023", "REQ-SWAP-024", "REQ-SWAP-025", "REQ-SWAP-026", "REQ-SWAP-027", "REQ-SWAP-028", "REQ-SWAP-029", "REQ-SWAP-030", "REQ-SWAP-055", "REQ-SWAP-057", "REQ-SWAP-061", "REQ-SWAP-062", "REQ-SWAP-064", "REQ-SWAP-067", "REQ-SWAP-072", "REQ-SWAP-073", "REQ-SWAP-074", "REQ-SWAP-075", "REQ-SWAP-076", "REQ-SWAP-077", "REQ-SWAP-078", "REQ-SWAP-079", "REQ-SWAP-082", "REQ-SWAP-083", "REQ-SWAP-085", "REQ-SWAP-086", "REQ-SWAP-087", "REQ-SWAP-088", "REQ-SWAP-089", "REQ-SWAP-090", "REQ-SWAP-091", "REQ-SWAP-092", "REQ-SWAP-093", "REQ-SWAP-094", "REQ-SWAP-098", "REQ-SWAP-100", "REQ-SWAP-101", "REQ-SWAP-103", "REQ-SWAP-104", "REQ-SWAP-105", "REQ-SWAP-108", "REQ-SWAP-121", "SPEC-LIQ-001", "SPEC-LIQ-002", "SPEC-LIQ-003", "SPEC-LIQ-004", "SPEC-LIQ-005", "SPEC-LIQ-006", "SPEC-LIQ-007", "SPEC-LIQ-008", "SPEC-LIQ-009", "SPEC-LIQ-010", "SPEC-LIQ-011", "SPEC-LIQ-012", "SPEC-LIQ-013", "SPEC-LIQ-016", "SPEC-LIQ-017", "SPEC-LIQ-018", "SPEC-LIQ-019", "SPEC-LIQ-022", "LIQ-011", "LIQ-013", "LIQ-061", "LIQ-069", "LIQ-070", "Q-208", "Q-214", "Q-216", "Q-217", "Q-224", "Q-235", "Q-241", "Q-242", "Q-247", "Q-250", "Q-251", "Q-256", "Q-267", "Q-350", "Q-379", "Q-380", "Q-404"],
-    "ILPVaultSwapLiquidation.settlePending": ["REQ-SWAP-042", "REQ-SWAP-043", "REQ-SWAP-044", "REQ-SWAP-045", "REQ-SWAP-066", "REQ-SWAP-068", "REQ-SWAP-070", "REQ-SWAP-071", "REQ-SWAP-092", "REQ-SWAP-100", "REQ-SWAP-104", "REQ-SWAP-121", "SPEC-LIQ-014", "SPEC-LIQ-018", "REQ-FLR-038", "Q-201", "Q-211", "Q-224", "Q-236", "Q-241", "Q-250", "Q-379"]
+  "contracts/src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol": {
+    "ILPVaultSwapBase.LockHeld": ["REQ-SWAP-002", "REQ-SWAP-066"],
+    "ILPVaultSwapBase.UnknownProxy": ["REQ-SWAP-004"],
+    "ILPVaultSwapBase.UnknownMarket": ["REQ-SWAP-004"],
+    "ILPVaultSwapBase.UnknownDebtReserve": ["REQ-SWAP-087", "REQ-SWAP-095"],
+    "ILPVaultSwapBase.InvalidAmount": ["REQ-SWAP-005"],
+    "ILPVaultSwapBase.NotLiquidatable": ["REQ-SWAP-006"],
+    "ILPVaultSwapBase.SharesNotEqualAssets": ["REQ-SWAP-007", "REQ-SWAP-052"],
+    "ILPVaultSwapBase.StalePrice": ["REQ-SWAP-008", "REQ-SWAP-050", "REQ-SWAP-071", "Q-208"],
+    "ILPVaultSwapBase.DebtPriceStale": ["REQ-SWAP-091", "REQ-SWAP-096"],
+    "ILPVaultSwapBase.GraceHealthFactor": ["REQ-SWAP-009", "REQ-SWAP-051"],
+    "ILPVaultSwapBase.FundingMismatch": ["REQ-SWAP-011", "REQ-SWAP-070", "REQ-SWAP-098", "REQ-SWAP-112"],
+    "ILPVaultSwapBase.FlashFeeTooHigh": ["REQ-SWAP-013", "REQ-SWAP-053", "REQ-FLASH-002"],
+    "ILPVaultSwapBase.FlashSourceIsHub": ["REQ-FLASH-005", "REQ-SWAP-097", "INV-095"],
+    "ILPVaultSwapBase.FlashRepayShort": ["REQ-SWAP-122", "REQ-SWAP-124"],
+    "ILPVaultSwapBase.InvalidFlashCallback": ["REQ-SWAP-013", "REQ-SWAP-054"],
+    "ILPVaultSwapBase.NothingSeized": ["REQ-SWAP-017", "REQ-SWAP-056"],
+    "ILPVaultSwapBase.NoRouteAvailable": ["REQ-SWAP-022", "REQ-SWAP-059", "REQ-SWAP-071"],
+    "ILPVaultSwapBase.FlashLiquidityShort": ["REQ-FLASH-002", "REQ-SWAP-099", "REQ-SWAP-106", "Q-379"],
+    "ILPVaultSwapBase.RecoveryBelowFloor": ["REQ-SWAP-025", "REQ-SWAP-060", "REQ-SWAP-071", "REQ-SWAP-101", "SPEC-LIQ-014", "SPEC-LIQ-019"],
+    "ILPVaultSwapBase.InsufficientProceeds": ["SPEC-LIQ-010", "SPEC-LIQ-019", "REQ-SWAP-029", "REQ-SWAP-061", "REQ-SWAP-062", "REQ-BUDGET-002", "REQ-BUDGET-014", "Q-261", "Q-397", "Q-404"],
+    "ILPVaultSwapBase.InvalidFeeRecipient": ["REQ-SWAP-028", "REQ-SWAP-066"],
+    "ILPVaultSwapBase.InvalidKeeper": ["REQ-SWAP-033", "REQ-SWAP-035"],
+    "ILPVaultSwapBase.KeeperFloor": ["REQ-SWAP-034", "REQ-SWAP-035", "REQ-SWAP-065"],
+    "ILPVaultSwapBase.TooManyKeepers": ["REQ-SWAP-033", "Q-400"],
+    "ILPVaultSwapBase.NothingPending": ["REQ-SWAP-066", "REQ-SWAP-068", "Q-201"],
+    "ILPVaultSwapBase.DeadlineExpired": ["REQ-SWAP-074", "REQ-SWAP-078", "Q-216"],
+    "ILPVaultSwapBase.PayoutTooLow": ["REQ-SWAP-075", "REQ-SWAP-079", "Q-216", "Q-345"],
+    "ILPVaultSwapBase.InsufficientGas": ["REQ-SWAP-076", "REQ-SWAP-083", "REQ-SWAP-104", "REQ-SWAP-114", "Q-214", "Q-241"],
+    "ILPVaultSwapBase.AddressIsFrozen": ["REQ-SWAP-105", "REQ-SWAP-107", "REQ-SWAP-109", "REQ-SWAP-117", "Q-242"],
+    "ILPVaultSwapBase.DeleverageTooSmall": ["REQ-SWAP-106", "REQ-SWAP-116", "SPEC-LIQ-020", "Q-255"],
+    "ILPVaultSwapBase.DeleverageShortfall": ["REQ-SWAP-106", "REQ-SWAP-116", "SPEC-LIQ-020", "Q-255"],
+    "ILPVaultSwapBase.NotAdapter": ["REQ-SWAP-106", "REQ-SWAP-116", "Q-255"],
+    "ILPVaultSwapBase.AdminRoleOnlyTimelock": ["REQ-SWAP-040", "REQ-ACCESS-153", "Q-259"],
+    "ILPVaultSwapBase.ZeroCollateralPrice": ["SPEC-LIQ-004", "SPEC-LIQ-005", "SPEC-LIQ-014", "SPEC-LIQ-018"],
+    "ILPVaultSwapBase.ZeroDebtPrice": ["SPEC-LIQ-004", "SPEC-LIQ-005", "SPEC-LIQ-014", "SPEC-LIQ-018"],
+    "ILPVaultSwapBase.InvalidDecimals": ["SPEC-LIQ-004"],
+    "ILPVaultSwapBase.InvalidFeeShare": ["SPEC-LIQ-009"],
+    "ILPVaultSwapBase.ZeroAddress": ["REQ-SWAP-040"],
+    "ILPVaultSwapBase.InvalidLogic": ["REQ-SWAP-040"],
+    "ILPVaultSwapBase.NotDelegated": ["REQ-SWAP-040", "REQ-SWAP-043"],
+    "ILPVaultSwapBase.LiquidationSettled": ["REQ-SWAP-026", "REQ-SWAP-072", "REQ-SWAP-075", "Q-076", "Q-213", "Q-216", "Q-379", "Q-404"],
+    "ILPVaultSwapBase.BorrowerSurplusPaid": ["REQ-SWAP-026", "REQ-SWAP-027", "REQ-SWAP-076", "LIQ-085", "Q-337"],
+    "ILPVaultSwapBase.DeficitSurplusFunded": ["REQ-SWAP-027", "SPEC-LIQ-022"],
+    "ILPVaultSwapBase.FlashLoanUsed": ["REQ-SWAP-013", "REQ-SWAP-106", "Q-379"],
+    "ILPVaultSwapBase.RouteFailed": ["REQ-SWAP-058", "Q-379"],
+    "ILPVaultSwapBase.ResidueReturned": ["REQ-SWAP-024", "REQ-SWAP-076", "REQ-SWAP-077", "REQ-SWAP-121"],
+    "ILPVaultSwapBase.KeeperAdded": ["REQ-SWAP-033"],
+    "ILPVaultSwapBase.KeeperRemoved": ["REQ-SWAP-035"],
+    "ILPVaultSwapBase.PendingSettlementForwarded": ["REQ-SWAP-066", "REQ-SWAP-070", "SPEC-LIQ-014", "Q-201", "Q-211", "Q-236", "Q-379"],
+    "ILPVaultSwapBase.Deleveraged": ["REQ-SWAP-106", "SPEC-LIQ-020", "Q-255", "Q-379"]
   },
   "contracts/src/liquidation/lp-vault-swap/ILPVaultSwapLogic.sol": {
     "ILPVaultSwapLogic": ["REQ-SWAP-040"],
     "ILPVaultSwapLogic.logicConfig": ["REQ-SWAP-040"]
-  },
-  "contracts/src/liquidation/lp-vault-swap/ILPVaultSwapViews.sol": {
-    "ILPVaultSwapViews.isApprovedKeeper": ["REQ-SWAP-001", "REQ-SWAP-032"],
-    "ILPVaultSwapViews.approvedKeeperCount": ["REQ-SWAP-034", "REQ-SWAP-039"],
-    "ILPVaultSwapViews.activeKeeperCount": ["REQ-SWAP-034", "REQ-SWAP-107", "Q-242", "Q-404"],
-    "ILPVaultSwapViews.MAX_REPAY_TRANSFERS": ["REQ-SWAP-122"],
-    "ILPVaultSwapViews.getKeepers": ["REQ-SWAP-032"],
-    "ILPVaultSwapViews.KEEPER_FLOOR": ["REQ-SWAP-034", "Q-400"],
-    "ILPVaultSwapViews.MAX_KEEPERS": ["REQ-SWAP-032", "REQ-SWAP-033", "Q-400"],
-    "ILPVaultSwapViews.APPLICATION_ADMIN": ["REQ-SWAP-040"],
-    "ILPVaultSwapViews.TIMELOCK": ["REQ-SWAP-040", "REQ-ACCESS-153", "Q-259"],
-    "ILPVaultSwapViews.LOCK": ["REQ-SWAP-002"],
-    "ILPVaultSwapViews.AAVE_ADAPTER": ["REQ-SWAP-020", "REQ-SWAP-092"],
-    "ILPVaultSwapViews.COLLATERALIZATION": ["REQ-SWAP-015", "REQ-SWAP-020"],
-    "ILPVaultSwapViews.MARKET_REGISTRY": ["REQ-SWAP-004", "REQ-SWAP-047"],
-    "ILPVaultSwapViews.PARAMETER_STORE": ["REQ-SWAP-047"],
-    "ILPVaultSwapViews.PAYOUT_ESCROW": ["REQ-SWAP-076", "REQ-SWAP-082", "REQ-ESCROW-002", "Q-214"],
-    "ILPVaultSwapViews.PAYOUT_TRANSFER_GAS": ["REQ-SWAP-076", "REQ-SWAP-083", "Q-214"]
   },
   "contracts/src/liquidation/lp-vault-swap/LPVaultSwap.sol": {
     "LPVaultSwap": ["REQ-SWAP-001", "REQ-SWAP-032", "REQ-SWAP-033", "REQ-SWAP-034", "REQ-SWAP-035", "REQ-SWAP-036", "REQ-SWAP-037", "REQ-SWAP-038", "REQ-SWAP-040", "REQ-SWAP-043", "REQ-SWAP-048", "REQ-SWAP-065", "REQ-SWAP-069", "REQ-SWAP-072", "REQ-SWAP-080", "REQ-SWAP-085", "REQ-SWAP-107", "REQ-SWAP-113", "REQ-SWAP-117", "REQ-ACCESS-153", "Q-259", "Q-400", "Q-404"],
@@ -1303,22 +1293,12 @@
     "SettlementMath.deleverageRepayment": ["SPEC-LIQ-020", "REQ-SWAP-106", "REQ-SWAP-116"],
     "SettlementMath.deleverageAssetOut": ["SPEC-LIQ-020", "REQ-SWAP-106", "INV-089"]
   },
-  "contracts/src/liquidation/lp-vault-swap/types/DeleverageRequest.sol": {
-    "DeleverageRequest": ["REQ-SWAP-106", "SPEC-LIQ-020", "Q-255", "Q-379"]
-  },
-  "contracts/src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol": {
-    "LPVaultSwapImmutables": ["REQ-SWAP-002", "REQ-SWAP-034", "REQ-SWAP-040", "REQ-SWAP-047"]
-  },
-  "contracts/src/liquidation/lp-vault-swap/types/LPVaultSwapLogics.sol": {
-    "LPVaultSwapLogics": ["REQ-SWAP-040"]
-  },
-  "contracts/src/liquidation/lp-vault-swap/types/LiquidationParams.sol": {
-    "LiquidationParams": ["REQ-SWAP-005", "REQ-SWAP-011", "REQ-SWAP-046", "REQ-SWAP-074", "REQ-SWAP-075", "REQ-SWAP-087", "REQ-SWAP-088", "REQ-SWAP-101", "SPEC-LIQ-019", "Q-216", "Q-232", "Q-235", "Q-251", "Q-379", "Q-404"]
-  },
-  "contracts/src/liquidation/lp-vault-swap/types/LiquidationResult.sol": {
-    "LiquidationResult": ["SPEC-LIQ-005", "SPEC-LIQ-006", "SPEC-LIQ-009", "SPEC-LIQ-010", "SPEC-LIQ-017", "SPEC-LIQ-019", "SPEC-LIQ-022", "Q-379", "Q-397", "Q-404"]
-  },
-  "contracts/src/liquidation/lp-vault-swap/types/RouteMode.sol": {
+  "contracts/src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol": {
+    "DeleverageRequest": ["REQ-SWAP-106", "SPEC-LIQ-020", "Q-255", "Q-379"],
+    "LPVaultSwapImmutables": ["REQ-SWAP-002", "REQ-SWAP-034", "REQ-SWAP-040", "REQ-SWAP-047"],
+    "LPVaultSwapLogics": ["REQ-SWAP-040"],
+    "LiquidationParams": ["REQ-SWAP-005", "REQ-SWAP-011", "REQ-SWAP-046", "REQ-SWAP-074", "REQ-SWAP-075", "REQ-SWAP-087", "REQ-SWAP-088", "REQ-SWAP-101", "SPEC-LIQ-019", "Q-216", "Q-232", "Q-235", "Q-251", "Q-379", "Q-404"],
+    "LiquidationResult": ["SPEC-LIQ-005", "SPEC-LIQ-006", "SPEC-LIQ-009", "SPEC-LIQ-010", "SPEC-LIQ-017", "SPEC-LIQ-019", "SPEC-LIQ-022", "Q-379", "Q-397", "Q-404"],
     "RouteMode": ["REQ-SWAP-010", "REQ-SWAP-022", "REQ-SWAP-030", "REQ-SWAP-046", "REQ-SWAP-072"]
   },
   "contracts/src/liquidation/payout-escrow/IPayoutEscrow.sol": {
@@ -1408,12 +1388,9 @@
     "PegModuleRoute._intermediates": ["REQ-ROUTE-003"]
   },
   "contracts/src/liquidation/settlement-routes/RouteMath.sol": {
-    "RouteMath": ["REQ-ROUTE-012"],
+    "RouteMath": ["REQ-ROUTE-012", "REQ-ROUTE-008", "REQ-ROUTE-045"],
     "RouteMath.litePsmGemAmt": ["REQ-ROUTE-012"],
     "RouteMath.litePsmCost": ["REQ-ROUTE-012"]
-  },
-  "contracts/src/liquidation/settlement-routes/RouteReads.sol": {
-    "RouteReads": ["REQ-ROUTE-008", "REQ-ROUTE-045"]
   },
   "contracts/src/liquidation/settlement-routes/SwapRouteBase.sol": {
     "SwapRouteBase": ["REQ-ROUTE-007", "REQ-ROUTE-008", "REQ-ROUTE-014", "REQ-ROUTE-015", "REQ-ROUTE-016", "REQ-ROUTE-024", "REQ-ROUTE-042", "REQ-ROUTE-045", "INV-034", "INV-054", "Q-124", "Q-148", "Q-250"],
@@ -1438,18 +1415,12 @@
     "WrapperThenDexRoute._runLegs": ["REQ-ROUTE-008", "REQ-ROUTE-009", "REQ-ROUTE-010"],
     "WrapperThenDexRoute._intermediates": ["REQ-ROUTE-003"]
   },
-  "contracts/src/liquidation/settlement-routes/types/DexHop.sol": {
+  "contracts/src/liquidation/settlement-routes/types/SettlementRouteTypes.sol": {
     "HopKind": ["REQ-ROUTE-002", "REQ-ROUTE-009", "REQ-ROUTE-013", "REQ-ROUTE-046"],
-    "DexHop": ["REQ-ROUTE-002", "REQ-ROUTE-043", "REQ-ROUTE-046"]
-  },
-  "contracts/src/liquidation/settlement-routes/types/PegModuleStep.sol": {
+    "DexHop": ["REQ-ROUTE-002", "REQ-ROUTE-043", "REQ-ROUTE-046"],
     "PegModuleKind": ["REQ-ROUTE-002", "REQ-ROUTE-011", "REQ-ROUTE-012"],
-    "PegModuleStep": ["REQ-ROUTE-003", "REQ-ROUTE-011", "REQ-ROUTE-012"]
-  },
-  "contracts/src/liquidation/settlement-routes/types/RouteConfig.sol": {
-    "RouteConfig": ["REQ-ROUTE-005", "REQ-ROUTE-007", "REQ-ROUTE-016", "REQ-ROUTE-045", "Q-379"]
-  },
-  "contracts/src/liquidation/settlement-routes/types/WrapperStep.sol": {
+    "PegModuleStep": ["REQ-ROUTE-003", "REQ-ROUTE-011", "REQ-ROUTE-012"],
+    "RouteConfig": ["REQ-ROUTE-005", "REQ-ROUTE-007", "REQ-ROUTE-016", "REQ-ROUTE-045", "Q-379"],
     "WrapperKind": ["REQ-ROUTE-002", "REQ-ROUTE-010"],
     "WrapperStep": ["REQ-ROUTE-002", "REQ-ROUTE-003"]
   },

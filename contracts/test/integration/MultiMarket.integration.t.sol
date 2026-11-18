@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {AccountView} from "../../src/lens/lens/types/AccountView.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackVolatile} from "../utils/fixtures/RealStackVolatile.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

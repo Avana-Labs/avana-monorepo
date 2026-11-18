@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {DebtPriceView} from "../../src/lens/lens/types/DebtPriceView.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {DriftReason} from "../../src/types/DriftReason.sol";
 import {RealStackVolatile} from "../utils/fixtures/RealStackVolatile.sol";
@@ -189,7 +189,7 @@ contract LensPriceGatesIntegrationTest is RealStackVolatile {
         usdc.mint(keeper, p.params.debtToCover);
         vm.startPrank(keeper);
         usdc.approve(lpVaultSwap, p.params.debtToCover);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveIdV));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DebtPriceStale.selector, usdcReserveIdV));
         lvs.liquidate(p.params);
         usdc.approve(lpVaultSwap, 0);
         vm.stopPrank();

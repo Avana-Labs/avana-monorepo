@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {PriceState} from "../../src/types/PriceState.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 
@@ -80,11 +79,11 @@ contract LPVaultSwapPriceGatesFuzzTest is LPVaultSwapUnitBase {
         _apply(g);
         bytes memory expected;
         if (!_marketOk(g)) {
-            expected = abi.encodeWithSelector(ILPVaultSwapErrors.StalePrice.selector);
+            expected = abi.encodeWithSelector(ILPVaultSwapBase.StalePrice.selector);
         } else if (!_debtOk(g)) {
-            expected = abi.encodeWithSelector(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveId);
+            expected = abi.encodeWithSelector(ILPVaultSwapBase.DebtPriceStale.selector, usdcReserveId);
         } else if (g.grace && !g.graceMet) {
-            expected = abi.encodeWithSelector(ILPVaultSwapErrors.GraceHealthFactor.selector);
+            expected = abi.encodeWithSelector(ILPVaultSwapBase.GraceHealthFactor.selector);
         }
         uint256 debt = _debtOf(proxy, usdcReserveId);
         if (expected.length != 0) {
@@ -110,11 +109,11 @@ contract LPVaultSwapPriceGatesFuzzTest is LPVaultSwapUnitBase {
         uint256 pending = coll.getPending(address(vt)).units;
         _apply(g);
         if (!_marketOk(g)) {
-            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.StalePrice.selector));
+            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.StalePrice.selector));
             lvs.settlePending(MARKET_ID, usdcReserveId);
             assertEq(coll.getPending(address(vt)).units, pending, "nothing settled");
         } else if (!_debtOk(g)) {
-            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveId));
+            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DebtPriceStale.selector, usdcReserveId));
             lvs.settlePending(MARKET_ID, usdcReserveId);
             assertEq(coll.getPending(address(vt)).units, pending, "nothing settled");
         } else {

@@ -9,7 +9,7 @@ import {IAvanaTimelockErrors} from "../../src/governance/timelock/IAvanaTimelock
 import {IAvanaTimelockEvents} from "../../src/governance/timelock/IAvanaTimelockEvents.sol";
 import {IAvanaTimelockGovernance} from "../../src/governance/timelock/IAvanaTimelockGovernance.sol";
 import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
-import {ILPVaultSwapAdmin} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
@@ -58,7 +58,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
     }
 
     function _addKeeper() internal view returns (TimelockFixture.Call memory) {
-        return Call(address(lpVaultSwap), abi.encodeWithSelector(ILPVaultSwapAdmin.addKeeper.selector, keeper));
+        return Call(address(lpVaultSwap), abi.encodeWithSelector(ILPVaultSwap.addKeeper.selector, keeper));
     }
 
     function _restoreRoute() internal view returns (TimelockFixture.Call memory) {
@@ -130,7 +130,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
         assertTrue(timelock.isShortEligible(address(parameterStore), IParameterStore.tightenMaxFlashFeeBps.selector));
         // Same selector on another target is not eligible: pairs are keyed by target.
         assertFalse(timelock.isShortEligible(address(other), IParameterStoreTighten.tightenMarketUsdCap.selector));
-        assertFalse(timelock.isShortEligible(address(lpVaultSwap), ILPVaultSwapAdmin.addKeeper.selector));
+        assertFalse(timelock.isShortEligible(address(lpVaultSwap), ILPVaultSwap.addKeeper.selector));
     }
 
     // TEST-244 verifies: REQ-ACCESS-156, SPEC-GOV-005, Q-263
@@ -139,7 +139,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
             timelock.isDaoOnlyCancelSelector(address(marketRegistry), IMarketRegistryRoutes.restoreRoute.selector)
         );
         assertTrue(timelock.isDaoOnlyCancelSelector(address(marketRegistry), IMarketRegistry.unfreezeAddress.selector));
-        assertTrue(timelock.isDaoOnlyCancelSelector(address(lpVaultSwap), ILPVaultSwapAdmin.addKeeper.selector));
+        assertTrue(timelock.isDaoOnlyCancelSelector(address(lpVaultSwap), ILPVaultSwap.addKeeper.selector));
         assertFalse(
             timelock.isDaoOnlyCancelSelector(address(marketRegistry), IMarketRegistryRoutes.disableRoute.selector)
         );
@@ -166,7 +166,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
             IRiskModule.initialize.selector,
             ILPOracle.initialize.selector,
             IDebtOracle.initialize.selector,
-            ILPVaultSwapAdmin.initialize.selector
+            ILPVaultSwap.initialize.selector
         ];
         SelectorPair[] memory none = new SelectorPair[](0);
         SelectorPair[] memory one = new SelectorPair[](1);
@@ -216,9 +216,7 @@ contract AvanaTimelockUnitTest is TimelockFixture {
         assertEq(_required(_two(_tighten(), _loosen())), NORMAL_DELAY, "one normal call");
         assertEq(_required(_one(_addKeeper().target, _addKeeper().data)), NORMAL_DELAY, "addKeeper is normal");
         assertEq(
-            _required(
-                _one(address(lpVaultSwap), abi.encodeWithSelector(ILPVaultSwapAdmin.removeKeeper.selector, keeper))
-            ),
+            _required(_one(address(lpVaultSwap), abi.encodeWithSelector(ILPVaultSwap.removeKeeper.selector, keeper))),
             SHORT_DELAY,
             "removeKeeper is short"
         );

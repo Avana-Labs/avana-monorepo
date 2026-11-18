@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {SelectorPair} from "../../../src/governance/timelock/types/SelectorPair.sol";
-import {ILPVaultSwapAdmin} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
+import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
@@ -67,7 +67,7 @@ library TimelockShortDelayLists {
         for (uint256 i; i < mr.length; ++i) {
             pairs[ps.length + i] = SelectorPair(marketRegistry, mr[i]);
         }
-        pairs[SHORT_COUNT - 1] = SelectorPair(lpVaultSwap, ILPVaultSwapAdmin.removeKeeper.selector);
+        pairs[SHORT_COUNT - 1] = SelectorPair(lpVaultSwap, ILPVaultSwap.removeKeeper.selector);
     }
 
     function daoOnlyCancel(
@@ -78,6 +78,6 @@ library TimelockShortDelayLists {
         pairs[0] = SelectorPair(marketRegistry, IMarketRegistryRoutes.restoreRoute.selector);
         pairs[1] = SelectorPair(marketRegistry, IMarketRegistry.useStandbyRoute.selector);
         pairs[2] = SelectorPair(marketRegistry, IMarketRegistry.unfreezeAddress.selector);
-        pairs[3] = SelectorPair(lpVaultSwap, ILPVaultSwapAdmin.addKeeper.selector);
+        pairs[3] = SelectorPair(lpVaultSwap, ILPVaultSwap.addKeeper.selector);
     }
 }

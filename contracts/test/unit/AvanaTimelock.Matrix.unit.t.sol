@@ -7,11 +7,9 @@ import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {IAvanaTimelockErrors} from "../../src/governance/timelock/IAvanaTimelockErrors.sol";
 import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {ILPVaultSwapAdmin} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LPVaultSwap} from "../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
-import {LPVaultSwapImmutables} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
-import {LPVaultSwapLogics} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapLogics.sol";
+import {LPVaultSwapImmutables, LPVaultSwapLogics} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
@@ -55,8 +53,8 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         _otherRows(address(other));
         // LPVaultSwap keeper registry: the delay and cancel classes here; the same selectors executed through the
         // timelock on the real LPVaultSwap in test_TEST_063_lpVaultSwapKeeperRegistryThroughTimelock.
-        rows.push(Row(address(lpVaultSwap), ILPVaultSwapAdmin.addKeeper.selector, false, true));
-        rows.push(Row(address(lpVaultSwap), ILPVaultSwapAdmin.removeKeeper.selector, true, false));
+        rows.push(Row(address(lpVaultSwap), ILPVaultSwap.addKeeper.selector, false, true));
+        rows.push(Row(address(lpVaultSwap), ILPVaultSwap.removeKeeper.selector, true, false));
     }
 
     // ─── Matrix rows ───
@@ -509,19 +507,19 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     function test_TEST_063_lpVaultSwapKeeperRegistryThroughTimelock() public {
         ILPVaultSwap lvs = _realLPVaultSwap();
         address second = makeAddr("secondKeeper");
-        assertEq(_required(_one(address(lvs), abi.encodeCall(ILPVaultSwapAdmin.addKeeper, (second)))), NORMAL_DELAY);
-        assertEq(_required(_one(address(lvs), abi.encodeCall(ILPVaultSwapAdmin.removeKeeper, (keeper)))), SHORT_DELAY);
-        _run(_one(address(lvs), abi.encodeCall(ILPVaultSwapAdmin.addKeeper, (second))), bytes32("add"));
+        assertEq(_required(_one(address(lvs), abi.encodeCall(ILPVaultSwap.addKeeper, (second)))), NORMAL_DELAY);
+        assertEq(_required(_one(address(lvs), abi.encodeCall(ILPVaultSwap.removeKeeper, (keeper)))), SHORT_DELAY);
+        _run(_one(address(lvs), abi.encodeCall(ILPVaultSwap.addKeeper, (second))), bytes32("add"));
         assertTrue(lvs.isApprovedKeeper(second), "added after the normal delay");
         assertEq(lvs.activeKeeperCount(), 2);
-        _run(_one(address(lvs), abi.encodeCall(ILPVaultSwapAdmin.removeKeeper, (keeper))), bytes32("remove"));
+        _run(_one(address(lvs), abi.encodeCall(ILPVaultSwap.removeKeeper, (keeper))), bytes32("remove"));
         assertFalse(lvs.isApprovedKeeper(keeper), "removed after the short delay");
-        Call[] memory last = _one(address(lvs), abi.encodeCall(ILPVaultSwapAdmin.removeKeeper, (second)));
+        Call[] memory last = _one(address(lvs), abi.encodeCall(ILPVaultSwap.removeKeeper, (second)));
         _schedule(governanceMultisig, last, SHORT_DELAY, bytes32("floor"));
         vm.warp(block.timestamp + SHORT_DELAY);
         (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(last);
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, 0, 1));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 0, 1));
         timelock.executeBatch(t, v, p, bytes32(0), bytes32("floor"));
         assertTrue(lvs.isApprovedKeeper(second), "the floor keeps the last committed operator");
         vm.prank(governanceMultisig);
@@ -532,7 +530,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
                 AvanaRoles.APPLICATION_ADMIN
             )
         );
-        ILPVaultSwapAdmin(address(lvs)).addKeeper(makeAddr("direct"));
+        ILPVaultSwap(address(lvs)).addKeeper(makeAddr("direct"));
     }
 
     /// @dev Deploys the real LPVaultSwap (three logic contracts, the implementation, the proxy initialised with this

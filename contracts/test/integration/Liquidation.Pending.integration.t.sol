@@ -8,8 +8,8 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {BackingView} from "../../src/lens/lens/types/BackingView.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
 import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
@@ -156,7 +156,7 @@ contract LiquidationPendingIntegrationTest is RealStackFlows {
     // TEST-170 verifies: REQ-SWAP-044, SPEC-LIQ-014
     function test_TEST_170_nothingPendingRefused() public {
         uint256 settleReserve = registry.settlementReserve(mA);
-        vm.expectRevert(ILPVaultSwapErrors.NothingPending.selector);
+        vm.expectRevert(ILPVaultSwapBase.NothingPending.selector);
         lvs.settlePending(mA, settleReserve);
     }
 }

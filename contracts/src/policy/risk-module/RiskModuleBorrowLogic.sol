@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapViews} from "../../liquidation/lp-vault-swap/ILPVaultSwapViews.sol";
+import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {DebtPriceView} from "../../oracle/debt-oracle/types/DebtPriceView.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
@@ -148,7 +148,7 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
         if (!IRiskModuleDriftLogic(_DRIFT).isHubSharesEqualAssets(s.marketId)) {
             revert HubSharesNotEqualAssets(s.marketId);
         }
-        if (ILPVaultSwapViews(_LP_VAULT_SWAP).activeKeeperCount() == 0) revert LiquidationHalted(s.marketId);
+        if (ILPVaultSwap(_LP_VAULT_SWAP).activeKeeperCount() == 0) revert LiquidationHalted(s.marketId);
         (bool halted, uint256 haltedReserve) = _routeHalt(s);
         if (halted) revert DebtLiquidationHalted(haltedReserve);
         _breakers(s, borrow);

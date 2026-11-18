@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {DeleverageRequest} from "../../src/liquidation/lp-vault-swap/types/DeleverageRequest.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {DeleverageRequest} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
@@ -239,13 +239,11 @@ contract AaveAdapterSettlementUnitTest is AaveAdapterFixture {
     function test_TEST_239_lpVaultSwapErrorsPropagate() public {
         RepayWithCollateralParams memory params = _rwc(MARKET_ID, k1, RELEASE, debtReserveId);
         params.minDebtRepaid = 3001e18;
-        _expectRwcRevert(
-            abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageTooSmall.selector, 3000e18, 3001e18), params
-        );
+        _expectRwcRevert(abi.encodeWithSelector(ILPVaultSwapBase.DeleverageTooSmall.selector, 3000e18, 3001e18), params);
         swap.setDeleverage(3000e18, 1e12, 0);
         params.minDebtRepaid = 0;
         _expectRwcRevert(
-            abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageShortfall.selector, 1500e18, 3000e18), params
+            abi.encodeWithSelector(ILPVaultSwapBase.DeleverageShortfall.selector, 1500e18, 3000e18), params
         );
     }
 

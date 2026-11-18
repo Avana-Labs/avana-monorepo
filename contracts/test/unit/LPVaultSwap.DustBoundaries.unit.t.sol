@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapDustBoundariesUnitTest
@@ -80,7 +79,7 @@ contract LPVaultSwapDustBoundariesUnitTest is LPVaultSwapUnitBase {
         // meets its minimum, yet R stays below the floor.
         lpOracle.setAnswer(215_000_000);
         LiquidationParams memory p = _params(proxy, 200e6);
-        _expectLiquidateRevert(keeper, p, abi.encodeWithSelector(ILPVaultSwapErrors.RecoveryBelowFloor.selector));
+        _expectLiquidateRevert(keeper, p, abi.encodeWithSelector(ILPVaultSwapBase.RecoveryBelowFloor.selector));
         p.maxShortfall = 30e6;
         LiquidationResult memory topped = _liquidateAs(keeper, p);
         assertGt(topped.shortfall, 0, "top-up pulled");

@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LVSGasSink, LVSShortChange} from "../utils/mocks/LPVaultSwapMocks.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
@@ -125,7 +124,7 @@ contract LPVaultSwapPayoutEscrowUnitTest is LPVaultSwapUnitBase {
             try lvs.liquidate{gas: used - cut}(_params(proxy, 1950e6)) returns (LiquidationResult memory) {
                 assertEq(escrow.claimable(address(usdc), feeRecipient), 0, "fee escrowed for lack of gas");
             } catch (bytes memory reason) {
-                if (bytes4(reason) == ILPVaultSwapErrors.InsufficientGas.selector) sawInsufficientGas = true;
+                if (bytes4(reason) == ILPVaultSwapBase.InsufficientGas.selector) sawInsufficientGas = true;
             }
             vm.revertToState(snapshot);
         }

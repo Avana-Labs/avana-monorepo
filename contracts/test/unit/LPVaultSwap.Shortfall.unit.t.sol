@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
 import {LVSLyingRoute} from "../utils/mocks/LPVaultSwapMocks.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
@@ -67,15 +66,15 @@ contract LPVaultSwapShortfallUnitTest is LPVaultSwapUnitBase {
     function test_TEST_233_aboveMaxShortfallReverts() public {
         _poorUnwind(900_000); // 877.5 USDC instead of 1,030.2
         LiquidationParams memory p = _params(proxy, 1950e6);
-        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapErrors.RecoveryBelowFloor.selector));
+        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapBase.RecoveryBelowFloor.selector));
         p.maxShortfall = 100e6;
-        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapErrors.RecoveryBelowFloor.selector));
+        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapBase.RecoveryBelowFloor.selector));
         (, uint256 a1) = _released(975e6);
         uint256 r = 877_500_000 + a1 * 9995 / 10_000;
         Expect memory e = _expectUsdc(975e6, 1950e6, 1950e6, r, 10_500, P_VAULT, type(uint256).max);
         uint256 gap = e.minRec - r;
         p.maxShortfall = gap - 1;
-        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapErrors.RecoveryBelowFloor.selector));
+        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapBase.RecoveryBelowFloor.selector));
         p.maxShortfall = gap;
         LiquidationResult memory res = _liquidateAs(keeper, p);
         assertEq(res.shortfall, gap, "exactly the gap");
@@ -175,7 +174,7 @@ contract LPVaultSwapShortfallUnitTest is LPVaultSwapUnitBase {
         LiquidationParams memory p = _params(proxy, 1950e6);
         p.maxShortfall = 1_000_000e6;
         _fund(usdc, keeper, 1950e6 + 1_000_000e6);
-        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapErrors.NoRouteAvailable.selector));
+        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapBase.NoRouteAvailable.selector));
         store.setMaxShortfallBps(1500);
         LiquidationResult memory r = _liquidateAs(keeper, p);
         assertGt(r.shortfall, 0, "the caller tops up the floor gap");
@@ -197,10 +196,10 @@ contract LPVaultSwapShortfallUnitTest is LPVaultSwapUnitBase {
         p.maxShortfall = 200e6;
         uint256 snapshot = vm.snapshotState();
         crash.setReenter(address(usdc), abi.encodeCall(PayoutToken.setBonus, (1)));
-        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapErrors.FundingMismatch.selector));
+        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapBase.FundingMismatch.selector));
         vm.revertToState(snapshot);
         crash.setReenter(address(usdc), abi.encodeCall(PayoutToken.setDrain, (1)));
-        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapErrors.FundingMismatch.selector));
+        _expectLiquidateRevert(keeper, p, _err(ILPVaultSwapBase.FundingMismatch.selector));
         vm.revertToState(snapshot);
         LiquidationResult memory r = _liquidateAs(keeper, p);
         assertGt(r.shortfall, 0, "a top-up is pulled");

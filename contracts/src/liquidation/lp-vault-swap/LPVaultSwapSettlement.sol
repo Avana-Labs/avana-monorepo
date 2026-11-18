@@ -22,7 +22,7 @@ import {IPayoutEscrow} from "../payout-escrow/IPayoutEscrow.sol";
 import {ISettlementRoute} from "../settlement-routes/ISettlementRoute.sol";
 import {LPVaultSwapStorage} from "./LPVaultSwapStorage.sol";
 import {SettlementMath} from "./SettlementMath.sol";
-import {RouteMode} from "./types/RouteMode.sol";
+import {RouteMode} from "./types/LPVaultSwapTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 

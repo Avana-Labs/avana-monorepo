@@ -4,9 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
 import {PauseState} from "../../src/types/PauseState.sol";
@@ -117,7 +116,7 @@ contract LiquidationUniswapV4IntegrationTest is RealStackUniswapV4Journeys {
         usdc.mint(keeper, raised.debtToCover);
         vm.startPrank(keeper);
         usdc.approve(lpVaultSwap, raised.debtToCover);
-        vm.expectPartialRevert(ILPVaultSwapErrors.PayoutTooLow.selector);
+        vm.expectPartialRevert(ILPVaultSwapBase.PayoutTooLow.selector);
         lvs.liquidate(raised);
         vm.stopPrank();
         assertEq(_debtOn(v4SpokeS, proxy, v4UsdcReserveS), debtBefore, "nothing repaid");

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapPendingFuzzTest
@@ -60,7 +60,7 @@ contract LPVaultSwapPendingFuzzTest is LPVaultSwapUnitBase {
         assertEq(usdc.balanceOf(address(lvs)), 0, "no USDC kept");
         assertEq(usdt.balanceOf(address(lvs)), 0, "no USDT kept");
         vm.prank(caller);
-        vm.expectRevert(ILPVaultSwapErrors.NothingPending.selector);
+        vm.expectRevert(ILPVaultSwapBase.NothingPending.selector);
         lvs.settlePending(MARKET_ID, usdcReserveId);
     }
 
@@ -76,7 +76,7 @@ contract LPVaultSwapPendingFuzzTest is LPVaultSwapUnitBase {
         uint256 pending = coll.getPending(address(vt)).units;
         usdtUsdcPool.setRate(rateBps, 10_000);
         usdtUsdcPool2.setRate(rateBps, 10_000);
-        vm.expectRevert(ILPVaultSwapErrors.NoRouteAvailable.selector);
+        vm.expectRevert(ILPVaultSwapBase.NoRouteAvailable.selector);
         lvs.settlePending(MARKET_ID, usdcReserveId);
         assertEq(coll.getPending(address(vt)).units, pending, "pending kept");
         usdtUsdcPool.setRate(9995, 10_000);

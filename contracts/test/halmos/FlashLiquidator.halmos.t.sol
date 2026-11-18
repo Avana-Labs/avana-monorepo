@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {LiquidationParams, RouteMode} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {PayoutEscrow} from "../../src/liquidation/payout-escrow/PayoutEscrow.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
 import {FlashLiquidator} from "../../src/periphery/flash-liquidator/FlashLiquidator.sol";

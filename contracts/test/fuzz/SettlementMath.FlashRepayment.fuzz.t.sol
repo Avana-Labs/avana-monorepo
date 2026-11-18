@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {SettlementMath} from "../../src/liquidation/lp-vault-swap/SettlementMath.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {SettlementMathHarness} from "../utils/harness/SettlementMathHarness.sol";
@@ -216,10 +216,10 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
         if (gap > 0) assertEq(gap + c.callerFunds + c.recovered, owed, "gap larger than needed");
         uint256 floorGap = c.minRec > c.recovered ? c.minRec - c.recovered : 0;
         if (floorGap > c.maxShortfall) {
-            vm.expectRevert(ILPVaultSwapErrors.RecoveryBelowFloor.selector);
+            vm.expectRevert(ILPVaultSwapBase.RecoveryBelowFloor.selector);
             m.shortfallTopUp(c.minRec, c.recovered, gap, c.maxShortfall);
         } else if (gap > c.maxShortfall) {
-            vm.expectRevert(ILPVaultSwapErrors.InsufficientProceeds.selector);
+            vm.expectRevert(ILPVaultSwapBase.InsufficientProceeds.selector);
             m.shortfallTopUp(c.minRec, c.recovered, gap, c.maxShortfall);
         } else {
             uint256 shortfall = m.shortfallTopUp(c.minRec, c.recovered, gap, c.maxShortfall);
@@ -320,7 +320,7 @@ contract SettlementMathFlashRepaymentFuzzTest is AvanaTest {
         uint256 inflow = c.callerFunds + c.recoveredWithTopUp;
         uint256 outflow = c.debt + p.avanaFee + p.borrowerSurplus;
         if (inflow < outflow) {
-            vm.expectRevert(ILPVaultSwapErrors.InsufficientProceeds.selector);
+            vm.expectRevert(ILPVaultSwapBase.InsufficientProceeds.selector);
             m.keeperPayout(c.callerFunds, c.recoveredWithTopUp, c.debt, p.avanaFee, p.borrowerSurplus);
             return;
         }

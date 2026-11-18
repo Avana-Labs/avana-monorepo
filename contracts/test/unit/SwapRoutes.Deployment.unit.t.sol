@@ -7,10 +7,14 @@ import {DexPathRoute} from "../../src/liquidation/settlement-routes/DexPathRoute
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
 import {PegModuleRoute} from "../../src/liquidation/settlement-routes/PegModuleRoute.sol";
 import {WrapperThenDexRoute} from "../../src/liquidation/settlement-routes/WrapperThenDexRoute.sol";
-import {DexHop} from "../../src/liquidation/settlement-routes/types/DexHop.sol";
-import {PegModuleKind, PegModuleStep} from "../../src/liquidation/settlement-routes/types/PegModuleStep.sol";
-import {RouteConfig} from "../../src/liquidation/settlement-routes/types/RouteConfig.sol";
-import {WrapperKind, WrapperStep} from "../../src/liquidation/settlement-routes/types/WrapperStep.sol";
+import {
+    DexHop,
+    PegModuleKind,
+    PegModuleStep,
+    RouteConfig,
+    WrapperKind,
+    WrapperStep
+} from "../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {SwapRouteFixture} from "../utils/fixtures/SwapRouteFixture.sol";
 import {
     MockCLPool,

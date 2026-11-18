@@ -3,10 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {
+    LiquidationParams,
+    LiquidationResult,
+    RouteMode
+} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapCascadeFuzzTest
@@ -50,8 +52,8 @@ contract LPVaultSwapCascadeFuzzTest is LPVaultSwapUnitBase {
         bytes memory reason
     ) internal pure returns (bool) {
         bytes4 s = bytes4(reason);
-        return s == ILPVaultSwapErrors.NotLiquidatable.selector || s == ILPVaultSwapErrors.NoRouteAvailable.selector
-            || s == ILPVaultSwapErrors.RecoveryBelowFloor.selector || s == ILPVaultSwapErrors.NothingSeized.selector
+        return s == ILPVaultSwapBase.NotLiquidatable.selector || s == ILPVaultSwapBase.NoRouteAvailable.selector
+            || s == ILPVaultSwapBase.RecoveryBelowFloor.selector || s == ILPVaultSwapBase.NothingSeized.selector
             || s == bytes4(keccak256("MustNotLeaveDust()"));
     }
 

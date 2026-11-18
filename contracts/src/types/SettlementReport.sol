@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RouteMode} from "../liquidation/lp-vault-swap/types/RouteMode.sol";
+import {RouteMode} from "../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 
 /// @notice Settlement figures of one liquidation, carried by `LiquidationSettled`.
 /// @dev Every amount except `unitsSeized` and `amountsOut` is in base units of `debtAsset`.

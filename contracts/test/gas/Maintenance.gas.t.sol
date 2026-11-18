@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {OperatorFlashLiquidator} from "../../src/periphery/flash-liquidator/OperatorFlashLiquidator.sol";
 import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
@@ -80,7 +80,7 @@ contract MaintenanceGasTest is RealStackFlows, GasCalibration {
         assertEq(coll.getPending(vt).units, kept, "the kept units moved to pending");
         _nextBlock();
         uint256 reserve = registry.settlementReserve(mA);
-        uint256 used = _txGas(anyone, lpVaultSwap, abi.encodeCall(ILPVaultSwapLiquidation.settlePending, (mA, reserve)));
+        uint256 used = _txGas(anyone, lpVaultSwap, abi.encodeCall(ILPVaultSwap.settlePending, (mA, reserve)));
         assertEq(coll.getPending(vt).units, 0, "pending cleared");
         vm.snapshotValue("Maintenance", "settlePending_1market", used);
         emit log_named_uint("settlePending (one market, two-token unwind and one swap)", used);
@@ -143,7 +143,7 @@ contract MaintenanceGasTest is RealStackFlows, GasCalibration {
         LiquidationParams memory p = lens.previewLiquidation(proxy, ghoReserveId, block.timestamp + 120).params;
         uint256 snap = vm.snapshotState();
         _fundCaller(keeper, p);
-        uint256 direct = _txGas(keeper, lpVaultSwap, abi.encodeCall(ILPVaultSwapLiquidation.liquidate, (p)));
+        uint256 direct = _txGas(keeper, lpVaultSwap, abi.encodeCall(ILPVaultSwap.liquidate, (p)));
         uint256 debtAfter = _debtOf(proxy, ghoReserveId);
         vm.revertToStateAndDelete(snap);
         FlashLiquidationRequest memory q;

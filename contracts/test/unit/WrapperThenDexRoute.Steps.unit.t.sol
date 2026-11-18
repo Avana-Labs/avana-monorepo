@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
 import {WrapperThenDexRoute} from "../../src/liquidation/settlement-routes/WrapperThenDexRoute.sol";
-import {DexHop} from "../../src/liquidation/settlement-routes/types/DexHop.sol";
-import {WrapperKind, WrapperStep} from "../../src/liquidation/settlement-routes/types/WrapperStep.sol";
+import {DexHop, WrapperKind, WrapperStep} from "../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {SwapRouteFixture} from "../utils/fixtures/SwapRouteFixture.sol";
 import {RawAnswer} from "../utils/mocks/RouteReadTargets.sol";
 import {MockCLPool, MockCurvePool, MockDaiUsds, MockVault4626} from "../utils/mocks/SwapRouteMocks.sol";

@@ -10,7 +10,7 @@ import {ICollateralizationBase} from "../../src/custody/collateralization/IColla
 import {IUniswapV4PoolManager} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
 import {PositionFeesView} from "../../src/lens/lens/types/PositionFeesView.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PledgePreview} from "../../src/types/PledgePreview.sol";
 import {PositionRef} from "../../src/types/PositionRef.sol";

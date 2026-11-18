@@ -6,12 +6,9 @@ pragma solidity 0.8.28;
 import {IFlashReceiver} from "../../src/flash/IFlashReceiver.sol";
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {ILPVaultSwapDeleverage} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapDeleverage.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LPVaultSwap} from "../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
-import {LPVaultSwapImmutables} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
-import {LPVaultSwapLogics} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapLogics.sol";
+import {LPVaultSwapImmutables, LPVaultSwapLogics} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -53,9 +50,9 @@ contract LPVaultSwapAdminFuzzTest is LPVaultSwapUnitBase {
         LPVaultSwapImmutables memory im = immutables();
         im.keeperFloor = floor;
         if (floor == 0 || floor > 32) {
-            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, floor, 32));
+            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, floor, 32));
         } else if (floor != immutables().keeperFloor) {
-            vm.expectRevert(ILPVaultSwapErrors.InvalidLogic.selector);
+            vm.expectRevert(ILPVaultSwapBase.InvalidLogic.selector);
         }
         this.deployImplementation(im, _logics());
     }
@@ -75,10 +72,10 @@ contract LPVaultSwapAdminFuzzTest is LPVaultSwapUnitBase {
         }
         address implementation = address(implementation);
         if (n > 32) {
-            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.TooManyKeepers.selector, 32));
+            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.TooManyKeepers.selector, 32));
             this.deployProxy(implementation, timelock_, keepers);
         } else if (n < 1) {
-            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, n, 1));
+            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, n, 1));
             this.deployProxy(implementation, timelock_, keepers);
         } else {
             ILPVaultSwap p = ILPVaultSwap(this.deployProxy(implementation, timelock_, keepers));
@@ -97,7 +94,7 @@ contract LPVaultSwapAdminFuzzTest is LPVaultSwapUnitBase {
         (keepers[0], keepers[1], keepers[2]) = (address(0xD001), address(0xD002), address(0xD003));
         if (dup % 2 == 0) keepers[2] = keepers[dup % 2];
         else keepers[1] = address(0);
-        vm.expectRevert(ILPVaultSwapErrors.InvalidKeeper.selector);
+        vm.expectRevert(ILPVaultSwapBase.InvalidKeeper.selector);
         this.deployProxy(address(implementation), timelock, keepers);
     }
 
@@ -114,9 +111,7 @@ contract LPVaultSwapAdminFuzzTest is LPVaultSwapUnitBase {
         bytes32[2] memory admins = [bytes32(0x00), AvanaRoles.APPLICATION_ADMIN];
         for (uint256 i = 0; i < 2; ++i) {
             vm.prank(timelock);
-            vm.expectRevert(
-                abi.encodeWithSelector(ILPVaultSwapErrors.AdminRoleOnlyTimelock.selector, admins[i], account)
-            );
+            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.AdminRoleOnlyTimelock.selector, admins[i], account));
             ac.grantRole(admins[i], account);
         }
         vm.prank(timelock);
@@ -132,16 +127,16 @@ contract LPVaultSwapAdminFuzzTest is LPVaultSwapUnitBase {
         bytes memory tail
     ) public {
         bytes4[4] memory selectors = [
-            ILPVaultSwapLiquidation.liquidate.selector,
-            ILPVaultSwapLiquidation.settlePending.selector,
-            ILPVaultSwapDeleverage.deleverage.selector,
+            ILPVaultSwap.liquidate.selector,
+            ILPVaultSwap.settlePending.selector,
+            ILPVaultSwap.deleverage.selector,
             IFlashReceiver.onFlashLoan.selector
         ];
         address[4] memory targets = [liquidationLogic, pendingLogic, deleverageLogic, deleverageLogic];
         uint256 i = which % 4;
         (bool ok, bytes memory ret) = targets[i].call(abi.encodePacked(selectors[i], tail));
         assertFalse(ok, "a logic contract never runs on its own address");
-        if (ret.length >= 4) assertEq(bytes4(ret), ILPVaultSwapErrors.NotDelegated.selector, "NotDelegated");
+        if (ret.length >= 4) assertEq(bytes4(ret), ILPVaultSwapBase.NotDelegated.selector, "NotDelegated");
     }
 
     /// @notice After any number of keeper additions, an upgrade by the timelock keeps the proxy address, the

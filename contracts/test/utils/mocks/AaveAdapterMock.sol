@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapDeleverage} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapDeleverage.sol";
-import {DeleverageRequest} from "../../../src/liquidation/lp-vault-swap/types/DeleverageRequest.sol";
+import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {DeleverageRequest} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ILock} from "../../../src/lock/lock/ILock.sol";
 import {IAaveAdapterBase} from "../../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {PositionProxy} from "../../../src/proxy/position-proxy/PositionProxy.sol";
@@ -232,7 +232,7 @@ contract AaveAdapterMock is IAaveAdapterBase {
         _session = Session(
             true, proxy, debtReserveId, false, false, position.positionKey, units, keccak256(abi.encode(minAmounts))
         );
-        (debtRepaid, assetOut) = ILPVaultSwapDeleverage(lpVaultSwap)
+        (debtRepaid, assetOut) = ILPVaultSwap(lpVaultSwap)
             .deleverage(
                 DeleverageRequest({
                     proxy: proxy,
@@ -271,7 +271,7 @@ contract AaveAdapterMock is IAaveAdapterBase {
             r.units,
             keccak256(abi.encode(r.minAmounts))
         );
-        (debtRepaid, assetOut) = ILPVaultSwapDeleverage(lpVaultSwap).deleverage(r);
+        (debtRepaid, assetOut) = ILPVaultSwap(lpVaultSwap).deleverage(r);
         delete _session;
         ILock(lock).release();
     }
@@ -280,7 +280,7 @@ contract AaveAdapterMock is IAaveAdapterBase {
     function deleverageUnlocked(
         DeleverageRequest calldata r
     ) external returns (uint256, uint256) {
-        return ILPVaultSwapDeleverage(lpVaultSwap).deleverage(r);
+        return ILPVaultSwap(lpVaultSwap).deleverage(r);
     }
 
     /// @notice Calls any LPVaultSwap function while holding the Lock as the AaveAdapter.

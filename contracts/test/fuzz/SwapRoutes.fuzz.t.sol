@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {DexPathRoute} from "../../src/liquidation/settlement-routes/DexPathRoute.sol";
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
 import {PegModuleRoute} from "../../src/liquidation/settlement-routes/PegModuleRoute.sol";
-import {PegModuleKind, PegModuleStep} from "../../src/liquidation/settlement-routes/types/PegModuleStep.sol";
+import {PegModuleKind, PegModuleStep} from "../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {SwapRouteFixture} from "../utils/fixtures/SwapRouteFixture.sol";
 import {MockCLPool, MockCurvePool, MockLitePsm} from "../utils/mocks/SwapRouteMocks.sol";
 

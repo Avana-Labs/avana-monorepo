@@ -152,7 +152,7 @@ Every contract has one folder, `src/<domain>/<contract>/`, named after the contr
 |---|---|
 | `I<Name>.sol` | The external functions of a small contract, or the aggregate that inherits every piece of a large one. The implementation declares only `I<Name>`. |
 | `I<Name>Events.sol`, `I<Name>Errors.sol` | Every event and every custom error of the contract. |
-| `I<Name><Audience>.sol` | The functions one class of caller uses, for example `ILPVaultSwapKeeper`, `ILPVaultSwapPermissionless`, `ILPVaultSwapAdmin` and `ILPVaultSwapViews`. |
+| `I<Name><Audience>.sol` | The functions one class of caller uses, for example `ILPVaultSwapKeeper`, `ILPVaultSwapPermissionless`, `ILPVaultSwap` and `ILPVaultSwap`. |
 | `types/<Type>.sol` | One struct or enum of the contract per file, declared at file level. |
 | `<Name>Constants.sol` and other libraries | Constant-only libraries of the contract. |
 
@@ -165,7 +165,7 @@ Callers import only the piece they call, for example `IRiskModule` for `checkPle
 | AaveAdapter | `IAaveAdapter`, `IAaveAdapter`, `IAaveAdapter`, `IAaveAdapter`, `IAaveAdapter` |
 | LPVault | `ILPVault`, which implements `IAmmIntegration` and `IAmmIntegrationHooks` (`src/amm/`) |
 | Collateralization | `ICollateralization`, `ICollateralization`, `ICollateralization`, `ICollateralization`, `ICollateralization` |
-| LPVaultSwap | `ILPVaultSwapKeeper`, `ILPVaultSwapPermissionless`, `ILPVaultSwapDeleverage`, `ILPVaultSwapAdmin`, `ILPVaultSwapViews` |
+| LPVaultSwap | `ILPVaultSwapKeeper`, `ILPVaultSwapPermissionless`, `ILPVaultSwap`, `ILPVaultSwap`, `ILPVaultSwap` |
 | RiskModule | `IRiskModule`, `IRiskModule`, `IRiskModule` |
 | PositionProxy | `IPositionProxy` |
 | AvanaTimelock | `IAvanaTimelockGovernance` (self-call setters, expired-operation clean-up), `IAvanaTimelockViews` |

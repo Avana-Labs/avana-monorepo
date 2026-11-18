@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
 import {IOperatorFlashLiquidator} from "../../src/periphery/flash-liquidator/IOperatorFlashLiquidator.sol";
 import {OperatorFlashLiquidator} from "../../src/periphery/flash-liquidator/OperatorFlashLiquidator.sol";
@@ -89,7 +89,7 @@ contract FlashLiquidatorFundingUnitTest is FlashLiquidatorFixture {
         _fund(keeper, address(helper), 100e6);
         FlashLiquidationRequest memory r = _floorRequest(X_FLOOR, 100e6);
         vm.prank(keeper);
-        vm.expectRevert(ILPVaultSwapErrors.RecoveryBelowFloor.selector);
+        vm.expectRevert(ILPVaultSwapBase.RecoveryBelowFloor.selector);
         helper.flashLiquidate(r);
 
         // The 2.11 example recovers above its floor: the 50 USDC budget is untouched and paid back.

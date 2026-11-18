@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
+import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
 import {Market} from "../../types/Market.sol";
@@ -258,7 +258,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         if (r.code.length == 0) return false;
         // Only the probe's success and the length of its first word are read.
         (bool logic, bytes memory ret) =
-            RouteReads._staticRead(r, PROBE_GAS, abi.encodeWithSignature("logicConfig()"), 32);
+            RouteMath._staticRead(r, PROBE_GAS, abi.encodeWithSignature("logicConfig()"), 32);
         return (logic && ret.length == 32) || _word(r, abi.encodeWithSignature("TIMELOCK()")) == uint160(_TIMELOCK)
             || _word(r, abi.encodeWithSignature("MARKET_REGISTRY()")) == uint160(address(_REGISTRY));
     }
@@ -288,7 +288,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         address target,
         bytes memory data
     ) private view returns (uint256 value) {
-        (bool ok, bytes memory ret) = RouteReads._staticRead(target, PROBE_GAS, data, 64);
+        (bool ok, bytes memory ret) = RouteMath._staticRead(target, PROBE_GAS, data, 64);
         if (ok && ret.length == 32) value = abi.decode(ret, (uint256));
     }
 

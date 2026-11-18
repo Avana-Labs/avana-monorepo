@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IFlashSource} from "../../src/flash/IFlashSource.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {ILPVaultSwapEvents} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapEvents.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {PauseReason} from "../../src/types/PauseReason.sol";
@@ -161,7 +160,7 @@ contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
         RepayWithCollateralParams memory p = _rwc(RELEASE, usdcReserveId);
         p.minDebtRepaid = pvRepaid + 1;
         uint256 debtBefore = _debtOf(proxy, usdcReserveId);
-        vm.expectPartialRevert(ILPVaultSwapErrors.DeleverageTooSmall.selector);
+        vm.expectPartialRevert(ILPVaultSwapBase.DeleverageTooSmall.selector);
         vm.prank(bob);
         adapterC.repayWithCollateral(p);
         assertEq(_debtOf(proxy, usdcReserveId), debtBefore, "nothing repaid");
@@ -263,7 +262,7 @@ contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
     function _recoveredLog(
         Vm.Log[] memory logs
     ) internal view returns (uint256 recovered) {
-        bytes32 sig = ILPVaultSwapEvents.Deleveraged.selector;
+        bytes32 sig = ILPVaultSwapBase.Deleveraged.selector;
         for (uint256 i = 0; i < logs.length; ++i) {
             if (logs[i].emitter == lpVaultSwap && logs[i].topics[0] == sig) {
                 (,, recovered,,) = abi.decode(logs[i].data, (uint128, uint256, uint256, uint256, uint256));
@@ -276,7 +275,7 @@ contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
     function _flashLog(
         Vm.Log[] memory logs
     ) internal view returns (uint256 amount, uint256 premium) {
-        bytes32 sig = ILPVaultSwapEvents.FlashLoanUsed.selector;
+        bytes32 sig = ILPVaultSwapBase.FlashLoanUsed.selector;
         for (uint256 i = 0; i < logs.length; ++i) {
             if (logs[i].emitter == lpVaultSwap && logs[i].topics[0] == sig) {
                 (amount, premium) = abi.decode(logs[i].data, (uint256, uint256));

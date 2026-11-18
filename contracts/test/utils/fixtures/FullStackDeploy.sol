@@ -12,9 +12,10 @@ import {SelectorPair} from "../../../src/governance/timelock/types/SelectorPair.
 import {INonfungiblePositionManager} from "../../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
 import {ILens} from "../../../src/lens/lens/ILens.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {ILPVaultSwapAdmin} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
-import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
-import {LPVaultSwapLogics} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapLogics.sol";
+import {
+    LPVaultSwapImmutables,
+    LPVaultSwapLogics
+} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
 import {AaveAdapter} from "../../../src/policy/aave-adapter/AaveAdapter.sol";
 import {AaveAdapterCollateralLogic} from "../../../src/policy/aave-adapter/AaveAdapterCollateralLogic.sol";
@@ -250,7 +251,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         address[] memory keepers = new address[](1);
         keepers[0] = keeper;
         AdapterPlaceholder(lpVaultSwap)
-            .upgradeToAndCall(impl, abi.encodeCall(ILPVaultSwapAdmin.initialize, (address(timelock), keepers)));
+            .upgradeToAndCall(impl, abi.encodeCall(ILPVaultSwap.initialize, (address(timelock), keepers)));
         lvs = ILPVaultSwap(lpVaultSwap);
     }
 

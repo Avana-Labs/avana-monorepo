@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {GovernedTargets} from "../../../src/governance/timelock/types/GovernedTargets.sol";
 import {SelectorPair} from "../../../src/governance/timelock/types/SelectorPair.sol";
-import {ILPVaultSwapAdmin} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
-import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
+import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
@@ -264,9 +264,8 @@ abstract contract AvanaCoreDeploy is DeployBase {
         bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2]);
         d.implementation =
             _deploy("LPVaultSwapImplementation", bytes.concat(_artifact("LPVaultSwap.sol", "LPVaultSwap"), im, logics));
-        d.proxy = _proxy(
-            "LPVaultSwap", d.implementation, abi.encodeCall(ILPVaultSwapAdmin.initialize, (p.timelock, c.keepers))
-        );
+        d.proxy =
+            _proxy("LPVaultSwap", d.implementation, abi.encodeCall(ILPVaultSwap.initialize, (p.timelock, c.keepers)));
     }
 
     /// @notice A fixed ERC-1967 proxy at the CREATE3 address of `name`, initialised in its constructor.

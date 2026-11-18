@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {AccountView} from "../../src/lens/lens/types/AccountView.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
 import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {RealStackUniswapV4Journeys} from "../utils/fixtures/RealStackUniswapV4Journeys.sol";
 
 /// @title LpJourneyUniswapV4IntegrationTest

@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
@@ -116,7 +116,7 @@ contract LiquidationWholeAccountUniswapV4GasTest is RealStackUniswapV4, GasCalib
         usdc.mint(keeper, debt);
         vm.prank(keeper);
         usdc.approve(lpVaultSwap, debt);
-        used = _coldGas(keeper, lpVaultSwap, abi.encodeCall(ILPVaultSwapLiquidation.liquidate, (p)));
+        used = _coldGas(keeper, lpVaultSwap, abi.encodeCall(ILPVaultSwap.liquidate, (p)));
         assertEq(_sharesOn(v4SpokeV, proxy, mkt[mV4].reserveId), 0, "the whole collateral reserve was seized");
         assertEq(coll.getAccountCredited(proxy, mkt[mV4].vaultToken), 0, "every record debited");
         assertEq(IERC20(mkt[mV4].vaultToken).balanceOf(lpVaultSwap), 0, "LPVaultSwap keeps no vault token");

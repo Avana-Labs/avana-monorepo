@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {DexPathRoute} from "../../src/liquidation/settlement-routes/DexPathRoute.sol";
-import {DexHop, HopKind} from "../../src/liquidation/settlement-routes/types/DexHop.sol";
+import {DexHop, HopKind} from "../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {SettlementReport} from "../../src/types/SettlementReport.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 import {MockCLPool} from "../utils/mocks/SwapRouteMocks.sol";

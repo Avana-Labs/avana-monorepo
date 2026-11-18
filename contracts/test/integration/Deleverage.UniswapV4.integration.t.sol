@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {RealStackUniswapV4Journeys} from "../utils/fixtures/RealStackUniswapV4Journeys.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -104,7 +104,7 @@ contract DeleverageUniswapV4IntegrationTest is RealStackUniswapV4Journeys {
         RepayWithCollateralParams memory p = _rwc(key, release);
         p.minDebtRepaid = pvRepaid + 1;
         uint256 debtBefore = _debtOn(v4SpokeS, proxy, v4UsdcReserveS);
-        vm.expectPartialRevert(ILPVaultSwapErrors.DeleverageTooSmall.selector);
+        vm.expectPartialRevert(ILPVaultSwapBase.DeleverageTooSmall.selector);
         vm.prank(bob);
         adapterC.repayWithCollateral(p);
         assertEq(_debtOn(v4SpokeS, proxy, v4UsdcReserveS), debtBefore, "nothing repaid");

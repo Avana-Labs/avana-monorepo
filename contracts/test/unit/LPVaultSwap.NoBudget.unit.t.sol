@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../src/types/Market.sol";
 import {SettlementReport} from "../../src/types/SettlementReport.sol";
@@ -96,7 +95,7 @@ contract LPVaultSwapNoBudgetUnitTest is LPVaultSwapUnitBase {
         lpVault.bind(MARKET_ID, pool, _pair(address(usdc), address(usdt)), rates);
         uint256 debt = _debtOf(proxy, usdcReserveId);
         uint256 units = _suppliedUnits(proxy);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.RecoveryBelowFloor.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.RecoveryBelowFloor.selector));
         assertEq(_debtOf(proxy, usdcReserveId), debt, "debt");
         assertEq(_suppliedUnits(proxy), units, "collateral");
     }
