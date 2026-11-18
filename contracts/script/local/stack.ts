@@ -102,6 +102,8 @@ async function up(): Promise<void> {
   say(`keeper: active on ${CHAINS.filter((c) => existsSync(manifestPath(c))).map((c) => c.label).join(", ")}`);
   await startFaucet();
   say(`faucet: ready on ${faucetUrl()}`);
+  if (!flag("no-hubs")) await applyHubFiles();
+  // After the Hub files: the activity loop reads the chain's listed markets at start, and a fresh chain has none before.
   if (!flag("no-activity")) {
     for (const c of CHAINS.filter((x) => existsSync(manifestPath(x)))) {
       const name = `activity-${c.key}`;
@@ -109,7 +111,6 @@ async function up(): Promise<void> {
     }
     say("activity: running on every deployed chain");
   }
-  if (!flag("no-hubs")) await applyHubFiles();
   // The webapp reads its environment from stack.env: write it first.
   await writeEnvFile();
   if (!flag("no-webapp")) startWebapp();
