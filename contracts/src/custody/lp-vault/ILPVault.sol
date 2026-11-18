@@ -12,7 +12,7 @@ import {ILPVaultBase} from "./ILPVaultBase.sol";
 /// @dev Not upgradeable, no owner. Position-moving functions are Collateralization-only, under the Lock.
 interface ILPVault is ILPVaultBase {
     /// @notice Sends a stray position (held with no depositor of record) to the owner governance established.
-    /// @dev Timelock only, with the Lock free.
+    /// @dev Restricted to the governance role (AccessManager), with the Lock free.
     function returnStray(
         bytes32 positionKey,
         address recipient
@@ -32,9 +32,6 @@ interface ILPVault is ILPVaultBase {
 
     /// @notice Returns the chain's Lock.
     function LOCK() external view returns (address lock);
-
-    /// @notice Returns the chain's AvanaTimelock, the only caller of `returnStray`.
-    function TIMELOCK() external view returns (address timelock);
 
     /// @notice Returns the integration identifier assigned at registration in the VaultTokenFactory.
     function INTEGRATION_ID() external view returns (uint32 integrationId);

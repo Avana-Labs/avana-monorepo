@@ -51,13 +51,13 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         vm.etch(erc1820, address(new RegistryErc1820Mock()).code);
         RegistryErc1820Mock reg = RegistryErc1820Mock(erc1820);
         reg.setImplementer(address(dai), keccak256("ERC777Token"), uint256(uint160(makeAddr("hooks"))));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         _expectListing("erc777");
         registry.listToken(address(dai), d);
         vm.stopPrank();
         reg.setImplementer(address(dai), keccak256("ERC777Token"), 0);
         reg.setImplementer(address(dai), keccak256("ERC20Token"), uint256(uint160(makeAddr("hooks"))));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(address(dai), d);
         assertTrue(registry.getToken(address(dai)).listed, "listed once no ERC777Token implementer");
     }
@@ -68,7 +68,7 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         RegistryTokenMock dai = new RegistryTokenMock(18);
         (address[] memory p, address[] memory a) = _routes("dai");
         TokenDef memory d = _tokenDef(p, a);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         // A route of zero or three feeds.
         d.primaryRoute = new address[](0);
         _expectListing("routeLength");
@@ -109,7 +109,7 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         (toks[0], toks[1]) = (address(usdc), address(usdt));
         vm.expectEmit(address(registry));
         emit IMarketRegistryBase.MarketRegistered(1, V3, pool, bytes32(0), toks, vt, address(o), address(spoke));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         uint256 id = registry.listCollateralMarket(_marketDef(vt, address(o)));
         assertEq(id, 1);
         Market memory m = registry.getMarket(id);
@@ -135,12 +135,12 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         // A token deployed for another shape cannot be paired with this market.
         PositionShape memory other = PositionShape(ShapeKind.TickRange, -100, 100);
         (address vtOther, RegistryLPOracleMock o) = _deployTokenAndOracle(1, other);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.VaultTokenMismatch.selector);
         registry.listCollateralMarket(_marketDef(vtOther, address(o)));
         // A token carrying the wrong market identifier.
         (address vtLate, RegistryLPOracleMock o2) = _deployTokenAndOracle(2, _shape());
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.VaultTokenMismatch.selector);
         registry.listCollateralMarket(_marketDef(vtLate, address(o2)));
     }
@@ -149,13 +149,13 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
     function test_TEST_138_vaultTokenBindingsAndDecimals() public {
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(1, _shape());
         RegistryLPOracleMock otherOracle = new RegistryLPOracleMock(1, address(lpVault));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.VaultTokenMismatch.selector);
         registry.listCollateralMarket(_marketDef(vt, address(otherOracle)));
         address[] memory toks = new address[](2);
         (toks[0], toks[1]) = (address(usdc), address(usdt));
         lpVault.setPoolTokens(toks, 17);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.VaultTokenMismatch.selector);
         registry.listCollateralMarket(_marketDef(vt, address(o)));
     }
@@ -166,15 +166,15 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(1, _shape());
         bytes memory cap = abi.encodeCall(ILPVault.maxRecordsPerAccountMarket, ());
         vm.mockCall(address(lpVault), cap, abi.encode(uint256(0)));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         _expectListing("records");
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         vm.mockCall(address(lpVault), cap, abi.encode(uint256(17)));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         _expectListing("records");
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         vm.mockCall(address(lpVault), cap, abi.encode(uint256(12)));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         vm.clearMockedCalls();
     }
@@ -184,42 +184,42 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(1, _shape());
         MarketDef memory d = _marketDef(vt, address(o));
         d.spoke = alice;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, alice));
         registry.listCollateralMarket(d);
         d = _marketDef(vt, address(o));
         d.hub = alice;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, address(spoke)));
         registry.listCollateralMarket(d);
         d = _marketDef(vt, address(o));
         d.integrationId = 2;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, 2));
         registry.listCollateralMarket(d);
         d = _marketDef(vt, address(o));
         d.poolId = bytes32(uint256(1));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         _expectListing("pool");
         registry.listCollateralMarket(d);
         d = _marketDef(vt, address(o));
         d.shape = PositionShape(ShapeKind.TickRange, 50, 50);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         _expectListing("shape");
         registry.listCollateralMarket(d);
         d.shape = PositionShape(ShapeKind.FullPool, 0, 0);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         _expectListing("shape");
         registry.listCollateralMarket(d);
         d.shape = PositionShape(ShapeKind.None, -50, 50);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         _expectListing("shape");
         registry.listCollateralMarket(d);
         lpVault.setKeying(PoolKeying.Id, ShapeKind.FullPool);
         d = _marketDef(vt, address(o));
         d.shape = PositionShape(ShapeKind.FullPool, 0, 1);
         (d.pool, d.poolId) = (address(0), bytes32(uint256(7)));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         _expectListing("shape");
         registry.listCollateralMarket(d);
     }
@@ -231,11 +231,11 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         MarketDef memory d = _marketDef(vt, address(o));
         // LPOracle seed.
         o.setSeed(18, 1e8);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         _expectListing("lpOracle");
         registry.listCollateralMarket(d);
         o.setSeed(8, 0);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         _expectListing("lpOracle");
         registry.listCollateralMarket(d);
         o.setSeed(8, 1e8);
@@ -243,11 +243,11 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         // 2^96 (unusable) is what fails it, and the largest usable one lists.
         address usdcPrimary = registry.getToken(address(usdc)).primaryRoute[0];
         RegistryFeedMock(usdcPrimary).setAnswer(int256(2 ** 96));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         _expectListing("rawPrice");
         registry.listCollateralMarket(d);
         RegistryFeedMock(usdcPrimary).setAnswer(int256(2 ** 96 - 1));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listCollateralMarket(d);
     }
 
@@ -259,16 +259,16 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         address[] memory toks = new address[](2);
         (toks[0], toks[1]) = (address(usdc), address(dai));
         lpVault.setPoolTokens(toks, 18);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TokenNotListed.selector, address(dai)));
         registry.listCollateralMarket(d);
         // DAI listed as a non-stable token on a Stable-tier Spoke.
         (address[] memory p, address[] memory a) = _routes("dai");
         TokenDef memory td = _tokenDef(p, a);
         td.isUsdStable = false;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(address(dai), td);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         _expectListing("tokenClass");
         registry.listCollateralMarket(d);
         // WETH-like token whose alternate route shares ETH/USD with USDC's alternate.
@@ -276,11 +276,11 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         address[] memory usdcAlt = registry.getToken(address(usdc)).alternateRoute;
         (p, a) = _routes("weth");
         a[1] = usdcAlt[1];
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(address(weth), _tokenDef(p, a));
         (toks[0], toks[1]) = (address(usdc), address(weth));
         lpVault.setPoolTokens(toks, 18);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         _expectListing("commonMode");
         registry.listCollateralMarket(d);
     }
@@ -289,7 +289,7 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
     function test_TEST_138_spokeWideDriftAndSettlementReserve() public {
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(1, _shape());
         rm.setDrift(true);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(
             abi.encodeWithSelector(IMarketRegistryBase.ActivationCheckFailed.selector, 1, bytes32("aaveConfig"))
         );
@@ -302,7 +302,7 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         spoke2.setOracle(address(oracle2));
         spoke2.setImplementation(address(spokeImpl));
         oracle2.setSpoke(address(spoke2));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.recordHub(address(hub2), RiskTier.Stable);
         registry.deployCdpSpoke(
             SpokeDef(false, address(hub2), V3, RiskTier.Stable, address(spokeImpl), address(oracle2))
@@ -326,20 +326,20 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         (address vt2,) = _deployTokenAndOracle(2, wide);
         MarketDef memory d2 = _marketDef(vt2, address(o));
         d2.shape = wide;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.DuplicateMarketKey.selector);
         registry.listCollateralMarket(d2);
         vm.expectEmit(address(registry));
         emit IMarketRegistryBase.MarketRegistrationCancelled(id);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.cancelRegistration(id);
         assertEq(registry.marketOfVaultToken(vt), 0);
         // Relisting with another LPOracle is refused: the token carries its LPOracle.
         RegistryLPOracleMock o3 = new RegistryLPOracleMock(id, address(lpVault));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.VaultTokenMismatch.selector);
         registry.listCollateralMarket(_marketDef(vt, address(o3)));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         uint256 again = registry.listCollateralMarket(_marketDef(vt, address(o)));
         assertEq(again, id);
         assertEq(registry.marketCount(), 1);
@@ -353,15 +353,15 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
     function test_TEST_252_relistingStartsClean() public {
         (uint256 id, address vt, RegistryLPOracleMock o) = _listMarket();
         address r1 = _setRoute(id, address(usdc), address(gho), 0, "dexA");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.cancelRegistration(id);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         // The cancelled registration's route and its approval for `restoreRoute` are gone.
         (address route, bool usable) = registry.getRoute(id, address(usdc), address(gho), 0);
         assertEq(route, address(0));
         assertFalse(usable);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.NotPreviouslyApproved.selector);
         registry.restoreRoute(id, address(usdc), address(gho), 0, r1);
         // The relisting's own routes are recorded as usual.
@@ -370,13 +370,13 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         assertEq(route, r2);
         assertTrue(usable);
         // A second cancel and relisting moves to the next route epoch.
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.cancelRegistration(id);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         (route,) = registry.getRoute(id, address(usdc), address(gho), 0);
         assertEq(route, address(0));
-        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(id), 29))), 2, "routeEpoch");
+        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(id), 26))), 2, "routeEpoch");
     }
 
     /// @dev Slot of `mapping[key]` at field `field` of the ERC-7201 layout.
@@ -397,21 +397,21 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
             keccak256(abi.encode(uint256(keccak256("avana.storage.MarketRegistry")) - 1)) & ~bytes32(uint256(0xff));
         assertEq(ns, LAYOUT);
         (uint256 id,,) = _listMarket();
-        // Field 0 marketCount, 19 flashSource.
+        // Field 0 marketCount, 16 flashSource.
         assertEq(uint256(vm.load(address(registry), LAYOUT)), id);
-        assertEq(address(uint160(uint256(vm.load(address(registry), bytes32(uint256(LAYOUT) + 19))))), address(flash));
-        // Appended: 26 approvedSpokeCodeHash, 27 spokeCodeHash, 28 integrationContracts.
+        assertEq(address(uint160(uint256(vm.load(address(registry), bytes32(uint256(LAYOUT) + 16))))), address(flash));
+        // Appended: 23 approvedSpokeCodeHash, 24 spokeCodeHash, 25 integrationContracts.
         bytes32 h = keccak256("some implementation");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.approveSpokeCodeHash(h);
-        assertEq(uint256(vm.load(address(registry), _mapSlot(h, 26))), 1);
-        bytes32 spokeHash = vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(address(spoke)))), 27));
+        assertEq(uint256(vm.load(address(registry), _mapSlot(h, 23))), 1);
+        bytes32 spokeHash = vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(address(spoke)))), 24));
         assertEq(spokeHash, address(spokeImpl).codehash);
         address[] memory amm = new address[](1);
         amm[0] = address(usdc);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.recordIntegrationContracts(V3, amm);
         uint256 recorded = registry.integrationContracts(V3).length;
-        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(uint256(V3)), 28))), recorded);
+        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(uint256(V3)), 25))), recorded);
     }
 }

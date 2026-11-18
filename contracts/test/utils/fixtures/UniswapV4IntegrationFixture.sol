@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {IUniswapV4Integration} from "../../../src/amm/uniswap-v4/IUniswapV4Integration.sol";
 import {ILPVaultBase} from "../../../src/custody/lp-vault/ILPVaultBase.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
@@ -32,7 +33,6 @@ abstract contract UniswapV4IntegrationFixture is UniswapV4WorldFixture, ILPVault
     address internal lpVaultSwap = makeAddr("lpVaultSwap");
     address internal coll = makeAddr("collateralization");
     address internal registry = makeAddr("marketRegistry");
-    address internal timelock = makeAddr("timelock");
 
     Lock internal lock;
     IUniswapV4Integration internal vault;
@@ -62,10 +62,18 @@ abstract contract UniswapV4IntegrationFixture is UniswapV4WorldFixture, ILPVault
             deployCode(
                 "UniswapV4Integration.sol:UniswapV4Integration",
                 abi.encode(
-                    INTEGRATION, coll, registry, address(lock), timelock, address(posm), address(factory), uint256(12)
+                    INTEGRATION,
+                    coll,
+                    registry,
+                    address(lock),
+                    address(accessManager),
+                    address(posm),
+                    address(factory),
+                    uint256(12)
                 )
             )
         );
+        _bindAccess(AvanaAccess.Kind.LpVault, address(vault));
         vm.label(address(vault), "UniswapV4LPVault");
         _bindV4(M1, stableKey, address(stableRef), M1_LOWER, M1_UPPER, ONE, ONE);
         _bindV4(M2, ethKey, address(ethRef), M2_LOWER, M2_UPPER, ETH_PRICE, ONE);

@@ -44,7 +44,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         spoke.setReserve(DAI_RESERVE, r, c, d);
         aaveOracle.setSource(DAI_RESERVE, address(daiOracle));
         ps.setStressRise(address(dai), 500);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.setAvanaFirstLossReserve(address(hub), address(dai), address(daiCoverage));
         vm.stopPrank();
     }
@@ -64,7 +64,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
     }
 
     function _enableDai() internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.enableDebtReserve(address(spoke), _daiDef());
     }
 
@@ -81,7 +81,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         uint256 id,
         bytes memory err
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         if (err.length != 0) vm.expectRevert(err);
         registry.activateMarket(id);
     }
@@ -124,7 +124,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         (uint256 id, address vt,) = _listMarket();
         _prepareActivation(id, vt);
         _daiRoutes(id);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.disableRoute(id, address(usdt), address(dai), 0);
         _expectActivation(id, _routesErr(id));
     }
@@ -147,7 +147,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         spoke.setReserve(5, r, c, d);
         aaveOracle.setSource(5, address(usdcOracle));
         ps.setStressRise(address(usdc), 500);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.setAvanaFirstLossReserve(address(hub), address(usdc), address(usdcCoverage));
         registry.enableDebtReserve(
             address(spoke),
@@ -191,22 +191,22 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
     function test_TEST_245_newReserveCheckedAgainstLiquidatableMarketsOnly() public {
         (uint256 active,,) = _activeMarket();
         (uint256 off,) = _secondMarketActive(PositionShape(ShapeKind.TickRange, -80, 80), 21);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setMarketOffboarding(off);
         // A Registered and a Cancelled market without any DAI route.
         (uint256 reg,,) = _listShape(PositionShape(ShapeKind.TickRange, -30, 30));
         (uint256 can,,) = _listShape(PositionShape(ShapeKind.TickRange, -40, 40));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.cancelRegistration(can);
         // No DAI routes anywhere: the first liquidatable market fails.
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(
             abi.encodeWithSelector(IMarketRegistryBase.LivenessBound.selector, address(spoke), active, DAI_RESERVE)
         );
         registry.enableDebtReserve(address(spoke), _daiDef());
         // Routes for the Active market only: the Offboarding one fails.
         _daiRoutes(active);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(
             abi.encodeWithSelector(IMarketRegistryBase.LivenessBound.selector, address(spoke), off, DAI_RESERVE)
         );
@@ -214,7 +214,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         // Routes for both: the liveness bound failing on the Offboarding market still blocks.
         _daiRoutes(off);
         ps.setLivenessFails(address(spoke), off, DAI_RESERVE, true);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(
             abi.encodeWithSelector(IMarketRegistryBase.LivenessBound.selector, address(spoke), off, DAI_RESERVE)
         );
@@ -235,7 +235,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         (vt, o) = _deployTokenAndOracle(registry.marketCount() + 1, sh);
         MarketDef memory d = _marketDef(vt, address(o));
         d.shape = sh;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         id = registry.listCollateralMarket(d);
     }
 
@@ -255,7 +255,7 @@ contract MarketRegistryMultiDebtUnitTest is MarketRegistryFixture {
         spoke.setReserve(slot, r, c, d);
         ps.setMarket(id, 9500, 10e8, 1_000_000e8, 100_000e8, 1e8);
         _setRoutesInto(id, address(gho));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.activateMarket(id);
     }
 }

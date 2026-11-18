@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {AaveV3FlashSource} from "../../../src/flash/AaveV3FlashSource.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {LPVaultSwap} from "../../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
@@ -70,8 +71,7 @@ abstract contract AdapterSwapFixture is AaveAdapterFixture {
             parameterStore: address(lvsStore),
             lpVaultSwap: lpVaultSwap,
             lock: address(lock),
-            vaultTokenFactory: address(factory),
-            timelock: timelock
+            vaultTokenFactory: address(factory)
         });
         logics = AaveAdapterLogics({
             user: address(new AaveAdapterUserLogic(im)),
@@ -81,8 +81,9 @@ abstract contract AdapterSwapFixture is AaveAdapterFixture {
         });
         implementation = new AaveAdapter(im, logics);
         AdapterPlaceholder(adapter)
-            .upgradeToAndCall(address(implementation), abi.encodeCall(AaveAdapter.initialize, (timelock)));
+            .upgradeToAndCall(address(implementation), abi.encodeCall(AaveAdapter.initialize, (address(accessManager))));
         adapterC = IAaveAdapter(adapter);
+        _bindAccess(AvanaAccess.Kind.AaveAdapter, adapter);
 
         _addUsdcDebtReserve();
         _addMarketB();
@@ -110,8 +111,9 @@ abstract contract AdapterSwapFixture is AaveAdapterFixture {
         address[] memory keepers = new address[](1);
         keepers[0] = keeper;
         AdapterPlaceholder(lpVaultSwap)
-            .upgradeToAndCall(address(impl), abi.encodeCall(LPVaultSwap.initialize, (timelock, keepers)));
+            .upgradeToAndCall(address(impl), abi.encodeCall(LPVaultSwap.initialize, (address(accessManager), keepers)));
         lvs = ILPVaultSwap(lpVaultSwap);
+        _bindAccess(AvanaAccess.Kind.LPVaultSwap, lpVaultSwap);
     }
 
     /// @dev LPVaultSwap's reads for market 4 and the GHO reserve: its oracle, slippage, floor allowance, flash source,

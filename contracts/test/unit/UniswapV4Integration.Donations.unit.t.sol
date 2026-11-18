@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {ClTestToken} from "../utils/fixtures/ClPoolFixture.sol";
 import {UniswapV4IntegrationFixture} from "../utils/fixtures/UniswapV4IntegrationFixture.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
@@ -72,9 +73,9 @@ contract UniswapV4IntegrationDonationsUnitTest is UniswapV4IntegrationFixture {
         vm.prank(alice);
         posm.transferFrom(alice, address(vault), uint256(stray)); // pushed without a hook: still stray
         vm.prank(alice);
-        vm.expectRevert(NotTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, alice));
         vault.returnStray(stray, alice);
-        vm.startPrank(timelock);
+        vm.startPrank(governor);
         vm.expectRevert(InvalidRecipient.selector);
         vault.returnStray(stray, address(0));
         vm.expectRevert(InvalidRecipient.selector);
@@ -83,17 +84,17 @@ contract UniswapV4IntegrationDonationsUnitTest is UniswapV4IntegrationFixture {
         vault.returnStray(pledged, alice);
         vm.stopPrank();
         bytes32 elsewhere = _mint1(carol);
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(NotStray.selector);
         vault.returnStray(elsewhere, alice); // not held by the LPVault
         _lock();
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(Locked.selector);
         vault.returnStray(stray, alice);
         _unlock();
         vm.expectEmit(address(vault));
         emit StrayReturned(stray, carol);
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.returnStray(stray, carol);
         assertEq(posm.ownerOf(uint256(stray)), carol);
         assertEq(vault.unitsOf(pledged), uint128(1e15 / 10 ** vault.unitExponent(M1)), "the pledged position untouched");
@@ -108,12 +109,12 @@ contract UniswapV4IntegrationDonationsUnitTest is UniswapV4IntegrationFixture {
         _asColl(abi.encodeCall(vault.returnPosition, (key)));
         vm.prank(alice);
         posm.transferFrom(alice, address(vault), uint256(key));
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.returnStray(key, alice);
         vm.prank(alice);
         posm.approve(address(vault), uint256(key));
         _receive(M1, alice, key);
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(NotStray.selector);
         vault.returnStray(key, bob);
     }

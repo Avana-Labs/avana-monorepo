@@ -200,7 +200,7 @@ contract DeployReleaseTest is Test {
         address who,
         string memory r,
         string memory commit,
-        address timelock
+        address accessManager
     ) internal returns (string memory) {
         return _write(
             string.concat(
@@ -212,10 +212,10 @@ contract DeployReleaseTest is Test {
                 vm.toString(address(f)),
                 '","deployer":"',
                 vm.toString(who),
-                '","salts":[{"name":"AvanaTimelock","salt":"',
-                vm.toString(h.salt("AvanaTimelock")),
+                '","salts":[{"name":"AccessManager","salt":"',
+                vm.toString(h.salt("AccessManager")),
                 '","address":"',
-                vm.toString(timelock),
+                vm.toString(accessManager),
                 '"}]}'
             )
         );
@@ -224,14 +224,14 @@ contract DeployReleaseTest is Test {
     /// A record built without a deployer: salts only, no addresses.
     function _recordNoDeployer(
         AvanaCreate3Factory f,
-        bytes32 timelockSalt
+        bytes32 managerSalt
     ) internal returns (string memory) {
         return _write(
             string.concat(
                 '{"release":"v0.2.0","commit":"807e2c8000000000000000000000000000000001","create3Factory":"',
                 vm.toString(address(f)),
-                '","deployer":null,"salts":[{"name":"AvanaTimelock","salt":"',
-                vm.toString(timelockSalt),
+                '","deployer":null,"salts":[{"name":"AccessManager","salt":"',
+                vm.toString(managerSalt),
                 '","address":null}]}'
             )
         );
@@ -249,22 +249,22 @@ contract DeployReleaseTest is Test {
         AvanaCreate3Factory f = new AvanaCreate3Factory();
         address who = makeAddr("deployer");
         h.setUpRecord(f, who, "v0.2.0");
-        address timelock = h.predict("AvanaTimelock");
+        address accessManager = h.predict("AccessManager");
         string memory commit = "807e2c8000000000000000000000000000000001";
 
-        h.checkReleaseRecord(_record(f, who, "v0.2.0", commit, timelock), HEAD);
+        h.checkReleaseRecord(_record(f, who, "v0.2.0", commit, accessManager), HEAD);
         // On anvil (no HEAD read) the commit is not compared.
-        h.checkReleaseRecord(_record(f, who, "v0.2.0", commit, timelock), "");
+        h.checkReleaseRecord(_record(f, who, "v0.2.0", commit, accessManager), "");
 
-        string memory p = _record(f, who, "v0.3.0", commit, timelock);
+        string memory p = _record(f, who, "v0.3.0", commit, accessManager);
         vm.expectRevert(bytes("release record is for v0.3.0, not v0.2.0"));
         h.checkReleaseRecord(p, HEAD);
 
-        p = _record(f, who, "v0.2.0", commit, timelock);
+        p = _record(f, who, "v0.2.0", commit, accessManager);
         vm.expectRevert(bytes(string.concat("release record commit 0x", commit, " is not HEAD ", vm.toString(OTHER))));
         h.checkReleaseRecord(p, OTHER);
 
-        p = _record(f, makeAddr("someone else"), "v0.2.0", commit, timelock);
+        p = _record(f, makeAddr("someone else"), "v0.2.0", commit, accessManager);
         vm.expectRevert(
             bytes(
                 string.concat(
@@ -281,17 +281,17 @@ contract DeployReleaseTest is Test {
         vm.expectRevert(
             bytes(
                 string.concat(
-                    "release record puts AvanaTimelock at ",
+                    "release record puts AccessManager at ",
                     vm.toString(address(0xBEEF)),
                     "; this run predicts ",
-                    vm.toString(timelock)
+                    vm.toString(accessManager)
                 )
             )
         );
         h.checkReleaseRecord(p, HEAD);
 
         AvanaCreate3Factory other = new AvanaCreate3Factory();
-        p = _record(other, who, "v0.2.0", commit, timelock);
+        p = _record(other, who, "v0.2.0", commit, accessManager);
         vm.expectRevert(
             bytes(
                 string.concat(
@@ -304,15 +304,15 @@ contract DeployReleaseTest is Test {
         );
         h.checkReleaseRecord(p, HEAD);
 
-        h.checkReleaseRecord(_recordNoDeployer(f, h.salt("AvanaTimelock")), HEAD);
+        h.checkReleaseRecord(_recordNoDeployer(f, h.salt("AccessManager")), HEAD);
         p = _recordNoDeployer(f, bytes32(uint256(1)));
         vm.expectRevert(
             bytes(
                 string.concat(
-                    "release record salt of AvanaTimelock is ",
+                    "release record salt of AccessManager is ",
                     vm.toString(bytes32(uint256(1))),
                     "; this run's is ",
-                    vm.toString(h.salt("AvanaTimelock"))
+                    vm.toString(h.salt("AccessManager"))
                 )
             )
         );

@@ -151,7 +151,7 @@ contract FullStackPolicyIntegrationTest is FullStackMarkets {
         assertEq(d, SHORT_DELAY, "disableRoute: short delay");
         (, usable) = registry.getRoute(mA, address(usdt), address(gho), 0);
         assertFalse(usable, "disabled");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.NotPreviouslyApproved.selector);
         registry.restoreRoute(mA, address(usdt), address(gho), 0, fresh);
         d = _govern(
@@ -163,12 +163,12 @@ contract FullStackPolicyIntegrationTest is FullStackMarkets {
         assertTrue(usable, "restored");
         address throughPool =
             address(new RegistryRouteMock(address(usdt), address(gho), address(swap), _list(address(poolA))));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert();
         registry.setRoute(mA, address(usdt), address(gho), 1, throughPool);
         address intoItself =
             address(new RegistryRouteMock(address(usdc), address(usdc), address(swap), _list(makeAddr("dex 8"))));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert();
         registry.setRoute(mA, address(usdc), address(usdc), 0, intoItself);
         d = _govern(

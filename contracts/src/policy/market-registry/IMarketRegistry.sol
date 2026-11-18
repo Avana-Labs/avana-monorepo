@@ -7,16 +7,16 @@ import {DriftReason, Market, MarketDef} from "../../types/MarketTypes.sol";
 import {IMarketRegistryBase} from "./IMarketRegistryBase.sol";
 import {IMarketRegistryRoutes} from "./IMarketRegistryRoutes.sol";
 import {DebtReserveDef, RiskTier, SpokeDef, TokenDef, WindDownState} from "./types/MarketRegistryTypes.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @title IMarketRegistry
 /// @notice The chain's registry of Hubs, integrations, CDP Spokes, debt reserves, markets and routes.
-/// @dev UUPS proxy; only the timelock can upgrade it. Holds no funds and stores no risk parameter.
-interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistryRoutes {
+/// @dev UUPS proxy; only the AccessManager's governance role can upgrade it. Holds no funds and stores no risk parameter.
+interface IMarketRegistry is IAccessManaged, IMarketRegistryBase, IMarketRegistryRoutes {
     /// @notice Initializes the proxy storage.
-    /// @dev Runs once, with the proxy deployment. Reverts `AdminRoleOnlyTimelock` unless `timelock == TIMELOCK`.
+    /// @dev Runs once, with the proxy deployment; sets the AccessManager that authorizes every governed call.
     function initialize(
-        address timelock
+        address authority
     ) external;
 
     /// @notice Records a standard Aave V4 CDP Spoke, or re-approves a recorded one after an Aave upgrade.
@@ -80,8 +80,6 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
 
     event HubRecorded(address indexed hub, RiskTier tier);
 
-    event IntegrationRegistered(uint32 indexed integrationId, address lpVault, address pricing);
-
     event AvanaFirstLossReserveSet(address indexed hub, address indexed asset, address firstLossReserve);
 
     /// @param previous The previous source (address(0) for the first).
@@ -90,7 +88,7 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
     /// @notice A Hub argument is zero, unrecorded, already recorded, of the wrong tier, or the borrowing Spoke's home.
     error InvalidHub(address hub);
 
-    /// @notice An integration identifier is 0 or already used, or the LPVault reports another identifier.
+    /// @notice An integration identifier is not registered in the VaultTokenFactory, or a recorded contract is invalid.
     error InvalidIntegration(uint32 integrationId);
 
     /// @notice The First-Loss Reserve does not report the Hub and asset, or the pair already has one.
@@ -101,14 +99,6 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
     function recordHub(
         address hub,
         RiskTier tier
-    ) external;
-
-    /// @notice Registers an AMM integration: the AMM protocol's LPVault on this chain and its pricing implementation.
-    /// @dev Identifiers are never reused.
-    function registerIntegration(
-        uint32 integrationId,
-        address lpVault,
-        address pricing
     ) external;
 
     /// @notice Records the First-Loss Reserve of a (Hub, debt asset) pair.
@@ -137,17 +127,6 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
     function hubOf(
         address spoke
     ) external view returns (address hub);
-
-    /// @notice The LPVault and pricing implementation of an AMM integration.
-    /// @return lpVault The AMM protocol's LPVault, or `address(0)`.
-    function integrationOf(
-        uint32 integrationId
-    ) external view returns (address lpVault, address pricing);
-
-    /// @notice Integration identifier of an LPVault (0 if unknown).
-    function integrationIdOf(
-        address lpVault
-    ) external view returns (uint32 integrationId);
 
     /// @notice First-Loss Reserve of a (Hub, debt asset) pair (`address(0)` if none).
     function firstLossReserveOf(
@@ -227,7 +206,7 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
     ) external view returns (uint256 debtReserveId);
 
     /// @notice Changes a market's settlement debt reserve.
-    /// @dev `APPLICATION_ADMIN` only. The reserve must be enabled on the market's Spoke.
+    /// @dev Governance role only. The reserve must be enabled on the market's Spoke.
     function setSettlementReserve(
         uint256 marketId,
         uint256 debtReserveId
@@ -245,7 +224,7 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
     error InvalidSpokeCodeHash(bytes32 codeHash);
 
     /// @notice Approves the code hash of a CDP Spoke implementation.
-    /// @dev `APPLICATION_ADMIN` only. Approvals are never withdrawn.
+    /// @dev Governance role only. Approvals are never withdrawn.
     function approveSpokeCodeHash(
         bytes32 codeHash
     ) external;
@@ -263,14 +242,14 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
     ) external view returns (address implementation, bytes32 codeHash, bool current);
 
     /// @notice Records AMM protocol contracts an integration's LPVault pins (position managers, factories).
-    /// @dev `APPLICATION_ADMIN` only. After finalization, disables any active route that depends on an added address.
+    /// @dev Governance role only. After finalization, disables any active route that depends on an added address.
     function recordIntegrationContracts(
         uint32 integrationId,
         address[] calldata contracts
     ) external;
 
     /// @notice Finalizes an integration's AMM contract record; no route of its markets is accepted before.
-    /// @dev `APPLICATION_ADMIN` only. Reverts `InvalidIntegration` if the record is empty, final or its key is stale.
+    /// @dev Governance role only. Reverts `InvalidIntegration` if the record is empty, final or its key is stale.
     function finalizeIntegrationContracts(
         uint32 integrationId
     ) external;
@@ -350,7 +329,7 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
     /// @notice LPVaultSwap fixed proxy address (implementation immutable).
     function LP_VAULT_SWAP() external view returns (address lpVaultSwap);
 
-    /// @notice Timelocked vault-token factory (implementation immutable).
+    /// @notice Vault-token factory, the chain's one integration registry (implementation immutable).
     function VAULT_TOKEN_FACTORY() external view returns (address factory);
 
     /// @notice RiskModule fixed proxy address (implementation immutable).
@@ -359,13 +338,10 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
     /// @notice Aave Adapter fixed proxy address (implementation immutable).
     function AAVE_ADAPTER() external view returns (address adapter);
 
-    /// @notice The Avana timelock, the only holder of `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN`.
-    function TIMELOCK() external view returns (address timelock);
-
     /// @notice The Aave governance executor (implementation immutable).
     function AAVE_GOVERNANCE_EXECUTOR() external view returns (address executor);
 
-    /// @notice The chain's IFlashSource implementation, replaceable through the timelock.
+    /// @notice The chain's IFlashSource implementation, replaceable through the governance role.
     function flashSource() external view returns (address source);
 
     /// @notice Lock (implementation immutable).

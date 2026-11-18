@@ -51,7 +51,7 @@ interface IClCustodySource {
 /// depositors pledge, partly remove, collect fees and withdraw through Collateralization under the AaveAdapter's Lock;
 /// LPVaultSwap seizes and Collateralization reconciles units; a third party adds liquidity to custodied positions; an
 /// attacker pushes or sends NFTs to the LPVault, names itself in fee collections and calls every custody function
-/// directly under either Lock member's session; the timelock returns strays to their senders; the pool's spot price and
+/// directly under either Lock member's session; the governor returns strays to their senders; the pool's spot price and
 /// outside liquidity move. Ghosts track each position's depositor, market and credited units as Collateralization
 /// would, each stray's sender, what LPVaultSwap was reported and received, and every call that should have failed.
 contract ClLPVaultCustodyHandler is CommonBase, StdUtils {
@@ -64,7 +64,7 @@ contract ClLPVaultCustodyHandler is CommonBase, StdUtils {
     address public immutable ADAPTER;
     address public immutable COLL;
     address public immutable SWAP;
-    address public immutable TIMELOCK;
+    address public immutable GOVERNOR;
     address public immutable ATTACKER;
     address[2] internal depositors;
 
@@ -93,7 +93,7 @@ contract ClLPVaultCustodyHandler is CommonBase, StdUtils {
         address[2] memory depositors_
     ) {
         (VAULT, SOURCE, LOCK) = (vault, source, lock);
-        (ADAPTER, COLL, SWAP, TIMELOCK, ATTACKER) = (roles[0], roles[1], roles[2], roles[3], roles[4]);
+        (ADAPTER, COLL, SWAP, GOVERNOR, ATTACKER) = (roles[0], roles[1], roles[2], roles[3], roles[4]);
         depositors = depositors_;
     }
 
@@ -232,7 +232,7 @@ contract ClLPVaultCustodyHandler is CommonBase, StdUtils {
         if (tryCustodied) {
             bytes32 key = _openKey(seed);
             if (key == bytes32(0)) return;
-            vm.prank(TIMELOCK);
+            vm.prank(GOVERNOR);
             (bool ok,) = address(VAULT).call(abi.encodeCall(VAULT.returnStray, (key, ATTACKER)));
             if (ok) ++forbiddenSuccesses;
             return;
@@ -240,12 +240,12 @@ contract ClLPVaultCustodyHandler is CommonBase, StdUtils {
         if (strays.length == 0) return;
         bytes32 stray = strays[seed % strays.length];
         if (strayReturned[stray]) return;
-        vm.prank(TIMELOCK);
+        vm.prank(GOVERNOR);
         VAULT.returnStray(stray, senderOf[stray]);
         strayReturned[stray] = true;
     }
 
-    /// @notice A custody call made directly by an attacker, the AaveAdapter, LPVaultSwap or the timelock (not through
+    /// @notice A custody call made directly by an attacker, the AaveAdapter, LPVaultSwap or the governor (not through
     /// Collateralization) inside either Lock member's session: every one must fail.
     function attackDirect(
         uint256 keySeed,
@@ -255,7 +255,7 @@ contract ClLPVaultCustodyHandler is CommonBase, StdUtils {
     ) external {
         if (keys.length == 0) return;
         bytes32 key = keys[keySeed % keys.length];
-        address[4] memory callers = [ATTACKER, ADAPTER, SWAP, TIMELOCK];
+        address[4] memory callers = [ATTACKER, ADAPTER, SWAP, GOVERNOR];
         bytes[5] memory calls = [
             abi.encodeCall(ILPVault.returnPosition, (key)),
             abi.encodeCall(ILPVault.unwind, (key, 1, new uint256[](2), ATTACKER)),

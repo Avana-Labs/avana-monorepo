@@ -95,9 +95,6 @@ interface IRiskModuleErrors {
     /// @param remainingUsd Value of the remaining units at the accepted price, 8-decimal USD.
     error RecordBelowMinPledge(uint256 remainingUsd, uint256 minPledgeUsd);
 
-    /// @notice `DEFAULT_ADMIN_ROLE` or `APPLICATION_ADMIN` granted to an address other than `TIMELOCK`.
-    error AdminRoleOnlyTimelock(bytes32 role, address account);
-
     /// @notice The account already holds the maximum number of open records in its market.
     error TooManyRecords(uint256 records);
 

@@ -47,14 +47,14 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
     function _activate(
         uint256 marketId
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.activateMarket(marketId);
     }
 
     /// @dev Lists the `[-100, 100]` market as market 2.
     function _listSecond() internal returns (uint256 id2, address vt2, RegistryLPOracleMock o2) {
         (vt2, o2) = _deployTokenAndOracle(registry.marketCount() + 1, _wide());
-        vm.prank(address(timelock));
+        vm.prank(governor);
         id2 = registry.listCollateralMarket(_wideDef(vt2, address(o2)));
     }
 
@@ -93,7 +93,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
     function _offboard(
         uint256 marketId
     ) internal returns (uint256 t0) {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setMarketOffboarding(marketId);
         t0 = block.timestamp;
     }
@@ -135,7 +135,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         (uint256 id2, address vt2,) = _listSecond();
         _prepareSecond(id2, vt2);
         rm.setDriftMarket(id2);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(
             abi.encodeWithSelector(IMarketRegistryBase.ActivationCheckFailed.selector, id2, bytes32("aaveConfig"))
         );
@@ -158,7 +158,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         IAaveV4Spoke.DynamicReserveConfig memory d;
         (d.collateralFactor, d.maxLiquidationBonus) = (7000, 10_500);
         spoke.setReserve(VT_RESERVE, r, c, d);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.DuplicateMarketKey.selector);
         registry.activateMarket(id2);
         assertEq(registry.getMarket(id2).reserveId, 0);
@@ -206,7 +206,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         ids[3] = o;
         // id 4 Cancelled.
         (uint256 c,,) = _listMarketWith(PositionShape(ShapeKind.TickRange, -30, 30), 13, 13);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.cancelRegistration(c);
         ids[4] = c;
         // id 5 Closed.
@@ -228,7 +228,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         (token, o) = _deployTokenAndOracle(registry.marketCount() + 1, shape);
         MarketDef memory d = _marketDef(token, address(o));
         d.shape = shape;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         m = registry.listCollateralMarket(d);
         hub.setAsset(token, assetId);
         hub.setSpokeConfig(assetId, address(spoke), 2_000_000, 0);
@@ -278,7 +278,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         bytes memory err
     ) internal {
         uint256 snap = vm.snapshotState();
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (bool success, bytes memory ret) = address(registry).call(data);
         vm.revertToState(snap);
         assertEq(success, ok, "transition admitted against the status machine");
@@ -306,7 +306,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         assertEq(registry.marketOfLpOracle(address(lpo)), id);
         vm.expectEmit(address(registry));
         emit IMarketRegistryBase.MarketRegistrationCancelled(id);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.cancelRegistration(id);
         assertEq(registry.marketOfKey(key), 0, "key freed");
         assertEq(registry.marketOfVaultToken(vt), 0, "vault token freed");
@@ -326,10 +326,10 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
     // A relisting takes the reserved identifier back, rewrites the indexes and does not grow the market count or the
     // Spoke's list; a new market listed after it takes the next identifier.
     function test_TEST_252_relistReclaimsTheIdAndIndexes() public {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.cancelRegistration(id);
         vm.warp(block.timestamp + 1 days);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         uint256 again = registry.listCollateralMarket(_marketDef(vt, address(lpo)));
         assertEq(again, id);
         bytes32 key = factory.marketKeyOf(V3, pool, bytes32(0), _shape());
@@ -352,7 +352,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         uint256 t0 = _offboard(id);
         vm.warp(t0 + 5 days);
         registry.closeMarket(id);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.VaultTokenMismatch.selector);
         registry.listCollateralMarket(_marketDef(vt, address(lpo)));
     }
@@ -361,15 +361,15 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
     // While a registration is live its key, token and LPOracle stay taken: a second listing of the same definition is
     // a duplicate.
     function test_TEST_252_liveRegistrationKeepsItsKey() public {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.DuplicateMarketKey.selector);
         registry.listCollateralMarket(_marketDef(vt, address(lpo)));
         _activate(id);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.DuplicateMarketKey.selector);
         registry.listCollateralMarket(_marketDef(vt, address(lpo)));
         _offboard(id);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.DuplicateMarketKey.selector);
         registry.listCollateralMarket(_marketDef(vt, address(lpo)));
     }
@@ -379,9 +379,9 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
     // and the status after every step.
     function test_TEST_213_fullLifeOfOneMarket() public {
         assertEq(registry.activeMarketCount(address(spoke)), 0);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.cancelRegistration(id);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listCollateralMarket(_marketDef(vt, address(lpo)));
         _setRoutesInto(id, address(gho));
         _activate(id);

@@ -3,11 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {VaultToken} from "../../../src/vault-token/vault-token/VaultToken.sol";
+import {HalmosAccess} from "../../halmos/HalmosAccess.sol";
 import {CollateralizationLockMock} from "../../utils/mocks/CollateralizationLockMock.sol";
 import {LPVaultIdentityMock} from "../../utils/mocks/LPVaultIdentityMock.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 
 /// @title VaultTokenFactoryProperties
 /// @notice Echidna and Medusa properties of the VaultTokenFactory (2.4). Between transactions: the factory's bindings
@@ -22,6 +25,7 @@ contract VaultTokenFactoryProperties {
     uint256 internal constant RANGES = 3;
 
     VaultTokenFactory internal immutable FACTORY;
+    AccessManager internal immutable MANAGER;
     address internal immutable COLL;
     address internal immutable V3;
     address internal immutable SLIP;
@@ -40,15 +44,21 @@ contract VaultTokenFactoryProperties {
     address public ghostSlip;
 
     constructor() {
+        AccessManager manager = HalmosAccess.deploy(address(this));
+        MANAGER = manager;
         CollateralizationLockMock coll = new CollateralizationLockMock(LOCK);
         COLL = address(coll);
-        FACTORY = new VaultTokenFactory(ADAPTER, SWAP, COLL, address(this), REGISTRY);
+        FACTORY = new VaultTokenFactory(ADAPTER, SWAP, COLL, address(manager), REGISTRY);
+        HalmosAccess.bind(manager, AvanaAccess.Kind.VaultTokenFactory, address(FACTORY));
         coll.setCore(address(FACTORY), ADAPTER, SWAP);
-        V3 = address(new LPVaultIdentityMock(1, COLL, LOCK, keccak256("UNISWAP_V3"), address(this), REGISTRY));
-        SLIP =
-            address(new LPVaultIdentityMock(2, COLL, LOCK, keccak256("AERODROME_SLIPSTREAM"), address(this), REGISTRY));
+        V3 = address(new LPVaultIdentityMock(1, COLL, LOCK, keccak256("UNISWAP_V3"), address(manager), REGISTRY));
+        SLIP = address(
+            new LPVaultIdentityMock(2, COLL, LOCK, keccak256("AERODROME_SLIPSTREAM"), address(manager), REGISTRY)
+        );
         BAD_LOCK_VAULT = address(
-            new LPVaultIdentityMock(2, COLL, address(0xBAD), keccak256("AERODROME_SLIPSTREAM"), address(this), REGISTRY)
+            new LPVaultIdentityMock(
+                2, COLL, address(0xBAD), keccak256("AERODROME_SLIPSTREAM"), address(manager), REGISTRY
+            )
         );
         FACTORY.registerIntegration(1, V3);
     }
@@ -57,7 +67,7 @@ contract VaultTokenFactoryProperties {
 
     function property_bindingsFixed() external view returns (bool) {
         return FACTORY.ADAPTER() == ADAPTER && FACTORY.LP_VAULT_SWAP() == SWAP && FACTORY.COLLATERALIZATION() == COLL
-            && FACTORY.TIMELOCK() == address(this) && FACTORY.MARKET_REGISTRY() == REGISTRY;
+            && FACTORY.authority() == address(MANAGER) && FACTORY.MARKET_REGISTRY() == REGISTRY;
     }
 
     function property_integrationsWriteOnce() external view returns (bool) {

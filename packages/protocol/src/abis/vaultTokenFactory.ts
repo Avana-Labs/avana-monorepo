@@ -57,19 +57,6 @@ export const vaultTokenFactoryAbi = [
   },
   {
     "type": "function",
-    "name": "TIMELOCK",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "timelock",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "deployVaultToken",
     "inputs": [
       {
@@ -153,6 +140,25 @@ export const vaultTokenFactoryAbi = [
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "integrationIdOf",
+    "inputs": [
+      {
+        "name": "lpVault",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "integrationId",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -526,11 +532,6 @@ export const vaultTokenFactoryAbi = [
   {
     "type": "error",
     "name": "InvalidTokenMetadata",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotTimelock",
     "inputs": []
   },
   {

@@ -36,7 +36,7 @@ contract IntegLPVaultMock is ILPVaultBase {
     bytes32 public immutable AMM_PROTOCOL;
 
     // ─── CollLPVaultMock's layout ───
-    address public TIMELOCK;
+    address public authority;
     address public MARKET_REGISTRY;
     mapping(uint256 marketId => address[] tokens) internal _tokens;
     mapping(uint256 marketId => address pool) public poolOf;
@@ -67,10 +67,10 @@ contract IntegLPVaultMock is ILPVaultBase {
     // ─── Test controls ───
 
     function setCore(
-        address timelock,
+        address authority_,
         address marketRegistry
     ) external {
-        (TIMELOCK, MARKET_REGISTRY) = (timelock, marketRegistry);
+        (authority, MARKET_REGISTRY) = (authority_, marketRegistry);
     }
 
     /// @notice Binds `marketId` to `pool` on `[tickLower, tickUpper]` with its tokens and unwind rates.

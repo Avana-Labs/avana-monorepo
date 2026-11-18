@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {BackingRecord} from "../../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {ILPVault} from "../../../src/custody/lp-vault/ILPVault.sol";
@@ -39,7 +40,7 @@ abstract contract LPVaultLedgerFixture is AaveV4Fixture {
         address lpVaultSwap;
         address collateralization;
         address lock;
-        address timelock;
+        address authority;
         address marketRegistry;
     }
 
@@ -94,18 +95,19 @@ abstract contract LPVaultLedgerFixture is AaveV4Fixture {
         ledgerRisk = new CollRiskModuleMock();
         ledgerOracle = new CollOracleMock();
         ledgerFactory = new VaultTokenFactory(
-            core.adapter, core.lpVaultSwap, core.collateralization, core.timelock, core.marketRegistry
+            core.adapter, core.lpVaultSwap, core.collateralization, core.authority, core.marketRegistry
         );
+        _bindAccess(AvanaAccess.Kind.VaultTokenFactory, address(ledgerFactory));
         deployCodeTo(
             "Collateralization.sol:Collateralization",
             abi.encode(core.adapter, core.lpVaultSwap, address(ledgerRisk), core.lock, address(ledgerFactory)),
             core.collateralization
         );
         ledger = ICollateralization(core.collateralization);
-        vm.prank(core.timelock);
+        vm.prank(governor);
         ledgerFactory.registerIntegration(integrationId, lpVault);
         (address pool, bytes32 poolId, PositionShape memory shape,) = ILPVault(lpVault).marketOf(marketId);
-        vm.prank(core.timelock);
+        vm.prank(governor);
         address vt = ledgerFactory.deployVaultToken(
             integrationId,
             pool,

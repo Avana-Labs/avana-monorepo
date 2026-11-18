@@ -5,16 +5,17 @@ pragma solidity 0.8.28;
 
 import {ExecuteOperations} from "../../script/deploy/05_ExecuteOperations.s.sol";
 import {DeployGasVault} from "../../script/deploy/12_DeployGasVault.s.sol";
-import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
-import {GovernedTargets, SelectorPair} from "../../src/governance/timelock/IAvanaTimelock.sol";
+import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {IAvanaGasVault} from "../../src/periphery/gas-vault/IAvanaGasVault.sol";
 import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @notice The gas vault's deploy steps (`script/deploy/12_DeployGasVault.s.sol`) as `step.sh` runs them, against a
-/// real AvanaTimelock and the deploy outputs of an earlier `03-avana`: the treasury checks refuse a wrong address,
-/// `deploy` writes `gas-vault.json`, `signers` writes and schedules the timelock operation, `05` executes it after the
-/// normal delay, a second `signers` has nothing to schedule, `fund` brings the vault to `fundWei`, and a drained signer
+/// real AccessManager and the deploy outputs of an earlier `03-avana`: the treasury checks refuse a wrong address,
+/// `deploy` writes `gas-vault.json` and maps the vault's functions as the DAO, `signers` writes and schedules the
+/// operation, `05` executes it after the governance delay, a second `signers` has nothing to schedule, `fund` brings the vault to `fundWei`, and a drained signer
 /// is refilled by anyone's `topUpAll`. One test function: the steps share the files of one test network.
 contract DeployGasVaultTest is Test {
     string internal constant NETWORK = "gas-vault-unit";
@@ -29,37 +30,22 @@ contract DeployGasVaultTest is Test {
     address internal primary = makeAddr("keeperPrimary");
     address internal standby = makeAddr("keeperStandby");
     address internal store = makeAddr("parameterStore");
-    AvanaTimelock internal timelock;
+    AccessManager internal manager;
 
     function setUp() public {
-        address[] memory proposers = new address[](2);
-        (proposers[0], proposers[1]) = (safe, aaveExecutor);
-        address[] memory executors = new address[](1);
-        executors[0] = safe;
-        address[] memory cancellers = new address[](1);
-        cancellers[0] = guardian;
-        address[] memory dao = new address[](1);
-        dao[0] = aaveExecutor;
-        SelectorPair[] memory none = new SelectorPair[](0);
-        timelock = new AvanaTimelock(
-            proposers,
-            executors,
-            cancellers,
-            dao,
-            NORMAL_DELAY,
-            true,
-            none,
-            none,
-            GovernedTargets(store, makeAddr("marketRegistry"), makeAddr("lpVaultSwap"))
-        );
+        manager = new AccessManager(aaveExecutor);
+        vm.startPrank(aaveExecutor);
+        manager.labelRole(AvanaRoles.GOVERNANCE_ROLE, AvanaRoles.GOVERNANCE_LABEL);
+        manager.grantRole(AvanaRoles.GOVERNANCE_ROLE, safe, uint32(NORMAL_DELAY));
+        vm.stopPrank();
         vm.etch(store, hex"00");
         vm.mockCall(store, abi.encodeCall(IParameterStore.feeRecipient, ()), abi.encode(treasury));
         vm.createDir(DIR, true);
         vm.writeFile(
             string.concat(DIR, "/avana.json"),
             string.concat(
-                '{"timelock":"',
-                vm.toString(address(timelock)),
+                '{"accessManager":"',
+                vm.toString(address(manager)),
                 '","parameterStore":{"proxy":"',
                 vm.toString(store),
                 '"}}'
@@ -86,6 +72,8 @@ contract DeployGasVaultTest is Test {
                 vm.toString(block.chainid),
                 ',"release":"v0.1.0-local","governance":{"governanceSafe":"',
                 vm.toString(safe),
+                '","aaveGovernanceExecutor":"',
+                vm.toString(aaveExecutor),
                 '","emergencyGuardian":"',
                 vm.toString(guardian),
                 '"},"parameters":{"globals":{"feeRecipient":"',
@@ -129,10 +117,12 @@ contract DeployGasVaultTest is Test {
             payable(vm.parseJsonAddress(vm.readFile(string.concat(DIR, "/gas-vault.json")), ".AvanaGasVault"))
         );
         assertEq(vault.TREASURY(), treasury);
-        assertEq(vault.TIMELOCK(), address(timelock));
+        assertEq(IAccessManaged(address(vault)).authority(), address(manager));
+        (, uint32 mapped) = manager.canCall(safe, address(vault), IAvanaGasVault.addSigner.selector);
+        assertEq(mapped, NORMAL_DELAY, "addSigner is on the governance role");
         assertEq(vault.GUARDIAN(), guardian);
         assertEq(vault.MAX_SIGNERS(), 8);
-        assertEq(vault.signers().length, 0, "no signer before the timelock operation");
+        assertEq(vault.signers().length, 0, "no signer before the operation");
 
         // A second deploy keeps the recorded vault.
         script.runStep("deploy");
@@ -140,7 +130,7 @@ contract DeployGasVaultTest is Test {
             vm.parseJsonAddress(vm.readFile(string.concat(DIR, "/gas-vault.json")), ".AvanaGasVault"), address(vault)
         );
 
-        // addSigner of both signers, scheduled as the Safe at the normal delay, executed by anyone once ready.
+        // addSigner of both signers, scheduled as the Safe at the governance delay, executed by the Safe once ready.
         script.runStep("signers");
         string memory op = vm.readFile(string.concat(DIR, "/operation-gas-vault-signers.json"));
         assertEq(vm.parseJsonUint(op, ".delay"), NORMAL_DELAY);

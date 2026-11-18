@@ -348,10 +348,9 @@ contract RiskModulePositionManagersUnitTest is MarketRegistryFixture, AaveV4Fixt
         _deployRegistryWith(aave.cdpSpokeImplementation);
         lpVault = new RegistryLPVaultMock(V3, address(collat), lockAddr);
         lpVault.setRegistry(address(registry));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         factory.registerIntegration(V3, address(lpVault));
         registry.recordHub(aave.hub, RiskTier.Stable);
-        registry.registerIntegration(V3, address(lpVault), makeAddr("clPricing"));
         address s = registry.deployCdpSpoke(
             SpokeDef(false, aave.hub, V3, RiskTier.Stable, aave.cdpSpokeImplementation, aave.cdpOracle)
         );
@@ -359,9 +358,7 @@ contract RiskModulePositionManagersUnitTest is MarketRegistryFixture, AaveV4Fixt
         (,, bool current) = registry.spokeImplementationStatus(s);
         assertTrue(current);
         RiskModuleDriftLogic drift = new RiskModuleDriftLogic(
-            RiskModuleImmutables(
-                address(registry), address(ps), address(collat), adapterAddr, address(lpVaultSwap), address(timelock)
-            )
+            RiskModuleImmutables(address(registry), address(ps), address(collat), adapterAddr, address(lpVaultSwap))
         );
         // The Aave DAO upgrades the Spoke proxy to a fresh deployment of the same code: the proxy's code is
         // unchanged, the implementation behind it is not, and every Avana check on the Spoke reports drift.

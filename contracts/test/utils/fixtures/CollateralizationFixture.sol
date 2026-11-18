@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {BackingRecord} from "../../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
@@ -124,7 +125,6 @@ abstract contract CollateralizationFixture is AaveV4Fixture {
 
     address internal adapter = makeAddr("aaveAdapter");
     address internal lpVaultSwap = makeAddr("lpVaultSwap");
-    address internal timelock = makeAddr("timelock");
     /// @dev The MarketRegistry every registered LPVault names; the same label as the Uniswap v3 suite's registry.
     address internal marketRegistry = makeAddr("marketRegistry");
     address internal pool = makeAddr("usdcUsdtPool");
@@ -158,7 +158,8 @@ abstract contract CollateralizationFixture is AaveV4Fixture {
         riskModule = new CollRiskModuleMock();
         oracle = new CollOracleMock();
         address predicted = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 1);
-        factory = new VaultTokenFactory(adapter, lpVaultSwap, predicted, timelock, marketRegistry);
+        factory = new VaultTokenFactory(adapter, lpVaultSwap, predicted, address(accessManager), marketRegistry);
+        _bindAccess(AvanaAccess.Kind.VaultTokenFactory, address(factory));
         coll = ICollateralization(
             deployCode(
                 "Collateralization.sol:Collateralization",
@@ -167,8 +168,8 @@ abstract contract CollateralizationFixture is AaveV4Fixture {
         );
         require(address(coll) == predicted, "predicted Collateralization");
         lpVault = new CollLPVaultMock(INTEGRATION, address(coll), address(lock));
-        lpVault.setCore(timelock, marketRegistry);
-        vm.prank(timelock);
+        lpVault.setCore(address(accessManager), marketRegistry);
+        vm.prank(governor);
         factory.registerIntegration(INTEGRATION, address(lpVault));
 
         usdc = new CollPoolToken("USDC", 6);
@@ -190,7 +191,7 @@ abstract contract CollateralizationFixture is AaveV4Fixture {
         usdc.mint(address(lpVault), 1e30);
         usdt.mint(address(lpVault), 1e30);
 
-        vm.prank(timelock);
+        vm.prank(governor);
         vt = factory.deployVaultToken(
             INTEGRATION,
             pool,

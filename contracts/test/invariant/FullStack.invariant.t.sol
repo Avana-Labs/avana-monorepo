@@ -15,9 +15,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title FullStackInvariantTest
 /// @notice Invariants of the whole chain stack as one deployment runs it (`FullStackMarkets`: the real
-/// MarketRegistry, ParameterStore, RiskModule, AaveAdapter, Collateralization, AvanaTimelock, LPOracles and USDC
+/// MarketRegistry, ParameterStore, RiskModule, AaveAdapter, Collateralization, AccessManager, LPOracles and USDC
 /// DebtOracle on the real local Aave V4) under random sequences of pledges, borrows of GHO and USDC, repays by owners
-/// and third parties, debt-free withdrawals, liquidations, price moves, draw-cap cuts, timelock tightenings, an
+/// and third parties, debt-free withdrawals, liquidations, price moves, draw-cap cuts, governance tightenings, an
 /// AaveAdapter upgrade to a second reviewed implementation, and time.
 /// @dev Each handler call is one transaction.
 /// forge-config: default.isolate = false
@@ -39,7 +39,7 @@ contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
         world.adapter = adapterC;
         world.registry = registry;
         world.store = store;
-        world.timelock = timelock;
+        world.accessManager = accessManager;
         world.coll = coll;
         world.lpVault = lpVault;
         world.swap = swap;
@@ -47,7 +47,7 @@ contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
         world.hub = aave.hub;
         world.hubConfigurator = aave.hubConfigurator;
         world.aaveDao = aaveDao;
-        world.guardian = emergencyGuardian;
+        world.dao = aaveGovernanceExecutor;
         world.governance = governanceMultisig;
         world.markets = [mA, mB];
         world.vaultTokens = [mkt[mA].vaultToken, mkt[mB].vaultToken];
@@ -118,7 +118,7 @@ contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
     // TEST-215 verifies: REQ-ACCESS-148, INV-075
     /// @notice Every handler action reaches its entry point and completes in a plain sequence, so the random campaign
     /// exercises real calls: pledges in both markets, borrows of GHO and USDC, a repay by a third party, a cap
-    /// tightening and the AaveAdapter upgrade through the timelock, a price fall and a liquidation, a draw-cap cut, and
+    /// tightening and the AaveAdapter upgrade through the AccessManager, a price fall and a liquidation, a draw-cap cut, and
     /// a debt-free withdrawal.
     function test_TEST_215_handlerActionsComplete() public {
         // Counts from here on; the set-up seeded 3 pledges and 6 borrows.
@@ -133,9 +133,9 @@ contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
         assertEq(handler.borrows() - base[1], 3, "borrows");
         handler.repay(0, 0, 0, 1);
         handler.tightenSlice(0);
-        assertEq(store.topUpSliceUsd(mA), 100_000e8 - 1e8, "slice tightened through the timelock");
+        assertEq(store.topUpSliceUsd(mA), 100_000e8 - 1e8, "slice tightened through the AccessManager");
         handler.upgradeAdapter();
-        assertEq(handler.upgrades(), 1, "Adapter upgraded through the timelock");
+        assertEq(handler.upgrades(), 1, "Adapter upgraded through the AccessManager");
         handler.setPrice(93_000_000);
         handler.liquidate(0);
         assertEq(handler.liquidations() - base[2], 1, "liquidation");
@@ -197,9 +197,9 @@ contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
     // ─── TEST-215: multi-actor suite ───
 
     // TEST-215 verifies: INV-028, INV-055, INV-075, REQ-ACCESS-148
-    /// @notice With borrowers, a third-party payer, LPVaultSwap, the Emergency Guardian, the Aave DAO and the timelock
+    /// @notice With borrowers, a third-party payer, LPVaultSwap, the Emergency Guardian, the Aave DAO and the governance Safe
     /// acting in any order: the Adapter holds no token and the Lock is free between transactions; each market's
-    /// regular and slice budgets stay within the ParameterStore's caps; no timelock operation executed before its
+    /// regular and slice budgets stay within the ParameterStore's caps; no governed call executed before its
     /// required delay; and a pledge never completed below `minPledgeUsd` at the served price.
     function invariant_TEST_215_allInvariantsAfterEveryStep() public view {
         uint256[2] memory ids = [mA, mB];

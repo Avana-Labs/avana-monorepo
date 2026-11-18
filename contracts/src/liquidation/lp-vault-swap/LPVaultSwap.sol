@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IFlashReceiver} from "../../flash/IFlashReceiver.sol";
-import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
 import {ILPVaultSwap} from "./ILPVaultSwap.sol";
 import {ILPVaultSwapLogic} from "./ILPVaultSwapLogic.sol";
 import {LPVaultSwapStorage} from "./LPVaultSwapStorage.sol";
@@ -15,18 +14,20 @@ import {
     LiquidationParams,
     LiquidationResult
 } from "./types/LPVaultSwapTypes.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {
+    AccessManagedUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-// The keeper events follow a view read; the setters are timelock-only.
+// The keeper events follow a view read; the setters are restricted by the AccessManager.
 // forge-lint: disable-start(reentrancy-events)
 // A zero or repeated initial keeper must revert the initialisation.
 // forge-lint: disable-start(require-revert-in-loop)
 /// @title LPVaultSwap
-/// @notice The chain's liquidator: roles, the committed-operator registry, and dispatch of `liquidate`,
+/// @notice The chain's liquidator: access control, the committed-operator registry, and dispatch of `liquidate`,
 /// `settlePending`, `deleverage` and `onFlashLoan` to their logic contracts by delegatecall.
-/// @dev UUPS proxy; only the timelock can upgrade it.
-contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeable, UUPSUpgradeable {
+/// @dev UUPS proxy; only the AccessManager's governance role can upgrade it.
+contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessManagedUpgradeable, UUPSUpgradeable {
     address internal immutable _LIQUIDATION_LOGIC;
     address internal immutable _PENDING_LOGIC;
     address internal immutable _DELEVERAGE_LOGIC;
@@ -106,15 +107,12 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
 
     /// @inheritdoc ILPVaultSwap
     function initialize(
-        address timelock,
+        address authority,
         address[] calldata initialKeepers
     ) external override initializer {
-        if (timelock == address(0)) revert ZeroAddress();
-        __AccessControl_init();
+        if (authority == address(0)) revert ZeroAddress();
+        __AccessManaged_init(authority);
         __UUPSUpgradeable_init();
-        _s().timelock = timelock;
-        _grantRole(DEFAULT_ADMIN_ROLE, timelock);
-        _grantRole(AvanaRoles.APPLICATION_ADMIN, timelock);
         uint256 n = initialKeepers.length;
         if (n > _MAX_KEEPERS) revert TooManyKeepers(_MAX_KEEPERS);
         if (n < _KEEPER_FLOOR) revert KeeperFloor(n, _KEEPER_FLOOR);
@@ -126,7 +124,7 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
     /// @inheritdoc ILPVaultSwap
     function addKeeper(
         address keeper
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         Layout storage l = _s();
         if (keeper == address(0) || l.keepers[keeper]) revert InvalidKeeper();
         if (l.keeperList.length >= _MAX_KEEPERS) revert TooManyKeepers(_MAX_KEEPERS);
@@ -136,7 +134,7 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
     /// @inheritdoc ILPVaultSwap
     function removeKeeper(
         address keeper
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         Layout storage l = _s();
         if (!l.keepers[keeper]) revert InvalidKeeper();
         address[] storage list = l.keeperList;
@@ -191,16 +189,6 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
     }
 
     /// @inheritdoc ILPVaultSwap
-    function APPLICATION_ADMIN() external pure override returns (bytes32 role) {
-        role = AvanaRoles.APPLICATION_ADMIN;
-    }
-
-    /// @inheritdoc ILPVaultSwap
-    function TIMELOCK() external view override returns (address timelock) {
-        timelock = _s().timelock;
-    }
-
-    /// @inheritdoc ILPVaultSwap
     function LOCK() external view override returns (address lock) {
         lock = _LOCK;
     }
@@ -245,20 +233,9 @@ contract LPVaultSwap is ILPVaultSwap, LPVaultSwapStorage, AccessControlUpgradeab
         emit KeeperAdded(keeper);
     }
 
-    /// @dev Either admin role can be held only by the timelock `initialize` set.
-    function _grantRole(
-        bytes32 role,
-        address account
-    ) internal override returns (bool granted) {
-        if ((role == DEFAULT_ADMIN_ROLE || role == AvanaRoles.APPLICATION_ADMIN) && account != _s().timelock) {
-            revert AdminRoleOnlyTimelock(role, account);
-        }
-        granted = super._grantRole(role, account);
-    }
-
     function _authorizeUpgrade(
         address
-    ) internal override onlyRole(AvanaRoles.APPLICATION_ADMIN) {}
+    ) internal override restricted {}
 
     function _delegate(
         address logic

@@ -161,19 +161,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "TIMELOCK",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "timelock",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "VAULT_TOKEN_FACTORY",
     "inputs": [],
     "outputs": [
@@ -229,6 +216,19 @@ export const marketRegistryAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "authority",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -717,25 +717,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "getRoleAdmin",
-    "inputs": [
-      {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getRoute",
     "inputs": [
       {
@@ -895,48 +876,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "grantRole",
-    "inputs": [
-      {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "hasRole",
-    "inputs": [
-      {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "hubOf",
     "inputs": [
       {
@@ -978,7 +917,7 @@ export const marketRegistryAbi = [
     "name": "initialize",
     "inputs": [
       {
-        "name": "timelock",
+        "name": "authority",
         "type": "address",
         "internalType": "address"
       }
@@ -1001,49 +940,6 @@ export const marketRegistryAbi = [
         "name": "contracts",
         "type": "address[]",
         "internalType": "address[]"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "integrationIdOf",
-    "inputs": [
-      {
-        "name": "lpVault",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "integrationId",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "integrationOf",
-    "inputs": [
-      {
-        "name": "integrationId",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "lpVault",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "pricing",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -1087,6 +983,19 @@ export const marketRegistryAbi = [
         "name": "approved",
         "type": "bool",
         "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isConsumingScheduledOp",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes4",
+        "internalType": "bytes4"
       }
     ],
     "stateMutability": "view"
@@ -1423,29 +1332,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "registerIntegration",
-    "inputs": [
-      {
-        "name": "integrationId",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "lpVault",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "pricing",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "removeDebtReserve",
     "inputs": [
       {
@@ -1457,24 +1343,6 @@ export const marketRegistryAbi = [
         "name": "reserveId",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "renounceRole",
-    "inputs": [
-      {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "callerConfirmation",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -1515,15 +1383,10 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "revokeRole",
+    "name": "setAuthority",
     "inputs": [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "account",
+        "name": "",
         "type": "address",
         "internalType": "address"
       }
@@ -1769,6 +1632,19 @@ export const marketRegistryAbi = [
   },
   {
     "type": "event",
+    "name": "AuthorityUpdated",
+    "inputs": [
+      {
+        "name": "authority",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "AvanaFirstLossReserveSet",
     "inputs": [
       {
@@ -1950,31 +1826,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "event",
-    "name": "IntegrationRegistered",
-    "inputs": [
-      {
-        "name": "integrationId",
-        "type": "uint32",
-        "indexed": true,
-        "internalType": "uint32"
-      },
-      {
-        "name": "lpVault",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      },
-      {
-        "name": "pricing",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "MarketActivated",
     "inputs": [
       {
@@ -2131,81 +1982,6 @@ export const marketRegistryAbi = [
         "type": "address[]",
         "indexed": false,
         "internalType": "address[]"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "RoleAdminChanged",
-    "inputs": [
-      {
-        "name": "role",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "previousAdminRole",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "newAdminRole",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "RoleGranted",
-    "inputs": [
-      {
-        "name": "role",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "account",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "sender",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "RoleRevoked",
-    "inputs": [
-      {
-        "name": "role",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "account",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "sender",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -2429,22 +2205,39 @@ export const marketRegistryAbi = [
   },
   {
     "type": "error",
-    "name": "AccessControlBadConfirmation",
-    "inputs": []
+    "name": "AccessManagedInvalidAuthority",
+    "inputs": [
+      {
+        "name": "authority",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
     "type": "error",
-    "name": "AccessControlUnauthorizedAccount",
+    "name": "AccessManagedRequiredDelay",
     "inputs": [
       {
-        "name": "account",
+        "name": "caller",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "neededRole",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "name": "delay",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "AccessManagedUnauthorized",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
       }
     ]
   },
@@ -2461,22 +2254,6 @@ export const marketRegistryAbi = [
         "name": "check",
         "type": "bytes32",
         "internalType": "bytes32"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "AdminRoleOnlyTimelock",
-    "inputs": [
-      {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
       }
     ]
   },

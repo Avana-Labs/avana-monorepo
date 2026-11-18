@@ -143,7 +143,7 @@ contract MarketRegistryLifecycleHandler is MarketRegistryFixture {
         MarketDef memory d = _marketDef(s.vaultToken, s.lpOracle);
         d.shape = sh;
         bool expected = s.status == MarketStatus.None || s.status == MarketStatus.Cancelled;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         try registry.listCollateralMarket(d) returns (uint256 id) {
             if (s.id == 0) {
                 ++listed;
@@ -170,7 +170,7 @@ contract MarketRegistryLifecycleHandler is MarketRegistryFixture {
         if (s.id == 0) revert Skipped();
         if (s.status == MarketStatus.Registered) _prepare(i);
         bool expected = s.status == MarketStatus.Registered;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         try registry.activateMarket(s.id) {
             s.status = MarketStatus.Active;
             _reserveIdentity[i] = reserveIdentityOf(s.id);
@@ -187,7 +187,7 @@ contract MarketRegistryLifecycleHandler is MarketRegistryFixture {
         Slot storage s = _slots[i];
         if (s.id == 0) revert Skipped();
         bool expected = s.status == MarketStatus.Registered;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         try registry.cancelRegistration(s.id) {
             s.status = MarketStatus.Cancelled;
             _check("cancel", true, expected, i);
@@ -207,7 +207,7 @@ contract MarketRegistryLifecycleHandler is MarketRegistryFixture {
         // The Aave DAO may have moved the collateral factor since activation.
         uint16 cf = uint16(bound(cfSeed, 1, 8000));
         if (expected) _setCf(i, cf);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         try registry.setMarketOffboarding(s.id) {
             s.status = MarketStatus.Offboarding;
             s.offboardedAt = uint64(block.timestamp);

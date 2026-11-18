@@ -175,7 +175,7 @@ contract SlipstreamIntegrationCustodyUnitTest is SlipstreamIntegrationFixture {
         vm.expectRevert(UnsupportedNft.selector);
         vault.receivePosition(M1, alice, bad);
         _unlock();
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(UnsupportedNft.selector);
         vault.returnStray(bad, alice);
         vm.expectRevert(NotInCustody.selector);

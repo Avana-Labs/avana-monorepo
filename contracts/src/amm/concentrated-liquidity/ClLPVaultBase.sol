@@ -10,11 +10,12 @@ import {IClIntegration} from "../IClIntegration.sol";
 import {ClMarketConfig} from "../types/AmmTypes.sol";
 import {ClPriceMath} from "./ClPriceMath.sol";
 import {IClPositionManager} from "./IClPositionManager.sol";
+import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 
 /// @title ClLPVaultBase
 /// @notice Shared state, caller and Lock checks and position checks of every concentrated-liquidity LPVault.
 /// @dev Immutable: no proxy, owner or pause. Reads no token balance of its own.
-abstract contract ClLPVaultBase is IClIntegration {
+abstract contract ClLPVaultBase is IClIntegration, AccessManaged {
     struct Market {
         ClMarketConfig cfg;
         uint8 decimals0;
@@ -33,7 +34,6 @@ abstract contract ClLPVaultBase is IClIntegration {
     address internal immutable _COLLATERALIZATION;
     address internal immutable _MARKET_REGISTRY;
     address internal immutable _LOCK;
-    address internal immutable _TIMELOCK;
 
     /// @dev Write-once market table (`bindMarket`); `poolRef == 0` means unbound.
     mapping(uint256 marketId => Market market) internal _markets;
@@ -53,21 +53,20 @@ abstract contract ClLPVaultBase is IClIntegration {
         address collateralization,
         address marketRegistry,
         address lock,
-        address timelock
-    ) {
+        address authority
+    ) AccessManaged(authority) {
         if (
             integrationId == 0 || collateralization == address(0) || marketRegistry == address(0) || lock == address(0)
-                || timelock == address(0)
+                || authority == address(0)
         ) revert InvalidDeployment();
         if (
-            collateralization == marketRegistry || collateralization == lock || collateralization == timelock
-                || marketRegistry == lock || marketRegistry == timelock || lock == timelock
+            collateralization == marketRegistry || collateralization == lock || collateralization == authority
+                || marketRegistry == lock || marketRegistry == authority || lock == authority
         ) revert InvalidDeployment();
         _INTEGRATION_ID = integrationId;
         _COLLATERALIZATION = collateralization;
         _MARKET_REGISTRY = marketRegistry;
         _LOCK = lock;
-        _TIMELOCK = timelock;
     }
 
     /// @inheritdoc ILPVault
@@ -88,11 +87,6 @@ abstract contract ClLPVaultBase is IClIntegration {
     /// @inheritdoc ILPVault
     function LOCK() external view override returns (address) {
         return _LOCK;
-    }
-
-    /// @inheritdoc ILPVault
-    function TIMELOCK() external view override returns (address) {
-        return _TIMELOCK;
     }
 
     function _positionManager(

@@ -37,7 +37,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         bytes memory data
     ) internal returns (uint256 n) {
         vm.recordLogs();
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (bool ok,) = address(store).call(data);
         assertTrue(ok, "setter refused");
         Vm.Log[] memory logs = vm.getRecordedLogs();
@@ -134,7 +134,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         registry.setHub(hub2, true);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreBase.CapLoosened("tokenUsdCap", _pair(hub2, usdt), 0, 3_000_000e8, address(timelock));
+        emit IParameterStoreBase.CapLoosened("tokenUsdCap", _pair(hub2, usdt), 0, 3_000_000e8, governor);
         store.setInitialTokenCap(hub2, usdt, 3_000_000e8);
     }
 
@@ -153,7 +153,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
 
     // TEST-061 verifies: REQ-CONFIG-053, REQ-RISK-043, REQ-PSTORE-017, REQ-ACCESS-109
     function test_TEST_061_capLoosenEvents() public {
-        address tl = address(timelock);
+        address tl = governor;
         _tl();
         vm.expectEmit(address(store));
         emit IParameterStoreBase.CapLoosened("marketUsdCap", bytes32(M), 5_000_000e8, 7_500_000e8, tl);
@@ -170,7 +170,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
 
     // TEST-061 verifies: REQ-CONFIG-053, REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-030, REQ-ACCESS-109
     function test_TEST_061_parameterLoosenEvents() public {
-        address tl = address(timelock);
+        address tl = governor;
         vm.startPrank(tl);
         store.tightenDebtStressRiseBps(usdc, 500);
         store.setDebtAssetParams(gho, DebtReserveParams(0.5e18));
@@ -235,7 +235,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
     function test_TEST_272_initialCapLoweringEmitsCaller() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreBase.CapTightened("marketUsdCap", bytes32(M), 5_000_000e8, 4_000_000e8, address(timelock));
+        emit IParameterStoreBase.CapTightened("marketUsdCap", bytes32(M), 5_000_000e8, 4_000_000e8, governor);
         store.setInitialMarketCaps(M, 4_000_000e8, 500_000e8, 1e8);
     }
 

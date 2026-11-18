@@ -83,11 +83,11 @@ export const riskModuleAbi = [
   },
   {
     "type": "function",
-    "name": "TIMELOCK",
+    "name": "authority",
     "inputs": [],
     "outputs": [
       {
-        "name": "timelock",
+        "name": "",
         "type": "address",
         "internalType": "address"
       }
@@ -550,13 +550,26 @@ export const riskModuleAbi = [
     "name": "initialize",
     "inputs": [
       {
-        "name": "timelock",
+        "name": "authority",
         "type": "address",
         "internalType": "address"
       }
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "isConsumingScheduledOp",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes4",
+        "internalType": "bytes4"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -747,6 +760,19 @@ export const riskModuleAbi = [
   },
   {
     "type": "function",
+    "name": "setAuthority",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "usdToRestore",
     "inputs": [
       {
@@ -763,6 +789,19 @@ export const riskModuleAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "AuthorityUpdated",
+    "inputs": [
+      {
+        "name": "authority",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -785,15 +824,37 @@ export const riskModuleAbi = [
   },
   {
     "type": "error",
-    "name": "AdminRoleOnlyTimelock",
+    "name": "AccessManagedInvalidAuthority",
     "inputs": [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "name": "authority",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "AccessManagedRequiredDelay",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        "name": "account",
+        "name": "delay",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "AccessManagedUnauthorized",
+    "inputs": [
+      {
+        "name": "caller",
         "type": "address",
         "internalType": "address"
       }

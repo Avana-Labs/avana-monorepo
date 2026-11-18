@@ -6,8 +6,8 @@ pragma solidity 0.8.28;
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {AccessOperations} from "./AccessOperations.sol";
 import {DeployBase} from "./DeployBase.sol";
-import {TimelockOperations} from "./TimelockOperations.sol";
 
 interface IPoolTokens {
     function token0() external view returns (address);
@@ -36,10 +36,10 @@ interface IHubAssetIds {
 /// listing never depends on how Aave's side was deployed.
 /// @dev Feed roles in `world.json`: `primary` and `alternate` are the token's two price routes (one feed each, no feed
 /// shared, `REQ-CONFIG-018`).
-abstract contract ListingBase is TimelockOperations, DeployBase {
+abstract contract ListingBase is AccessOperations, DeployBase {
     string internal cfg;
     string internal avanaJson;
-    address internal timelock;
+    address internal accessManager;
     IMarketRegistry internal registry;
     IParameterStore internal store;
 
@@ -55,7 +55,7 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
     function _loadListing() internal {
         cfg = vm.readFile(_configPath(_network()));
         avanaJson = vm.readFile(_outputPath("avana"));
-        timelock = vm.parseJsonAddress(avanaJson, ".timelock");
+        accessManager = vm.parseJsonAddress(avanaJson, ".accessManager");
         registry = IMarketRegistry(vm.parseJsonAddress(avanaJson, ".marketRegistry.proxy"));
         store = IParameterStore(vm.parseJsonAddress(avanaJson, ".parameterStore.proxy"));
         release = vm.parseJsonString(avanaJson, ".release");

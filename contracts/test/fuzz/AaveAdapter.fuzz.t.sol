@@ -325,7 +325,7 @@ contract AaveAdapterFuzzTest is AaveAdapterFixture {
             adapter,
             address(coll),
             address(swap),
-            timelock,
+            address(accessManager),
             address(registry),
             address(pstore),
             address(risk),
@@ -356,11 +356,11 @@ contract AaveAdapterFuzzTest is AaveAdapterFixture {
     ) internal view returns (bool) {
         if (
             a == address(0) || adapterC.walletOf(a) != address(0) || a == adapter || a == address(coll)
-                || a == address(swap) || a == timelock || a == address(registry) || a == address(pstore)
+                || a == address(swap) || a == address(accessManager) || a == address(registry) || a == address(pstore)
                 || a == address(risk) || a == address(proxyManager)
         ) return true;
         if (
-            registry.integrationIdOf(a) != 0 || a == registry.payoutEscrow() || a == registry.flashSourceAddr()
+            factory.integrationIdOf(a) != 0 || a == registry.payoutEscrow() || a == registry.flashSourceAddr()
                 || registry.isRecordedHub(a) || registry.getSpoke(a).approved
         ) return true;
         IAaveV4Hub hub = IAaveV4Hub(aave.hub);

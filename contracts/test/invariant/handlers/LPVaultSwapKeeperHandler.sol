@@ -9,7 +9,7 @@ import {CommonBase} from "forge-std/Base.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 
 /// @title LPVaultSwapKeeperHandler
-/// @notice Actions on LPVaultSwap's committed-operator registry: the timelock adds and removes any of 40 candidate
+/// @notice Actions on LPVaultSwap's committed-operator registry: the governance role adds and removes any of 40 candidate
 /// addresses, and an outsider tries both admin calls. A ghost model predicts the outcome of every call (success or the
 /// exact error, in the spec's order) from the spec: `addKeeper` needs a new (`InvalidKeeper` first), non-zero keeper
 /// below `MAX_KEEPERS` (32); `removeKeeper` needs a registered keeper whose removal keeps the count at `keeperFloor`
@@ -20,7 +20,7 @@ contract LPVaultSwapKeeperHandler is CommonBase, StdUtils {
     error Skipped();
 
     ILPVaultSwap public immutable LVS;
-    address public immutable TIMELOCK;
+    address public immutable GOVERNOR;
     uint256 internal constant CANDIDATES = 40;
     uint256 internal constant MAX_KEEPERS = 32;
     uint256 internal constant FLOOR = 1;
@@ -34,10 +34,10 @@ contract LPVaultSwapKeeperHandler is CommonBase, StdUtils {
 
     constructor(
         ILPVaultSwap lvs,
-        address timelock,
+        address governor,
         address initialKeeper
     ) {
-        (LVS, TIMELOCK) = (lvs, timelock);
+        (LVS, GOVERNOR) = (lvs, governor);
         modelRegistered[initialKeeper] = true;
         modelCount = 1;
     }
@@ -58,7 +58,7 @@ contract LPVaultSwapKeeperHandler is CommonBase, StdUtils {
         } else if (modelCount >= MAX_KEEPERS) {
             expected = abi.encodeWithSelector(ILPVaultSwapBase.TooManyKeepers.selector, MAX_KEEPERS);
         }
-        vm.prank(TIMELOCK);
+        vm.prank(GOVERNOR);
         (bool ok, bytes memory ret) = address(LVS).call(abi.encodeCall(ILPVaultSwap.addKeeper, (k)));
         if (expected.length == 0) {
             if (!ok) ++mismatches;
@@ -81,7 +81,7 @@ contract LPVaultSwapKeeperHandler is CommonBase, StdUtils {
                 expected = abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, after_, FLOOR);
             }
         }
-        vm.prank(TIMELOCK);
+        vm.prank(GOVERNOR);
         (bool ok, bytes memory ret) = address(LVS).call(abi.encodeCall(ILPVaultSwap.removeKeeper, (k)));
         if (expected.length == 0) {
             if (!ok) ++mismatches;
@@ -95,7 +95,7 @@ contract LPVaultSwapKeeperHandler is CommonBase, StdUtils {
         uint256 seed,
         address caller
     ) external {
-        if (caller == TIMELOCK) revert Skipped();
+        if (caller == GOVERNOR) revert Skipped();
         address k = candidate(seed);
         vm.prank(caller);
         (bool okAdd,) = address(LVS).call(abi.encodeCall(ILPVaultSwap.addKeeper, (k)));

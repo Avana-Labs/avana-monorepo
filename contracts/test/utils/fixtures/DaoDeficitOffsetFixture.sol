@@ -41,9 +41,7 @@ abstract contract DaoDeficitOffsetFixture is AvanaFirstLossReserveFixture {
         uint256 assetId,
         string memory label
     ) internal returns (DaoDeficitOffset offset) {
-        offset = new DaoDeficitOffset(
-            aave.hub, token, assetId, aave.accessManager, RESERVE_WITHDRAWAL_DELAY, address(layer)
-        );
+        offset = new DaoDeficitOffset(aave.hub, token, assetId, aave.accessManager, address(layer));
         vm.label(address(offset), label);
         uint40 maxCap = hub.MAX_ALLOWED_SPOKE_CAP();
         uint24 maxRp = hub.MAX_RISK_PREMIUM_THRESHOLD();

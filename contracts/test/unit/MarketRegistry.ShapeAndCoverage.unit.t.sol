@@ -64,7 +64,7 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
         d.poolId = hasPoolId ? keccak256("poolId") : bytes32(0);
         d.shape = sh;
         bytes32 rule = _shapeRule(keying, capKind, hasPool, hasPoolId, sh);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         if (rule != 0) {
             vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, rule));
         } else {
@@ -81,7 +81,7 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
         for (uint256 i = 0; i < 3; ++i) {
             MarketDef memory d = _marketDef(address(0), makeAddr("oracle"));
             d.shape = PositionShape(ShapeKind.TickRange, 100 - deltas[i], 100);
-            vm.prank(address(timelock));
+            vm.prank(governor);
             if (deltas[i] <= 0) {
                 vm.expectRevert(
                     abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("shape"))
@@ -96,7 +96,7 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
         for (uint256 i = 0; i < 3; ++i) {
             MarketDef memory d = _marketDef(address(0), makeAddr("oracle"));
             d.shape = PositionShape(ShapeKind.FullPool, ticks[i][0], ticks[i][1]);
-            vm.prank(address(timelock));
+            vm.prank(governor);
             if (i < 2) {
                 vm.expectRevert(
                     abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("shape"))
@@ -115,7 +115,7 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
         address asset,
         address cs
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidAvanaFirstLossReserve.selector, cs));
         registry.setAvanaFirstLossReserve(h, asset, cs);
     }
@@ -141,7 +141,7 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
         );
         vm.expectEmit(address(registry));
         emit IMarketRegistry.AvanaFirstLossReserveSet(address(hub), address(dai), address(good));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setAvanaFirstLossReserve(address(hub), address(dai), address(good));
         assertEq(registry.firstLossReserveOf(address(hub), address(dai)), address(good));
         // Set once: a second First-Loss Reserve for the pair, even a valid one, is refused.
@@ -155,33 +155,9 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
     function test_TEST_273_firstLossReserveNeedsAHubAsset() public {
         RegistryTokenMock dai = new RegistryTokenMock(18);
         RegistryAvanaFirstLossReserveMock cs = new RegistryAvanaFirstLossReserveMock(address(hub), address(dai), 0);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(bytes("AssetNotListed"));
         registry.setAvanaFirstLossReserve(address(hub), address(dai), address(cs));
         assertEq(registry.firstLossReserveOf(address(hub), address(dai)), address(0));
-    }
-
-    // ─── Integrations ───
-
-    // TEST-264 verifies: REQ-CONFIG-075, REQ-MREG-020, Q-376
-    // Registering pins the LPVault and the pricing for the id and emits them; an LPVault already pinned to another id
-    // is refused.
-    function test_TEST_264_registerIntegrationRecordAndEvent() public {
-        RegistryLPVaultMock v2 = new RegistryLPVaultMock(2, address(collat), lockAddr);
-        v2.setRegistry(address(registry));
-        address pricing2 = makeAddr("pricing2");
-        vm.startPrank(address(timelock));
-        factory.registerIntegration(2, address(v2));
-        vm.expectEmit(address(registry));
-        emit IMarketRegistry.IntegrationRegistered(2, address(v2), pricing2);
-        registry.registerIntegration(2, address(v2), pricing2);
-        // The V3 LPVault cannot be pinned again under a new id.
-        RegistryLPVaultMock v3 = new RegistryLPVaultMock(3, address(collat), lockAddr);
-        v3.setRegistry(address(registry));
-        factory.registerIntegration(3, address(v3));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, uint32(3)));
-        registry.registerIntegration(3, address(lpVault), makeAddr("pricing3"));
-        vm.stopPrank();
-        assertEq(registry.integrationIdOf(address(v2)), 2);
     }
 }

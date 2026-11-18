@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @title LPVaultSwapViewsUnitTest
 /// @notice LPVaultSwap's views (2.11 "Interface", REQ-SWAP-032 to REQ-SWAP-038, REQ-SWAP-076, REQ-SWAP-122): the
@@ -23,18 +23,17 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
         assertEq(lvs.MARKET_REGISTRY(), address(registry), "MARKET_REGISTRY");
         assertEq(lvs.PARAMETER_STORE(), address(store), "PARAMETER_STORE");
         assertEq(lvs.PAYOUT_ESCROW(), address(escrow), "PAYOUT_ESCROW");
-        assertEq(lvs.TIMELOCK(), timelock, "TIMELOCK");
+        assertEq(lvs.authority(), address(accessManager), "TIMELOCK");
     }
 
     /// @notice The spec's constants: `keeperFloor` 1, `MAX_KEEPERS` 32, `MAX_REPAY_TRANSFERS` 4, the payout transfer's
-    /// 100,000 gas, and `APPLICATION_ADMIN` the shared role identifier.
+    /// 100,000 gas.
     // TEST-098 verifies: REQ-SWAP-034, REQ-SWAP-076, REQ-SWAP-122
     function test_TEST_098_constants() public view {
         assertEq(lvs.KEEPER_FLOOR(), 1, "keeperFloor");
         assertEq(lvs.MAX_KEEPERS(), 32, "MAX_KEEPERS");
         assertEq(lvs.MAX_REPAY_TRANSFERS(), 4, "MAX_REPAY_TRANSFERS");
         assertEq(lvs.PAYOUT_TRANSFER_GAS(), 100_000, "payout transfer gas");
-        assertEq(lvs.APPLICATION_ADMIN(), AvanaRoles.APPLICATION_ADMIN, "APPLICATION_ADMIN");
     }
 
     /// @notice The list keeps registration order; a removal moves the last entry into the removed slot.
@@ -42,7 +41,7 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
     function test_TEST_098_listOrderAndSwapAndPop() public {
         address[4] memory k = [makeAddr("k1"), makeAddr("k2"), makeAddr("k3"), makeAddr("k4")];
         for (uint256 i = 0; i < 4; ++i) {
-            vm.prank(timelock);
+            vm.prank(governor);
             lvs.addKeeper(k[i]);
         }
         address[] memory list = lvs.getKeepers();
@@ -51,7 +50,7 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
         for (uint256 i = 0; i < 4; ++i) {
             assertEq(list[i + 1], k[i], "registration order");
         }
-        vm.prank(timelock);
+        vm.prank(governor);
         lvs.removeKeeper(k[1]);
         list = lvs.getKeepers();
         assertEq(list.length, 4, "one fewer");
@@ -68,7 +67,7 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
     ) public {
         n = uint8(bound(n, 1, 20));
         for (uint256 i = 0; i < n; ++i) {
-            vm.prank(timelock);
+            vm.prank(governor);
             lvs.addKeeper(address(uint160(0xF000 + i)));
         }
         assertEq(lvs.approvedKeeperCount(), uint256(n) + 1, "registered count");
@@ -83,16 +82,16 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
     // TEST-098 verifies: REQ-SWAP-033, REQ-ACCESS-053
     function test_TEST_098_capIsExactly32() public {
         for (uint256 i = 0; i < 31; ++i) {
-            vm.prank(timelock);
+            vm.prank(governor);
             lvs.addKeeper(address(uint160(0xA100 + i)));
         }
         assertEq(lvs.approvedKeeperCount(), 32, "32 registered");
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.TooManyKeepers.selector, 32));
         lvs.addKeeper(makeAddr("thirtyThird"));
-        vm.prank(timelock);
+        vm.prank(governor);
         lvs.removeKeeper(address(uint160(0xA100)));
-        vm.prank(timelock);
+        vm.prank(governor);
         lvs.addKeeper(makeAddr("thirtyThird"));
         assertEq(lvs.approvedKeeperCount(), 32, "room again after a removal");
     }
@@ -102,34 +101,32 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
     // TEST-098 verifies: REQ-SWAP-033, REQ-SWAP-035, REQ-ACCESS-053, REQ-ACCESS-054
     function test_TEST_098_invalidKeeperAndEvents() public {
         address k = makeAddr("newKeeper");
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(ILPVaultSwapBase.InvalidKeeper.selector);
         lvs.addKeeper(address(0));
         vm.expectEmit(address(lvs));
         emit KeeperAdded(k);
-        vm.prank(timelock);
+        vm.prank(governor);
         lvs.addKeeper(k);
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(ILPVaultSwapBase.InvalidKeeper.selector);
         lvs.addKeeper(k);
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(ILPVaultSwapBase.InvalidKeeper.selector);
         lvs.removeKeeper(makeAddr("stranger"));
         vm.expectEmit(address(lvs));
         emit KeeperRemoved(k);
-        vm.prank(timelock);
+        vm.prank(governor);
         lvs.removeKeeper(k);
     }
 
-    /// @notice Any account without `APPLICATION_ADMIN` is refused both registry calls with the missing role.
+    /// @notice Any account without a role on the AccessManager is refused both registry calls.
     // TEST-062 verifies: REQ-SWAP-033, REQ-SWAP-035, REQ-ACCESS-053, REQ-ACCESS-054
-    function testFuzz_TEST_062_registryNeedsApplicationAdmin(
+    function testFuzz_TEST_062_registryNeedsARole(
         address caller
     ) public {
-        vm.assume(caller != timelock);
-        bytes memory err = abi.encodeWithSelector(
-            IAccessControl.AccessControlUnauthorizedAccount.selector, caller, AvanaRoles.APPLICATION_ADMIN
-        );
+        vm.assume(caller != governor && caller != governanceMultisig);
+        bytes memory err = abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, caller);
         vm.prank(caller);
         vm.expectRevert(err);
         lvs.addKeeper(makeAddr("k"));

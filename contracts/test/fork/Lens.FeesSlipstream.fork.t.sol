@@ -84,7 +84,7 @@ contract LensFeesSlipstreamForkTest is AvanaTest {
         }
         vm.createSelectFork(rpc, blockNumber);
         lock = new Lock(adapter, makeAddr("lpVaultSwap"));
-        vault = new SlipstreamIntegration(2, coll, registry, address(lock), makeAddr("timelock"), npm, factory);
+        vault = new SlipstreamIntegration(2, coll, registry, address(lock), makeAddr("authority"), npm, factory);
         vm.prank(registry);
         vault.bindMarket(
             1,

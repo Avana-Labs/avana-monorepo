@@ -29,7 +29,7 @@ contract ParameterStoreMarketCountGasIntegrationTest is ParameterStoreRegistryFi
         int24 half = int24(int256(10 * id));
         PositionShape memory shape = PositionShape(ShapeKind.TickRange, -half, half);
         RegistryLPOracleMock lpOracle = new RegistryLPOracleMock(id, address(lpVault));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         address vaultToken = factory.deployVaultToken(
             V3,
             pool,
@@ -46,7 +46,7 @@ contract ParameterStoreMarketCountGasIntegrationTest is ParameterStoreRegistryFi
         MarketDef memory d;
         (d.hub, d.spoke, d.integrationId, d.pool, d.shape) = (address(hub), address(spoke), V3, pool, shape);
         (d.vaultToken, d.lpOracle) = (vaultToken, address(lpOracle));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listCollateralMarket(d);
     }
 
@@ -54,7 +54,7 @@ contract ParameterStoreMarketCountGasIntegrationTest is ParameterStoreRegistryFi
     function _recheckGas(
         uint16 cf
     ) internal returns (uint256 used) {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         uint256 before = gasleft();
         store.setTokenCollateralFactorBps(address(usdc), cf);
         used = before - gasleft();
@@ -79,14 +79,14 @@ contract ParameterStoreMarketCountGasIntegrationTest is ParameterStoreRegistryFi
         uint256 next = registry.marketCount() + 1;
         RegistryLPOracleMock o = new RegistryLPOracleMock(next, address(lpVault));
         PositionShape memory shape = PositionShape(ShapeKind.TickRange, -10_000, 10_000);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         address vt = factory.deployVaultToken(
             V3, pool, bytes32(0), shape, address(hub), address(spoke), next, address(o), 18, "Avana", "av"
         );
         MarketDef memory d;
         (d.hub, d.spoke, d.integrationId, d.pool, d.shape) = (address(hub), address(spoke), V3, pool, shape);
         (d.vaultToken, d.lpOracle) = (vt, address(o));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.MarketCountLimit.selector, MAX_MARKETS));
         registry.listCollateralMarket(d);
     }

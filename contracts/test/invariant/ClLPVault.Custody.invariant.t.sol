@@ -21,7 +21,7 @@ abstract contract ClLPVaultCustodyInvariants is ClLPVaultBase, IClCustodySource 
     function _startHandler() internal {
         Core memory c = _cCore();
         handler = new ClLPVaultCustodyHandler(
-            _cVault(), this, c.lock, [c.adapter, c.coll, c.lpVaultSwap, c.timelock, attacker], [alice, bob]
+            _cVault(), this, c.lock, [c.adapter, c.coll, c.lpVaultSwap, governor, attacker], [alice, bob]
         );
         targetContract(address(handler));
     }
@@ -49,7 +49,7 @@ abstract contract ClLPVaultCustodyInvariants is ClLPVaultBase, IClCustodySource 
                 assertEq(v.depositorOf(key), address(0), "no entry after it left");
             }
             assertTrue(
-                owner != c.adapter && owner != c.coll && owner != c.lpVaultSwap && owner != c.timelock,
+                owner != c.adapter && owner != c.coll && owner != c.lpVaultSwap && owner != governor,
                 "never held by a core contract"
             );
         }

@@ -23,7 +23,7 @@ abstract contract AvanaDeploy is AvanaPeripheryDeploy {
         Predicted memory p = _predictAll();
         d.factory = address(create3);
         d.deployer = deployer;
-        d.timelock = _deployTimelock(c, p);
+        d.accessManager = _deployAccessManager(c, p);
         d.marketRegistry = _deployMarketRegistry(c, p);
         d.parameterStore = _deployParameterStore(c, p);
         d.riskModule = _deployRiskModule(p);
@@ -83,7 +83,7 @@ abstract contract AvanaDeploy is AvanaPeripheryDeploy {
         Predicted memory p,
         AvanaDeployment memory d
     ) internal view {
-        require(d.timelock == p.timelock, "timelock");
+        require(d.accessManager == p.accessManager, "accessManager");
         require(d.marketRegistry.proxy == p.marketRegistry, "marketRegistry");
         require(d.parameterStore.proxy == p.parameterStore, "parameterStore");
         require(d.riskModule.proxy == p.riskModule, "riskModule");
@@ -97,13 +97,13 @@ abstract contract AvanaDeploy is AvanaPeripheryDeploy {
         _expect(d.lock, "LP_VAULT_SWAP()", p.lpVaultSwap);
         _expect(d.collateralization, "LOCK()", p.lock);
         _expect(d.collateralization, "VAULT_TOKEN_FACTORY()", p.vaultTokenFactory);
-        _expect(d.vaultTokenFactory, "TIMELOCK()", p.timelock);
+        _expect(d.vaultTokenFactory, "authority()", p.accessManager);
         _expect(d.vaultTokenFactory, "COLLATERALIZATION()", p.collateralization);
         _expect(d.payoutEscrow, "LP_VAULT_SWAP()", p.lpVaultSwap);
         _expect(d.marketRegistry.proxy, "PARAMETER_STORE()", p.parameterStore);
         _expect(d.marketRegistry.proxy, "FLASH_LIQUIDATOR()", p.flashLiquidator);
         for (uint256 i = 0; i < d.lpVaults.length; ++i) {
-            _expect(d.lpVaults[i], "TIMELOCK()", p.timelock);
+            _expect(d.lpVaults[i], "authority()", p.accessManager);
             _expect(d.lpVaults[i], "MARKET_REGISTRY()", p.marketRegistry);
         }
     }

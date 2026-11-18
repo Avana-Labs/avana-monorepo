@@ -10,7 +10,7 @@ import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap
 import {LPVaultSwap} from "../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
 import {LPVaultSwapImmutables, LPVaultSwapLogics} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
@@ -34,10 +34,10 @@ contract LPVaultSwapAdminFuzzTest is LPVaultSwapUnitBase {
 
     function deployProxy(
         address implementation,
-        address timelock_,
+        address authority_,
         address[] memory keepers
     ) external returns (address) {
-        return address(new ERC1967Proxy(implementation, abi.encodeCall(LPVaultSwap.initialize, (timelock_, keepers))));
+        return address(new ERC1967Proxy(implementation, abi.encodeCall(LPVaultSwap.initialize, (authority_, keepers))));
     }
 
     /// @notice A keeper floor in [1, 32] constructs; 0 or above 32 reverts `KeeperFloor(floor, 32)`. The logic
@@ -58,14 +58,14 @@ contract LPVaultSwapAdminFuzzTest is LPVaultSwapUnitBase {
     }
 
     /// @notice An initial list of `n` distinct keepers initialises exactly when `keeperFloor ≤ n ≤ 32`, else
-    /// `KeeperFloor(n, floor)` or `TooManyKeepers(32)`; the timelock receives both admin roles and nobody else.
+    /// `KeeperFloor(n, floor)` or `TooManyKeepers(32)`; the AccessManager is the authority.
     // TEST-242 verifies: REQ-SWAP-032, REQ-SWAP-034, REQ-SWAP-040, REQ-ACCESS-153
     function testFuzz_TEST_242_initialKeeperList(
         uint256 n,
-        address timelock_
+        address authority_
     ) public {
         n = bound(n, 0, 40);
-        vm.assume(timelock_ != address(0));
+        vm.assume(authority_ != address(0));
         address[] memory keepers = new address[](n);
         for (uint256 i = 0; i < n; ++i) {
             keepers[i] = address(uint160(0xD000 + i));
@@ -73,15 +73,14 @@ contract LPVaultSwapAdminFuzzTest is LPVaultSwapUnitBase {
         address implementation = address(implementation);
         if (n > 32) {
             vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.TooManyKeepers.selector, 32));
-            this.deployProxy(implementation, timelock_, keepers);
+            this.deployProxy(implementation, authority_, keepers);
         } else if (n < 1) {
             vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, n, 1));
-            this.deployProxy(implementation, timelock_, keepers);
+            this.deployProxy(implementation, authority_, keepers);
         } else {
-            ILPVaultSwap p = ILPVaultSwap(this.deployProxy(implementation, timelock_, keepers));
+            ILPVaultSwap p = ILPVaultSwap(this.deployProxy(implementation, authority_, keepers));
             assertEq(p.approvedKeeperCount(), n, "all registered");
-            assertTrue(IAccessControl(address(p)).hasRole(0x00, timelock_), "timelock is root admin");
-            assertTrue(IAccessControl(address(p)).hasRole(AvanaRoles.APPLICATION_ADMIN, timelock_), "timelock admin");
+            assertEq(IAccessManaged(address(p)).authority(), authority_, "authority");
         }
     }
 
@@ -95,28 +94,24 @@ contract LPVaultSwapAdminFuzzTest is LPVaultSwapUnitBase {
         if (dup % 2 == 0) keepers[2] = keepers[dup % 2];
         else keepers[1] = address(0);
         vm.expectRevert(ILPVaultSwapBase.InvalidKeeper.selector);
-        this.deployProxy(address(implementation), timelock, keepers);
+        this.deployProxy(address(implementation), address(accessManager), keepers);
     }
 
-    /// @notice Either admin role granted to any account other than the timelock reverts
-    /// `AdminRoleOnlyTimelock(role, account)`; any other role follows AccessControl and is granted.
+    /// @notice An account with no role on the AccessManager is refused `addKeeper`, `removeKeeper` and an upgrade.
     // TEST-062 verifies: REQ-SWAP-040, REQ-ACCESS-153, INV-084
-    function testFuzz_TEST_062_adminRolesOnlyTimelock(
-        address account,
-        bytes32 otherRole
+    function testFuzz_TEST_062_registryAndUpgradeNeedARole(
+        address account
     ) public {
-        vm.assume(account != timelock);
-        vm.assume(otherRole != 0x00 && otherRole != AvanaRoles.APPLICATION_ADMIN);
-        IAccessControl ac = IAccessControl(address(lvs));
-        bytes32[2] memory admins = [bytes32(0x00), AvanaRoles.APPLICATION_ADMIN];
-        for (uint256 i = 0; i < 2; ++i) {
-            vm.prank(timelock);
-            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.AdminRoleOnlyTimelock.selector, admins[i], account));
-            ac.grantRole(admins[i], account);
-        }
-        vm.prank(timelock);
-        ac.grantRole(otherRole, account);
-        assertTrue(ac.hasRole(otherRole, account), "other roles follow AccessControl");
+        vm.assume(account != governor && account != governanceMultisig);
+        bytes memory err = abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, account);
+        vm.startPrank(account);
+        vm.expectRevert(err);
+        lvs.addKeeper(account);
+        vm.expectRevert(err);
+        lvs.removeKeeper(keeper);
+        vm.expectRevert(err);
+        UUPSUpgradeable(address(lvs)).upgradeToAndCall(address(implementation), "");
+        vm.stopPrank();
     }
 
     /// @notice Any calldata sent straight to a logic contract (not through the proxy) reverts `NotDelegated` for
@@ -139,35 +134,31 @@ contract LPVaultSwapAdminFuzzTest is LPVaultSwapUnitBase {
         if (ret.length >= 4) assertEq(bytes4(ret), ILPVaultSwapBase.NotDelegated.selector, "NotDelegated");
     }
 
-    /// @notice After any number of keeper additions, an upgrade by the timelock keeps the proxy address, the
-    /// registry and the roles; an upgrade by anyone else reverts with the missing `APPLICATION_ADMIN`.
+    /// @notice After any number of keeper additions, an upgrade by the governance role keeps the proxy address, the
+    /// registry and the authority; an upgrade by anyone else reverts `AccessManagedUnauthorized`.
     // TEST-242 verifies: REQ-SWAP-040, REQ-SWAP-069, REQ-ACCESS-153
     function testFuzz_TEST_242_upgradeKeepsRegistry(
         uint8 adds,
         address outsider
     ) public {
-        vm.assume(outsider != timelock);
+        vm.assume(outsider != governor && outsider != governanceMultisig);
         uint256 n = bound(adds, 0, 10);
         for (uint256 i = 0; i < n; ++i) {
-            vm.prank(timelock);
+            vm.prank(governor);
             lvs.addKeeper(address(uint160(0xE000 + i)));
         }
         address[] memory before = lvs.getKeepers();
         LPVaultSwap next = new LPVaultSwap(immutables(), _logics());
         vm.prank(outsider);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, outsider, AvanaRoles.APPLICATION_ADMIN
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, outsider));
         UUPSUpgradeable(address(lvs)).upgradeToAndCall(address(next), "");
-        vm.prank(timelock);
+        vm.prank(governor);
         UUPSUpgradeable(address(lvs)).upgradeToAndCall(address(next), "");
         address[] memory afterList = lvs.getKeepers();
         assertEq(afterList.length, before.length, "same registry size");
         for (uint256 i = 0; i < before.length; ++i) {
             assertEq(afterList[i], before[i], "same registry order");
         }
-        assertTrue(IAccessControl(address(lvs)).hasRole(AvanaRoles.APPLICATION_ADMIN, timelock), "roles kept");
+        assertEq(lvs.authority(), address(accessManager), "authority kept");
     }
 }

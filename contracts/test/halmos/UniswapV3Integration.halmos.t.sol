@@ -22,7 +22,7 @@ contract UniswapV3IntegrationHalmosTest is Test {
     address internal constant SWAP = address(0x5A9);
     address internal constant COLL = address(0xC011);
     address internal constant REGISTRY = address(0x4E6);
-    address internal constant TIMELOCK = address(0x713E);
+    address internal constant AUTHORITY = address(0x713E);
     address internal constant OWNER = address(0xA11CE);
 
     Lock internal lock;
@@ -40,7 +40,7 @@ contract UniswapV3IntegrationHalmosTest is Test {
         MintableToken b = new MintableToken("B", 6);
         pool = MockV3Pool(factory.createPool(address(a), address(b), 500, 10));
         vault = new UniswapV3IntegrationHarness(
-            1, COLL, REGISTRY, address(lock), TIMELOCK, address(nfpm), address(factory), factory.poolInitCodeHash()
+            1, COLL, REGISTRY, address(lock), AUTHORITY, address(nfpm), address(factory), factory.poolInitCodeHash()
         );
         vm.prank(REGISTRY);
         vault.bindMarket(

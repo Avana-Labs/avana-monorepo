@@ -14,7 +14,7 @@ contract ParameterStoreAdminRiskProperties is ParameterStoreHarnessBase {
     address internal immutable ADMIN_RISK;
 
     constructor() ParameterStoreHarnessBase() {
-        ADMIN_RISK = address(new ParameterStoreAdminRiskLogic(address(this), address(_REGISTRY), 12));
+        ADMIN_RISK = address(new ParameterStoreAdminRiskLogic(address(_REGISTRY), 12));
         _s().g.avanaFeeShareBps = 2000;
     }
 

@@ -250,7 +250,7 @@ contract UniswapV4IntegrationCustodyUnitTest is UniswapV4IntegrationFixture {
         assertEq(vault.unitsOf(key), 0, "fully seized");
         assertTrue(vault.isInCustody(key), "the zero-unit position stays in custody");
         assertEq(vault.depositorOf(key), alice);
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(NotStray.selector);
         vault.returnStray(key, bob);
         _as(adapter, abi.encodeCall(vault.collectFees, (key, alice)));
@@ -605,7 +605,7 @@ contract UniswapV4IntegrationCustodyUnitTest is UniswapV4IntegrationFixture {
             (bool okColl,) = _try(address(0), coll, calls[i]);
             assertFalse(okColl, "custody entry point outside the Lock");
         }
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(NotStray.selector);
         vault.returnStray(key, operator);
         _assertBacked(key, alice, units);
@@ -639,7 +639,7 @@ contract UniswapV4IntegrationCustodyUnitTest is UniswapV4IntegrationFixture {
         vm.prank(carol);
         posm.transferFrom(carol, address(vault), stray);
         _lock();
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(Locked.selector);
         vault.returnStray(bytes32(stray), carol);
         vm.prank(alice);
@@ -653,7 +653,7 @@ contract UniswapV4IntegrationCustodyUnitTest is UniswapV4IntegrationFixture {
         _unlock();
         _as(adapter, calls[1]);
         assertEq(posm.ownerOf(uint256(key)), bob, "returned under the Lock");
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.returnStray(bytes32(stray), carol);
         assertEq(posm.ownerOf(stray), carol, "the stray leaves once the Lock is free");
     }
@@ -668,7 +668,14 @@ contract UniswapV4IntegrationCustodyUnitTest is UniswapV4IntegrationFixture {
         address otherVault = deployCode(
             "UniswapV4Integration.sol:UniswapV4Integration",
             abi.encode(
-                INTEGRATION + 1, coll, registry, address(lock), timelock, address(posm), address(factory), uint256(12)
+                INTEGRATION + 1,
+                coll,
+                registry,
+                address(lock),
+                address(accessManager),
+                address(posm),
+                address(factory),
+                uint256(12)
             )
         );
         address[5] memory callers = [alice, makeAddr("positionProxy"), otherVault, adapter, lpVaultSwap];
@@ -683,7 +690,7 @@ contract UniswapV4IntegrationCustodyUnitTest is UniswapV4IntegrationFixture {
             }
         }
         _assertBacked(key, bob, units);
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(NotStray.selector);
         vault.returnStray(key, alice);
         bytes32 eth = _mintFor(alice, ethKey, M2_LOWER, M2_UPPER, 1e18);
@@ -702,7 +709,7 @@ contract UniswapV4IntegrationCustodyUnitTest is UniswapV4IntegrationFixture {
     /// mint, burn or proxy-registration selector.
     function test_TEST_162_lpVaultTouchesNoVaultTokenGateOrUpgradeableContract() public {
         vm.etch(registry, hex"60006000fd");
-        address[5] memory denied = [registry, adapter, lpVaultSwap, timelock, coll];
+        address[5] memory denied = [registry, adapter, lpVaultSwap, address(accessManager), coll];
         for (uint256 i = 0; i < denied.length; ++i) {
             vm.expectCall(denied[i], "", 0);
         }

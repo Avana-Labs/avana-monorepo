@@ -33,7 +33,7 @@ contract LPVaultSwapHostileUniswapV4IntegrationTest is RealStackUniswapV4Journey
     function setUp() public {
         _setUpV4Journeys();
         honestImpl = address(uint160(uint256(vm.load(lpVaultSwap, IMPL_SLOT))));
-        hostile = new HostileLiquidatorImpl(address(timelock));
+        hostile = new HostileLiquidatorImpl(address(accessManager));
     }
 
     function _install(

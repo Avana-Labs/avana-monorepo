@@ -45,10 +45,10 @@ contract SlipstreamIntegration is ClNfpmLPVault, ISlipstreamIntegration {
         address collateralization,
         address marketRegistry,
         address lock,
-        address timelock,
+        address authority,
         address[GENERATION_COUNT] memory npms,
         address[GENERATION_COUNT] memory factories
-    ) ClLPVaultBase(integrationId, collateralization, marketRegistry, lock, timelock) {
+    ) ClLPVaultBase(integrationId, collateralization, marketRegistry, lock, authority) {
         address[12] memory all = [
             npms[0],
             npms[1],
@@ -61,7 +61,7 @@ contract SlipstreamIntegration is ClNfpmLPVault, ISlipstreamIntegration {
             collateralization,
             marketRegistry,
             lock,
-            timelock
+            authority
         ];
         bool bad = false;
         // The eight AMM addresses against each other and the bindings; the bindings were checked by the base.

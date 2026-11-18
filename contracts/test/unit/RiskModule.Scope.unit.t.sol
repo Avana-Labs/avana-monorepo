@@ -71,7 +71,7 @@ contract RiskModuleScopeUnitTest is RiskModuleFixture {
         bytes32 implSlot = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
         bytes32 implBefore = vm.load(at, implSlot);
         RiskModule next = new RiskModule(rmIm, rmLogics);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         riskModule.upgradeToAndCall(address(next), "");
         assertEq(vm.load(at, implSlot), bytes32(uint256(uint160(address(next)))), "new implementation");
         assertTrue(vm.load(at, implSlot) != implBefore);

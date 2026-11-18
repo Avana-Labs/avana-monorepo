@@ -17,9 +17,8 @@ contract DaoDeficitOffset is AvanaFirstLossReserve, IDaoDeficitOffset {
         address asset,
         uint256 assetId,
         address authority,
-        uint256 reserveWithdrawalDelay,
         address firstLossLayer
-    ) AvanaFirstLossReserve(hub, asset, assetId, authority, reserveWithdrawalDelay) {
+    ) AvanaFirstLossReserve(hub, asset, assetId, authority) {
         if (firstLossLayer == address(0)) revert ZeroAddress();
         IAvanaFirstLossReserve layer = IAvanaFirstLossReserve(firstLossLayer);
         if (layer.HUB() != hub || layer.ASSET() != asset || layer.ASSET_ID() != assetId) {

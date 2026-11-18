@@ -71,7 +71,7 @@ contract LPVaultSwapLivenessUnitTest is LPVaultSwapUnitBase {
             abi.encodeWithSignature("setMarketFrozen(uint256,bool)", MARKET_ID, true)
         ];
         for (uint256 i = 0; i < calls.length; ++i) {
-            vm.prank(timelock);
+            vm.prank(governor);
             (bool ok,) = address(lvs).call(calls[i]);
             assertFalse(ok, "no restriction selector");
         }

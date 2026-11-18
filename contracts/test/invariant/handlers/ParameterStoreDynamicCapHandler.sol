@@ -22,7 +22,7 @@ contract ParameterStoreDynamicCapHandler is Test {
     error Skipped();
 
     IParameterStore internal store;
-    address internal timelock;
+    address internal governor;
     address internal safe;
     address internal stranger = makeAddr("stranger");
     uint256 internal marketId;
@@ -43,7 +43,7 @@ contract ParameterStoreDynamicCapHandler is Test {
         address steward,
         uint256 m
     ) {
-        (store, timelock, safe, marketId) = (s, tl, steward, m);
+        (store, governor, safe, marketId) = (s, tl, steward, m);
     }
 
     function _arbitrary(
@@ -100,7 +100,7 @@ contract ParameterStoreDynamicCapHandler is Test {
         uint8 role
     ) internal view returns (address) {
         uint8 r = role % 8;
-        return r < 4 ? timelock : r < 7 ? safe : stranger;
+        return r < 4 ? governor : r < 7 ? safe : stranger;
     }
 
     /// @dev The caller and direction of a steered call: an unset value (`capInterval == 0`) is first loosened by the
@@ -110,7 +110,7 @@ contract ParameterStoreDynamicCapHandler is Test {
         bool loosen,
         uint32 oldInterval
     ) internal view returns (address, bool) {
-        if (oldInterval == 0) return (timelock, true);
+        if (oldInterval == 0) return (governor, true);
         return who == safe ? (who, false) : (who, loosen);
     }
 

@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {AaveAdapter} from "../../../src/policy/aave-adapter/AaveAdapter.sol";
 import {AaveAdapterCollateralLogic} from "../../../src/policy/aave-adapter/AaveAdapterCollateralLogic.sol";
@@ -107,8 +108,7 @@ abstract contract AaveAdapterRiskFixture is AaveAdapterFixture {
             parameterStore: address(rstore),
             collateralization: address(coll),
             adapter: adapter,
-            lpVaultSwap: address(swap),
-            timelock: timelock
+            lpVaultSwap: address(swap)
         });
         RiskModuleLogics memory l;
         l.drift = address(new RiskModuleDriftLogic(rmIm));
@@ -118,8 +118,11 @@ abstract contract AaveAdapterRiskFixture is AaveAdapterFixture {
         l.status = address(new RiskModuleStatusLogic(rmIm, l.drift, l.breaker, l.borrow));
         l.dynamicCap = address(new RiskModuleDynamicCapLogic(rmIm));
         RiskModule rmImpl = new RiskModule(rmIm, l);
-        rm = RiskModule(address(new ERC1967Proxy(address(rmImpl), abi.encodeCall(RiskModule.initialize, (timelock)))));
+        rm = RiskModule(
+            address(new ERC1967Proxy(address(rmImpl), abi.encodeCall(RiskModule.initialize, (address(accessManager)))))
+        );
         vm.label(address(rm), "RiskModule");
+        _bindAccess(AvanaAccess.Kind.RiskModule, address(rm));
 
         // The Adapter, upgraded in place: same proxy, same storage, the reviewed RiskModule and this ParameterStore.
         im.riskModule = address(rm);
@@ -131,7 +134,7 @@ abstract contract AaveAdapterRiskFixture is AaveAdapterFixture {
             settlement: address(new AaveAdapterSettlementLogic(im))
         });
         implementation = new AaveAdapter(im, logics);
-        vm.prank(timelock);
+        vm.prank(governor);
         AaveAdapter(adapter).upgradeToAndCall(address(implementation), "");
     }
 

@@ -49,7 +49,7 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         address token
     ) internal returns (address feed) {
         feed = _newFeed("GHO/USD monitoring");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(token, _monitoringDef(feed));
     }
 
@@ -58,7 +58,7 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         address token
     ) internal {
         (address[] memory p, address[] memory a) = _routes("both");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setPriceSource(token, p, a);
     }
 
@@ -79,7 +79,7 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         IAaveV4Spoke.DynamicReserveConfig memory dyn;
         spoke.setReserve(NEW_RESERVE, r, c, dyn);
         aaveOracle.setSource(NEW_RESERVE, source);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setAvanaFirstLossReserve(address(hub), asset, address(cs));
         d = DebtReserveDef({
             reserveId: NEW_RESERVE,
@@ -107,7 +107,7 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
     function _enable(
         DebtReserveDef memory d
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.enableDebtReserve(address(spoke), d);
     }
 
@@ -135,7 +135,7 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         (address[] memory p, address[] memory a) = _routes("probe");
         TokenDef memory d = _tokenDef(p, a);
         d.issuerProbe = probe;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(token, d);
     }
 
@@ -152,7 +152,7 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         address[] memory noAlt = new address[](0);
         vm.expectEmit(address(registry));
         emit IMarketRegistryBase.TokenListed(address(ghoM), 18, d.primaryRoute, noAlt, address(0));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(address(ghoM), d);
         TokenDef memory t = registry.getToken(address(ghoM));
         assertTrue(t.listed);
@@ -175,7 +175,7 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         address noDef = address(new RegistryFeedMock(8, 1e8));
         address noBeat = address(new RegistryFeedMock(8, 1e8));
         ps.setFeed(noBeat, 8, 0, 25, 25);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         _expectListing("feed");
         registry.listToken(address(ghoM), _monitoringDef(noDef));
         _expectListing("heartbeat");
@@ -189,7 +189,7 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         onlyAlt.alternateRoute = a;
         TokenDef memory noPrimary = _monitoringDef(p[0]);
         noPrimary.primaryRoute = new address[](0);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         _expectListing("routeLength");
         registry.listToken(address(ghoM), onlyAlt);
         _expectListing("routeLength");
@@ -210,21 +210,21 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         (toks[0], toks[1]) = (address(usdc), address(ghoM));
         lpVault.setPoolTokens(toks, 18);
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(1, _shape());
-        vm.prank(address(timelock));
+        vm.prank(governor);
         _expectListing("routeLength");
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         // An unlisted pool token is still reported as unlisted first.
         address unlisted = address(new RegistryTokenMock(6));
         (toks[0], toks[1]) = (unlisted, address(ghoM));
         lpVault.setPoolTokens(toks, 18);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TokenNotListed.selector, unlisted));
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         // With both routes the token is an ordinary listed token and the market registers.
         _giveBothRoutes(address(ghoM));
         (toks[0], toks[1]) = (address(usdc), address(ghoM));
         lpVault.setPoolTokens(toks, 18);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         uint256 id = registry.listCollateralMarket(_marketDef(vt, address(o)));
         assertEq(registry.getMarket(id).tokens[1], address(ghoM));
     }
@@ -260,7 +260,7 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         RegistryRouteMock viaClPool = _routeWithDeps(address(usdc), address(gho), "clA", "clB");
         viaClPool.setExactAmountInputs(exact);
         for (uint8 kind = 0; kind < 2; ++kind) {
-            vm.prank(address(timelock));
+            vm.prank(governor);
             vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
             registry.setRoute(id, address(usdc), address(gho), kind, address(viaClPool));
         }
@@ -268,7 +268,7 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         exact[0] = address(usdc);
         RegistryRouteMock usdcHop = _routeWithDeps(address(usdc), address(gho), "clC", "clD");
         usdcHop.setExactAmountInputs(exact);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setRoute(id, address(usdc), address(gho), 0, address(usdcHop));
         (address r,) = registry.getRoute(id, address(usdc), address(gho), 0);
         assertEq(r, address(usdcHop));
@@ -284,11 +284,11 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         _listWithProbe(address(tether), IssuerProbe.UsdtFeeRateAndPaused);
         DebtReserveDef memory d = _oracleReserveFor(address(tether), 6);
         tether.setFee(1, false);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TransferFeeActive.selector, address(tether)));
         registry.enableDebtReserve(address(spoke), d);
         tether.setFee(0, true);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TransferFeeActive.selector, address(tether)));
         registry.enableDebtReserve(address(spoke), d);
         tether.setFee(0, false);
@@ -305,7 +305,7 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         bytes memory answer
     ) internal {
         vm.mockCall(asset, abi.encodeCall(ITetherFee.basisPointsRate, ()), answer);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TransferFeeActive.selector, asset));
         registry.enableDebtReserve(address(spoke), d);
     }
@@ -316,7 +316,7 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         DebtReserveDef calldata d,
         address asset
     ) external returns (uint256 used) {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         uint256 before = gasleft();
         try registry.enableDebtReserve(address(spoke), d) {
             revert("enabled");
@@ -343,7 +343,7 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         _expectFeeRefused(address(tether), d, new bytes(1 << 20));
         vm.clearMockedCalls();
         tether.setFee(0, true);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TransferFeeActive.selector, address(tether)));
         registry.enableDebtReserve(address(spoke), d);
         tether.setFee(1, false);
@@ -361,7 +361,7 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         DebtReserveDef memory d = _oracleReserveFor(address(tether), 6);
         vm.etch(address(tether), "");
         vm.mockCall(address(tether), abi.encodeWithSignature("decimals()"), abi.encode(uint8(6)));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TransferFeeActive.selector, address(tether)));
         registry.enableDebtReserve(address(spoke), d);
     }

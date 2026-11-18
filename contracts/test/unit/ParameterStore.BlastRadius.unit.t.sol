@@ -65,7 +65,7 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
 
     // TEST-133 verifies: REQ-PSTORE-001, REQ-PSTORE-003, INV-018
     function test_TEST_133_tighteningsTouchOnlyTheStore() public {
-        address tl = address(timelock);
+        address tl = governor;
         _contained(tl, abi.encodeCall(store.tightenSlippageAllowanceBps, (M, 50)));
         _contained(tl, abi.encodeCall(store.tightenBorrowPriceMaxAge, (address(fUsdc), 4200)));
         _contained(tl, abi.encodeCall(store.tightenPoolRiskFactor, (M, 3000)));
@@ -81,7 +81,7 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
 
     // TEST-133 verifies: REQ-PSTORE-001, REQ-PSTORE-003, INV-018
     function test_TEST_133_loosenAndListingTouchOnlyTheStore() public {
-        address tl = address(timelock);
+        address tl = governor;
         _contained(tl, abi.encodeCall(store.loosenMarketUsdCap, (M, 6_000_000e8)));
         _contained(tl, abi.encodeCall(store.loosenTopUpSliceUsd, (M, 600_000e8)));
         _contained(tl, abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 21_000_000e8)));
@@ -99,7 +99,7 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
 
     // TEST-133 verifies: REQ-PSTORE-001, REQ-PSTORE-003, REQ-CONFIG-056, INV-018
     function test_TEST_133_structuralSettersTouchOnlyTheStore() public {
-        address tl = address(timelock);
+        address tl = governor;
         _contained(tl, abi.encodeCall(store.setBorrowPriceMaxAge, (address(fUsdc), 5000)));
         _contained(tl, abi.encodeCall(store.setPoolRiskFactor, (M, 3000)));
         _contained(tl, abi.encodeCall(store.setAvanaFeeShareBps, (1000)));
@@ -151,9 +151,9 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
             assertFalse(ok, "accepted bare ETH");
             assertEq(targets[i].balance, 0);
         }
-        // A setter is not payable either, even for the timelock.
-        vm.deal(address(timelock), 1 ether);
-        vm.prank(address(timelock));
+        // A setter is not payable either, even for the governor.
+        vm.deal(governor, 1 ether);
+        vm.prank(governor);
         (bool sent,) = address(store).call{value: 1}(abi.encodeCall(store.setCoverageRatioBps, (1)));
         assertFalse(sent, "setter accepted ETH");
         assertEq(store.coverageRatioBps(), 0);

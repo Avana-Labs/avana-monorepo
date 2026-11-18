@@ -75,7 +75,7 @@ contract MarketRegistryUniswapV4ListingUnitTest is MarketRegistryFixture {
                     address(collat),
                     address(registry),
                     lockAddr,
-                    address(timelock),
+                    address(accessManager),
                     positionManager,
                     refFactory,
                     uint256(12)
@@ -85,9 +85,8 @@ contract MarketRegistryUniswapV4ListingUnitTest is MarketRegistryFixture {
         vm.label(address(uni4), "UniswapV4LPVault");
         address[] memory amm = new address[](2);
         (amm[0], amm[1]) = (positionManager, poolManager);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         factory.registerIntegration(UNI4, address(uni4));
-        registry.registerIntegration(UNI4, address(uni4), makeAddr("uni4Pricing"));
         registry.recordIntegrationContracts(UNI4, amm);
         registry.finalizeIntegrationContracts(UNI4);
         vm.stopPrank();
@@ -101,7 +100,7 @@ contract MarketRegistryUniswapV4ListingUnitTest is MarketRegistryFixture {
         uni4Spoke.setOracle(address(o));
         uni4Spoke.setImplementation(address(spokeImpl));
         o.setSpoke(address(uni4Spoke));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.deployCdpSpoke(
             SpokeDef({
                 approved: false,
@@ -120,7 +119,7 @@ contract MarketRegistryUniswapV4ListingUnitTest is MarketRegistryFixture {
         uni4Spoke.setReserve(GHO_ON_UNI4, r, c, d);
         o.setSource(GHO_ON_UNI4, address(ghoSource));
         hub.setSpokeConfig(GHO_ASSET, address(uni4Spoke), 0, 1_000_000);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.enableDebtReserve(address(uni4Spoke), _ghoDef());
     }
 
@@ -150,7 +149,7 @@ contract MarketRegistryUniswapV4ListingUnitTest is MarketRegistryFixture {
         uint256 id = registry.marketCount() + 1;
         unitDecimals = _unitDecimals(id);
         RegistryLPOracleMock lpOracle = new RegistryLPOracleMock(id, address(uni4));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         address vaultToken = factory.deployVaultToken(
             UNI4,
             address(0),
@@ -176,11 +175,11 @@ contract MarketRegistryUniswapV4ListingUnitTest is MarketRegistryFixture {
     function test_TEST_138_listsAgainstTheRealUniswapV4Integration() public {
         (MarketDef memory d, uint8 unitDecimals) = _uni4Def(_data());
         d.integrationData = "";
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(ILPVaultBase.InvalidPool.selector);
         registry.listCollateralMarket(d);
         d.integrationData = _data();
-        vm.prank(address(timelock));
+        vm.prank(governor);
         uint256 id = registry.listCollateralMarket(d);
         assertEq(id, registry.marketCount());
         Market memory m = registry.getMarket(id);
@@ -211,19 +210,19 @@ contract MarketRegistryUniswapV4ListingUnitTest is MarketRegistryFixture {
     /// recorded PositionManager or PoolManager is refused, one through another pool is accepted.
     function test_TEST_054_routesOfTheRealIntegrationAvoidItsRecordedContracts() public {
         (MarketDef memory d,) = _uni4Def(_data());
-        vm.prank(address(timelock));
+        vm.prank(governor);
         uint256 id = registry.listCollateralMarket(d);
         address[2] memory bad = [positionManager, poolManager];
         for (uint256 i = 0; i < bad.length; ++i) {
             address[] memory deps = new address[](1);
             deps[0] = bad[i];
             address route = address(new RegistryRouteMock(address(usdc), address(gho), address(lpVaultSwap), deps));
-            vm.prank(address(timelock));
+            vm.prank(governor);
             vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
             registry.setRoute(id, address(usdc), address(gho), 0, route);
         }
         address ok = address(_newRoute(address(usdc), address(gho), "otherPool"));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setRoute(id, address(usdc), address(gho), 0, ok);
         (address r, bool usable) = registry.getRoute(id, address(usdc), address(gho), 0);
         assertTrue(r == ok && usable);

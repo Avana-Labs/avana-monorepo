@@ -25,7 +25,7 @@ contract ParameterStoreFeedsUnitTest is ParameterStoreFixture {
         address feed,
         FeedDef memory d
     ) internal returns (bool ok, bytes memory ret) {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (ok, ret) = address(store).call(abi.encodeCall(store.setFeed, (feed, d)));
     }
 
@@ -255,7 +255,7 @@ contract ParameterStoreFeedsUnitTest is ParameterStoreFixture {
     // TEST-250 verifies: REQ-CONFIG-022
     function test_TEST_250_feedWithoutCodeIsRefused() public {
         address eoa = makeAddr("eoaFeed");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (bool ok,) = address(store).call(abi.encodeCall(store.setFeed, (eoa, _feedDef(3600, 600))));
         assertFalse(ok);
         assertEq(store.getFeed(eoa).feedHeartbeat, 0);
@@ -305,7 +305,7 @@ contract ParameterStoreFeedsUnitTest is ParameterStoreFixture {
     function test_TEST_064_feedRaiseRefusedAtTheMarginEdge() public {
         // CF 9,999 for both tokens and a pool factor of 4,000 give a margin of 10,000 − ⌊9,999 × 4,000 / 10,000⌋ =
         // 6,001 bps. Each route must stay strictly below it.
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         store.setTokenCollateralFactorBps(usdc, 9999);
         store.setTokenCollateralFactorBps(usdt, 9999);
         vm.stopPrank();

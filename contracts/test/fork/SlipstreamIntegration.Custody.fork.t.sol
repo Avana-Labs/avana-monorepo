@@ -112,7 +112,7 @@ contract SlipstreamIntegrationCustodyForkTest is AvanaTest {
         if (pin == 0) vm.createSelectFork(rpc);
         else vm.createSelectFork(rpc, pin);
         lock = new Lock(adapter, makeAddr("lpVaultSwap"));
-        vault = new SlipstreamIntegration(2, coll, registry, address(lock), makeAddr("timelock"), npms, factories);
+        vault = new SlipstreamIntegration(2, coll, registry, address(lock), makeAddr("authority"), npms, factories);
         mover = new ClPoolMover();
         npm = npms[GEN];
         assertEq(ICLPool(POOL).nft(), npm);

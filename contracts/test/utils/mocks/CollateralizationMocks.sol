@@ -108,8 +108,8 @@ contract CollLPVaultMock is ILPVaultBase {
     address public immutable COLLATERALIZATION;
     address public immutable LOCK;
     bytes32 public constant AMM_PROTOCOL = keccak256("UNISWAP_V3");
-    /// @dev The timelock and MarketRegistry the VaultTokenFactory compares at registration (`setCore`).
-    address public TIMELOCK;
+    /// @dev The authority_ and MarketRegistry the VaultTokenFactory compares at registration (`setCore`).
+    address public authority;
     address public MARKET_REGISTRY;
 
     mapping(uint256 marketId => address[] tokens) internal _tokens;
@@ -159,10 +159,10 @@ contract CollLPVaultMock is ILPVaultBase {
     }
 
     function setCore(
-        address timelock,
+        address authority_,
         address marketRegistry
     ) external {
-        TIMELOCK = timelock;
+        authority = authority_;
         MARKET_REGISTRY = marketRegistry;
     }
 

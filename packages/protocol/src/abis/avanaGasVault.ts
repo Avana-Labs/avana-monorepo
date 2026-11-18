@@ -74,19 +74,6 @@ export const avanaGasVaultAbi = [
   },
   {
     "type": "function",
-    "name": "TIMELOCK",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "TRANSFER_GAS",
     "inputs": [],
     "outputs": [
@@ -678,17 +665,7 @@ export const avanaGasVaultAbi = [
   },
   {
     "type": "error",
-    "name": "NotGuardianOrTimelock",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "NotTighter",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotTimelock",
     "inputs": []
   },
   {

@@ -20,19 +20,18 @@ import {FeedDef, MarketParams} from "./types/ParameterStoreTypes.sol";
 contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLogic {
     /// @notice Fixes the implementation immutables; they must equal the ParameterStore's.
     constructor(
-        address timelock,
         address marketRegistry,
         uint32 chainBlockTime
-    ) ParameterStoreStorage(timelock, marketRegistry, chainBlockTime) {}
+    ) ParameterStoreStorage(marketRegistry, chainBlockTime) {}
 
     /// @inheritdoc IParameterStoreLogic
     function logicConfig()
         external
         view
         override
-        returns (bytes32 kind, address timelock, address marketRegistry, uint32 chainBlockTime)
+        returns (bytes32 kind, address marketRegistry, uint32 chainBlockTime)
     {
-        return (keccak256("ParameterStoreAdminOracleLogic"), _TIMELOCK, address(_REGISTRY), _BLOCK_TIME);
+        return (keccak256("ParameterStoreAdminOracleLogic"), address(_REGISTRY), _BLOCK_TIME);
     }
 
     /// @notice Body of `IParameterStore.setBorrowPriceMaxAge`.

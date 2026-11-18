@@ -25,11 +25,6 @@ export const firstLossReserveAbi = [
         "name": "authority",
         "type": "address",
         "internalType": "address"
-      },
-      {
-        "name": "reserveWithdrawalDelay",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "nonpayable"
@@ -75,19 +70,6 @@ export const firstLossReserveAbi = [
   },
   {
     "type": "function",
-    "name": "RESERVE_WITHDRAWAL_DELAY",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "delay",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "allowedBorrowSpoke",
     "inputs": [
       {
@@ -120,19 +102,6 @@ export const firstLossReserveAbi = [
   },
   {
     "type": "function",
-    "name": "cancelWithdrawal",
-    "inputs": [
-      {
-        "name": "id",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "coverDeficit",
     "inputs": [
       {
@@ -154,25 +123,6 @@ export const firstLossReserveAbi = [
       },
       {
         "name": "covered",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "executeWithdrawal",
-    "inputs": [
-      {
-        "name": "id",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "withdrawn",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -239,47 +189,6 @@ export const firstLossReserveAbi = [
   },
   {
     "type": "function",
-    "name": "getWithdrawal",
-    "inputs": [
-      {
-        "name": "id",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "withdrawal",
-        "type": "tuple",
-        "internalType": "struct Withdrawal",
-        "components": [
-          {
-            "name": "amount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "to",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "executableAt",
-            "type": "uint64",
-            "internalType": "uint64"
-          },
-          {
-            "name": "status",
-            "type": "uint8",
-            "internalType": "enum WithdrawalStatus"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "isBelowMinimum",
     "inputs": [],
     "outputs": [
@@ -303,43 +212,6 @@ export const firstLossReserveAbi = [
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "nextWithdrawalId",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "requestWithdrawal",
-    "inputs": [
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "to",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "id",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -423,6 +295,30 @@ export const firstLossReserveAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "withdraw",
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "to",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "withdrawn",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "event",
@@ -576,26 +472,13 @@ export const firstLossReserveAbi = [
   },
   {
     "type": "event",
-    "name": "WithdrawalCancelled",
+    "name": "ReserveWithdrawn",
     "inputs": [
       {
-        "name": "id",
-        "type": "uint256",
+        "name": "to",
+        "type": "address",
         "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "WithdrawalExecuted",
-    "inputs": [
-      {
-        "name": "id",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
+        "internalType": "address"
       },
       {
         "name": "withdrawn",
@@ -610,47 +493,10 @@ export const firstLossReserveAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "to",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
         "name": "balanceAfter",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "WithdrawalRequested",
-    "inputs": [
-      {
-        "name": "id",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "to",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "executableAt",
-        "type": "uint64",
-        "indexed": false,
-        "internalType": "uint64"
       }
     ],
     "anonymous": false
@@ -739,17 +585,6 @@ export const firstLossReserveAbi = [
   },
   {
     "type": "error",
-    "name": "InvalidWithdrawalDelay",
-    "inputs": [
-      {
-        "name": "delay",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "NothingToCover",
     "inputs": [
       {
@@ -763,22 +598,6 @@ export const firstLossReserveAbi = [
     "type": "error",
     "name": "ReentrancyGuardReentrantCall",
     "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "SafeCastOverflowedUintDowncast",
-    "inputs": [
-      {
-        "name": "bits",
-        "type": "uint8",
-        "internalType": "uint8"
-      },
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
   },
   {
     "type": "error",
@@ -815,33 +634,6 @@ export const firstLossReserveAbi = [
         "name": "received",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "WithdrawalNotPending",
-    "inputs": [
-      {
-        "name": "id",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "WithdrawalNotReady",
-    "inputs": [
-      {
-        "name": "id",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "executableAt",
-        "type": "uint64",
-        "internalType": "uint64"
       }
     ]
   },

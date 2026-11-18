@@ -28,7 +28,7 @@ interface IFaucetToken {
 /// @notice Step 12 of the deployment order: the Avana Umbrella (First-Loss Reserve) of each (Hub, debt asset), deployed by
 /// Avana once the Hub lists the asset (its constructor checks the Hub's asset ID, `REQ-FLR-008`) and before the Aave
 /// DAO's loss-layer AIP registers it (`08_AaveLossLayersPayload`), which names it by address. `AVANA_COVERAGE_STEP`:
-/// - `deploy`: `AvanaFirstLossReserve(hub, asset, assetId, aaveAccessManager, 1,209,600)` per pair; writes `coverage.json`.
+/// - `deploy`: `AvanaFirstLossReserve(hub, asset, assetId, aaveAccessManager)` per pair; writes `coverage.json`.
 /// - `fund`: after the AIP has set each Umbrella's `firstLossReserveMinimum`, Avana Labs funds it to that minimum
 ///   (`REQ-FLR-011`), so it is not below its minimum when `enableDebtReserve` reads it.
 /// @dev The pairs are `aavePayload.hubs` × `aavePayload.debtAssets`; the Aave addresses come from the config. Funding on
@@ -103,9 +103,7 @@ contract DeployAvanaFirstLossReserves is DeployBase {
     ) private returns (string memory json) {
         (string memory label, string memory symbol, address hub, address token) = _name(h, i);
         string memory name = string.concat("AvanaFirstLossReserve.", label, ".", symbol);
-        bytes memory args = abi.encode(
-            hub, token, IHubAssets(hub).getAssetId(token), _addr(cfg, ".aave.accessManager"), uint256(1_209_600)
-        );
+        bytes memory args = abi.encode(hub, token, IHubAssets(hub).getAssetId(token), _addr(cfg, ".aave.accessManager"));
         address cs = _deploy(name, bytes.concat(_artifact("AvanaFirstLossReserve.sol", "AvanaFirstLossReserve"), args));
         json = vm.serializeAddress("coverage", name, cs);
         console2.log(name, cs);

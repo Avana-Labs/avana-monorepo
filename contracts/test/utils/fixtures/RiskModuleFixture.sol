@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
@@ -101,7 +102,6 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
 
     /// @dev MarketRegistry and RiskModule, each at the address the other was built with.
     function _deployContracts() internal {
-        _deployTimelock();
         coll = new RiskCollateralizationMock(lockAddr);
         collat = coll;
         store = new RiskStoreMock();
@@ -117,6 +117,9 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         address registryAddress = address(registry);
         vm.revertToState(dryRun);
         _deployFactoryRegistryAndRisk(registryAddress);
+        _bindAccess(AvanaAccess.Kind.MarketRegistry, address(registry));
+        _bindAccess(AvanaAccess.Kind.RiskModule, address(riskModule));
+        _bindAccess(AvanaAccess.Kind.VaultTokenFactory, address(factory));
         vm.label(address(registry), "MarketRegistry");
         vm.label(address(riskModule), "RiskModule");
     }
@@ -127,14 +130,13 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         address marketRegistry_
     ) internal {
         factory = new VaultTokenFactory(
-            address(adapter), address(lpVaultSwap), address(coll), address(timelock), marketRegistry_
+            address(adapter), address(lpVaultSwap), address(coll), address(accessManager), marketRegistry_
         );
         coll.setCore(address(factory), address(adapter), address(lpVaultSwap));
         uint256 n = vm.getNonce(address(this));
         address predictedRegistry = vm.computeCreateAddress(address(this), n + 6);
         address predictedRisk = vm.computeCreateAddress(address(this), n + 14);
         im = MarketRegistryImmutables({
-            timelock: address(timelock),
             aaveGovernanceExecutor: aaveGovernanceExecutor,
             vaultTokenFactory: address(factory),
             aaveAdapter: address(adapter),
@@ -152,7 +154,9 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         logics = _deployLogics(im);
         MarketRegistry impl = new MarketRegistry(im, logics);
         registry = MarketRegistry(
-            address(new ERC1967Proxy(address(impl), abi.encodeCall(MarketRegistry.initialize, (address(timelock)))))
+            address(
+                new ERC1967Proxy(address(impl), abi.encodeCall(MarketRegistry.initialize, (address(accessManager))))
+            )
         );
         require(address(registry) == predictedRegistry, "registry prediction");
         rmIm = RiskModuleImmutables({
@@ -160,13 +164,12 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
             parameterStore: address(store),
             collateralization: address(coll),
             adapter: address(adapter),
-            lpVaultSwap: address(swap),
-            timelock: address(timelock)
+            lpVaultSwap: address(swap)
         });
         rmLogics = _deployRiskLogics(rmIm);
         RiskModule rmImpl = new RiskModule(rmIm, rmLogics);
         riskModule = RiskModule(
-            address(new ERC1967Proxy(address(rmImpl), abi.encodeCall(RiskModule.initialize, (address(timelock)))))
+            address(new ERC1967Proxy(address(rmImpl), abi.encodeCall(RiskModule.initialize, (address(accessManager)))))
         );
         require(address(riskModule) == predictedRisk, "risk module prediction");
     }
@@ -206,14 +209,13 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         ghoSource = new RegistryFeedMock(8, 1e8);
         ghoCoverage = new RegistryAvanaFirstLossReserveMock(address(hub), address(gho), GHO_ASSET);
         ghoCoverage.setFunded(4e24, false);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         factory.registerIntegration(V3, address(lpVault));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.recordHub(address(hub), RiskTier.Stable);
-        registry.registerIntegration(V3, address(lpVault), makeAddr("clPricing"));
         vm.stopPrank();
         _recordAmmContracts();
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.deployCdpSpoke(_spokeDef());
         registry.setFlashSource(address(flash));
         hub.setAsset(address(gho), GHO_ASSET);
@@ -225,7 +227,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         rHub.setActive(GHO_ASSET, address(spoke), true, false);
         // Every debt asset is a listed token with its issuer probe, a fixed-price one included (REQ-MREG-006).
         _listTokenWithProbe(address(gho), "gho", _ghoIssuerProbe());
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.enableDebtReserve(address(spoke), _ghoDef());
         _listToken(address(usdc), "usdc");
         _listToken(address(usdt), "usdt");
@@ -243,7 +245,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
     function _market() internal {
         mid = registry.marketCount() + 1;
         oracle = new RiskLPOracleMock(mid, address(lpVault));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vaultToken = factory.deployVaultToken(
             V3,
             pool,
@@ -258,7 +260,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
             "avUSDC-USDT"
         );
         store.setMarket(mid, 4000, 10e8, 1_000_000e8, 100_000e8, 1e8);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listCollateralMarket(_marketDef(vaultToken, address(oracle)));
         hub.setAsset(vaultToken, VT_ASSET);
         hub.setSpokeConfig(VT_ASSET, address(spoke), 2_000_000, 0);
@@ -277,7 +279,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         rSpoke.setReserveCount(2);
         aaveOracle.setSource(VT_RESERVE, address(oracle));
         _setRoutesInto(mid, address(gho));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.activateMarket(mid);
         store.setTokenCap(address(hub), address(usdc), 10_000_000e8);
         store.setTokenCap(address(hub), address(usdt), 10_000_000e8);
@@ -338,7 +340,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         rSpoke.setReserveCount(USDC_RESERVE + 1);
         aaveOracle.setSource(USDC_RESERVE, address(usdcOracle));
         store.setStressRise(address(usdc), 500);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.setAvanaFirstLossReserve(address(hub), address(usdc), address(usdcCoverage));
         vm.stopPrank();
         _setRoute(mid, address(usdt), address(usdc), 0, "dexE");
@@ -354,7 +356,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
             firstLossReserve: address(usdcCoverage),
             approved: false
         });
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.enableDebtReserve(address(spoke), def);
     }
 
@@ -378,7 +380,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         spoke.setReserve(DAI_RESERVE, r, c, IAaveV4Spoke.DynamicReserveConfig(0, 0, 0));
         rSpoke.setReserveCount(DAI_RESERVE + 1);
         aaveOracle.setSource(DAI_RESERVE, address(daiSource));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setAvanaFirstLossReserve(address(hub), address(tDai), address(daiCoverage));
         _listToken(address(tDai), "dai");
         _setRoutesInto(mid, address(tDai));
@@ -393,7 +395,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
             firstLossReserve: address(daiCoverage),
             approved: false
         });
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.enableDebtReserve(address(spoke), def);
     }
 
@@ -402,7 +404,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         id = registry.marketCount() + 1;
         PositionShape memory shape = PositionShape(ShapeKind.TickRange, -100, 100);
         RiskLPOracleMock o = new RiskLPOracleMock(id, address(lpVault));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         address vt = factory.deployVaultToken(
             V3,
             pool,
@@ -419,7 +421,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         store.setMarket(id, 4000, 10e8, 1_000_000e8, 100_000e8, 1e8);
         MarketDef memory d = _marketDef(vt, address(o));
         d.shape = shape;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listCollateralMarket(d);
     }
 

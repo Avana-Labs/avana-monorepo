@@ -875,7 +875,8 @@
     ],
     "lossLayerRoles": {
       "coverageRole": 500,
-      "reserveAdminRole": 501
+      "reserveAdminRole": 501,
+      "withdrawRole": 503
     },
     "guardianRole": 502
   },

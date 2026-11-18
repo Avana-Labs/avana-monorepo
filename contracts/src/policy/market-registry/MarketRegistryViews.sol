@@ -175,21 +175,6 @@ abstract contract MarketRegistryViews is MarketRegistryStorage, IMarketRegistry 
     }
 
     /// @inheritdoc IMarketRegistry
-    function integrationOf(
-        uint32 integrationId
-    ) external view override returns (address lpVault, address pricing) {
-        lpVault = _s().integrationLpVault[integrationId];
-        pricing = _s().integrationPricing[integrationId];
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function integrationIdOf(
-        address lpVault
-    ) external view override returns (uint32 integrationId) {
-        integrationId = _s().integrationIdOf[lpVault];
-    }
-
-    /// @inheritdoc IMarketRegistry
     function firstLossReserveOf(
         address hub,
         address asset

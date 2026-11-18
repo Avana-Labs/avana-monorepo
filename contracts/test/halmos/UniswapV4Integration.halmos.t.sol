@@ -25,7 +25,7 @@ contract UniswapV4IntegrationHalmosTest is Test {
     address internal constant SWAP = address(0x5A9);
     address internal constant COLL = address(0xC011);
     address internal constant REGISTRY = address(0x4E6);
-    address internal constant TIMELOCK = address(0x713E);
+    address internal constant AUTHORITY = address(0x713E);
     address internal constant OWNER = address(0xA11CE);
 
     V4StandInManager internal manager;
@@ -42,7 +42,8 @@ contract UniswapV4IntegrationHalmosTest is Test {
         key = UniswapV4PoolKey(a, b, 500, 10, address(0));
         bytes32 poolId = keccak256(abi.encode(key));
         manager.initialize(poolId, 0);
-        vault = new UniswapV4Integration(1, COLL, REGISTRY, address(lock), TIMELOCK, address(manager), address(ref), 12);
+        vault =
+            new UniswapV4Integration(1, COLL, REGISTRY, address(lock), AUTHORITY, address(manager), address(ref), 12);
         vm.prank(REGISTRY);
         vault.bindMarket(
             1,

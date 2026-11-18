@@ -149,7 +149,7 @@ contract AaveAdapterPledgeRowsUnitTest is AaveAdapterFixture {
     /// refused `OnlyAdapter`, and a proxy the Adapter has not registered cannot receive the market's tokens.
     function test_TEST_188_onlyTheAdapterRegisters() public {
         address predicted = adapterC.predictProxy(bob, MARKET_ID);
-        address[4] memory callers = [address(proxyManager), lpVaultSwap, timelock, bob];
+        address[4] memory callers = [address(proxyManager), lpVaultSwap, governor, bob];
         for (uint256 i = 0; i < callers.length; ++i) {
             vm.expectRevert();
             vm.prank(callers[i]);

@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 /// @title IParameterStoreLoosen
 /// @notice Loosen setters of the ParameterStore: each moves one risk parameter in its riskier direction.
-/// @dev Timelock only, at the normal delay. Step-limited parameters move one step at most once per `normalDelay`.
+/// @dev Governance role only, after the governance delay. Step-limited parameters move one step at most once per `LOOSEN_SPACING` (5 days).
 interface IParameterStoreLoosen {
     /// @notice Raises a market's `slippageAllowanceBps`.
     /// @dev At most `LOOSEN_SLIPPAGE_STEP_BPS` above the current value.

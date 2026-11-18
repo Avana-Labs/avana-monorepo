@@ -74,7 +74,7 @@ contract LensFeesForkTest is AvanaTest {
         }
         vm.createSelectFork(rpc, blockNumber);
         lock = new Lock(adapter, makeAddr("lpVaultSwap"));
-        vault = new UniswapV3Integration(1, coll, registry, address(lock), makeAddr("timelock"), NFPM, FACTORY, 12);
+        vault = new UniswapV3Integration(1, coll, registry, address(lock), makeAddr("authority"), NFPM, FACTORY, 12);
         vm.prank(registry);
         vault.bindMarket(1, POOL, bytes32(0), PositionShape(ShapeKind.TickRange, -FULL, FULL), abi.encode(1e8, 1e8));
         (token0, token1) = (IUniswapV3Pool(POOL).token0(), IUniswapV3Pool(POOL).token1());

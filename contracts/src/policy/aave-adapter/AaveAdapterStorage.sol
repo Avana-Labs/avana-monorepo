@@ -35,7 +35,6 @@ abstract contract AaveAdapterStorage is IAaveAdapterBase {
     address internal immutable _LP_VAULT_SWAP;
     address internal immutable _LOCK;
     address internal immutable _VAULT_TOKEN_FACTORY;
-    address internal immutable _TIMELOCK;
     /// @dev `keccak256(abi.encode(immutables))`, compared between the router and each logic contract.
     bytes32 internal immutable _IMMUTABLES_HASH;
     /// @dev This contract's own address, used to refuse direct calls to a logic contract.
@@ -47,7 +46,7 @@ abstract contract AaveAdapterStorage is IAaveAdapterBase {
         if (
             im.proxyManager == address(0) || im.collateralization == address(0) || im.riskModule == address(0)
                 || im.marketRegistry == address(0) || im.parameterStore == address(0) || im.lpVaultSwap == address(0)
-                || im.lock == address(0) || im.vaultTokenFactory == address(0) || im.timelock == address(0)
+                || im.lock == address(0) || im.vaultTokenFactory == address(0)
         ) revert ZeroAddress();
         _PROXY_MANAGER = im.proxyManager;
         _COLLATERALIZATION = im.collateralization;
@@ -57,7 +56,6 @@ abstract contract AaveAdapterStorage is IAaveAdapterBase {
         _LP_VAULT_SWAP = im.lpVaultSwap;
         _LOCK = im.lock;
         _VAULT_TOKEN_FACTORY = im.vaultTokenFactory;
-        _TIMELOCK = im.timelock;
         _IMMUTABLES_HASH = keccak256(abi.encode(im));
         _SELF = address(this);
     }
@@ -68,6 +66,15 @@ abstract contract AaveAdapterStorage is IAaveAdapterBase {
         // solhint-disable-next-line no-inline-assembly
         assembly ("memory-safe") {
             l.slot := slot
+        }
+    }
+
+    /// @dev The AccessManager the proxy was initialized with, read from `AccessManagedUpgradeable`'s ERC-7201 slot (its
+    /// first member is the authority).
+    function _authority() internal view returns (address a) {
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            a := sload(0xf3177357ab46d8af007ab3fdb9af81da189e1068fefdc0073dca88a2cab40a00)
         }
     }
 

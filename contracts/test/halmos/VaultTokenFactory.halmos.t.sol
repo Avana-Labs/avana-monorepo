@@ -3,11 +3,15 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {VaultTokenFactory} from "../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {CollateralizationLockMock} from "../utils/mocks/CollateralizationLockMock.sol";
 import {LPVaultIdentityMock} from "../utils/mocks/LPVaultIdentityMock.sol";
+import {HalmosAccess} from "./HalmosAccess.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title VaultTokenFactoryHalmosTest
@@ -38,6 +42,7 @@ contract VaultTokenFactoryHalmosTest is Test {
 
     VaultTokenFactory internal factory;
     address internal coll;
+    AccessManager internal manager;
     address internal vault;
     address internal vault2;
     address internal wrongVault;
@@ -46,12 +51,16 @@ contract VaultTokenFactoryHalmosTest is Test {
     function setUp() public {
         CollateralizationLockMock c = new CollateralizationLockMock(LOCK);
         coll = address(c);
-        factory = new VaultTokenFactory(ADAPTER, SWAP, coll, TIMELOCK, REGISTRY);
+        manager = HalmosAccess.deploy(TIMELOCK);
+        factory = new VaultTokenFactory(ADAPTER, SWAP, coll, address(manager), REGISTRY);
+        HalmosAccess.bind(manager, AvanaAccess.Kind.VaultTokenFactory, address(factory));
         c.setCore(address(factory), ADAPTER, SWAP);
-        vault = address(new LPVaultIdentityMock(1, coll, LOCK, keccak256("UNISWAP_V3"), TIMELOCK, REGISTRY));
-        vault2 = address(new LPVaultIdentityMock(2, coll, LOCK, keccak256("AERODROME_SLIPSTREAM"), TIMELOCK, REGISTRY));
+        vault = address(new LPVaultIdentityMock(1, coll, LOCK, keccak256("UNISWAP_V3"), address(manager), REGISTRY));
+        vault2 = address(
+            new LPVaultIdentityMock(2, coll, LOCK, keccak256("AERODROME_SLIPSTREAM"), address(manager), REGISTRY)
+        );
         wrongVault = address(
-            new LPVaultIdentityMock(2, coll, LOCK, keccak256("AERODROME_SLIPSTREAM"), TIMELOCK, address(0xBAD))
+            new LPVaultIdentityMock(2, coll, LOCK, keccak256("AERODROME_SLIPSTREAM"), address(manager), address(0xBAD))
         );
         vm.prank(TIMELOCK);
         factory.registerIntegration(1, vault);
@@ -98,7 +107,7 @@ contract VaultTokenFactoryHalmosTest is Test {
     }
 
     // PROP-099 verifies: REQ-VTOKEN-019, REQ-VTOKEN-037, REQ-VTOKEN-044, REQ-VTOKEN-045, INV-051, INV-052, Q-228
-    /// @notice Any caller other than the timelock is refused with `NotTimelock` by both writing functions, whatever
+    /// @notice Any caller without a role on the AccessManager is refused with `AccessManagedUnauthorized` by both writing functions, whatever
     /// the arguments.
     function check_PROP_099_writesOnlyByTimelock(
         address caller,
@@ -124,7 +133,7 @@ contract VaultTokenFactoryHalmosTest is Test {
                 reason = bytes4(data);
             }
         }
-        assert(!ok && reason == IVaultTokenFactory.NotTimelock.selector);
+        assert(!ok && reason == IAccessManaged.AccessManagedUnauthorized.selector);
     }
 
     // PROP-099 verifies: REQ-VTOKEN-023, REQ-VTOKEN-044, REQ-VTOKEN-045, REQ-VTOKEN-049, REQ-AMM-CORE-001, INV-052, Q-291, Q-374
@@ -148,7 +157,7 @@ contract VaultTokenFactoryHalmosTest is Test {
         assert(kind1 == ShapeKind.TickRange);
         assert(factory.tokenOf(SPOKE, key) == TOKEN && factory.isVaultToken(TOKEN));
         assert(factory.ADAPTER() == ADAPTER && factory.LP_VAULT_SWAP() == SWAP);
-        assert(factory.COLLATERALIZATION() == coll && factory.TIMELOCK() == TIMELOCK);
+        assert(factory.COLLATERALIZATION() == coll && factory.authority() == address(manager));
         assert(factory.MARKET_REGISTRY() == REGISTRY);
         if (ok) {
             assert(caller == TIMELOCK && id == 2 && target == vault2 && before == address(0));

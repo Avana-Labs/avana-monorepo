@@ -61,7 +61,7 @@ contract ParameterStoreFeedBoundsUnitTest is ParameterStoreFixture {
     }
 
     function _set() internal returns (bool ok, bytes memory ret) {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (ok, ret) = address(store).call(abi.encodeCall(store.setFeed, (address(f), _feedDef(3600, 600))));
     }
 

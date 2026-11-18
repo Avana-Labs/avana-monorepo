@@ -305,15 +305,15 @@ contract MockProxyManager {
     }
 }
 
-/// @notice A contract answering `TIMELOCK()` or `MARKET_REGISTRY()`, as every upgradeable Avana contract does.
+/// @notice A contract answering `authority()` or `MARKET_REGISTRY()`, as every upgradeable Avana contract does.
 contract MockAvanaComponent {
-    address public TIMELOCK;
+    address public authority;
     address public MARKET_REGISTRY;
 
     constructor(
-        address timelock,
+        address authority_,
         address registry
     ) {
-        (TIMELOCK, MARKET_REGISTRY) = (timelock, registry);
+        (authority, MARKET_REGISTRY) = (authority_, registry);
     }
 }

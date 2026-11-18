@@ -30,7 +30,7 @@ contract AvanaFirstLossReserveTailCoverageUnitTest is LensFixture {
         store.setTokenCap(aave.hub, address(usdt), 1_600_000e8);
         _setDrawCap(ghoAssetId, aave.cdpSpoke, 2_000_000);
 
-        ghoReserve = new AvanaFirstLossReserve(aave.hub, address(debt), ghoAssetId, aave.accessManager, 1_209_600);
+        ghoReserve = new AvanaFirstLossReserve(aave.hub, address(debt), ghoAssetId, aave.accessManager);
         uint24 maxRp = IAaveV4Hub(aave.hub).MAX_RISK_PREMIUM_THRESHOLD();
         vm.prank(aaveDao);
         ICollHubConfigurator(aave.hubConfigurator)

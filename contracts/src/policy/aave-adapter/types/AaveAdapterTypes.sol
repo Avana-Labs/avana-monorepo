@@ -16,7 +16,6 @@ struct AaveAdapterImmutables {
     address lpVaultSwap;
     address lock;
     address vaultTokenFactory;
-    address timelock;
 }
 
 /// @notice The four logic contracts of an AaveAdapter implementation.

@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 /// @title IFlashSource
 /// @notice The chain's source of flash liquidity for `deleverage` (repay with collateral).
-/// @dev One per chain, replaceable by the timelock. Its `LENDER()` must not be a Hub recorded on the chain.
+/// @dev One per chain, replaceable through the governance role. Its `LENDER()` must not be a Hub recorded on the chain.
 interface IFlashSource {
     error NotLPVaultSwap();
 

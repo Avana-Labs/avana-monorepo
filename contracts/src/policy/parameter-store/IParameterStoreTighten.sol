@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 /// @title IParameterStoreTighten
 /// @notice Tighten setters of the ParameterStore: each moves one risk parameter in its safer direction.
-/// @dev Timelock at the short delay, or `APPLICATION_RISK_STEWARD` at once.
+/// @dev Tighten role: the governance Safe after 12 hours, the risk steward at once.
 interface IParameterStoreTighten {
     /// @notice Lowers a market's `slippageAllowanceBps`.
     /// @dev Reverts `LivenessBound` below `slippageAllowanceMinBps`.

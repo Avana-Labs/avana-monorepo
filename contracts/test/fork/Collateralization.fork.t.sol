@@ -53,9 +53,9 @@ abstract contract CollateralizationForkBase is CollateralizationFixture {
         int24 edge,
         uint8 decimals
     ) internal {
-        vm.prank(timelock);
+        vm.prank(governor);
         factory.registerIntegration(LIVE_INTEGRATION, integration);
-        vm.prank(timelock);
+        vm.prank(governor);
         liveToken = VaultToken(
             factory.deployVaultToken(
                 LIVE_INTEGRATION,
@@ -156,7 +156,7 @@ contract CollateralizationUniswapV3ForkTest is CollateralizationForkBase {
         if (!_select("RPC_MAINNET", ForkConstants.mainnetForkBlock())) return;
         _deployCollateralization();
         v3 = new UniswapV3Integration(
-            LIVE_INTEGRATION, address(coll), marketRegistry, address(lock), timelock, NFPM, FACTORY, 12
+            LIVE_INTEGRATION, address(coll), marketRegistry, address(lock), address(accessManager), NFPM, FACTORY, 12
         );
         vm.prank(marketRegistry);
         (address[] memory tokens, uint8 d) = v3.bindMarket(
@@ -277,7 +277,7 @@ contract CollateralizationSlipstreamForkTest is CollateralizationForkBase {
         if (!_select("RPC_BASE", ForkConstants.baseForkBlock())) return;
         _deployCollateralization();
         slip = new SlipstreamIntegration(
-            LIVE_INTEGRATION, address(coll), marketRegistry, address(lock), timelock, npm, factories
+            LIVE_INTEGRATION, address(coll), marketRegistry, address(lock), address(accessManager), npm, factories
         );
         vm.prank(marketRegistry);
         (, uint8 d) = slip.bindMarket(

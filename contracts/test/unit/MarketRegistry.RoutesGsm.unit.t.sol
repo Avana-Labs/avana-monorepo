@@ -54,7 +54,7 @@ contract MarketRegistryRoutesGsmUnitTest is MarketRegistryFixture {
         uint8 kind,
         address route
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setRoute(id, usdcIn, address(gho), kind, route);
     }
 
@@ -62,7 +62,7 @@ contract MarketRegistryRoutesGsmUnitTest is MarketRegistryFixture {
         uint8 kind,
         address route
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setRoute(id, usdcIn, address(gho), kind, route);
     }
@@ -205,26 +205,26 @@ contract MarketRegistryRoutesGsmUnitTest is MarketRegistryFixture {
     function test_TEST_054_restoreRerunsGsmHealthCheck() public {
         RegistryRouteMock r = _gsmRoute();
         _set(BACKUP, address(r));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.disableRoute(id, usdcIn, address(gho), BACKUP);
         gsm.setFrozen(1);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.restoreRoute(id, usdcIn, address(gho), BACKUP, address(r));
         gsm.setFrozen(0);
         gsm.setSeized(1);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.restoreRoute(id, usdcIn, address(gho), BACKUP, address(r));
         gsm.setSeized(0);
         gsm.setCap(0);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.restoreRoute(id, usdcIn, address(gho), BACKUP, address(r));
         (, bool usable) = registry.getRoute(id, usdcIn, address(gho), BACKUP);
         assertFalse(usable);
         gsm.setCap(1e24);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectEmit(address(registry));
         emit IMarketRegistryBase.RouteRestored(id, usdcIn, address(gho), BACKUP, address(r));
         registry.restoreRoute(id, usdcIn, address(gho), BACKUP, address(r));
@@ -286,15 +286,15 @@ contract MarketRegistryRoutesGsmUnitTest is MarketRegistryFixture {
         mids[0] = makeAddr("intermediate");
         r.setIntermediates(mids);
         _set(PRIMARY, address(r));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.disableRoute(id, usdcIn, address(gho), PRIMARY);
         RegistryErc1820Mock reg = _etchErc1820();
         reg.setImplementer(mids[0], ERC777_TOKEN, uint256(uint160(makeAddr("hook"))));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.restoreRoute(id, usdcIn, address(gho), PRIMARY, address(r));
         reg.setImplementer(mids[0], ERC777_TOKEN, 0);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.restoreRoute(id, usdcIn, address(gho), PRIMARY, address(r));
         _usable(PRIMARY, address(r));
     }

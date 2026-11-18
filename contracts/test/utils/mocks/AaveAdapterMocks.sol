@@ -33,7 +33,6 @@ contract AdapterRegistryMock {
     mapping(uint256 => Market) internal _markets;
     mapping(address => SpokeDef) internal _spokes;
     mapping(address => mapping(uint256 => DebtReserveDef)) internal _debt;
-    mapping(address => uint32) public integrationIdOfMap;
     mapping(address => bool) public recordedHub;
     address public payoutEscrow;
     address public flashSourceAddr;
@@ -239,13 +238,6 @@ contract AdapterRegistryMock {
         _debt[spoke][reserveId] = def;
     }
 
-    function setIntegrationId(
-        address lpVault,
-        uint32 id
-    ) external {
-        integrationIdOfMap[lpVault] = id;
-    }
-
     function setRecordedHub(
         address hub,
         bool on
@@ -295,13 +287,6 @@ contract AdapterRegistryMock {
     ) external view returns (DebtReserveDef memory) {
         _ok();
         return _debt[spoke][reserveId];
-    }
-
-    function integrationIdOf(
-        address lpVault
-    ) external view returns (uint32) {
-        _ok();
-        return integrationIdOfMap[lpVault];
     }
 
     function isRecordedHub(

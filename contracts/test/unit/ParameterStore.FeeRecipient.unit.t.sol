@@ -39,7 +39,7 @@ contract ProgrammableCandidate {
 /// answer to a probe is not an identity and never blocks the setter.
 contract ParameterStoreFeeRecipientUnitTest is ParameterStoreFixture {
     bytes4 internal constant LOGIC_CONFIG = bytes4(keccak256("logicConfig()"));
-    bytes4 internal constant TIMELOCK_SEL = bytes4(keccak256("TIMELOCK()"));
+    bytes4 internal constant AUTHORITY_SEL = bytes4(keccak256("authority()"));
     bytes4 internal constant REGISTRY_SEL = bytes4(keccak256("MARKET_REGISTRY()"));
     bytes4 internal constant ADAPTER_SEL = bytes4(keccak256("ADAPTER()"));
     bytes4 internal constant WALLET_SEL = bytes4(keccak256("WALLET()"));
@@ -56,7 +56,7 @@ contract ParameterStoreFeeRecipientUnitTest is ParameterStoreFixture {
     function _set(
         address r
     ) internal returns (bool ok, bytes memory ret) {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (ok, ret) = address(store).call(abi.encodeCall(store.setFeeRecipient, (r)));
     }
 
@@ -79,11 +79,11 @@ contract ParameterStoreFeeRecipientUnitTest is ParameterStoreFixture {
     // ─── Identity probes answered exactly ───
 
     // TEST-062 verifies: REQ-CONFIG-056
-    function test_TEST_062_exactTimelockWordIsAvana() public {
-        c.program(TIMELOCK_SEL, abi.encode(address(timelock)), false);
+    function test_TEST_062_exactAuthorityWordIsAvana() public {
+        c.program(AUTHORITY_SEL, abi.encode(address(accessManager)), false);
         _refused(address(c));
-        // Another timelock's address is not this chain's.
-        c.program(TIMELOCK_SEL, abi.encode(makeAddr("otherTimelock")), false);
+        // Another authority is not this chain's.
+        c.program(AUTHORITY_SEL, abi.encode(makeAddr("otherAuthority")), false);
         _accepted(address(c));
     }
 
@@ -122,16 +122,16 @@ contract ParameterStoreFeeRecipientUnitTest is ParameterStoreFixture {
     // TEST-062 verifies: REQ-CONFIG-056
     function test_TEST_062_revertingProbesAreAccepted() public {
         bytes4[7] memory sels =
-            [LOGIC_CONFIG, TIMELOCK_SEL, REGISTRY_SEL, ADAPTER_SEL, WALLET_SEL, SPOKE_SEL, MARKET_ID_SEL];
+            [LOGIC_CONFIG, AUTHORITY_SEL, REGISTRY_SEL, ADAPTER_SEL, WALLET_SEL, SPOKE_SEL, MARKET_ID_SEL];
         for (uint256 i = 0; i < sels.length; ++i) {
-            c.program(sels[i], abi.encode(address(timelock)), true);
+            c.program(sels[i], abi.encode(address(accessManager)), true);
         }
         _accepted(address(c));
     }
 
     // TEST-062 verifies: REQ-CONFIG-056
     function test_TEST_062_shortAndEmptyAnswersAreNoWord() public {
-        c.program(TIMELOCK_SEL, hex"", false);
+        c.program(AUTHORITY_SEL, hex"", false);
         c.program(REGISTRY_SEL, abi.encodePacked(uint128(uint160(address(registry)))), false);
         c.program(ADAPTER_SEL, abi.encodePacked(bytes20(registry.AAVE_ADAPTER())), false);
         _accepted(address(c));
@@ -140,7 +140,7 @@ contract ParameterStoreFeeRecipientUnitTest is ParameterStoreFixture {
     // TEST-062 verifies: REQ-CONFIG-056
     function test_TEST_062_longAnswersOfOtherAddressesAreAccepted() public {
         bytes memory blob = abi.encode(makeAddr("x"), makeAddr("y"), uint256(7));
-        c.program(TIMELOCK_SEL, blob, false);
+        c.program(AUTHORITY_SEL, blob, false);
         c.program(REGISTRY_SEL, blob, false);
         c.program(ADAPTER_SEL, blob, false);
         c.program(WALLET_SEL, blob, false);

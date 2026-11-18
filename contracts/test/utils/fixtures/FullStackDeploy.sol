@@ -3,11 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {IUniswapV3Integration} from "../../../src/amm/uniswap-v3/IUniswapV3Integration.sol";
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
-import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
-import {AvanaTimelock} from "../../../src/governance/timelock/AvanaTimelock.sol";
-import {GovernedTargets, SelectorPair} from "../../../src/governance/timelock/IAvanaTimelock.sol";
 import {INonfungiblePositionManager} from "../../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
 import {ILens} from "../../../src/lens/lens/ILens.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
@@ -57,15 +55,14 @@ import {FullStackLPVaultMock} from "../mocks/FullStackLPVaultMock.sol";
 import {LPVaultSwapMock} from "../mocks/LPVaultSwapMock.sol";
 import {AaveV4Fixture} from "./AaveV4Fixture.sol";
 import {ClPoolFixture} from "./ClPoolFixture.sol";
-import {TimelockShortDelayLists} from "./TimelockShortDelayLists.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @title FullStackDeploy
-/// @notice The Avana core as one chain runs it, on the real local Aave V4 (pinned release): the real AvanaTimelock
-/// (short-delay list and DAO-only cancel set naming the real ParameterStore and MarketRegistry), the
+/// @notice The Avana core as one chain runs it, on the real local Aave V4 (pinned release): the real AccessManager
+/// (the DAO as admin, `governor` holding every Avana role with no delay, each governed function mapped by `AvanaAccess`), the
 /// MarketRegistry (six logic contracts), the ParameterStore (five logic contracts), the RiskModule (six logic
 /// contracts) and the AaveAdapter (four logic contracts), each behind its ERC-1967 proxy and initialized by the
-/// timelock, with the real Lock, Collateralization (built from its artifact), VaultTokenFactory and ProxyManager.
+/// AccessManager, with the real Lock, Collateralization (built from its artifact), VaultTokenFactory and ProxyManager.
 /// @dev The four upgradeable proxies are created first over a placeholder, so every immutable contract and every
 /// implementation is built with their final addresses and no address is predicted. Stand-ins, each named: LPVaultSwap
 /// (`LPVaultSwapMock`, which liquidates on the Spoke through the real Collateralization and AaveAdapter) and the
@@ -80,7 +77,6 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
     uint256 internal constant T0 = 1_762_650_000;
     uint256 internal constant MAX_MARKETS = 64;
 
-    AvanaTimelock internal timelock;
     MarketRegistry internal registry;
     IParameterStore internal store;
     RiskModule internal riskModule;
@@ -115,7 +111,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         return false;
     }
 
-    /// @dev Proxies, timelock, immutable contracts, then each implementation behind its proxy.
+    /// @dev Proxies, access manager, immutable contracts, then each implementation behind its proxy.
     function _deployCore() internal {
         bool real = _realStack();
         adapter = _placeholderProxy();
@@ -128,8 +124,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
             swap = new LPVaultSwapMock(adapter);
             lpVaultSwap = address(swap);
         }
-        timelock = _deployDefaultTimelock(storeAddr, registryAddr, lpVaultSwap);
-        address tl = address(timelock);
+        address tl = address(accessManager);
         lock = new Lock(adapter, lpVaultSwap);
         address predicted = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 1);
         vtFactory = new VaultTokenFactory(adapter, lpVaultSwap, predicted, tl, registryAddr);
@@ -158,6 +153,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
             _installLPVaultSwap();
             _deployLens();
         }
+        _bindCoreAccess(registryAddr, storeAddr, riskAddr);
         _labelCore();
     }
 
@@ -184,7 +180,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
                     address(coll),
                     registryAddr,
                     address(lock),
-                    address(timelock),
+                    address(accessManager),
                     address(nfpm),
                     address(factory),
                     uint256(BLOCK_TIME)
@@ -242,7 +238,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         address[] memory keepers = new address[](1);
         keepers[0] = keeper;
         AdapterPlaceholder(lpVaultSwap)
-            .upgradeToAndCall(impl, abi.encodeCall(ILPVaultSwap.initialize, (address(timelock), keepers)));
+            .upgradeToAndCall(impl, abi.encodeCall(ILPVaultSwap.initialize, (address(accessManager), keepers)));
         lvs = ILPVaultSwap(lpVaultSwap);
     }
 
@@ -277,50 +273,21 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         return address(new ERC1967Proxy(address(new AdapterPlaceholder()), ""));
     }
 
-    struct TimelockArgs {
-        address[] proposers;
-        address[] executors;
-        address[] cancellers;
-        address[] daoCancellers;
-        SelectorPair[] shortEligible;
-        SelectorPair[] daoOnly;
-        GovernedTargets targets;
-    }
-
-    /// @dev The configuration of `REQ-ACCESS-027` (as `TimelockFixture`), bound to the real targets.
-    function _deployDefaultTimelock(
-        address storeAddr,
+    /// @dev Maps the governed functions of the core, the VaultTokenFactory and (real stack) LPVaultSwap to their roles.
+    function _bindCoreAccess(
         address registryAddr,
-        address swapAddr
-    ) private returns (AvanaTimelock) {
-        TimelockArgs memory a;
-        a.proposers = new address[](2);
-        (a.proposers[0], a.proposers[1]) = (governanceMultisig, aaveGovernanceExecutor);
-        a.executors = new address[](1);
-        a.executors[0] = governanceMultisig;
-        a.cancellers = new address[](2);
-        (a.cancellers[0], a.cancellers[1]) = (emergencyGuardian, aaveGuardian);
-        a.daoCancellers = new address[](1);
-        a.daoCancellers[0] = aaveGovernanceExecutor;
-        a.shortEligible = TimelockShortDelayLists.shortEligible(storeAddr, registryAddr, swapAddr);
-        a.daoOnly = TimelockShortDelayLists.daoOnlyCancel(registryAddr, swapAddr);
-        a.targets = GovernedTargets(storeAddr, registryAddr, swapAddr);
-        // Built on a production chain ID: the test-network delays of REQ-ACCESS-187 are TEST-345's.
-        uint256 chainId = vm.getChainId();
-        vm.chainId(1);
-        AvanaTimelock t = new AvanaTimelock(
-            a.proposers,
-            a.executors,
-            a.cancellers,
-            a.daoCancellers,
-            NORMAL_DELAY,
-            true,
-            a.shortEligible,
-            a.daoOnly,
-            a.targets
-        );
-        vm.chainId(chainId);
-        return t;
+        address storeAddr,
+        address riskAddr
+    ) private {
+        _bindAccess(AvanaAccess.Kind.MarketRegistry, registryAddr);
+        _bindAccess(AvanaAccess.Kind.ParameterStore, storeAddr);
+        _bindAccess(AvanaAccess.Kind.RiskModule, riskAddr);
+        _bindAccess(AvanaAccess.Kind.AaveAdapter, adapter);
+        _bindAccess(AvanaAccess.Kind.VaultTokenFactory, address(vtFactory));
+        if (_realStack()) {
+            _bindAccess(AvanaAccess.Kind.LPVaultSwap, lpVaultSwap);
+            _bindAccess(AvanaAccess.Kind.LpVault, integration);
+        }
     }
 
     function _installRegistry(
@@ -329,7 +296,6 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         address riskAddr
     ) private {
         registryIm = MarketRegistryImmutables({
-            timelock: address(timelock),
             aaveGovernanceExecutor: aaveGovernanceExecutor,
             vaultTokenFactory: address(vtFactory),
             aaveAdapter: adapter,
@@ -352,7 +318,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         l.windDown = address(new MarketRegistryWindDownLogic(registryIm));
         MarketRegistry impl = new MarketRegistry(registryIm, l);
         AdapterPlaceholder(registryAddr)
-            .upgradeToAndCall(address(impl), abi.encodeCall(MarketRegistry.initialize, (address(timelock))));
+            .upgradeToAndCall(address(impl), abi.encodeCall(MarketRegistry.initialize, (address(accessManager))));
         registry = MarketRegistry(registryAddr);
     }
 
@@ -360,15 +326,15 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         address storeAddr,
         address registryAddr
     ) private {
-        address tl = address(timelock);
+        address tl = address(accessManager);
         ParameterStoreLogics memory l = ParameterStoreLogics({
-            tighten: address(new ParameterStoreTightenLogic(tl, registryAddr, BLOCK_TIME)),
-            loosen: address(new ParameterStoreLoosenLogic(tl, registryAddr, BLOCK_TIME)),
-            listing: address(new ParameterStoreListingLogic(tl, registryAddr, BLOCK_TIME)),
-            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, registryAddr, BLOCK_TIME)),
-            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, registryAddr, BLOCK_TIME))
+            tighten: address(new ParameterStoreTightenLogic(registryAddr, BLOCK_TIME)),
+            loosen: address(new ParameterStoreLoosenLogic(registryAddr, BLOCK_TIME)),
+            listing: address(new ParameterStoreListingLogic(registryAddr, BLOCK_TIME)),
+            adminOracle: address(new ParameterStoreAdminOracleLogic(registryAddr, BLOCK_TIME)),
+            adminRisk: address(new ParameterStoreAdminRiskLogic(registryAddr, BLOCK_TIME))
         });
-        ParameterStore impl = new ParameterStore(tl, registryAddr, BLOCK_TIME, l);
+        ParameterStore impl = new ParameterStore(registryAddr, BLOCK_TIME, l);
         AdapterPlaceholder(storeAddr)
             .upgradeToAndCall(address(impl), abi.encodeCall(IParameterStore.initialize, (tl, _globals())));
         store = IParameterStore(storeAddr);
@@ -392,8 +358,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
             parameterStore: storeAddr,
             collateralization: address(coll),
             adapter: adapter,
-            lpVaultSwap: lpVaultSwap,
-            timelock: address(timelock)
+            lpVaultSwap: lpVaultSwap
         });
         RiskModuleLogics memory l;
         l.drift = address(new RiskModuleDriftLogic(riskIm));
@@ -404,7 +369,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         l.dynamicCap = address(new RiskModuleDynamicCapLogic(riskIm));
         RiskModule impl = new RiskModule(riskIm, l);
         AdapterPlaceholder(riskAddr)
-            .upgradeToAndCall(address(impl), abi.encodeCall(RiskModule.initialize, (address(timelock))));
+            .upgradeToAndCall(address(impl), abi.encodeCall(RiskModule.initialize, (address(accessManager))));
         riskModule = RiskModule(riskAddr);
     }
 
@@ -421,12 +386,11 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
             parameterStore: storeAddr,
             lpVaultSwap: lpVaultSwap,
             lock: address(lock),
-            vaultTokenFactory: address(vtFactory),
-            timelock: address(timelock)
+            vaultTokenFactory: address(vtFactory)
         });
         AaveAdapter impl = new AaveAdapter(adapterIm, _adapterLogics(adapterIm));
         AdapterPlaceholder(adapter)
-            .upgradeToAndCall(address(impl), abi.encodeCall(AaveAdapter.initialize, (address(timelock))));
+            .upgradeToAndCall(address(impl), abi.encodeCall(AaveAdapter.initialize, (address(accessManager))));
         adapterC = IAaveAdapter(adapter);
     }
 
@@ -443,7 +407,6 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
     }
 
     function _labelCore() private {
-        vm.label(address(timelock), "AvanaTimelock");
         vm.label(address(registry), "MarketRegistry");
         vm.label(address(store), "ParameterStore");
         vm.label(address(riskModule), "RiskModule");

@@ -3,27 +3,29 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAvanaTimelock} from "../../../src/governance/timelock/IAvanaTimelock.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 
 /// @title ParameterStoreHandler
-/// @notice Actor handler of the ParameterStore governance-drift suite (TEST-225): the timelock tightens, loosens and
+/// @notice Actor handler of the ParameterStore governance-drift suite (TEST-225): the governor tightens, loosens and
 /// sets market, cap, feed-age and chain values; the Joint Configuration Safe tightens; strangers try every class;
 /// time moves. Inputs are
 /// bounded around the interesting edges and every call may revert. Ghosts count each success that broke its rule
 /// (direction, step, spacing, caller), so the invariants also see what a single call did, not only the end state.
 contract ParameterStoreHandler is CommonBase, StdUtils {
     IParameterStore public immutable STORE;
-    address public immutable TIMELOCK;
+    address public immutable GOVERNOR;
     address public immutable STEWARD;
     address public immutable HUB;
     address public immutable USDC;
     address public immutable USDT;
     address public immutable FEED;
     uint256 public immutable M;
+
+    /// @dev The ParameterStore's least time between two loosenings of one value.
+    uint256 internal constant LOOSEN_SPACING = 5 days;
 
     // Ghosts
     uint256 public wrongDirection;
@@ -36,7 +38,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
 
     constructor(
         IParameterStore store,
-        address timelock,
+        address governor,
         address steward,
         address hub,
         address usdc,
@@ -44,7 +46,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
         address feed,
         uint256 marketId
     ) {
-        (STORE, TIMELOCK, STEWARD, HUB) = (store, timelock, steward, hub);
+        (STORE, GOVERNOR, STEWARD, HUB) = (store, governor, steward, hub);
         (USDC, USDT, FEED, M) = (usdc, usdt, feed, marketId);
     }
 
@@ -60,7 +62,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
     function _tightener(
         bool steward
     ) internal view returns (address) {
-        return steward ? STEWARD : TIMELOCK;
+        return steward ? STEWARD : GOVERNOR;
     }
 
     function _key(
@@ -75,7 +77,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
         bytes32 key
     ) internal {
         uint256 last = lastLoosening[key];
-        if (last != 0 && block.timestamp < last + IAvanaTimelock(TIMELOCK).normalDelay()) ++spacingEscaped;
+        if (last != 0 && block.timestamp < last + LOOSEN_SPACING) ++spacingEscaped;
         lastLoosening[key] = block.timestamp;
     }
 
@@ -103,7 +105,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
     ) external {
         uint256 old = STORE.marketUsdCap(M);
         v = bound(v, old > 0 ? old - 1 : 0, _loosenCeiling(old));
-        if (_as(TIMELOCK, abi.encodeCall(STORE.loosenMarketUsdCap, (M, v)))) {
+        if (_as(GOVERNOR, abi.encodeCall(STORE.loosenMarketUsdCap, (M, v)))) {
             if (v <= old) ++wrongDirection;
             if (_capStepBroken(old, v)) ++stepEscaped;
             _spaced(_key("marketUsdCap", bytes32(M)));
@@ -126,7 +128,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
         uint256 cap = STORE.marketUsdCap(M);
         uint256 base = cap / 10 > old ? cap / 10 : old;
         v = bound(v, old, base + base / 2 + 2);
-        if (_as(TIMELOCK, abi.encodeCall(STORE.loosenTopUpSliceUsd, (M, v)))) {
+        if (_as(GOVERNOR, abi.encodeCall(STORE.loosenTopUpSliceUsd, (M, v)))) {
             if (v <= old) ++wrongDirection;
             if (v * 10_000 > base * 15_000) ++stepEscaped;
             _spaced(_key("topUpSliceUsd", bytes32(M)));
@@ -149,7 +151,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
     ) external {
         uint256 old = STORE.tokenUsdCap(HUB, USDC);
         v = bound(v, old, _loosenCeiling(old));
-        if (_as(TIMELOCK, abi.encodeCall(STORE.loosenTokenUsdCap, (HUB, USDC, v)))) {
+        if (_as(GOVERNOR, abi.encodeCall(STORE.loosenTokenUsdCap, (HUB, USDC, v)))) {
             if (_capStepBroken(old, v)) ++stepEscaped;
             _spaced(_key("tokenUsdCap", keccak256(abi.encode(HUB, USDC))));
         }
@@ -190,7 +192,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
     ) external {
         uint16 old = STORE.getMarketParams(M).slippageAllowanceBps;
         v = uint16(bound(v, old, uint256(old) + 30));
-        if (_as(TIMELOCK, abi.encodeCall(STORE.loosenSlippageAllowanceBps, (M, v)))) {
+        if (_as(GOVERNOR, abi.encodeCall(STORE.loosenSlippageAllowanceBps, (M, v)))) {
             if (v > uint256(old) + 25) ++stepEscaped;
             _spaced(_key("slippageAllowanceBps", bytes32(M)));
         }
@@ -199,7 +201,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
     function setSlippageFloor(
         uint16 v
     ) external {
-        _as(TIMELOCK, abi.encodeCall(STORE.setSlippageAllowanceMinBps, (M, uint16(bound(v, 0, 200)))));
+        _as(GOVERNOR, abi.encodeCall(STORE.setSlippageAllowanceMinBps, (M, uint16(bound(v, 0, 200)))));
     }
 
     function tightenPledge(
@@ -218,7 +220,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
     ) external {
         uint256 old = STORE.minPledgeUsd(M);
         v = bound(v, 0, old + 1);
-        if (_as(TIMELOCK, abi.encodeCall(STORE.loosenMinPledgeUsd, (M, v))) && v >= old) ++wrongDirection;
+        if (_as(GOVERNOR, abi.encodeCall(STORE.loosenMinPledgeUsd, (M, v))) && v >= old) ++wrongDirection;
     }
 
     // ─── Feed ages ───
@@ -237,7 +239,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
     function setBorrowAge(
         uint32 v
     ) external {
-        _as(TIMELOCK, abi.encodeCall(STORE.setBorrowPriceMaxAge, (FEED, uint32(bound(v, 0, 90_000)))));
+        _as(GOVERNOR, abi.encodeCall(STORE.setBorrowPriceMaxAge, (FEED, uint32(bound(v, 0, 90_000)))));
     }
 
     // ─── Chain values ───
@@ -245,7 +247,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
     function setFlashFee(
         uint16 v
     ) external {
-        _as(TIMELOCK, abi.encodeCall(STORE.setMaxFlashFeeBps, (uint16(bound(v, 0, 120)))));
+        _as(GOVERNOR, abi.encodeCall(STORE.setMaxFlashFeeBps, (uint16(bound(v, 0, 120)))));
     }
 
     function tightenFlashFee(
@@ -268,7 +270,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
             if (_as(_tightener(steward), abi.encodeCall(STORE.tightenMaxShortfallBps, (v))) && v >= old) {
                 ++wrongDirection;
             }
-        } else if (_as(TIMELOCK, abi.encodeCall(STORE.loosenMaxShortfallBps, (v))) && v <= old) {
+        } else if (_as(GOVERNOR, abi.encodeCall(STORE.loosenMaxShortfallBps, (v))) && v <= old) {
             ++wrongDirection;
         }
     }
@@ -286,7 +288,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
             abi.encodeCall(STORE.setBorrowPriceMaxAge, (FEED, uint32(bound(v, 1, 88_200)))),
             abi.encodeCall(STORE.setPoolRiskFactor, (M, uint16(bound(v, 1, 9000)))),
             abi.encodeCall(STORE.setAvanaFeeShareBps, (uint16(bound(v, 0, 5000)))),
-            abi.encodeCall(STORE.grantRole, (bytes32(0), who))
+            abi.encodeCall(STORE.setCoverageRatioBps, (uint16(bound(v, 0, 5000))))
         ];
         if (_as(who, calls[v % calls.length])) ++strangerWrites;
     }

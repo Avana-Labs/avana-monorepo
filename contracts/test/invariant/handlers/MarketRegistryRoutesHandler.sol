@@ -94,7 +94,7 @@ contract MarketRegistryRoutesHandler is MarketRegistryFixture {
     function _caller(
         bool guardian
     ) internal view returns (address) {
-        return guardian ? emergencyGuardian : address(timelock);
+        return guardian ? emergencyGuardian : governor;
     }
 
     function _after(

@@ -8,15 +8,15 @@ import {ShapeKind} from "../../../src/types/PositionTypes.sol";
 
 /// @title LPVaultIdentityMock
 /// @notice Stand-in LPVault for the VaultTokenFactory: answers only the identity getters `registerIntegration` reads
-/// (`INTEGRATION_ID`, `COLLATERALIZATION`, `LOCK`, `TIMELOCK`, `MARKET_REGISTRY`, `AMM_PROTOCOL`, `capabilities`).
-/// @dev The identity is set at construction; `setTimelock`, `setRegistry` and `setKind` let a test build a mis-wired
+/// (`INTEGRATION_ID`, `COLLATERALIZATION`, `LOCK`, `authority`, `MARKET_REGISTRY`, `AMM_PROTOCOL`, `capabilities`).
+/// @dev The identity is set at construction; `setAuthority`, `setRegistry` and `setKind` let a test build a mis-wired
 /// LPVault. Defaults: a pool-address keyed `TickRange` integration.
 contract LPVaultIdentityMock {
     uint32 public immutable INTEGRATION_ID;
     address public immutable COLLATERALIZATION;
     address public immutable LOCK;
     bytes32 public immutable AMM_PROTOCOL;
-    address public TIMELOCK;
+    address public authority;
     address public MARKET_REGISTRY;
     PoolKeying internal _keying = PoolKeying.Address;
     ShapeKind internal _kind = ShapeKind.TickRange;
@@ -29,21 +29,21 @@ contract LPVaultIdentityMock {
         address collateralization,
         address lock,
         bytes32 ammProtocol,
-        address timelock,
+        address authority_,
         address marketRegistry
     ) {
         INTEGRATION_ID = integrationId;
         COLLATERALIZATION = collateralization;
         LOCK = lock;
         AMM_PROTOCOL = ammProtocol;
-        TIMELOCK = timelock;
+        authority = authority_;
         MARKET_REGISTRY = marketRegistry;
     }
 
-    function setTimelock(
-        address timelock
+    function setAuthority(
+        address authority_
     ) external {
-        TIMELOCK = timelock;
+        authority = authority_;
     }
 
     function setRegistry(

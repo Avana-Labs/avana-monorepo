@@ -137,7 +137,7 @@ contract UniswapV4IntegrationForkTest is AvanaTest {
         vault = IUniswapV4Integration(
             deployCode(
                 "UniswapV4Integration.sol:UniswapV4Integration",
-                abi.encode(uint32(1), coll, registry, address(lock), makeAddr("timelock"), POSM, V3_FACTORY, 12)
+                abi.encode(uint32(1), coll, registry, address(lock), makeAddr("authority"), POSM, V3_FACTORY, 12)
             )
         );
         key = UniswapV4PoolKey(address(0), USDC, 500, SPACING, address(0));

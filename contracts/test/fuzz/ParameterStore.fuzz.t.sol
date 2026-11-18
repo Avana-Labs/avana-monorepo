@@ -39,7 +39,7 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
     function _call(
         bytes memory data
     ) internal returns (bool ok, bytes memory ret) {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (ok, ret) = address(store).call(data);
     }
 

@@ -47,7 +47,7 @@ contract UniswapV4IntegrationFeesCustodyInvariantTest is UniswapV4IntegrationFix
                 source: this,
                 lock: lock
             }),
-            [adapter, coll, lpVaultSwap, timelock, attacker],
+            [adapter, coll, lpVaultSwap, governor, attacker],
             [alice, bob],
             keys_,
             address(weth)
@@ -140,7 +140,7 @@ contract UniswapV4IntegrationFeesCustodyInvariantTest is UniswapV4IntegrationFix
                 }
             }
             assertTrue(
-                owner != adapter && owner != coll && owner != lpVaultSwap && owner != timelock,
+                owner != adapter && owner != coll && owner != lpVaultSwap && owner != governor,
                 "never held by a core contract"
             );
         }

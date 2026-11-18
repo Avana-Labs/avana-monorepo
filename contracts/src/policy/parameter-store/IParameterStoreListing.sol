@@ -7,7 +7,7 @@ import {DebtReserveParams, FeedDef, MarketParams} from "./types/ParameterStoreTy
 
 /// @title IParameterStoreListing
 /// @notice Setters the listing batches of markets, tokens and debt reserves use.
-/// @dev Every setter requires `APPLICATION_ADMIN` and runs through the timelock at the normal delay.
+/// @dev Every setter takes the governance role and runs through the AccessManager after the governance delay.
 interface IParameterStoreListing {
     /// @notice Writes a registered market's parameters, including `minPledgeUsd`.
     /// @dev Reverts `NotInListing` unless the market is `Registered`.

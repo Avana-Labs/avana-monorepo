@@ -44,7 +44,7 @@ contract VaultTokenFactoryFuzzTest is VaultTokenFactoryFixture {
         address predicted
     ) internal view returns (bool) {
         return a == address(v3Vault) || a == adapter || a == address(lpVaultSwap) || a == address(collateralization)
-            || a == predicted || a == address(timelock) || a.code.length > 0;
+            || a == predicted || a == address(accessManager) || a.code.length > 0;
     }
 
     // TEST-024 verifies: REQ-VTOKEN-020, REQ-VTOKEN-021, REQ-VTOKEN-022, REQ-VTOKEN-023, REQ-VTOKEN-038, Q-224, Q-299
@@ -93,7 +93,7 @@ contract VaultTokenFactoryFuzzTest is VaultTokenFactoryFixture {
         address t = _deploy(l);
         l.lpOracle = _boundStranger(otherOracle);
         l.marketId = bound(otherMarketId, 0, type(uint32).max);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (bool ok,) = address(factory).call(_deployCall(l));
         assertFalse(ok, "second deployment");
         assertEq(factory.tokenOf(l.spoke, _key(l)), t, "entry unchanged");

@@ -3,12 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
 import {IClIntegration} from "../../src/amm/IClIntegration.sol";
 import {IClPositionManager} from "../../src/amm/concentrated-liquidity/IClPositionManager.sol";
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
-import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
-import {GovernedTargets, SelectorPair} from "../../src/governance/timelock/IAvanaTimelock.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {VaultTokenFactory} from "../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
@@ -17,6 +16,8 @@ import {VaultToken} from "../../src/vault-token/vault-token/VaultToken.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
 import {OtherNft} from "../utils/mocks/UniswapV3Mocks.sol";
 import {ClLPVaultBase, ClLPVaultSlipstreamHooks, ClLPVaultUniswapHooks} from "./ClLPVault.Base.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
+import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {VmSafe} from "forge-std/Vm.sol";
@@ -24,7 +25,7 @@ import {VmSafe} from "forge-std/Vm.sol";
 /// @title ClLPVaultIsolationTests
 /// @notice What a concentrated-liquidity LPVault holds and answers to, on the production contract with no
 /// Collateralization, vault token or registry behind it that could mask a fault: a pushed or sent NFT is only a stray
-/// and leaves only through the AvanaTimelock at its normal delay; the LPVault grants no position-manager approval; it
+/// and leaves only through the AccessManager at the governance delay; the LPVault grants no position-manager approval; it
 /// has no vault-token code path, reads no pause state, policy or registry and calls no upgradeable contract; it refuses
 /// ETH; a vault token bound to it can never reach it; it registers once under its own integration identifier; and a
 /// pool token's transfer fee fails none of its checks. Each body runs on the Uniswap v3 and the Slipstream LPVault.
@@ -106,12 +107,12 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
 
     // TEST-015 verifies: REQ-VAULT-165, REQ-VAULT-079, REQ-VAULT-080, REQ-VAULT-122, REQ-VAULT-123, INV-007
     // Sources: 2.2 REQ-VAULT-165 and the failure rows REQ-VAULT-122, REQ-VAULT-123; 2.20 REQ-VAULT-080
-    /// @notice `returnStray` runs only for the timelock, only with the Lock free, only to a recipient other than zero
+    /// @notice `returnStray` runs only for the governance role, only with the Lock free, only to a recipient other than zero
     /// and the LPVault, and only for a position the LPVault holds with no custody entry; it then sends the NFT by
     /// `transferFrom` and emits `StrayReturned`.
     /// @dev Kills: a missing caller, Lock, recipient or stray check, a stray path that can move a pledged NFT, a
     /// return through `safeTransferFrom`.
-    function test_TEST_015_returnStrayOnlyThroughTheTimelockForAStray() public {
+    function test_TEST_015_returnStrayOnlyThroughTheGovernanceRoleForAStray() public {
         Core memory c = _cCore();
         IClIntegration v = _cVault();
         bytes32 stray = _cMint(MKT_A, alice, 1e9);
@@ -119,13 +120,13 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         IERC721 manager = _cManager(stray);
         vm.prank(alice);
         manager.transferFrom(alice, address(v), _cTokenId(stray)); // sent without a hook: still a stray
-        address[3] memory outsiders = [alice, governanceMultisig, c.coll];
+        address[3] memory outsiders = [alice, attacker, c.coll];
         for (uint256 i = 0; i < outsiders.length; ++i) {
             vm.prank(outsiders[i]);
-            vm.expectRevert(NotTimelock.selector);
+            vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, outsiders[i]));
             v.returnStray(stray, carol);
         }
-        vm.startPrank(c.timelock);
+        vm.startPrank(governor);
         vm.expectRevert(InvalidRecipient.selector);
         v.returnStray(stray, address(0));
         vm.expectRevert(InvalidRecipient.selector);
@@ -136,12 +137,12 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         v.returnStray(bytes32(uint256(999_999)), carol); // a token the manager does not know
         vm.stopPrank();
         bytes32 elsewhere = _cMint(MKT_A, carol, 1);
-        vm.prank(c.timelock);
+        vm.prank(governor);
         vm.expectRevert(NotStray.selector);
         v.returnStray(elsewhere, alice); // not held by the LPVault
         vm.prank(c.adapter);
         c.lock.acquire();
-        vm.prank(c.timelock);
+        vm.prank(governor);
         vm.expectRevert(Locked.selector);
         v.returnStray(stray, carol);
         vm.prank(c.adapter);
@@ -154,7 +155,7 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         vm.expectCall(address(manager), abi.encodeWithSignature("safeTransferFrom(address,address,uint256)"), 0);
         vm.expectEmit(address(v));
         emit StrayReturned(stray, carol);
-        vm.prank(c.timelock);
+        vm.prank(governor);
         v.returnStray(stray, carol);
         assertEq(manager.ownerOf(_cTokenId(stray)), carol);
         assertEq(manager.ownerOf(_cTokenId(pledged)), address(v), "the pledged NFT never moved");
@@ -175,7 +176,7 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         _cAs(c.lpVaultSwap, abi.encodeCall(ILPVault.unwind, (key, units, _cZeros(), c.lpVaultSwap)));
         assertEq(v.unitsOf(key), 0);
         assertEq(v.depositorOf(key), alice);
-        vm.prank(c.timelock);
+        vm.prank(governor);
         vm.expectRevert(NotStray.selector);
         v.returnStray(key, bob);
         // Returned, then sent back: a stray again, and returnable.
@@ -184,100 +185,74 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         _cAs(c.adapter, abi.encodeCall(ILPVault.returnPosition, (again)));
         vm.prank(alice);
         _cManager(again).transferFrom(alice, address(v), _cTokenId(again));
-        vm.prank(c.timelock);
+        vm.prank(governor);
         v.returnStray(again, alice);
         // Pledged again before a second return executes: refused at execution.
         vm.prank(alice);
         _cManager(again).approve(address(v), _cTokenId(again));
         _cAs(c.adapter, abi.encodeCall(ILPVault.receivePosition, (MKT_A, alice, again)));
-        vm.prank(c.timelock);
+        vm.prank(governor);
         vm.expectRevert(NotStray.selector);
         v.returnStray(again, bob);
         assertEq(_cManager(again).ownerOf(_cTokenId(again)), address(v));
     }
 
     // TEST-166 verifies: REQ-VAULT-081, REQ-VAULT-082, REQ-VAULT-084, REQ-VAULT-165, Q-228
-    // Sources: 5.1 TEST-166 (returnStray only for TIMELOCK; at the normal delay it executes right after it; no second
-    // timer); 2.2 REQ-VAULT-081 (recipient as scheduled), REQ-VAULT-082, REQ-VAULT-084 (cancel through the timelock)
-    /// @notice An LPVault bound to the real AvanaTimelock: the governance multisig cannot call `returnStray` directly; the
-    /// operation needs the normal delay and no more, executes for anyone right after it and sends the NFT to the
-    /// recipient it names (not the sender); each canceller can cancel a scheduled return; the LPVault has no queue,
-    /// timer or cancel of its own.
-    /// @dev Kills: a role or multisig caller check in place of the timelock, a delay or queue inside the LPVault, a
-    /// recipient inferred from the sender.
-    function test_TEST_166_strayReturnRunsAtOneNormalDelay() public {
-        AvanaTimelock tl = _cTimelock();
-        IClIntegration v = _cVaultWithTimelock(address(tl));
+    // Sources: 5.1 TEST-166 (returnStray only through the AccessManager; at the governance delay it executes right
+    // after it; no second timer); 2.2 REQ-VAULT-081 (recipient as scheduled), REQ-VAULT-082, REQ-VAULT-084 (cancel)
+    /// @notice An LPVault bound to the real AccessManager: the governance multisig cannot call `returnStray`
+    /// directly; the operation needs the governance delay and no more, executes for the multisig right after it and
+    /// sends the NFT to the recipient it names (not the sender); the scheduler and the DAO can cancel a scheduled
+    /// return; the LPVault has no queue, timer or cancel of its own.
+    /// @dev Kills: a caller check in place of the AccessManager, a delay or queue inside the LPVault, a recipient
+    /// inferred from the sender.
+    function test_TEST_166_strayReturnRunsAtOneGovernanceDelay() public {
+        IClIntegration v = _cVaultWithAuthority(address(accessManager));
+        _bindAccess(AvanaAccess.Kind.LpVault, address(v));
         bytes32 stray = _cMint(MKT_A, alice, 1e9);
         vm.prank(alice);
         _cManager(stray).transferFrom(alice, address(v), _cTokenId(stray));
         bytes memory data = abi.encodeCall(ILPVault.returnStray, (stray, carol));
+        bytes32 opId = accessManager.hashOperation(governanceMultisig, address(v), data);
         vm.prank(governanceMultisig);
-        vm.expectRevert(NotTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManager.AccessManagerNotScheduled.selector, opId));
         v.returnStray(stray, carol);
-        address[] memory targets = new address[](1);
-        targets[0] = address(v);
-        bytes[] memory payloads = new bytes[](1);
-        payloads[0] = data;
-        assertEq(tl.requiredDelay(targets, payloads), NORMAL_DELAY, "one normal delay");
+        (bool immediate, uint32 delay) =
+            accessManager.canCall(governanceMultisig, address(v), ILPVault.returnStray.selector);
+        assertFalse(immediate);
+        assertEq(delay, NORMAL_DELAY, "one governance delay");
         vm.prank(governanceMultisig);
         vm.expectRevert();
-        tl.schedule(address(v), 0, data, bytes32(0), bytes32("short"), NORMAL_DELAY - 1);
-        // Every canceller can cancel a scheduled return; the NFT stays.
-        address[4] memory cancellers = [governanceMultisig, emergencyGuardian, aaveGuardian, aaveGovernanceExecutor];
+        accessManager.schedule(address(v), data, uint48(block.timestamp + NORMAL_DELAY - 1));
+        // The scheduler and the DAO can cancel a scheduled return; the NFT stays.
+        address[2] memory cancellers = [governanceMultisig, aaveGovernanceExecutor];
         for (uint256 i = 0; i < cancellers.length; ++i) {
-            bytes32 salt = bytes32(i + 1);
             vm.prank(governanceMultisig);
-            tl.schedule(address(v), 0, data, bytes32(0), salt, NORMAL_DELAY);
-            bytes32 id = tl.hashOperation(address(v), 0, data, bytes32(0), salt);
+            accessManager.schedule(address(v), data, 0);
             vm.prank(cancellers[i]);
-            tl.cancel(id);
+            accessManager.cancel(governanceMultisig, address(v), data);
             vm.warp(block.timestamp + NORMAL_DELAY);
-            vm.prank(attacker);
+            vm.prank(governanceMultisig);
             vm.expectRevert();
-            tl.execute(address(v), 0, data, bytes32(0), salt);
+            accessManager.execute(address(v), data);
         }
         assertEq(_cManager(stray).ownerOf(_cTokenId(stray)), address(v), "cancelled returns move nothing");
         (bool hasCancel,) = address(v).call(abi.encodeWithSignature("cancel(bytes32)", bytes32(0)));
         (bool hasQueue,) = address(v).call(abi.encodeWithSignature("scheduleReturn(bytes32,address)", stray, carol));
         assertFalse(hasCancel || hasQueue, "no cancel or queue of its own");
-        // Scheduled at the normal delay: not a second earlier, then by anyone, to the scheduled recipient.
+        // Scheduled at the governance delay: not a second earlier, then by the scheduler, to the scheduled recipient.
         vm.prank(governanceMultisig);
-        tl.schedule(address(v), 0, data, bytes32(0), bytes32("run"), NORMAL_DELAY);
+        accessManager.schedule(address(v), data, 0);
         vm.warp(block.timestamp + NORMAL_DELAY - 1);
-        vm.prank(attacker);
+        vm.prank(governanceMultisig);
         vm.expectRevert();
-        tl.execute(address(v), 0, data, bytes32(0), bytes32("run"));
+        accessManager.execute(address(v), data);
         vm.warp(block.timestamp + 1);
         vm.expectEmit(address(v));
         emit StrayReturned(stray, carol);
-        vm.prank(attacker);
-        tl.execute(address(v), 0, data, bytes32(0), bytes32("run"));
+        vm.prank(governanceMultisig);
+        accessManager.execute(address(v), data);
         assertEq(_cManager(stray).ownerOf(_cTokenId(stray)), carol, "sent to the recipient governance named");
-    }
-
-    /// @notice The AvanaTimelock with the initial roles, normal delay and public execution, and no short-delay or
-    /// DAO-only selectors.
-    function _cTimelock() internal returns (AvanaTimelock) {
-        address[] memory proposers = new address[](2);
-        (proposers[0], proposers[1]) = (governanceMultisig, aaveGovernanceExecutor);
-        address[] memory executors = new address[](1);
-        executors[0] = governanceMultisig;
-        address[] memory cancellers = new address[](2);
-        (cancellers[0], cancellers[1]) = (emergencyGuardian, aaveGuardian);
-        address[] memory daoCancellers = new address[](1);
-        daoCancellers[0] = aaveGovernanceExecutor;
-        return new AvanaTimelock(
-            proposers,
-            executors,
-            cancellers,
-            daoCancellers,
-            NORMAL_DELAY,
-            true,
-            new SelectorPair[](0),
-            new SelectorPair[](0),
-            GovernedTargets(makeAddr("parameterStore"), makeAddr("marketRegistryTarget"), makeAddr("lpVaultSwapTarget"))
-        );
     }
 
     // ─── Approvals ───
@@ -395,7 +370,7 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
             c.registry,
             c.adapter,
             c.lpVaultSwap,
-            c.timelock,
+            c.authority,
             c.coll,
             token.hub(),
             token.spoke(),
@@ -423,7 +398,7 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         Core memory c = _cCore();
         (bytes32 other,) = _cPledge(MKT_A, bob, 1e12);
         bytes32 fresh = _cMint(MKT_A, carol, 1e9);
-        address[5] memory callers = [c.adapter, c.lpVaultSwap, c.registry, c.timelock, attacker];
+        address[5] memory callers = [c.adapter, c.lpVaultSwap, c.registry, governor, attacker];
         bytes[5] memory calls = [
             abi.encodeCall(ILPVault.returnPosition, (other)),
             abi.encodeCall(ILPVault.unwind, (other, 1, _cZeros(), c.lpVaultSwap)),
@@ -488,17 +463,17 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         IClIntegration v = _cVault();
         uint32 id = v.INTEGRATION_ID();
         VaultTokenFactory factory = _cFactory();
-        vm.prank(c.timelock);
+        vm.prank(governor);
         vm.expectRevert(IVaultTokenFactory.InvalidIntegration.selector);
         factory.registerIntegration(id + 1, address(v)); // not its own identifier
         vm.prank(c.adapter);
-        vm.expectRevert(IVaultTokenFactory.NotTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, c.adapter));
         factory.registerIntegration(id, address(v));
-        vm.prank(c.timelock);
+        vm.prank(governor);
         factory.registerIntegration(id, address(v));
         assertEq(factory.lpVaultOf(id), address(v));
-        IClIntegration twin = _cVaultWithTimelock(c.timelock);
-        vm.startPrank(c.timelock);
+        IClIntegration twin = _cVaultWithAuthority(c.authority);
+        vm.startPrank(governor);
         vm.expectRevert(IVaultTokenFactory.InvalidIntegration.selector);
         factory.registerIntegration(id, address(twin)); // the identifier is taken
         vm.expectRevert(IVaultTokenFactory.InvalidIntegration.selector);
@@ -617,7 +592,8 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
     /// views and its Lock answered for the factory's core check.
     function _cFactory() internal returns (VaultTokenFactory factory) {
         Core memory c = _cCore();
-        factory = new VaultTokenFactory(c.adapter, c.lpVaultSwap, c.coll, c.timelock, c.registry);
+        factory = new VaultTokenFactory(c.adapter, c.lpVaultSwap, c.coll, c.authority, c.registry);
+        _bindAccess(AvanaAccess.Kind.VaultTokenFactory, address(factory));
         vm.mockCall(c.coll, abi.encodeCall(ICollateralization.VAULT_TOKEN_FACTORY, ()), abi.encode(address(factory)));
         vm.mockCall(c.coll, abi.encodeCall(ICollateralization.ADAPTER, ()), abi.encode(c.adapter));
         vm.mockCall(c.coll, abi.encodeCall(ICollateralization.LP_VAULT_SWAP, ()), abi.encode(c.lpVaultSwap));
@@ -626,10 +602,9 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
 
     /// @notice The LPVault registered in the real factory and the vault token of market 1 deployed by it.
     function _cListToken() internal returns (VaultTokenFactory factory, VaultToken token) {
-        Core memory c = _cCore();
         IClIntegration v = _cVault();
         factory = _cFactory();
-        vm.startPrank(c.timelock);
+        vm.startPrank(governor);
         factory.registerIntegration(v.INTEGRATION_ID(), address(v));
         address t = factory.deployVaultToken(
             v.INTEGRATION_ID(),

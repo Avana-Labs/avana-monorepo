@@ -54,9 +54,7 @@ contract RiskModuleHalmosTest is Test {
         h = new RiskModuleMathHarness();
         reg = new HalmosImplementationRegistry();
         drift = new RiskModuleDriftLogic(
-            RiskModuleImmutables(
-                address(reg), address(0x5701), address(0xC011), address(0xADA9), address(0x5A9), address(0x71E)
-            )
+            RiskModuleImmutables(address(reg), address(0x5701), address(0xC011), address(0xADA9), address(0x5A9))
         );
     }
 

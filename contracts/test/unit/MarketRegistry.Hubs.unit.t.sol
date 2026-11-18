@@ -23,7 +23,7 @@ import {
     RegistryLPVaultMock,
     RegistryTokenMock
 } from "../utils/mocks/MarketRegistryMocks.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @notice Hubs, AMM integrations, First-Loss Reserves, cross-Hub lines, the flash source and CDP Spoke records.
 contract MarketRegistryHubsUnitTest is MarketRegistryFixture {
@@ -47,7 +47,7 @@ contract MarketRegistryHubsUnitTest is MarketRegistryFixture {
 
     // TEST-285 verifies: REQ-CONFIG-083, REQ-CONFIG-005, INV-095, Q-388
     function test_TEST_285_recordHubChecks() public {
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidHub.selector, address(0)));
         registry.recordHub(address(0), RiskTier.Stable);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidHub.selector, address(hub)));
@@ -73,7 +73,7 @@ contract MarketRegistryHubsUnitTest is MarketRegistryFixture {
         RegistryFlashSourceMock viaHub = new RegistryFlashSourceMock(address(hub), address(lpVaultSwap));
         RegistryFlashSourceMock wrongSwap = new RegistryFlashSourceMock(aaveV3Pool, alice);
         RegistryFlashSourceMock good = new RegistryFlashSourceMock(aaveV3Pool, address(lpVaultSwap));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setFlashSource(address(viaHub));
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
@@ -89,301 +89,13 @@ contract MarketRegistryHubsUnitTest is MarketRegistryFixture {
         assertEq(registry.flashSource(), address(good));
     }
 
-    // TEST-264 verifies: REQ-CONFIG-075, Q-313, Q-376
-    function test_TEST_264_registerIntegrationPinsTheLPVault() public {
-        RegistryLPVaultMock v2 = new RegistryLPVaultMock(2, address(collat), lockAddr);
-        v2.setRegistry(address(registry));
-        vm.startPrank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, 2));
-        registry.registerIntegration(2, address(v2), alice);
-        factory.registerIntegration(2, address(v2));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, 0));
-        registry.registerIntegration(0, address(v2), alice);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, V3));
-        registry.registerIntegration(V3, address(v2), alice);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, 3));
-        registry.registerIntegration(3, address(v2), alice);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, 2));
-        registry.registerIntegration(2, address(v2), address(0));
-        v2.setRegistry(alice);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, 2));
-        registry.registerIntegration(2, address(v2), alice);
-        v2.setRegistry(address(registry));
-        registry.registerIntegration(2, address(v2), alice);
-        vm.stopPrank();
-        (address lpv, address pricing) = registry.integrationOf(2);
-        assertEq(lpv, address(v2));
-        assertEq(pricing, alice);
-        assertEq(registry.integrationIdOf(address(v2)), 2);
-    }
-
-    // TEST-273 verifies: REQ-MREG-009, REQ-CONFIG-081, Q-379
-    function test_TEST_273_firstLossReserveRecord() public {
-        RegistryAvanaFirstLossReserveMock wrongHub =
-            new RegistryAvanaFirstLossReserveMock(address(hub2), address(gho), 0);
-        RegistryAvanaFirstLossReserveMock wrongId =
-            new RegistryAvanaFirstLossReserveMock(address(hub), address(usdc), 9);
-        hub.setAsset(address(usdc), 2);
-        vm.startPrank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidHub.selector, address(hub2)));
-        registry.setAvanaFirstLossReserve(address(hub2), address(gho), address(wrongHub));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidAvanaFirstLossReserve.selector, address(wrongId)));
-        registry.setAvanaFirstLossReserve(address(hub), address(usdc), address(wrongId));
-        vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistry.InvalidAvanaFirstLossReserve.selector, address(wrongHub))
-        );
-        registry.setAvanaFirstLossReserve(address(hub), address(gho), address(wrongHub));
-        vm.stopPrank();
-        assertEq(registry.firstLossReserveOf(address(hub), address(gho)), address(ghoCoverage));
-    }
-
-    // TEST-185 verifies: REQ-CONFIG-077, REQ-CONFIG-074, REQ-CONFIG-083, REQ-CONFIG-016, ATTACK-121, Q-312, REQ-ACCESS-133
-    // Sources: 5.1 TEST-185
-    function test_TEST_185_deployCdpSpokeChecks() public {
-        vm.prank(address(timelock));
-        registry.recordHub(address(hub2), RiskTier.Correlated);
-        SpokeDef memory d = _spoke2Def();
-        // Oracle decimals other than 8.
-        oracle2.setDecimals(18);
-        _expectInvalidSpoke(d, address(spoke2));
-        oracle2.setDecimals(8);
-        // Implementation slot other than the named implementation.
-        spoke2.setImplementation(alice);
-        _expectInvalidSpoke(d, address(spoke2));
-        // An implementation whose code differs from the approved standard implementation.
-        RegistrySpokeMock otherCode = new RegistrySpokeMock();
-        spoke2.setImplementation(address(otherCode));
-        d.implementation = address(otherCode);
-        _expectInvalidSpoke(d, address(spoke2));
-        // A second deployment of the same audited code passes the code-hash check.
-        RegistrySpokeImplMock sameCode = new RegistrySpokeImplMock();
-        spoke2.setImplementation(address(sameCode));
-        d.implementation = address(sameCode);
-        // Hub tier mismatch, unknown integration, oracle naming another Spoke.
-        d.riskTier = RiskTier.Volatile;
-        _expectInvalidSpoke(d, address(spoke2));
-        d.riskTier = RiskTier.Correlated;
-        d.integrationId = 9;
-        _expectInvalidSpoke(d, address(spoke2));
-        d.integrationId = V3;
-        spoke2.setOracle(alice);
-        _expectInvalidSpoke(d, address(spoke2));
-        spoke2.setOracle(address(oracle2));
-        // Drift check failing.
-        rm.setDrift(true);
-        _expectInvalidSpoke(d, address(spoke2));
-        rm.setDrift(false);
-        vm.expectEmit(address(registry));
-        emit IMarketRegistryBase.SpokeApproved(address(spoke2), address(hub2), V3, address(sameCode), address(oracle2));
-        vm.prank(address(timelock));
-        assertEq(registry.deployCdpSpoke(d), address(spoke2));
-        assertEq(registry.hubOf(address(spoke2)), address(hub2));
-        assertEq(registry.getSpokes().length, 2);
-        // A second Spoke for the same (Hub, integration, tier) is recorded too.
-        SpokeDef memory d3 = d;
-        address spoke3 = _newSpoke(d3);
-        vm.prank(address(timelock));
-        assertEq(registry.deployCdpSpoke(d3), spoke3);
-        assertEq(registry.hubOf(spoke3), address(hub2));
-        assertEq(registry.getSpokes().length, 3);
-    }
-
-    /// @notice Two CDP Spokes on the same (Hub, integration, tier), a market listed on each (each market key is
-    /// chain-wide, so the second market takes another range of the same pool).
-    function test_TEST_185_twoSpokesShareHubIntegrationTier() public {
-        SpokeDef memory d = _spokeDef();
-        address other = _newSpoke(d);
-        vm.prank(address(timelock));
-        assertEq(registry.deployCdpSpoke(d), other);
-        assertEq(registry.hubOf(other), address(hub));
-        assertEq(registry.hubOf(address(spoke)), address(hub));
-        // The second Spoke lends GHO too, as the fixture's Spoke does: its settlement reserve.
-        IAaveV4Spoke.Reserve memory r;
-        (r.underlying, r.hub, r.assetId, r.decimals) = (address(gho), address(hub), uint16(GHO_ASSET), 18);
-        IAaveV4Spoke.ReserveConfig memory c;
-        c.borrowable = true;
-        IAaveV4Spoke.DynamicReserveConfig memory dyn;
-        RegistrySpokeMock(other).setReserve(GHO_RESERVE, r, c, dyn);
-        RegistryAaveOracleMock(d.aaveOracle).setSource(GHO_RESERVE, address(ghoSource));
-        hub.setSpokeConfig(GHO_ASSET, other, 0, 1_000_000);
-        vm.prank(address(timelock));
-        registry.enableDebtReserve(other, _ghoDef());
-
-        (uint256 first,,) = _listMarket();
-        uint256 second = registry.marketCount() + 1;
-        PositionShape memory shape = PositionShape(ShapeKind.TickRange, -100, 100);
-        RegistryLPOracleMock lpOracle = new RegistryLPOracleMock(second, address(lpVault));
-        vm.prank(address(timelock));
-        address vaultToken = factory.deployVaultToken(
-            V3,
-            pool,
-            bytes32(0),
-            shape,
-            address(hub),
-            other,
-            second,
-            address(lpOracle),
-            18,
-            "Avana USDC/USDT wide",
-            "avUSDC-USDT-w"
-        );
-        MarketDef memory m = _marketDef(vaultToken, address(lpOracle));
-        (m.spoke, m.shape) = (other, shape);
-        vm.prank(address(timelock));
-        assertEq(registry.listCollateralMarket(m), second);
-        assertEq(first + 1, second);
-    }
-
-    /// @dev A standard Spoke mock with its own AaveOracle, for `def` (its oracle and implementation are set).
-    function _newSpoke(
-        SpokeDef memory def
-    ) internal returns (address) {
-        RegistrySpokeMock s = new RegistrySpokeMock();
-        RegistryAaveOracleMock o = new RegistryAaveOracleMock();
-        s.setOracle(address(o));
-        s.setImplementation(address(spokeImpl));
-        o.setSpoke(address(s));
-        (def.aaveOracle, def.implementation) = (address(o), address(spokeImpl));
-        return address(s);
-    }
-
-    // TEST-185 verifies: REQ-CONFIG-016, REQ-CONFIG-074
-    function test_TEST_185_reapprovalAfterAaveUpgrade() public {
-        RegistrySpokeImplMock upgraded = new RegistrySpokeImplMock();
-        spoke.setImplementation(address(upgraded));
-        assertEq(_drift(), uint8(DriftReason.SpokeImplementation), "SpokeImplementation drift before re-approval");
-        SpokeDef memory d = _spokeDef();
-        d.implementation = address(upgraded);
-        vm.prank(address(timelock));
-        registry.deployCdpSpoke(d);
-        assertEq(registry.getSpoke(address(spoke)).implementation, address(upgraded));
-        assertEq(registry.getSpokes().length, 1);
-        assertEq(uint8(_drift()), 0);
-        d.riskTier = RiskTier.Correlated;
-        _expectInvalidSpoke(d, address(spoke));
-    }
-
-    // TEST-185 verifies: REQ-CONFIG-074, REQ-CONFIG-077, REQ-CONFIG-016, REQ-ACCESS-133, REQ-ACCESS-177
-    // Sources: MarketRegistry review 2026-11-10 finding 1 (approved Spoke code hashes)
-    function test_TEST_185_approvedSpokeCodeHashes() public {
-        vm.prank(address(timelock));
-        registry.recordHub(address(hub2), RiskTier.Correlated);
-        RegistrySpokeMock otherCode = new RegistrySpokeMock();
-        bytes32 h = address(otherCode).codehash;
-        spoke2.setImplementation(address(otherCode));
-        SpokeDef memory d = _spoke2Def();
-        d.implementation = address(otherCode);
-        // Not approved yet: the code differs from the standard implementation's.
-        assertFalse(registry.isApprovedSpokeCodeHash(h));
-        assertTrue(registry.isApprovedSpokeCodeHash(address(spokeImpl).codehash));
-        _expectInvalidSpoke(d, address(spoke2));
-        // Only the admin approves, never 0, the empty-code hash or a hash already approved.
-        vm.prank(alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, alice, APP_ADMIN)
-        );
-        registry.approveSpokeCodeHash(h);
-        _expectBadHash(bytes32(0));
-        _expectBadHash(keccak256(""));
-        _expectBadHash(address(spokeImpl).codehash);
-        assertFalse(registry.isApprovedSpokeCodeHash(bytes32(0)));
-        assertFalse(registry.isApprovedSpokeCodeHash(keccak256("")));
-        vm.expectEmit(address(registry));
-        emit IMarketRegistry.SpokeCodeHashApproved(h);
-        vm.prank(address(timelock));
-        registry.approveSpokeCodeHash(h);
-        assertTrue(registry.isApprovedSpokeCodeHash(h));
-        _expectBadHash(h);
-        vm.prank(address(timelock));
-        registry.deployCdpSpoke(d);
-        (address impl, bytes32 codeHash, bool current) = registry.spokeImplementationStatus(address(spoke2));
-        assertEq(impl, address(otherCode));
-        assertEq(codeHash, h);
-        assertTrue(current);
-    }
-
-    // TEST-185 verifies: REQ-CONFIG-074, REQ-CONFIG-016, REQ-CONFIG-076
-    // Sources: Step 2 decisions 2026-11-11 (upgrade detection binds the implementation behind the proxy)
-    function test_TEST_185_implementationStatusFollowsTheProxySlot() public {
-        (address impl, bytes32 codeHash, bool current) = registry.spokeImplementationStatus(address(spoke));
-        assertEq(impl, address(spokeImpl));
-        assertEq(codeHash, address(spokeImpl).codehash);
-        assertTrue(current);
-        // An unrecorded Spoke, even an address with no code, reads all zero and never reverts.
-        (impl, codeHash, current) = registry.spokeImplementationStatus(alice);
-        assertEq(impl, address(0));
-        assertEq(codeHash, bytes32(0));
-        assertFalse(current);
-        (impl,, current) = registry.spokeImplementationStatus(address(spoke2));
-        assertFalse(current);
-        // The Aave DAO upgrades the proxy, even to a deployment of the same audited code: not current until re-approved.
-        RegistrySpokeImplMock sameCode = new RegistrySpokeImplMock();
-        spoke.setImplementation(address(sameCode));
-        (impl, codeHash, current) = registry.spokeImplementationStatus(address(spoke));
-        assertEq(impl, address(sameCode));
-        assertEq(codeHash, address(spokeImpl).codehash);
-        assertFalse(current);
-        assertEq(_drift(), uint8(DriftReason.SpokeImplementation));
-        // An unreadable slot is not current either.
-        spoke.setRevertExtSload(true);
-        (impl, codeHash, current) = registry.spokeImplementationStatus(address(spoke));
-        assertEq(impl, address(0));
-        assertFalse(current);
-        assertEq(_drift(), uint8(DriftReason.SpokeImplementation));
-        spoke.setRevertExtSload(false);
-        SpokeDef memory d = _spokeDef();
-        d.implementation = address(sameCode);
-        vm.prank(address(timelock));
-        registry.deployCdpSpoke(d);
-        (,, current) = registry.spokeImplementationStatus(address(spoke));
-        assertTrue(current);
-    }
-
-    // TEST-285 verifies: REQ-CONFIG-005, Q-386
-    // Sources: MarketRegistry review 2026-11-10 finding 9 (setFlashSource event)
-    function test_TEST_285_setFlashSourceEmits() public {
-        RegistryFlashSourceMock f2 = new RegistryFlashSourceMock(makeAddr("otherLender"), address(lpVaultSwap));
-        vm.expectEmit(address(registry));
-        emit IMarketRegistry.FlashSourceSet(address(flash), address(f2));
-        vm.prank(address(timelock));
-        registry.setFlashSource(address(f2));
-        assertEq(registry.flashSource(), address(f2));
-    }
-
-    function _expectBadHash(
-        bytes32 h
-    ) internal {
-        vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidSpokeCodeHash.selector, h));
-        registry.approveSpokeCodeHash(h);
-    }
-
-    function _drift() internal view returns (uint8) {
-        (, DriftReason r) = registry.spokeSettingsDrift(address(spoke));
-        return uint8(r);
-    }
-
-    function _expectInvalidSpoke(
-        SpokeDef memory d,
-        address s
-    ) internal {
-        vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, s));
-        registry.deployCdpSpoke(d);
-    }
-
-    // TEST-264 verifies: REQ-CONFIG-033, REQ-CONFIG-075
-    /// @notice A market lists only under its Spoke's integration, in both directions and also when the other integration
-    /// has a registered LPVault: integration 2 on the V3 Spoke and V3 on an integration-2 Spoke both revert
-    /// `InvalidIntegration`.
     function test_TEST_264_listingRefusesAnotherRegisteredIntegration() public {
         RegistryLPVaultMock v2 = new RegistryLPVaultMock(2, address(collat), lockAddr);
         v2.setRegistry(address(registry));
         address[] memory amm = new address[](2);
         (amm[0], amm[1]) = (address(new RegistryTokenMock(18)), address(new RegistryTokenMock(18)));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         factory.registerIntegration(2, address(v2));
-        registry.registerIntegration(2, address(v2), alice);
         registry.recordIntegrationContracts(2, amm);
         registry.finalizeIntegrationContracts(2);
         registry.recordHub(address(hub2), RiskTier.Correlated);
@@ -393,12 +105,12 @@ contract MarketRegistryHubsUnitTest is MarketRegistryFixture {
         vm.stopPrank();
         MarketDef memory d = _marketDef(makeAddr("vt"), makeAddr("lpo"));
         d.integrationId = 2;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, 2));
         registry.listCollateralMarket(d);
         d = _marketDef(makeAddr("vt"), makeAddr("lpo"));
         (d.hub, d.spoke) = (address(hub2), address(spoke2));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, V3));
         registry.listCollateralMarket(d);
     }

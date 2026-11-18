@@ -4,13 +4,16 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAvanaGasVault} from "./IAvanaGasVault.sol";
+import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title AvanaGasVault
 /// @notice Holds the native gas token and refills Avana's keeper signers through permissionless top-ups.
 /// @dev The cap holds over any rolling `PERIOD` window, not per calendar period.
-contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
+// The AccessManager check of `restricted` is the only external call before an event; it holds no funds and cannot reenter.
+// forge-lint: disable-start(reentrancy-events)
+contract AvanaGasVault is IAvanaGasVault, AccessManaged, ReentrancyGuardTransient {
     /// @inheritdoc IAvanaGasVault
     uint256 public constant override PERIOD = 24 hours;
 
@@ -25,9 +28,6 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
 
     /// @inheritdoc IAvanaGasVault
     address public immutable override TREASURY;
-
-    /// @inheritdoc IAvanaGasVault
-    address public immutable override TIMELOCK;
 
     /// @inheritdoc IAvanaGasVault
     address public immutable override GUARDIAN;
@@ -54,13 +54,9 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
     /// @dev Entries `(uint48 timestamp << 80) | uint80 amount`; kept on removal so a re-added signer keeps its window.
     mapping(address signer => uint128[MAX_SENDS_PER_PERIOD]) private _sends;
 
-    modifier onlyTimelock() {
-        if (msg.sender != TIMELOCK) revert NotTimelock();
-        _;
-    }
-
-    modifier onlyGuardianOrTimelock() {
-        if (msg.sender != GUARDIAN && msg.sender != TIMELOCK) revert NotGuardianOrTimelock();
+    /// @dev The guardian acts at once; any other caller needs the AccessManager's permission (and its delay).
+    modifier onlyGuardianOrAuthorized() {
+        if (msg.sender != GUARDIAN) _checkCanCall(msg.sender, msg.data);
         _;
     }
 
@@ -69,21 +65,20 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         _;
     }
 
-    /// @notice Fixes the treasury, the timelock, the guardian and the allowlist bound.
+    /// @notice Fixes the treasury, the AccessManager, the guardian and the allowlist bound.
     /// @param treasury The `feeRecipient` treasury Safe, the only withdrawal destination.
     constructor(
         address treasury,
-        address timelock,
+        address authority,
         address guardian,
         uint256 maxSigners
-    ) {
+    ) AccessManaged(authority) {
         if (
-            treasury == address(0) || timelock == address(0) || guardian == address(0) || treasury == timelock
+            treasury == address(0) || authority == address(0) || guardian == address(0) || treasury == authority
                 || treasury == guardian
         ) revert InvalidAddress();
         if (maxSigners == 0 || maxSigners > MAX_SIGNERS_LIMIT) revert InvalidMaxSigners(maxSigners);
         TREASURY = treasury;
-        TIMELOCK = timelock;
         GUARDIAN = guardian;
         MAX_SIGNERS = maxSigners;
     }
@@ -150,9 +145,9 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         uint256 minBalance,
         uint256 targetBalance,
         uint256 periodCap
-    ) external override onlyTimelock {
+    ) external override restricted {
         if (
-            signer == address(0) || signer == address(this) || signer == TREASURY || signer == TIMELOCK
+            signer == address(0) || signer == address(this) || signer == TREASURY || signer == authority()
                 || signer == GUARDIAN || _signer[signer].position != 0
         ) revert InvalidSigner(signer);
         if (_signerList.length >= MAX_SIGNERS) revert TooManySigners();
@@ -174,14 +169,14 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         uint256 minBalance,
         uint256 targetBalance,
         uint256 periodCap
-    ) external override onlyTimelock {
+    ) external override restricted {
         if (_signer[signer].position == 0) revert UnknownSigner(signer);
         _checkConfig(minBalance, targetBalance, periodCap, false);
         _setConfig(signer, minBalance, targetBalance, periodCap);
     }
 
     /// @inheritdoc IAvanaGasVault
-    function unpause() external override onlyTimelock {
+    function unpause() external override restricted {
         paused = false;
         emit PauseChanged(false, msg.sender);
     }
@@ -189,7 +184,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
     /// @inheritdoc IAvanaGasVault
     function withdraw(
         uint256 amount
-    ) external override nonReentrant onlyTimelock {
+    ) external override nonReentrant restricted {
         uint256 held = address(this).balance;
         if (amount == 0 || amount > held) revert InvalidWithdrawal(amount, held);
         emit Withdrawn(amount);
@@ -202,7 +197,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         uint256 minBalance,
         uint256 targetBalance,
         uint256 periodCap
-    ) external override onlyGuardianOrTimelock {
+    ) external override onlyGuardianOrAuthorized {
         Signer memory s = _listed(signer);
         if (minBalance > s.minBalance || targetBalance > s.targetBalance || periodCap > s.periodCap) {
             revert NotTighter();
@@ -214,7 +209,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
     /// @inheritdoc IAvanaGasVault
     function removeSigner(
         address signer
-    ) external override onlyGuardianOrTimelock {
+    ) external override onlyGuardianOrAuthorized {
         uint256 index = _listed(signer).position - 1;
         uint256 last = _signerList.length - 1;
         if (index != last) {
@@ -228,7 +223,7 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
     }
 
     /// @inheritdoc IAvanaGasVault
-    function pause() external override onlyGuardianOrTimelock {
+    function pause() external override onlyGuardianOrAuthorized {
         paused = true;
         emit PauseChanged(true, msg.sender);
     }
@@ -355,3 +350,4 @@ contract AvanaGasVault is IAvanaGasVault, ReentrancyGuardTransient {
         if (s.position == 0) revert UnknownSigner(signer);
     }
 }
+// forge-lint: disable-end(reentrancy-events)

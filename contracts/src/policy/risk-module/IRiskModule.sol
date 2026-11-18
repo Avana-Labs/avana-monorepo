@@ -7,15 +7,16 @@ import {AccountGateStatus, DriftReason} from "../../types/MarketTypes.sol";
 import {PledgeCounters, PledgePreview} from "../../types/PositionTypes.sol";
 import {IRiskModuleErrors} from "./IRiskModuleErrors.sol";
 import {DynamicCap, PledgeCharge} from "./types/RiskModuleTypes.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @title IRiskModule
 /// @notice Avana's risk checks on one chain: the pledge check and the borrow-side pre- and post-checks.
-/// @dev UUPS proxy; only the timelock can upgrade it. Holds no funds and has no setter.
-interface IRiskModule is IRiskModuleErrors {
+/// @dev UUPS proxy; only the AccessManager's governance role can upgrade it. Holds no funds and has no setter.
+interface IRiskModule is IRiskModuleErrors, IAccessManaged {
     /// @notice Initializes the proxy storage.
-    /// @dev Runs once, with the proxy deployment. Grants `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` to `timelock`.
+    /// @dev Runs once, with the proxy deployment; sets the AccessManager that authorizes upgrades.
     function initialize(
-        address timelock
+        address authority
     ) external;
 
     /// @notice `pokeConfig` found the Spoke's Aave settings drifted.
@@ -156,9 +157,6 @@ interface IRiskModule is IRiskModuleErrors {
 
     /// @notice LPVaultSwap, read for `activeKeeperCount`; new borrowing halts when it is 0.
     function LP_VAULT_SWAP() external view returns (address lpVaultSwap);
-
-    /// @notice The only address that may hold `DEFAULT_ADMIN_ROLE` or `APPLICATION_ADMIN` (implementation immutable).
-    function TIMELOCK() external view returns (address timelock);
 
     /// @notice Debt of an account valued at its debt oracles, 8-decimal USD.
     function debtValueUsd(

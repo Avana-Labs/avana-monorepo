@@ -31,7 +31,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         bytes memory data,
         bytes memory err
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (bool ok, bytes memory ret) = address(store).call(data);
         assertFalse(ok, "store accepted");
         assertEq(ret, err, "wrong error");
@@ -43,8 +43,8 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
     function test_TEST_062_storeAndRegistryNameEachOther() public view {
         assertEq(registry.PARAMETER_STORE(), address(store));
         assertEq(store.MARKET_REGISTRY(), address(registry));
-        assertEq(store.TIMELOCK(), address(timelock));
-        assertEq(registry.TIMELOCK(), address(timelock));
+        assertEq(store.authority(), address(accessManager));
+        assertEq(registry.authority(), address(accessManager));
     }
 
     // TEST-062 verifies: REQ-CONFIG-056
@@ -79,7 +79,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
             abi.encodeCall(store.setFeeRecipient, (address(lpVault))),
             abi.encodeWithSelector(IParameterStoreBase.InvalidFeeRecipient.selector, address(lpVault))
         );
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.setFeeRecipient(daoTreasury);
         assertEq(store.feeRecipient(), daoTreasury);
     }
@@ -93,7 +93,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
             abi.encodeCall(store.setInitialTokenCap, (other, address(usdc), 1e8)),
             abi.encodeWithSelector(IParameterStoreBase.UnknownHub.selector, other)
         );
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.setInitialTokenCap(address(hub), address(usdc), 20_000_000e8);
         assertEq(store.tokenUsdCap(address(hub), address(usdc)), 20_000_000e8);
         // A token the registry never listed.
@@ -108,7 +108,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
 
     // TEST-246 verifies: REQ-CONFIG-050, REQ-PSTORE-006, Q-397
     function test_TEST_246_allowanceFromTheRegistryReserve() public {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.loosenFloorRoundingAllowance(address(gho), 1e18);
         assertEq(store.floorRoundingAllowance(address(gho)), 1e18);
         // The reserve's price source moves to $2: the bound halves.
@@ -129,10 +129,10 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         vm.mockCall(
             address(ghoCoverage), abi.encodeWithSignature("firstLossReserveMinimum()"), abi.encode(uint256(100_000e18))
         );
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.loosenDeficitMax(address(hub), address(gho), 10_000e18);
         _refuses(abi.encodeCall(store.loosenDeficitMax, (address(hub), address(gho), 100_000e18 + 1)), oob);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.loosenDeficitMax(address(hub), address(gho), 100_000e18);
         assertEq(store.deficitMax(address(hub), address(gho)), 100_000e18);
         // USDT has no reserve funded by the Hub.
@@ -147,7 +147,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
     function _listMarket() internal returns (uint256 id, address vaultToken, RegistryLPOracleMock lpOracle) {
         id = registry.marketCount() + 1;
         lpOracle = new RegistryLPOracleMock(id, address(lpVault));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vaultToken = factory.deployVaultToken(
             V3,
             pool,
@@ -169,7 +169,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         d.shape = PositionShape(ShapeKind.TickRange, -50, 50);
         d.vaultToken = vaultToken;
         d.lpOracle = address(lpOracle);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         id = registry.listCollateralMarket(d);
     }
 
@@ -186,7 +186,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         MarketParams memory p;
         (p.slippageAllowanceBps, p.slippageAllowanceMinBps) = (195, 30);
         (p.poolRiskFactor, p.minPledgeUsd) = (4000, 10e8);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         store.setTokenCollateralFactorBps(address(usdc), 7800);
         store.setTokenCollateralFactorBps(address(usdt), 7500);
         store.setInitialMarketParams(id, p);
@@ -216,14 +216,14 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         address[] memory deps = new address[](1);
         deps[0] = makeAddr(dep);
         address route = address(new RegistryRouteMock(token, address(gho), address(lpVaultSwap), deps));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setRoute(id, token, address(gho), uint8(kind), route);
     }
 
     function _activeMarket() internal returns (uint256 id, address vaultToken, RegistryLPOracleMock lpOracle) {
         (id, vaultToken, lpOracle) = _listMarket();
         _storeListing(id, vaultToken);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.activateMarket(id);
     }
 
@@ -233,7 +233,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Registered));
         _storeListing(id, vaultToken);
         assertEq(store.getMarketParams(id).poolRiskFactor, 4000);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.activateMarket(id);
         assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Active));
         // Active: the listing writes are closed.
@@ -260,9 +260,9 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         assertTrue(store.liquidationLivenessHolds(address(spoke), id, GHO_RESERVE));
         assertFalse(store.liquidationLivenessHolds(address(spoke), id, 7), "unapproved reserve");
         // Floor 190: 10,250 × 9,810 = 100,552,500 ≥ 10⁴ × 10,055, so a flash ceiling of 55 holds and 56 does not.
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.setSlippageAllowanceMinBps(id, 190);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.setMaxFlashFeeBps(55);
         _refuses(
             abi.encodeCall(store.setMaxFlashFeeBps, (56)),
@@ -279,9 +279,9 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         (dyn.collateralFactor, dyn.maxLiquidationBonus) = (2500, 10_100);
         spoke.setReserve(VT_RESERVE, r, spoke.getReserveConfig(VT_RESERVE), dyn);
         assertFalse(store.liquidationLivenessHolds(address(spoke), id, GHO_RESERVE));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.setMaxFlashFeeBps(0);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.setSlippageAllowanceMinBps(id, 30);
     }
 
@@ -296,7 +296,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
             abi.encode(c)
         );
         // (max(1,500,000, 1,200,000) + 100,000) / $1 = 1,600,000 ≤ addCap 2,000,000.
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.loosenMarketUsdCap(id, 1_500_000e8);
         vm.warp(block.timestamp + NORMAL_DELAY);
         hub.setSpokeConfig(VT_ASSET, address(spoke), 2_149_999, 0);
@@ -306,7 +306,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
             abi.encodeWithSelector(IParameterStoreBase.AddCapTooSmall.selector)
         );
         hub.setSpokeConfig(VT_ASSET, address(spoke), 2_350_000, 0);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.loosenMarketUsdCap(id, 2_250_000e8);
         assertEq(store.marketUsdCap(id), 2_250_000e8);
     }
@@ -320,11 +320,11 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
     function test_TEST_138_activationOnlyAfterTheStoreListing() public {
         (uint256 id, address vaultToken,) = _listMarket();
         vm.expectPartialRevert(IMarketRegistryBase.ActivationCheckFailed.selector);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.activateMarket(id);
         assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Registered), "still Registered");
         _storeListing(id, vaultToken);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.activateMarket(id);
         assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Active), "Active after the store listing");
         assertEq(store.minPledgeUsd(id), 10e8, "the listed minimum pledge");

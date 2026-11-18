@@ -26,14 +26,14 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
     }
 
     function _activate() internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.activateMarket(id);
     }
 
     function _expectCheck(
         bytes32 check
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ActivationCheckFailed.selector, id, check));
         registry.activateMarket(id);
     }
@@ -62,10 +62,10 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         assertEq(registry.marketOfReserve(address(spoke), VT_RESERVE), id);
         assertEq(registry.marketOfHubAsset(address(hub), VT_ASSET), id);
         assertEq(registry.activeMarketCount(address(spoke)), 1);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.MarketNotRegistered.selector, id));
         registry.activateMarket(id);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.MarketNotRegistered.selector, 42));
         registry.activateMarket(42);
     }
@@ -136,7 +136,7 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
     // Sources: 5.1 TEST-245
     function test_TEST_245_activationLiveness() public {
         ps.setLivenessFails(address(spoke), id, GHO_RESERVE, true);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(
             abi.encodeWithSelector(IMarketRegistryBase.LivenessBound.selector, address(spoke), id, GHO_RESERVE)
         );
@@ -148,11 +148,11 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         _activate();
         PositionShape memory wide = PositionShape(ShapeKind.TickRange, -100, 100);
         (address vt2, RegistryLPOracleMock o2) = _deployTokenAndOracle(2, wide);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listCollateralMarket(_wideDef(vt2, address(o2), wide));
         hub.setAsset(vt2, VT_ASSET);
         ps.setMarket(2, 9500, 10e8, 1_000_000e8, 100_000e8, 1e8);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.DuplicateMarketKey.selector);
         registry.activateMarket(2);
     }
@@ -169,20 +169,20 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
     // TEST-213 verifies: REQ-MREG-015, REQ-CONFIG-013, REQ-CONFIG-048, Q-227, REQ-ACCESS-036, REQ-ACCESS-134, REQ-ACCESS-106
     // Sources: 5.1 TEST-213
     function test_TEST_213_cancelAndOffboard() public {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.MarketNotActive.selector, id));
         registry.setMarketOffboarding(id);
         _activate();
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.MarketNotRegistered.selector, id));
         registry.cancelRegistration(id);
         vm.expectEmit(address(registry));
         emit IMarketRegistryBase.MarketOffboarding(id);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setMarketOffboarding(id);
         assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Offboarding));
         assertEq(registry.activeMarketCount(address(spoke)), 1, "Offboarding markets still count");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.MarketNotActive.selector, id));
         registry.setMarketOffboarding(id);
     }
@@ -191,7 +191,7 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
     function test_TEST_213_offboardingNoticeAndClose() public {
         _activate();
         vm.warp(1_000_000);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setMarketOffboarding(id);
         uint256 t0 = block.timestamp;
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.MarketNotOffboarding.selector, 42));
@@ -224,7 +224,7 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         assertEq(w.offboardedAt, 0);
         assertEq(w.startLtBps, 0);
         vm.warp(2_000_000);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setMarketOffboarding(id);
         uint256 t0 = block.timestamp;
         w = registry.windDownState(id);
@@ -254,7 +254,7 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         // A CF that fails the bonus bound cannot activate; keep it valid.
         vm.assume(uint256(cf) * 10_500 <= 99_990_000);
         _activate();
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setMarketOffboarding(id);
         WindDownState memory w = registry.windDownState(id);
         assertEq(w.targetLtBps, uint256(cf) * 5000 / 10_000);
@@ -263,7 +263,7 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
 
     // TEST-213 verifies: REQ-MREG-033, Q-358
     function test_TEST_213_settlementReserveChange() public {
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 42));
         registry.setSettlementReserve(42, GHO_RESERVE);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownDebtReserve.selector, address(spoke), 3));

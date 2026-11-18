@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
 import {PositionRef} from "../../types/PositionTypes.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
@@ -16,14 +15,16 @@ import {
     AdapterAccount,
     RepayWithCollateralParams
 } from "./types/AaveAdapterTypes.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {
+    AccessManagedUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 /// @title AaveAdapter
 /// @notice The chain's single entry point for every borrower action; entry-point bodies live in four logic contracts.
-/// @dev UUPS proxy; only the timelock can upgrade it.
-contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable, AaveAdapterStorage {
+/// @dev UUPS proxy; only the AccessManager's governance role can upgrade it.
+contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessManagedUpgradeable, AaveAdapterStorage {
     address internal immutable _USER_LOGIC;
     address internal immutable _EXIT_LOGIC;
     address internal immutable _COLLATERAL_LOGIC;
@@ -46,14 +47,11 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
 
     /// @inheritdoc IAaveAdapter
     function initialize(
-        address timelock
+        address authority
     ) external override initializer {
-        if (timelock == address(0)) revert ZeroAddress();
-        if (timelock != _TIMELOCK) revert AdminRoleOnlyTimelock(DEFAULT_ADMIN_ROLE, timelock);
-        __AccessControl_init();
+        if (authority == address(0)) revert ZeroAddress();
+        __AccessManaged_init(authority);
         __UUPSUpgradeable_init();
-        _grantRole(DEFAULT_ADMIN_ROLE, timelock);
-        _grantRole(AvanaRoles.APPLICATION_ADMIN, timelock);
     }
 
     /// @inheritdoc IAaveAdapter
@@ -237,11 +235,6 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
     }
 
     /// @inheritdoc IAaveAdapter
-    function APPLICATION_ADMIN() external pure override returns (bytes32 role) {
-        role = AvanaRoles.APPLICATION_ADMIN;
-    }
-
-    /// @inheritdoc IAaveAdapter
     function PROXY_MANAGER() external view override returns (address proxyManager) {
         proxyManager = _PROXY_MANAGER;
     }
@@ -281,26 +274,10 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         vaultTokenFactory = _VAULT_TOKEN_FACTORY;
     }
 
-    /// @inheritdoc IAaveAdapter
-    function TIMELOCK() external view override returns (address timelock) {
-        timelock = _TIMELOCK;
-    }
-
-    /// @dev Either admin role can be held only by `TIMELOCK`.
-    function _grantRole(
-        bytes32 role,
-        address account
-    ) internal override returns (bool granted) {
-        if ((role == DEFAULT_ADMIN_ROLE || role == AvanaRoles.APPLICATION_ADMIN) && account != _TIMELOCK) {
-            revert AdminRoleOnlyTimelock(role, account);
-        }
-        granted = super._grantRole(role, account);
-    }
-
-    /// @dev Upgrades need `APPLICATION_ADMIN`, held by the timelock.
+    /// @dev Upgrades need the AccessManager's governance role, after its execution delay.
     function _authorizeUpgrade(
         address
-    ) internal view override onlyRole(AvanaRoles.APPLICATION_ADMIN) {}
+    ) internal override restricted {}
 
     /// @dev Runs the current call's body in `logic`, in this contract's storage; reverts bubble up unchanged.
     function _forward(

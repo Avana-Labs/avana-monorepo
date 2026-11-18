@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
 import {AccountGateStatus, DriftReason} from "../../types/MarketTypes.sol";
 import {PledgeCounters, PledgePreview} from "../../types/PositionTypes.sol";
 import {BreakerReasons} from "../market-registry/types/Breaker.sol";
@@ -17,13 +16,15 @@ import {IRiskModuleStatusLogic} from "./IRiskModuleStatusLogic.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";
 import {RiskModuleMath} from "./RiskModuleMath.sol";
 import {DynamicCap, PledgeCharge, RiskModuleImmutables, RiskModuleLogics} from "./types/RiskModuleTypes.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {
+    AccessManagedUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title RiskModule
 /// @notice Avana's risk checks on one chain: pledge, borrow-side, dynamic borrow cap, drift and live breaker checks.
-/// @dev UUPS proxy; only the timelock can upgrade it. Check bodies run in six stateless logic contracts.
-contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase, IRiskModule {
+/// @dev UUPS proxy; only the AccessManager's governance role can upgrade it. Check bodies run in six stateless logic contracts.
+contract RiskModule is UUPSUpgradeable, AccessManagedUpgradeable, RiskModuleBase, IRiskModule {
     /// @custom:storage-location erc7201:avana.storage.RiskModule.dynamicCap
     struct DynamicCapLayout {
         mapping(uint256 marketId => DynamicCap) marketBorrowCap;
@@ -68,13 +69,10 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
 
     /// @inheritdoc IRiskModule
     function initialize(
-        address timelock
+        address authority
     ) external override initializer {
-        if (timelock != _TIMELOCK) revert AdminRoleOnlyTimelock(DEFAULT_ADMIN_ROLE, timelock);
-        __AccessControl_init();
+        __AccessManaged_init(authority);
         __UUPSUpgradeable_init();
-        _grantRole(DEFAULT_ADMIN_ROLE, timelock);
-        _grantRole(AvanaRoles.APPLICATION_ADMIN, timelock);
     }
 
     /// @inheritdoc IRiskModule
@@ -298,24 +296,8 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
         lpVaultSwap = _LP_VAULT_SWAP;
     }
 
-    /// @inheritdoc IRiskModule
-    function TIMELOCK() external view override returns (address timelock) {
-        timelock = _TIMELOCK;
-    }
-
-    /// @dev Either admin role can be held only by `TIMELOCK`, through `initialize` or any later grant.
-    function _grantRole(
-        bytes32 role,
-        address account
-    ) internal override returns (bool granted) {
-        if ((role == DEFAULT_ADMIN_ROLE || role == AvanaRoles.APPLICATION_ADMIN) && account != _TIMELOCK) {
-            revert AdminRoleOnlyTimelock(role, account);
-        }
-        granted = super._grantRole(role, account);
-    }
-
-    /// @dev Upgrades need `APPLICATION_ADMIN`, held only by the timelock.
+    /// @dev Upgrades need the AccessManager's governance role, after its execution delay.
     function _authorizeUpgrade(
         address
-    ) internal view override onlyRole(AvanaRoles.APPLICATION_ADMIN) {}
+    ) internal override restricted {}
 }

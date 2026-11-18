@@ -149,12 +149,12 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         DebtReserveDef memory def
     ) private view {
         bool refused = receiver == address(0) || _s().walletOf[receiver] != address(0) || receiver == address(this)
-            || receiver == _COLLATERALIZATION || receiver == _LP_VAULT_SWAP || receiver == _TIMELOCK
+            || receiver == _COLLATERALIZATION || receiver == _LP_VAULT_SWAP || receiver == _authority()
             || receiver == _MARKET_REGISTRY || receiver == _PARAMETER_STORE || receiver == _RISK_MODULE
             || receiver == _PROXY_MANAGER;
         if (!refused) {
             address reg = _MARKET_REGISTRY;
-            refused = IMarketRegistry(reg).integrationIdOf(receiver) != 0
+            refused = IVaultTokenFactory(_VAULT_TOKEN_FACTORY).integrationIdOf(receiver) != 0
                 || receiver == IMarketRegistry(reg).PAYOUT_ESCROW() || receiver == IMarketRegistry(reg).flashSource()
                 || IMarketRegistry(reg).isRecordedHub(receiver) || IMarketRegistry(reg).getSpoke(receiver).approved
                 || IAaveV4Hub(def.fundingHub).isSpokeListed(def.hubAssetId, receiver)

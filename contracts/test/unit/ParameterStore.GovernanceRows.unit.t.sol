@@ -34,7 +34,7 @@ contract ParameterStoreGovernanceRowsUnitTest is ParameterStoreFixture {
         string memory sig
     ) internal {
         bytes4 sel = bytes4(keccak256(bytes(sig)));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (bool ok, bytes memory ret) = address(store).call(abi.encodePacked(sel, new bytes(128)));
         assertFalse(ok, sig);
         assertEq(ret.length, 0, sig);

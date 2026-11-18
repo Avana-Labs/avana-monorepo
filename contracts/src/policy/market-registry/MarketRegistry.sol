@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
 import {MarketDef} from "../../types/MarketTypes.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
@@ -18,14 +17,16 @@ import {
     SpokeDef,
     TokenDef
 } from "./types/MarketRegistryTypes.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {
+    AccessManagedUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 /// @title MarketRegistry
 /// @notice The chain's registry of Hubs, integrations, CDP Spokes, debt reserves, markets and routes.
-/// @dev UUPS proxy; only the timelock can upgrade it. Write bodies run in logic contracts by delegatecall.
-contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegistryViews {
+/// @dev UUPS proxy; only the AccessManager's governance role can upgrade it. Write bodies run in logic contracts by delegatecall.
+contract MarketRegistry is UUPSUpgradeable, AccessManagedUpgradeable, MarketRegistryViews {
     address internal immutable _HUBS_LOGIC;
     address internal immutable _LISTING_LOGIC;
     address internal immutable _ACTIVATION_LOGIC;
@@ -85,11 +86,6 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
     }
 
     /// @inheritdoc IMarketRegistry
-    function TIMELOCK() external view override returns (address timelock) {
-        timelock = _TIMELOCK;
-    }
-
-    /// @inheritdoc IMarketRegistry
     function AAVE_GOVERNANCE_EXECUTOR() external view override returns (address executor) {
         executor = _AAVE_GOVERNANCE_EXECUTOR;
     }
@@ -129,17 +125,6 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
         return _ACTIVATION_LOGIC;
     }
 
-    /// @dev Either admin role can be held only by `TIMELOCK`, through `initialize` or any later grant.
-    function _grantRole(
-        bytes32 role,
-        address account
-    ) internal override returns (bool granted) {
-        if ((role == DEFAULT_ADMIN_ROLE || role == AvanaRoles.APPLICATION_ADMIN) && account != _TIMELOCK) {
-            revert AdminRoleOnlyTimelock(role, account);
-        }
-        granted = super._grantRole(role, account);
-    }
-
     /// @dev Delegatecalls `logic` with the current calldata; reverts bubble up unchanged.
     function _forward(
         address logic
@@ -163,29 +148,17 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
 
     /// @inheritdoc IMarketRegistry
     function initialize(
-        address timelock
+        address authority
     ) external override initializer {
-        if (timelock != _TIMELOCK) revert AdminRoleOnlyTimelock(DEFAULT_ADMIN_ROLE, timelock);
-        __AccessControl_init();
+        __AccessManaged_init(authority);
         __UUPSUpgradeable_init();
-        _grantRole(DEFAULT_ADMIN_ROLE, timelock);
-        _grantRole(AvanaRoles.APPLICATION_ADMIN, timelock);
     }
 
     /// @inheritdoc IMarketRegistry
     function recordHub(
         address,
         RiskTier
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_HUBS_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function registerIntegration(
-        uint32,
-        address,
-        address
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_HUBS_LOGIC);
     }
 
@@ -194,21 +167,21 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
         address,
         address,
         address
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_HUBS_LOGIC);
     }
 
     /// @inheritdoc IMarketRegistry
     function setFlashSource(
         address
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_HUBS_LOGIC);
     }
 
     /// @inheritdoc IMarketRegistry
     function approveSpokeCodeHash(
         bytes32
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_HUBS_LOGIC);
     }
 
@@ -216,21 +189,21 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
     function recordIntegrationContracts(
         uint32,
         address[] calldata
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_ROUTES_LOGIC);
     }
 
     /// @inheritdoc IMarketRegistry
     function finalizeIntegrationContracts(
         uint32
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_ROUTES_LOGIC);
     }
 
     /// @inheritdoc IMarketRegistry
     function deployCdpSpoke(
         SpokeDef calldata
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) returns (address spoke) {
+    ) external override restricted returns (address spoke) {
         spoke = abi.decode(_forwardReturning(_HUBS_LOGIC), (address));
     }
 
@@ -238,7 +211,7 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
     function enableDebtReserve(
         address,
         DebtReserveDef calldata
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_HUBS_LOGIC);
     }
 
@@ -246,7 +219,7 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
     function removeDebtReserve(
         address,
         uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_HUBS_LOGIC);
     }
 
@@ -254,7 +227,7 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
     function listToken(
         address,
         TokenDef calldata
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_LISTING_LOGIC);
     }
 
@@ -263,35 +236,35 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
         address,
         address[] calldata,
         address[] calldata
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_LISTING_LOGIC);
     }
 
     /// @inheritdoc IMarketRegistry
     function listCollateralMarket(
         MarketDef calldata
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) returns (uint256 marketId) {
+    ) external override restricted returns (uint256 marketId) {
         marketId = abi.decode(_forwardReturning(_LISTING_LOGIC), (uint256));
     }
 
     /// @inheritdoc IMarketRegistry
     function activateMarket(
         uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_ACTIVATION_LOGIC);
     }
 
     /// @inheritdoc IMarketRegistry
     function cancelRegistration(
         uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_ACTIVATION_LOGIC);
     }
 
     /// @inheritdoc IMarketRegistry
     function setMarketOffboarding(
         uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_ACTIVATION_LOGIC);
     }
 
@@ -302,7 +275,7 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
         address,
         uint8,
         address
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_ROUTES_LOGIC);
     }
 
@@ -312,7 +285,7 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
         address,
         address,
         uint8
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_ROUTES_LOGIC);
     }
 
@@ -323,7 +296,7 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
         address,
         uint8,
         address
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_ROUTES_LOGIC);
     }
 
@@ -338,12 +311,12 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
     function setSettlementReserve(
         uint256,
         uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_WIND_DOWN_LOGIC);
     }
 
-    /// @dev Upgrades need `APPLICATION_ADMIN`, held only by the timelock.
+    /// @dev Upgrades need the AccessManager's governance role, after its execution delay.
     function _authorizeUpgrade(
         address
-    ) internal view override onlyRole(AvanaRoles.APPLICATION_ADMIN) {}
+    ) internal override restricted {}
 }

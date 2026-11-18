@@ -25,8 +25,6 @@ struct RiskModuleImmutables {
     address adapter;
     // LPVaultSwap fixed proxy, read for `activeKeeperCount`.
     address lpVaultSwap;
-    // The chain's AvanaTimelock, the only holder of `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN`.
-    address timelock;
 }
 
 /// @notice The six immutable logic contracts the RiskModule calls for its check bodies.

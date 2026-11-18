@@ -24,7 +24,6 @@ contract MockMarketRegistry {
     mapping(address => bool) internal _hubs;
     mapping(address => uint256[]) internal _reserveIds;
     mapping(address => mapping(uint256 => DebtReserveDef)) internal _reserves;
-    mapping(address => uint32) internal _integrationIds;
     address[] internal _spokeList;
     uint256 public marketCount;
 
@@ -163,13 +162,6 @@ contract MockMarketRegistry {
         _reserves[spoke][d.reserveId] = d;
     }
 
-    function setIntegrationId(
-        address lpVault,
-        uint32 id
-    ) external {
-        _integrationIds[lpVault] = id;
-    }
-
     function getMarket(
         uint256 id
     ) external view returns (Market memory) {
@@ -214,12 +206,6 @@ contract MockMarketRegistry {
         address hub
     ) external view returns (bool) {
         return _hubs[hub];
-    }
-
-    function integrationIdOf(
-        address lpVault
-    ) external view returns (uint32) {
-        return _integrationIds[lpVault];
     }
 
     function getDebtReserveIds(

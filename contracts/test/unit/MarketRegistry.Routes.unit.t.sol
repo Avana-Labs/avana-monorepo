@@ -33,7 +33,7 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         uint8 kind,
         address route
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setRoute(id, token, asset, kind, route);
     }
 
@@ -43,7 +43,7 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         uint8 kind,
         address route
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setRoute(id, token, asset, kind, route);
     }
@@ -64,7 +64,7 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
     function test_TEST_054_setRouteChecks() public {
         address usdcIn = address(usdc);
         address dex = makeAddr("dexA");
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 42));
         registry.setRoute(42, usdcIn, address(gho), 0, alice);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TokenNotListed.selector, address(gho)));
@@ -118,7 +118,7 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         (address[] memory p, address[] memory a) = _routes("tether");
         TokenDef memory td = _tokenDef(p, a);
         td.issuerProbe = IssuerProbe.UsdtFeeRate;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(address(tether), td);
         address usdcIn = address(usdc);
         address[] memory exact = new address[](2);
@@ -167,7 +167,7 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         TokenDef memory td = _tokenDef(p, a);
         address psm = makeAddr("litePsm");
         td.pegModule = psm;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(address(dai), td);
         address[] memory toks = new address[](2);
         (toks[0], toks[1]) = (address(usdc), address(dai));
@@ -176,19 +176,19 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         (address vt2, RegistryLPOracleMock o2) = _deployTokenAndOracle(2, wide);
         MarketDef memory d = _marketDef(vt2, address(o2));
         d.shape = wide;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         uint256 id2 = registry.listCollateralMarket(d);
         address usdcIn = address(usdc);
         RegistryRouteMock viaPsm = _routeWithDeps(usdcIn, address(gho), psm, makeAddr("dexP"));
         // The backup of a market holding DAI never passes through DAI's peg module.
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setRoute(id2, usdcIn, address(gho), 1, address(viaPsm));
         // A primary may pass through it; the backup then uses other venues.
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setRoute(id2, usdcIn, address(gho), 0, address(viaPsm));
         RegistryRouteMock backup = _routeWithDeps(usdcIn, address(gho), makeAddr("dexQ"), makeAddr("dexR"));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setRoute(id2, usdcIn, address(gho), 1, address(backup));
         // On the USDC/USDT market, where no pool token names that module, a backup through it is accepted.
         RegistryRouteMock viaPsm2 = _routeWithDeps(usdcIn, address(gho), psm, makeAddr("dexS"));
@@ -200,11 +200,11 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         address usdcIn = address(usdc);
         address r1 = _setRoute(id, usdcIn, address(gho), 0, "dexA");
         address r2 = address(_newRoute(usdcIn, address(gho), "dexZ"));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.disableRoute(id, usdcIn, address(gho), 1);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryBase.RouteDisabled(id, usdcIn, address(gho), 0, address(timelock));
+        emit IMarketRegistryBase.RouteDisabled(id, usdcIn, address(gho), 0, governor);
         registry.disableRoute(id, usdcIn, address(gho), 0);
         (, bool usable) = registry.getRoute(id, usdcIn, address(gho), 0);
         assertFalse(usable);
@@ -235,7 +235,7 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         address usdcIn = address(usdc);
         address bad = _setRoute(id, usdcIn, address(gho), 0, "dexA");
         address good = address(_newRoute(usdcIn, address(gho), "dexZ"));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.setRoute(id, usdcIn, address(gho), 0, bad);
         registry.disableRoute(id, usdcIn, address(gho), 0);
         registry.restoreRoute(id, usdcIn, address(gho), 0, bad);
@@ -260,7 +260,7 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         address singleton = address(new RegistryTokenMock(0));
         address[] memory amm = new address[](1);
         amm[0] = singleton;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.recordIntegrationContracts(V3, amm);
         RegistryRouteMock viaSingleton = _routeWithDeps(address(usdc), address(gho), singleton, makeAddr("wrapper"));
         _expectInvalidRoute(address(usdc), address(gho), 0, address(viaSingleton));
@@ -307,36 +307,36 @@ contract MarketRegistryRoutesIdKeyedUnitTest is MarketRegistryFixture {
         bytes32 poolId = keccak256("usdc-usdt-v4");
         PositionShape memory full = PositionShape(ShapeKind.FullPool, 0, 0);
         RegistryLPOracleMock o = new RegistryLPOracleMock(idm, address(lpVault));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         address vtm = factory.deployVaultToken(
             V3, address(0), poolId, full, address(hub), address(spoke), idm, address(o), 18, "Avana v4", "avV4"
         );
         MarketDef memory d = _marketDef(vtm, address(o));
         (d.pool, d.poolId, d.shape) = (address(0), poolId, full);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         assertEq(registry.listCollateralMarket(d), idm);
         address singleton = address(new RegistryTokenMock(0));
         RegistryRouteMock viaSingleton = _routeWithDeps(address(usdc), address(gho), singleton, makeAddr("wrapper"));
         RegistryRouteMock elsewhere = _routeWithDeps(address(usdc), address(gho), makeAddr("curve"), makeAddr("uni"));
         // With no AMM contract recorded for the integration, every route of the market is refused (fail closed).
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setRoute(idm, address(usdc), address(gho), 0, address(elsewhere));
         address[] memory amm = new address[](1);
         amm[0] = singleton;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.recordIntegrationContracts(V3, amm);
         // Recorded but not finalized: still refused (REQ-MREG-035).
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setRoute(idm, address(usdc), address(gho), 0, address(elsewhere));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.finalizeIntegrationContracts(V3);
         // A route through the singleton cannot show it avoids the market's own pool id.
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setRoute(idm, address(usdc), address(gho), 0, address(viaSingleton));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setRoute(idm, address(usdc), address(gho), 0, address(elsewhere));
     }
 }

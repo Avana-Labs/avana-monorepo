@@ -9,7 +9,7 @@ import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
 
 /// @title IVaultTokenFactory
 /// @notice Registry of AMM integrations and vault tokens; one vault token per (CDP Spoke, market key), via CREATE3.
-/// @dev Both registries are append-only; only the timelock writes them.
+/// @dev Both registries are append-only; only the AccessManager's governance role writes them.
 interface IVaultTokenFactory {
     event IntegrationRegistered(
         uint32 indexed integrationId,
@@ -31,8 +31,6 @@ interface IVaultTokenFactory {
         bytes32 poolId,
         PositionShape shape
     );
-
-    error NotTimelock();
 
     /// @notice The integration identifier or LPVault is invalid, already registered, or its bindings do not match.
     error InvalidIntegration();
@@ -101,6 +99,11 @@ interface IVaultTokenFactory {
         uint32 integrationId
     ) external view returns (address lpVault);
 
+    /// @notice Returns the integration identifier an LPVault is registered under, or 0 when it is not registered.
+    function integrationIdOf(
+        address lpVault
+    ) external view returns (uint32 integrationId);
+
     /// @notice Returns the pool keying and shape kind recorded for a registered integration.
     /// @dev `(PoolKeying.Address, ShapeKind.None)` for an unregistered identifier.
     function integrationKindOf(
@@ -121,9 +124,6 @@ interface IVaultTokenFactory {
 
     /// @notice Returns the chain's Collateralization, bound into every token.
     function COLLATERALIZATION() external view returns (address collateralization);
-
-    /// @notice Returns the chain's AvanaTimelock, the only caller of `registerIntegration` and `deployVaultToken`.
-    function TIMELOCK() external view returns (address timelock);
 
     /// @notice Returns the chain's MarketRegistry, which every registered LPVault must name as its `MARKET_REGISTRY()`.
     function MARKET_REGISTRY() external view returns (address marketRegistry);

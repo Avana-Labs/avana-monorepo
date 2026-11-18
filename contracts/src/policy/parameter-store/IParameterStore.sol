@@ -14,22 +14,22 @@ import {
     MarketDynamicCap,
     MarketParams
 } from "./types/ParameterStoreTypes.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @title IParameterStore
 /// @notice Every Avana risk parameter of one chain, with its hard bounds, liveness bounds and change direction.
-/// @dev UUPS proxy; only the timelock can upgrade it. Holds no funds.
+/// @dev UUPS proxy; only the AccessManager's governance role can upgrade it. Holds no funds.
 interface IParameterStore is
-    IAccessControl,
+    IAccessManaged,
     IParameterStoreBase,
     IParameterStoreTighten,
     IParameterStoreLoosen,
     IParameterStoreListing
 {
     /// @notice Initializes the proxy storage.
-    /// @dev Grants the admin roles to `timelock`; reverts `AdminRoleOnlyTimelock` unless `timelock == TIMELOCK`.
+    /// @dev Sets the AccessManager that authorizes every governed call.
     function initialize(
-        address timelock,
+        address authority,
         GlobalParams calldata params
     ) external;
 
@@ -49,7 +49,7 @@ interface IParameterStore is
     ) external;
 
     /// @notice Sets `avanaFeeShareBps` in either direction.
-    /// @dev Also callable by `APPLICATION_RISK_STEWARD`; a rise reverts `OutOfBounds` unless the fee bound holds.
+    /// @dev Takes the tighten role, so the risk steward may call it at once; a rise reverts `OutOfBounds` unless the fee bound holds.
     function setAvanaFeeShareBps(
         uint16 value
     ) external;
@@ -66,7 +66,7 @@ interface IParameterStore is
         uint16 value
     ) external;
 
-    /// @notice Lowers `maxFlashFeeBps` (short delay, or at once by `APPLICATION_RISK_STEWARD`).
+    /// @notice Lowers `maxFlashFeeBps` (tighten role: the governance Safe after 12 hours, the risk steward at once).
     /// @dev A lower ceiling can move liquidations to the caller-funded path, never stop them.
     function tightenMaxFlashFeeBps(
         uint16 value
@@ -329,7 +329,4 @@ interface IParameterStore is
 
     /// @notice Largest increase of `slippageAllowanceBps` in one loosening (implementation constant).
     function LOOSEN_SLIPPAGE_STEP_BPS() external pure returns (uint16 value);
-
-    /// @notice The Avana timelock, the only holder of `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN`.
-    function TIMELOCK() external view returns (address timelock);
 }

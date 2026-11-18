@@ -12,11 +12,13 @@ import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
 import {IVaultToken} from "../vault-token/IVaultToken.sol";
 import {VaultToken} from "../vault-token/VaultToken.sol";
 import {IVaultTokenFactory} from "./IVaultTokenFactory.sol";
+import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {CREATE3} from "solady/utils/CREATE3.sol";
 
 /// @title VaultTokenFactory
 /// @notice Append-only registry of AMM integrations and vault tokens; the only deployer of vault tokens (CREATE3).
-contract VaultTokenFactory is IVaultTokenFactory {
+contract VaultTokenFactory is IVaultTokenFactory, AccessManaged {
     uint8 private constant MIN_DECIMALS = 6;
     uint8 private constant MAX_DECIMALS = 18;
     uint256 private constant MARKET_ID_LIMIT = 1 << 32;
@@ -30,12 +32,11 @@ contract VaultTokenFactory is IVaultTokenFactory {
     address private immutable _ADAPTER;
     address private immutable _LP_VAULT_SWAP;
     address private immutable _COLLATERALIZATION;
-    address private immutable _TIMELOCK;
     address private immutable _MARKET_REGISTRY;
 
     mapping(uint32 integrationId => address lpVault) private _lpVaultOf;
-    /// @dev Registered LPVaults, so one LPVault is registered under one identifier.
-    mapping(address lpVault => bool registered) private _isLpVault;
+    /// @dev Registered LPVaults and the identifier of each, so one LPVault is registered under one identifier.
+    mapping(address lpVault => uint32 integrationId) private _integrationIdOf;
     mapping(address spoke => mapping(bytes32 marketKey => address vaultToken)) private _tokenOf;
     mapping(address vaultToken => bool deployed) private _isVaultToken;
     mapping(uint32 integrationId => PoolKeying keying) private _poolKeyingOf;
@@ -46,12 +47,12 @@ contract VaultTokenFactory is IVaultTokenFactory {
         address adapter,
         address lpVaultSwap,
         address collateralization,
-        address timelock,
+        address authority,
         address marketRegistry
-    ) {
+    ) AccessManaged(authority) {
         if (
             adapter == address(0) || lpVaultSwap == address(0) || collateralization == address(0)
-                || timelock == address(0) || marketRegistry == address(0)
+                || authority == address(0) || marketRegistry == address(0)
         ) revert ZeroAddress();
         if (adapter == lpVaultSwap || adapter == collateralization || lpVaultSwap == collateralization) {
             revert IVaultToken.InvalidBinding();
@@ -59,13 +60,7 @@ contract VaultTokenFactory is IVaultTokenFactory {
         _ADAPTER = adapter;
         _LP_VAULT_SWAP = lpVaultSwap;
         _COLLATERALIZATION = collateralization;
-        _TIMELOCK = timelock;
         _MARKET_REGISTRY = marketRegistry;
-    }
-
-    modifier onlyTimelock() {
-        if (msg.sender != _TIMELOCK) revert NotTimelock();
-        _;
     }
 
     /// @inheritdoc IVaultTokenFactory
@@ -73,16 +68,16 @@ contract VaultTokenFactory is IVaultTokenFactory {
     function registerIntegration(
         uint32 integrationId,
         address lpVault
-    ) external override onlyTimelock {
+    ) external override restricted {
         if (
             integrationId == 0 || lpVault == address(0) || _isFactoryBinding(lpVault)
-                || _lpVaultOf[integrationId] != address(0) || _isLpVault[lpVault]
+                || _lpVaultOf[integrationId] != address(0) || _integrationIdOf[lpVault] != 0
         ) revert InvalidIntegration();
         _checkCore();
         bytes32 ammProtocol = _checkVaultIdentity(integrationId, lpVault);
         (PoolKeying keying, ShapeKind kind) = _readCapabilities(lpVault);
         _lpVaultOf[integrationId] = lpVault;
-        _isLpVault[lpVault] = true;
+        _integrationIdOf[lpVault] = integrationId;
         _poolKeyingOf[integrationId] = keying;
         _shapeKindOf[integrationId] = kind;
         // The only calls before this event are bounded static reads, which cannot re-enter.
@@ -104,7 +99,7 @@ contract VaultTokenFactory is IVaultTokenFactory {
         uint8 decimals,
         string memory name,
         string memory symbol
-    ) public override onlyTimelock returns (address vaultToken) {
+    ) public override restricted returns (address vaultToken) {
         VaultTokenBindings memory b =
             _checkListing(integrationId, pool, poolId, shape, hub, spoke, marketId, lpOracle, decimals);
         uint256 nameLength = bytes(name).length;
@@ -150,6 +145,13 @@ contract VaultTokenFactory is IVaultTokenFactory {
     }
 
     /// @inheritdoc IVaultTokenFactory
+    function integrationIdOf(
+        address lpVault
+    ) external view override returns (uint32 integrationId) {
+        integrationId = _integrationIdOf[lpVault];
+    }
+
+    /// @inheritdoc IVaultTokenFactory
     function integrationKindOf(
         uint32 integrationId
     ) external view override returns (PoolKeying poolKeying, ShapeKind shapeKind) {
@@ -178,11 +180,6 @@ contract VaultTokenFactory is IVaultTokenFactory {
     /// @inheritdoc IVaultTokenFactory
     function COLLATERALIZATION() external view override returns (address collateralization) {
         collateralization = _COLLATERALIZATION;
-    }
-
-    /// @inheritdoc IVaultTokenFactory
-    function TIMELOCK() external view override returns (address timelock) {
-        timelock = _TIMELOCK;
     }
 
     /// @inheritdoc IVaultTokenFactory
@@ -278,7 +275,7 @@ contract VaultTokenFactory is IVaultTokenFactory {
             !idOk || id != integrationId || !protocolOk || protocol == 0 || lock == address(0)
                 || _readAddress(lpVault, abi.encodeCall(ILPVault.COLLATERALIZATION, ())) != _COLLATERALIZATION
                 || _readAddress(lpVault, abi.encodeCall(ILPVault.LOCK, ())) != lock
-                || _readAddress(lpVault, abi.encodeCall(ILPVault.TIMELOCK, ())) != _TIMELOCK
+                || _readAddress(lpVault, abi.encodeCall(IAccessManaged.authority, ())) != authority()
                 || _readAddress(lpVault, abi.encodeCall(ILPVault.MARKET_REGISTRY, ())) != _MARKET_REGISTRY
         ) revert InvalidIntegration();
         ammProtocol = bytes32(protocol);

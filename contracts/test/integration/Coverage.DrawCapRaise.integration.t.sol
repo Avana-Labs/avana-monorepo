@@ -21,7 +21,7 @@ contract CoverageDrawCapRaiseIntegrationTest is RealStackFlows {
         _setUpFullStack();
         mA = _addMarket(poolA);
         // A 10 % cover: the 100,000 USDC First-Loss Reserve covers exactly the CDP Spoke's 1,000,000 USDC draw cap.
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.setCoverageRatioBps(1000);
     }
 

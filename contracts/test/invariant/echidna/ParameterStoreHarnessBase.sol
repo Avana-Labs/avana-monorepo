@@ -14,7 +14,6 @@ import {MockIntegration, MockLPOracle, MockPool} from "../../utils/mocks/Paramet
 /// one Registered market (USDC/USDT in an address-keyed pool, default parameters of 1.5) and a mocked LPOracle.
 abstract contract ParameterStoreHarnessBase is ParameterStoreStorage {
     uint256 internal constant M = 1;
-    uint256 internal constant NORMAL_DELAY = 432_000;
     address internal constant USDC = address(0x5DC);
     address internal constant USDT = address(0x5D7);
 
@@ -25,7 +24,7 @@ abstract contract ParameterStoreHarnessBase is ParameterStoreStorage {
     /// @notice Number of setter calls attempted in assertion mode; written so each call is a transaction.
     uint256 public calls;
 
-    constructor() ParameterStoreStorage(address(this), address(new HarnessMarketRegistry()), 12) {
+    constructor() ParameterStoreStorage(address(new HarnessMarketRegistry()), 12) {
         ORACLE = new MockLPOracle();
         INTEGRATION = new MockIntegration();
         POOL = new MockPool();
@@ -38,11 +37,6 @@ abstract contract ParameterStoreHarnessBase is ParameterStoreStorage {
         p.minPledgeUsd = 10e8;
         $.tokenCollateralFactorBps[USDC] = 7800;
         $.tokenCollateralFactorBps[USDT] = 7500;
-    }
-
-    /// @notice The timelock's normal delay, read by the logic to space loosenings.
-    function normalDelay() external pure returns (uint256) {
-        return NORMAL_DELAY;
     }
 
     function _call(

@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {MarketRegistryActivationLogic} from "../../../src/policy/market-registry/MarketRegistryActivationLogic.sol";
@@ -32,6 +33,8 @@ import {
     ParameterStoreLogics
 } from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
+import {AvanaTest} from "../AvanaTest.sol";
+import {CallRecorder} from "../mocks/CallRecorder.sol";
 import {
     RegistryAaveOracleMock,
     RegistryHubMock,
@@ -49,7 +52,6 @@ import {
     RegistryTokenMock
 } from "../mocks/MarketRegistryMocks.sol";
 import {MockAggregator} from "../mocks/ParameterStoreMocks.sol";
-import {TimelockFixture} from "./TimelockFixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @title ParameterStoreRegistryFixture
@@ -58,7 +60,13 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// after `_setUpWorld`: the Stable LP Hub recorded, integration 1 registered, the CDP Spoke deployed, GHO listed and
 /// enabled as a fixed-price debt reserve funded by the Hub, and USDC and USDT listed with a one-leg primary and a
 /// two-leg alternate route whose feeds the store defines (25 bps each).
-abstract contract ParameterStoreRegistryFixture is TimelockFixture {
+abstract contract ParameterStoreRegistryFixture is AvanaTest {
+    /// @dev Stand-ins for the contracts the fixture does not build: they accept every call and record it.
+    CallRecorder internal parameterStore = new CallRecorder();
+    CallRecorder internal marketRegistry = new CallRecorder();
+    CallRecorder internal lpVaultSwap = new CallRecorder();
+    CallRecorder internal other = new CallRecorder();
+
     uint32 internal constant V3 = 1;
     uint32 internal constant BLOCK_TIME = 12;
     uint256 internal constant GHO_RESERVE = 0;
@@ -95,7 +103,6 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
     address internal pool = makeAddr("usdcUsdtPool");
 
     function _deployWired() internal {
-        _deployTimelock();
         collat = new RegistryCollateralizationMock(lockAddr);
         rm = new RegistryRiskModuleMock();
         adapterMock = new RegistryAdapterMock();
@@ -110,6 +117,9 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         _deployFactoryRegistryAndStore(predictedRegistry, predictedStore);
         require(address(registry) == predictedRegistry, "registry prediction");
         require(address(store) == predictedStore, "store prediction");
+        _bindAccess(AvanaAccess.Kind.MarketRegistry, address(registry));
+        _bindAccess(AvanaAccess.Kind.ParameterStore, address(store));
+        _bindAccess(AvanaAccess.Kind.VaultTokenFactory, address(factory));
         vm.label(address(registry), "MarketRegistry");
         vm.label(address(store), "ParameterStore");
     }
@@ -121,11 +131,10 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         address store_
     ) internal {
         factory = new VaultTokenFactory(
-            address(adapterMock), address(lpVaultSwap), address(collat), address(timelock), registry_
+            address(adapterMock), address(lpVaultSwap), address(collat), address(accessManager), registry_
         );
         collat.setCore(address(factory), address(adapterMock), address(lpVaultSwap));
         im = MarketRegistryImmutables({
-            timelock: address(timelock),
             aaveGovernanceExecutor: aaveGovernanceExecutor,
             vaultTokenFactory: address(factory),
             aaveAdapter: address(adapterMock),
@@ -148,18 +157,20 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         l.windDown = address(new MarketRegistryWindDownLogic(im));
         MarketRegistry impl = new MarketRegistry(im, l);
         registry = MarketRegistry(
-            address(new ERC1967Proxy(address(impl), abi.encodeCall(MarketRegistry.initialize, (address(timelock)))))
+            address(
+                new ERC1967Proxy(address(impl), abi.encodeCall(MarketRegistry.initialize, (address(accessManager))))
+            )
         );
-        address tl = address(timelock);
+        address tl = address(accessManager);
         address reg = address(registry);
         storeLogics = ParameterStoreLogics({
-            tighten: address(new ParameterStoreTightenLogic(tl, reg, BLOCK_TIME)),
-            loosen: address(new ParameterStoreLoosenLogic(tl, reg, BLOCK_TIME)),
-            listing: address(new ParameterStoreListingLogic(tl, reg, BLOCK_TIME)),
-            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, reg, BLOCK_TIME)),
-            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, reg, BLOCK_TIME))
+            tighten: address(new ParameterStoreTightenLogic(reg, BLOCK_TIME)),
+            loosen: address(new ParameterStoreLoosenLogic(reg, BLOCK_TIME)),
+            listing: address(new ParameterStoreListingLogic(reg, BLOCK_TIME)),
+            adminOracle: address(new ParameterStoreAdminOracleLogic(reg, BLOCK_TIME)),
+            adminRisk: address(new ParameterStoreAdminRiskLogic(reg, BLOCK_TIME))
         });
-        ParameterStore storeImpl = new ParameterStore(tl, reg, BLOCK_TIME, storeLogics);
+        ParameterStore storeImpl = new ParameterStore(reg, BLOCK_TIME, storeLogics);
         store = IParameterStore(
             address(new ERC1967Proxy(address(storeImpl), abi.encodeCall(IParameterStore.initialize, (tl, _globals()))))
         );
@@ -192,11 +203,10 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         ghoSource = new RegistryFeedMock(8, 1e8);
         ghoCoverage = new RegistryAvanaFirstLossReserveMock(address(hub), address(gho), GHO_ASSET);
         ghoCoverage.setFunded(4e24, false);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         factory.registerIntegration(V3, address(lpVault));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.recordHub(address(hub), RiskTier.Stable);
-        registry.registerIntegration(V3, address(lpVault), makeAddr("clPricing"));
         // The integration's position manager and factory, recorded and finalized (REQ-MREG-035).
         address[] memory amm = new address[](2);
         (amm[0], amm[1]) = (address(new RegistryTokenMock(18)), address(new RegistryTokenMock(18)));
@@ -218,7 +228,7 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         vm.stopPrank();
         _setGhoReserve();
         _listToken(address(gho), "gho", IssuerProbe.None);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.enableDebtReserve(address(spoke), _ghoDef());
         _listToken(address(usdc), "usdc", IssuerProbe.PausedFlag);
         _listToken(address(usdt), "usdt", IssuerProbe.PausedFlag);
@@ -257,7 +267,7 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         // A live round at $1.00, which the registry reads when it lists a market.
         MockAggregator(f).setRound(1e8, 1);
         vm.label(f, label);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.setFeed(f, _feedDef());
     }
 
@@ -289,7 +299,7 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         d.primaryRoute = p;
         d.alternateRoute = a;
         d.issuerProbe = probe;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(token, d);
     }
 }

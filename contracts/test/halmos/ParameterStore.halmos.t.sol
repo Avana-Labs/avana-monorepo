@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
@@ -22,6 +23,8 @@ import {Market} from "../../src/types/MarketTypes.sol";
 import {ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MockMarketRegistry} from "../utils/mocks/MockMarketRegistry.sol";
 import {MockIntegration, MockLPOracle, MockPool} from "../utils/mocks/ParameterStoreMocks.sol";
+import {HalmosAccess} from "./HalmosAccess.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Test} from "forge-std/Test.sol";
 
@@ -42,25 +45,28 @@ contract ParameterStoreHalmosTest is Test {
     uint256 internal constant M = 1;
 
     IParameterStore internal store;
+    AccessManager internal manager;
 
     function setUp() public {
+        manager = HalmosAccess.deploy(TIMELOCK);
         MockMarketRegistry registry = new MockMarketRegistry();
         ParameterStoreLogics memory l = ParameterStoreLogics({
-            tighten: address(new ParameterStoreTightenLogic(TIMELOCK, address(registry), 12)),
-            loosen: address(new ParameterStoreLoosenLogic(TIMELOCK, address(registry), 12)),
-            listing: address(new ParameterStoreListingLogic(TIMELOCK, address(registry), 12)),
-            adminOracle: address(new ParameterStoreAdminOracleLogic(TIMELOCK, address(registry), 12)),
-            adminRisk: address(new ParameterStoreAdminRiskLogic(TIMELOCK, address(registry), 12))
+            tighten: address(new ParameterStoreTightenLogic(address(registry), 12)),
+            loosen: address(new ParameterStoreLoosenLogic(address(registry), 12)),
+            listing: address(new ParameterStoreListingLogic(address(registry), 12)),
+            adminOracle: address(new ParameterStoreAdminOracleLogic(address(registry), 12)),
+            adminRisk: address(new ParameterStoreAdminRiskLogic(address(registry), 12))
         });
-        ParameterStore impl = new ParameterStore(TIMELOCK, address(registry), 12, l);
+        ParameterStore impl = new ParameterStore(address(registry), 12, l);
         GlobalParams memory g;
         g.maxFlashFeeBps = 10;
         g.avanaFeeShareBps = 2000;
         g.feeRecipient = RECIPIENT;
         g.maxShortfallBps = 1000;
         store = IParameterStore(
-            address(new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStore.initialize, (TIMELOCK, g))))
+            address(new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStore.initialize, (address(manager), g))))
         );
+        HalmosAccess.bind(manager, AvanaAccess.Kind.ParameterStore, address(store));
         MockIntegration integration = new MockIntegration();
         integration.set(false, true, false, ShapeKind.FullPool);
         Market memory m;

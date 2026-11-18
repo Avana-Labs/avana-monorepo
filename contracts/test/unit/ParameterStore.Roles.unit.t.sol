@@ -7,23 +7,21 @@ import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {DebtReserveParams, FeedDef, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
+import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 
-/// @notice The role matrix of every ParameterStore setter: the Joint Configuration Safe (`APPLICATION_RISK_STEWARD`)
-/// runs each of the 13 tighten setters and `setAvanaFeeShareBps` at once with the timelock path's checks and its own
-/// address as `caller`; the timelock's delay class of every selector; and who administers each role.
+/// @notice The role matrix of every ParameterStore setter: the Joint Configuration Safe (the tighten role with no
+/// delay) runs each of the 13 tighten setters and `setAvanaFeeShareBps` at once with the same checks as the governance
+/// path and its own address as `caller`; the delay class of every selector; and who administers each role.
 contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
-    bytes32 internal constant ADMIN = AvanaRoles.APPLICATION_ADMIN;
-    bytes32 internal constant STEWARD = AvanaRoles.APPLICATION_RISK_STEWARD;
     address internal safe = makeAddr("jointConfigurationSafe");
     bytes internal notStricter = abi.encodeWithSelector(IParameterStoreBase.NotStricter.selector);
 
     function setUp() public {
         _deployStore();
         _listMarket();
-        vm.startPrank(address(timelock));
-        store.grantRole(STEWARD, safe);
-        vm.stopPrank();
+        vm.prank(aaveGovernanceExecutor);
+        accessManager.grantRole(AvanaRoles.TIGHTEN_ROLE, safe, 0);
     }
 
     /// @dev The steward repeats its own call: the value is no longer strictly safer, exactly as on the timelock path.
@@ -34,17 +32,16 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         (bool ok, bytes memory ret) = address(store).call(data);
         assertFalse(ok, "steward repeated a tightening");
         assertEq(ret, notStricter);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (ok, ret) = address(store).call(data);
-        assertFalse(ok, "timelock repeated a tightening");
+        assertFalse(ok, "governance repeated a tightening");
         assertEq(ret, notStricter);
     }
 
     function _unauthorized(
-        address who,
-        bytes32 role
+        address who
     ) internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, who, role);
+        return abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, who);
     }
 
     // ─── The 14 steward selectors, one by one ───
@@ -156,7 +153,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         _stewardRepeats(abi.encodeCall(store.tightenMaxFlashFeeBps, (5)));
         // Raising it back is structural: the steward is refused with the admin role named.
         vm.prank(safe);
-        vm.expectRevert(_unauthorized(safe, ADMIN));
+        vm.expectRevert(_unauthorized(safe));
         store.setMaxFlashFeeBps(10);
     }
 
@@ -171,7 +168,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         store.tightenDeficitMax(address(hub), gho, 5000e18);
         _stewardRepeats(abi.encodeCall(store.tightenDeficitMax, (address(hub), gho, 5000e18)));
         vm.prank(safe);
-        vm.expectRevert(_unauthorized(safe, ADMIN));
+        vm.expectRevert(_unauthorized(safe));
         store.loosenDeficitMax(address(hub), gho, 10_000e18);
     }
 
@@ -192,7 +189,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         store.tightenDebtStressRiseBps(usdc, 500);
         _stewardRepeats(abi.encodeCall(store.tightenDebtStressRiseBps, (usdc, 500)));
         vm.prank(safe);
-        vm.expectRevert(_unauthorized(safe, ADMIN));
+        vm.expectRevert(_unauthorized(safe));
         store.loosenDebtStressRiseBps(usdc, 100);
     }
 
@@ -209,7 +206,7 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         assertEq(store.avanaFeeShareBps(), 1000);
         // The recipient stays on the timelock.
         vm.prank(safe);
-        vm.expectRevert(_unauthorized(safe, ADMIN));
+        vm.expectRevert(_unauthorized(safe));
         store.setFeeRecipient(bob);
     }
 
@@ -217,12 +214,12 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
 
     // TEST-062 verifies: REQ-PSTORE-002, REQ-CONFIG-058, REQ-CONFIG-053, REQ-CONFIG-054
     function test_TEST_062_stewardRefusedOnLoosenStructuralAndListing() public {
-        bytes[] memory calls = _timelockOnlyCalls();
+        bytes[] memory calls = _governanceOnlyCalls();
         for (uint256 i = 0; i < calls.length; ++i) {
             vm.prank(safe);
             (bool ok, bytes memory ret) = address(store).call(calls[i]);
-            assertFalse(ok, "steward ran a timelock-only setter");
-            assertEq(ret, _unauthorized(safe, ADMIN));
+            assertFalse(ok, "steward ran a governance-only setter");
+            assertEq(ret, _unauthorized(safe));
         }
     }
 
@@ -230,87 +227,84 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-002, REQ-ACCESS-153
     function test_TEST_242_roleAdminsAreFixed() public view {
-        assertEq(store.getRoleAdmin(bytes32(0)), bytes32(0));
-        assertEq(store.getRoleAdmin(ADMIN), bytes32(0));
-        assertEq(store.getRoleAdmin(STEWARD), ADMIN);
-        assertTrue(store.hasRole(STEWARD, safe));
-        assertFalse(store.hasRole(ADMIN, safe));
-        assertFalse(store.hasRole(bytes32(0), safe));
-        assertFalse(store.hasRole(STEWARD, address(timelock)));
+        assertEq(accessManager.getRoleAdmin(AvanaRoles.TIGHTEN_ROLE), AvanaRoles.ADMIN_ROLE);
+        assertEq(accessManager.getRoleAdmin(AvanaRoles.GOVERNANCE_ROLE), AvanaRoles.ADMIN_ROLE);
+        assertEq(accessManager.getRoleGuardian(AvanaRoles.TIGHTEN_ROLE), AvanaRoles.ADMIN_ROLE);
+        (bool member, uint32 delay) = accessManager.hasRole(AvanaRoles.TIGHTEN_ROLE, safe);
+        assertTrue(member);
+        assertEq(delay, 0, "the steward acts at once");
+        (member,) = accessManager.hasRole(AvanaRoles.GOVERNANCE_ROLE, safe);
+        assertFalse(member);
+        (member,) = accessManager.hasRole(AvanaRoles.ADMIN_ROLE, safe);
+        assertFalse(member);
+        (member,) = accessManager.hasRole(AvanaRoles.TIGHTEN_ROLE, aaveGovernanceExecutor);
+        assertFalse(member, "the DAO administers the roles and holds none of them");
     }
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-002, REQ-ACCESS-153
-    function test_TEST_242_onlyTheTimelockGrantsAndRevokes() public {
+    function test_TEST_242_onlyTheDaoGrantsAndRevokes() public {
         address[3] memory holders = [safe, emergencyGuardian, attacker];
-        bytes32[3] memory roles = [bytes32(0), ADMIN, STEWARD];
+        uint64[2] memory ids = [AvanaRoles.TIGHTEN_ROLE, AvanaRoles.GOVERNANCE_ROLE];
         for (uint256 i = 0; i < holders.length; ++i) {
-            for (uint256 j = 0; j < roles.length; ++j) {
-                bytes32 needed = store.getRoleAdmin(roles[j]);
+            for (uint256 j = 0; j < ids.length; ++j) {
                 vm.prank(holders[i]);
-                vm.expectRevert(_unauthorized(holders[i], needed));
-                store.grantRole(roles[j], alice);
+                vm.expectRevert(
+                    abi.encodeWithSelector(
+                        IAccessManager.AccessManagerUnauthorizedAccount.selector, holders[i], AvanaRoles.ADMIN_ROLE
+                    )
+                );
+                accessManager.grantRole(ids[j], alice, 0);
                 vm.prank(holders[i]);
-                vm.expectRevert(_unauthorized(holders[i], needed));
-                store.revokeRole(roles[j], address(timelock));
+                vm.expectRevert(
+                    abi.encodeWithSelector(
+                        IAccessManager.AccessManagerUnauthorizedAccount.selector, holders[i], AvanaRoles.ADMIN_ROLE
+                    )
+                );
+                accessManager.revokeRole(ids[j], governor);
             }
         }
-        // The timelock grants and revokes the delegated roles freely.
-        vm.prank(address(timelock));
-        store.grantRole(STEWARD, alice);
-        assertTrue(store.hasRole(STEWARD, alice));
-        vm.prank(address(timelock));
-        store.revokeRole(STEWARD, safe);
-        assertFalse(store.hasRole(STEWARD, safe));
+        // The DAO grants and revokes the roles freely.
+        vm.startPrank(aaveGovernanceExecutor);
+        accessManager.grantRole(AvanaRoles.TIGHTEN_ROLE, alice, 0);
+        accessManager.revokeRole(AvanaRoles.TIGHTEN_ROLE, safe);
+        vm.stopPrank();
+        (bool member,) = accessManager.hasRole(AvanaRoles.TIGHTEN_ROLE, alice);
+        assertTrue(member);
+        (member,) = accessManager.hasRole(AvanaRoles.TIGHTEN_ROLE, safe);
+        assertFalse(member);
         vm.prank(safe);
-        vm.expectRevert(_unauthorized(safe, ADMIN));
+        vm.expectRevert(_unauthorized(safe));
         store.tightenMinPledgeUsd(M, 20e8);
-    }
-
-    // TEST-242 verifies: REQ-PSTORE-001, REQ-ACCESS-153, Q-259
-    function test_TEST_242_adminRolesNeverLeaveTheTimelock() public {
-        address[4] memory others = [safe, emergencyGuardian, governanceMultisig, address(store)];
-        for (uint256 i = 0; i < others.length; ++i) {
-            vm.prank(address(timelock));
-            vm.expectRevert(
-                abi.encodeWithSelector(IParameterStoreBase.AdminRoleOnlyTimelock.selector, ADMIN, others[i])
-            );
-            store.grantRole(ADMIN, others[i]);
-            vm.prank(address(timelock));
-            vm.expectRevert(
-                abi.encodeWithSelector(IParameterStoreBase.AdminRoleOnlyTimelock.selector, bytes32(0), others[i])
-            );
-            store.grantRole(bytes32(0), others[i]);
-            assertFalse(store.hasRole(ADMIN, others[i]));
-        }
     }
 
     // TEST-062 verifies: REQ-PSTORE-002
     function test_TEST_062_renouncedStewardHoldsNothing() public {
         vm.prank(safe);
-        store.renounceRole(STEWARD, safe);
-        assertFalse(store.hasRole(STEWARD, safe));
+        accessManager.renounceRole(AvanaRoles.TIGHTEN_ROLE, safe);
+        (bool member,) = accessManager.hasRole(AvanaRoles.TIGHTEN_ROLE, safe);
+        assertFalse(member);
         vm.prank(safe);
-        vm.expectRevert(_unauthorized(safe, ADMIN));
+        vm.expectRevert(_unauthorized(safe));
         store.tightenMaxShortfallBps(1);
         vm.prank(safe);
-        vm.expectRevert(_unauthorized(safe, ADMIN));
+        vm.expectRevert(_unauthorized(safe));
         store.setAvanaFeeShareBps(1);
     }
 
-    // ─── Delay class of every selector through the timelock ───
+    // ─── Delay class of every selector through the AccessManager ───
 
     // TEST-063 verifies: REQ-PSTORE-002, REQ-CONFIG-053, REQ-CONFIG-054, REQ-ACCESS-155
     function test_TEST_063_delayClassOfEverySelector() public view {
         bytes[] memory tight = _tightenCalls();
         for (uint256 i = 0; i < tight.length; ++i) {
-            assertEq(_required(_one(address(store), tight[i])), SHORT_DELAY, "tighten selector not short");
+            assertEq(_delayOf(address(store), tight[i]), SHORT_DELAY, "tighten selector not short");
         }
-        bytes[] memory rest = _timelockOnlyCalls();
+        bytes[] memory rest = _governanceOnlyCalls();
         for (uint256 i = 0; i < rest.length; ++i) {
-            assertEq(_required(_one(address(store), rest[i])), NORMAL_DELAY, "normal selector short");
+            assertEq(_delayOf(address(store), rest[i]), NORMAL_DELAY, "governance selector short");
         }
-        // The fee share is steward-callable but not short-eligible: through the timelock it waits the normal delay.
-        assertEq(_required(_one(address(store), abi.encodeCall(store.setAvanaFeeShareBps, (1)))), NORMAL_DELAY);
+        // The fee share is steward-callable, so it takes the tighten role: the governance Safe waits 12 hours.
+        assertEq(_delayOf(address(store), abi.encodeCall(store.setAvanaFeeShareBps, (1))), SHORT_DELAY);
     }
 
     // ─── Fixtures of calls ───
@@ -332,11 +326,11 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         c[12] = abi.encodeCall(store.tightenDebtStressRiseBps, (usdc, 100));
     }
 
-    /// @dev Every APPLICATION_ADMIN-only selector (loosen, structural, listing, second source, role change, upgrade).
-    function _timelockOnlyCalls() internal view returns (bytes[] memory c) {
+    /// @dev Every governance-role selector (loosen, structural, listing).
+    function _governanceOnlyCalls() internal view returns (bytes[] memory c) {
         MarketParams memory mp;
         FeedDef memory fd;
-        c = new bytes[](27);
+        c = new bytes[](25);
         uint256 k;
         c[k++] = abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 101));
         c[k++] = abi.encodeCall(store.loosenFloorRoundingAllowance, (gho, 1));
@@ -363,8 +357,6 @@ contract ParameterStoreRolesUnitTest is ParameterStoreFixture {
         c[k++] = abi.encodeCall(store.setFeed, (address(fUsdc), fd));
         c[k++] = abi.encodeCall(store.setDebtAssetParams, (gho, DebtReserveParams(1)));
         c[k++] = abi.encodeCall(store.setCoverageRatioBps, (2000));
-        c[k++] = abi.encodeCall(store.grantRole, (STEWARD, alice));
-        c[k++] = abi.encodeCall(store.revokeRole, (STEWARD, safe));
         assert(k == c.length);
     }
 }

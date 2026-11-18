@@ -89,10 +89,6 @@ contract MarketRegistryViewsUnitTest is MarketRegistryFixture {
         assertEq(uint8(registry.hubTier(anyAddr)), uint8(RiskTier.None));
         assertFalse(registry.isRecordedHub(anyAddr));
         assertEq(registry.hubOf(anyAddr), address(0));
-        (address lpv, address pricing) = registry.integrationOf(anyIntegration);
-        assertEq(lpv, address(0));
-        assertEq(pricing, address(0));
-        assertEq(registry.integrationIdOf(anyAddr), 0);
         assertEq(registry.firstLossReserveOf(anyAddr, anyAddr), address(0));
         (uint256 capSum, uint256 required, uint256 funded) = registry.drawCapCoverage(anyAddr, anyAddr);
         assertEq(capSum + required + funded, 0);
@@ -115,7 +111,7 @@ contract MarketRegistryViewsUnitTest is MarketRegistryFixture {
         assertEq(hubs[0], address(hub));
         address h2 = makeAddr("hub2");
         address h3 = makeAddr("hub3");
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.recordHub(h2, RiskTier.Volatile);
         registry.recordHub(h3, RiskTier.Correlated);
         vm.stopPrank();
@@ -166,7 +162,7 @@ contract MarketRegistryViewsUnitTest is MarketRegistryFixture {
         assertEq(m, marketId);
         assertEq(uint8(r), uint8(DriftReason.ReceiveSharesOn));
         // Offboarding: still liquidatable, still reported.
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setMarketOffboarding(marketId);
         (m, r) = registry.spokeSettingsDrift(address(spoke));
         assertEq(m, marketId);

@@ -85,13 +85,13 @@ contract MarketCountGasTest is RealStackFlows, GasCalibration {
         // Raise USDC's factor by one bp: only a raise re-runs the listing margin of every market holding the token.
         ++usdcFactor;
         r.recheck = _txGas(
-            address(timelock),
+            governor,
             address(store),
             abi.encodeCall(IParameterStore.setTokenCollateralFactorBps, (address(usdc), usdcFactor))
         );
         TokenDef memory t = registry.getToken(address(usdc));
         r.priceSource = _txGas(
-            address(timelock),
+            governor,
             address(registry),
             abi.encodeCall(IMarketRegistry.setPriceSource, (address(usdc), t.primaryRoute, t.alternateRoute))
         );

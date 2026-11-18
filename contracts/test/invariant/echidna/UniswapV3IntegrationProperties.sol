@@ -18,7 +18,7 @@ import {MockV3Factory, MockV3Pool} from "../../utils/mocks/UniswapV3Mocks.sol";
 /// 49,152-byte initcode limit with a minimal NFPM and token; donations and `returnStray` are covered by the unit suites.
 contract UniswapV3IntegrationProperties {
     address internal constant SWAP = address(0x5A9);
-    address internal constant TIMELOCK = address(0x713E);
+    address internal constant AUTHORITY = address(0x713E);
     address internal constant RECIPIENT = address(0xBEEF);
 
     Lock internal lock;
@@ -41,7 +41,7 @@ contract UniswapV3IntegrationProperties {
             address(this),
             address(registrar),
             address(lock),
-            TIMELOCK,
+            AUTHORITY,
             address(nfpm),
             address(factory),
             factory.poolInitCodeHash()

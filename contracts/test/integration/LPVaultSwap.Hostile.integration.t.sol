@@ -81,7 +81,7 @@ contract LPVaultSwapHostileIntegrationTest is RealStackVolatile {
         mA = _addMarket(poolA);
         vt = mkt[mA].vaultToken;
         honestImpl = address(uint160(uint256(vm.load(lpVaultSwap, IMPL_SLOT))));
-        hostile = new HostileLiquidatorImpl(address(timelock));
+        hostile = new HostileLiquidatorImpl(address(accessManager));
     }
 
     function _implementation() internal view returns (address) {

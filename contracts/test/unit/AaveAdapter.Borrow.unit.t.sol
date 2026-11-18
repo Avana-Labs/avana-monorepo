@@ -191,7 +191,7 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
         refused[3] = adapter;
         refused[4] = address(coll);
         refused[5] = address(swap);
-        refused[6] = timelock;
+        refused[6] = address(accessManager);
         refused[7] = address(registry);
         refused[8] = address(pstore);
         refused[9] = address(risk);

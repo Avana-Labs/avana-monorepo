@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {ILPVaultSwapLogic} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLogic.sol";
 import {LPVaultSwap} from "../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
@@ -13,7 +14,7 @@ import {
     LPVaultSwapLogics
 } from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
@@ -95,11 +96,13 @@ contract LPVaultSwapAdminUnitTest is LPVaultSwapUnitBase {
         address[] memory one = new address[](1);
         one[0] = keeper;
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 1, 2));
-        new ERC1967Proxy(address(impl), abi.encodeCall(LPVaultSwap.initialize, (timelock, one)));
+        new ERC1967Proxy(address(impl), abi.encodeCall(LPVaultSwap.initialize, (address(accessManager), one)));
         address[] memory two = new address[](2);
         (two[0], two[1]) = (keeper, carol);
         LPVaultSwap proxy = LPVaultSwap(
-            address(new ERC1967Proxy(address(impl), abi.encodeCall(LPVaultSwap.initialize, (timelock, two))))
+            address(
+                new ERC1967Proxy(address(impl), abi.encodeCall(LPVaultSwap.initialize, (address(accessManager), two)))
+            )
         );
         assertEq(proxy.KEEPER_FLOOR(), 2, "proxy KEEPER_FLOOR");
     }
@@ -138,7 +141,7 @@ contract LPVaultSwapAdminUnitTest is LPVaultSwapUnitBase {
         address[] memory one = new address[](1);
         one[0] = keeper;
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization()"));
-        implementation.initialize(timelock, one);
+        implementation.initialize(address(accessManager), one);
         bytes memory notDelegated = _err(ILPVaultSwapBase.NotDelegated.selector);
         address[4] memory targets = [address(implementation), liquidationLogic, pendingLogic, deleverageLogic];
         DeleverageRequest memory r;
@@ -161,53 +164,60 @@ contract LPVaultSwapAdminUnitTest is LPVaultSwapUnitBase {
         }
     }
 
-    /// @notice REQ-ACCESS-153: `grantRole` of either admin role to anyone but the timelock reverts
-    /// `AdminRoleOnlyTimelock(role, account)`; other roles follow AccessControl; the timelock holds both admin roles.
+    /// @notice The authority is the AccessManager `initialize` set. `addKeeper` and `upgradeToAndCall` need the
+    /// governance role, `removeKeeper` the tighten role; the governance Safe waits the delay of each, `governor`
+    /// calls at once and any other caller is refused.
     // TEST-242 verifies: REQ-SWAP-040, REQ-ACCESS-153, PROP-070, Q-259
     // TEST-062 verifies: REQ-SWAP-040, REQ-ACCESS-153
-    function test_TEST_242_adminRolesOnlyTimelock() public {
-        bytes32 admin = AvanaRoles.APPLICATION_ADMIN;
-        bytes32 root = 0x00;
-        assertTrue(IAccessControl(address(lvs)).hasRole(admin, timelock), "APPLICATION_ADMIN");
-        assertTrue(IAccessControl(address(lvs)).hasRole(root, timelock), "DEFAULT_ADMIN_ROLE");
-        assertEq(lvs.TIMELOCK(), timelock, "TIMELOCK");
-        assertEq(lvs.APPLICATION_ADMIN(), admin, "role id");
-        vm.startPrank(timelock);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.AdminRoleOnlyTimelock.selector, admin, carol));
-        IAccessControl(address(lvs)).grantRole(admin, carol);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.AdminRoleOnlyTimelock.selector, root, carol));
-        IAccessControl(address(lvs)).grantRole(root, carol);
-        bytes32 other = keccak256("SOME_ROLE");
-        IAccessControl(address(lvs)).grantRole(other, carol);
-        vm.stopPrank();
-        assertTrue(IAccessControl(address(lvs)).hasRole(other, carol), "other roles grantable");
+    function test_TEST_242_authorityIsTheAccessManager() public {
+        assertEq(lvs.authority(), address(accessManager), "authority");
+        assertEq(
+            accessManager.getTargetFunctionRole(address(lvs), ILPVaultSwap.addKeeper.selector),
+            AvanaRoles.GOVERNANCE_ROLE,
+            "addKeeper role"
+        );
+        assertEq(
+            accessManager.getTargetFunctionRole(address(lvs), ILPVaultSwap.removeKeeper.selector),
+            AvanaRoles.TIGHTEN_ROLE,
+            "removeKeeper role"
+        );
+        assertEq(
+            accessManager.getTargetFunctionRole(address(lvs), UUPSUpgradeable.upgradeToAndCall.selector),
+            AvanaRoles.GOVERNANCE_ROLE,
+            "upgrade role"
+        );
+        (bool immediate, uint32 delay) = accessManager.canCall(governor, address(lvs), ILPVaultSwap.addKeeper.selector);
+        assertTrue(immediate);
+        assertEq(delay, 0);
+        (immediate, delay) = accessManager.canCall(governanceMultisig, address(lvs), ILPVaultSwap.addKeeper.selector);
+        assertFalse(immediate);
+        assertEq(delay, NORMAL_DELAY, "governance delay");
+        (immediate, delay) = accessManager.canCall(governanceMultisig, address(lvs), ILPVaultSwap.removeKeeper.selector);
+        assertFalse(immediate);
+        assertEq(delay, SHORT_DELAY, "tighten delay");
         vm.prank(carol);
-        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, carol, root));
-        IAccessControl(address(lvs)).grantRole(admin, carol);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, carol));
+        lvs.addKeeper(carol);
     }
 
-    /// @notice `upgradeToAndCall` needs `APPLICATION_ADMIN`; the timelock's upgrade keeps the address, the registry and
+    /// @notice `upgradeToAndCall` needs the governance role; its upgrade keeps the address, the registry and
     /// the carry.
     // TEST-242 verifies: REQ-SWAP-040, REQ-SWAP-069
     // TEST-062 verifies: REQ-SWAP-040, REQ-SWAP-069
-    function test_TEST_242_upgradeNeedsApplicationAdmin() public {
+    function test_TEST_242_upgradeNeedsTheGovernanceRole() public {
         LPVaultSwap next = new LPVaultSwap(immutables(), _logics());
         vm.prank(keeper);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, keeper, AvanaRoles.APPLICATION_ADMIN
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, keeper));
         UUPSUpgradeable(address(lvs)).upgradeToAndCall(address(next), "");
-        vm.prank(timelock);
+        vm.prank(governor);
         lvs.addKeeper(carol);
-        vm.prank(timelock);
+        vm.prank(governor);
         UUPSUpgradeable(address(lvs)).upgradeToAndCall(address(next), "");
         bytes32 implSlot = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
         assertEq(address(uint160(uint256(vm.load(address(lvs), implSlot)))), address(next), "implementation");
         assertTrue(lvs.isApprovedKeeper(carol), "registry kept");
         assertEq(lvs.getKeepers().length, 2, "list kept");
-        assertEq(lvs.TIMELOCK(), timelock, "timelock kept");
+        assertEq(lvs.authority(), address(accessManager), "authority kept");
         (address proxy,) = _bobAccount();
         _liquidateAs(keeper, _params(proxy, 1950e6));
     }

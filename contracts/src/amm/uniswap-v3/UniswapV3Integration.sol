@@ -32,19 +32,19 @@ contract UniswapV3Integration is ClNfpmLPVault, IUniswapV3Integration {
         address collateralization,
         address marketRegistry,
         address lock,
-        address timelock,
+        address authority,
         address nfpm,
         address factory,
         uint256 blockTime
-    ) ClLPVaultBase(integrationId, collateralization, marketRegistry, lock, timelock) {
+    ) ClLPVaultBase(integrationId, collateralization, marketRegistry, lock, authority) {
         uint256 known = _knownBlockTime(block.chainid);
         if (blockTime == 0 || blockTime > MAX_BLOCK_TIME || (known != 0 && blockTime != known)) {
             revert InvalidDeployment();
         }
         if (nfpm == address(0) || factory == address(0) || nfpm == factory) revert InvalidDeployment();
         if (
-            nfpm == collateralization || nfpm == marketRegistry || nfpm == lock || nfpm == timelock
-                || factory == collateralization || factory == marketRegistry || factory == lock || factory == timelock
+            nfpm == collateralization || nfpm == marketRegistry || nfpm == lock || nfpm == authority
+                || factory == collateralization || factory == marketRegistry || factory == lock || factory == authority
         ) revert InvalidDeployment();
         if (nfpm.code.length == 0 || INonfungiblePositionManager(nfpm).factory() != factory) {
             revert InvalidDeployment();

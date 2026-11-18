@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 /// @title IAvanaGasVault
 /// @notice Per-chain vault of native gas for Avana's keeper signers; anyone may top up a signer below its minimum.
-/// @dev `TIMELOCK` raises and withdraws; `GUARDIAN` (or `TIMELOCK`) removes, lowers and pauses.
+/// @dev The AccessManager's governance role raises and withdraws; `GUARDIAN` (or that role) removes, lowers and pauses.
 interface IAvanaGasVault {
     /// @notice A signer's refill rule: top up below `minBalance`, to `targetBalance`, at most `periodCap` per `PERIOD`.
     struct SignerConfig {
@@ -16,9 +16,6 @@ interface IAvanaGasVault {
 
     /// @notice The only withdrawal destination: the chain's `feeRecipient` treasury Safe.
     function TREASURY() external view returns (address);
-
-    /// @notice The chain's AvanaTimelock.
-    function TIMELOCK() external view returns (address);
 
     /// @notice The chain's Emergency Guardian Safe: removes, lowers and pauses at once; cannot raise or withdraw.
     function GUARDIAN() external view returns (address);
@@ -119,19 +116,13 @@ interface IAvanaGasVault {
         address signer
     ) external view returns (uint256 amount, uint256 requested);
 
-    /// @notice A constructor address is `address(0)`, or `TREASURY` equals `TIMELOCK` or `GUARDIAN`.
+    /// @notice A constructor address is `address(0)`, or `TREASURY` equals the authority or `GUARDIAN`.
     error InvalidAddress();
 
     /// @notice The constructor's `maxSigners` is 0 or above `MAX_SIGNERS_LIMIT`.
     error InvalidMaxSigners(uint256 maxSigners);
 
-    /// @notice The caller is not `TIMELOCK`.
-    error NotTimelock();
-
-    /// @notice The caller is neither `GUARDIAN` nor `TIMELOCK`.
-    error NotGuardianOrTimelock();
-
-    /// @notice `addSigner` named `address(0)`, the vault, `TREASURY`, `TIMELOCK`, `GUARDIAN` or a listed signer.
+    /// @notice `addSigner` named `address(0)`, the vault, `TREASURY`, the authority, `GUARDIAN` or a listed signer.
     error InvalidSigner(address signer);
 
     /// @notice The signer is not on the allowlist.
@@ -179,17 +170,17 @@ interface IAvanaGasVault {
     event SignerAdded(address indexed signer, uint256 minBalance, uint256 targetBalance, uint256 periodCap);
 
     /// @notice A signer's configuration changed through `setSignerConfig` or `tightenSigner`.
-    /// @param by `TIMELOCK` or `GUARDIAN`.
+    /// @param by the governance role or `GUARDIAN`.
     event SignerConfigChanged(
         address indexed signer, address indexed by, uint256 minBalance, uint256 targetBalance, uint256 periodCap
     );
 
     /// @notice A signer was removed from the allowlist.
-    /// @param by `TIMELOCK` or `GUARDIAN`.
+    /// @param by the governance role or `GUARDIAN`.
     event SignerRemoved(address indexed signer, address indexed by);
 
     /// @notice Top-ups were paused or unpaused.
-    /// @param by `TIMELOCK` or `GUARDIAN`.
+    /// @param by the governance role or `GUARDIAN`.
     event PauseChanged(bool paused, address indexed by);
 
     /// @notice ETH was withdrawn to `TREASURY`.

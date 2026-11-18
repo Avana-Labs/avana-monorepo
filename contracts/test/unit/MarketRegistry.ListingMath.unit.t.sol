@@ -35,7 +35,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         t = address(new RegistryTokenMock(decimals));
         (address[] memory p, address[] memory a) = _routes(label);
         RegistryFeedMock(p[0]).setAnswer(answer);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(t, _tokenDef(p, a));
     }
 
@@ -56,7 +56,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(registry.marketCount() + 1, sh);
         MarketDef memory d = _marketDef(vt, address(o));
         d.shape = sh;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (ok, ret) = address(registry).call(abi.encodeCall(registry.listCollateralMarket, (d)));
     }
 
@@ -161,7 +161,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         (, address[] memory a) = _routes("t0");
         address[] memory p = new address[](2);
         (p[0], p[1]) = (address(legA), address(legB));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(t0, _tokenDef(p, a));
         _pool(t0, _tokenWithPrimary(18, 1e8, "t1"));
         // 10^-6 ETH x 3,000 USD = 0.003 USD: 300,000 at 8 decimals.
@@ -204,7 +204,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
             if (k == 0) a[1] = usdcAlt[1];
             if (k == 1) a[0] = usdcAlt[0];
             if (k == 2) p[0] = usdcPrimary[0];
-            vm.prank(address(timelock));
+            vm.prank(governor);
             registry.listToken(t, _tokenDef(p, a));
             _pool(address(usdc), t);
             (bool ok, bytes memory ret) = _tryList();
@@ -226,7 +226,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         address t = address(new RegistryTokenMock(6));
         (address[] memory p, address[] memory a) = _routes("t");
         a[0] = registry.getToken(address(usdc)).alternateRoute[0];
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(t, _tokenDef(p, a));
         address[] memory toks = new address[](3);
         (toks[0], toks[1], toks[2]) = (address(usdc), address(usdt), t);
@@ -248,7 +248,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         uint256 id,
         bytes32 check
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         if (check != bytes32(0)) {
             vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ActivationCheckFailed.selector, id, check));
         }

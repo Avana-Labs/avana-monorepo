@@ -74,7 +74,7 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
     function test_TEST_272_capsLowerOnly() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreBase.CapTightened("marketUsdCap", bytes32(M), 5_000_000e8, 4_000_000e8, address(timelock));
+        emit IParameterStoreBase.CapTightened("marketUsdCap", bytes32(M), 5_000_000e8, 4_000_000e8, governor);
         store.tightenMarketUsdCap(M, 4_000_000e8);
         _tl();
         // Below the 500,000 slice: the slice only admits rescue top-ups, which reduce risk.

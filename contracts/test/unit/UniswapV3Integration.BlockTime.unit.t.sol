@@ -16,7 +16,7 @@ contract UniswapV3IntegrationBlockTimeUnitTest is UniswapV3IntegrationFixture {
     uint256 internal constant BOUND = 77;
 
     function _bindings() internal view returns (address[6] memory b) {
-        b = [coll, registry, address(lock), timelock, address(nfpm), address(v3Factory)];
+        b = [coll, registry, address(lock), address(accessManager), address(nfpm), address(v3Factory)];
     }
 
     function _deploy(

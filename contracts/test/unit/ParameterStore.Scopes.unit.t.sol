@@ -26,7 +26,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         bytes memory data,
         bytes memory err
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (bool ok, bytes memory ret) = address(store).call(data);
         assertFalse(ok, "unscoped write accepted");
         assertEq(ret, err, "wrong scope error");
@@ -88,7 +88,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         assertEq(store.marketUsdCap(M), 5_000_000e8);
         // Back to Registered, both run again.
         registry.setStatus(M, MarketStatus.Registered);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         store.setInitialMarketParams(M, p);
         store.setInitialMarketCaps(M, 1e8, 0, 1e8);
         vm.stopPrank();

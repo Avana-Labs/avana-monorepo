@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {AaveAdapter} from "../../../src/policy/aave-adapter/AaveAdapter.sol";
@@ -108,8 +109,7 @@ abstract contract AaveAdapterFixture is CollateralizationFixture {
             parameterStore: address(pstore),
             lpVaultSwap: lpVaultSwap,
             lock: address(lock),
-            vaultTokenFactory: address(factory),
-            timelock: timelock
+            vaultTokenFactory: address(factory)
         });
         logics = AaveAdapterLogics({
             user: address(new AaveAdapterUserLogic(im)),
@@ -119,8 +119,9 @@ abstract contract AaveAdapterFixture is CollateralizationFixture {
         });
         implementation = new AaveAdapter(im, logics);
         AdapterPlaceholder(adapter)
-            .upgradeToAndCall(address(implementation), abi.encodeCall(AaveAdapter.initialize, (timelock)));
+            .upgradeToAndCall(address(implementation), abi.encodeCall(AaveAdapter.initialize, (address(accessManager))));
         adapterC = IAaveAdapter(adapter);
+        _bindAccess(AvanaAccess.Kind.AaveAdapter, adapter);
 
         _addUsdcDebtReserve();
         _addMarketB();
@@ -153,7 +154,6 @@ abstract contract AaveAdapterFixture is CollateralizationFixture {
         registry.setDebtReserve(
             aave.cdpSpoke, usdcReserveId, _debtDef(usdcReserveId, address(usdcDebt), 6, usdcAssetId)
         );
-        registry.setIntegrationId(address(lpVault), INTEGRATION);
         registry.setRecordedHub(aave.hub, true);
         registry.setPayoutEscrow(makeAddr("payoutEscrow"));
         registry.setFlashSource(makeAddr("flashSource"));
@@ -262,7 +262,7 @@ abstract contract AaveAdapterFixture is CollateralizationFixture {
         rates[0] = 800_000;
         rates[1] = 1_250_000;
         lpVault.bind(MARKET_B, poolB, tokens, rates);
-        vm.prank(timelock);
+        vm.prank(governor);
         vtB = factory.deployVaultToken(
             INTEGRATION,
             poolB,

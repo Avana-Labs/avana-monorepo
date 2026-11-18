@@ -28,7 +28,7 @@ abstract contract AvanaPeripheryDeploy is AvanaCoreDeploy {
             "VaultTokenFactory",
             bytes.concat(
                 _artifact("VaultTokenFactory.sol", "VaultTokenFactory"),
-                abi.encode(p.aaveAdapter, p.lpVaultSwap, p.collateralization, p.timelock, p.marketRegistry)
+                abi.encode(p.aaveAdapter, p.lpVaultSwap, p.collateralization, p.accessManager, p.marketRegistry)
             )
         );
         d.proxyManager = _deploy3(
@@ -87,7 +87,7 @@ abstract contract AvanaPeripheryDeploy is AvanaCoreDeploy {
         Predicted memory p,
         uint32 blockTime
     ) internal returns (address) {
-        bytes memory base = abi.encode(it.integrationId, p.collateralization, p.marketRegistry, p.lock, p.timelock);
+        bytes memory base = abi.encode(it.integrationId, p.collateralization, p.marketRegistry, p.lock, p.accessManager);
         string memory name = string.concat("LPVault.", vm.toString(it.integrationId));
         if (_eq(it.kind, "uniswap-v3")) {
             require(it.positionManagers.length == 1 && it.factories.length == 1, "uniswap-v3: one NPM and factory");

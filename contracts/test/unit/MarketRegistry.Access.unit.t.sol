@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
 import {MarketRegistryHubsLogic} from "../../src/policy/market-registry/MarketRegistryHubsLogic.sol";
@@ -15,11 +16,11 @@ import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
-/// @notice Roles, initialization, upgrades, the logic-contract wiring and the selector inventory of the MarketRegistry.
+/// @notice Access, initialization, upgrades, the logic-contract wiring and the selector inventory of the MarketRegistry.
 contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
     function setUp() public {
         _setUpWorld();
@@ -27,37 +28,32 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
 
     // TEST-242 verifies: REQ-MREG-005, REQ-ACCESS-153, INV-084, Q-259, REQ-ACCESS-149, REQ-ACCESS-002, REQ-ACCESS-014, REQ-ACCESS-032
     // Sources: 5.1 TEST-242
-    function test_TEST_242_adminRolesOnlyForTimelock() public {
-        bytes32 defaultAdmin = registry.DEFAULT_ADMIN_ROLE();
-        vm.startPrank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.AdminRoleOnlyTimelock.selector, APP_ADMIN, alice));
-        registry.grantRole(APP_ADMIN, alice);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.AdminRoleOnlyTimelock.selector, defaultAdmin, alice));
-        registry.grantRole(defaultAdmin, alice);
-        vm.stopPrank();
-        assertTrue(registry.hasRole(APP_ADMIN, address(timelock)));
-        assertTrue(registry.hasRole(defaultAdmin, address(timelock)));
-        assertEq(registry.getRoleAdmin(APP_ADMIN), defaultAdmin);
+    function test_TEST_242_authorityIsTheAccessManager() public view {
+        assertEq(registry.authority(), address(accessManager));
+        assertEq(
+            accessManager.getTargetFunctionRole(address(registry), registry.recordHub.selector),
+            AvanaRoles.GOVERNANCE_ROLE
+        );
+        assertEq(
+            accessManager.getTargetFunctionRole(address(registry), registry.activateMarket.selector),
+            AvanaRoles.TIGHTEN_ROLE
+        );
     }
 
     // TEST-242 verifies: REQ-MREG-005, REQ-CONFIG-002, REQ-ACCESS-150
-    function test_TEST_242_initializeOnlyWithTimelockAndOnce() public {
+    function test_TEST_242_initializeOnlyOnce() public {
         MarketRegistry impl = new MarketRegistry(im, logics);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.AdminRoleOnlyTimelock.selector, bytes32(0), alice));
-        new ERC1967Proxy(address(impl), abi.encodeCall(MarketRegistry.initialize, (alice)));
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        registry.initialize(address(timelock));
+        registry.initialize(address(accessManager));
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        impl.initialize(address(timelock));
+        impl.initialize(address(accessManager));
     }
 
     // TEST-062 verifies: REQ-MREG-004, REQ-MREG-026, REQ-CONFIG-028
     // Sources: 5.1 TEST-062
     function test_TEST_062_strangerRefusedOnEveryWrite() public {
         vm.prank(attacker);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, attacker, APP_ADMIN)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, attacker));
         registry.listToken(address(gho), _tokenDef(new address[](0), new address[](0)));
     }
 
@@ -66,11 +62,9 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
     function test_TEST_168_upgradeKeepsStateAndNeedsAdmin() public {
         MarketRegistry next = new MarketRegistry(im, logics);
         vm.prank(alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, alice, APP_ADMIN)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, alice));
         registry.upgradeToAndCall(address(next), "");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.upgradeToAndCall(address(next), "");
         assertTrue(registry.getToken(address(usdc)).listed);
         assertEq(registry.getDebtReserveIds(address(spoke)).length, 1);
@@ -102,7 +96,7 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
 
     // TEST-168 verifies: REQ-CONFIG-005, REQ-CONFIG-064
     function test_TEST_168_immutableGetters() public view {
-        assertEq(registry.TIMELOCK(), address(timelock));
+        assertEq(registry.authority(), address(accessManager));
         assertEq(registry.AAVE_GOVERNANCE_EXECUTOR(), aaveGovernanceExecutor);
         assertEq(registry.VAULT_TOKEN_FACTORY(), address(factory));
         assertEq(registry.AAVE_ADAPTER(), address(adapterMock));

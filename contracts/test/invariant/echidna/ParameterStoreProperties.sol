@@ -20,7 +20,6 @@ import {HarnessMarketRegistry} from "../../utils/mocks/HarnessMarketRegistry.sol
 /// Market 1 starts with the default values of 1.5, written straight into the layout.
 contract ParameterStoreProperties is ParameterStoreStorage {
     uint256 internal constant M = 1;
-    uint256 internal constant NORMAL_DELAY = 432_000;
 
     address internal immutable TIGHTEN;
     address internal immutable LOOSEN;
@@ -28,9 +27,9 @@ contract ParameterStoreProperties is ParameterStoreStorage {
     /// @notice Number of setter calls attempted in assertion mode; written so each call is a transaction.
     uint256 public calls;
 
-    constructor() ParameterStoreStorage(address(this), address(new HarnessMarketRegistry()), 12) {
-        TIGHTEN = address(new ParameterStoreTightenLogic(address(this), address(_REGISTRY), 12));
-        LOOSEN = address(new ParameterStoreLoosenLogic(address(this), address(_REGISTRY), 12));
+    constructor() ParameterStoreStorage(address(new HarnessMarketRegistry()), 12) {
+        TIGHTEN = address(new ParameterStoreTightenLogic(address(_REGISTRY), 12));
+        LOOSEN = address(new ParameterStoreLoosenLogic(address(_REGISTRY), 12));
         Layout storage $ = _s();
         MarketParams storage p = $.market[M];
         p.slippageAllowanceBps = 100;
@@ -42,11 +41,6 @@ contract ParameterStoreProperties is ParameterStoreStorage {
         $.stressFloorUsd[M] = 1e8;
         $.g.maxShortfallBps = 1000;
         $.g.maxFlashFeeBps = 10;
-    }
-
-    /// @notice The timelock's normal delay, read by the loosen logic to space loosenings.
-    function normalDelay() external pure returns (uint256) {
-        return NORMAL_DELAY;
     }
 
     // ─── Properties ───

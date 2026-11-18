@@ -80,8 +80,6 @@ interface ILPVaultBase {
     /// @notice An NFT receiver callback came from a contract other than a position manager bound to this integration.
     error UnsupportedNft();
 
-    error NotTimelock();
-
     error LengthMismatch(uint256 expected, uint256 actual);
 
     error BelowMinimum(uint256 index, uint256 received, uint256 minimum);

@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
 import {PoolKeying} from "../../src/amm/types/AmmTypes.sol";
 import {UniswapV3Integration} from "../../src/amm/uniswap-v3/UniswapV3Integration.sol";
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
@@ -11,6 +12,7 @@ import {ShapeKind} from "../../src/types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {VaultTokenFactoryFixture} from "../utils/fixtures/VaultTokenFactoryFixture.sol";
 import {MockNFPM, MockV3Factory} from "../utils/mocks/UniswapV3Mocks.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @notice An LPVault whose answer to each getter is programmed: the correct answer by default, or a revert, a short
 /// answer, a long answer (the correct answer followed by a word), a 1 MB answer headed by the correct answer, or a
@@ -107,7 +109,7 @@ contract VaultTokenFactoryBoundedReadsUnitTest is VaultTokenFactoryFixture {
             ILPVault.AMM_PROTOCOL.selector,
             ILPVault.COLLATERALIZATION.selector,
             ILPVault.LOCK.selector,
-            ILPVault.TIMELOCK.selector,
+            IAccessManaged.authority.selector,
             ILPVault.MARKET_REGISTRY.selector,
             ILPVault.capabilities.selector
         ];
@@ -115,7 +117,7 @@ contract VaultTokenFactoryBoundedReadsUnitTest is VaultTokenFactoryFixture {
         vault.setAnswer(getters[1], abi.encode(AERODROME_SLIPSTREAM));
         vault.setAnswer(getters[2], abi.encode(address(collateralization)));
         vault.setAnswer(getters[3], abi.encode(lock));
-        vault.setAnswer(getters[4], abi.encode(address(timelock)));
+        vault.setAnswer(getters[4], abi.encode(address(accessManager)));
         vault.setAnswer(getters[5], abi.encode(address(marketRegistry)));
         vault.setAnswer(
             getters[6], abi.encode(uint256(PoolKeying.Address), 0, 0, uint256(ShapeKind.TickRange), 1, 0, 0, 0)
@@ -125,7 +127,7 @@ contract VaultTokenFactoryBoundedReadsUnitTest is VaultTokenFactoryFixture {
     function _register(
         address lpVault
     ) internal returns (bool ok, bytes memory ret, uint256 used) {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         uint256 g0 = gasleft();
         (ok, ret) = address(factory).call{gas: 5_000_000}(
             abi.encodeCall(factory.registerIntegration, (SLIPSTREAM_ID, lpVault))
@@ -174,9 +176,12 @@ contract VaultTokenFactoryBoundedReadsUnitTest is VaultTokenFactoryFixture {
         IVaultTokenFactory f = IVaultTokenFactory(
             deployCode(
                 "VaultTokenFactory.sol:VaultTokenFactory:default",
-                abi.encode(adapter, address(lpVaultSwap), address(coll), address(timelock), address(marketRegistry))
+                abi.encode(
+                    adapter, address(lpVaultSwap), address(coll), address(accessManager), address(marketRegistry)
+                )
             )
         );
+        _bindAccess(AvanaAccess.Kind.VaultTokenFactory, address(f));
         coll.setAnswer(ICollateralization.VAULT_TOKEN_FACTORY.selector, abi.encode(address(f)));
         vault.setAnswer(getters[2], abi.encode(address(coll)));
         bytes4[4] memory sels = [
@@ -190,13 +195,13 @@ contract VaultTokenFactoryBoundedReadsUnitTest is VaultTokenFactoryFixture {
         for (uint256 i = 0; i < sels.length; ++i) {
             for (uint256 b = 0; b < bad.length; ++b) {
                 coll.setMode(sels[i], bad[b]);
-                vm.prank(address(timelock));
+                vm.prank(governor);
                 vm.expectRevert(IVaultTokenFactory.InvalidIntegration.selector);
                 f.registerIntegration(SLIPSTREAM_ID, address(vault));
             }
             coll.setMode(sels[i], ProgrammableLPVault.Mode.Exact);
         }
-        vm.prank(address(timelock));
+        vm.prank(governor);
         f.registerIntegration(SLIPSTREAM_ID, address(vault));
         assertEq(f.lpVaultOf(SLIPSTREAM_ID), address(vault));
     }
@@ -262,7 +267,7 @@ contract VaultTokenFactoryBoundedReadsUnitTest is VaultTokenFactoryFixture {
             address(collateralization),
             address(marketRegistry),
             lock,
-            address(timelock),
+            address(accessManager),
             address(new MockNFPM(address(v3Factory))),
             address(v3Factory),
             12

@@ -69,8 +69,8 @@ struct ChainInputs {
     GlobalParams globals;
     uint256 maxMarketCount;
     uint256 keeperFloor;
-    // The timelock's initial normal delay, seconds (`REQ-ACCESS-027`: 432,000; 60 to 120 on a test network,
-    // `REQ-ACCESS-187`).
+    // The governance delay source, seconds (432,000): the governance role's execution delay when it lies between
+    // 4 and 5 days, else 4 days (`AvanaAccess.governanceDelay`).
     uint256 timelockNormalDelay;
     address[] keepers;
     OperatorHelperInput[] operatorHelpers;
@@ -88,7 +88,7 @@ struct UpgradeableDeployment {
 struct AvanaDeployment {
     address factory;
     address deployer;
-    address timelock;
+    address accessManager;
     UpgradeableDeployment marketRegistry;
     UpgradeableDeployment parameterStore;
     UpgradeableDeployment riskModule;

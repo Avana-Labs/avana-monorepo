@@ -20,7 +20,7 @@ contract ParameterStoreListingProperties is ParameterStoreHarnessBase {
     MockAggregator internal immutable FEED;
 
     constructor() ParameterStoreHarnessBase() {
-        LISTING = address(new ParameterStoreListingLogic(address(this), address(_REGISTRY), 12));
+        LISTING = address(new ParameterStoreListingLogic(address(_REGISTRY), 12));
         FEED = new MockAggregator(8, 1e6, 1e12);
     }
 

@@ -34,7 +34,7 @@ contract MarketRegistrySpecExamplesUnitTest is MarketRegistryFixture {
         (vt, o) = _deployTokenAndOracle(registry.marketCount() + 1, shape);
         MarketDef memory d = _marketDef(vt, address(o));
         d.shape = shape;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         id = registry.listCollateralMarket(d);
         hub.setAsset(vt, slot);
         hub.setSpokeConfig(slot, address(spoke), 2_000_000, 0);
@@ -47,7 +47,7 @@ contract MarketRegistrySpecExamplesUnitTest is MarketRegistryFixture {
         spoke.setLiquidationConfig(1.1e18, 5000);
         ps.setMarket(id, 9500, 10e8, 1_000_000e8, 100_000e8, 1e8);
         _setRoutesInto(id, address(gho));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.activateMarket(id);
     }
 
@@ -66,15 +66,15 @@ contract MarketRegistrySpecExamplesUnitTest is MarketRegistryFixture {
         _activeShape(_range(20), 12);
         _activeShape(_range(30), 13);
         (uint256 off,) = _activeShape(_range(40), 14);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setMarketOffboarding(off);
         _listMarket();
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(registry.marketCount() + 1, _range(60));
         MarketDef memory d = _marketDef(vt, address(o));
         d.shape = _range(60);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         uint256 can = registry.listCollateralMarket(d);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.cancelRegistration(can);
         assertEq(registry.activeMarketCount(address(spoke)), 4);
         assertEq(registry.marketsOfSpoke(address(spoke)).length, 6);
@@ -88,7 +88,7 @@ contract MarketRegistrySpecExamplesUnitTest is MarketRegistryFixture {
         spoke2.setOracle(address(oracle2));
         spoke2.setImplementation(address(spokeImpl));
         oracle2.setSpoke(address(spoke2));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.recordHub(address(hub2), RiskTier.Stable);
         registry.deployCdpSpoke(
             SpokeDef(false, address(hub2), V3, RiskTier.Stable, address(spokeImpl), address(oracle2))
@@ -105,7 +105,7 @@ contract MarketRegistrySpecExamplesUnitTest is MarketRegistryFixture {
         oracle2.setSource(0, address(ghoSource));
         RegistryAvanaFirstLossReserveMock cs2 = new RegistryAvanaFirstLossReserveMock(address(hub2), address(gho), 0);
         cs2.setFunded(4e24, false);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.setAvanaFirstLossReserve(address(hub2), address(gho), address(cs2));
         registry.enableDebtReserve(
             address(spoke2),
@@ -124,21 +124,21 @@ contract MarketRegistrySpecExamplesUnitTest is MarketRegistryFixture {
         (RegistryHubMock hub2, RegistrySpokeMock spoke2) = _secondStableSpoke();
         uint256 next = registry.marketCount() + 1;
         RegistryLPOracleMock o2 = new RegistryLPOracleMock(next, address(lpVault));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         address vt2 = factory.deployVaultToken(
             V3, pool, bytes32(0), _shape(), address(hub2), address(spoke2), next, address(o2), 18, "Avana 2", "av2"
         );
         MarketDef memory d = _marketDef(vt2, address(o2));
         (d.hub, d.spoke) = (address(hub2), address(spoke2));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.DuplicateMarketKey.selector);
         registry.listCollateralMarket(d);
         // Wind the first market down to Closed.
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setMarketOffboarding(m1);
         vm.warp(block.timestamp + 5 days);
         registry.closeMarket(m1);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         uint256 m2 = registry.listCollateralMarket(d);
         assertEq(m2, next);
         assertTrue(m2 != m1);
@@ -151,7 +151,7 @@ contract MarketRegistrySpecExamplesUnitTest is MarketRegistryFixture {
         assertEq(uint8(registry.getMarket(m1).status), uint8(MarketStatus.Closed));
         // A second token for the first Spoke and the same key is refused at the factory.
         RegistryLPOracleMock o3 = new RegistryLPOracleMock(next + 1, address(lpVault));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IVaultTokenFactory.TokenExistsForMarket.selector);
         factory.deployVaultToken(
             V3, pool, bytes32(0), _shape(), address(hub), address(spoke), next + 1, address(o3), 18, "Avana 3", "av3"

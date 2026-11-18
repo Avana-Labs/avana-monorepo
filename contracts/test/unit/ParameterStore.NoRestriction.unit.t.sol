@@ -41,7 +41,7 @@ contract ParameterStoreNoRestrictionUnitTest is ParameterStoreFixture {
             [address(store), impl, logics.tighten, logics.loosen, logics.listing, logics.adminOracle, logics.adminRisk];
         for (uint256 t = 0; t < targets.length; ++t) {
             for (uint256 i = 0; i < absent.length; ++i) {
-                vm.prank(address(timelock));
+                vm.prank(governor);
                 (bool ok,) = targets[t].call(abi.encodeWithSignature(absent[i], uint256(1), true));
                 assertFalse(ok, absent[i]);
             }

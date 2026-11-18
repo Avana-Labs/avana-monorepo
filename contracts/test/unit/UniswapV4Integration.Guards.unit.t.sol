@@ -39,7 +39,9 @@ contract UniswapV4IntegrationGuardsUnitTest is UniswapV4IntegrationFixture {
     ) internal returns (address a) {
         bytes memory code = abi.encodePacked(
             vm.getCode("UniswapV4Integration.sol:UniswapV4Integration"),
-            abi.encode(INTEGRATION, coll, registry, address(lock), timelock, manager, refFactory, blockTime)
+            abi.encode(
+                INTEGRATION, coll, registry, address(lock), address(accessManager), manager, refFactory, blockTime
+            )
         );
         assembly {
             a := create(0, add(code, 0x20), mload(code))
@@ -75,7 +77,7 @@ contract UniswapV4IntegrationGuardsUnitTest is UniswapV4IntegrationFixture {
         _expectDeployRefused(address(posm), address(posm), 12);
         _expectDeployRefused(address(0), address(factory), 12);
         _expectDeployRefused(coll, address(factory), 12);
-        _expectDeployRefused(address(posm), timelock, 12);
+        _expectDeployRefused(address(posm), address(accessManager), 12);
         // A PositionManager or factory with code that is one of the Avana bindings (the Lock).
         _expectDeployRefused(address(lock), address(factory), 12);
         _expectDeployRefused(address(posm), address(lock), 12);

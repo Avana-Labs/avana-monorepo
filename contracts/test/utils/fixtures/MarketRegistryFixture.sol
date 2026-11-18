@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {ILPVault} from "../../../src/custody/lp-vault/ILPVault.sol";
-import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {MarketRegistryActivationLogic} from "../../../src/policy/market-registry/MarketRegistryActivationLogic.sol";
@@ -24,6 +24,8 @@ import {
 import {MarketDef} from "../../../src/types/MarketTypes.sol";
 import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
+import {AvanaTest} from "../AvanaTest.sol";
+import {CallRecorder} from "../mocks/CallRecorder.sol";
 import {
     RegistryAaveOracleMock,
     RegistryHubMock,
@@ -43,7 +45,6 @@ import {
     RegistryRouteMock,
     RegistryTokenMock
 } from "../mocks/MarketRegistryMocks.sol";
-import {TimelockFixture} from "./TimelockFixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @title MarketRegistryFixture
@@ -54,13 +55,18 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// recorded, the GHO First-Loss Reserve funded, a 20,000,000 GHO credit line, the flash source set, GHO listed (issuer probe
 /// None) and enabled as debt reserve 0 (fixed price, same Hub), USDC and USDT listed with two routes each. `_listMarket` lists the USDC/USDT
 /// `[-50, 50]` market; `_activate` makes it Active with routes into GHO.
-abstract contract MarketRegistryFixture is TimelockFixture {
+abstract contract MarketRegistryFixture is AvanaTest {
+    /// @dev Stand-ins for the contracts the fixture does not build: they accept every call and record it.
+    CallRecorder internal parameterStore = new CallRecorder();
+    CallRecorder internal marketRegistry = new CallRecorder();
+    CallRecorder internal lpVaultSwap = new CallRecorder();
+    CallRecorder internal other = new CallRecorder();
+
     uint32 internal constant V3 = 1;
     uint256 internal constant GHO_RESERVE = 0;
     uint256 internal constant GHO_ASSET = 0;
     uint256 internal constant VT_ASSET = 1;
     uint256 internal constant VT_RESERVE = 1;
-    bytes32 internal constant APP_ADMIN = AvanaRoles.APPLICATION_ADMIN;
 
     MarketRegistry internal registry;
     MarketRegistryImmutables internal im;
@@ -99,7 +105,6 @@ abstract contract MarketRegistryFixture is TimelockFixture {
     function _deployRegistryWith(
         address standardImpl
     ) internal {
-        _deployTimelock();
         collat = new RegistryCollateralizationMock(lockAddr);
         ps = new RegistryParameterStoreMock();
         rm = new RegistryRiskModuleMock();
@@ -113,6 +118,8 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         address predictedRegistry = address(registry);
         vm.revertToState(dryRun);
         _deployFactoryAndRegistry(standardImpl, predictedRegistry);
+        _bindAccess(AvanaAccess.Kind.MarketRegistry, address(registry));
+        _bindAccess(AvanaAccess.Kind.VaultTokenFactory, address(factory));
         vm.label(address(registry), "MarketRegistry");
         require(address(registry) == predictedRegistry, "registry prediction");
     }
@@ -123,11 +130,10 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         address marketRegistry_
     ) internal {
         factory = new VaultTokenFactory(
-            address(adapterMock), address(lpVaultSwap), address(collat), address(timelock), marketRegistry_
+            address(adapterMock), address(lpVaultSwap), address(collat), address(accessManager), marketRegistry_
         );
         collat.setCore(address(factory), address(adapterMock), address(lpVaultSwap));
         im = MarketRegistryImmutables({
-            timelock: address(timelock),
             aaveGovernanceExecutor: aaveGovernanceExecutor,
             vaultTokenFactory: address(factory),
             aaveAdapter: address(adapterMock),
@@ -145,7 +151,9 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         logics = _deployLogics(im);
         MarketRegistry impl = new MarketRegistry(im, logics);
         registry = MarketRegistry(
-            address(new ERC1967Proxy(address(impl), abi.encodeCall(MarketRegistry.initialize, (address(timelock)))))
+            address(
+                new ERC1967Proxy(address(impl), abi.encodeCall(MarketRegistry.initialize, (address(accessManager))))
+            )
         );
     }
 
@@ -183,14 +191,13 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         ghoCoverage.setFunded(4e24, false);
 
         _beforeIntegrationRegistered();
-        vm.prank(address(timelock));
+        vm.prank(governor);
         factory.registerIntegration(V3, address(lpVault));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.recordHub(address(hub), RiskTier.Stable);
-        registry.registerIntegration(V3, address(lpVault), makeAddr("clPricing"));
         vm.stopPrank();
         _recordAmmContracts();
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.deployCdpSpoke(_spokeDef());
         registry.setFlashSource(address(flash));
         hub.setAsset(address(gho), GHO_ASSET);
@@ -199,7 +206,7 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         _setGhoReserve();
         // Every debt asset is a listed token with its issuer probe, a fixed-price one included (REQ-MREG-006).
         _listTokenWithProbe(address(gho), "gho", IssuerProbe.None);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.enableDebtReserve(address(spoke), _ghoDef());
         _listToken(address(usdc), "usdc");
         _listToken(address(usdt), "usdt");
@@ -219,7 +226,7 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         vm.label(ammFactory, "v3Factory");
         address[] memory amm = new address[](2);
         (amm[0], amm[1]) = (ammPositionManager, ammFactory);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.recordIntegrationContracts(V3, amm);
         registry.finalizeIntegrationContracts(V3);
         vm.stopPrank();
@@ -230,7 +237,7 @@ abstract contract MarketRegistryFixture is TimelockFixture {
     function _recordKeyOf(
         uint32 id
     ) internal view returns (bytes32) {
-        (address v,) = registry.integrationOf(id);
+        address v = factory.lpVaultOf(id);
         ILPVault a = ILPVault(v);
         return keccak256(abi.encode(block.chainid, v, v.codehash, a.AMM_PROTOCOL(), a.capabilities().poolKeying));
     }
@@ -318,7 +325,7 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         (address[] memory p, address[] memory a) = _routes(label);
         TokenDef memory d = _tokenDef(p, a);
         d.issuerProbe = probe;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(token, d);
     }
 
@@ -345,7 +352,7 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         PositionShape memory shape
     ) internal returns (address vaultToken, RegistryLPOracleMock lpOracle) {
         lpOracle = new RegistryLPOracleMock(marketId, address(lpVault));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vaultToken = factory.deployVaultToken(
             V3,
             pool,
@@ -363,7 +370,7 @@ abstract contract MarketRegistryFixture is TimelockFixture {
 
     function _listMarket() internal returns (uint256 id, address vaultToken, RegistryLPOracleMock lpOracle) {
         (vaultToken, lpOracle) = _deployTokenAndOracle(registry.marketCount() + 1, _shape());
-        vm.prank(address(timelock));
+        vm.prank(governor);
         id = registry.listCollateralMarket(_marketDef(vaultToken, address(lpOracle)));
     }
 
@@ -414,14 +421,14 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         string memory dep
     ) internal returns (address route) {
         route = address(_newRoute(token, asset, dep));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setRoute(id, token, asset, kind, route);
     }
 
     function _activeMarket() internal returns (uint256 id, address vaultToken, RegistryLPOracleMock lpOracle) {
         (id, vaultToken, lpOracle) = _listMarket();
         _prepareActivation(id, vaultToken);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.activateMarket(id);
     }
 }

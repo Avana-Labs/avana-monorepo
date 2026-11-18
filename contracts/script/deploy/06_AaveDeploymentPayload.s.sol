@@ -172,7 +172,8 @@ contract AaveDeploymentPayload is AavePayloads {
         // Outside Aave V4's role ranges (0-499, aave-v4 Roles.sol) and apart from Avana's loss-layer roles.
         require(
             role >= 500 && role != vm.parseJsonUint(cfg, ".aavePayload.lossLayerRoles.coverageRole")
-                && role != vm.parseJsonUint(cfg, ".aavePayload.lossLayerRoles.reserveAdminRole"),
+                && role != vm.parseJsonUint(cfg, ".aavePayload.lossLayerRoles.reserveAdminRole")
+                && role != vm.parseJsonUint(cfg, ".aavePayload.lossLayerRoles.withdrawRole"),
             "aavePayload.guardianRole: outside 0-499 and not a loss-layer role"
         );
         IGuardianAccessViews v = IGuardianAccessViews(am);

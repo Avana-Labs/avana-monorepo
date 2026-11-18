@@ -18,71 +18,40 @@ import {BytecodeInspector} from "../utils/BytecodeInspector.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {VmSafe} from "forge-std/Vm.sol";
 
 /// @title AaveAdapterAccessUnitTest
-/// @notice The Adapter's form and powers: UUPS behind ERC-1967 with the upgrade gated by `APPLICATION_ADMIN`, admin
-/// roles only for the timelock, the constructor checks of the router and its logic contracts, the views, the selector
+/// @notice The Adapter's form and powers: UUPS behind ERC-1967 with the upgrade gated by the AccessManager's
+/// governance role, the authority fixed at initialization, the constructor checks of the router and its logic contracts, the views, the selector
 /// inventory, and the fixed target and selector set of every call a proxy makes (no position-manager approval).
 /// forge-config: default.isolate = false
 contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
     using BytecodeInspector for bytes;
 
-    bytes32 internal constant ADMIN = keccak256("APPLICATION_ADMIN");
-
-    // ─── Initialization and roles ───
+    // ─── Initialization and access ───
 
     // TEST-242 verifies: REQ-ADAPTER-074, REQ-ADAPTER-084, REQ-ADAPTER-093, REQ-ACCESS-153, Q-259
     // Sources: 5.1 TEST-242
-    /// @notice `grantRole(APPLICATION_ADMIN, a)` and `grantRole(DEFAULT_ADMIN_ROLE, a)` for any `a ≠ TIMELOCK` revert
-    /// `AdminRoleOnlyTimelock(role, a)`, even from the timelock itself; the timelock holds both roles after init.
-    function test_TEST_242_adminRolesOnlyTimelock() public {
-        AaveAdapter a = AaveAdapter(adapter);
-        assertTrue(a.hasRole(bytes32(0), timelock), "default admin");
-        assertTrue(a.hasRole(ADMIN, timelock), "application admin");
-        assertFalse(a.hasRole(bytes32(0), address(this)), "deployer has no role");
-        address[3] memory others = [alice, address(this), governanceMultisig];
-        for (uint256 i = 0; i < others.length; ++i) {
-            vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.AdminRoleOnlyTimelock.selector, ADMIN, others[i]));
-            vm.prank(timelock);
-            a.grantRole(ADMIN, others[i]);
-            vm.expectRevert(
-                abi.encodeWithSelector(IAaveAdapterBase.AdminRoleOnlyTimelock.selector, bytes32(0), others[i])
-            );
-            vm.prank(timelock);
-            a.grantRole(bytes32(0), others[i]);
-        }
-        assertEq(a.getRoleAdmin(ADMIN), bytes32(0), "admin of APPLICATION_ADMIN");
-    }
-
-    // TEST-062 verifies: REQ-ADAPTER-003, REQ-ADAPTER-084, REQ-ACCESS-153
-    /// @notice A non-admin cannot grant any role, and other roles can be granted only by the timelock.
-    function test_TEST_062_roleChangesOnlyByTimelock() public {
-        AaveAdapter a = AaveAdapter(adapter);
-        bytes32 other = keccak256("SOME_ROLE");
-        vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, attacker, bytes32(0))
+    /// @notice The authority is the AccessManager `initialize` set; `upgradeToAndCall` is on the governance role.
+    function test_TEST_242_authorityIsTheAccessManager() public view {
+        assertEq(adapterC.authority(), address(accessManager), "authority");
+        assertEq(
+            accessManager.getTargetFunctionRole(adapter, UUPSUpgradeable.upgradeToAndCall.selector),
+            AvanaRoles.GOVERNANCE_ROLE
         );
-        vm.prank(attacker);
-        a.grantRole(other, attacker);
-        vm.prank(timelock);
-        a.grantRole(other, alice);
-        assertTrue(a.hasRole(other, alice), "timelock grants other roles");
     }
 
     // TEST-062 verifies: REQ-ADAPTER-003, REQ-ADAPTER-042, REQ-ACCESS-153
-    /// @notice `upgradeToAndCall` needs `APPLICATION_ADMIN`: any other caller reverts, the timelock upgrades.
-    function test_TEST_062_upgradeOnlyApplicationAdmin() public {
+    /// @notice `upgradeToAndCall` needs the governance role: any other caller reverts, `governor` upgrades.
+    function test_TEST_062_upgradeOnlyTheGovernanceRole() public {
         AaveAdapter next = new AaveAdapter(im, logics);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, attacker, ADMIN)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, attacker));
         vm.prank(attacker);
         AaveAdapter(adapter).upgradeToAndCall(address(next), "");
-        vm.prank(timelock);
+        vm.prank(governor);
         AaveAdapter(adapter).upgradeToAndCall(address(next), "");
         bytes32 impl = vm.load(adapter, 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc);
         assertEq(address(uint160(uint256(impl))), address(next), "implementation slot");
@@ -96,7 +65,7 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
         (bytes32 k, address p) = _pledgeAs(alice, MARKET_ID, UNITS);
         _borrowAs(alice, MARKET_ID, debtReserveId, 100e18);
         AaveAdapter next = new AaveAdapter(im, logics);
-        vm.prank(timelock);
+        vm.prank(governor);
         AaveAdapter(adapter).upgradeToAndCall(address(next), "");
         assertEq(adapterC.proxyOf(alice, MARKET_ID), p, "binding");
         assertEq(adapterC.borrowNonce(p), 1, "nonce");
@@ -115,20 +84,19 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
     }
 
     // TEST-242 verifies: REQ-ADAPTER-074, REQ-ADAPTER-004
-    /// @notice `initialize` runs once (a second call reverts), refuses a zero timelock and any timelock other than the
-    /// immutable one, and the implementation itself cannot be initialized.
+    /// @notice `initialize` runs once (a second call reverts), refuses a zero authority, and the implementation itself
+    /// cannot be initialized.
     function test_TEST_242_initializeRules() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        IAaveAdapter(adapter).initialize(timelock);
+        IAaveAdapter(adapter).initialize(address(accessManager));
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        implementation.initialize(timelock);
+        implementation.initialize(address(accessManager));
         AaveAdapter impl2 = new AaveAdapter(im, logics);
         vm.expectRevert(IAaveAdapterBase.ZeroAddress.selector);
         new ERC1967Proxy(address(impl2), abi.encodeCall(AaveAdapter.initialize, (address(0))));
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.AdminRoleOnlyTimelock.selector, bytes32(0), attacker));
-        new ERC1967Proxy(address(impl2), abi.encodeCall(AaveAdapter.initialize, (attacker)));
-        ERC1967Proxy fresh = new ERC1967Proxy(address(impl2), abi.encodeCall(AaveAdapter.initialize, (timelock)));
-        assertTrue(AaveAdapter(address(fresh)).hasRole(ADMIN, timelock), "fresh proxy initialized");
+        ERC1967Proxy fresh =
+            new ERC1967Proxy(address(impl2), abi.encodeCall(AaveAdapter.initialize, (address(accessManager))));
+        assertEq(AaveAdapter(address(fresh)).authority(), address(accessManager), "fresh proxy initialized");
     }
 
     // TEST-062 verifies: REQ-ADAPTER-074, REQ-ADAPTER-004
@@ -136,7 +104,7 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
     /// immutables (`InvalidLogic`).
     function test_TEST_062_constructorChecks() public {
         AaveAdapterImmutables memory bad;
-        for (uint256 i = 0; i < 9; ++i) {
+        for (uint256 i = 0; i < 8; ++i) {
             bad = im;
             if (i == 0) bad.proxyManager = address(0);
             if (i == 1) bad.collateralization = address(0);
@@ -146,7 +114,6 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
             if (i == 5) bad.lpVaultSwap = address(0);
             if (i == 6) bad.lock = address(0);
             if (i == 7) bad.vaultTokenFactory = address(0);
-            if (i == 8) bad.timelock = address(0);
             vm.expectRevert(IAaveAdapterBase.ZeroAddress.selector);
             new AaveAdapterUserLogic(bad);
         }
@@ -226,10 +193,9 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
     // ─── Views ───
 
     // TEST-247 verifies: REQ-PROXY-049, REQ-ADAPTER-074, REQ-ADAPTER-084
-    /// @notice The implementation immutables and the role identifier read back as built.
+    /// @notice The implementation immutables read back as built.
     function test_TEST_247_views() public view {
         IAaveAdapter v = IAaveAdapter(adapter);
-        assertEq(v.APPLICATION_ADMIN(), AvanaRoles.APPLICATION_ADMIN, "role");
         assertEq(v.PROXY_MANAGER(), address(proxyManager), "pm");
         assertEq(v.COLLATERALIZATION(), address(coll), "coll");
         assertEq(v.RISK_MODULE(), address(risk), "risk");
@@ -238,7 +204,6 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
         assertEq(v.LP_VAULT_SWAP(), address(swap), "swap");
         assertEq(v.LOCK(), address(lock), "lock");
         assertEq(v.VAULT_TOKEN_FACTORY(), address(factory), "factory");
-        assertEq(v.TIMELOCK(), timelock, "timelock");
         assertEq(v.borrowNonce(alice), 0, "nonce of a non-proxy");
         (address s,,,) = v.accountOf(alice);
         assertEq(s, address(0), "no account");
@@ -453,7 +418,7 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
     }
 
     function _expectedSelectors() internal pure returns (bytes4[] memory s) {
-        s = new bytes4[](40);
+        s = new bytes4[](34);
         s[0] = IAaveAdapter.pledge.selector;
         s[1] = IAaveAdapter.borrow.selector;
         s[2] = IAaveAdapter.repay.selector;
@@ -474,26 +439,20 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
         s[17] = IAaveAdapter.accountOf.selector;
         s[18] = IAaveAdapter.predictProxy.selector;
         s[19] = IAaveAdapter.borrowNonce.selector;
-        s[20] = IAaveAdapter.APPLICATION_ADMIN.selector;
-        s[21] = IAaveAdapter.PROXY_MANAGER.selector;
-        s[22] = IAaveAdapter.COLLATERALIZATION.selector;
-        s[23] = IAaveAdapter.RISK_MODULE.selector;
-        s[24] = IAaveAdapter.MARKET_REGISTRY.selector;
-        s[25] = IAaveAdapter.PARAMETER_STORE.selector;
-        s[26] = IAaveAdapter.LP_VAULT_SWAP.selector;
-        s[27] = IAaveAdapter.LOCK.selector;
-        s[28] = IAaveAdapter.VAULT_TOKEN_FACTORY.selector;
-        s[29] = IAaveAdapter.TIMELOCK.selector;
-        s[30] = IAccessControl.hasRole.selector;
-        s[31] = IAccessControl.getRoleAdmin.selector;
-        s[32] = IAccessControl.grantRole.selector;
-        s[33] = IAccessControl.revokeRole.selector;
-        s[34] = IAccessControl.renounceRole.selector;
-        s[35] = UUPSUpgradeable.upgradeToAndCall.selector;
-        s[36] = UUPSUpgradeable.proxiableUUID.selector;
-        s[37] = bytes4(keccak256("supportsInterface(bytes4)"));
-        s[38] = bytes4(keccak256("UPGRADE_INTERFACE_VERSION()"));
-        s[39] = bytes4(keccak256("DEFAULT_ADMIN_ROLE()"));
+        s[20] = IAaveAdapter.PROXY_MANAGER.selector;
+        s[21] = IAaveAdapter.COLLATERALIZATION.selector;
+        s[22] = IAaveAdapter.RISK_MODULE.selector;
+        s[23] = IAaveAdapter.MARKET_REGISTRY.selector;
+        s[24] = IAaveAdapter.PARAMETER_STORE.selector;
+        s[25] = IAaveAdapter.LP_VAULT_SWAP.selector;
+        s[26] = IAaveAdapter.LOCK.selector;
+        s[27] = IAaveAdapter.VAULT_TOKEN_FACTORY.selector;
+        s[28] = IAccessManaged.authority.selector;
+        s[29] = IAccessManaged.setAuthority.selector;
+        s[30] = IAccessManaged.isConsumingScheduledOp.selector;
+        s[31] = UUPSUpgradeable.upgradeToAndCall.selector;
+        s[32] = UUPSUpgradeable.proxiableUUID.selector;
+        s[33] = bytes4(keccak256("UPGRADE_INTERFACE_VERSION()"));
     }
 
     function _has(

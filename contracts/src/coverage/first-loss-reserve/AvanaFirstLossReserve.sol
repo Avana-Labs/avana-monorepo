@@ -4,24 +4,19 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
-import {IAvanaFirstLossReserve, Withdrawal, WithdrawalStatus} from "./IAvanaFirstLossReserve.sol";
+import {IAvanaFirstLossReserve} from "./IAvanaFirstLossReserve.sol";
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title AvanaFirstLossReserve
 /// @notice Avana Umbrella of one `(HUB, ASSET)`: a supply-only Spoke whose Hub shares cover allowlisted deficits.
-/// @dev Immutable; its only authority is the Aave DAO's AccessManager. Holds no tokens between transactions.
+/// @dev Immutable; its only authority is its AccessManager. Holds no tokens between transactions.
 contract AvanaFirstLossReserve is IAvanaFirstLossReserve, AccessManaged, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
-    using SafeCast for uint256;
-
-    /// @dev Required withdrawal delay: 14 days.
-    uint256 internal constant RESERVE_WITHDRAWAL_DELAY_VALUE = 1_209_600;
 
     /// @dev Aave's deficit scale (asset units * 1e27).
     uint256 internal constant RAY = 1e27;
@@ -32,15 +27,10 @@ contract AvanaFirstLossReserve is IAvanaFirstLossReserve, AccessManaged, Reentra
 
     uint256 internal immutable _ASSET_ID;
 
-    uint256 internal immutable _RESERVE_WITHDRAWAL_DELAY;
-
     mapping(address spoke => bool allowed) public override allowedBorrowSpoke;
 
     /// @inheritdoc IAvanaFirstLossReserve
     uint256 public override firstLossReserveMinimum;
-
-    /// @inheritdoc IAvanaFirstLossReserve
-    uint256 public override nextWithdrawalId = 1;
 
     /// @inheritdoc IAvanaFirstLossReserve
     uint256 public override totalFunded;
@@ -51,23 +41,16 @@ contract AvanaFirstLossReserve is IAvanaFirstLossReserve, AccessManaged, Reentra
     /// @inheritdoc IAvanaFirstLossReserve
     uint256 public override totalWithdrawn;
 
-    mapping(uint256 id => Withdrawal request) internal _withdrawals;
-
     constructor(
         address hub,
         address asset,
         uint256 assetId,
-        address authority,
-        uint256 reserveWithdrawalDelay
+        address authority
     ) AccessManaged(authority) {
         if (hub == address(0) || asset == address(0) || authority == address(0)) revert ZeroAddress();
-        if (reserveWithdrawalDelay != RESERVE_WITHDRAWAL_DELAY_VALUE) {
-            revert InvalidWithdrawalDelay(reserveWithdrawalDelay);
-        }
         _HUB = IAaveV4Hub(hub);
         _ASSET = asset;
         _ASSET_ID = assetId;
-        _RESERVE_WITHDRAWAL_DELAY = reserveWithdrawalDelay;
         (address underlying, uint8 hubDecimals) = IAaveV4Hub(hub).getAssetUnderlyingAndDecimals(assetId);
         if (underlying != asset || hubDecimals != IERC20Metadata(asset).decimals()) revert InvalidHubAsset(assetId);
     }
@@ -135,48 +118,19 @@ contract AvanaFirstLossReserve is IAvanaFirstLossReserve, AccessManaged, Reentra
     }
 
     /// @inheritdoc IAvanaFirstLossReserve
-    function requestWithdrawal(
+    function withdraw(
         uint256 amount,
         address to
-    ) external override nonReentrant restricted returns (uint256 id) {
+    ) external override nonReentrant restricted returns (uint256 withdrawn) {
         if (amount == 0) revert ZeroAmount();
         if (to == address(0) || to == address(this) || to == address(_HUB)) revert InvalidRecipient(to);
-        uint64 executableAt = (block.timestamp + _RESERVE_WITHDRAWAL_DELAY).toUint64();
-        id = nextWithdrawalId++;
-        _withdrawals[id] =
-            Withdrawal({amount: amount, to: to, executableAt: executableAt, status: WithdrawalStatus.Pending});
-        // forge-lint: disable-next-line(reentrancy-events)
-        emit WithdrawalRequested(id, amount, to, executableAt);
-    }
-
-    /// @inheritdoc IAvanaFirstLossReserve
-    function cancelWithdrawal(
-        uint256 id
-    ) external override nonReentrant restricted {
-        Withdrawal storage request = _withdrawals[id];
-        if (request.status != WithdrawalStatus.Pending) revert WithdrawalNotPending(id);
-        request.status = WithdrawalStatus.Cancelled;
-        // forge-lint: disable-next-line(reentrancy-events)
-        emit WithdrawalCancelled(id);
-    }
-
-    /// @inheritdoc IAvanaFirstLossReserve
-    function executeWithdrawal(
-        uint256 id
-    ) external override nonReentrant restricted returns (uint256 withdrawn) {
-        Withdrawal storage request = _withdrawals[id];
-        if (request.status != WithdrawalStatus.Pending) revert WithdrawalNotPending(id);
-        uint64 executableAt = request.executableAt;
-        if (block.timestamp < executableAt) revert WithdrawalNotReady(id, executableAt);
         _requireNoAllowlistedDeficit();
-        address to = request.to;
-        withdrawn = Math.min(request.amount, fundedBalance());
-        request.status = WithdrawalStatus.Executed;
+        withdrawn = Math.min(amount, fundedBalance());
         totalWithdrawn += withdrawn;
         uint256 sharesBurned = _HUB.remove(_ASSET_ID, withdrawn, to);
         uint256 balanceAfter = fundedBalance();
         // forge-lint: disable-next-line(reentrancy-events)
-        emit WithdrawalExecuted(id, withdrawn, sharesBurned, to, balanceAfter);
+        emit ReserveWithdrawn(to, withdrawn, sharesBurned, balanceAfter);
         _alertIfBelowMinimum(balanceAfter);
     }
 
@@ -196,13 +150,6 @@ contract AvanaFirstLossReserve is IAvanaFirstLossReserve, AccessManaged, Reentra
     }
 
     /// @inheritdoc IAvanaFirstLossReserve
-    function getWithdrawal(
-        uint256 id
-    ) external view override returns (Withdrawal memory withdrawal) {
-        withdrawal = _withdrawals[id];
-    }
-
-    /// @inheritdoc IAvanaFirstLossReserve
     function ASSET() external view override returns (address asset) {
         asset = _ASSET;
     }
@@ -215,11 +162,6 @@ contract AvanaFirstLossReserve is IAvanaFirstLossReserve, AccessManaged, Reentra
     /// @inheritdoc IAvanaFirstLossReserve
     function ASSET_ID() external view override returns (uint256 assetId) {
         assetId = _ASSET_ID;
-    }
-
-    /// @inheritdoc IAvanaFirstLossReserve
-    function RESERVE_WITHDRAWAL_DELAY() external view override returns (uint256 delay) {
-        delay = _RESERVE_WITHDRAWAL_DELAY;
     }
 
     function _requireNoAllowlistedDeficit() internal view {

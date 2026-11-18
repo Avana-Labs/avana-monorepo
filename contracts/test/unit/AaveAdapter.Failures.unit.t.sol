@@ -162,7 +162,7 @@ contract AaveAdapterFailuresUnitTest is AaveAdapterFixture {
         (bytes32 kB, address pB) = _pledgeAs(bob, MARKET_ID, UNITS);
         _borrowAs(bob, MARKET_ID, debtReserveId, 15_000e18);
         BrokenAdapter broken = new BrokenAdapter();
-        vm.prank(timelock);
+        vm.prank(governor);
         AaveAdapter(adapter).upgradeToAndCall(address(broken), "");
         uint256 d = _deadline();
         bytes4 b = BrokenAdapter.Broken.selector;
@@ -193,7 +193,7 @@ contract AaveAdapterFailuresUnitTest is AaveAdapterFixture {
         vm.expectRevert(b);
         adapterC.proxyOf(alice, MARKET_ID);
         // The fix: an upgrade to a working implementation, at the normal delay in production.
-        vm.prank(timelock);
+        vm.prank(governor);
         AaveAdapter(adapter).upgradeToAndCall(address(implementation), "");
         assertEq(adapterC.proxyOf(alice, MARKET_ID), p, "binding kept");
         vm.prank(alice);
@@ -210,7 +210,7 @@ contract AaveAdapterFailuresUnitTest is AaveAdapterFixture {
     /// @notice Even broken, the implementation upgrades only through `APPLICATION_ADMIN`.
     function test_TEST_195_brokenStillGatesUpgrade() public {
         BrokenAdapter broken = new BrokenAdapter();
-        vm.prank(timelock);
+        vm.prank(governor);
         AaveAdapter(adapter).upgradeToAndCall(address(broken), "");
         vm.expectRevert();
         vm.prank(attacker);
@@ -221,7 +221,7 @@ contract AaveAdapterFailuresUnitTest is AaveAdapterFixture {
 
     function _installHostile() internal returns (HostileAdapter h) {
         HostileAdapter impl = new HostileAdapter();
-        vm.prank(timelock);
+        vm.prank(governor);
         AaveAdapter(adapter).upgradeToAndCall(address(impl), "");
         h = HostileAdapter(adapter);
     }
@@ -234,7 +234,7 @@ contract AaveAdapterFailuresUnitTest is AaveAdapterFixture {
         HostileAdapter h = _installHostile();
         h.mintTo(vt, p, 777);
         assertEq(token.totalSupply(), UNITS + 777, "unbacked units exist");
-        vm.prank(timelock);
+        vm.prank(governor);
         AaveAdapter(adapter).upgradeToAndCall(address(implementation), "");
         bytes32 key = _newKey();
         lpVault.mintPosition(key, bob, MARKET_ID, UNITS);

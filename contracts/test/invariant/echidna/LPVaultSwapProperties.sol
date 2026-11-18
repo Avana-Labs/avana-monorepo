@@ -3,6 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
+import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {ILPVaultSwapLogic} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapLogic.sol";
 import {LPVaultSwap} from "../../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
@@ -10,6 +12,7 @@ import {
     LPVaultSwapImmutables,
     LPVaultSwapLogics
 } from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {HalmosAccess} from "../../halmos/HalmosAccess.sol";
 import {
     LPVaultSwapSettlementHarness,
     LVSHarnessRegistry,
@@ -17,7 +20,7 @@ import {
     LVSHarnessToken
 } from "../../utils/harness/LPVaultSwapSettlementHarness.sol";
 import {LVSMarketRegistryMock} from "../../utils/mocks/LPVaultSwapMocks.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @notice A logic-contract stand-in reporting the kind and immutables hash the implementation checks (the three real
@@ -57,9 +60,9 @@ contract LVSEchidnaOutsider {
 
 /// @title LPVaultSwapProperties
 /// @notice Echidna and Medusa properties of LPVaultSwap (2.11): the committed-operator registry behind the real proxy
-/// and implementation, with this harness as the timelock, and the shared swap-leg step on the real
+/// and implementation, with this harness as the AccessManager's governor, and the shared swap-leg step on the real
 /// `LPVaultSwapSettlement` code. Between transactions: the registry holds between `keeperFloor` (1) and `MAX_KEEPERS`
-/// (32) entries and at least `keeperFloor` active ones; only the timelock holds the admin roles. Inside one
+/// (32) entries and at least `keeperFloor` active ones; only the governor holds the roles. Inside one
 /// transaction: `addKeeper` succeeds exactly for a new keeper below the cap; `removeKeeper` exactly for a
 /// registered keeper whose removal keeps the floor; an outsider changes nothing; a leg step never routes the debt asset
 /// (no buy leg), routes each other token into the debt asset only, at a minimum of at least 1.
@@ -70,6 +73,7 @@ contract LPVaultSwapProperties {
     uint256 internal constant MAX_KEEPERS = 32;
 
     ILPVaultSwap internal immutable LVS;
+    AccessManager internal immutable MANAGER;
     LVSMarketRegistryMock internal immutable REGISTRY;
     LVSEchidnaOutsider internal immutable OUTSIDER;
     LPVaultSwapSettlementHarness internal immutable LEGS;
@@ -83,6 +87,8 @@ contract LPVaultSwapProperties {
 
     constructor() {
         REGISTRY = new LVSMarketRegistryMock();
+        AccessManager manager = HalmosAccess.deploy(address(this));
+        MANAGER = manager;
         LPVaultSwapImmutables memory im = LPVaultSwapImmutables({
             lock: address(0x1001),
             aaveAdapter: address(0x1002),
@@ -102,8 +108,11 @@ contract LPVaultSwapProperties {
         address[] memory keepers = new address[](1);
         keepers[0] = _keeper(0);
         LVS = ILPVaultSwap(
-            address(new ERC1967Proxy(implementation, abi.encodeCall(LPVaultSwap.initialize, (address(this), keepers))))
+            address(
+                new ERC1967Proxy(implementation, abi.encodeCall(LPVaultSwap.initialize, (address(manager), keepers)))
+            )
         );
+        HalmosAccess.bind(manager, AvanaAccess.Kind.LPVaultSwap, address(LVS));
         OUTSIDER = new LVSEchidnaOutsider();
 
         LVSHarnessRegistry routes = new LVSHarnessRegistry();
@@ -149,11 +158,10 @@ contract LPVaultSwapProperties {
         return LVS.activeKeeperCount() == _active();
     }
 
-    function property_onlyTimelockIsAdmin() external view returns (bool) {
-        bytes32 admin = 0x00;
-        IAccessControl ac = IAccessControl(address(LVS));
-        return ac.hasRole(admin, address(this)) && !ac.hasRole(admin, address(OUTSIDER))
-            && !ac.hasRole(admin, address(REGISTRY));
+    function property_onlyTheManagerAuthorizes() external view returns (bool) {
+        (bool outsiderHolds,) = MANAGER.hasRole(AvanaRoles.GOVERNANCE_ROLE, address(OUTSIDER));
+        (bool registryHolds,) = MANAGER.hasRole(AvanaRoles.GOVERNANCE_ROLE, address(REGISTRY));
+        return LVS.authority() == address(MANAGER) && !outsiderHolds && !registryHolds;
     }
 
     // ─── Assertion entry points ───

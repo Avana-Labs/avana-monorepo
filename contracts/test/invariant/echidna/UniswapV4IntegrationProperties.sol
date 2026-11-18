@@ -25,7 +25,7 @@ import {V4StandInManager, V4StandInReference, V4StandInToken} from "./UniswapV4S
 /// real PoolManager and PositionManager run in `UniswapV4Integration.FeesCustody.invariant.t.sol`.
 contract UniswapV4IntegrationProperties {
     address internal constant SWAP = address(0x5A9);
-    address internal constant TIMELOCK = address(0x713E);
+    address internal constant AUTHORITY = address(0x713E);
     address internal constant RECIPIENT = address(0xBEEF);
     uint256 internal constant MARKET = 1;
 
@@ -55,7 +55,7 @@ contract UniswapV4IntegrationProperties {
         manager.initialize(poolId, 0);
         V4Registrar registrar = new V4Registrar();
         vault = new UniswapV4Integration(
-            1, address(this), address(registrar), address(lock), TIMELOCK, address(manager), address(ref), 12
+            1, address(this), address(registrar), address(lock), AUTHORITY, address(manager), address(ref), 12
         );
         registrar.bind(vault, poolId, abi.encode(key, address(ref), uint256(1e8), uint256(1e8)));
         for (uint256 i = 0; i < 4; ++i) {

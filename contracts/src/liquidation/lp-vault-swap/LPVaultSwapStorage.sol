@@ -37,8 +37,6 @@ abstract contract LPVaultSwapStorage is ILPVaultSwapBase {
 
     /// @custom:storage-location erc7201:avana.storage.LPVaultSwap
     struct Layout {
-        // The chain's AvanaTimelock, set once by `initialize`.
-        address timelock;
         mapping(address operator => bool registered) keepers;
         address[] keeperList;
         // Pending-settlement proceeds per asset worth less than one Hub share, held for the next `settlePending`.

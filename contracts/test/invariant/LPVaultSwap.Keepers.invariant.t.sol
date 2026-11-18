@@ -3,15 +3,16 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
+import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {LPVaultSwap} from "../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
 import {LPVaultSwapImmutables, LPVaultSwapLogics} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {AvanaTest} from "../utils/AvanaTest.sol";
 import {LVSMarketRegistryMock} from "../utils/mocks/LPVaultSwapMocks.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";
 import {LPVaultSwapKeeperHandler} from "./handlers/LPVaultSwapKeeperHandler.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {Test} from "forge-std/Test.sol";
 
 /// @title LPVaultSwapKeepersInvariantTest
 /// @notice The committed-operator registry under random sequences of timelock adds and removes and outsider calls,
@@ -24,11 +25,10 @@ import {Test} from "forge-std/Test.sol";
 /// forge-config: default.invariant.depth = 64
 /// forge-config: invariant.invariant.runs = 2000
 /// forge-config: invariant.invariant.depth = 400
-contract LPVaultSwapKeepersInvariantTest is Test, HandlerReach {
+contract LPVaultSwapKeepersInvariantTest is AvanaTest, HandlerReach {
     LPVaultSwapKeeperHandler internal handler;
     ILPVaultSwap internal lvs;
     LVSMarketRegistryMock internal registry;
-    address internal timelock = makeAddr("timelock");
 
     function setUp() public {
         registry = new LVSMarketRegistryMock();
@@ -51,9 +51,14 @@ contract LPVaultSwapKeepersInvariantTest is Test, HandlerReach {
         address[] memory keepers = new address[](1);
         keepers[0] = first;
         lvs = ILPVaultSwap(
-            address(new ERC1967Proxy(implementation, abi.encodeCall(LPVaultSwap.initialize, (timelock, keepers))))
+            address(
+                new ERC1967Proxy(
+                    implementation, abi.encodeCall(LPVaultSwap.initialize, (address(accessManager), keepers))
+                )
+            )
         );
-        handler = new LPVaultSwapKeeperHandler(lvs, timelock, first);
+        _bindAccess(AvanaAccess.Kind.LPVaultSwap, address(lvs));
+        handler = new LPVaultSwapKeeperHandler(lvs, governor, first);
         targetContract(address(handler));
     }
 
@@ -142,10 +147,10 @@ contract LPVaultSwapKeepersInvariantTest is Test, HandlerReach {
     }
 
     // TEST-062 verifies: REQ-SWAP-040, INV-051, INV-084
-    function invariant_TEST_062_onlyTimelockAdmin() public view {
-        IAccessControl ac = IAccessControl(address(lvs));
-        assertTrue(ac.hasRole(0x00, timelock), "timelock holds DEFAULT_ADMIN_ROLE");
-        assertFalse(ac.hasRole(0x00, address(handler)), "the handler holds no admin role");
+    function invariant_TEST_062_authorityIsTheAccessManager() public view {
+        assertEq(lvs.authority(), address(accessManager), "the authority never changes");
+        (bool isMember,) = accessManager.hasRole(AvanaRoles.GOVERNANCE_ROLE, address(handler));
+        assertFalse(isMember, "the handler holds no role");
     }
 
     /// @notice Each run exercises both paths of the registry.

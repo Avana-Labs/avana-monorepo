@@ -22,7 +22,6 @@ abstract contract RiskModuleBase is IRiskModuleErrors {
     address internal immutable _COLLATERALIZATION;
     address internal immutable _ADAPTER;
     address internal immutable _LP_VAULT_SWAP;
-    address internal immutable _TIMELOCK;
     /// @dev `keccak256(abi.encode(im))`, compared between the RiskModule and its logic contracts.
     bytes32 internal immutable _IMMUTABLES_HASH;
 
@@ -34,7 +33,6 @@ abstract contract RiskModuleBase is IRiskModuleErrors {
         _COLLATERALIZATION = im.collateralization;
         _ADAPTER = im.adapter;
         _LP_VAULT_SWAP = im.lpVaultSwap;
-        _TIMELOCK = im.timelock;
         _IMMUTABLES_HASH = keccak256(abi.encode(im));
     }
 

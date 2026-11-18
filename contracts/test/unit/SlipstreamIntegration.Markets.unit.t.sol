@@ -52,9 +52,9 @@ contract SlipstreamIntegrationMarketsUnitTest is SlipstreamIntegrationFixture {
         address[4] memory f = _factoryList();
         address l = address(lock);
         vm.expectRevert(InvalidDeployment.selector);
-        new SlipstreamIntegration(0, coll, registry, l, timelock, n, f);
+        new SlipstreamIntegration(0, coll, registry, l, address(accessManager), n, f);
         vm.expectRevert(InvalidDeployment.selector);
-        new SlipstreamIntegration(1, coll, coll, l, timelock, n, f);
+        new SlipstreamIntegration(1, coll, coll, l, address(accessManager), n, f);
         address[4][7] memory badN;
         address[4][7] memory badF;
         for (uint256 i = 0; i < 7; ++i) {
@@ -69,13 +69,13 @@ contract SlipstreamIntegrationMarketsUnitTest is SlipstreamIntegrationFixture {
         badF[6][2] = address(new MockCLFactory()); // a manager whose factory() is another factory
         for (uint256 i = 0; i < 7; ++i) {
             vm.expectRevert(InvalidDeployment.selector);
-            new SlipstreamIntegration(1, coll, registry, l, timelock, badN[i], badF[i]);
+            new SlipstreamIntegration(1, coll, registry, l, address(accessManager), badN[i], badF[i]);
         }
         // A generation-3 manager that names generation 0's factory, paired with generation 3's.
         MockSlipstreamNPM stray = new MockSlipstreamNPM(address(factories[0]));
         n[3] = address(stray);
         vm.expectRevert(InvalidDeployment.selector);
-        new SlipstreamIntegration(1, coll, registry, l, timelock, n, f);
+        new SlipstreamIntegration(1, coll, registry, l, address(accessManager), n, f);
     }
 
     // TEST-108 verifies: REQ-VAULT-155, REQ-AMM-CORE-001, REQ-AMM-CORE-009, REQ-AMM-SLIP-006, SPEC-AMM-CORE-002
@@ -84,7 +84,7 @@ contract SlipstreamIntegrationMarketsUnitTest is SlipstreamIntegrationFixture {
         assertEq(vault.COLLATERALIZATION(), coll);
         assertEq(vault.MARKET_REGISTRY(), registry);
         assertEq(vault.LOCK(), address(lock));
-        assertEq(vault.TIMELOCK(), timelock);
+        assertEq(vault.authority(), address(accessManager));
         assertEq(vault.AMM_PROTOCOL(), keccak256("AERODROME_SLIPSTREAM"));
         assertEq(vault.generationCount(), 4);
         for (uint8 g = 0; g < 4; ++g) {

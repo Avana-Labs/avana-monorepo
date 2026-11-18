@@ -79,8 +79,7 @@ contract AaveAdapterProperties is AaveAdapterSteps {
             parameterStore: address(0x1005),
             lpVaultSwap: address(0x1006),
             lock: address(0x1007),
-            vaultTokenFactory: address(0x1008),
-            timelock: address(0x1009)
+            vaultTokenFactory: address(0x1008)
         });
     }
 
@@ -198,6 +197,6 @@ contract AaveAdapterProperties is AaveAdapterSteps {
     /// @notice The implementation immutables never change and none is zero.
     function property_immutablesFixed() external view returns (bool) {
         return _PROXY_MANAGER == address(0x1001) && _RISK_MODULE == address(0x1003) && _LOCK == address(0x1007)
-            && _TIMELOCK == address(0x1009) && _COLLATERALIZATION != address(0) && _SELF == address(this);
+            && _COLLATERALIZATION != address(0) && _SELF == address(this);
     }
 }

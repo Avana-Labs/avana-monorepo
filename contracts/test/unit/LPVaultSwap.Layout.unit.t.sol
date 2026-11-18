@@ -87,24 +87,23 @@ contract LPVaultSwapLayoutUnitTest is LPVaultSwapUnitBase {
     // TEST-242 verifies: REQ-SWAP-040, REQ-ACCESS-153
     function test_TEST_242_implementationHoldsNothing() public view {
         assertEq(implementation.approvedKeeperCount(), 0, "no keepers on the implementation");
-        assertFalse(implementation.hasRole(0x00, timelock), "no admin on the implementation");
+        assertEq(implementation.authority(), address(0), "no authority on the implementation");
         assertEq(address(implementation).balance, 0, "no ETH");
     }
 
-    /// @notice The namespace fields sit where the layout says: the timelock at word 0, a keeper's flag in the
-    /// mapping at word 1, the list length at word 2 and its first entry at keccak(word 2).
+    /// @notice The namespace fields sit where the layout says: a keeper's flag in the mapping at word 0, the list
+    /// length at word 1 and its first entry at keccak(word 1).
     // TEST-242 verifies: REQ-SWAP-032, REQ-SWAP-040
     function test_TEST_242_registryWords() public view {
         uint256 base = uint256(NAMESPACE);
-        assertEq(address(uint160(uint256(vm.load(address(lvs), bytes32(base))))), timelock, "timelock word");
-        bytes32 flag = keccak256(abi.encode(keeper, base + 1));
+        bytes32 flag = keccak256(abi.encode(keeper, base));
         assertEq(uint256(vm.load(address(lvs), flag)), 1, "keeper flag");
-        assertEq(uint256(vm.load(address(lvs), bytes32(base + 2))), 1, "list length");
-        bytes32 first = keccak256(abi.encode(base + 2));
+        assertEq(uint256(vm.load(address(lvs), bytes32(base + 1))), 1, "list length");
+        bytes32 first = keccak256(abi.encode(base + 1));
         assertEq(address(uint160(uint256(vm.load(address(lvs), first)))), keeper, "first entry");
     }
 
-    /// @notice A sub-share pending settlement writes only the carry of its settlement asset (word 3 of the
+    /// @notice A sub-share pending settlement writes only the carry of its settlement asset (word 2 of the
     /// namespace, keyed by the asset); the registry words do not move; a funded settlement clears the carry.
     // TEST-170 verifies: REQ-SWAP-070, REQ-SWAP-103
     function test_TEST_170_settlementWritesOnlyTheCarry() public {
@@ -112,7 +111,7 @@ contract LPVaultSwapLayoutUnitTest is LPVaultSwapUnitBase {
         _seizeAndKeep(proxy, 1000e6);
         _liquidateAs(keeper, _params(proxy, 500e6));
         uint256 base = uint256(NAMESPACE);
-        bytes32 carrySlot = keccak256(abi.encode(address(usdc), base + 3));
+        bytes32 carrySlot = keccak256(abi.encode(address(usdc), base + 2));
         bytes32[3] memory before;
         for (uint256 i = 0; i < 3; ++i) {
             before[i] = vm.load(address(lvs), bytes32(base + i));
@@ -133,29 +132,27 @@ contract LPVaultSwapLayoutUnitTest is LPVaultSwapUnitBase {
     }
 
     /// @notice Registry changes move only the registry words: adding and removing keepers changes the list length and
-    /// the flags, never the timelock word or any carry.
+    /// the flags, never any carry.
     // TEST-098 verifies: REQ-SWAP-032, REQ-SWAP-035, REQ-SWAP-103
     function testFuzz_TEST_098_registryChangesTouchOnlyRegistryWords(
         uint8 adds
     ) public {
         uint256 n = bound(adds, 1, 12);
         uint256 base = uint256(NAMESPACE);
-        bytes32 timelockWord = vm.load(address(lvs), bytes32(base));
-        bytes32 carrySlot = keccak256(abi.encode(address(usdc), base + 3));
+        bytes32 carrySlot = keccak256(abi.encode(address(usdc), base + 2));
         for (uint256 i = 0; i < n; ++i) {
             address k = address(uint160(0xB000 + i));
-            vm.prank(timelock);
+            vm.prank(governor);
             lvs.addKeeper(k);
-            assertEq(uint256(vm.load(address(lvs), keccak256(abi.encode(k, base + 1)))), 1, "flag set");
+            assertEq(uint256(vm.load(address(lvs), keccak256(abi.encode(k, base)))), 1, "flag set");
         }
-        assertEq(uint256(vm.load(address(lvs), bytes32(base + 2))), n + 1, "list length");
-        vm.prank(timelock);
+        assertEq(uint256(vm.load(address(lvs), bytes32(base + 1))), n + 1, "list length");
+        vm.prank(governor);
         lvs.removeKeeper(address(uint160(0xB000)));
         assertEq(
-            uint256(vm.load(address(lvs), keccak256(abi.encode(address(uint160(0xB000)), base + 1)))), 0, "flag cleared"
+            uint256(vm.load(address(lvs), keccak256(abi.encode(address(uint160(0xB000)), base)))), 0, "flag cleared"
         );
-        assertEq(uint256(vm.load(address(lvs), bytes32(base + 2))), n, "list shrinks by one");
-        assertEq(vm.load(address(lvs), bytes32(base)), timelockWord, "timelock word unchanged");
+        assertEq(uint256(vm.load(address(lvs), bytes32(base + 1))), n, "list shrinks by one");
         assertEq(vm.load(address(lvs), carrySlot), bytes32(0), "no carry written");
     }
 }

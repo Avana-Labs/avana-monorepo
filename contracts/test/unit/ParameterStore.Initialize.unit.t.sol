@@ -14,7 +14,7 @@ import {ParameterStoreLoosenLogic} from "../../src/policy/parameter-store/Parame
 import {ParameterStoreTightenLogic} from "../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
 import {GlobalParams, ParameterStoreLogics} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
@@ -27,13 +27,13 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     function setUp() public {
         _deployStore();
-        impl = new ParameterStore(address(timelock), address(registry), BLOCK_TIME, logics);
+        impl = new ParameterStore(address(registry), BLOCK_TIME, logics);
     }
 
     function _init(
         GlobalParams memory g
     ) internal returns (bool ok, bytes memory err, IParameterStore s) {
-        bytes memory data = abi.encodeCall(IParameterStore.initialize, (address(timelock), g));
+        bytes memory data = abi.encodeCall(IParameterStore.initialize, (address(accessManager), g));
         try new ERC1967Proxy(address(impl), data) returns (ERC1967Proxy p) {
             (ok, s) = (true, IParameterStore(address(p)));
         } catch (bytes memory reason) {
@@ -92,7 +92,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-056
     function test_TEST_242_feeRecipientCheckedAtInitialize() public {
         GlobalParams memory g = _defaultGlobals();
-        address[4] memory bad = [address(0), address(timelock), address(registry), address(hub)];
+        address[4] memory bad = [address(0), address(accessManager), address(registry), address(hub)];
         for (uint256 i = 0; i < bad.length; ++i) {
             g.feeRecipient = bad[i];
             _refused(g, abi.encodeWithSelector(IParameterStoreBase.InvalidFeeRecipient.selector, bad[i]));
@@ -111,30 +111,19 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         _refused(g, oob);
         g.maxShortfallBps = 1000;
         _refused(g, abi.encodeWithSelector(IParameterStoreBase.InvalidFeeRecipient.selector, address(0)));
-        // The timelock argument is checked before any value.
-        bytes memory data = abi.encodeCall(IParameterStore.initialize, (alice, g));
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.AdminRoleOnlyTimelock.selector, bytes32(0), alice));
-        new ERC1967Proxy(address(impl), data);
     }
 
     // ─── What initialize writes ───
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-023, REQ-ACCESS-153, REQ-ACCESS-150
-    function test_TEST_242_initializeGrantsRolesAndEmits() public {
-        bytes memory data = abi.encodeCall(IParameterStore.initialize, (address(timelock), _defaultGlobals()));
+    function test_TEST_242_initializeSetsTheAuthorityAndEmits() public {
+        bytes memory data = abi.encodeCall(IParameterStore.initialize, (address(accessManager), _defaultGlobals()));
         vm.expectEmit();
-        emit IAccessControl.RoleGranted(bytes32(0), address(timelock), address(this));
-        vm.expectEmit();
-        emit IAccessControl.RoleGranted(AvanaRoles.APPLICATION_ADMIN, address(timelock), address(this));
+        emit IAccessManaged.AuthorityUpdated(address(accessManager));
         vm.expectEmit();
         emit Initializable.Initialized(1);
         IParameterStore s = IParameterStore(address(new ERC1967Proxy(address(impl), data)));
-        assertTrue(s.hasRole(bytes32(0), address(timelock)));
-        assertTrue(s.hasRole(AvanaRoles.APPLICATION_ADMIN, address(timelock)));
-        assertFalse(s.hasRole(bytes32(0), address(this)));
-        assertFalse(s.hasRole(AvanaRoles.APPLICATION_ADMIN, address(this)));
-        assertEq(s.getRoleAdmin(AvanaRoles.APPLICATION_RISK_STEWARD), AvanaRoles.APPLICATION_ADMIN);
-        assertEq(s.TIMELOCK(), address(timelock));
+        assertEq(s.authority(), address(accessManager));
         assertEq(s.MARKET_REGISTRY(), address(registry));
         assertEq(s.CHAIN_BLOCK_TIME(), BLOCK_TIME);
         assertEq(s.coverageRatioBps(), 0);
@@ -177,13 +166,13 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
     // TEST-242 verifies: REQ-PSTORE-001, REQ-ACCESS-150, REQ-ACCESS-031
     function test_TEST_242_implementationCannotBeInitialized() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        impl.initialize(address(timelock), _defaultGlobals());
+        impl.initialize(address(accessManager), _defaultGlobals());
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        implementation.initialize(address(timelock), _defaultGlobals());
-        // A second initialize of the live proxy fails the same way, as the timelock too.
+        implementation.initialize(address(accessManager), _defaultGlobals());
+        // A second initialize of the live proxy fails the same way, as the governor too.
         _tl();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        store.initialize(address(timelock), _defaultGlobals());
+        store.initialize(address(accessManager), _defaultGlobals());
     }
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-056
@@ -191,15 +180,15 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
     /// are skipped and the store initializes with the recipient recorded.
     function test_TEST_242_initializeBeforeRegistryHasCode() public {
         address noCode = makeAddr("registryNotYetDeployed");
-        address tl = address(timelock);
+        address tl = address(accessManager);
         ParameterStoreLogics memory l = ParameterStoreLogics({
-            tighten: address(new ParameterStoreTightenLogic(tl, noCode, BLOCK_TIME)),
-            loosen: address(new ParameterStoreLoosenLogic(tl, noCode, BLOCK_TIME)),
-            listing: address(new ParameterStoreListingLogic(tl, noCode, BLOCK_TIME)),
-            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, noCode, BLOCK_TIME)),
-            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, noCode, BLOCK_TIME))
+            tighten: address(new ParameterStoreTightenLogic(noCode, BLOCK_TIME)),
+            loosen: address(new ParameterStoreLoosenLogic(noCode, BLOCK_TIME)),
+            listing: address(new ParameterStoreListingLogic(noCode, BLOCK_TIME)),
+            adminOracle: address(new ParameterStoreAdminOracleLogic(noCode, BLOCK_TIME)),
+            adminRisk: address(new ParameterStoreAdminRiskLogic(noCode, BLOCK_TIME))
         });
-        ParameterStore early = new ParameterStore(tl, noCode, BLOCK_TIME, l);
+        ParameterStore early = new ParameterStore(noCode, BLOCK_TIME, l);
         bytes memory data = abi.encodeCall(IParameterStore.initialize, (tl, _defaultGlobals()));
         IParameterStore s = IParameterStore(address(new ERC1967Proxy(address(early), data)));
         assertEq(s.feeRecipient(), feeRecipient);

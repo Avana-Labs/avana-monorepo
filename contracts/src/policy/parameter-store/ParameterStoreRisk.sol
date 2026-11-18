@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 /// @title ParameterStoreRisk
 /// @notice Checks that read Aave and the First-Loss Reserves: liquidation liveness, `addCap` sizing, debt reserves.
 /// @dev A call that reverts or returns an unusable value counts as a failed check.
-// Loop lengths are the registry's size, which only timelock operations grow.
+// Loop lengths are the registry's size, which only governed operations grow.
 
 import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";

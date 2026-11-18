@@ -9,7 +9,7 @@ import {StdUtils} from "forge-std/StdUtils.sol";
 
 /// @title AvanaGasVaultHandler
 /// @notice Actors of the AvanaGasVault invariant suite (TEST-335): anyone funds and triggers `topUp`/`topUpAll`;
-/// signers spend gas; the timelock adds signers, sets values either way, unpauses and withdraws; the guardian removes,
+/// signers spend gas; the governance role adds signers, sets values either way, unpauses and withdraws; the guardian removes,
 /// lowers and pauses; strangers try every privileged call. The handler keeps its own ledger of every send (time,
 /// amount, cap in force) and of every balance change, so the suite can check the vault against it.
 contract AvanaGasVaultHandler is CommonBase, StdUtils {
@@ -17,7 +17,7 @@ contract AvanaGasVaultHandler is CommonBase, StdUtils {
 
     AvanaGasVault public immutable VAULT;
     address public immutable TREASURY;
-    address public immutable TIMELOCK;
+    address public immutable GOVERNOR;
     address public immutable GUARDIAN;
     address internal constant SINK = address(0x514E4B);
 
@@ -47,12 +47,13 @@ contract AvanaGasVaultHandler is CommonBase, StdUtils {
 
     constructor(
         AvanaGasVault vault,
+        address governor_,
         address[] memory candidates_,
         address[] memory strangers_
     ) {
         VAULT = vault;
         TREASURY = vault.TREASURY();
-        TIMELOCK = vault.TIMELOCK();
+        GOVERNOR = governor_;
         GUARDIAN = vault.GUARDIAN();
         candidates = candidates_;
         strangers = strangers_;
@@ -139,7 +140,7 @@ contract AvanaGasVaultHandler is CommonBase, StdUtils {
         vm.warp(block.timestamp + bound(secs, 1, 30 hours));
     }
 
-    // ─── TIMELOCK ───
+    // ─── GOVERNOR ───
 
     function addSigner(
         uint256 seed,
@@ -151,7 +152,7 @@ contract AvanaGasVaultHandler is CommonBase, StdUtils {
         targetBalance = bound(targetBalance, 0.01 ether, 3 ether);
         minBalance = bound(minBalance, 1, targetBalance);
         periodCap = bound(periodCap, 1, 4 ether);
-        vm.prank(TIMELOCK);
+        vm.prank(GOVERNOR);
         VAULT.addSigner(signer, minBalance, targetBalance, periodCap);
     }
 
@@ -165,12 +166,12 @@ contract AvanaGasVaultHandler is CommonBase, StdUtils {
         targetBalance = bound(targetBalance, 0.01 ether, 3 ether);
         minBalance = bound(minBalance, 1, targetBalance);
         periodCap = bound(periodCap, 1, 4 ether);
-        vm.prank(TIMELOCK);
+        vm.prank(GOVERNOR);
         VAULT.setSignerConfig(signer, minBalance, targetBalance, periodCap);
     }
 
     function unpause() external {
-        vm.prank(TIMELOCK);
+        vm.prank(GOVERNOR);
         VAULT.unpause();
     }
 
@@ -181,7 +182,7 @@ contract AvanaGasVaultHandler is CommonBase, StdUtils {
         if (held == 0) revert Skipped();
         amount = bound(amount, 1, held);
         uint256 treasuryBefore = TREASURY.balance;
-        vm.prank(TIMELOCK);
+        vm.prank(GOVERNOR);
         VAULT.withdraw(amount);
         withdrawn += amount;
         if (TREASURY.balance != treasuryBefore + amount) ++wrongPayments;
@@ -220,7 +221,7 @@ contract AvanaGasVaultHandler is CommonBase, StdUtils {
 
     // ─── Forbidden ───
 
-    /// @notice A stranger tries a timelock call, or the guardian tries a timelock call or a raise.
+    /// @notice A stranger tries a governance call, or the guardian tries a governance call or a raise.
     function forbidden(
         uint256 seed,
         uint256 which,

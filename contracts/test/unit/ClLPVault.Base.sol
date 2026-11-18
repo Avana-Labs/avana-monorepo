@@ -67,7 +67,7 @@ abstract contract ClLPVaultBase is AvanaTest, ILPVaultBase {
         address adapter;
         address lpVaultSwap;
         address registry;
-        address timelock;
+        address authority;
         Lock lock;
     }
 
@@ -100,10 +100,10 @@ abstract contract ClLPVaultBase is AvanaTest, ILPVaultBase {
         bytes32 key
     ) internal view virtual returns (uint128);
 
-    /// @notice A second LPVault of the same protocol with every binding of the fixture's except `timelock`, market 1
+    /// @notice A second LPVault of the same protocol with every binding of the fixture's except the authority, market 1
     /// bound.
-    function _cVaultWithTimelock(
-        address timelock_
+    function _cVaultWithAuthority(
+        address authority_
     ) internal virtual returns (IClIntegration);
 
     /// @notice Creates a pool of `tokenA`/`tokenB` and binds it as market `MKT_C` on `[-50, 50]`.
@@ -209,7 +209,7 @@ abstract contract ClLPVaultUniswapHooks is UniswapV3IntegrationFixture, ClLPVaul
     }
 
     function _cCore() internal view override returns (Core memory) {
-        return Core(coll, adapter, lpVaultSwap, registry, timelock, lock);
+        return Core(coll, adapter, lpVaultSwap, registry, address(accessManager), lock);
     }
 
     function _cManager(
@@ -256,15 +256,15 @@ abstract contract ClLPVaultUniswapHooks is UniswapV3IntegrationFixture, ClLPVaul
         (,,,,,,, l,,,,) = nfpm.positions(uint256(key));
     }
 
-    function _cVaultWithTimelock(
-        address timelock_
+    function _cVaultWithAuthority(
+        address authority_
     ) internal override returns (IClIntegration v) {
         UniswapV3IntegrationHarness h = new UniswapV3IntegrationHarness(
             INTEGRATION,
             coll,
             registry,
             address(lock),
-            timelock_,
+            authority_,
             address(nfpm),
             address(v3Factory),
             v3Factory.poolInitCodeHash()
@@ -291,7 +291,7 @@ abstract contract ClLPVaultSlipstreamHooks is SlipstreamIntegrationFixture, ClLP
     }
 
     function _cCore() internal view override returns (Core memory) {
-        return Core(coll, adapter, lpVaultSwap, registry, timelock, lock);
+        return Core(coll, adapter, lpVaultSwap, registry, address(accessManager), lock);
     }
 
     function _cManager(
@@ -338,11 +338,11 @@ abstract contract ClLPVaultSlipstreamHooks is SlipstreamIntegrationFixture, ClLP
         return _liquidity(key);
     }
 
-    function _cVaultWithTimelock(
-        address timelock_
+    function _cVaultWithAuthority(
+        address authority_
     ) internal override returns (IClIntegration v) {
         SlipstreamIntegration s = new SlipstreamIntegration(
-            INTEGRATION, coll, registry, address(lock), timelock_, _npmList(), _factoryList()
+            INTEGRATION, coll, registry, address(lock), authority_, _npmList(), _factoryList()
         );
         vm.prank(registry);
         s.bindMarket(M1, address(pool1), bytes32(0), PositionShape(ShapeKind.TickRange, M1_LOWER, M1_UPPER), _data(G1));

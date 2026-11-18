@@ -192,16 +192,11 @@ contract AvanaFirstLossReserveHalmosTest is Test {
         auth.allow(COVERAGE, IAvanaFirstLossReserve.coverDeficit.selector);
         auth.allow(DAO, IAvanaFirstLossReserve.setAllowedBorrowSpoke.selector);
         auth.allow(DAO, IAvanaFirstLossReserve.setFirstLossReserveMinimum.selector);
-        auth.allow(DAO, IAvanaFirstLossReserve.requestWithdrawal.selector);
-        auth.allow(DAO, IAvanaFirstLossReserve.cancelWithdrawal.selector);
-        auth.allow(DAO, IAvanaFirstLossReserve.executeWithdrawal.selector);
-        cs = new AvanaFirstLossReserve(address(hub), address(token), ASSET_ID, address(auth), 1_209_600);
+        auth.allow(DAO, IAvanaFirstLossReserve.withdraw.selector);
+        cs = new AvanaFirstLossReserve(address(hub), address(token), ASSET_ID, address(auth));
         hub.setListed(BORROW);
         vm.prank(DAO);
         cs.setAllowedBorrowSpoke(BORROW, true);
-        vm.prank(DAO);
-        cs.requestWithdrawal(1000e18, RECIPIENT);
-        vm.warp(block.timestamp + 1_209_600);
         token.mint(FUNDER, 1 << 128);
         otherToken.mint(FUNDER, 1 << 128);
         vm.prank(FUNDER);

@@ -109,7 +109,7 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
                 address(coll),
                 address(registry),
                 address(lock),
-                address(timelock),
+                address(accessManager),
                 address(v4posm),
                 address(factory),
                 uint256(BLOCK_TIME)
@@ -118,9 +118,8 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
         vm.label(v4Vault, "UniswapV4Integration");
         address[] memory amm = new address[](2);
         (amm[0], amm[1]) = (address(v4posm), address(v4pm));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         vtFactory.registerIntegration(V4, v4Vault);
-        registry.registerIntegration(V4, v4Vault, makeAddr("v4Pricing"));
         registry.recordIntegrationContracts(V4, amm);
         registry.finalizeIntegrationContracts(V4);
         vm.stopPrank();
@@ -152,7 +151,7 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
             aave.roles.delegatecall(abi.encodeCall(IAvanaAaveV4Roles.setupSpoke, (aave.accessManager, spoke)));
         _bubble(ok, data);
         IAccessManager(aave.accessManager).renounceRole(0, address(this));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.approveSpokeCodeHash(impl.codehash);
         registry.deployCdpSpoke(
             SpokeDef({
@@ -190,7 +189,7 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
         vm.stopPrank();
         address cs = hub == hubV ? firstLossReserveOfV[address(asset)] : firstLossReserveOf[address(asset)];
         uint8 dec = asset.decimals();
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.enableDebtReserve(
             spoke,
             DebtReserveDef({
@@ -318,7 +317,7 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
         _aaveVolatile(m, d, cf, site);
         _routesInto(id, address(usdc));
         _routesInto(id, address(gho));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.activateMarket(id);
         vm.label(m.vaultToken, string.concat("VaultToken ", vm.toString(id)));
         vm.label(address(m.oracle), string.concat("LPOracleV4 ", vm.toString(id)));
@@ -341,7 +340,7 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
         VtMeta memory v;
         (v.name, v.symbol) = _v4Names(id, key);
         v.shape = _v4Shape(key.tickSpacing);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vt = vtFactory.deployVaultToken(
             V4, address(0), keccak256(abi.encode(key)), v.shape, site.hub, site.spoke, id, oracle, d, v.name, v.symbol
         );
@@ -373,7 +372,7 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
         def.shape = _v4Shape(key.tickSpacing);
         (def.vaultToken, def.lpOracle) = (vt, oracle);
         def.integrationData = abi.encode(key, address(ref), _usdPrice(t0), _usdPrice(t1));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listCollateralMarket(def);
     }
 

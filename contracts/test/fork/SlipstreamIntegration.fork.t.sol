@@ -97,7 +97,7 @@ contract SlipstreamIntegrationForkTest is AvanaTest {
         }
         vm.createSelectFork(rpc, blockNumber);
         lock = new Lock(adapter, makeAddr("lpVaultSwap"));
-        vault = new SlipstreamIntegration(2, coll, registry, address(lock), makeAddr("timelock"), npm, factory);
+        vault = new SlipstreamIntegration(2, coll, registry, address(lock), makeAddr("authority"), npm, factory);
     }
 
     // TEST-265 verifies: REQ-AMM-SLIP-006, REQ-AMM-SLIP-007, REQ-AMM-SLIP-008, SPEC-AMM-SLIP-001, REQ-AMM-SLIP-015, REQ-AMM-SLIP-016, INV-017

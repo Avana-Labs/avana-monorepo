@@ -3,16 +3,17 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
 import {AvanaGasVault} from "../../src/periphery/gas-vault/AvanaGasVault.sol";
-import {Test} from "forge-std/Test.sol";
+import {AvanaTest} from "../utils/AvanaTest.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @notice AvanaGasVault top-up amount (2.24 `REQ-GASV-004`, `REQ-GASV-005`) for any configuration, signer balance,
 /// vault balance and send history: a top-up sends exactly `min(targetBalance − balance, periodCap − sentInPeriod,
 /// vault balance)`, never above the target, never more than the cap over the window, and only to the signer.
-contract AvanaGasVaultFuzzTest is Test {
+contract AvanaGasVaultFuzzTest is AvanaTest {
     AvanaGasVault internal vault;
     address internal treasury = makeAddr("treasury");
-    address internal timelock = makeAddr("timelock");
     address internal guardian = makeAddr("guardian");
     address internal signer = makeAddr("signer");
     address internal sink = makeAddr("sink");
@@ -21,7 +22,8 @@ contract AvanaGasVaultFuzzTest is Test {
 
     function setUp() public {
         vm.warp(1_800_000_000);
-        vault = new AvanaGasVault(treasury, timelock, guardian, 8);
+        vault = new AvanaGasVault(treasury, address(accessManager), guardian, 8);
+        _bindAccess(AvanaAccess.Kind.GasVault, address(vault));
     }
 
     function _min(
@@ -47,7 +49,7 @@ contract AvanaGasVaultFuzzTest is Test {
         held = bound(held, 0, 1e25);
         gap = bound(gap, 0, 2 days);
         vm.deal(address(vault), held);
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.addSigner(signer, minBalance, targetBalance, periodCap);
 
         // An earlier top-up `gap` seconds ago, when it was due and could send.
@@ -94,7 +96,7 @@ contract AvanaGasVaultFuzzTest is Test {
     ) public {
         periodCap = bound(periodCap, 1, 10 ether);
         vm.deal(address(vault), 1000 ether);
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.addSigner(signer, 1 ether, 1 ether, periodCap);
         uint256[8] memory at;
         uint256[8] memory amount;

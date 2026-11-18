@@ -8,7 +8,7 @@ import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.
 import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {MarketDynamicCap} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @title ParameterStoreDynamicCapUnitTest
 /// @notice The dynamic borrow cap terms of a market (interval, alpha, buffer bounds): never-written values read as
@@ -21,8 +21,8 @@ contract ParameterStoreDynamicCapUnitTest is ParameterStoreFixture {
     function setUp() public {
         _deployStore();
         _listMarket();
-        vm.prank(address(timelock));
-        store.grantRole(AvanaRoles.APPLICATION_RISK_STEWARD, safe);
+        vm.prank(aaveGovernanceExecutor);
+        accessManager.grantRole(AvanaRoles.TIGHTEN_ROLE, safe, 0);
     }
 
     function _defaultCap() internal pure returns (MarketDynamicCap memory) {
@@ -169,19 +169,11 @@ contract ParameterStoreDynamicCapUnitTest is ParameterStoreFixture {
         tight.capBufferMax -= K;
         vm.prank(safe);
         store.tightenMarketDynamicCap(M, tight);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, safe, AvanaRoles.APPLICATION_ADMIN
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, safe));
         vm.prank(safe);
         store.loosenMarketDynamicCap(M, _defaultCap());
         address stranger = makeAddr("stranger");
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, stranger, AvanaRoles.APPLICATION_ADMIN
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, stranger));
         vm.prank(stranger);
         store.tightenMarketDynamicCap(M, tight);
     }

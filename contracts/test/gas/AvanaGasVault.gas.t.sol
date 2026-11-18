@@ -3,10 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
 import {AvanaGasVault} from "../../src/periphery/gas-vault/AvanaGasVault.sol";
 import {IAvanaGasVault} from "../../src/periphery/gas-vault/IAvanaGasVault.sol";
+import {AvanaTest} from "../utils/AvanaTest.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
-import {Test} from "forge-std/Test.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @title AvanaGasVaultGasTest
 /// @notice Gas of the AvanaGasVault's permissionless calls (2.24), each as its own transaction (`isolate = true`,
@@ -17,22 +19,21 @@ import {Test} from "forge-std/Test.sol";
 /// empty (balance and nonce 0, so each transfer pays the new-account charge), which a keeper signer that has sent a
 /// transaction never is. A due signer here holds 1 wei, so its account exists.
 /// forge-config: default.isolate = true
-contract AvanaGasVaultGasTest is Test, GasCalibration {
+contract AvanaGasVaultGasTest is AvanaTest, GasCalibration {
     /// @notice DESIGN section 6 bound for `topUpAll` with 8 signers.
     uint256 internal constant TOP_UP_ALL_BUDGET = 300_000;
 
     AvanaGasVault internal vault;
-    address internal timelock = makeAddr("timelock");
-    address internal keeper = makeAddr("keeper");
     address[8] internal signerList;
 
     function setUp() public {
         vm.warp(1_800_000_000);
-        vault = new AvanaGasVault(makeAddr("treasury"), timelock, makeAddr("guardian"), 8);
+        vault = new AvanaGasVault(makeAddr("treasury"), address(accessManager), makeAddr("guardian"), 8);
+        _bindAccess(AvanaAccess.Kind.GasVault, address(vault));
         vm.deal(address(vault), 100 ether);
         for (uint256 i; i < 8; ++i) {
             signerList[i] = makeAddr(string.concat("signer", vm.toString(i)));
-            vm.prank(timelock);
+            vm.prank(governor);
             vault.addSigner(signerList[i], 0.3 ether, 1 ether, 1 ether);
         }
     }

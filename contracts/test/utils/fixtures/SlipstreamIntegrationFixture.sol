@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {SlipstreamIntegration} from "../../../src/amm/slipstream/SlipstreamIntegration.sol";
 import {ILPVaultBase} from "../../../src/custody/lp-vault/ILPVaultBase.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
@@ -15,7 +16,7 @@ import {MintableToken} from "../mocks/UniswapV3Mocks.sol";
 /// @notice The production Slipstream LPVault with the real Lock and four mock generations (factory, position manager,
 /// clone pools), and two bound markets of one USDC/USDT pair: market 1 on `[-50, 50]` of the generation-2 (Gauges V3)
 /// pool of spacing 1, which has a gauge, and market 2 on the full range of the generation-3 (Aero) pool of spacing
-/// 100. Collateralization, the MarketRegistry, the AaveAdapter, LPVaultSwap and the timelock are named addresses.
+/// 100. Collateralization, the MarketRegistry, the AaveAdapter, LPVaultSwap and the address(accessManager) are named addresses.
 /// @dev Suites set `isolate = false`: `_asColl` takes the Lock as the AaveAdapter, makes one call as Collateralization
 /// and frees the Lock, as one outer entry point would.
 abstract contract SlipstreamIntegrationFixture is AvanaTest, ILPVaultBase {
@@ -32,7 +33,6 @@ abstract contract SlipstreamIntegrationFixture is AvanaTest, ILPVaultBase {
     address internal lpVaultSwap = makeAddr("lpVaultSwap");
     address internal coll = makeAddr("collateralization");
     address internal registry = makeAddr("marketRegistry");
-    address internal timelock = makeAddr("timelock");
 
     Lock internal lock;
     MockCLFactory[4] internal factories;
@@ -60,6 +60,7 @@ abstract contract SlipstreamIntegrationFixture is AvanaTest, ILPVaultBase {
         gauge1 = new MockCLGauge(address(pool1), npms[G1], aero);
         pool1.setGauge(address(gauge1));
         vault = _deploy(_npmList(), _factoryList());
+        _bindAccess(AvanaAccess.Kind.LpVault, address(vault));
         _bind(M1, address(pool1), G1, M1_LOWER, M1_UPPER);
         _bind(M2, address(pool100), G2, -FULL_100, FULL_100);
         vm.label(address(vault), "SlipstreamLPVault");
@@ -84,7 +85,7 @@ abstract contract SlipstreamIntegrationFixture is AvanaTest, ILPVaultBase {
         address[4] memory n,
         address[4] memory f
     ) internal returns (SlipstreamIntegration) {
-        return new SlipstreamIntegration(INTEGRATION, coll, registry, address(lock), timelock, n, f);
+        return new SlipstreamIntegration(INTEGRATION, coll, registry, address(lock), address(accessManager), n, f);
     }
 
     function _data(

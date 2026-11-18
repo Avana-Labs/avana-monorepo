@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 /// @title IMarketRegistryRoutes
 /// @notice Governance of swap routes from a market's pool token into a debt asset, used by settlement.
-/// @dev Every function requires `APPLICATION_ADMIN`. `kind` is the slot: 0 primary, 1 backup.
+/// @dev Every function is restricted by the AccessManager: `disableRoute` and `restoreRoute` take the tighten role, the rest the governance role. `kind` is the slot: 0 primary, 1 backup.
 interface IMarketRegistryRoutes {
     /// @notice Adds or changes the primary or backup swap route of a market's pool token into a debt asset.
     /// @dev Reverts `InvalidRoute` on a failed route check. Replacing a route revokes the old one's approval.

@@ -174,7 +174,7 @@ abstract contract RealStackSlipstream is RealStackVolatile {
         slipVault = deployCode(
             "SlipstreamIntegration.sol:SlipstreamIntegration",
             abi.encode(
-                SLIP, address(coll), address(registry), address(lock), address(timelock), slipNpms, slipFactories
+                SLIP, address(coll), address(registry), address(lock), address(accessManager), slipNpms, slipFactories
             )
         );
         vm.label(slipVault, "SlipstreamIntegration");
@@ -182,9 +182,8 @@ abstract contract RealStackSlipstream is RealStackVolatile {
         for (uint256 g = 0; g < 4; ++g) {
             (amm[g], amm[4 + g]) = (slipNpms[g], slipFactories[g]);
         }
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         vtFactory.registerIntegration(SLIP, slipVault);
-        registry.registerIntegration(SLIP, slipVault, makeAddr("slipPricing"));
         registry.recordIntegrationContracts(SLIP, amm);
         registry.finalizeIntegrationContracts(SLIP);
         vm.stopPrank();
@@ -214,7 +213,7 @@ abstract contract RealStackSlipstream is RealStackVolatile {
         (address s, address impl, address oracle) = ISpokeInstanceBatch(batch).getReport();
         spoke = s;
         _setupSpokeRoles(spoke);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.approveSpokeCodeHash(impl.codehash);
         registry.deployCdpSpoke(
             SpokeDef({
@@ -266,7 +265,7 @@ abstract contract RealStackSlipstream is RealStackVolatile {
         vm.stopPrank();
         address cs = hub == hubV ? firstLossReserveOfV[address(asset)] : firstLossReserveOf[address(asset)];
         uint8 dec = asset.decimals();
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.enableDebtReserve(
             spoke,
             DebtReserveDef({

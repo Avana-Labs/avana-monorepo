@@ -22,7 +22,7 @@ abstract contract DeploymentOutput is Script {
         vm.serializeString(o, "release", c.release);
         vm.serializeAddress(o, "deployer", d.deployer);
         vm.serializeAddress(o, "create3Factory", d.factory);
-        vm.serializeAddress(o, "timelock", d.timelock);
+        vm.serializeAddress(o, "accessManager", d.accessManager);
         vm.serializeString(o, "marketRegistry", _upgradeable("marketRegistry", d.marketRegistry));
         vm.serializeString(o, "parameterStore", _upgradeable("parameterStore", d.parameterStore));
         vm.serializeString(o, "riskModule", _upgradeable("riskModule", d.riskModule));

@@ -49,13 +49,10 @@ interface IParameterStoreBase {
     /// @param key `keccak256(abi.encode(name, scope))` of the parameter.
     error LoosenStepTooLarge(bytes32 key);
 
-    /// @notice The parameter was loosened less than `normalDelay` ago.
+    /// @notice The parameter was loosened less than `LOOSEN_SPACING` (5 days) ago.
     /// @param key `keccak256(abi.encode(name, scope))` of the parameter.
     /// @param nextAt First timestamp at which the parameter can be loosened again, seconds.
     error LoosenTooSoon(bytes32 key, uint256 nextAt);
-
-    /// @notice A grant of `DEFAULT_ADMIN_ROLE` or `APPLICATION_ADMIN` to an account other than `TIMELOCK`.
-    error AdminRoleOnlyTimelock(bytes32 role, address account);
 
     /// @notice The Hub is not recorded in the MarketRegistry.
     error UnknownHub(address hub);
@@ -65,7 +62,7 @@ interface IParameterStoreBase {
 
     /// @notice A tighten setter succeeded.
     /// @param scope marketId, token, feed, `keccak256(spoke, debtReserveId)` or zero for a global parameter.
-    /// @param caller `msg.sender`: the timelock, or the `APPLICATION_RISK_STEWARD` holder for a tightening.
+    /// @param caller `msg.sender`: the governance Safe, or the risk steward for a tightening.
     event ParameterTightened(bytes32 name, bytes32 scope, uint256 oldValue, uint256 newValue, address caller);
 
     /// @notice A loosen setter succeeded.

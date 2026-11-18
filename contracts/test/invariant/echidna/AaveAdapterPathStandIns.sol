@@ -529,8 +529,7 @@ abstract contract AaveAdapterPathHarness is AaveAdapterStorage {
             parameterStore: world,
             lpVaultSwap: address(0x5A1),
             lock: address(_lock),
-            vaultTokenFactory: world,
-            timelock: address(this)
+            vaultTokenFactory: world
         });
     }
 

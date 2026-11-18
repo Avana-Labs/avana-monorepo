@@ -293,8 +293,7 @@ contract AaveAdapterHalmosTest is Test {
             parameterStore: address(0x1005),
             lpVaultSwap: address(0x1006),
             lock: address(0x1007),
-            vaultTokenFactory: address(0x1008),
-            timelock: address(0x1009)
+            vaultTokenFactory: address(0x1008)
         });
         steps = new AaveAdapterStepsHarness(im);
     }

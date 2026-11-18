@@ -190,8 +190,8 @@ contract RegistryLPVaultMock {
     address public immutable LOCK;
     bytes32 public constant AMM_PROTOCOL = keccak256("UNISWAP_V3");
     address public MARKET_REGISTRY;
-    /// @dev The timelock the VaultTokenFactory compares; copied from the first registry that answers `TIMELOCK()`.
-    address public TIMELOCK;
+    /// @dev The authority_ the VaultTokenFactory compares; copied from the first registry that answers `authority()`.
+    address public authority;
     address[] internal _tokens;
     uint8 public unitDecimals = 18;
     PoolKeying public keying = PoolKeying.Address;
@@ -223,9 +223,9 @@ contract RegistryLPVaultMock {
         address r
     ) external {
         MARKET_REGISTRY = r;
-        if (TIMELOCK == address(0) && r.code.length > 0) {
-            (bool ok, bytes memory ret) = r.staticcall(abi.encodeWithSignature("TIMELOCK()"));
-            if (ok && ret.length == 32) TIMELOCK = abi.decode(ret, (address));
+        if (authority == address(0) && r.code.length > 0) {
+            (bool ok, bytes memory ret) = r.staticcall(abi.encodeWithSignature("authority()"));
+            if (ok && ret.length == 32) authority = abi.decode(ret, (address));
         }
     }
 

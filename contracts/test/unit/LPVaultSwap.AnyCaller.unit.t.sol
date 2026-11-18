@@ -104,9 +104,9 @@ contract LPVaultSwapAnyCallerUnitTest is LPVaultSwapUnitBase {
     function test_TEST_045_registryNeitherReadNorWritten() public {
         (address proxy,) = _bobAccount();
         address[] memory before = lvs.getKeepers();
-        vm.prank(timelock);
+        vm.prank(governor);
         lvs.addKeeper(carol);
-        vm.prank(timelock);
+        vm.prank(governor);
         lvs.removeKeeper(keeper);
         LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, 1950e6));
         assertGt(r.debtRepaid, 0, "removed operator still liquidates");

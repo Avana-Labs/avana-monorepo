@@ -88,9 +88,6 @@ interface ILPVaultSwapBase {
     /// @notice `deleverage` was not called by the AaveAdapter while it holds the lock.
     error NotAdapter();
 
-    /// @notice A grant of `DEFAULT_ADMIN_ROLE` or `APPLICATION_ADMIN` to an account other than the AvanaTimelock.
-    error AdminRoleOnlyTimelock(bytes32 role, address account);
-
     /// @notice A collateral, vault-token or released-token price used to value a seizure or a leg is 0.
     error ZeroCollateralPrice();
 

@@ -23,9 +23,9 @@ contract ParameterStoreInvariantTest is ParameterStoreFixture, HandlerReach {
         _deployStore();
         _listMarket();
         _activate();
-        vm.prank(address(timelock));
-        store.grantRole(AvanaRoles.APPLICATION_RISK_STEWARD, safe);
-        handler = new ParameterStoreHandler(store, address(timelock), safe, address(hub), usdc, usdt, address(fUsdc), M);
+        vm.prank(aaveGovernanceExecutor);
+        accessManager.grantRole(AvanaRoles.TIGHTEN_ROLE, safe, 0);
+        handler = new ParameterStoreHandler(store, governor, safe, address(hub), usdc, usdt, address(fUsdc), M);
         targetContract(address(handler));
     }
 

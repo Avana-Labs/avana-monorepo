@@ -127,8 +127,7 @@ abstract contract ClLPVaultCustody is ClLPVaultBase {
     function returnStray(
         bytes32 positionKey,
         address recipient
-    ) external override {
-        if (msg.sender != _TIMELOCK) revert NotTimelock();
+    ) external override restricted {
         if (ILock(_LOCK).isLocked()) revert Locked();
         if (recipient == address(0) || recipient == address(this)) revert InvalidRecipient();
         if (_depositorOf[positionKey] != address(0) || !_holds(positionKey)) revert NotStray();

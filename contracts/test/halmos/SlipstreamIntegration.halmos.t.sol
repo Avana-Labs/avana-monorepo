@@ -23,7 +23,7 @@ contract SlipstreamIntegrationHalmosTest is Test {
     address internal constant SWAP = address(0x5A9);
     address internal constant COLL = address(0xC011);
     address internal constant REGISTRY = address(0x4E6);
-    address internal constant TIMELOCK = address(0x713E);
+    address internal constant AUTHORITY = address(0x713E);
     address internal constant OWNER = address(0xA11CE);
     uint8 internal constant GEN = 2;
 
@@ -49,7 +49,7 @@ contract SlipstreamIntegrationHalmosTest is Test {
         MintableToken b = new MintableToken("B", 6);
         factories[GEN].enableTickSpacing(10, 500);
         pool = MockCLPool(factories[GEN].createPool(address(a), address(b), 10));
-        vault = new SlipstreamIntegration(1, COLL, REGISTRY, address(lock), TIMELOCK, n, f);
+        vault = new SlipstreamIntegration(1, COLL, REGISTRY, address(lock), AUTHORITY, n, f);
         vm.prank(REGISTRY);
         vault.bindMarket(
             1,

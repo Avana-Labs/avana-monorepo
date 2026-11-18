@@ -8,6 +8,7 @@ import {IDaoDeficitOffset} from "../../src/coverage/dao-deficit-offset/IDaoDefic
 import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {DaoDeficitOffsetFixture} from "../utils/fixtures/DaoDeficitOffsetFixture.sol";
 import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
+import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 
 /// @dev Views a constructor reads from its first-loss layer, each settable, to reach every mismatch branch.
 contract FirstLossLayerViews {
@@ -39,7 +40,7 @@ contract DaoDeficitOffsetUnitTest is DaoDeficitOffsetFixture {
     function _deploy(
         address layer
     ) internal returns (DaoDeficitOffset) {
-        return new DaoDeficitOffset(aave.hub, address(gho), ghoAssetId, aave.accessManager, 1_209_600, layer);
+        return new DaoDeficitOffset(aave.hub, address(gho), ghoAssetId, aave.accessManager, layer);
     }
 
     // ─── Construction ───
@@ -50,12 +51,10 @@ contract DaoDeficitOffsetUnitTest is DaoDeficitOffsetFixture {
     function test_TEST_298_constructorRejectsZeroLayerAndInheritsChecks() public {
         vm.expectRevert(IAvanaFirstLossReserve.ZeroAddress.selector);
         _deploy(address(0));
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.InvalidWithdrawalDelay.selector, 1));
-        new DaoDeficitOffset(aave.hub, address(gho), ghoAssetId, aave.accessManager, 1, address(ghoCoverage));
         vm.expectRevert(IAvanaFirstLossReserve.ZeroAddress.selector);
-        new DaoDeficitOffset(address(0), address(gho), ghoAssetId, aave.accessManager, 1_209_600, address(ghoCoverage));
+        new DaoDeficitOffset(address(0), address(gho), ghoAssetId, aave.accessManager, address(ghoCoverage));
         vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.InvalidHubAsset.selector, usdcAssetId));
-        new DaoDeficitOffset(aave.hub, address(gho), usdcAssetId, aave.accessManager, 1_209_600, address(ghoCoverage));
+        new DaoDeficitOffset(aave.hub, address(gho), usdcAssetId, aave.accessManager, address(ghoCoverage));
     }
 
     // TEST-298 verifies: REQ-FLR-047, REQ-FLR-040, Q-410
@@ -77,7 +76,6 @@ contract DaoDeficitOffsetUnitTest is DaoDeficitOffsetFixture {
         assertEq(ok.HUB(), aave.hub, "hub");
         assertEq(ok.ASSET(), address(gho), "asset");
         assertEq(ok.ASSET_ID(), ghoAssetId, "asset id");
-        assertEq(ok.RESERVE_WITHDRAWAL_DELAY(), 1_209_600, "delay");
         assertEq(ghoOffset.FIRST_LOSS_LAYER(), address(ghoCoverage), "fixture GHO layer");
         assertEq(usdcOffset.FIRST_LOSS_LAYER(), address(usdcCoverage), "fixture USDC layer");
     }
@@ -265,7 +263,7 @@ contract DaoDeficitOffsetUnitTest is DaoDeficitOffsetFixture {
         vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, stranger));
         ghoOffset.setFirstLossReserveMinimum(0);
         vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, stranger));
-        ghoOffset.requestWithdrawal(1, stranger);
+        ghoOffset.withdraw(1, stranger);
         vm.stopPrank();
 
         vm.prank(aaveGovernanceExecutor);
@@ -299,22 +297,23 @@ contract DaoDeficitOffsetUnitTest is DaoDeficitOffsetFixture {
     // ─── Withdrawals ───
 
     // TEST-298 verifies: REQ-FLR-049, REQ-FLR-025, REQ-FLR-026, REQ-FLR-045, SPEC-FLR-003, Q-410
-    /// @notice The DAO withdraws its offset through the offset's own 14-day queue, which waits behind the deficit guard
-    /// like the Avana Umbrella's; the Avana Umbrella's balance and queue do not move.
+    /// @notice The DAO withdraws its offset through the offset's own 14-day delayed call, which waits behind the
+    /// deficit guard like the Avana Umbrella's; the Avana Umbrella's balance does not move.
     function test_TEST_298_offsetWithdrawalIsSeparate() public {
+        IAccessManager manager = IAccessManager(aave.accessManager);
+        bytes memory data = abi.encodeCall(ghoOffset.withdraw, (40_000e18, daoTreasury));
         vm.prank(aaveGovernanceExecutor);
-        uint256 id = ghoOffset.requestWithdrawal(40_000e18, daoTreasury);
-        assertEq(ghoCoverage.nextWithdrawalId(), 1, "Avana queue untouched");
+        manager.schedule(address(ghoOffset), data, 0);
         vm.warp(block.timestamp + 1_209_600);
         _reportDeficit(ghoAssetId, aave.cdpSpoke, 1000e18);
         vm.prank(aaveGovernanceExecutor);
         vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.DeficitOutstanding.selector, aave.cdpSpoke));
-        ghoOffset.executeWithdrawal(id);
+        manager.execute(address(ghoOffset), data);
         _coverWith(ghoCoverage, aave.cdpSpoke, type(uint256).max);
 
         uint256 treasuryBefore = gho.balanceOf(daoTreasury);
         vm.prank(aaveGovernanceExecutor);
-        assertEq(ghoOffset.executeWithdrawal(id), 40_000e18, "withdrawn");
+        manager.execute(address(ghoOffset), data);
         assertEq(gho.balanceOf(daoTreasury) - treasuryBefore, 40_000e18, "paid to the treasury");
         assertEq(ghoOffset.fundedBalance(), DAO_OFFSET_GHO - 40_000e18, "offset left");
         assertEq(ghoCoverage.fundedBalance(), FIRST_LOSS_RESERVE_MINIMUM_GHO - 1000e18, "Avana layer only covered");

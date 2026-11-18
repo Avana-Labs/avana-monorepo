@@ -137,7 +137,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         assertEq(tightened, 1);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreBase.CapLoosened("marketUsdCap", bytes32(M), 4_000_000e8, 6_000_000e8, address(timelock));
+        emit IParameterStoreBase.CapLoosened("marketUsdCap", bytes32(M), 4_000_000e8, 6_000_000e8, governor);
         store.setInitialMarketCaps(M, 6_000_000e8, 500_000e8, 1e8);
     }
 

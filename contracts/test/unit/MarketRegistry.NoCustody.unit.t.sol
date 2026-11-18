@@ -63,7 +63,7 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
         vm.startStateDiffRecording();
         (uint256 id, address vt,) = _listMarket();
         _prepareActivation(id, vt);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.activateMarket(id);
         registry.setSettlementReserve(id, GHO_RESERVE);
         registry.disableRoute(id, address(usdc), address(gho), 1);
@@ -79,10 +79,10 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
     // A relisting reads the integration's existing binding and makes no second bindMarket.
     function test_TEST_252_relistingMakesNoSecondBind() public {
         (uint256 id, address vt, RegistryLPOracleMock o) = _listMarket();
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.cancelRegistration(id);
         vm.startStateDiffRecording();
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         assertEq(_checkAccesses(vm.stopAndReturnStateDiff()), 0);
     }
@@ -120,7 +120,7 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
             "withdraw(address,uint256)"
         ];
         for (uint256 i = 0; i < absent.length; ++i) {
-            vm.prank(address(timelock));
+            vm.prank(governor);
             (bool ok, bytes memory ret) = address(registry).call(abi.encodeWithSignature(absent[i], alice, alice, 1));
             assertFalse(ok);
             assertEq(ret.length, 0, "no such selector");
@@ -134,7 +134,7 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
     function test_TEST_138_failedListingLeavesNoTrace() public {
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(1, _shape());
         o.setSeed(8, 0);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("lpOracle")));
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         assertEq(registry.marketCount(), 0);
@@ -146,7 +146,7 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
         lpVault.marketOf(1);
         // The same definition lists once the check passes, with the same identifier.
         o.setSeed(8, 1e8);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         assertEq(registry.listCollateralMarket(_marketDef(vt, address(o))), 1);
     }
 
@@ -157,18 +157,18 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(1, _shape());
         bytes memory err = abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("lpOracle"));
         o.setSeed(18, 1e8);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(err);
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         o.setSeed(8, -1);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(err);
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         // An oracle of another market, and one of another integration, each behind its own vault token.
         _expectSeedRefused(new RegistryLPOracleMock(2, address(lpVault)), PositionShape(ShapeKind.TickRange, -10, 10));
         _expectSeedRefused(new RegistryLPOracleMock(1, alice), PositionShape(ShapeKind.TickRange, -20, 20));
         o.setSeed(8, 1);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         assertEq(registry.listCollateralMarket(_marketDef(vt, address(o))), 1);
     }
 
@@ -176,13 +176,13 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
         RegistryLPOracleMock o,
         PositionShape memory sh
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         address token = factory.deployVaultToken(
             V3, pool, bytes32(0), sh, address(hub), address(spoke), 1, address(o), 18, "Avana X", "avX"
         );
         MarketDef memory d = _marketDef(token, address(o));
         d.shape = sh;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("lpOracle")));
         registry.listCollateralMarket(d);
     }

@@ -33,7 +33,8 @@ contract RiskModuleInvariantTest is RiskModuleFixture {
                 debtReserve: GHO_RESERVE,
                 feedAge: FEED_AGE,
                 legTokens: [address(usdc), address(usdt)],
-                legFeeds: [feedUsdc, feedUsdt]
+                legFeeds: [feedUsdc, feedUsdt],
+                governor: governor
             })
         );
         targetContract(address(handler));

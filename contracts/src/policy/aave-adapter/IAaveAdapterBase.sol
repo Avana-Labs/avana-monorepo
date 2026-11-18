@@ -58,7 +58,7 @@ interface IAaveAdapterBase {
     /// @notice Repay arrays differ in length, or a minimum-amount array's length is not the market's token count.
     error LengthMismatch();
 
-    /// @notice `initialize` was called with a zero timelock.
+    /// @notice `initialize` was called with a zero authority.
     error ZeroAddress();
 
     /// @notice `repayWithCollateral` named a debt reserve in which the account owes nothing.
@@ -73,9 +73,6 @@ interface IAaveAdapterBase {
 
     /// @notice A deleverage callback outside its open session, out of order or repeated.
     error NoDeleverageSession();
-
-    /// @notice `DEFAULT_ADMIN_ROLE` or `APPLICATION_ADMIN` granted to an address other than `TIMELOCK`.
-    error AdminRoleOnlyTimelock(bytes32 role, address account);
 
     /// @notice A balance measured around a `proxy.execute` step moved by other than the expected amount.
     error BalanceDeltaMismatch();

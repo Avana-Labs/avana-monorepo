@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 /// @title CallRecorder
-/// @notice Stand-in target for timelock operations: accepts any call, records its caller and calldata, and can be
+/// @notice Stand-in target for governed operations: accepts any call, records its caller and calldata, and can be
 /// told to revert, so tests see exactly what an executed operation delivered and when.
 contract CallRecorder {
     error Refused();

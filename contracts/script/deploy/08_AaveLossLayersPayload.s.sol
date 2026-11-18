@@ -49,23 +49,32 @@ interface ILayerFunding {
 /// one `DaoDeficitOffset` behind each Avana Umbrella (First-Loss Reserve, deployed by Avana in `07_DeployAvanaFirstLossReserves`
 /// and named here by address), then one Aave V4 payload on the config engine that
 /// - grants `HUB_DEFICIT_ELIMINATOR_ROLE` to both layers, labels the loss-layer roles and maps `coverDeficit` to
-///   `COVERAGE_ROLE` (the Emergency Guardian and the Aave Protocol Guardian) and the reserve administration to
-///   `RESERVE_ADMIN_ROLE` (the governance executor);
+///   `COVERAGE_ROLE` (the Emergency Guardian and the Aave Protocol Guardian), the reserve administration to
+///   `RESERVE_ADMIN_ROLE` (the governance executor) and `withdraw` to `WITHDRAW_ROLE` (the governance executor with a
+///   14-day execution delay, the withdrawal delay: it schedules, and executes 14 days later); the Aave DAO is the
+///   guardian of the three roles, so it can cancel a scheduled withdrawal;
 /// - registers both layers supply-only on their Hub asset (`addCap = MAX_ALLOWED_SPOKE_CAP`, `drawCap = 0`);
 /// - in `_postExecute`, as the executor: allowlists the Hub's CDP Spokes on both, sets each `firstLossReserveMinimum`
 ///   and funds the DAO offset to its minimum from the treasury. Avana Labs then funds the Umbrella (step `fund`).
-/// @dev The two role IDs are settings (`aavePayload.lossLayerRoles`): 500 and 501 on local and test networks, the IDs
-/// Aave governance assigns before mainnet (Aave allocates role IDs by domain range; 500/501 may collide). On Ethereum
+/// @dev The three role IDs are settings (`aavePayload.lossLayerRoles`): 500, 501 and 503 on local and test networks, the IDs
+/// Aave governance assigns before mainnet (Aave allocates role IDs by domain range; 500, 501 and 503 may collide). On Ethereum
 /// and Base the script refuses the placeholder values and writes the actions only.
 contract AaveLossLayersPayload is AavePayloads {
     /// @notice Aave Hub role of a deficit eliminator (`Roles.HUB_DEFICIT_ELIMINATOR_ROLE`).
     uint64 internal constant HUB_DEFICIT_ELIMINATOR_ROLE = 103;
+
+    /// @notice The AccessManager's admin role, held by the Aave DAO.
+    uint64 internal constant ADMIN_ROLE = 0;
+
+    /// @notice Execution delay of `WITHDRAW_ROLE`: 14 days, the First-Loss Reserve's withdrawal delay.
+    uint32 internal constant RESERVE_WITHDRAW_DELAY = 14 days;
 
     string internal cfg;
     address internal executor;
     address internal am;
     uint64 internal coverageRole;
     uint64 internal reserveAdminRole;
+    uint64 internal withdrawRole;
     bool internal execute;
     string internal offsetsJson;
 
@@ -76,9 +85,14 @@ contract AaveLossLayersPayload is AavePayloads {
         am = _addr(cfg, ".aave.accessManager");
         coverageRole = uint64(vm.parseJsonUint(cfg, ".aavePayload.lossLayerRoles.coverageRole"));
         reserveAdminRole = uint64(vm.parseJsonUint(cfg, ".aavePayload.lossLayerRoles.reserveAdminRole"));
-        require(coverageRole != reserveAdminRole && coverageRole > 0 && reserveAdminRole > 0, "lossLayerRoles");
+        withdrawRole = uint64(vm.parseJsonUint(cfg, ".aavePayload.lossLayerRoles.withdrawRole"));
         require(
-            execute || (coverageRole != 500 && reserveAdminRole != 501),
+            coverageRole != reserveAdminRole && coverageRole != withdrawRole && reserveAdminRole != withdrawRole
+                && coverageRole > 0 && reserveAdminRole > 0 && withdrawRole > 0,
+            "lossLayerRoles"
+        );
+        require(
+            execute || (coverageRole != 500 && reserveAdminRole != 501 && withdrawRole != 503),
             "mainnet: set aavePayload.lossLayerRoles to the role IDs Aave governance assigns"
         );
         address controller = execute ? _addr(cfg, ".aaveLocal.payloadsController") : address(0);
@@ -98,7 +112,8 @@ contract AaveLossLayersPayload is AavePayloads {
         _shipPayload("AvanaLossLayers", b, _addr(cfg, ".aave.configEngine"), executor, controller, execute);
     }
 
-    /// @notice The two role labels, `COVERAGE_ROLE` for both guardians, `RESERVE_ADMIN_ROLE` for the executor.
+    /// @notice The three role labels, `COVERAGE_ROLE` for both guardians, `RESERVE_ADMIN_ROLE` for the executor and
+    /// `WITHDRAW_ROLE` for the executor with the 14-day withdrawal delay.
     function _roles(
         Builder memory b
     ) private view {
@@ -108,9 +123,13 @@ contract AaveLossLayersPayload is AavePayloads {
         if (!ILossLayerViews(am).isRoleLabeled(reserveAdminRole)) {
             _roleUpdate(b, _label(reserveAdminRole, "AVANA_RESERVE_ADMIN_ROLE"));
         }
-        _grant(b, coverageRole, _addr(cfg, ".governance.emergencyGuardian"));
-        _grant(b, coverageRole, _addr(cfg, ".governance.aaveProtocolGuardian"));
-        _grant(b, reserveAdminRole, executor);
+        if (!ILossLayerViews(am).isRoleLabeled(withdrawRole)) {
+            _roleUpdate(b, _label(withdrawRole, "AVANA_RESERVE_WITHDRAW_ROLE"));
+        }
+        _grant(b, coverageRole, _addr(cfg, ".governance.emergencyGuardian"), 0);
+        _grant(b, coverageRole, _addr(cfg, ".governance.aaveProtocolGuardian"), 0);
+        _grant(b, reserveAdminRole, executor, 0);
+        _grant(b, withdrawRole, executor, RESERVE_WITHDRAW_DELAY);
     }
 
     function _label(
@@ -121,7 +140,8 @@ contract AaveLossLayersPayload is AavePayloads {
             authority: am,
             roleId: role,
             admin: AFlags.KEEP_CURRENT_UINT64,
-            guardian: AFlags.KEEP_CURRENT_UINT64,
+            // The Aave DAO (the manager's admin role, 0) is the guardian of the role: it can cancel scheduled calls.
+            guardian: ADMIN_ROLE,
             grantDelay: AFlags.KEEP_CURRENT_UINT32,
             label: label,
             labelUpdate: false
@@ -131,10 +151,13 @@ contract AaveLossLayersPayload is AavePayloads {
     function _grant(
         Builder memory b,
         uint64 role,
-        address account
+        address account,
+        uint32 executionDelay
     ) private view {
-        (bool member,) = ILossLayerViews(am).hasRole(role, account);
-        if (!member) _roleMembership(b, ARoleMembership(am, role, account, true, 0));
+        (bool member, uint32 delay) = ILossLayerViews(am).hasRole(role, account);
+        if (!member || delay != executionDelay) {
+            _roleMembership(b, ARoleMembership(am, role, account, true, executionDelay));
+        }
     }
 
     /// @notice One (Hub, asset): the DAO offset deployed behind the Umbrella, both layers wired. A pair wired by an
@@ -170,7 +193,7 @@ contract AaveLossLayersPayload is AavePayloads {
             IAvanaFirstLossReserve c = IAvanaFirstLossReserve(cs);
             bytes memory initCode = bytes.concat(
                 _artifact("DaoDeficitOffset.sol", "DaoDeficitOffset"),
-                abi.encode(c.HUB(), c.ASSET(), c.ASSET_ID(), am, uint256(1_209_600), cs)
+                abi.encode(c.HUB(), c.ASSET(), c.ASSET_ID(), am, cs)
             );
             vm.broadcast(deployer);
             dos = _deploy(string.concat("DaoDeficitOffset.", label, ".", symbol), initCode);
@@ -201,17 +224,17 @@ contract AaveLossLayersPayload is AavePayloads {
     ) private view {
         IAvanaFirstLossReserve c = IAvanaFirstLossReserve(layer);
         address hub = c.HUB();
-        _grant(b, HUB_DEFICIT_ELIMINATOR_ROLE, layer);
+        _grant(b, HUB_DEFICIT_ELIMINATOR_ROLE, layer, 0);
         bytes4[] memory cover = new bytes4[](1);
         cover[0] = IAvanaFirstLossReserve.coverDeficit.selector;
-        bytes4[] memory admin = new bytes4[](5);
+        bytes4[] memory admin = new bytes4[](2);
         admin[0] = IAvanaFirstLossReserve.setAllowedBorrowSpoke.selector;
         admin[1] = IAvanaFirstLossReserve.setFirstLossReserveMinimum.selector;
-        admin[2] = IAvanaFirstLossReserve.requestWithdrawal.selector;
-        admin[3] = IAvanaFirstLossReserve.cancelWithdrawal.selector;
-        admin[4] = IAvanaFirstLossReserve.executeWithdrawal.selector;
+        bytes4[] memory withdraw = new bytes4[](1);
+        withdraw[0] = IAvanaFirstLossReserve.withdraw.selector;
         _targetFunctionRole(b, ATargetFunctionRoleUpdate(am, layer, cover, coverageRole));
         _targetFunctionRole(b, ATargetFunctionRoleUpdate(am, layer, admin, reserveAdminRole));
+        _targetFunctionRole(b, ATargetFunctionRoleUpdate(am, layer, withdraw, withdrawRole));
         ASpokeToAssetsAddition memory add;
         add.hubConfigurator = _addr(cfg, ".aave.hubConfigurator");
         add.hub = hub;

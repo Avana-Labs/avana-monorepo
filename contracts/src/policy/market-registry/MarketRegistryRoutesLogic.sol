@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {ISettlementRoute} from "../../liquidation/settlement-routes/ISettlementRoute.sol";
 import {Market} from "../../types/MarketTypes.sol";
+import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {IMarketRegistryRoutes} from "./IMarketRegistryRoutes.sol";
@@ -224,7 +225,7 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
     function _integrationRecordKey(
         uint32 integrationId
     ) private view returns (bytes32) {
-        address lpVault = _s().integrationLpVault[integrationId];
+        address lpVault = IVaultTokenFactory(_VAULT_TOKEN_FACTORY).lpVaultOf(integrationId);
         if (lpVault == address(0)) revert IMarketRegistry.InvalidIntegration(integrationId);
         ILPVault v = ILPVault(lpVault);
         return

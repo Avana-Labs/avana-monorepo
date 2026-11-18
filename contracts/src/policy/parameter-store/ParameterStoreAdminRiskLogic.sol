@@ -7,6 +7,7 @@ import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
 import {Market} from "../../types/MarketTypes.sol";
+import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {DebtReserveDef} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
@@ -28,19 +29,18 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
 
     /// @notice Fixes the implementation immutables; they must equal the ParameterStore's.
     constructor(
-        address timelock,
         address marketRegistry,
         uint32 chainBlockTime
-    ) ParameterStoreStorage(timelock, marketRegistry, chainBlockTime) {}
+    ) ParameterStoreStorage(marketRegistry, chainBlockTime) {}
 
     /// @inheritdoc IParameterStoreLogic
     function logicConfig()
         external
         view
         override
-        returns (bytes32 kind, address timelock, address marketRegistry, uint32 chainBlockTime)
+        returns (bytes32 kind, address marketRegistry, uint32 chainBlockTime)
     {
-        return (keccak256("ParameterStoreAdminRiskLogic"), _TIMELOCK, address(_REGISTRY), _BLOCK_TIME);
+        return (keccak256("ParameterStoreAdminRiskLogic"), address(_REGISTRY), _BLOCK_TIME);
     }
 
     /// @notice Body of `IParameterStore.initialize`: checks and writes the global values.
@@ -130,7 +130,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         address r
     ) internal view {
         IMarketRegistry reg = _REGISTRY;
-        bool bad = r == address(0) || r == address(this) || r == _TIMELOCK || r == address(reg);
+        bool bad = r == address(0) || r == address(this) || r == _authority() || r == address(reg);
         if (!bad && address(reg).code.length != 0) {
             function() external view returns (address)[12] memory recorded = [
                 reg.AAVE_ADAPTER,
@@ -151,14 +151,23 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
                 // forge-lint: disable-next-line(calls-loop)
                 if (r == recorded[i]()) bad = true;
             }
-            bad = bad || reg.isRecordedHub(r) || reg.getSpoke(r).approved || reg.integrationIdOf(r) != 0
+            bad = bad || reg.isRecordedHub(r) || reg.getSpoke(r).approved || _isIntegration(reg, r)
                 || reg.marketOfVaultToken(r) != 0 || reg.marketOfLpOracle(r) != 0 || _isReserveContract(reg, r)
                 || _reportsAvana(r) || _isProxy(reg, r);
         }
         if (bad) revert InvalidFeeRecipient(r);
     }
 
-    // Loop lengths are the registry's size, which only timelock operations grow.
+    /// @dev Whether `r` is an LPVault registered in the VaultTokenFactory.
+    function _isIntegration(
+        IMarketRegistry reg,
+        address r
+    ) private view returns (bool) {
+        address factory = reg.VAULT_TOKEN_FACTORY();
+        return factory.code.length != 0 && IVaultTokenFactory(factory).integrationIdOf(r) != 0;
+    }
+
+    // Loop lengths are the registry's size, which only governed operations grow.
     // forge-lint: disable-start(calls-loop)
     function _isReserveContract(
         IMarketRegistry reg,
@@ -176,7 +185,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
 
     // forge-lint: disable-end(calls-loop)
 
-    /// @dev Whether `r` reports this chain's timelock or MarketRegistry, or answers `logicConfig()` at all.
+    /// @dev Whether `r` reports this chain's AccessManager or MarketRegistry, or answers `logicConfig()` at all.
     function _reportsAvana(
         address r
     ) private view returns (bool) {
@@ -184,7 +193,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         // Only the probe's success and the length of its first word are read.
         (bool logic, bytes memory ret) =
             RouteMath._staticRead(r, PROBE_GAS, abi.encodeWithSignature("logicConfig()"), 32);
-        return (logic && ret.length == 32) || _word(r, abi.encodeWithSignature("TIMELOCK()")) == uint160(_TIMELOCK)
+        return (logic && ret.length == 32) || _word(r, abi.encodeWithSignature("authority()")) == uint160(_authority())
             || _word(r, abi.encodeWithSignature("MARKET_REGISTRY()")) == uint160(address(_REGISTRY));
     }
 

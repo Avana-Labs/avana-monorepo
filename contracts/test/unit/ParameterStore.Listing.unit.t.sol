@@ -108,7 +108,7 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         Market memory m = registry.getMarket(M);
         m.lpOracle = address(new MockLPOracle());
         registry.setMarket(2, m);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.setPoolRiskFactor(M, 1);
         // Market 1 now leaves a margin of 10⁴ − ⌊7,500 / 10⁴⌋ = 10,000, so the feed change passes for it.
         _tl();
@@ -248,7 +248,7 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
     /// @notice An 18-decimal feed whose minimum normalises above 1 (minAnswer 1e11, above 10^10) is pinned.
     function test_TEST_250_eighteenDecimalFeedAboveNormalisedMinimum() public {
         MockAggregator f18 = new MockAggregator(18, 1e11, 1e30);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.setFeed(address(f18), _feedDef(86_400, 1800));
         FeedDef memory d = store.getFeed(address(f18));
         assertEq(d.decimals, 18);

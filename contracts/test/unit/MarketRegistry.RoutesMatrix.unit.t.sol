@@ -14,7 +14,7 @@ import {
     RegistryRouteMock,
     RegistryTokenMock
 } from "../utils/mocks/MarketRegistryMocks.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @notice Swap-route slots across market statuses, debt-asset classes and kinds; disable and restore across slots,
 /// markets and relistings.
@@ -43,7 +43,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         uint8 kind,
         address route
     ) internal returns (bool ok, bytes memory ret) {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (ok, ret) = address(registry).call(abi.encodeCall(registry.setRoute, (marketId, token, asset, kind, route)));
     }
 
@@ -57,11 +57,11 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         assertTrue(ok, "Registered");
         // Active and Offboarding.
         _prepareActivation(id, vt);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.activateMarket(id);
         (ok,) = _setAs(id, address(usdc), address(gho), 0, r);
         assertTrue(ok, "Active");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setMarketOffboarding(id);
         (ok,) = _setAs(id, address(usdc), address(gho), 0, r);
         assertTrue(ok, "Offboarding");
@@ -74,7 +74,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, id));
         // Cancelled and unknown.
         (uint256 c,,) = _listWide();
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.cancelRegistration(c);
         (ok, ret) = _setAs(c, address(usdc), address(gho), 0, r);
         assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, c));
@@ -87,7 +87,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         (token, o) = _deployTokenAndOracle(registry.marketCount() + 1, wide);
         MarketDef memory d = _marketDef(token, address(o));
         d.shape = wide;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         m = registry.listCollateralMarket(d);
     }
 
@@ -110,7 +110,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         (ok, ret) = _setAs(id, address(usdc), address(dai), 0, _route(address(usdc), address(dai), "d3"));
         assertFalse(ok);
         assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.TokenNotListed.selector, address(dai)));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setAvanaFirstLossReserve(address(hub), address(dai), address(cs));
         (ok,) = _setAs(id, address(usdc), address(dai), 0, _route(address(usdc), address(dai), "d3"));
         assertTrue(ok, "asset with a First-Loss Reserve");
@@ -142,18 +142,18 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
     function test_TEST_054_backupSlotRecordAndEvent() public {
         address p = _route(address(usdt), address(gho), "dexP");
         address b = _route(address(usdt), address(gho), "dexQ");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setRoute(id, address(usdt), address(gho), 0, p);
         vm.expectEmit(address(registry));
         emit IMarketRegistryBase.RouteSet(id, address(usdt), address(gho), 1, b);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setRoute(id, address(usdt), address(gho), 1, b);
         (address r0,) = registry.getRoute(id, address(usdt), address(gho), 0);
         (address r1,) = registry.getRoute(id, address(usdt), address(gho), 1);
         assertEq(r0, p);
         assertEq(r1, b);
         // Disabling the backup leaves the primary usable.
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.disableRoute(id, address(usdt), address(gho), 1);
         (, bool u0) = registry.getRoute(id, address(usdt), address(gho), 0);
         (, bool u1) = registry.getRoute(id, address(usdt), address(gho), 1);
@@ -166,7 +166,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
     function test_TEST_054_restoreIsBoundToItsOwnSlot() public {
         address p = _setRoute(id, address(usdc), address(gho), 0, "dexA");
         (uint256 other,,) = _listWide();
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.disableRoute(id, address(usdc), address(gho), 0);
         vm.expectRevert(IMarketRegistryBase.NotPreviouslyApproved.selector);
         registry.restoreRoute(id, address(usdc), address(gho), 1, p);
@@ -185,11 +185,11 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
     // market has closed, is refused.
     function test_TEST_054_restoreRerunsTheChecks() public {
         address p = _setRoute(id, address(usdc), address(gho), 0, "dexA");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.disableRoute(id, address(usdc), address(gho), 0);
         // The route no longer supports the Spoke's token class.
         RegistryRouteMock(p).setClassOk(false);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.restoreRoute(id, address(usdc), address(gho), 0, p);
         RegistryRouteMock(p).setClassOk(true);
@@ -199,7 +199,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         // Activation set slot 0 again; a replaced route leaves the approved set (REQ-ROUTE-017), so the slot's current
         // route is the one to restore from here on.
         (p,) = registry.getRoute(id, address(usdc), address(gho), 0);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.restoreRoute(id, address(usdc), address(gho), 0, p);
         registry.activateMarket(id);
         registry.setMarketOffboarding(id);
@@ -207,7 +207,7 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         vm.stopPrank();
         vm.warp(block.timestamp + 5 days);
         registry.closeMarket(id);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, id));
         registry.restoreRoute(id, address(usdc), address(gho), 0, p);
     }
@@ -216,14 +216,14 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
     // After a relisting the old approvals are hidden too: a route approved before the cancel cannot be restored.
     function test_TEST_252_relistHidesOldApprovals() public {
         address p = _setRoute(id, address(usdc), address(gho), 0, "dexA");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.cancelRegistration(id);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listCollateralMarket(_marketDef(vt, address(lpo)));
         (address cur, bool usable) = registry.getRoute(id, address(usdc), address(gho), 0);
         assertEq(cur, address(0));
         assertFalse(usable);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.disableRoute(id, address(usdc), address(gho), 0);
         vm.expectRevert(IMarketRegistryBase.NotPreviouslyApproved.selector);
@@ -242,8 +242,8 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         address p = _setRoute(id, address(usdc), address(gho), 0, "dexA");
         for (uint256 i = 0; i < 2; ++i) {
             vm.expectEmit(address(registry));
-            emit IMarketRegistryBase.RouteDisabled(id, address(usdc), address(gho), 0, address(timelock));
-            vm.prank(address(timelock));
+            emit IMarketRegistryBase.RouteDisabled(id, address(usdc), address(gho), 0, governor);
+            vm.prank(governor);
             registry.disableRoute(id, address(usdc), address(gho), 0);
             (address cur, bool usable) = registry.getRoute(id, address(usdc), address(gho), 0);
             assertEq(cur, p);
@@ -278,16 +278,12 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
         for (uint8 kind = 0; kind < 2; ++kind) {
             for (uint256 g = 0; g < 2; ++g) {
                 vm.prank(guardians[g]);
-                vm.expectRevert(
-                    abi.encodeWithSelector(
-                        IAccessControl.AccessControlUnauthorizedAccount.selector, guardians[g], APP_ADMIN
-                    )
-                );
+                vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, guardians[g]));
                 registry.disableRoute(id, address(usdc), address(gho), kind);
             }
         }
         _assertUsable(routes, true);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.disableRoute(id, address(usdc), address(gho), 0);
         registry.disableRoute(id, address(usdc), address(gho), 1);
         vm.stopPrank();

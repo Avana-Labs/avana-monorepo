@@ -3,18 +3,26 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
+import {AvanaTest} from "../AvanaTest.sol";
+import {CallRecorder} from "../mocks/CallRecorder.sol";
 import {CollateralizationLockMock} from "../mocks/CollateralizationLockMock.sol";
 import {LPVaultIdentityMock} from "../mocks/LPVaultIdentityMock.sol";
-import {TimelockFixture} from "./TimelockFixture.sol";
 
 /// @title VaultTokenFactoryFixture
-/// @notice The chain's VaultTokenFactory behind the AvanaTimelock, with the Uniswap v3 LPVault registered as
+/// @notice The chain's VaultTokenFactory behind the AccessManager, with the Uniswap v3 LPVault registered as
 /// integration 1 and the full-range USDC/USDT listing of 2.4 (`marketId` 4, 6 decimals) ready to deploy.
 /// @dev The AaveAdapter, Hub, CDP Spoke, LPOracle and pool are plain addresses: the factory and the token never call
 /// them. Collateralization and the LPVault are mocks answering the identity getters `registerIntegration` reads.
-abstract contract VaultTokenFactoryFixture is TimelockFixture {
+abstract contract VaultTokenFactoryFixture is AvanaTest {
+    /// @dev Stand-ins for the contracts the fixture does not build: they accept every call and record it.
+    CallRecorder internal parameterStore = new CallRecorder();
+    CallRecorder internal marketRegistry = new CallRecorder();
+    CallRecorder internal lpVaultSwap = new CallRecorder();
+    CallRecorder internal other = new CallRecorder();
+
     uint32 internal constant V3_ID = 1;
     uint32 internal constant SLIPSTREAM_ID = 2;
     bytes32 internal constant UNISWAP_V3 = keccak256("UNISWAP_V3");
@@ -53,13 +61,13 @@ abstract contract VaultTokenFactoryFixture is TimelockFixture {
     LPVaultIdentityMock internal v3Vault;
 
     function _deployFactory() internal {
-        _deployTimelock();
         collateralization = new CollateralizationLockMock(lock);
         vm.label(address(collateralization), "Collateralization");
         factory = new VaultTokenFactory(
-            adapter, address(lpVaultSwap), address(collateralization), address(timelock), address(marketRegistry)
+            adapter, address(lpVaultSwap), address(collateralization), address(accessManager), address(marketRegistry)
         );
         vm.label(address(factory), "VaultTokenFactory");
+        _bindAccess(AvanaAccess.Kind.VaultTokenFactory, address(factory));
         collateralization.setCore(address(factory), adapter, address(lpVaultSwap));
         v3Vault = _vault(V3_ID, UNISWAP_V3);
         vm.label(address(v3Vault), "UniswapV3LPVault");
@@ -70,7 +78,7 @@ abstract contract VaultTokenFactoryFixture is TimelockFixture {
         bytes32 protocol
     ) internal returns (LPVaultIdentityMock) {
         return new LPVaultIdentityMock(
-            id, address(collateralization), lock, protocol, address(timelock), address(marketRegistry)
+            id, address(collateralization), lock, protocol, address(accessManager), address(marketRegistry)
         );
     }
 
@@ -78,7 +86,7 @@ abstract contract VaultTokenFactoryFixture is TimelockFixture {
         uint32 id,
         address vault
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         factory.registerIntegration(id, vault);
     }
 
@@ -135,7 +143,7 @@ abstract contract VaultTokenFactoryFixture is TimelockFixture {
     function _deploy(
         Listing memory l
     ) internal returns (address) {
-        return _deployAs(address(timelock), l);
+        return _deployAs(governor, l);
     }
 
     function _key(

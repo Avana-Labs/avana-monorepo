@@ -4,11 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
-import {
-    IAvanaFirstLossReserve,
-    Withdrawal,
-    WithdrawalStatus
-} from "../../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
+import {IAvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {CoverageActor} from "../../utils/mocks/CoverageActor.sol";
 import {MockAuthority} from "../../utils/mocks/MockAuthority.sol";
 import {MockCoverageHub} from "../../utils/mocks/MockCoverageHub.sol";
@@ -18,9 +14,8 @@ import {MockDebtAsset} from "../../utils/mocks/MockDebtAsset.sol";
 /// @notice Echidna and Medusa properties of the First-Loss Reserve (2.14). Between transactions: the reserve holds only
 /// donated tokens, its funded balance plus what it covered and withdrew never exceeds what was funded plus the yield
 /// accrued to it (`accrueYield` adds interest to every added share and to `ghostYield`), only Spokes listed on the
-/// asset are allowlisted, every issued withdrawal ID has a status, and the
-/// immutables never change. Inside each assertion entry point: `fund`, `coverDeficit`, the allowlist and the
-/// withdrawal calls succeed exactly when 2.14 allows and move exactly the stated amounts.
+/// asset are allowlisted and the immutables never change. Inside each assertion entry point: `fund`, `coverDeficit`, the allowlist and
+/// `withdraw` succeed exactly when 2.14 allows and move exactly the stated amounts.
 /// @dev The harness is the Aave DAO: the authority (`MockAuthority`, the `canCall` interface of the DAO's
 /// AccessManager, which the unit tests use for real; the real one does not fit the harness's 49,152-byte initcode)
 /// lets it call `coverDeficit` and every DAO function; `OUTSIDER` may call none. The Hub is the one-asset model
@@ -32,7 +27,6 @@ import {MockDebtAsset} from "../../utils/mocks/MockDebtAsset.sol";
 contract AvanaFirstLossReserveProperties {
     uint256 internal constant ASSET_ID = 0;
     uint256 internal constant RAY = 1e27;
-    uint256 internal constant DELAY = 1_209_600;
     /// @notice The Hub's virtual shares and assets in its share price (`MockCoverageHub.VIRTUAL`, as in the Hub).
     uint256 internal constant HUB_VIRTUAL = 1e6;
 
@@ -57,7 +51,7 @@ contract AvanaFirstLossReserveProperties {
         TOKEN = new MockDebtAsset("GHO", "GHO", 18);
         HUB = new MockCoverageHub(address(TOKEN), 18, ASSET_ID);
         AUTH = new MockAuthority();
-        CS = new AvanaFirstLossReserve(address(HUB), address(TOKEN), ASSET_ID, address(AUTH), DELAY);
+        CS = new AvanaFirstLossReserve(address(HUB), address(TOKEN), ASSET_ID, address(AUTH));
         LEND = new CoverageActor();
         BORROW = new CoverageActor();
         OTHER = new CoverageActor();
@@ -70,9 +64,7 @@ contract AvanaFirstLossReserveProperties {
         AUTH.allow(address(this), IAvanaFirstLossReserve.coverDeficit.selector);
         AUTH.allow(address(this), IAvanaFirstLossReserve.setAllowedBorrowSpoke.selector);
         AUTH.allow(address(this), IAvanaFirstLossReserve.setFirstLossReserveMinimum.selector);
-        AUTH.allow(address(this), IAvanaFirstLossReserve.requestWithdrawal.selector);
-        AUTH.allow(address(this), IAvanaFirstLossReserve.cancelWithdrawal.selector);
-        AUTH.allow(address(this), IAvanaFirstLossReserve.executeWithdrawal.selector);
+        AUTH.allow(address(this), IAvanaFirstLossReserve.withdraw.selector);
 
         TOKEN.mint(address(HUB), 1_000_000e18);
         LEND.exec(address(HUB), abi.encodeCall(MockCoverageHub.add, (ASSET_ID, 1_000_000e18)));
@@ -100,16 +92,9 @@ contract AvanaFirstLossReserveProperties {
             && !CS.allowedBorrowSpoke(address(this));
     }
 
-    function property_issuedIdsHaveStatus() external view returns (bool) {
-        uint256 next = CS.nextWithdrawalId();
-        if (CS.getWithdrawal(0).status != WithdrawalStatus.None) return false;
-        if (CS.getWithdrawal(next).status != WithdrawalStatus.None) return false;
-        return next == 1 || CS.getWithdrawal(next - 1).status != WithdrawalStatus.None;
-    }
-
     function property_immutablesFixed() external view returns (bool) {
         return CS.HUB() == address(HUB) && CS.ASSET() == address(TOKEN) && CS.ASSET_ID() == ASSET_ID
-            && CS.RESERVE_WITHDRAWAL_DELAY() == DELAY && CS.authority() == address(AUTH);
+            && CS.authority() == address(AUTH);
     }
 
     // ─── State actions ───
@@ -211,62 +196,27 @@ contract AvanaFirstLossReserveProperties {
         }
     }
 
-    /// @notice A request succeeds exactly for a non-zero amount and a valid recipient, executable after the delay.
-    function request(
+    /// @notice `withdraw` succeeds only for a non-zero amount, a valid recipient and no open deficit on an allowlisted
+    /// Spoke, and then pays `min(amount, fundedBalance())` to the recipient.
+    function withdraw(
         uint96 amount,
         uint8 to
     ) external {
         ++sequences;
         uint256 i = to % 3;
         address recipient = i == 0 ? address(OUTSIDER) : (i == 1 ? address(CS) : address(HUB));
-        bool expected = amount > 0 && recipient == address(OUTSIDER);
-        uint256 id = CS.nextWithdrawalId();
-        try CS.requestWithdrawal(amount, recipient) returns (uint256 got) {
-            assert(expected && got == id);
-            Withdrawal memory w = CS.getWithdrawal(id);
-            assert(w.status == WithdrawalStatus.Pending && w.executableAt == block.timestamp + DELAY);
-        } catch {
-            assert(!expected);
-        }
-    }
-
-    /// @notice Cancellation succeeds exactly for a Pending request.
-    function cancel(
-        uint8 idSeed
-    ) external {
-        ++sequences;
-        uint256 id = uint256(idSeed) % (CS.nextWithdrawalId() + 1);
-        bool expected = CS.getWithdrawal(id).status == WithdrawalStatus.Pending;
-        try CS.cancelWithdrawal(id) {
-            assert(expected);
-            assert(CS.getWithdrawal(id).status == WithdrawalStatus.Cancelled);
-        } catch {
-            assert(!expected);
-        }
-    }
-
-    /// @notice Execution succeeds only for a Pending request at or after `executableAt`, and then withdraws
-    /// `min(amount, fundedBalance())` to the recipient.
-    function execute(
-        uint8 idSeed
-    ) external {
-        ++sequences;
-        uint256 id = uint256(idSeed) % (CS.nextWithdrawalId() + 1);
-        Withdrawal memory w = CS.getWithdrawal(id);
-        uint256 expectedOut = _min(w.amount, CS.fundedBalance());
-        uint256 received = TOKEN.balanceOf(w.to);
+        uint256 expectedOut = _min(amount, CS.fundedBalance());
+        uint256 received = TOKEN.balanceOf(recipient);
         bool deficitOpen = _allowlistedDeficitOpen();
-        try CS.executeWithdrawal(id) returns (uint256 withdrawn) {
-            assert(w.status == WithdrawalStatus.Pending && block.timestamp >= w.executableAt && !deficitOpen);
+        try CS.withdraw(amount, recipient) returns (uint256 withdrawn) {
+            assert(amount > 0 && recipient == address(OUTSIDER) && !deficitOpen);
             assert(withdrawn == expectedOut && withdrawn > 0);
-            assert(TOKEN.balanceOf(w.to) == received + withdrawn);
-            assert(CS.getWithdrawal(id).status == WithdrawalStatus.Executed);
+            assert(TOKEN.balanceOf(recipient) == received + withdrawn);
         } catch {
             assert(
-                w.status != WithdrawalStatus.Pending || block.timestamp < w.executableAt || expectedOut == 0
-                    || HUB.halted(address(CS)) || expectedOut > HUB.liquidity() || deficitOpen
+                amount == 0 || recipient != address(OUTSIDER) || expectedOut == 0 || HUB.halted(address(CS))
+                    || expectedOut > HUB.liquidity() || deficitOpen
             );
-            assert(CS.getWithdrawal(id).status == w.status);
         }
     }
 
@@ -275,7 +225,7 @@ contract AvanaFirstLossReserveProperties {
         uint8 which
     ) external {
         ++sequences;
-        uint256 i = which % 6;
+        uint256 i = which % 4;
         bytes memory data;
         if (i == 0) {
             data = abi.encodeCall(IAvanaFirstLossReserve.coverDeficit, (address(BORROW), 1e18));
@@ -283,12 +233,8 @@ contract AvanaFirstLossReserveProperties {
             data = abi.encodeCall(IAvanaFirstLossReserve.setAllowedBorrowSpoke, (address(OTHER), true));
         } else if (i == 2) {
             data = abi.encodeCall(IAvanaFirstLossReserve.setFirstLossReserveMinimum, (0));
-        } else if (i == 3) {
-            data = abi.encodeCall(IAvanaFirstLossReserve.requestWithdrawal, (1e18, address(OUTSIDER)));
-        } else if (i == 4) {
-            data = abi.encodeCall(IAvanaFirstLossReserve.cancelWithdrawal, (1));
         } else {
-            data = abi.encodeCall(IAvanaFirstLossReserve.executeWithdrawal, (1));
+            data = abi.encodeCall(IAvanaFirstLossReserve.withdraw, (1e18, address(OUTSIDER)));
         }
         (bool ok,) = OUTSIDER.exec(address(CS), data);
         assert(!ok);

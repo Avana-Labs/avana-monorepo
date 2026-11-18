@@ -47,7 +47,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         spoke.setReserve(USDC_RESERVE, r, c, d);
         aaveOracle.setSource(USDC_RESERVE, address(usdcOracle));
         ps.setStressRise(address(usdc), 500);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.setAvanaFirstLossReserve(address(hub), address(usdc), address(usdcCoverage));
         vm.stopPrank();
     }
@@ -69,7 +69,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
     function _enable(
         DebtReserveDef memory d
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.enableDebtReserve(address(spoke), d);
     }
 
@@ -77,7 +77,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         DebtReserveDef memory d,
         bytes32 check
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidDebtReserve.selector, check));
         registry.enableDebtReserve(address(spoke), d);
     }
@@ -135,7 +135,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
             firstLossReserve: address(0),
             approved: false
         });
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TokenNotListed.selector, address(dai)));
         registry.enableDebtReserve(address(spoke), def);
         // GHO, the fixture's fixed-price reserve, was enabled only after its listing with an issuer probe.
@@ -147,7 +147,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
     function test_TEST_185_firstLossReserveChecks() public {
         DebtReserveDef memory d = _usdcDef();
         d.firstLossReserve = address(ghoCoverage);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IMarketRegistry.AvanaFirstLossReserveMismatch.selector,
@@ -158,7 +158,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         );
         registry.enableDebtReserve(address(spoke), d);
         usdcCoverage.setFunded(2e12, true);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.CoverageNotFunded.selector, address(hub), address(usdc)));
         registry.enableDebtReserve(address(spoke), _usdcDef());
     }
@@ -180,7 +180,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         (address[] memory p, address[] memory a) = _routes("usdt2");
         TokenDef memory td = _tokenDef(p, a);
         td.issuerProbe = IssuerProbe.UsdtFeeRate;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(address(usdtLike), td);
         DebtReserveDef memory d = _usdcDef();
         RegistryDebtOracleMock o = new RegistryDebtOracleMock(address(usdtLike), address(registry), address(ps));
@@ -195,16 +195,16 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         spoke.setReserve(6, r, c, dyn);
         aaveOracle.setSource(6, address(o));
         ps.setStressRise(address(usdtLike), 500);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setAvanaFirstLossReserve(address(hub), address(usdtLike), address(cs));
         (d.reserveId, d.asset, d.hubAssetId, d.priceSource, d.firstLossReserve) =
         (6, address(usdtLike), 3, address(o), address(cs));
         usdtLike.setFee(1, false);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TransferFeeActive.selector, address(usdtLike)));
         registry.enableDebtReserve(address(spoke), d);
         usdtLike.setFee(0, true);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TransferFeeActive.selector, address(usdtLike)));
         registry.enableDebtReserve(address(spoke), d);
         usdtLike.setFee(0, false);
@@ -212,7 +212,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         _setRoute(marketId, address(usdc), address(usdtLike), 1, "dexH");
         _setRoute(marketId, address(usdt), address(usdtLike), 0, "dexI");
         _setRoute(marketId, address(usdt), address(usdtLike), 1, "dexJ");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.enableDebtReserve(address(spoke), d);
     }
 
@@ -220,7 +220,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
     // Sources: 5.1 TEST-245, MATH-ST-13
     function test_TEST_245_livenessAgainstLiveMarkets() public {
         // The Active market has no USDT -> USDC route yet.
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(
             abi.encodeWithSelector(IMarketRegistryBase.LivenessBound.selector, address(spoke), marketId, USDC_RESERVE)
         );
@@ -228,7 +228,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         _setRoute(marketId, address(usdt), address(usdc), 0, "dexE");
         _setRoute(marketId, address(usdt), address(usdc), 1, "dexF");
         ps.setLivenessFails(address(spoke), marketId, USDC_RESERVE, true);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(
             abi.encodeWithSelector(IMarketRegistryBase.LivenessBound.selector, address(spoke), marketId, USDC_RESERVE)
         );
@@ -246,7 +246,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         _setRoute(marketId, address(usdt), address(usdc), 0, "dexE");
         _setRoute(marketId, address(usdt), address(usdc), 1, "dexF");
         DebtReserveDef memory d = _usdcDef();
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(usdc), 4e12, 3.9e12
@@ -267,7 +267,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         _setRoute(marketId, address(usdt), address(usdc), 0, "dexE");
         _setRoute(marketId, address(usdt), address(usdc), 1, "dexF");
         _enable(_usdcDef());
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownDebtReserve.selector, address(spoke), 9));
         registry.removeDebtReserve(address(spoke), 9);
         // GHO is the settlement reserve of the live market.
@@ -277,13 +277,13 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         registry.removeDebtReserve(address(spoke), GHO_RESERVE);
         vm.stopPrank();
         hub.setOwed(USDC_ASSET, address(spoke), 1, 0);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(
             abi.encodeWithSelector(IMarketRegistryBase.DebtReserveInUse.selector, address(spoke), USDC_RESERVE)
         );
         registry.removeDebtReserve(address(spoke), USDC_RESERVE);
         hub.setOwed(USDC_ASSET, address(spoke), 0, 1);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(
             abi.encodeWithSelector(IMarketRegistryBase.DebtReserveInUse.selector, address(spoke), USDC_RESERVE)
         );
@@ -291,7 +291,7 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
         hub.setOwed(USDC_ASSET, address(spoke), 0, 0);
         vm.expectEmit(address(registry));
         emit IMarketRegistryBase.DebtReserveRemoved(address(spoke), USDC_RESERVE);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.removeDebtReserve(address(spoke), USDC_RESERVE);
         assertFalse(registry.isApprovedDebtReserve(address(spoke), USDC_RESERVE));
         uint256[] memory ids = registry.getDebtReserveIds(address(spoke));

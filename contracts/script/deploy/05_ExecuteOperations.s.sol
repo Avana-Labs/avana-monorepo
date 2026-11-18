@@ -3,48 +3,54 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ITimelockOps, TimelockOperations} from "./lib/TimelockOperations.sol";
+import {AccessOperations, IAccessManagerOps} from "./lib/AccessOperations.sol";
 import {console2} from "forge-std/console2.sol";
 
 /// @title ExecuteOperations
-/// @notice Executes ready AvanaTimelock operations written by earlier steps; anyone may, while public execution is on.
-/// @dev `AVANA_OPERATIONS` is a comma-separated list of operation names (default `guardian-roles,chain-wiring`). An
-/// operation that is not ready is reported with its ready time and skipped; one already done is skipped. The parts of a
-/// split batch (`<name>.2`, `<name>.3`…) run after `<name>`, in order.
-contract ExecuteOperations is TimelockOperations {
+/// @notice Executes the ready calls of the AccessManager operations written by earlier steps, in order, as the
+/// scheduler (an operation is bound to the Safe that scheduled it).
+/// @dev `AVANA_OPERATIONS` is a comma-separated list of operation names (default `chain-wiring`). A call that is not
+/// ready is reported with its ready time and the rest of the operation waits; a call already executed is skipped. The
+/// parts of a split batch (`<name>.2`, `<name>.3`…) run after `<name>`, in order, once every call of the previous part
+/// is executed. A call not executed within the manager's expiration (1 week after it is ready) is expired and has to be
+/// scheduled again.
+contract ExecuteOperations is AccessOperations {
     function run() external {
-        string[] memory names = vm.split(vm.envOr("AVANA_OPERATIONS", string("guardian-roles,chain-wiring")), ",");
+        string[] memory names = vm.split(vm.envOr("AVANA_OPERATIONS", string("chain-wiring")), ",");
         for (uint256 i = 0; i < names.length; ++i) {
-            (address timelock, Operation memory op,) = _readOperation(names[i]);
-            bytes32 id = _execute(timelock, names[i], op);
-            // A batch split in parts (`09_ListMarkets`): `<name>.2`, `<name>.3`… each name the previous part as its
-            // predecessor. A part file left by an earlier, longer batch names another predecessor and ends the chain.
-            for (uint256 k = 2;; ++k) {
+            bool done = _executeOperation(names[i]);
+            // A batch split in parts (`09_ListMarkets`): `<name>.2`, `<name>.3`… run in order, each after the previous
+            // part is done.
+            for (uint256 k = 2; done; ++k) {
                 string memory part = string.concat(names[i], ".", vm.toString(k));
                 if (!_hasOperation(part)) break;
-                (address t, Operation memory next,) = _readOperation(part);
-                if (t != timelock || next.predecessor != id) break;
-                id = _execute(timelock, part, next);
+                done = _executeOperation(part);
             }
         }
     }
 
-    /// @return id The operation's id.
-    function _execute(
-        address timelock,
-        string memory name,
-        Operation memory op
-    ) private returns (bytes32 id) {
-        ITimelockOps t = ITimelockOps(timelock);
-        id = _operationId(timelock, op);
-        if (t.isOperationDone(id)) {
-            console2.log("done already:", name);
-        } else if (!t.isOperationReady(id)) {
-            console2.log("not ready:", name, "ready at", t.getTimestamp(id));
-        } else {
-            vm.broadcast();
-            t.executeBatch(op.targets, op.values, op.payloads, op.predecessor, op.salt);
-            console2.log("executed:", name);
+    /// @return done Whether every call of the operation is executed.
+    function _executeOperation(
+        string memory name
+    ) private returns (bool done) {
+        (address manager, address scheduler, Operation memory op) = _readOperation(name);
+        IAccessManagerOps m = IAccessManagerOps(manager);
+        bytes32[] memory ids = _operationIds(manager, scheduler, op);
+        for (uint256 i = 0; i < ids.length; ++i) {
+            uint48 readyAt = m.getSchedule(ids[i]);
+            if (readyAt == 0) {
+                if (m.getNonce(ids[i]) != 0) continue;
+                console2.log("not scheduled:", name, op.labels[i]);
+                return false;
+            }
+            if (readyAt > block.timestamp) {
+                console2.log(string.concat("not ready: ", name, " ", op.labels[i], ", ready at"), readyAt);
+                return false;
+            }
+            vm.broadcast(scheduler);
+            m.execute(op.targets[i], op.payloads[i]);
+            console2.log("executed:", name, op.labels[i]);
         }
+        return true;
     }
 }

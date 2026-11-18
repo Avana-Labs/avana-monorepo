@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
@@ -108,7 +109,6 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
     /// @dev `RiskModuleFixture._deployContracts` with the real Lock (members: the Adapter and LPVaultSwap) and the real
     /// Collateralization at the address the factory, the MarketRegistry and the RiskModule are built with.
     function _deployWithRealLedger() internal {
-        _deployTimelock();
         store = new RiskStoreMock();
         ps = store;
         adapter = new RiskAdapterMock();
@@ -124,6 +124,9 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
         address registryAddress = address(registry);
         vm.revertToState(dryRun);
         _deployLedgerRegistryAndRisk(registryAddress);
+        _bindAccess(AvanaAccess.Kind.MarketRegistry, address(registry));
+        _bindAccess(AvanaAccess.Kind.RiskModule, address(riskModule));
+        _bindAccess(AvanaAccess.Kind.VaultTokenFactory, address(factory));
     }
 
     /// @dev The VaultTokenFactory (naming `marketRegistry_`), the real Collateralization, the MarketRegistry and the
@@ -134,7 +137,7 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
         uint256 n = vm.getNonce(address(this));
         address predictedLedger = vm.computeCreateAddress(address(this), n + 1);
         factory = new VaultTokenFactory(
-            address(adapter), address(lpVaultSwap), predictedLedger, address(timelock), marketRegistry_
+            address(adapter), address(lpVaultSwap), predictedLedger, address(accessManager), marketRegistry_
         );
         // After the ledger (nonce n + 1): registry logics (5), registry implementation and proxy, risk logics (6),
         // risk implementation and proxy.
@@ -149,7 +152,6 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
         coll = RiskCollateralizationMock(address(ledger));
         collat = coll;
         im = MarketRegistryImmutables({
-            timelock: address(timelock),
             aaveGovernanceExecutor: aaveGovernanceExecutor,
             vaultTokenFactory: address(factory),
             aaveAdapter: address(adapter),
@@ -167,20 +169,21 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
         logics = _deployLogics(im);
         MarketRegistry impl = new MarketRegistry(im, logics);
         registry = MarketRegistry(
-            address(new ERC1967Proxy(address(impl), abi.encodeCall(MarketRegistry.initialize, (address(timelock)))))
+            address(
+                new ERC1967Proxy(address(impl), abi.encodeCall(MarketRegistry.initialize, (address(accessManager))))
+            )
         );
         rmIm = RiskModuleImmutables({
             marketRegistry: address(registry),
             parameterStore: address(store),
             collateralization: address(ledger),
             adapter: address(adapter),
-            lpVaultSwap: address(swap),
-            timelock: address(timelock)
+            lpVaultSwap: address(swap)
         });
         rmLogics = _deployRiskLogics(rmIm);
         RiskModule rmImpl = new RiskModule(rmIm, rmLogics);
         riskModule = RiskModule(
-            address(new ERC1967Proxy(address(rmImpl), abi.encodeCall(RiskModule.initialize, (address(timelock)))))
+            address(new ERC1967Proxy(address(rmImpl), abi.encodeCall(RiskModule.initialize, (address(accessManager)))))
         );
         require(address(riskModule) == predictedRisk, "risk module prediction");
     }

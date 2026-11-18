@@ -69,7 +69,7 @@ contract MarketRegistryHostileAndManualBreakerUnitTest is RiskModuleFixture {
 
         address attacker = makeAddr("attacker");
         HostileMarketRegistry hostile = new HostileMarketRegistry(attacker);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         UUPSUpgradeable(address(registry)).upgradeToAndCall(address(hostile), "");
         assertEq(
             HostileMarketRegistry(address(registry)).ATTACKER(), attacker, "the hostile implementation is in force"

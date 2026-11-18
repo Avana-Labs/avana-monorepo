@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
-import {AvanaTimelock} from "../../../src/governance/timelock/AvanaTimelock.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
@@ -18,6 +17,8 @@ import {FullStackLPVaultMock} from "../../utils/mocks/FullStackLPVaultMock.sol";
 import {OracleFeedMock} from "../../utils/mocks/LPOracleMocks.sol";
 import {LPVaultSwapMock} from "../../utils/mocks/LPVaultSwapMock.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 
@@ -26,7 +27,7 @@ struct FullStackWorld {
     IAaveAdapter adapter;
     MarketRegistry registry;
     IParameterStore store;
-    AvanaTimelock timelock;
+    AccessManager accessManager;
     ICollateralization coll;
     FullStackLPVaultMock lpVault;
     LPVaultSwapMock swap;
@@ -34,7 +35,7 @@ struct FullStackWorld {
     address hub;
     address hubConfigurator;
     address aaveDao;
-    address guardian;
+    address dao;
     address governance;
     uint256[2] markets;
     address[2] vaultTokens;
@@ -50,11 +51,11 @@ struct FullStackWorld {
 /// @notice Actor handler of the full-stack invariants: three wallets pledge into two markets, borrow GHO and USDC,
 /// repay (their own debt or a third party's), withdraw debt-free; token prices move inside the USD band; LPVaultSwap
 /// liquidates any account below HF 1; the Aave DAO cuts the CDP Spoke's draw cap below its drawn amount and anyone
-/// syncs it into the registry's credit line; the timelock tightens a cap at the short delay and upgrades the
-/// AaveAdapter to a second reviewed implementation at the normal delay; time passes with every feed republished.
+/// syncs it into the registry's credit line; the governance Safe tightens a cap at the tighten delay and upgrades the
+/// AaveAdapter to a second reviewed implementation at the governance delay; time passes with every feed republished.
 /// @dev Each failed expectation increments a counter the invariants read: an exit (repay, debt-free withdrawal,
 /// liquidation) that reverts for a breaker; a borrow that leaves the Spoke's owed amount above its draw cap; a pledge
-/// worth less than `minPledgeUsd` at the served price; a timelock operation that executed before its required delay.
+/// worth less than `minPledgeUsd` at the served price; a governed call that executed before its execution delay.
 contract FullStackHandler is CommonBase, StdUtils {
     /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
     /// campaign's success count, so the metrics show the calls that did real work. An exit refused for a breaker does
@@ -343,7 +344,7 @@ contract FullStackHandler is CommonBase, StdUtils {
         ok;
     }
 
-    /// @notice The timelock tightens the market's `topUpSliceUsd` by a little at the short delay.
+    /// @notice The governance Safe tightens the market's `topUpSliceUsd` by a little after the tighten delay.
     function tightenSlice(
         uint256 marketSeed
     ) external {
@@ -353,7 +354,7 @@ contract FullStackHandler is CommonBase, StdUtils {
         _govern(address(w.store), abi.encodeCall(IParameterStoreTighten.tightenTopUpSliceUsd, (market, slice - 1e8)));
     }
 
-    /// @notice The timelock upgrades the AaveAdapter to the second reviewed implementation at the normal delay.
+    /// @notice The governance Safe upgrades the AaveAdapter to the second reviewed implementation after the governance delay.
     function upgradeAdapter() external {
         if (upgrades > 0) revert Skipped();
         _govern(
@@ -453,29 +454,26 @@ contract FullStackHandler is CommonBase, StdUtils {
         address target,
         bytes memory data
     ) internal {
-        address[] memory t = new address[](1);
-        t[0] = target;
-        bytes[] memory p = new bytes[](1);
-        p[0] = data;
-        uint256 delay = w.timelock.requiredDelay(t, p);
-        bytes32 salt = keccak256(abi.encode("full-stack op", ++opNonce));
+        IAccessManager m = IAccessManager(address(w.accessManager));
+        (, uint32 delay) = m.canCall(w.governance, target, bytes4(data));
         vm.prank(w.governance);
-        w.timelock.schedule(target, 0, data, bytes32(0), salt, delay);
+        m.schedule(target, data, 0);
         uint256 scheduledAt = block.timestamp;
+        // Executing a moment before readiness must fail.
+        vm.prank(w.governance);
+        (bool ok,) = address(m).call(abi.encodeCall(m.execute, (target, data)));
+        if (ok) ++earlyExecutions;
         vm.warp(block.timestamp + delay);
         vm.roll(block.number + 1);
         _refresh();
-        (bool ok,) = address(w.timelock).call(abi.encodeCall(w.timelock.execute, (target, 0, data, bytes32(0), salt)));
-        if (ok && block.timestamp < scheduledAt + delay) ++earlyExecutions;
-        // Executing a moment before readiness must fail.
-        bytes32 early = keccak256(abi.encode("full-stack early", opNonce));
         vm.prank(w.governance);
-        w.timelock.schedule(target, 0, data, bytes32(0), early, delay);
-        (ok,) = address(w.timelock).call(abi.encodeCall(w.timelock.execute, (target, 0, data, bytes32(0), early)));
-        if (ok) ++earlyExecutions;
-        bytes32 id = w.timelock.hashOperation(target, 0, data, bytes32(0), early);
-        vm.prank(w.guardian);
-        w.timelock.cancel(id);
+        (ok,) = address(m).call(abi.encodeCall(m.execute, (target, data)));
+        if (ok && block.timestamp < scheduledAt + delay) ++earlyExecutions;
+        // The DAO cancels a scheduled repeat of the call.
+        vm.prank(w.governance);
+        m.schedule(target, data, 0);
+        vm.prank(w.dao);
+        m.cancel(w.governance, target, data);
     }
 
     /// @dev After a completed pledge Collateralization's counters are within the ParameterStore's caps.

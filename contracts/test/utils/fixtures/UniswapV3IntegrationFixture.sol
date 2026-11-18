@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {ILPVaultBase} from "../../../src/custody/lp-vault/ILPVaultBase.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
 import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
@@ -14,7 +15,7 @@ import {MintableToken, MockNFPM, MockV3Factory, MockV3Pool} from "../mocks/Unisw
 /// @notice The Uniswap v3 LPVault (mock-factory harness) with the real Lock, a mock NFPM, factory and pools, and two
 /// bound markets of one USDC/USDT pair: market 1 on `[-50, 50]` of the 0.05% pool (spacing 10, 9 vault decimals) and
 /// market 2 on the full range of the 0.3% pool (spacing 60, 6 vault decimals). Collateralization, the MarketRegistry,
-/// the AaveAdapter, LPVaultSwap and the timelock are named addresses.
+/// the AaveAdapter, LPVaultSwap and the address(accessManager) are named addresses.
 /// @dev Suites set `isolate = false`: `_asColl` takes the Lock as the AaveAdapter, makes one call as Collateralization
 /// and frees the Lock, as one outer entry point would.
 abstract contract UniswapV3IntegrationFixture is AvanaTest, ILPVaultBase {
@@ -29,7 +30,6 @@ abstract contract UniswapV3IntegrationFixture is AvanaTest, ILPVaultBase {
     address internal lpVaultSwap = makeAddr("lpVaultSwap");
     address internal coll = makeAddr("collateralization");
     address internal registry = makeAddr("marketRegistry");
-    address internal timelock = makeAddr("timelock");
 
     Lock internal lock;
     MockV3Factory internal v3Factory;
@@ -53,13 +53,14 @@ abstract contract UniswapV3IntegrationFixture is AvanaTest, ILPVaultBase {
             coll,
             registry,
             address(lock),
-            timelock,
+            address(accessManager),
             address(nfpm),
             address(v3Factory),
             v3Factory.poolInitCodeHash()
         );
         _bind(M1, address(pool500), M1_LOWER, M1_UPPER);
         _bind(M2, address(pool3000), -FULL_60, FULL_60);
+        _bindAccess(AvanaAccess.Kind.LpVault, address(vault));
         vm.label(address(vault), "UniswapV3LPVault");
         vm.label(address(nfpm), "NFPM(mock)");
         vm.label(address(v3Factory), "V3Factory(mock)");

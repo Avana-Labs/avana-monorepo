@@ -72,11 +72,11 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         address collateralization,
         address marketRegistry,
         address lock,
-        address timelock,
+        address authority,
         address positionManager,
         address referenceFactory,
         uint256 blockTime
-    ) ClLPVaultBase(integrationId, collateralization, marketRegistry, lock, timelock) {
+    ) ClLPVaultBase(integrationId, collateralization, marketRegistry, lock, authority) {
         uint256 known = _knownBlockTime(block.chainid);
         if (blockTime == 0 || blockTime > MAX_BLOCK_TIME || (known != 0 && blockTime != known)) {
             revert InvalidDeployment();
@@ -87,8 +87,8 @@ contract UniswapV4Integration is ClLPVaultCustody, ClLPVaultMarkets, IUniswapV4I
         ) revert InvalidDeployment();
         if (
             positionManager == collateralization || positionManager == marketRegistry || positionManager == lock
-                || positionManager == timelock || referenceFactory == collateralization
-                || referenceFactory == marketRegistry || referenceFactory == lock || referenceFactory == timelock
+                || positionManager == authority || referenceFactory == collateralization
+                || referenceFactory == marketRegistry || referenceFactory == lock || referenceFactory == authority
         ) revert InvalidDeployment();
         address pm = IUniswapV4PositionManager(positionManager).poolManager();
         address weth = IUniswapV4PositionManager(positionManager).WETH9();

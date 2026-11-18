@@ -49,25 +49,25 @@ contract UniswapV3IntegrationMarketsUnitTest is UniswapV3IntegrationFixture {
         address f = address(v3Factory);
         address l = address(lock);
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(0, coll, registry, l, timelock, n, f, 12);
+        new UniswapV3Integration(0, coll, registry, l, address(accessManager), n, f, 12);
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(1, address(0), registry, l, timelock, n, f, 12);
+        new UniswapV3Integration(1, address(0), registry, l, address(accessManager), n, f, 12);
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(1, coll, coll, l, timelock, n, f, 12);
+        new UniswapV3Integration(1, coll, coll, l, address(accessManager), n, f, 12);
         vm.expectRevert(InvalidDeployment.selector);
         new UniswapV3Integration(1, coll, registry, l, l, n, f, 12);
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(1, coll, registry, l, timelock, address(0), f, 12);
+        new UniswapV3Integration(1, coll, registry, l, address(accessManager), address(0), f, 12);
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(1, coll, registry, l, timelock, n, n, 12);
+        new UniswapV3Integration(1, coll, registry, l, address(accessManager), n, n, 12);
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(1, coll, registry, l, timelock, n, timelock, 12);
+        new UniswapV3Integration(1, coll, registry, l, address(accessManager), n, address(accessManager), 12);
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(1, coll, registry, l, timelock, alice, f, 12);
+        new UniswapV3Integration(1, coll, registry, l, address(accessManager), alice, f, 12);
         // An NFPM whose factory() is another factory.
         MockNFPM wrong = new MockNFPM(address(new MockV3Factory()));
         vm.expectRevert(InvalidDeployment.selector);
-        new UniswapV3Integration(1, coll, registry, l, timelock, address(wrong), f, 12);
+        new UniswapV3Integration(1, coll, registry, l, address(accessManager), address(wrong), f, 12);
     }
 
     // TEST-108 verifies: REQ-VAULT-155, REQ-AMM-CORE-001, REQ-AMM-CORE-002, REQ-AMM-CORE-009, REQ-AMM-V3-001, SPEC-AMM-CORE-002
@@ -77,7 +77,7 @@ contract UniswapV3IntegrationMarketsUnitTest is UniswapV3IntegrationFixture {
         assertEq(vault.COLLATERALIZATION(), coll);
         assertEq(vault.MARKET_REGISTRY(), registry);
         assertEq(vault.LOCK(), address(lock));
-        assertEq(vault.TIMELOCK(), timelock);
+        assertEq(vault.authority(), address(accessManager));
         assertEq(vault.NFPM(), address(nfpm));
         assertEq(vault.FACTORY(), address(v3Factory));
         assertEq(vault.AMM_PROTOCOL(), keccak256("UNISWAP_V3"));
@@ -442,7 +442,7 @@ contract UniswapV3IntegrationMarketsUnitTest is UniswapV3IntegrationFixture {
     // TEST-264 verifies: REQ-AMM-V3-002
     function test_TEST_264_harnessDiffersOnlyInTheInitCodeHash() public {
         UniswapV3Integration prod = new UniswapV3Integration(
-            INTEGRATION, coll, registry, address(lock), timelock, address(nfpm), address(v3Factory), 12
+            INTEGRATION, coll, registry, address(lock), address(accessManager), address(nfpm), address(v3Factory), 12
         );
         assertEq(prod.POOL_INIT_CODE_HASH(), 0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54);
         // The production contract refuses a mock pool: its CREATE2 address is not the canonical one.

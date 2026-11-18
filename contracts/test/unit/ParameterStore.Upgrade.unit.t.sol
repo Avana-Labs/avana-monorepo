@@ -14,14 +14,15 @@ import {ParameterStoreTightenLogic} from "../../src/policy/parameter-store/Param
 import {ParameterStoreLogics} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
+import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {VmSafe} from "forge-std/Vm.sol";
 
-/// @notice Upgrades of the ParameterStore (REQ-PSTORE-001, REQ-PSTORE-003): only `APPLICATION_ADMIN` through a
-/// normal-delay operation, every namespaced value and every role kept, the new implementation's logic contracts
+/// @notice Upgrades of the ParameterStore (REQ-PSTORE-001, REQ-PSTORE-003): only the governance role through a
+/// governance-delay operation, every namespaced value and the authority kept, the new implementation's logic contracts
 /// serving the setters from then on, and the incident-response round trip of REQ-CONFIG-071 run through the real
-/// timelock at its delays.
+/// AccessManager at its delays.
 contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
     bytes32 internal constant IMPL_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
@@ -31,37 +32,32 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
     }
 
     function _freshLogics() internal returns (ParameterStoreLogics memory l) {
-        address tl = address(timelock);
         address reg = address(registry);
         l = ParameterStoreLogics({
-            tighten: address(new ParameterStoreTightenLogic(tl, reg, BLOCK_TIME)),
-            loosen: address(new ParameterStoreLoosenLogic(tl, reg, BLOCK_TIME)),
-            listing: address(new ParameterStoreListingLogic(tl, reg, BLOCK_TIME)),
-            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, reg, BLOCK_TIME)),
-            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, reg, BLOCK_TIME))
+            tighten: address(new ParameterStoreTightenLogic(reg, BLOCK_TIME)),
+            loosen: address(new ParameterStoreLoosenLogic(reg, BLOCK_TIME)),
+            listing: address(new ParameterStoreListingLogic(reg, BLOCK_TIME)),
+            adminOracle: address(new ParameterStoreAdminOracleLogic(reg, BLOCK_TIME)),
+            adminRisk: address(new ParameterStoreAdminRiskLogic(reg, BLOCK_TIME))
         });
     }
 
     function _upgrade(
         address next
     ) internal {
-        _run(
-            _one(address(store), abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (next, bytes("")))),
-            keccak256(abi.encode(next))
-        );
+        _runScheduled(address(store), abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (next, bytes(""))));
     }
 
     // TEST-062 verifies: REQ-PSTORE-001, INV-065
-    function test_TEST_062_upgradeKeepsEveryValueAndRole() public {
-        vm.startPrank(address(timelock));
+    function test_TEST_062_upgradeKeepsEveryValueAndTheAuthority() public {
+        vm.startPrank(governor);
         store.tightenRouteDepthThreshold(M, usdc, gho, 1, 7e8);
         store.setCoverageRatioBps(1500);
-        store.grantRole(AvanaRoles.APPLICATION_RISK_STEWARD, alice);
         store.loosenMarketUsdCap(M, 6_000_000e8);
         vm.stopPrank();
         bytes32 key = keccak256(abi.encode(bytes32("marketUsdCap"), bytes32(M)));
         uint64 stamped = store.lastLoosenedAt(key);
-        ParameterStore next = new ParameterStore(address(timelock), address(registry), BLOCK_TIME, _freshLogics());
+        ParameterStore next = new ParameterStore(address(registry), BLOCK_TIME, _freshLogics());
         _upgrade(address(next));
         assertEq(address(uint160(uint256(vm.load(address(store), IMPL_SLOT)))), address(next));
         assertEq(store.routeDepthThreshold(M, usdc, gho, 1), 7e8);
@@ -70,8 +66,7 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
         assertEq(store.lastLoosenedAt(key), stamped);
         assertEq(store.tokenCollateralFactorBps(usdc), 7800);
         assertEq(store.getFeed(address(fUsdc)).feedMaxAge, 88_200);
-        assertTrue(store.hasRole(AvanaRoles.APPLICATION_RISK_STEWARD, alice));
-        assertTrue(store.hasRole(AvanaRoles.APPLICATION_ADMIN, address(timelock)));
+        assertEq(store.authority(), address(accessManager));
         // The upgrade waited a normal delay, so the next loosening runs; the one after it is spaced from it.
         assertGe(block.timestamp, uint256(stamped) + NORMAL_DELAY);
         _tl();
@@ -87,7 +82,7 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
     // TEST-062 verifies: REQ-PSTORE-001
     function test_TEST_062_newLogicsServeTheSettersAfterUpgrade() public {
         ParameterStoreLogics memory fresh = _freshLogics();
-        ParameterStore next = new ParameterStore(address(timelock), address(registry), BLOCK_TIME, fresh);
+        ParameterStore next = new ParameterStore(address(registry), BLOCK_TIME, fresh);
         _upgrade(address(next));
         // The setter now runs in the new tighten logic: the state is the proxy's, the call the new logic's.
         vm.startStateDiffRecording();
@@ -110,25 +105,25 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
 
     // TEST-062 verifies: REQ-PSTORE-001, REQ-PSTORE-002, INV-065, REQ-ACCESS-015, REQ-ACCESS-031
     function test_TEST_062_onlyTheAdminUpgrades() public {
-        ParameterStore next = new ParameterStore(address(timelock), address(registry), BLOCK_TIME, logics);
+        ParameterStore next = new ParameterStore(address(registry), BLOCK_TIME, logics);
         address safe = makeAddr("jointConfigurationSafe");
-        vm.prank(address(timelock));
-        store.grantRole(AvanaRoles.APPLICATION_RISK_STEWARD, safe);
-        address[2] memory callers = [safe, governanceMultisig];
+        vm.prank(aaveGovernanceExecutor);
+        accessManager.grantRole(AvanaRoles.TIGHTEN_ROLE, safe, 0);
+        address[2] memory callers = [safe, attacker];
         for (uint256 i = 0; i < callers.length; ++i) {
             vm.prank(callers[i]);
-            vm.expectRevert(
-                abi.encodeWithSelector(
-                    IAccessControl.AccessControlUnauthorizedAccount.selector, callers[i], AvanaRoles.APPLICATION_ADMIN
-                )
-            );
+            vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, callers[i]));
             UUPSUpgradeable(address(store)).upgradeToAndCall(address(next), "");
         }
-        // Through the timelock, an upgrade is never short.
-        assertEq(
-            _required(_one(address(store), abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (address(next), "")))),
-            NORMAL_DELAY
-        );
+        // The governance Safe may not call it directly either: its role carries the governance delay, so the call
+        // must be scheduled first.
+        bytes memory data = abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (address(next), ""));
+        bytes32 opId = accessManager.hashOperation(governanceMultisig, address(store), data);
+        vm.prank(governanceMultisig);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManager.AccessManagerNotScheduled.selector, opId));
+        UUPSUpgradeable(address(store)).upgradeToAndCall(address(next), "");
+        // Through the AccessManager, an upgrade is never short.
+        assertEq(_delayOf(address(store), data), NORMAL_DELAY);
     }
 
     // TEST-062 verifies: REQ-PSTORE-001
@@ -148,16 +143,16 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
     function test_TEST_225_incidentTighteningReturnsOneStepPerDelay() public {
         // Market slippage tightened from 100 to 40 bps by a short-delay operation.
         uint256 t0 = block.timestamp;
-        _run(_one(address(store), abi.encodeCall(store.tightenSlippageAllowanceBps, (M, 40))), bytes32("t"));
+        _runScheduled(address(store), abi.encodeCall(store.tightenSlippageAllowanceBps, (M, 40)));
         assertEq(block.timestamp, t0 + SHORT_DELAY);
         assertEq(store.getMarketParams(M).slippageAllowanceBps, 40);
         // Back to 100: 65, then 90, then 100, each at the normal delay and one normal delay after the previous one.
         uint16[3] memory steps = [uint16(65), 90, 100];
         uint256 first = 0;
         for (uint256 i = 0; i < steps.length; ++i) {
-            Call[] memory c = _one(address(store), abi.encodeCall(store.loosenSlippageAllowanceBps, (M, steps[i])));
-            assertEq(_required(c), NORMAL_DELAY);
-            _run(c, bytes32(uint256(i + 1)));
+            bytes memory c = abi.encodeCall(store.loosenSlippageAllowanceBps, (M, steps[i]));
+            assertEq(_delayOf(address(store), c), NORMAL_DELAY);
+            _runScheduled(address(store), c);
             if (i == 0) first = block.timestamp;
             assertEq(store.getMarketParams(M).slippageAllowanceBps, steps[i]);
         }
@@ -168,30 +163,28 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
         _tl();
         store.tightenSlippageAllowanceBps(M, 40);
         vm.warp(block.timestamp + NORMAL_DELAY);
-        Call[] memory big = _one(address(store), abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 66)));
-        _schedule(governanceMultisig, big, NORMAL_DELAY, bytes32("big"));
-        vm.warp(block.timestamp + NORMAL_DELAY);
-        (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(big);
-        vm.prank(attacker);
+        bytes memory big = abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 66));
+        (, uint256 readyAt) = _scheduleOp(governanceMultisig, address(store), big);
+        vm.warp(readyAt);
+        vm.prank(governanceMultisig);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IParameterStoreBase.LoosenStepTooLarge.selector,
                 keccak256(abi.encode(bytes32("slippageAllowanceBps"), bytes32(M)))
             )
         );
-        timelock.executeBatch(t, v, p, bytes32(0), bytes32("big"));
+        accessManager.execute(address(store), big);
     }
 
     // TEST-063 verifies: REQ-PSTORE-016, REQ-PSTORE-002, REQ-CONFIG-053
     function test_TEST_063_deficitTighteningAtTheShortDelay() public {
         _tl();
         store.loosenDeficitMax(address(hub), gho, 10_000e18);
-        Call[] memory c = _one(address(store), abi.encodeCall(store.tightenDeficitMax, (address(hub), gho, 5000e18)));
-        assertEq(_required(c), SHORT_DELAY);
-        _run(c, bytes32("deficit"));
+        bytes memory c = abi.encodeCall(store.tightenDeficitMax, (address(hub), gho, 5000e18));
+        assertEq(_delayOf(address(store), c), SHORT_DELAY);
+        _runScheduled(address(store), c);
         assertEq(store.deficitMax(address(hub), gho), 5000e18);
-        Call[] memory back =
-            _one(address(store), abi.encodeCall(store.loosenDeficitMax, (address(hub), gho, 10_000e18)));
-        assertEq(_required(back), NORMAL_DELAY);
+        bytes memory back = abi.encodeCall(store.loosenDeficitMax, (address(hub), gho, 10_000e18));
+        assertEq(_delayOf(address(store), back), NORMAL_DELAY);
     }
 }

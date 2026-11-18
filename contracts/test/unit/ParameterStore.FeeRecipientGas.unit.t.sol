@@ -36,8 +36,8 @@ contract OversizedAnswerCandidate {
     }
 }
 
-/// @notice A candidate whose `TIMELOCK()` burns `burn` gas before answering `answer` with one word.
-contract HeavyTimelockCandidate {
+/// @notice A candidate whose `authority()` burns `burn` gas before answering `answer` with one word.
+contract HeavyAuthorityCandidate {
     address internal immutable _ANSWER;
     uint256 internal immutable _BURN;
 
@@ -49,7 +49,7 @@ contract HeavyTimelockCandidate {
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function TIMELOCK() external view returns (address) {
+    function authority() external view returns (address) {
         uint256 start = gasleft();
         while (start - gasleft() < _BURN) {}
         return _ANSWER;
@@ -64,7 +64,7 @@ contract HeavyTimelockCandidate {
 contract ParameterStoreFeeRecipientGasUnitTest is ParameterStoreFixture {
     /// @dev `PROBE_GAS` of `ParameterStoreAdminRiskLogic`.
     uint256 internal constant PROBE_GAS = 30_000;
-    /// @dev The identity probes a candidate with code answers when none matches: `logicConfig()`, `TIMELOCK()`,
+    /// @dev The identity probes a candidate with code answers when none matches: `logicConfig()`, `authority()`,
     /// `MARKET_REGISTRY()`, `ADAPTER()`, `WALLET()`, `SPOKE()`, `MARKET_ID()`.
     uint256 internal constant PROBES = 7;
 
@@ -75,7 +75,7 @@ contract ParameterStoreFeeRecipientGasUnitTest is ParameterStoreFixture {
     function _cost(
         address candidate
     ) internal returns (bool ok, uint256 used) {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         uint256 g0 = gasleft();
         (ok,) = address(store).call{gas: 5_000_000}(abi.encodeCall(store.setFeeRecipient, (candidate)));
         used = g0 - gasleft();
@@ -96,14 +96,14 @@ contract ParameterStoreFeeRecipientGasUnitTest is ParameterStoreFixture {
     }
 
     // TEST-062 verifies: REQ-CONFIG-056
-    function test_TEST_062_oversizedAnswerHeadedByTheTimelockIsNoWord() public {
+    function test_TEST_062_oversizedAnswerHeadedByTheAuthorityIsNoWord() public {
         // A word is exactly 32 bytes: a 64-byte or 1 MB answer whose first word is the timelock is no identity, the
         // same as before the bound; only the exact word marks the candidate.
-        OversizedAnswerCandidate exact = new OversizedAnswerCandidate(32, uint160(address(timelock)));
-        OversizedAnswerCandidate twoWords = new OversizedAnswerCandidate(64, uint160(address(timelock)));
-        OversizedAnswerCandidate huge = new OversizedAnswerCandidate(1_000_000, uint160(address(timelock)));
+        OversizedAnswerCandidate exact = new OversizedAnswerCandidate(32, uint160(address(accessManager)));
+        OversizedAnswerCandidate twoWords = new OversizedAnswerCandidate(64, uint160(address(accessManager)));
+        OversizedAnswerCandidate huge = new OversizedAnswerCandidate(1_000_000, uint160(address(accessManager)));
         (bool ok,) = _cost(address(exact));
-        assertFalse(ok, "exact timelock word accepted");
+        assertFalse(ok, "exact authority word accepted");
         (ok,) = _cost(address(twoWords));
         assertTrue(ok, "two-word answer read as a word");
         (ok,) = _cost(address(huge));
@@ -113,12 +113,12 @@ contract ParameterStoreFeeRecipientGasUnitTest is ParameterStoreFixture {
 
     // TEST-062 verifies: REQ-CONFIG-056
     function test_TEST_062_avanaGettersFitTheProbeGas() public {
-        // Real getters behind their proxies and the logic contracts: each costs well under a third of PROBE_GAS.
+        // Real getters behind their proxies and the logic contracts: each costs under half of PROBE_GAS (authority() is a cold storage read behind a cold proxy and implementation).
         ProxyManager pm = new ProxyManager(makeAddr("adapter"), address(new StubRegistryMock()));
         vm.prank(makeAddr("adapter"));
         address proxy = pm.deployProxy(alice, address(spoke), M);
         bytes[6] memory calls = [
-            abi.encodeWithSignature("TIMELOCK()"),
+            abi.encodeWithSignature("authority()"),
             abi.encodeWithSignature("MARKET_REGISTRY()"),
             abi.encodeCall(IParameterStoreLogic.logicConfig, ()),
             abi.encodeWithSignature("ADAPTER()"),
@@ -131,21 +131,21 @@ contract ParameterStoreFeeRecipientGasUnitTest is ParameterStoreFixture {
             (bool ok, bytes memory ret) = targets[i].staticcall{gas: PROBE_GAS}(calls[i]);
             uint256 used = g0 - gasleft();
             assertTrue(ok && ret.length >= 32, "getter failed within the probe gas");
-            assertLt(used, PROBE_GAS / 3, "getter too close to the probe gas");
+            assertLt(used, PROBE_GAS / 2, "getter too close to the probe gas");
         }
     }
 
     // TEST-062 verifies: REQ-CONFIG-056
     function test_TEST_062_noGasLimitAcceptsAStarvedAvanaCandidate() public {
-        // A candidate that answers TIMELOCK() with this chain's timelock after burning 20,000 gas: within the probe
+        // A candidate that answers authority() with this chain's timelock after burning 20,000 gas: within the probe
         // gas, so refused; under any transaction gas limit the setter either refuses it or runs out of gas, never
         // records it.
-        HeavyTimelockCandidate heavy = new HeavyTimelockCandidate(address(timelock), 20_000);
+        HeavyAuthorityCandidate heavy = new HeavyAuthorityCandidate(address(accessManager), 20_000);
         bytes memory refused = abi.encodeWithSelector(IParameterStoreBase.InvalidFeeRecipient.selector, heavy);
         // An out-of-gas failure of the delegated body reaches the caller as OpenZeppelin's `FailedCall()`.
         bytes memory outOfGas = abi.encodeWithSignature("FailedCall()");
         for (uint256 limit = 20_000; limit <= 200_000; limit += 1000) {
-            vm.prank(address(timelock));
+            vm.prank(governor);
             (bool ok, bytes memory ret) =
                 address(store).call{gas: limit}(abi.encodeCall(store.setFeeRecipient, (address(heavy))));
             assertFalse(ok, "starved probe accepted an Avana candidate");

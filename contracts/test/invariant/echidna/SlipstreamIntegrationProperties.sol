@@ -20,7 +20,7 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 /// `donateLiquidity`, `push`, `stealAttempt`; each selects one of four NFTs by `i % 4`.
 contract SlipstreamIntegrationProperties {
     address internal constant SWAP = address(0x5A9);
-    address internal constant TIMELOCK = address(0x713E);
+    address internal constant AUTHORITY = address(0x713E);
     address internal constant RECIPIENT = address(0xBEEF);
     uint8 internal constant GEN = 2;
 
@@ -48,7 +48,7 @@ contract SlipstreamIntegrationProperties {
         EchidnaToken b = new EchidnaToken();
         pool = EchidnaCLPool(gen2Factory.createPool(address(a), address(b), address(npms[GEN])));
         registrar = new SlipRegistrar();
-        vault = new SlipstreamIntegration(1, address(this), address(registrar), address(lock), TIMELOCK, n, f);
+        vault = new SlipstreamIntegration(1, address(this), address(registrar), address(lock), AUTHORITY, n, f);
         registrar.bind(vault, address(pool));
         for (uint256 i = 0; i < 4; ++i) {
             ids[i] = npms[GEN].mint(address(this), pool.token0(), pool.token1(), -50, 50, uint128(1e12 * (i + 1)));

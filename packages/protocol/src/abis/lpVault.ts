@@ -70,19 +70,6 @@ export const lpVaultAbi = [
   },
   {
     "type": "function",
-    "name": "TIMELOCK",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "timelock",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "bindMarket",
     "inputs": [
       {
@@ -1139,11 +1126,6 @@ export const lpVaultAbi = [
   {
     "type": "error",
     "name": "NotStray",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotTimelock",
     "inputs": []
   },
   {

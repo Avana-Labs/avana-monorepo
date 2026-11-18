@@ -10,7 +10,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 
 /// @title FullStackGovernanceIntegrationTest
 /// @notice The exit window of a hostile AaveAdapter upgrade on the full real stack (`FullStackMarkets`): the upgrade is
-/// an operation of the real AvanaTimelock at the normal delay, and the exits run through the real AaveAdapter,
+/// an operation of the real AccessManager at the governance delay, and the exits run through the real AaveAdapter,
 /// Collateralization, RiskModule and Aave V4 Spoke.
 /// @dev The borrower holds 3,000 GHO and 2,000 USDC of debt and two pledged positions in market A and a third in
 /// market B; `HostileAdapter` is the hostile implementation a test installs on purpose.
@@ -60,7 +60,7 @@ contract FullStackGovernanceIntegrationTest is FullStackMarkets {
 
     /// @notice The governance multisig schedules an AaveAdapter upgrade to a hostile implementation at the normal
     /// delay (5 days); well inside the delay the borrower repays both debt reserves and withdraws all three positions
-    /// (two repays, three withdrawals); a canceller then cancels the operation. In a second run the operation becomes
+    /// (two repays, three withdrawals); the DAO then cancels the operation. In a second run the operation becomes
     /// ready and executes, and the borrower's accounts hold nothing for the hostile code to touch.
     // TEST-195 verifies: REQ-ADAPTER-060, REQ-ADAPTER-001, REQ-ADAPTER-003, REQ-ADAPTER-099, REQ-PROXY-086
     function test_TEST_195_exitInsideTheDelay() public {
@@ -68,23 +68,21 @@ contract FullStackGovernanceIntegrationTest is FullStackMarkets {
         bytes memory call = _upgradeCall(hostile);
         assertEq(_requiredDelay(adapter, call), NORMAL_DELAY, "an Adapter upgrade takes the normal delay");
         uint256 scheduledAt = block.timestamp;
-        vm.prank(governanceMultisig);
-        timelock.schedule(adapter, 0, call, bytes32(0), bytes32("hostile"), NORMAL_DELAY);
-        bytes32 id = timelock.hashOperation(adapter, 0, call, bytes32(0), bytes32("hostile"));
+        (bytes32 id,) = _scheduleOp(governanceMultisig, adapter, call);
         uint256 snap = vm.snapshotState();
         vm.warp(block.timestamp + 1 hours);
         _refreshFeeds();
         _exitEverything();
         assertLt(block.timestamp, scheduledAt + NORMAL_DELAY, "every exit well inside the delay");
-        vm.prank(emergencyGuardian);
-        timelock.cancel(id);
-        assertFalse(timelock.isOperation(id), "cancelled");
+        vm.prank(aaveGovernanceExecutor);
+        accessManager.cancel(governanceMultisig, adapter, call);
+        assertEq(accessManager.getSchedule(id), 0, "cancelled");
         vm.revertToState(snap);
         // Second run: the exits, then the operation becomes ready and executes.
         _exitEverything();
         vm.warp(scheduledAt + NORMAL_DELAY);
-        vm.prank(attacker);
-        timelock.execute(adapter, 0, call, bytes32(0), bytes32("hostile"));
+        vm.prank(governanceMultisig);
+        accessManager.execute(adapter, call);
         assertEq(
             address(
                 uint160(uint256(vm.load(adapter, 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc)))

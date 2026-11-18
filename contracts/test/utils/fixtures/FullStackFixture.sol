@@ -117,7 +117,7 @@ abstract contract FullStackFixture is FullStackDeploy {
     // ─── Hub, integration and Spoke ───
 
     function _recordSpoke() private {
-        address tl = address(timelock);
+        address tl = governor;
         address[] memory amm = new address[](2);
         if (_realStack()) {
             flashSource = deployCode(
@@ -134,7 +134,6 @@ abstract contract FullStackFixture is FullStackDeploy {
         vm.startPrank(tl);
         vtFactory.registerIntegration(V3, integration);
         registry.recordHub(aave.hub, RiskTier.Stable);
-        registry.registerIntegration(V3, integration, makeAddr("clPricing"));
         registry.recordIntegrationContracts(V3, amm);
         registry.finalizeIntegrationContracts(V3);
         registry.setFlashSource(flashSource);
@@ -164,7 +163,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         f = new OracleFeedMock(8, 1, 1e18);
         f.push(int256(price), block.timestamp);
         vm.label(address(f), label);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.setFeed(address(f), _feedDef());
     }
 
@@ -196,7 +195,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         d.primaryRoute = _list(address(p));
         d.alternateRoute = _list(address(a));
         d.issuerProbe = IssuerProbe.None;
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.listToken(address(token), d);
         store.setTokenCollateralFactorBps(address(token), address(token) == address(usdc) ? USDC_CF : USDT_CF);
         vm.stopPrank();
@@ -233,7 +232,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         ghoFeed = _feed("GHO/USD", 1e8);
         TokenDef memory d;
         d.primaryRoute = _list(address(ghoFeed));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(address(gho), d);
         ghoPrice = new CollPriceSource(1e8);
         (ghoAssetId, ghoReserveId) = _addDebtAsset(gho, 18, address(ghoPrice));
@@ -327,7 +326,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         if (_realStack()) {
             cs = deployCode(
                 "AvanaFirstLossReserve.sol:AvanaFirstLossReserve:default",
-                abi.encode(aave.hub, asset, assetId, aave.accessManager, 1_209_600)
+                abi.encode(aave.hub, asset, assetId, aave.accessManager)
             );
             uint24 maxRp = IAaveV4Hub(aave.hub).MAX_RISK_PREMIUM_THRESHOLD();
             vm.prank(aaveDao);
@@ -349,7 +348,7 @@ abstract contract FullStackFixture is FullStackDeploy {
             cs = address(m);
         }
         firstLossReserveOf[asset] = cs;
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.setAvanaFirstLossReserve(aave.hub, asset, cs);
         vm.stopPrank();
     }
@@ -358,7 +357,7 @@ abstract contract FullStackFixture is FullStackDeploy {
         DebtReserveDef memory def,
         uint256 floorRounding
     ) internal {
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.enableDebtReserve(aave.cdpSpoke, def);
         store.setDebtAssetParams(def.asset, DebtReserveParams(floorRounding));
         vm.stopPrank();

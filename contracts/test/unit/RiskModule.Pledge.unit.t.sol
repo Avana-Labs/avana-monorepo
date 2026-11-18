@@ -34,7 +34,7 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
 
     // TEST-012 verifies: REQ-RISK-009, REQ-RISK-014, INV-026, REQ-ACCESS-036, REQ-VAULT-144, REQ-RISK-034
     function test_TEST_012_offboardingAndNotActive() public {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setMarketOffboarding(mid);
         PledgeCounters memory k = _counters();
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.MarketOffboarding.selector, mid));

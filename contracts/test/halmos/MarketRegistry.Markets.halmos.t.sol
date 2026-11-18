@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
@@ -43,6 +44,8 @@ import {
     RegistryRouteMock,
     RegistryTokenMock
 } from "../utils/mocks/MarketRegistryMocks.sol";
+import {HalmosAccess} from "./HalmosAccess.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Test} from "forge-std/Test.sol";
 
@@ -135,7 +138,7 @@ contract HalmosVaultTokenFactoryMock {
 /// @dev World: the Stable LP Hub, integration 1, the CDP Spoke with GHO enabled, USDC and USDT listed, market 1
 /// (USDC/USDT `[-50, 50]`) `Registered` with its Aave payload and routes in place, and a vault token for a second
 /// shape `[-100, 100]` that names market 1's LPOracle, so listing it collides with market 1 on the LPOracle key. Actors
-/// are constant addresses; the timelock is an EOA holding `APPLICATION_ADMIN`.
+/// are constant addresses; the timelock is an EOA holding the roles of the AccessManager.
 contract MarketRegistryMarketsHalmosTest is Test {
     address internal constant TIMELOCK = address(0x7311);
     address internal constant EXECUTOR = address(0x7312);
@@ -153,6 +156,7 @@ contract MarketRegistryMarketsHalmosTest is Test {
     uint256 internal constant VT_RESERVE = 1;
 
     IMarketRegistry internal registry;
+    AccessManager internal manager;
     HalmosVaultTokenFactoryMock internal factory;
     RegistryParameterStoreMock internal ps;
     RegistryCollateralizationMock internal collat;
@@ -167,6 +171,7 @@ contract MarketRegistryMarketsHalmosTest is Test {
     address internal oracle1;
 
     function setUp() public {
+        manager = HalmosAccess.deploy(TIMELOCK);
         collat = new RegistryCollateralizationMock(LOCK);
         ps = new RegistryParameterStoreMock();
         RegistryRiskModuleMock rm = new RegistryRiskModuleMock();
@@ -174,7 +179,6 @@ contract MarketRegistryMarketsHalmosTest is Test {
         RegistrySpokeImplMock spokeImpl = new RegistrySpokeImplMock();
         factory = new HalmosVaultTokenFactoryMock(address(adapter), address(collat), LP_VAULT_SWAP);
         MarketRegistryImmutables memory im = MarketRegistryImmutables({
-            timelock: TIMELOCK,
             aaveGovernanceExecutor: EXECUTOR,
             vaultTokenFactory: address(factory),
             aaveAdapter: address(adapter),
@@ -197,8 +201,9 @@ contract MarketRegistryMarketsHalmosTest is Test {
         l.windDown = address(new MarketRegistryWindDownLogic(im));
         MarketRegistry impl = new MarketRegistry(im, l);
         registry = IMarketRegistry(
-            address(new ERC1967Proxy(address(impl), abi.encodeCall(MarketRegistry.initialize, (TIMELOCK))))
+            address(new ERC1967Proxy(address(impl), abi.encodeCall(MarketRegistry.initialize, (address(manager)))))
         );
+        HalmosAccess.bind(manager, AvanaAccess.Kind.MarketRegistry, address(registry));
         hub = new RegistryHubMock();
         spoke = new RegistrySpokeMock();
         RegistryAaveOracleMock aaveOracle = new RegistryAaveOracleMock();
@@ -230,7 +235,6 @@ contract MarketRegistryMarketsHalmosTest is Test {
         vm.startPrank(TIMELOCK);
         factory.registerIntegration(V3, address(lpVault));
         registry.recordHub(address(hub), RiskTier.Stable);
-        registry.registerIntegration(V3, address(lpVault), PRICING);
         // The integration's position manager, recorded and finalized so its routes can be set (REQ-MREG-035).
         address[] memory amm = new address[](1);
         amm[0] = address(new RegistryTokenMock(18));

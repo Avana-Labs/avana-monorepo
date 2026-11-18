@@ -324,7 +324,7 @@ contract RiskModuleDriftUnitTest is RiskModuleFixture {
         assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(DriftReason.None));
         assertEq(riskModule.getBreakerStatus(mid), 0);
         // A drift on the Offboarding market is found, and holds its breaker.
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setMarketOffboarding(mid);
         _vtConfig(true, false, false);
         assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(DriftReason.ReceiveSharesOn));

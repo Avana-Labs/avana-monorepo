@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
@@ -17,13 +18,15 @@ import {
     RiskTier
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {RegistryAdapterMock, RegistryFlashSourceMock} from "../utils/mocks/MarketRegistryMocks.sol";
+import {HalmosAccess} from "./HalmosAccess.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title MarketRegistryHalmosTest
 /// @notice Symbolic checks of the real MarketRegistry (proxy, router and logic contracts) for every caller and input:
 /// the flash source never lends from a recorded Hub.
-/// @dev `TIMELOCK` holds `APPLICATION_ADMIN`; every other address is a stranger. Two Hubs are recorded; the flash
+/// @dev `TIMELOCK` holds the governance and tighten roles of the AccessManager; every other address is a stranger. Two Hubs are recorded; the flash
 /// source lends from `LENDER`, the Aave V3 Pool behind it.
 contract MarketRegistryHalmosTest is Test {
     address internal constant TIMELOCK = address(0x7111);
@@ -33,14 +36,15 @@ contract MarketRegistryHalmosTest is Test {
     address internal constant LENDER = address(0x7117);
 
     IMarketRegistry internal registry;
+    AccessManager internal manager;
     address internal flash;
     RegistryAdapterMock internal adapter;
     MarketRegistryImmutables internal im;
 
     function setUp() public {
+        manager = HalmosAccess.deploy(TIMELOCK);
         adapter = new RegistryAdapterMock();
         im = MarketRegistryImmutables({
-            timelock: TIMELOCK,
             aaveGovernanceExecutor: EXECUTOR,
             vaultTokenFactory: address(0x7201),
             aaveAdapter: address(adapter),
@@ -63,8 +67,9 @@ contract MarketRegistryHalmosTest is Test {
         l.windDown = address(new MarketRegistryWindDownLogic(im));
         MarketRegistry impl = new MarketRegistry(im, l);
         registry = IMarketRegistry(
-            address(new ERC1967Proxy(address(impl), abi.encodeCall(MarketRegistry.initialize, (TIMELOCK))))
+            address(new ERC1967Proxy(address(impl), abi.encodeCall(MarketRegistry.initialize, (address(manager)))))
         );
+        HalmosAccess.bind(manager, AvanaAccess.Kind.MarketRegistry, address(registry));
         vm.startPrank(TIMELOCK);
         registry.recordHub(HUB, RiskTier.Stable);
         registry.recordHub(OTHER_HUB, RiskTier.Correlated);

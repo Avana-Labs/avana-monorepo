@@ -9,8 +9,5 @@ pragma solidity 0.8.28;
 interface IParameterStoreLogic {
     /// @notice The logic contract's kind and implementation immutables.
     /// @return kind `keccak256` of the logic contract's name.
-    function logicConfig()
-        external
-        view
-        returns (bytes32 kind, address timelock, address marketRegistry, uint32 chainBlockTime);
+    function logicConfig() external view returns (bytes32 kind, address marketRegistry, uint32 chainBlockTime);
 }

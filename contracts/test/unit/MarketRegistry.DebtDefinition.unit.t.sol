@@ -34,7 +34,7 @@ contract MarketRegistryDebtDefinitionUnitTest is MarketRegistryFixture {
         _setUsdcReserve(address(usdc), address(hub), USDC_ASSET, 6, true, 0, 0);
         aaveOracle.setSource(USDC_RESERVE, address(usdcOracle));
         ps.setStressRise(address(usdc), 500);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.setAvanaFirstLossReserve(address(hub), address(usdc), address(usdcCoverage));
         vm.stopPrank();
     }
@@ -77,7 +77,7 @@ contract MarketRegistryDebtDefinitionUnitTest is MarketRegistryFixture {
         DebtReserveDef memory d,
         bytes memory err
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(err);
         registry.enableDebtReserve(address(spoke), d);
     }
@@ -91,7 +91,7 @@ contract MarketRegistryDebtDefinitionUnitTest is MarketRegistryFixture {
     function _enable(
         DebtReserveDef memory d
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.enableDebtReserve(address(spoke), d);
     }
 
@@ -184,7 +184,7 @@ contract MarketRegistryDebtDefinitionUnitTest is MarketRegistryFixture {
         d.fundingHub = alice;
         d.priceSource = address(0);
         d.firstLossReserve = address(0);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, alice));
         registry.enableDebtReserve(alice, d);
         _expect(d, _invalid("fundingHub"));

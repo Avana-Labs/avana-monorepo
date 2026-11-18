@@ -60,7 +60,7 @@ abstract contract ClLPVaultExitsTests is ClLPVaultBase {
         assertEq(v.unitsOf(key), 0, "fully seized");
         assertTrue(v.isInCustody(key), "the zero-unit position stays in custody");
         assertEq(v.depositorOf(key), alice);
-        vm.prank(c.timelock);
+        vm.prank(governor);
         vm.expectRevert(NotStray.selector);
         v.returnStray(key, bob);
         _cManager(key).accrue(_cTokenId(key), 11, 12);

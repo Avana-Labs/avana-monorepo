@@ -40,6 +40,8 @@ contract RiskModuleHandler is Test {
         // The two tokens and their leg feeds, as the fixture reports them; fixed for the campaign.
         address[2] legTokens;
         address[2] legFeeds;
+        // The account that holds the governance and tighten roles with no delay.
+        address governor;
     }
 
     World internal w;
@@ -96,7 +98,7 @@ contract RiskModuleHandler is Test {
     ) external {
         if (_offboarding || uint256(keccak256(abi.encode(seed))) % 16 != 0) revert Skipped();
         _offboarding = true;
-        vm.prank(address(w.rm.TIMELOCK()));
+        vm.prank(w.governor);
         w.registry.setMarketOffboarding(w.marketId);
     }
 

@@ -84,15 +84,18 @@ interface ICoverageHubSpokeCalls {
 /// second drawing Spoke that is never allowlisted, and its own First-Loss Reserve registered on its asset with
 /// `drawCap = 0`, holding `HUB_DEFICIT_ELIMINATOR_ROLE`, allowlisting the CDP Spoke and funded by Avana Labs to its
 /// minimum.
-/// @dev Roles live in the Aave DAO's AccessManager: `coverDeficit` maps to `COVERAGE_ROLE` (held by `coverageCaller`)
-/// and the `IAvanaFirstLossReserve` functions to `RESERVE_ADMIN_ROLE` (held by `aaveGovernanceExecutor`). The role IDs
+/// @dev Roles live in the Aave DAO's AccessManager: `coverDeficit` maps to `COVERAGE_ROLE` (held by `coverageCaller`),
+/// the allowlist and minimum setters to `RESERVE_ADMIN_ROLE` and `withdraw` to `WITHDRAW_ROLE` (both held by
+/// `aaveGovernanceExecutor`, the latter with the 14-day execution delay). The role IDs
 /// are fixture values in the 500 range, outside Aave's Hub, Spoke and configurator ranges; the DAO's payload fixes
 /// the deployed ones. Deficits are recorded by the real Hub: a drawing Spoke is pranked to `draw` and then
 /// `reportDeficit`, the two calls a liquidation that leaves no collateral makes.
 abstract contract AvanaFirstLossReserveFixture is AaveV4Fixture {
     uint64 internal constant COVERAGE_ROLE = 500;
     uint64 internal constant RESERVE_ADMIN_ROLE = 501;
-    uint256 internal constant RESERVE_WITHDRAWAL_DELAY = 1_209_600;
+    /// @dev `withdraw`, held by the DAO with a 14-day execution delay: the reserve's withdrawal delay.
+    uint64 internal constant WITHDRAW_ROLE = 503;
+    uint32 internal constant RESERVE_WITHDRAWAL_DELAY = 1_209_600;
 
     /// @notice `firstLossReserveAddCap` per asset, whole tokens (fixture values).
     uint40 internal constant ADD_CAP_GHO = 1_000_000;
@@ -174,7 +177,7 @@ abstract contract AvanaFirstLossReserveFixture is AaveV4Fixture {
         uint40 addCap,
         string memory label
     ) internal returns (AvanaFirstLossReserve cs) {
-        cs = new AvanaFirstLossReserve(aave.hub, token, assetId, aave.accessManager, RESERVE_WITHDRAWAL_DELAY);
+        cs = new AvanaFirstLossReserve(aave.hub, token, assetId, aave.accessManager);
         vm.label(address(cs), label);
         uint24 maxRp = hub.MAX_RISK_PREMIUM_THRESHOLD();
         vm.prank(aaveDao);
@@ -190,18 +193,19 @@ abstract contract AvanaFirstLossReserveFixture is AaveV4Fixture {
     ) internal {
         bytes4[] memory coverage = new bytes4[](1);
         coverage[0] = IAvanaFirstLossReserve.coverDeficit.selector;
-        bytes4[] memory admin = new bytes4[](5);
+        bytes4[] memory admin = new bytes4[](2);
         admin[0] = IAvanaFirstLossReserve.setAllowedBorrowSpoke.selector;
         admin[1] = IAvanaFirstLossReserve.setFirstLossReserveMinimum.selector;
-        admin[2] = IAvanaFirstLossReserve.requestWithdrawal.selector;
-        admin[3] = IAvanaFirstLossReserve.cancelWithdrawal.selector;
-        admin[4] = IAvanaFirstLossReserve.executeWithdrawal.selector;
+        bytes4[] memory withdraw = new bytes4[](1);
+        withdraw[0] = IAvanaFirstLossReserve.withdraw.selector;
         IAccessManager manager = IAccessManager(aave.accessManager);
         vm.startPrank(aaveDao);
         manager.setTargetFunctionRole(cs, coverage, COVERAGE_ROLE);
         manager.setTargetFunctionRole(cs, admin, RESERVE_ADMIN_ROLE);
+        manager.setTargetFunctionRole(cs, withdraw, WITHDRAW_ROLE);
         manager.grantRole(COVERAGE_ROLE, coverageCaller, 0);
         manager.grantRole(RESERVE_ADMIN_ROLE, aaveGovernanceExecutor, 0);
+        manager.grantRole(WITHDRAW_ROLE, aaveGovernanceExecutor, RESERVE_WITHDRAWAL_DELAY);
         vm.stopPrank();
     }
 

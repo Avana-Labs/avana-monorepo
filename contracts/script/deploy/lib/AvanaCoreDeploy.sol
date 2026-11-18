@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {GovernedTargets, SelectorPair} from "../../../src/governance/timelock/IAvanaTimelock.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
@@ -13,24 +12,24 @@ import {MarketRegistryImmutables} from "../../../src/policy/market-registry/type
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {IRiskModule} from "../../../src/policy/risk-module/IRiskModule.sol";
 import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
-import {TimelockShortDelayLists} from "../../../test/utils/fixtures/TimelockShortDelayLists.sol";
 import {DeployBase} from "./DeployBase.sol";
 import {ChainInputs, UpgradeableDeployment} from "./DeployTypes.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @title AvanaCoreDeploy
-/// @notice Steps 1–3 of the deployment order (`script/README.md`): the AvanaTimelock and the five upgradeable
+/// @notice Steps 1–3 of the deployment order (`script/README.md`): the AccessManager and the five upgradeable
 /// contracts (implementation, logic contracts, fixed ERC-1967 proxy initialised in the deploying transaction).
 /// @dev Every cross-reference is a predicted CREATE3 address of the deployer's namespace, so the order only has to
 /// respect constructor and initializer reads: the MarketRegistry proxy exists before the ParameterStore's
 /// `initialize` (which reads its recorded addresses) and before the flash liquidation helper (whose constructor
 /// reads `isRecordedHub`). Each proxy is created by `AvanaCreate3Factory.deploy` with `ERC1967Proxy(impl, initData)`
 /// as init code, so `initialize` runs inside the creating transaction and no one can call it first (`REQ-ACCESS-150`;
-/// `LPVaultSwap.initialize` accepts any timelock, which is why it must never be a separate transaction).
+/// `LPVaultSwap.initialize` accepts any authority, which is why it must never be a separate transaction).
 abstract contract AvanaCoreDeploy is DeployBase {
     /// @notice Predicted addresses of everything that is referenced before it exists.
     struct Predicted {
-        address timelock;
+        address accessManager;
         address marketRegistry;
         address parameterStore;
         address riskModule;
@@ -46,7 +45,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
     }
 
     function _predictAll() internal view returns (Predicted memory p) {
-        p.timelock = _predict("AvanaTimelock");
+        p.accessManager = _predict("AccessManager");
         p.marketRegistry = _predict("MarketRegistry");
         p.parameterStore = _predict("ParameterStore");
         p.riskModule = _predict("RiskModule");
@@ -61,41 +60,24 @@ abstract contract AvanaCoreDeploy is DeployBase {
         p.flashLiquidator = _predict("FlashLiquidator");
     }
 
-    /// @notice Step 1: the timelock with `admin = address(0)` and the initial role table (`REQ-ACCESS-027`).
-    function _deployTimelock(
+    /// @notice Step 1: the OpenZeppelin `AccessManager`, its admin the DAO (the Aave governance executor).
+    /// @dev No role is configured here: the DAO maps the governed functions and grants the roles in
+    /// `04_ConfigureAccess` (`AvanaAccess`), so the deployer holds no role in it.
+    function _deployAccessManager(
         ChainInputs memory c,
-        Predicted memory p
+        Predicted memory
     ) internal returns (address) {
-        address[] memory proposers = new address[](2);
-        (proposers[0], proposers[1]) = (c.gov.governanceSafe, c.gov.aaveGovernanceExecutor);
-        address[] memory executors = new address[](1);
-        executors[0] = c.gov.governanceSafe;
-        // Proposers are cancellers by construction (OpenZeppelin TimelockController); these are the other two.
-        address[] memory cancellers = new address[](2);
-        (cancellers[0], cancellers[1]) = (c.gov.emergencyGuardian, c.gov.aaveProtocolGuardian);
-        address[] memory daoCancellers = new address[](1);
-        daoCancellers[0] = c.gov.aaveGovernanceExecutor;
-        SelectorPair[] memory shortList =
-            TimelockShortDelayLists.shortEligible(p.parameterStore, p.marketRegistry, p.lpVaultSwap);
-        SelectorPair[] memory daoOnly = TimelockShortDelayLists.daoOnlyCancel(p.marketRegistry, p.lpVaultSwap);
-        // The selector pairs of both sets must name the chain's ParameterStore, MarketRegistry and LPVaultSwap
-        // (`REQ-ACCESS-155`, `REQ-ACCESS-156`): the predicted proxy addresses.
-        GovernedTargets memory targets = GovernedTargets({
-            parameterStore: p.parameterStore, marketRegistry: p.marketRegistry, lpVaultSwap: p.lpVaultSwap
-        });
-        bytes memory args = abi.encode(
-            proposers, executors, cancellers, daoCancellers, c.timelockNormalDelay, true, shortList, daoOnly, targets
+        return _deploy3(
+            "AccessManager", bytes.concat(type(AccessManager).creationCode, abi.encode(c.gov.aaveGovernanceExecutor))
         );
-        return _deploy3("AvanaTimelock", bytes.concat(_artifact("AvanaTimelock.sol", "AvanaTimelock"), args));
     }
 
-    /// @notice MarketRegistry: six logic contracts, the router implementation, the proxy with `initialize(timelock)`.
+    /// @notice MarketRegistry: six logic contracts, the router implementation, the proxy with `initialize(accessManager)`.
     function _deployMarketRegistry(
         ChainInputs memory c,
         Predicted memory p
     ) internal returns (UpgradeableDeployment memory d) {
         MarketRegistryImmutables memory im;
-        im.timelock = p.timelock;
         im.aaveGovernanceExecutor = c.gov.aaveGovernanceExecutor;
         im.vaultTokenFactory = p.vaultTokenFactory;
         im.aaveAdapter = p.aaveAdapter;
@@ -127,7 +109,8 @@ abstract contract AvanaCoreDeploy is DeployBase {
             "MarketRegistryImplementation",
             bytes.concat(_artifact("MarketRegistry.sol", "MarketRegistry"), abi.encode(im), logics)
         );
-        d.proxy = _proxy("MarketRegistry", d.implementation, abi.encodeCall(IMarketRegistry.initialize, (p.timelock)));
+        d.proxy =
+            _proxy("MarketRegistry", d.implementation, abi.encodeCall(IMarketRegistry.initialize, (p.accessManager)));
     }
 
     /// @notice ParameterStore: five logic contracts, the router, the proxy with the initial values (`REQ-PSTORE-001`).
@@ -135,7 +118,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         ChainInputs memory c,
         Predicted memory p
     ) internal returns (UpgradeableDeployment memory d) {
-        bytes memory im = abi.encode(p.timelock, p.marketRegistry, c.blockTime);
+        bytes memory im = abi.encode(p.marketRegistry, c.blockTime);
         string[5] memory names = [
             "ParameterStoreTightenLogic",
             "ParameterStoreLoosenLogic",
@@ -153,7 +136,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
             "ParameterStoreImplementation", bytes.concat(_artifact("ParameterStore.sol", "ParameterStore"), im, logics)
         );
         d.proxy = _proxy(
-            "ParameterStore", d.implementation, abi.encodeCall(IParameterStore.initialize, (p.timelock, c.globals))
+            "ParameterStore", d.implementation, abi.encodeCall(IParameterStore.initialize, (p.accessManager, c.globals))
         );
     }
 
@@ -167,8 +150,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
                 parameterStore: p.parameterStore,
                 collateralization: p.collateralization,
                 adapter: p.aaveAdapter,
-                lpVaultSwap: p.lpVaultSwap,
-                timelock: p.timelock
+                lpVaultSwap: p.lpVaultSwap
             })
         );
         d.logics = new address[](6);
@@ -203,7 +185,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2], d.logics[3], d.logics[4], d.logics[5]);
         d.implementation =
             _deploy("RiskModuleImplementation", bytes.concat(_artifact("RiskModule.sol", "RiskModule"), im, logics));
-        d.proxy = _proxy("RiskModule", d.implementation, abi.encodeCall(IRiskModule.initialize, (p.timelock)));
+        d.proxy = _proxy("RiskModule", d.implementation, abi.encodeCall(IRiskModule.initialize, (p.accessManager)));
     }
 
     /// @notice AaveAdapter: user, exit, collateral and settlement logic, the router, the proxy.
@@ -219,7 +201,6 @@ abstract contract AvanaCoreDeploy is DeployBase {
         a.lpVaultSwap = p.lpVaultSwap;
         a.lock = p.lock;
         a.vaultTokenFactory = p.vaultTokenFactory;
-        a.timelock = p.timelock;
         bytes memory im = abi.encode(a);
         string[4] memory names = [
             "AaveAdapterUserLogic", "AaveAdapterExitLogic", "AaveAdapterCollateralLogic", "AaveAdapterSettlementLogic"
@@ -232,7 +213,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2], d.logics[3]);
         d.implementation =
             _deploy("AaveAdapterImplementation", bytes.concat(_artifact("AaveAdapter.sol", "AaveAdapter"), im, logics));
-        d.proxy = _proxy("AaveAdapter", d.implementation, abi.encodeCall(IAaveAdapter.initialize, (p.timelock)));
+        d.proxy = _proxy("AaveAdapter", d.implementation, abi.encodeCall(IAaveAdapter.initialize, (p.accessManager)));
     }
 
     /// @notice LPVaultSwap: liquidation, pending and deleverage logic, the router, the proxy with the keepers.
@@ -261,8 +242,9 @@ abstract contract AvanaCoreDeploy is DeployBase {
         bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2]);
         d.implementation =
             _deploy("LPVaultSwapImplementation", bytes.concat(_artifact("LPVaultSwap.sol", "LPVaultSwap"), im, logics));
-        d.proxy =
-            _proxy("LPVaultSwap", d.implementation, abi.encodeCall(ILPVaultSwap.initialize, (p.timelock, c.keepers)));
+        d.proxy = _proxy(
+            "LPVaultSwap", d.implementation, abi.encodeCall(ILPVaultSwap.initialize, (p.accessManager, c.keepers))
+        );
     }
 
     /// @notice A fixed ERC-1967 proxy at the CREATE3 address of `name`, initialised in its constructor.

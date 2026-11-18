@@ -90,7 +90,7 @@ contract LensPriceGatesIntegrationTest is RealStackVolatile {
 
     /// @dev The USDC primary feed's `borrowPriceMaxAge` lowered to `BORROW_AGE` by the timelock.
     function _tightenUsdcBorrowAge() internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.tightenBorrowPriceMaxAge(address(usdcPrimary), BORROW_AGE);
     }
 
@@ -138,7 +138,7 @@ contract LensPriceGatesIntegrationTest is RealStackVolatile {
         address token,
         address asset
     ) internal {
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.disableRoute(mA, token, asset, 0);
         registry.disableRoute(mA, token, asset, 1);
         vm.stopPrank();
@@ -173,7 +173,7 @@ contract LensPriceGatesIntegrationTest is RealStackVolatile {
         _borrowA(
             usdcReserveId, 1e6, abi.encodeWithSelector(IRiskModuleErrors.DebtLiquidationHalted.selector, usdcReserveId)
         );
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.restoreRoute(mA, address(usdt), address(usdc), 1, routeOf[address(usdt)][address(usdc)][1]);
         uint256 amount = _previewUsdcA();
         assertGt(amount, 0, "the backup route reopens it");

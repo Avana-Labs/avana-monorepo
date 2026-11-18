@@ -13,7 +13,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title HostileAdapter
 /// @notice A hostile AaveAdapter implementation for the blast-radius tests (TEST-130, TEST-195, TEST-210): installed
-/// behind the Adapter's fixed proxy through the timelock, it drives every PositionProxy, mints, burns and registers
+/// behind the Adapter's fixed proxy through the AccessManager, it drives every PositionProxy, mints, burns and registers
 /// with the Adapter's own authority, and tries everything outside that authority.
 /// @dev Keeps the storage layout: it declares no state, so the Adapter's ERC-7201 namespace, the AccessControl and
 /// ERC-1967 slots are untouched. Anyone may call it or upgrade it, as a hostile implementation would allow.

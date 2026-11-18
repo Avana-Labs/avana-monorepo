@@ -99,7 +99,7 @@ contract UniswapV3IntegrationCustodyForkTest is AvanaTest {
         if (pin == 0) vm.createSelectFork(rpc);
         else vm.createSelectFork(rpc, pin);
         lock = new Lock(adapter, makeAddr("lpVaultSwap"));
-        vault = new UniswapV3Integration(1, coll, registry, address(lock), makeAddr("timelock"), NFPM, FACTORY, 12);
+        vault = new UniswapV3Integration(1, coll, registry, address(lock), makeAddr("authority"), NFPM, FACTORY, 12);
         mover = new ClPoolMover();
         (, int24 tick,,,,,) = IV3Slot0(POOL).slot0();
         (lower, upper) = (tick - 20, tick + 20);

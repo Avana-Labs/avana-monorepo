@@ -6,15 +6,16 @@ pragma solidity 0.8.28;
 import {PositionRef} from "../../types/PositionTypes.sol";
 import {IAaveAdapterBase} from "./IAaveAdapterBase.sol";
 import {RepayWithCollateralParams} from "./types/AaveAdapterTypes.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @title IAaveAdapter
 /// @notice The chain's single entry point for every borrower action on every CDP Spoke.
-/// @dev UUPS proxy; only the timelock can upgrade it. Holds no tokens between calls.
-interface IAaveAdapter is IAaveAdapterBase {
+/// @dev UUPS proxy; only the AccessManager's governance role can upgrade it. Holds no tokens between calls.
+interface IAaveAdapter is IAaveAdapterBase, IAccessManaged {
     /// @notice Initializes the proxy storage.
-    /// @dev Runs once; `timelock` must equal `TIMELOCK`. Grants the admin roles to `timelock` only.
+    /// @dev Runs once; sets the AccessManager that authorizes upgrades.
     function initialize(
-        address timelock
+        address authority
     ) external;
 
     /// @notice Removes part of one record's credited units; the position stays in custody.
@@ -183,9 +184,6 @@ interface IAaveAdapter is IAaveAdapterBase {
         address proxy
     ) external view returns (uint256 nonce);
 
-    /// @notice Returns the role identifier `keccak256("APPLICATION_ADMIN")`, held only by the timelock.
-    function APPLICATION_ADMIN() external view returns (bytes32 role);
-
     /// @notice Returns the ProxyManager (implementation immutable).
     function PROXY_MANAGER() external view returns (address proxyManager);
 
@@ -209,7 +207,4 @@ interface IAaveAdapter is IAaveAdapterBase {
 
     /// @notice Returns the chain's VaultTokenFactory (implementation immutable).
     function VAULT_TOKEN_FACTORY() external view returns (address vaultTokenFactory);
-
-    /// @notice Returns the only address that may hold the admin roles (implementation immutable).
-    function TIMELOCK() external view returns (address timelock);
 }

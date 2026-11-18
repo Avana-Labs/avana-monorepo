@@ -3,8 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
-import {GovernedTargets, IAvanaTimelock, SelectorPair} from "../../src/governance/timelock/IAvanaTimelock.sol";
 import {AaveAdapter} from "../../src/policy/aave-adapter/AaveAdapter.sol";
 import {AaveAdapterCollateralLogic} from "../../src/policy/aave-adapter/AaveAdapterCollateralLogic.sol";
 import {AaveAdapterExitLogic} from "../../src/policy/aave-adapter/AaveAdapterExitLogic.sol";
@@ -14,46 +12,26 @@ import {AaveAdapterLogics} from "../../src/policy/aave-adapter/types/AaveAdapter
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 
 /// @title AaveAdapterUpgradeRowsUnitTest
-/// @notice No proxy upgrade path through the real AvanaTimelock (TEST-191): an AaveAdapter upgrade to a second
+/// @notice No proxy upgrade path through the real AccessManager (TEST-191): an AaveAdapter upgrade to a second
 /// reviewed implementation, scheduled by the governance multisig, waits the normal delay, changes nothing before it
 /// ends, and after execution leaves every existing PositionProxy (three wallets, two markets on the fixture's CDP
 /// Spoke) with its code, binding, Spoke supply and debt, driven by the new Adapter.
-/// @dev The Adapter's `TIMELOCK` is a real AvanaTimelock built before the fixture (normal delay 5 days, the governance
-/// multisig and the Aave governance executor as proposers, the two guardians as cancellers). The fixture has one CDP
+/// @dev The Adapter's authority is the suite's AccessManager (the governance multisig holds the governance role with
+/// a 5-day execution delay; the DAO can cancel). The fixture has one CDP
 /// Spoke; the second-Spoke case of the row is the same proxy code at another `SPOKE()` immutable.
 /// forge-config: default.isolate = false
 contract AaveAdapterUpgradeRowsUnitTest is AaveAdapterFixture {
     bytes32 internal constant IMPL_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
-    AvanaTimelock internal tl;
     address[3] internal wallets;
     address[6] internal proxies;
     bytes32[6] internal keys;
     uint256[6] internal marketOf;
 
     function setUp() public override {
-        address[] memory proposers = new address[](2);
-        (proposers[0], proposers[1]) = (governanceMultisig, aaveGovernanceExecutor);
-        address[] memory executors = new address[](1);
-        executors[0] = governanceMultisig;
-        address[] memory cancellers = new address[](2);
-        (cancellers[0], cancellers[1]) = (emergencyGuardian, aaveGuardian);
-        address[] memory daoCancellers = new address[](1);
-        daoCancellers[0] = aaveGovernanceExecutor;
-        tl = new AvanaTimelock(
-            proposers,
-            executors,
-            cancellers,
-            daoCancellers,
-            NORMAL_DELAY,
-            true,
-            new SelectorPair[](0),
-            new SelectorPair[](0),
-            GovernedTargets(address(0xA001), address(0xA002), address(0xA003))
-        );
-        timelock = address(tl);
         super.setUp();
         wallets = [alice, bob, carol];
         for (uint256 w = 0; w < 3; ++w) {
@@ -79,16 +57,20 @@ contract AaveAdapterUpgradeRowsUnitTest is AaveAdapterFixture {
 
     // TEST-191 verifies: REQ-PROXY-050, REQ-PROXY-054, REQ-PROXY-086, REQ-PROXY-103, INV-065, ATTACK-123
     // Sources: 5.1 TEST-191, Q-225, Q-226, Q-228
-    /// @notice The upgrade scheduled at 12 hours reverts `DelayBelowRequired`; at the normal delay it is pending and
+    /// @notice The upgrade scheduled for 12 hours ahead reverts `AccessManagerUnauthorizedCall`; at the governance delay it is pending and
     /// changes nothing; once executed, every proxy created before it keeps its code hash, `WALLET()`, `SPOKE()`,
     /// `MARKET_ID()` and `ADAPTER()`, its Spoke supply and its debt, and the upgraded Adapter repays and withdraws
     /// debt-free through each of them.
     function test_TEST_191_adapterUpgradeLeavesEveryProxyAndDrivesIt() public {
         address impl = _newImplementation();
         bytes memory data = abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (impl, ""));
-        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.DelayBelowRequired.selector, 12 hours, NORMAL_DELAY));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessManager.AccessManagerUnauthorizedCall.selector, governanceMultisig, adapter, bytes4(data)
+            )
+        );
         vm.prank(governanceMultisig);
-        tl.schedule(adapter, 0, data, bytes32(0), bytes32("upgrade"), 12 hours);
+        accessManager.schedule(adapter, data, uint48(block.timestamp + 12 hours));
 
         bytes32[6] memory codeHashes;
         uint256[6] memory supplied;
@@ -99,13 +81,14 @@ contract AaveAdapterUpgradeRowsUnitTest is AaveAdapterFixture {
         }
         address oldImpl = address(uint160(uint256(vm.load(adapter, IMPL_SLOT))));
         vm.prank(governanceMultisig);
-        tl.schedule(adapter, 0, data, bytes32(0), bytes32("upgrade"), NORMAL_DELAY);
-        bytes32 id = tl.hashOperation(adapter, 0, data, bytes32(0), bytes32("upgrade"));
+        accessManager.schedule(adapter, data, 0);
+        bytes32 id = accessManager.hashOperation(governanceMultisig, adapter, data);
         vm.warp(block.timestamp + NORMAL_DELAY - 1);
         vm.expectRevert();
-        tl.execute(adapter, 0, data, bytes32(0), bytes32("upgrade"));
+        vm.prank(governanceMultisig);
+        accessManager.execute(adapter, data);
         assertEq(address(uint160(uint256(vm.load(adapter, IMPL_SLOT)))), oldImpl, "nothing before the delay ends");
-        assertTrue(tl.isOperationPending(id), "pending");
+        assertGt(accessManager.getSchedule(id), block.timestamp, "pending");
 
         vm.warp(block.timestamp + 1);
         // Debt accrues interest over the delay; the upgrade itself, in this block, must not move it.
@@ -113,7 +96,7 @@ contract AaveAdapterUpgradeRowsUnitTest is AaveAdapterFixture {
             owed[i] = _debtOf(proxies[i], debtReserveId);
         }
         vm.prank(governanceMultisig);
-        tl.execute(adapter, 0, data, bytes32(0), bytes32("upgrade"));
+        accessManager.execute(adapter, data);
         assertEq(address(uint160(uint256(vm.load(adapter, IMPL_SLOT)))), impl, "new Adapter installed");
 
         for (uint256 i = 0; i < 6; ++i) {

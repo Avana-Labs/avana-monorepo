@@ -6,26 +6,27 @@ pragma solidity 0.8.28;
 import {IFlashReceiver} from "../../flash/IFlashReceiver.sol";
 import {ILPVaultSwapBase} from "./ILPVaultSwapBase.sol";
 import {DeleverageRequest, LiquidationParams, LiquidationResult} from "./types/LPVaultSwapTypes.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @title ILPVaultSwap
 /// @notice The chain's liquidator: seizes vault-token collateral through Aave and settles it in the debt asset.
-/// @dev UUPS proxy; only the timelock can upgrade it. Never reads the pause state or circuit breakers.
-interface ILPVaultSwap is ILPVaultSwapBase, IFlashReceiver {
+/// @dev UUPS proxy; only the AccessManager's governance role can upgrade it. Never reads the pause state or circuit breakers.
+interface ILPVaultSwap is ILPVaultSwapBase, IFlashReceiver, IAccessManaged {
     /// @notice Initializes the proxy storage.
-    /// @dev Grants `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN` to `timelock` only.
+    /// @dev Sets the AccessManager that authorizes `addKeeper`, `removeKeeper` and upgrades.
     function initialize(
-        address timelock,
+        address authority,
         address[] calldata initialKeepers
     ) external;
 
     /// @notice Registers a committed operator, which commits to liquidate every account below HF 1 on the chain.
-    /// @dev `APPLICATION_ADMIN` only. Registration grants no power over `liquidate`.
+    /// @dev Restricted to the AccessManager's governance role. Registration grants no power over `liquidate`.
     function addKeeper(
         address keeper
     ) external;
 
     /// @notice Removes a committed operator from the registry.
-    /// @dev `APPLICATION_ADMIN` only. Reverts `KeeperFloor` if fewer than `KEEPER_FLOOR` active operators would remain.
+    /// @dev Restricted to the AccessManager's tighten role. Reverts `KeeperFloor` if fewer than `KEEPER_FLOOR` active operators would remain.
     function removeKeeper(
         address keeper
     ) external;
@@ -72,12 +73,6 @@ interface ILPVaultSwap is ILPVaultSwapBase, IFlashReceiver {
 
     /// @notice Most registered committed operators per chain.
     function MAX_KEEPERS() external view returns (uint256 max);
-
-    /// @notice The `APPLICATION_ADMIN` role identifier.
-    function APPLICATION_ADMIN() external view returns (bytes32 role);
-
-    /// @notice The AvanaTimelock, the only holder of `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN`.
-    function TIMELOCK() external view returns (address timelock);
 
     /// @notice Protocol lock contract.
     function LOCK() external view returns (address lock);

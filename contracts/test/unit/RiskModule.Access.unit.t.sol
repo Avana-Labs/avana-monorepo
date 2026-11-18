@@ -13,62 +13,43 @@ import {RiskModuleStatusLogic} from "../../src/policy/risk-module/RiskModuleStat
 import {RiskModuleImmutables, RiskModuleLogics} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @title RiskModuleAccessUnitTest
-/// @notice Roles, initialization, upgrades, implementation immutables and the logic-contract identity checks.
+/// @notice Access, initialization, upgrades, implementation immutables and the logic-contract identity checks.
 contract RiskModuleAccessUnitTest is RiskModuleFixture {
-    bytes32 internal constant APP = AvanaRoles.APPLICATION_ADMIN;
-
     function setUp() public {
         _deployRiskWorld();
     }
 
     // TEST-242 verifies: REQ-RISK-072, REQ-RISK-002, REQ-ACCESS-153, INV-084, REQ-ACCESS-002, REQ-ACCESS-014, REQ-ACCESS-032
-    function test_TEST_242_adminRolesOnlyTimelock() public {
-        assertTrue(riskModule.hasRole(APP, address(timelock)));
-        assertTrue(riskModule.hasRole(0x00, address(timelock)));
-        address other = makeAddr("other");
-        vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.AdminRoleOnlyTimelock.selector, APP, other));
-        riskModule.grantRole(APP, other);
-        vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.AdminRoleOnlyTimelock.selector, bytes32(0), other));
-        riskModule.grantRole(0x00, other);
-        vm.prank(other);
-        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, other, 0x00));
-        riskModule.grantRole(APP, other);
+    function test_TEST_242_authorityIsTheAccessManager() public view {
+        assertEq(riskModule.authority(), address(accessManager));
+        assertEq(
+            accessManager.getTargetFunctionRole(address(riskModule), riskModule.upgradeToAndCall.selector),
+            AvanaRoles.GOVERNANCE_ROLE
+        );
     }
 
     // TEST-242 verifies: REQ-RISK-002, REQ-RISK-054, PROP-034, REQ-ACCESS-015, REQ-ACCESS-031
-    function test_TEST_242_upgradeNeedsApplicationAdmin() public {
+    function test_TEST_242_upgradeNeedsTheGovernanceRole() public {
         RiskModule next = new RiskModule(rmIm, rmLogics);
         address other = makeAddr("other");
         vm.prank(other);
-        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, other, APP));
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, other));
         riskModule.upgradeToAndCall(address(next), "");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         riskModule.upgradeToAndCall(address(next), "");
-        assertEq(riskModule.TIMELOCK(), address(timelock));
+        assertEq(riskModule.authority(), address(accessManager));
     }
 
     // TEST-242 verifies: REQ-RISK-002, Q-226, REQ-ACCESS-150
     function test_TEST_242_initializeOnce() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        riskModule.initialize(address(timelock));
+        riskModule.initialize(address(accessManager));
         RiskModule impl = new RiskModule(rmIm, rmLogics);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        impl.initialize(address(timelock));
-    }
-
-    // TEST-242 verifies: REQ-RISK-072, REQ-RISK-002, REQ-ACCESS-153, Q-226, REQ-ACCESS-150
-    function test_TEST_242_initializeOnlyWithTimelock() public {
-        RiskModule impl = new RiskModule(rmIm, rmLogics);
-        address other = makeAddr("other");
-        bytes memory init = abi.encodeCall(RiskModule.initialize, (other));
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.AdminRoleOnlyTimelock.selector, bytes32(0), other));
-        new ERC1967Proxy(address(impl), init);
+        impl.initialize(address(accessManager));
     }
 
     // TEST-062 verifies: REQ-RISK-002
@@ -113,7 +94,7 @@ contract RiskModuleAccessUnitTest is RiskModuleFixture {
         assertEq(riskModule.COLLATERALIZATION(), address(coll));
         assertEq(riskModule.ADAPTER(), address(adapter));
         assertEq(riskModule.LP_VAULT_SWAP(), address(swap));
-        assertEq(riskModule.TIMELOCK(), address(timelock));
+        assertEq(riskModule.authority(), address(accessManager));
         assertEq(riskModule.rescueHealthFactor(), 1.1e18);
         assertEq(riskModule.RESCUE_MIN_PLEDGE_USD(), 10e8);
     }

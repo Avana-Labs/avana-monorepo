@@ -17,7 +17,7 @@ import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 /// @title RiskModuleDriftLogic
 /// @notice Aave configuration drift of a CDP Spoke and its markets, Hub shares == assets and expected CF.
 /// @dev Views only. Does not require the market to be Active, so activation can run it on a Registered market.
-// View calls in loops over the Spoke's reserves, debt reserves and markets, all bounded by timelock listings.
+// View calls in loops over the Spoke's reserves, debt reserves and markets, all bounded by governed listings.
 // forge-lint: disable-start(calls-loop)
 contract RiskModuleDriftLogic is RiskModuleBase, IRiskModuleDriftLogic {
     struct SpokeCtx {

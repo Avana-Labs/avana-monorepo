@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
 import {PoolKeying} from "../../src/amm/types/AmmTypes.sol";
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {VaultTokenBindings} from "../../src/types/MarketTypes.sol";
@@ -14,6 +15,8 @@ import {VaultToken} from "../../src/vault-token/vault-token/VaultToken.sol";
 import {VaultTokenFactoryFixture} from "../utils/fixtures/VaultTokenFactoryFixture.sol";
 import {CollateralizationLockMock} from "../utils/mocks/CollateralizationLockMock.sol";
 import {LPVaultIdentityMock} from "../utils/mocks/LPVaultIdentityMock.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
+import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 import {CREATE3} from "solady/utils/CREATE3.sol";
 
 /// @notice An LPVault whose identity getters misbehave: each getter reverts, returns a short answer, or (for
@@ -44,7 +47,7 @@ contract HostileLPVaultMock {
 
 /// @title VaultTokenFactoryUnitTest
 /// @notice The VaultTokenFactory (2.4 Deployment): constructor checks, the write-once integration registry, and
-/// `deployVaultToken`: timelock only, the listing checks in order, the token's binding checks surfaced before CREATE3,
+/// `deployVaultToken`: through the AccessManager only, the listing checks in order, the token's binding checks surfaced before CREATE3,
 /// one token per (CDP Spoke, market key) at the predicted address, and the bindings each token receives.
 contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
     function setUp() public {
@@ -60,7 +63,7 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
         assertEq(factory.ADAPTER(), adapter, "adapter");
         assertEq(factory.LP_VAULT_SWAP(), address(lpVaultSwap), "lpVaultSwap");
         assertEq(factory.COLLATERALIZATION(), address(collateralization), "collateralization");
-        assertEq(factory.TIMELOCK(), address(timelock), "timelock");
+        assertEq(factory.authority(), address(accessManager), "authority");
         assertEq(factory.MARKET_REGISTRY(), address(marketRegistry), "marketRegistry");
     }
 
@@ -68,7 +71,7 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
     function test_TEST_024_constructorRefusesZeroOrSharedBindings() public {
         address s = address(lpVaultSwap);
         address c = address(collateralization);
-        address t = address(timelock);
+        address t = address(accessManager);
         address r = address(marketRegistry);
         vm.expectRevert(IVaultTokenFactory.ZeroAddress.selector);
         new VaultTokenFactory(address(0), s, c, t, r);
@@ -109,11 +112,16 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
     }
 
     // TEST-024 verifies: REQ-VTOKEN-044, REQ-VTOKEN-045
-    function test_TEST_024_registerIntegrationOnlyTimelock() public {
+    function test_TEST_024_registerIntegrationOnlyThroughTheAccessManager() public {
         LPVaultIdentityMock slip = _vault(SLIPSTREAM_ID, AERODROME_SLIPSTREAM);
-        vm.expectRevert(IVaultTokenFactory.NotTimelock.selector);
-        vm.prank(governanceMultisig);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, attacker));
+        vm.prank(attacker);
         factory.registerIntegration(SLIPSTREAM_ID, address(slip));
+        // The governance Safe's role carries the governance delay: the call has to be scheduled.
+        bytes memory data = abi.encodeCall(IVaultTokenFactory.registerIntegration, (SLIPSTREAM_ID, address(slip)));
+        assertEq(_delayOf(address(factory), data), NORMAL_DELAY);
+        _runScheduled(address(factory), data);
+        assertEq(factory.lpVaultOf(SLIPSTREAM_ID), address(slip));
     }
 
     // TEST-024 verifies: REQ-VTOKEN-044, REQ-VTOKEN-045, Q-291, REQ-VAULT-174
@@ -141,7 +149,7 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
     /// zero AMM protocol or a `None` shape kind, is refused.
     function test_TEST_024_registerIntegrationRefusesForeignCore() public {
         address c = address(collateralization);
-        address t = address(timelock);
+        address t = address(accessManager);
         bytes32 p = AERODROME_SLIPSTREAM;
         uint32 id = SLIPSTREAM_ID;
         address r = address(marketRegistry);
@@ -201,12 +209,13 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
         assertEq(hostile.writes(), 0, "a getter wrote state");
         CollateralizationLockMock codeless = CollateralizationLockMock(makeAddr("codelessCollateralization"));
         VaultTokenFactory f = new VaultTokenFactory(
-            adapter, address(lpVaultSwap), address(codeless), address(timelock), address(marketRegistry)
+            adapter, address(lpVaultSwap), address(codeless), address(accessManager), address(marketRegistry)
         );
+        _bindAccess(AvanaAccess.Kind.VaultTokenFactory, address(f));
         LPVaultIdentityMock v = new LPVaultIdentityMock(
-            SLIPSTREAM_ID, address(codeless), lock, UNISWAP_V3, address(timelock), address(marketRegistry)
+            SLIPSTREAM_ID, address(codeless), lock, UNISWAP_V3, address(accessManager), address(marketRegistry)
         );
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IVaultTokenFactory.InvalidIntegration.selector);
         f.registerIntegration(SLIPSTREAM_ID, address(v));
     }
@@ -352,7 +361,7 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
     /// reaches a different address, so no one can occupy a listing's address in advance.
     function test_TEST_024_predictedAddressDependsOnFactory() public {
         VaultTokenFactory other = new VaultTokenFactory(
-            adapter, address(lpVaultSwap), address(collateralization), address(timelock), address(marketRegistry)
+            adapter, address(lpVaultSwap), address(collateralization), address(accessManager), address(marketRegistry)
         );
         bytes32 key = _key(_listing());
         assertTrue(other.predictAddress(spoke, key) != factory.predictAddress(spoke, key), "factory in the address");
@@ -362,12 +371,12 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
     // ─── deployVaultToken: rejections (TEST-024) ───
 
     // TEST-024 verifies: REQ-VTOKEN-019, REQ-VTOKEN-037, Q-228, REQ-ACCESS-061, REQ-ACCESS-010
-    function testFuzz_TEST_024_deployOnlyByTimelock(
+    function testFuzz_TEST_024_deployOnlyThroughTheAccessManager(
         address caller
     ) public {
-        vm.assume(caller != address(timelock));
+        vm.assume(caller != governor && caller != governanceMultisig);
         Listing memory l = _listing();
-        vm.expectRevert(IVaultTokenFactory.NotTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, caller));
         _deployAs(caller, l);
     }
 
@@ -446,7 +455,7 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
         string[4] memory names = ["", name129, NAME, NAME];
         string[4] memory symbols = [SYMBOL, SYMBOL, "", symbol33];
         for (uint256 i = 0; i < 4; ++i) {
-            vm.prank(address(timelock));
+            vm.prank(governor);
             vm.expectRevert(IVaultTokenFactory.InvalidTokenMetadata.selector);
             factory.deployVaultToken(
                 l.integrationId,
@@ -462,7 +471,7 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
                 symbols[i]
             );
         }
-        vm.prank(address(timelock));
+        vm.prank(governor);
         address token = factory.deployVaultToken(
             l.integrationId,
             l.pool,
@@ -555,34 +564,38 @@ contract VaultTokenFactoryUnitTest is VaultTokenFactoryFixture {
         assertEq(IVaultTokenFactory.ZeroAddress.selector, IVaultToken.ZeroAddress.selector);
     }
 
-    // ─── TEST-166: one timelock delay ───
+    // ─── TEST-166: one governance delay ───
 
     // TEST-166 verifies: REQ-VTOKEN-019, REQ-VTOKEN-037, REQ-ROLE-106, INV-051, INV-052, Q-228
     // Sources: 5.1 TEST-166, 2.15 normal delay
-    /// @notice Registration and deployment scheduled at the normal delay execute right after it, never before; the
+    /// @notice Registration and deployment scheduled at the governance delay execute right after it, never before; the
     /// governance multisig calling the factory directly is refused.
-    function test_TEST_166_deployRunsAfterOneNormalDelay() public {
+    function test_TEST_166_deployRunsAfterOneGovernanceDelay() public {
         LPVaultIdentityMock slip = _vault(SLIPSTREAM_ID, AERODROME_SLIPSTREAM);
         Listing memory l = _listing();
         l.integrationId = SLIPSTREAM_ID;
-        Call[] memory calls = _two(
-            Call(address(factory), abi.encodeCall(factory.registerIntegration, (SLIPSTREAM_ID, address(slip)))),
-            Call(address(factory), _deployCall(l))
-        );
-        assertEq(_required(calls), NORMAL_DELAY, "normal delay");
-        bytes32 salt = keccak256("listing");
-        _schedule(governanceMultisig, calls, NORMAL_DELAY, salt);
-        vm.warp(block.timestamp + NORMAL_DELAY - 1);
+        bytes memory register = abi.encodeCall(factory.registerIntegration, (SLIPSTREAM_ID, address(slip)));
+        bytes memory deploy = _deployCall(l);
+        assertEq(_delayOf(address(factory), register), NORMAL_DELAY, "governance delay");
+        assertEq(_delayOf(address(factory), deploy), NORMAL_DELAY, "governance delay");
+        (, uint256 readyAt) = _scheduleOp(governanceMultisig, address(factory), register);
+        _scheduleOp(governanceMultisig, address(factory), deploy);
+        vm.warp(readyAt - 1);
         vm.expectRevert();
-        _execute(attacker, calls, salt);
-        vm.warp(block.timestamp + 1);
-        _execute(attacker, calls, salt);
+        vm.prank(governanceMultisig);
+        accessManager.execute(address(factory), register);
+        vm.warp(readyAt);
+        vm.startPrank(governanceMultisig);
+        accessManager.execute(address(factory), register);
+        accessManager.execute(address(factory), deploy);
+        vm.stopPrank();
         address token = factory.tokenOf(spoke, _key(l));
         assertEq(token, factory.predictAddress(spoke, _key(l)), "deployed at the predicted address");
         assertEq(VaultToken(token).integration(), address(slip), "registered in the same batch");
 
         l.spoke = successorSpoke;
-        vm.expectRevert(IVaultTokenFactory.NotTimelock.selector);
+        bytes32 opId = accessManager.hashOperation(governanceMultisig, address(factory), _deployCall(l));
+        vm.expectRevert(abi.encodeWithSelector(IAccessManager.AccessManagerNotScheduled.selector, opId));
         _deployAs(governanceMultisig, l);
     }
 

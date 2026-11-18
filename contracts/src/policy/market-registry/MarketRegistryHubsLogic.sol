@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
-import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IFlashSource} from "../../flash/IFlashSource.sol";
 import {IAaveV4ExtSload} from "../../interfaces/external/aave/IAaveV4ExtSload.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
@@ -19,8 +18,8 @@ import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
 import {DebtReserveDef, MarketRegistryImmutables, RiskTier, SpokeDef} from "./types/MarketRegistryTypes.sol";
 
 /// @title MarketRegistryHubsLogic
-/// @notice Bodies of the MarketRegistry's Hub, integration, cross-Hub line, flash source, Spoke and debt-reserve writes.
-/// @dev Runs only by delegatecall from the MarketRegistry, which checks `APPLICATION_ADMIN` first.
+/// @notice Bodies of the MarketRegistry's Hub, cross-Hub line, flash source, Spoke and debt-reserve writes.
+/// @dev Runs only by delegatecall from the MarketRegistry, which checks the caller with the AccessManager first.
 // Bodies of IMarketRegistry selectors; this contract inherits no interface piece.
 // solhint-disable comprehensive-interface
 // Every external call here is a view, so none can re-enter the registry.
@@ -49,28 +48,6 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         l.hubTier[hub] = tier;
         l.hubList.push(hub);
         emit IMarketRegistry.HubRecorded(hub, tier);
-    }
-
-    function registerIntegration(
-        uint32 integrationId,
-        address lpVault,
-        address pricing
-    ) external {
-        _onlyDelegated();
-        Layout storage l = _s();
-        if (
-            integrationId == 0 || lpVault == address(0) || pricing == address(0)
-                || l.integrationLpVault[integrationId] != address(0) || l.integrationIdOf[lpVault] != 0
-        ) revert IMarketRegistry.InvalidIntegration(integrationId);
-        if (
-            ILPVault(lpVault).INTEGRATION_ID() != integrationId
-                || IVaultTokenFactory(_VAULT_TOKEN_FACTORY).lpVaultOf(integrationId) != lpVault
-                || ILPVault(lpVault).MARKET_REGISTRY() != address(this)
-        ) revert IMarketRegistry.InvalidIntegration(integrationId);
-        l.integrationLpVault[integrationId] = lpVault;
-        l.integrationPricing[integrationId] = pricing;
-        l.integrationIdOf[lpVault] = integrationId;
-        emit IMarketRegistry.IntegrationRegistered(integrationId, lpVault, pricing);
     }
 
     function setAvanaFirstLossReserve(
@@ -133,7 +110,7 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         } else {
             if (
                 l.hubTier[def.hub] != def.riskTier || def.riskTier == RiskTier.None
-                    || l.integrationLpVault[def.integrationId] == address(0)
+                    || IVaultTokenFactory(_VAULT_TOKEN_FACTORY).lpVaultOf(def.integrationId) == address(0)
             ) revert InvalidSpoke(spoke);
             l.spokes[spoke] = SpokeDef({
                 approved: true,

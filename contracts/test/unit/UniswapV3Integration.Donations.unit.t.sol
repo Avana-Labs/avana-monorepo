@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 import {LPVaultLedgerFixture} from "../utils/fixtures/LPVaultLedgerFixture.sol";
 import {UniswapV3IntegrationFixture} from "../utils/fixtures/UniswapV3IntegrationFixture.sol";
 import {MintableToken, NftHolder, OtherNft} from "../utils/mocks/UniswapV3Mocks.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -21,7 +22,7 @@ contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture, L
     function setUp() public override {
         super.setUp();
         _deployLedger(
-            LedgerCore(adapter, lpVaultSwap, coll, address(lock), timelock, registry),
+            LedgerCore(adapter, lpVaultSwap, coll, address(lock), address(accessManager), registry),
             INTEGRATION,
             address(vault),
             M1,
@@ -102,12 +103,12 @@ contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture, L
         assertEq(ledger.recordIdOf(INTEGRATION, stray), 0, "a stray has no backing record");
         _assertLedgerUnchanged(before, _ledgerState(pledged, bob, bobProxy, alice));
         vm.prank(alice);
-        vm.expectRevert(NotTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, alice));
         vault.returnStray(stray, alice);
-        vm.prank(governanceMultisig);
-        vm.expectRevert(NotTimelock.selector);
+        vm.prank(attacker);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, attacker));
         vault.returnStray(stray, alice);
-        vm.startPrank(timelock);
+        vm.startPrank(governor);
         vm.expectRevert(InvalidRecipient.selector);
         vault.returnStray(stray, address(0));
         vm.expectRevert(InvalidRecipient.selector);
@@ -118,17 +119,17 @@ contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture, L
         vault.returnStray(bytes32(uint256(9999)), alice); // unknown token
         vm.stopPrank();
         bytes32 elsewhere = _mint1(carol, 1);
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(NotStray.selector);
         vault.returnStray(elsewhere, alice); // not held by the LPVault
         _lock();
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(Locked.selector);
         vault.returnStray(stray, alice);
         _unlock();
         vm.expectEmit(address(vault));
         emit StrayReturned(stray, carol);
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.returnStray(stray, carol);
         assertEq(nfpm.ownerOf(uint256(stray)), carol);
         _assertLedgerUnchanged(before, _ledgerState(pledged, bob, bobProxy, alice));
@@ -146,14 +147,14 @@ contract UniswapV3IntegrationDonationsUnitTest is UniswapV3IntegrationFixture, L
         nfpm.transferFrom(alice, address(vault), uint256(key));
         assertEq(ledger.recordIdOf(INTEGRATION, key), 0, "an NFT sent back has no backing record");
         _assertLedgerUnchanged(before, _ledgerState(backed, bob, bobProxy, alice));
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.returnStray(key, alice);
         _assertLedgerUnchanged(before, _ledgerState(backed, bob, bobProxy, alice));
         // Pledged again before a second scheduled return executes: refused.
         vm.prank(alice);
         nfpm.approve(address(vault), uint256(key));
         _receive(M1, alice, key);
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(NotStray.selector);
         vault.returnStray(key, bob);
     }

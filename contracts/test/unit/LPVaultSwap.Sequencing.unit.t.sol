@@ -223,7 +223,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
             bytes4(keccak256("flashSource()"))
         ];
         for (uint256 i = 0; i < selectors.length; ++i) {
-            vm.prank(timelock);
+            vm.prank(governor);
             (bool ok,) = address(lvs).call(abi.encodePacked(selectors[i], abi.encode(address(flashSource))));
             assertFalse(ok, "no flash-source selector");
         }

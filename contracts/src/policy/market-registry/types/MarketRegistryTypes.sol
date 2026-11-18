@@ -29,8 +29,6 @@ struct DebtReserveDef {
 /// @notice Implementation immutables of the MarketRegistry and of each of its logic contracts.
 /// @dev Every field is non-zero; changing one is an upgrade.
 struct MarketRegistryImmutables {
-    // The chain's AvanaTimelock, the only holder of `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN`.
-    address timelock;
     // The Aave governance executor.
     address aaveGovernanceExecutor;
     address vaultTokenFactory;

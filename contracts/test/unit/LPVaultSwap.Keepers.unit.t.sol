@@ -8,14 +8,14 @@ import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LPVaultSwap} from "../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @title LPVaultSwapKeepersUnitTest
 /// @notice The committed-operator registry (2.11 REQ-SWAP-032 to REQ-SWAP-038, REQ-SWAP-065, REQ-SWAP-069,
 /// REQ-SWAP-107, REQ-SWAP-117; 2.15 REQ-ACCESS-011, REQ-ACCESS-053, REQ-ACCESS-054, REQ-ACCESS-100, REQ-ACCESS-121,
-/// SPEC-GOV-008): `initialize` registers the initial operators; `addKeeper` and `removeKeeper` need `APPLICATION_ADMIN`
-/// (the timelock), refuse zero, duplicate and unregistered addresses, cap the list at `MAX_KEEPERS = 32` and keep at
+/// SPEC-GOV-008): `initialize` registers the initial operators; `addKeeper` and `removeKeeper` need the AccessManager's
+/// governance and tighten roles, refuse zero, duplicate and unregistered addresses, cap the list at `MAX_KEEPERS = 32` and keep at
 /// least `KEEPER_FLOOR = 1` operator; `activeKeeperCount` equals the registered count; the registry gates no
 /// liquidation.
 /// forge-config: default.isolate = false
@@ -23,14 +23,14 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
     function _add(
         address k
     ) internal {
-        vm.prank(timelock);
+        vm.prank(governor);
         lvs.addKeeper(k);
     }
 
     function _remove(
         address k
     ) internal {
-        vm.prank(timelock);
+        vm.prank(governor);
         lvs.removeKeeper(k);
     }
 
@@ -54,17 +54,14 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
     }
 
     /// @notice `addKeeper` by the timelock registers and emits; every other caller reverts
-    /// `AccessControlUnauthorizedAccount`, the registered operator included.
+    /// `AccessManagedUnauthorized`, the registered operator included.
     // TEST-045 verifies: REQ-SWAP-033, REQ-SWAP-069, REQ-ACCESS-053, REQ-ACCESS-011
     // TEST-062 verifies: REQ-SWAP-033, REQ-SWAP-069, REQ-ACCESS-053
     function test_TEST_045_addKeeperRoleGuard() public {
-        bytes32 role = AvanaRoles.APPLICATION_ADMIN;
         address[3] memory others = [keeper, attacker, aaveDao];
         for (uint256 i = 0; i < others.length; ++i) {
             vm.prank(others[i]);
-            vm.expectRevert(
-                abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, others[i], role)
-            );
+            vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, others[i]));
             lvs.addKeeper(carol);
         }
         vm.expectEmit(true, false, false, false, address(lvs));
@@ -78,7 +75,7 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
     /// @notice `InvalidKeeper` for zero and for a registered operator.
     // TEST-045 verifies: REQ-SWAP-033, REQ-SWAP-107, REQ-SWAP-117, REQ-ACCESS-053
     function test_TEST_045_addKeeperRefusals() public {
-        vm.startPrank(timelock);
+        vm.startPrank(governor);
         vm.expectRevert(_err(ILPVaultSwapBase.InvalidKeeper.selector));
         lvs.addKeeper(address(0));
         vm.expectRevert(_err(ILPVaultSwapBase.InvalidKeeper.selector));
@@ -94,7 +91,7 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
             _add(_keeperN(i));
         }
         assertEq(lvs.approvedKeeperCount(), 32, "32 registered");
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.TooManyKeepers.selector, 32));
         lvs.addKeeper(carol);
         _remove(_keeperN(0));
@@ -109,16 +106,12 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
     // TEST-062 verifies: REQ-SWAP-035, REQ-SWAP-069, REQ-ACCESS-054
     function test_TEST_098_removeKeeperFloor() public {
         vm.prank(attacker);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, attacker, AvanaRoles.APPLICATION_ADMIN
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, attacker));
         lvs.removeKeeper(keeper);
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(_err(ILPVaultSwapBase.InvalidKeeper.selector));
         lvs.removeKeeper(carol);
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 0, 1));
         lvs.removeKeeper(keeper);
         _add(carol);
@@ -127,7 +120,7 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
         _remove(keeper);
         assertFalse(lvs.isApprovedKeeper(keeper), "removed");
         assertEq(lvs.activeKeeperCount(), 1, "one active");
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 0, 1));
         lvs.removeKeeper(carol);
     }
@@ -155,26 +148,26 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
     function test_TEST_098_initializeChecks() public {
         address[] memory none = new address[](0);
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 0, 1));
-        _deployProxy(timelock, none);
+        _deployProxy(address(accessManager), none);
         address[] memory many = new address[](33);
         for (uint256 i = 0; i < 33; ++i) {
             many[i] = _keeperN(i);
         }
         vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.TooManyKeepers.selector, 32));
-        _deployProxy(timelock, many);
+        _deployProxy(address(accessManager), many);
         address[] memory dup = new address[](2);
         (dup[0], dup[1]) = (carol, carol);
         vm.expectRevert(_err(ILPVaultSwapBase.InvalidKeeper.selector));
-        _deployProxy(timelock, dup);
+        _deployProxy(address(accessManager), dup);
         address[] memory zero = new address[](1);
         vm.expectRevert(_err(ILPVaultSwapBase.InvalidKeeper.selector));
-        _deployProxy(timelock, zero);
+        _deployProxy(address(accessManager), zero);
         address[] memory one = new address[](1);
         one[0] = carol;
         vm.expectRevert(_err(ILPVaultSwapBase.ZeroAddress.selector));
         _deployProxy(address(0), one);
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization()"));
-        LPVaultSwap(address(lvs)).initialize(timelock, one);
+        LPVaultSwap(address(lvs)).initialize(address(accessManager), one);
     }
 
     /// @notice Deploys a second proxy over the fixture's implementation (an external call, so `expectRevert` applies).
@@ -216,7 +209,7 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
             address k = _keeperN(ops[i] % 6);
             uint256 kind = (ops[i] / 6) % 2;
             uint256 activeBefore = lvs.activeKeeperCount();
-            vm.prank(timelock);
+            vm.prank(governor);
             if (kind == 0) {
                 try lvs.addKeeper(k) {} catch {}
             } else {

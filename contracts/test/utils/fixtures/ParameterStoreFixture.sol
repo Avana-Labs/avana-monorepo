@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {ParameterStore} from "../../../src/policy/parameter-store/ParameterStore.sol";
@@ -19,6 +20,7 @@ import {
 } from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {Market} from "../../../src/types/MarketTypes.sol";
 import {ShapeKind} from "../../../src/types/PositionTypes.sol";
+import {AvanaTest} from "../AvanaTest.sol";
 import {MockMarketRegistry} from "../mocks/MockMarketRegistry.sol";
 import {
     MockAggregator,
@@ -32,16 +34,14 @@ import {
     MockSpoke,
     MockVaultToken
 } from "../mocks/ParameterStoreMocks.sol";
-import {TimelockFixture} from "./TimelockFixture.sol";
-import {TimelockShortDelayLists} from "./TimelockShortDelayLists.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @title ParameterStoreFixture
-/// @notice The real AvanaTimelock (short-delay list naming the ParameterStore proxy), the ParameterStore
+/// @notice The real AccessManager (every ParameterStore setter mapped by `AvanaAccess`, `governor` holding the roles), the ParameterStore
 /// proxy over its implementation and five logic contracts, initialized with the default values of 1.5, and a mocked
 /// MarketRegistry with one Hub, one CDP Spoke, one GHO debt reserve and market 1 (USDC/USDT, concentrated
-/// liquidity, `Registered`). `_listMarket` runs the market's listing writes as the timelock.
-abstract contract ParameterStoreFixture is TimelockFixture {
+/// liquidity, `Registered`). `_listMarket` runs the market's listing writes as `governor`.
+abstract contract ParameterStoreFixture is AvanaTest {
     IParameterStore internal store;
     ParameterStore internal implementation;
     ParameterStoreLogics internal logics;
@@ -62,7 +62,6 @@ abstract contract ParameterStoreFixture is TimelockFixture {
     address internal usdc = makeAddr("USDC");
     address internal usdt = makeAddr("USDT");
     address internal gho = makeAddr("GHO");
-    address internal guardianTimelock;
     uint256 internal constant M = 1;
     uint32 internal constant BLOCK_TIME = 12;
 
@@ -70,27 +69,20 @@ abstract contract ParameterStoreFixture is TimelockFixture {
         registry = new MockMarketRegistry();
         collateralization = new MockCollateralization();
         registry.setCollateralization(address(collateralization));
-        address predicted = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 7);
-        timelock = _newTimelock(
-            NORMAL_DELAY,
-            true,
-            TimelockShortDelayLists.shortEligible(predicted, makeAddr("registryTarget"), makeAddr("swapTarget")),
-            TimelockShortDelayLists.daoOnlyCancel(makeAddr("registryTarget"), makeAddr("swapTarget"))
-        );
-        address tl = address(timelock);
+        address tl = address(accessManager);
         logics = ParameterStoreLogics({
-            tighten: address(new ParameterStoreTightenLogic(tl, address(registry), BLOCK_TIME)),
-            loosen: address(new ParameterStoreLoosenLogic(tl, address(registry), BLOCK_TIME)),
-            listing: address(new ParameterStoreListingLogic(tl, address(registry), BLOCK_TIME)),
-            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, address(registry), BLOCK_TIME)),
-            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, address(registry), BLOCK_TIME))
+            tighten: address(new ParameterStoreTightenLogic(address(registry), BLOCK_TIME)),
+            loosen: address(new ParameterStoreLoosenLogic(address(registry), BLOCK_TIME)),
+            listing: address(new ParameterStoreListingLogic(address(registry), BLOCK_TIME)),
+            adminOracle: address(new ParameterStoreAdminOracleLogic(address(registry), BLOCK_TIME)),
+            adminRisk: address(new ParameterStoreAdminRiskLogic(address(registry), BLOCK_TIME))
         });
-        implementation = new ParameterStore(tl, address(registry), BLOCK_TIME, logics);
+        implementation = new ParameterStore(address(registry), BLOCK_TIME, logics);
         ERC1967Proxy proxy = new ERC1967Proxy(
             address(implementation), abi.encodeCall(IParameterStore.initialize, (tl, _defaultGlobals()))
         );
-        require(address(proxy) == predicted, "prediction");
         store = IParameterStore(address(proxy));
+        _bindAccess(AvanaAccess.Kind.ParameterStore, address(proxy));
         vm.label(address(store), "ParameterStore");
         _deployWorld();
     }
@@ -183,9 +175,9 @@ abstract contract ParameterStoreFixture is TimelockFixture {
         p.minPledgeUsd = 10e8;
     }
 
-    /// @dev Listing writes of market 1 as the timelock: feeds, collateral factors, market parameters and caps, Hub caps.
+    /// @dev Listing writes of market 1 as `governor`: feeds, collateral factors, market parameters and caps, Hub caps.
     function _listMarket() internal {
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         store.setFeed(address(fUsdc), _feedDef(86_400, 1800));
         store.setFeed(address(fUsdcAlt), _feedDef(86_400, 1800));
         store.setFeed(address(fUsdt), _feedDef(86_400, 1800));
@@ -202,8 +194,8 @@ abstract contract ParameterStoreFixture is TimelockFixture {
         registry.setStatus(M, MarketStatus.Active);
     }
 
-    /// @dev Next call is made by the timelock.
+    /// @dev Next call is made by `governor`.
     function _tl() internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
     }
 }

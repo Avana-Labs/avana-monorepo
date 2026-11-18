@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAvanaTimelock} from "../../governance/timelock/IAvanaTimelock.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
@@ -39,6 +38,8 @@ abstract contract ParameterStoreStorage is IParameterStoreBase {
     /// @dev `keccak256(abi.encode(uint256(keccak256("avana.storage.ParameterStore")) - 1)) & ~bytes32(uint256(0xff))`.
     bytes32 private constant _STORAGE_SLOT = 0x97d60a1f76524429d85918aee5154ffd84c83f78fddb1d1f3d0a0bfeca081800;
 
+    /// @dev Least time between two loosenings of one parameter: 5 days, the longest governance delay.
+    uint256 internal constant LOOSEN_SPACING = 5 days;
     uint256 internal constant WAD = 1e18;
     uint256 internal constant BPS = 10_000;
     uint16 internal constant CAP_STEP_BPS = 15_000;
@@ -63,8 +64,6 @@ abstract contract ParameterStoreStorage is IParameterStoreBase {
     uint8 internal constant SCOPE_TOKEN = 1;
     uint8 internal constant SCOPE_FEED = 2;
 
-    address internal immutable _TIMELOCK;
-
     IMarketRegistry internal immutable _REGISTRY;
 
     uint32 internal immutable _BLOCK_TIME;
@@ -74,15 +73,23 @@ abstract contract ParameterStoreStorage is IParameterStoreBase {
 
     /// @notice Fixes the implementation immutables.
     constructor(
-        address timelock,
         address marketRegistry,
         uint32 chainBlockTime
     ) {
-        if (timelock == address(0) || marketRegistry == address(0) || chainBlockTime == 0) revert OutOfBounds();
-        _TIMELOCK = timelock;
+        if (marketRegistry == address(0) || chainBlockTime == 0) revert OutOfBounds();
         _REGISTRY = IMarketRegistry(marketRegistry);
         _BLOCK_TIME = chainBlockTime;
         _SELF = address(this);
+    }
+
+    /// @dev The AccessManager the proxy was initialized with, read from `AccessManagedUpgradeable`'s ERC-7201 slot
+    /// (its first member is the authority). A logic body cannot call `authority()` on the proxy, which has no code while
+    /// its constructor runs `initialize`.
+    function _authority() internal view returns (address a) {
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            a := sload(0xf3177357ab46d8af007ab3fdb9af81da189e1068fefdc0073dca88a2cab40a00)
+        }
     }
 
     function _onlyDelegated() internal view {
@@ -143,7 +150,7 @@ abstract contract ParameterStoreStorage is IParameterStoreBase {
         if (def.feedHeartbeat == 0) revert UnknownFeed(feed);
     }
 
-    /// @dev Reverts `LoosenTooSoon` within `normalDelay` of the key's previous loosening.
+    /// @dev Reverts `LoosenTooSoon` within `LOOSEN_SPACING` of the key's previous loosening.
     function _spaceLoosening(
         bytes32 name,
         bytes32 scope
@@ -151,7 +158,7 @@ abstract contract ParameterStoreStorage is IParameterStoreBase {
         bytes32 key = keccak256(abi.encode(name, scope));
         uint256 last = _s().lastLoosenedAt[key];
         if (last != 0) {
-            uint256 nextAt = last + IAvanaTimelock(_TIMELOCK).normalDelay();
+            uint256 nextAt = last + LOOSEN_SPACING;
             if (block.timestamp < nextAt) revert LoosenTooSoon(key, nextAt);
         }
         // Block timestamps stay far below 2^64 seconds.

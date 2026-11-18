@@ -3,8 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {IAvanaGasVault} from "../../../src/periphery/gas-vault/IAvanaGasVault.sol";
+import {AvanaAccess} from "../../deploy/lib/AvanaAccess.sol";
 import {DeployBase} from "../../deploy/lib/DeployBase.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {console2} from "forge-std/console2.sol";
 
 /// @title GasVaultDrill
@@ -12,8 +16,9 @@ import {console2} from "forge-std/console2.sol";
 /// role that makes that call on a real deployment. Run through `drill.sh`, which picks the role's encrypted Foundry
 /// keystore; without `--broadcast` forge only simulates.
 /// @dev Roles, from the environment (addresses only; no key is ever read): `DRILL_TREASURY` (stands for the
-/// `feeRecipient` treasury Safe), `DRILL_TIMELOCK` (an account standing for the AvanaTimelock, so `addSigner` runs
-/// without the 4-day delay; the delay itself is rehearsed on anvil by the `12-*` deploy steps), `DRILL_GUARDIAN` (the
+/// `feeRecipient` treasury Safe), `DRILL_TIMELOCK` (an account standing for the governance Safe: it holds the governance role of a
+/// drill-only AccessManager with no execution delay, so `addSigner` runs without the 4-day delay; the delay itself is
+/// rehearsed on anvil by the `12-*` deploy steps), `DRILL_GUARDIAN` (the
 /// Emergency Guardian Safe), `DRILL_SIGNER` (the keeper signer refilled) and the deployer, who also calls the
 /// permissionless top-ups. Amounts are small and set by `DRILL_MIN_WEI`, `DRILL_TARGET_WEI`, `DRILL_CAP_WEI` and
 /// `DRILL_FUND_WEI`. The vault's address is written to `deployments-local/<network>/gas-vault-drill.json`.
@@ -46,10 +51,11 @@ contract GasVaultDrill is DeployBase {
         return IAvanaGasVault(payable(vm.parseJsonAddress(vm.readFile(path), ".AvanaGasVault")));
     }
 
-    /// @notice Deployer: the vault with the drill's treasury, timelock and guardian.
+    /// @notice Deployer: a drill AccessManager, the vault with the drill's treasury, that manager and guardian, and the
+    /// vault's governed functions mapped to the governance role, held by the stand-in. The deployer gives up its admin role.
     function deploy() external {
         address treasury = _role("DRILL_TREASURY");
-        address timelock = _role("DRILL_TIMELOCK");
+        address governance = _role("DRILL_TIMELOCK");
         address guardian = _role("DRILL_GUARDIAN");
         string memory path = _outputPath("gas-vault-drill");
         if (vm.exists(path)) {
@@ -60,17 +66,33 @@ contract GasVaultDrill is DeployBase {
             );
         }
         vm.startBroadcast();
+        (, address sender,) = vm.readCallers();
+        AccessManager manager = new AccessManager(sender);
         address vault = _deploy(
             "AvanaGasVault",
             bytes.concat(
-                _artifact("AvanaGasVault.sol", "AvanaGasVault"), abi.encode(treasury, timelock, guardian, uint256(8))
+                _artifact("AvanaGasVault.sol", "AvanaGasVault"),
+                abi.encode(treasury, address(manager), guardian, uint256(8))
             )
         );
+        manager.labelRole(AvanaRoles.GOVERNANCE_ROLE, AvanaRoles.GOVERNANCE_LABEL);
+        manager.setTargetFunctionRole(
+            vault,
+            AvanaAccess.selectorsOf(AvanaAccess.Kind.GasVault, AvanaRoles.GOVERNANCE_ROLE),
+            AvanaRoles.GOVERNANCE_ROLE
+        );
+        manager.grantRole(AvanaRoles.GOVERNANCE_ROLE, governance, 0);
+        manager.grantRole(AvanaRoles.ADMIN_ROLE, governance, 0);
+        manager.renounceRole(AvanaRoles.ADMIN_ROLE, sender);
         vm.stopBroadcast();
         vm.createDir(string.concat(vm.projectRoot(), "/", OUTPUT_DIR, "/", _network()), true);
         vm.writeJson(vm.serializeAddress("drill", "AvanaGasVault", vault), path);
         IAvanaGasVault v = IAvanaGasVault(payable(vault));
-        require(v.TREASURY() == treasury && v.TIMELOCK() == timelock && v.GUARDIAN() == guardian, "immutables");
+        require(
+            v.TREASURY() == treasury && IAccessManaged(vault).authority() == address(manager)
+                && v.GUARDIAN() == guardian,
+            "immutables"
+        );
         console2.log("drill vault", vault);
     }
 
@@ -85,7 +107,7 @@ contract GasVaultDrill is DeployBase {
         console2.log("vault holds", address(v).balance);
     }
 
-    /// @notice Timelock stand-in: lists the signer with the drill's values.
+    /// @notice Governance stand-in: lists the signer with the drill's values.
     function addSigner() external {
         IAvanaGasVault v = _vault();
         address signer = _role("DRILL_SIGNER");
@@ -143,7 +165,7 @@ contract GasVaultDrill is DeployBase {
         console2.log("paused");
     }
 
-    /// @notice Timelock stand-in: lifts the pause.
+    /// @notice Governance stand-in: lifts the pause.
     function unpause() external {
         IAvanaGasVault v = _vault();
         vm.broadcast();
@@ -162,7 +184,7 @@ contract GasVaultDrill is DeployBase {
         console2.log("signer removed", signer);
     }
 
-    /// @notice Timelock stand-in: withdraws everything; it can only go to the treasury.
+    /// @notice Governance stand-in: withdraws everything; it can only go to the treasury.
     function withdraw() external {
         IAvanaGasVault v = _vault();
         address treasury = v.TREASURY();

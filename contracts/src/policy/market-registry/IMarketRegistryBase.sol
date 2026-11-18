@@ -9,7 +9,7 @@ interface IMarketRegistryBase {
     /// @notice A write would map a pool, vault token, LPOracle, Hub asset or Spoke reserve to a second market.
     error DuplicateMarketKey();
 
-    /// @notice A restore named an address never set for that slot through the timelock.
+    /// @notice A restore named an address never set for that slot through the governance role.
     error NotPreviouslyApproved();
 
     error InvalidRoute();
@@ -47,9 +47,6 @@ interface IMarketRegistryBase {
 
     /// @notice Liquidation of this (market, debt reserve) pair would have no usable swap route or flash source.
     error LivenessBound(address spoke, uint256 marketId, uint256 debtReserveId);
-
-    /// @notice A grant of `DEFAULT_ADMIN_ROLE` or `APPLICATION_ADMIN` to an account other than `TIMELOCK`.
-    error AdminRoleOnlyTimelock(bytes32 role, address account);
 
     /// @notice A new market would take the registry past `MAX_MARKET_COUNT` listings.
     error MarketCountLimit(uint256 limit);

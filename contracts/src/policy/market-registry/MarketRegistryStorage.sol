@@ -62,9 +62,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         mapping(address spoke => uint256[]) marketsOfSpoke;
         address[] hubList;
         mapping(address hub => RiskTier) hubTier;
-        mapping(uint32 integrationId => address) integrationLpVault;
-        mapping(uint32 integrationId => address) integrationPricing;
-        mapping(address lpVault => uint32) integrationIdOf;
         address[] spokeList;
         mapping(address spoke => SpokeDef) spokes;
         /// @dev Unused; kept for storage layout.
@@ -108,7 +105,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
     uint8 internal constant _PRIMARY = 0;
     uint8 internal constant _BACKUP = 1;
 
-    address internal immutable _TIMELOCK;
     address internal immutable _AAVE_GOVERNANCE_EXECUTOR;
     address internal immutable _VAULT_TOKEN_FACTORY;
     address internal immutable _AAVE_ADAPTER;
@@ -132,13 +128,12 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         MarketRegistryImmutables memory im
     ) {
         if (
-            im.timelock == address(0) || im.aaveGovernanceExecutor == address(0) || im.vaultTokenFactory == address(0)
+            im.aaveGovernanceExecutor == address(0) || im.vaultTokenFactory == address(0)
                 || im.aaveAdapter == address(0) || im.collateralization == address(0) || im.lock == address(0)
                 || im.proxyManager == address(0) || im.parameterStore == address(0) || im.riskModule == address(0)
                 || im.lpVaultSwap == address(0) || im.payoutEscrow == address(0) || im.flashLiquidator == address(0)
                 || im.standardSpokeImplementation == address(0) || im.maxMarketCount == 0
         ) revert ListingCheckFailed("immutables");
-        _TIMELOCK = im.timelock;
         _AAVE_GOVERNANCE_EXECUTOR = im.aaveGovernanceExecutor;
         _VAULT_TOKEN_FACTORY = im.vaultTokenFactory;
         _AAVE_ADAPTER = im.aaveAdapter;

@@ -85,7 +85,7 @@ abstract contract RealStackFlows is FullStackMarkets {
         d.primaryRoute = _list(address(p));
         d.alternateRoute = _list(address(a));
         d.issuerProbe = probe;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(address(token), d);
     }
 
@@ -150,7 +150,7 @@ abstract contract RealStackFlows is FullStackMarkets {
         for (uint256 i = 0; i < toks.length; ++i) {
             if (toks[i] == debtAsset) continue;
             address[2] memory r = _realRoutes(toks[i], debtAsset);
-            vm.startPrank(address(timelock));
+            vm.startPrank(governor);
             registry.setRoute(marketId, toks[i], debtAsset, 0, r[0]);
             registry.setRoute(marketId, toks[i], debtAsset, 1, r[1]);
             vm.stopPrank();

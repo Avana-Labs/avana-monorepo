@@ -20,7 +20,14 @@ contract UniswapV4IntegrationBlockTimeUnitTest is UniswapV4IntegrationFixture {
             deployCode(
                 "UniswapV4Integration.sol:UniswapV4Integration",
                 abi.encode(
-                    INTEGRATION, coll, registry, address(lock), timelock, address(posm), address(factory), blockTime
+                    INTEGRATION,
+                    coll,
+                    registry,
+                    address(lock),
+                    address(accessManager),
+                    address(posm),
+                    address(factory),
+                    blockTime
                 )
             )
         );

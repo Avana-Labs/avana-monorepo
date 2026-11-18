@@ -28,7 +28,7 @@ contract MarketRegistrySpokeRecordsUnitTest is MarketRegistryFixture {
         spoke2.setOracle(address(oracle2));
         spoke2.setImplementation(address(spokeImpl));
         oracle2.setSpoke(address(spoke2));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.recordHub(address(hub2), RiskTier.Correlated);
     }
 
@@ -40,7 +40,7 @@ contract MarketRegistrySpokeRecordsUnitTest is MarketRegistryFixture {
         SpokeDef memory d,
         address s
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, s));
         registry.deployCdpSpoke(d);
     }
@@ -58,7 +58,7 @@ contract MarketRegistrySpokeRecordsUnitTest is MarketRegistryFixture {
         oracle2.setSpoke(address(0));
         _expectInvalidSpoke(_def2(), address(0));
         oracle2.setSpoke(address(spoke2));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         assertEq(registry.deployCdpSpoke(_def2()), address(spoke2));
     }
 
@@ -104,7 +104,7 @@ contract MarketRegistrySpokeRecordsUnitTest is MarketRegistryFixture {
         d.implementation = address(upgraded);
         vm.expectEmit(address(registry));
         emit IMarketRegistryBase.SpokeApproved(address(spoke), address(hub), V3, address(upgraded), address(aaveOracle));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         assertEq(registry.deployCdpSpoke(d), address(spoke));
         assertEq(registry.getSpokes().length, 1);
         SpokeDef memory rec = registry.getSpoke(address(spoke));
@@ -120,7 +120,7 @@ contract MarketRegistrySpokeRecordsUnitTest is MarketRegistryFixture {
     // TEST-185 verifies: REQ-CONFIG-016, REQ-CONFIG-074
     // A re-approval of the unchanged implementation is accepted (idempotent) and leaves the record as it was.
     function test_TEST_185_reapprovalOfTheSameImplementation() public {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.deployCdpSpoke(_spokeDef());
         assertEq(registry.getSpokes().length, 1);
         (,, bool current) = registry.spokeImplementationStatus(address(spoke));
@@ -131,7 +131,7 @@ contract MarketRegistrySpokeRecordsUnitTest is MarketRegistryFixture {
     // Recording a second Spoke on another Hub adds it to the list and maps it to its Hub; its debt-reserve set starts
     // empty.
     function test_TEST_185_secondSpokeRecorded() public {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.deployCdpSpoke(_def2());
         address[] memory spokes = registry.getSpokes();
         assertEq(spokes.length, 2);
@@ -144,7 +144,7 @@ contract MarketRegistrySpokeRecordsUnitTest is MarketRegistryFixture {
     // TEST-185 verifies: REQ-CONFIG-077, REQ-CONFIG-079, REQ-MREG-006
     // A debt reserve can be enabled only on an approved Spoke.
     function test_TEST_185_debtReserveNeedsAnApprovedSpoke() public {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, address(spoke2)));
         registry.enableDebtReserve(address(spoke2), _ghoDef());
     }

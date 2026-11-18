@@ -98,7 +98,7 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
         assertEq(_status().unknownCollateralReserveId, USDC_RESERVE);
         rSpoke.setStatus(address(proxy), USDC_RESERVE, false, false);
         // An Offboarding market still maps its reserve; it refuses borrows and allows withdraw-with-debt.
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setMarketOffboarding(mid);
         s = _status();
         assertEq(s.unknownCollateralReserveId, NONE);
@@ -156,7 +156,7 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
         swap.setKeepers(1);
         // USDT loses both routes into USDC while the account owes USDC.
         rSpoke.setStatus(address(proxy), USDC_RESERVE, false, true);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.disableRoute(mid, address(usdt), address(usdc), 0);
         registry.disableRoute(mid, address(usdt), address(usdc), 1);
         vm.stopPrank();

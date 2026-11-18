@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {BackingRecord} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
@@ -59,18 +60,19 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
             address(coll),
             registry,
             address(lock),
-            timelock,
+            address(accessManager),
             address(nfpm),
             address(v3Factory),
             v3Factory.poolInitCodeHash()
         );
-        vm.prank(timelock);
+        _bindAccess(AvanaAccess.Kind.LpVault, address(v3Vault));
+        vm.prank(governor);
         factory.registerIntegration(V3_INTEGRATION, address(v3Vault));
         PositionShape memory shape = PositionShape(ShapeKind.TickRange, -FULL, FULL);
         vm.prank(registry);
         (, uint8 d) = v3Vault.bindMarket(V3_MARKET, address(v3Pool), bytes32(0), shape, abi.encode(1e8, 1e8));
         assertEq(d, 6);
-        vm.prank(timelock);
+        vm.prank(governor);
         vt2 = factory.deployVaultToken(
             V3_INTEGRATION,
             address(v3Pool),
@@ -268,7 +270,7 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
         assertEq(nfpm.ownerOf(uint256(key)), alice);
         assertEq(tUsdc.balanceOf(address(v3Vault)), 1e12, "donations stay in the LPVault");
         // The pushed NFT leaves only through the timelock's stray return.
-        vm.prank(timelock);
+        vm.prank(governor);
         v3Vault.returnStray(bytes32(pushed), attacker);
         assertEq(nfpm.ownerOf(pushed), attacker);
     }
@@ -493,7 +495,7 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
             adapter,
             lpVaultSwap,
             address(factory),
-            timelock,
+            address(accessManager),
             address(coll),
             aliceProxy
         ];

@@ -21,9 +21,9 @@ contract ParameterStoreDynamicCapInvariantTest is ParameterStoreFixture, Handler
     function setUp() public {
         _deployStore();
         _listMarket();
-        vm.prank(address(timelock));
-        store.grantRole(AvanaRoles.APPLICATION_RISK_STEWARD, safe);
-        handler = new ParameterStoreDynamicCapHandler(store, address(timelock), safe, M);
+        vm.prank(aaveGovernanceExecutor);
+        accessManager.grantRole(AvanaRoles.TIGHTEN_ROLE, safe, 0);
+        handler = new ParameterStoreDynamicCapHandler(store, governor, safe, M);
         targetContract(address(handler));
     }
 

@@ -3,9 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
 import {AvanaGasVault} from "../../src/periphery/gas-vault/AvanaGasVault.sol";
 import {IAvanaGasVault} from "../../src/periphery/gas-vault/IAvanaGasVault.sol";
-import {Test} from "forge-std/Test.sol";
+import {AvanaTest} from "../utils/AvanaTest.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @dev A signer whose `receive` re-enters the vault (`topUp` or `topUpAll`) and records the revert.
 contract ReentrantSigner {
@@ -65,10 +67,9 @@ contract GasBurningSigner {
 
 /// @notice AvanaGasVault (2.24): the top-up rule and its three caps, the exact 24 h window, `topUpAll`, reentry, the
 /// timelock and guardian split, tighten-only, the allowlist bound, pause and withdrawal to `TREASURY` only.
-contract AvanaGasVaultUnitTest is Test {
+contract AvanaGasVaultUnitTest is AvanaTest {
     AvanaGasVault internal vault;
     address internal treasury = makeAddr("treasury");
-    address internal timelock = makeAddr("timelock");
     address internal guardian = makeAddr("guardian");
     address internal primary = makeAddr("primary");
     address internal standby = makeAddr("standby");
@@ -81,10 +82,11 @@ contract AvanaGasVaultUnitTest is Test {
 
     function setUp() public {
         vm.warp(1_800_000_000);
-        vault = new AvanaGasVault(treasury, timelock, guardian, 8);
+        vault = new AvanaGasVault(treasury, address(accessManager), guardian, 8);
+        _bindAccess(AvanaAccess.Kind.GasVault, address(vault));
         vm.deal(address(this), 100 ether);
         vault.fund{value: 50 ether}();
-        vm.startPrank(timelock);
+        vm.startPrank(governor);
         vault.addSigner(primary, MIN, TARGET, CAP);
         vault.addSigner(standby, MIN, TARGET, CAP);
         vm.stopPrank();
@@ -105,26 +107,26 @@ contract AvanaGasVaultUnitTest is Test {
     // TEST-333 verifies: REQ-GASV-001, REQ-GASV-002
     function test_TEST_333_constructorFixesImmutablesAndRefusesBadInputs() public {
         assertEq(vault.TREASURY(), treasury);
-        assertEq(vault.TIMELOCK(), timelock);
+        assertEq(IAccessManaged(address(vault)).authority(), address(accessManager));
         assertEq(vault.GUARDIAN(), guardian);
         assertEq(vault.MAX_SIGNERS(), 8);
         assertEq(vault.PERIOD(), 86_400);
         assertEq(vault.MAX_SENDS_PER_PERIOD(), 4);
         vm.expectRevert(IAvanaGasVault.InvalidAddress.selector);
-        new AvanaGasVault(address(0), timelock, guardian, 8);
+        new AvanaGasVault(address(0), address(accessManager), guardian, 8);
         vm.expectRevert(IAvanaGasVault.InvalidAddress.selector);
         new AvanaGasVault(treasury, address(0), guardian, 8);
         vm.expectRevert(IAvanaGasVault.InvalidAddress.selector);
-        new AvanaGasVault(treasury, timelock, address(0), 8);
+        new AvanaGasVault(treasury, address(accessManager), address(0), 8);
         vm.expectRevert(IAvanaGasVault.InvalidAddress.selector);
         new AvanaGasVault(treasury, treasury, guardian, 8);
         vm.expectRevert(IAvanaGasVault.InvalidAddress.selector);
-        new AvanaGasVault(treasury, timelock, treasury, 8);
+        new AvanaGasVault(treasury, address(accessManager), treasury, 8);
         vm.expectRevert(abi.encodeWithSelector(IAvanaGasVault.InvalidMaxSigners.selector, 0));
-        new AvanaGasVault(treasury, timelock, guardian, 0);
+        new AvanaGasVault(treasury, address(accessManager), guardian, 0);
         vm.expectRevert(abi.encodeWithSelector(IAvanaGasVault.InvalidMaxSigners.selector, 9));
-        new AvanaGasVault(treasury, timelock, guardian, 9);
-        new AvanaGasVault(treasury, timelock, guardian, 1);
+        new AvanaGasVault(treasury, address(accessManager), guardian, 9);
+        new AvanaGasVault(treasury, address(accessManager), guardian, 1);
     }
 
     // TEST-333 verifies: REQ-GASV-003
@@ -195,11 +197,11 @@ contract AvanaGasVaultUnitTest is Test {
     // TEST-333 verifies: REQ-GASV-005
     function test_TEST_333_topUp_capHoldsOverAnyWindowNotPerCalendarPeriod() public {
         uint256 t0 = block.timestamp;
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.setSignerConfig(primary, 0.05 ether, 0.1 ether, CAP);
         assertEq(vault.topUp(primary), 0.1 ether); // at t0
         vm.warp(t0 + 23 hours);
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.setSignerConfig(primary, MIN, TARGET, CAP);
         _spend(primary, 0.1 ether);
         assertEq(vault.topUp(primary), 0.9 ether); // cap now used up
@@ -216,7 +218,7 @@ contract AvanaGasVaultUnitTest is Test {
 
     // TEST-333 verifies: REQ-GASV-005
     function test_TEST_333_topUp_atMostFourSendsPerWindow() public {
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.setSignerConfig(primary, MIN, TARGET, 10 ether);
         vm.deal(primary, 0);
         for (uint256 i; i < 4; ++i) {
@@ -236,7 +238,7 @@ contract AvanaGasVaultUnitTest is Test {
 
     // TEST-333 verifies: REQ-GASV-004, REQ-GASV-017
     function test_TEST_333_topUp_cappedByVaultBalance() public {
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.withdraw(49.5 ether);
         vm.deal(primary, 0);
         assertEq(vault.topUp(primary), 0.5 ether);
@@ -272,7 +274,7 @@ contract AvanaGasVaultUnitTest is Test {
     // TEST-333 verifies: REQ-GASV-013
     function test_TEST_333_topUp_reentrantSignerBlocked() public {
         ReentrantSigner r = new ReentrantSigner(vault);
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.addSigner(address(r), MIN, TARGET, CAP);
         assertEq(vault.topUp(address(r)), 1 ether);
         assertTrue(r.reentered());
@@ -284,7 +286,7 @@ contract AvanaGasVaultUnitTest is Test {
     // TEST-333 verifies: REQ-GASV-004, REQ-GASV-015
     function test_TEST_333_topUp_refusingSignerReverts() public {
         RefusingSigner r = new RefusingSigner();
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.addSigner(address(r), MIN, TARGET, CAP);
         vm.expectRevert(abi.encodeWithSelector(IAvanaGasVault.SendFailed.selector, address(r), 1 ether));
         vault.topUp(address(r));
@@ -300,7 +302,7 @@ contract AvanaGasVaultUnitTest is Test {
     function test_TEST_333_transferGasIsBounded() public {
         assertEq(vault.TRANSFER_GAS(), 100_000);
         GasBurningSigner b = new GasBurningSigner();
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.addSigner(address(b), MIN, TARGET, CAP);
         uint256 before = gasleft();
         vm.expectRevert(abi.encodeWithSelector(IAvanaGasVault.SendFailed.selector, address(b), 1 ether));
@@ -333,7 +335,7 @@ contract AvanaGasVaultUnitTest is Test {
     // TEST-333 verifies: REQ-GASV-006
     function test_TEST_333_topUpAll_skipsRefusingAndCappedSigners() public {
         RefusingSigner r = new RefusingSigner();
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.addSigner(address(r), MIN, TARGET, CAP);
         vm.deal(primary, 0);
         vm.deal(standby, 0);
@@ -352,7 +354,7 @@ contract AvanaGasVaultUnitTest is Test {
     function test_TEST_333_topUpAll_reentryBlocked() public {
         ReentrantSigner r = new ReentrantSigner(vault);
         r.setUseAll(true);
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.addSigner(address(r), MIN, TARGET, CAP);
         (uint256 count,) = vault.topUpAll();
         assertEq(count, 3);
@@ -365,14 +367,14 @@ contract AvanaGasVaultUnitTest is Test {
     function test_TEST_333_addSigner_onlyTimelock() public {
         address s = makeAddr("s");
         vm.prank(guardian);
-        vm.expectRevert(IAvanaGasVault.NotTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, guardian));
         vault.addSigner(s, MIN, TARGET, CAP);
         vm.prank(stranger);
-        vm.expectRevert(IAvanaGasVault.NotTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, stranger));
         vault.addSigner(s, MIN, TARGET, CAP);
         vm.expectEmit(true, false, false, true, address(vault));
         emit IAvanaGasVault.SignerAdded(s, MIN, TARGET, CAP);
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.addSigner(s, MIN, TARGET, CAP);
         assertTrue(vault.isSigner(s));
         assertEq(vault.signers().length, 3);
@@ -380,8 +382,8 @@ contract AvanaGasVaultUnitTest is Test {
 
     // TEST-333 verifies: REQ-GASV-007, REQ-GASV-016
     function test_TEST_333_addSigner_refusesBadSignersAndConfigs() public {
-        address[6] memory bad = [address(0), address(vault), treasury, timelock, guardian, primary];
-        vm.startPrank(timelock);
+        address[6] memory bad = [address(0), address(vault), treasury, address(accessManager), guardian, primary];
+        vm.startPrank(governor);
         for (uint256 i; i < bad.length; ++i) {
             vm.expectRevert(abi.encodeWithSelector(IAvanaGasVault.InvalidSigner.selector, bad[i]));
             vault.addSigner(bad[i], MIN, TARGET, CAP);
@@ -404,15 +406,16 @@ contract AvanaGasVaultUnitTest is Test {
 
     // TEST-333 verifies: REQ-GASV-007
     function test_TEST_333_maxSigners() public {
-        vm.startPrank(timelock);
+        vm.startPrank(governor);
         for (uint256 i; i < 6; ++i) {
             vault.addSigner(address(uint160(0xA000 + i)), MIN, TARGET, CAP);
         }
         vm.expectRevert(IAvanaGasVault.TooManySigners.selector);
         vault.addSigner(address(0xB000), MIN, TARGET, CAP);
         vm.stopPrank();
-        AvanaGasVault small = new AvanaGasVault(treasury, timelock, guardian, 1);
-        vm.startPrank(timelock);
+        AvanaGasVault small = new AvanaGasVault(treasury, address(accessManager), guardian, 1);
+        _bindAccess(AvanaAccess.Kind.GasVault, address(small));
+        vm.startPrank(governor);
         small.addSigner(primary, MIN, TARGET, CAP);
         vm.expectRevert(IAvanaGasVault.TooManySigners.selector);
         small.addSigner(standby, MIN, TARGET, CAP);
@@ -425,21 +428,21 @@ contract AvanaGasVaultUnitTest is Test {
     // TEST-333 verifies: REQ-GASV-008
     function test_TEST_333_setSignerConfig_onlyTimelockEitherDirection() public {
         vm.prank(guardian);
-        vm.expectRevert(IAvanaGasVault.NotTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, guardian));
         vault.setSignerConfig(primary, MIN, 2 ether, 2 ether);
         vm.expectEmit(true, true, false, true, address(vault));
-        emit IAvanaGasVault.SignerConfigChanged(primary, timelock, MIN, 2 ether, 2 ether);
-        vm.prank(timelock);
+        emit IAvanaGasVault.SignerConfigChanged(primary, governor, MIN, 2 ether, 2 ether);
+        vm.prank(governor);
         vault.setSignerConfig(primary, MIN, 2 ether, 2 ether);
         IAvanaGasVault.SignerConfig memory c = vault.signerConfig(primary);
         assertEq(c.targetBalance, 2 ether);
         assertEq(c.periodCap, 2 ether);
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.setSignerConfig(primary, 0.1 ether, 0.2 ether, 0.2 ether);
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IAvanaGasVault.UnknownSigner.selector, stranger));
         vault.setSignerConfig(stranger, MIN, TARGET, CAP);
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IAvanaGasVault.InvalidConfig.selector, MIN, TARGET, 0));
         vault.setSignerConfig(primary, MIN, TARGET, 0);
     }
@@ -447,10 +450,10 @@ contract AvanaGasVaultUnitTest is Test {
     // TEST-333 verifies: REQ-GASV-010, ATTACK-208
     function test_TEST_333_removeSigner_guardianImmediate() public {
         address third = makeAddr("third");
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.addSigner(third, MIN, TARGET, CAP);
         vm.prank(stranger);
-        vm.expectRevert(IAvanaGasVault.NotGuardianOrTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, stranger));
         vault.removeSigner(primary);
         vm.expectEmit(true, true, false, false, address(vault));
         emit IAvanaGasVault.SignerRemoved(primary, guardian);
@@ -462,7 +465,7 @@ contract AvanaGasVaultUnitTest is Test {
         assertEq(list[0], third);
         assertEq(list[1], standby);
         // The moved signer keeps working and can itself be removed.
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.removeSigner(third);
         assertEq(vault.signers()[0], standby);
         vm.deal(primary, 0);
@@ -482,7 +485,7 @@ contract AvanaGasVaultUnitTest is Test {
         vault.topUp(primary);
         vm.prank(guardian);
         vault.removeSigner(primary);
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.addSigner(primary, MIN, TARGET, CAP);
         assertEq(vault.sentInPeriod(primary), 1 ether);
         _spend(primary, 1 ether);
@@ -501,13 +504,13 @@ contract AvanaGasVaultUnitTest is Test {
         vault.tightenSigner(primary, MIN, TARGET, CAP + 1);
         vm.expectRevert(abi.encodeWithSelector(IAvanaGasVault.InvalidConfig.selector, MIN, MIN - 1, CAP));
         vault.tightenSigner(primary, MIN, MIN - 1, CAP);
-        vm.expectRevert(IAvanaGasVault.NotTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, guardian));
         vault.setSignerConfig(primary, MIN, TARGET, CAP);
-        vm.expectRevert(IAvanaGasVault.NotTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, guardian));
         vault.addSigner(stranger, MIN, TARGET, CAP);
-        vm.expectRevert(IAvanaGasVault.NotTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, guardian));
         vault.unpause();
-        vm.expectRevert(IAvanaGasVault.NotTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, guardian));
         vault.withdraw(1);
         // Lowering every value to 0 is allowed: the signer is then never topped up.
         vm.expectEmit(true, true, false, true, address(vault));
@@ -518,9 +521,9 @@ contract AvanaGasVaultUnitTest is Test {
         vm.expectRevert(abi.encodeWithSelector(IAvanaGasVault.NotBelowMinimum.selector, primary, 0, 0));
         vault.topUp(primary);
         vm.prank(stranger);
-        vm.expectRevert(IAvanaGasVault.NotGuardianOrTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, stranger));
         vault.tightenSigner(standby, 0, 0, 0);
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.tightenSigner(standby, 0.1 ether, 0.5 ether, 0.5 ether);
     }
 
@@ -529,7 +532,7 @@ contract AvanaGasVaultUnitTest is Test {
     // TEST-333 verifies: REQ-GASV-011, REQ-GASV-015
     function test_TEST_333_pause_blocksTopUp() public {
         vm.prank(stranger);
-        vm.expectRevert(IAvanaGasVault.NotGuardianOrTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, stranger));
         vault.pause();
         vm.expectEmit(false, true, false, true, address(vault));
         emit IAvanaGasVault.PauseChanged(true, guardian);
@@ -546,7 +549,7 @@ contract AvanaGasVaultUnitTest is Test {
         assertEq(requested, 1 ether);
         // Funding, withdrawal and the guardian's removals stay open.
         vault.fund{value: 1 ether}();
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.withdraw(1 ether);
         vm.prank(guardian);
         vault.removeSigner(standby);
@@ -554,14 +557,14 @@ contract AvanaGasVaultUnitTest is Test {
 
     // TEST-333 verifies: REQ-GASV-011
     function test_TEST_333_unpause_onlyTimelock() public {
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.pause();
         vm.prank(guardian);
-        vm.expectRevert(IAvanaGasVault.NotTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, guardian));
         vault.unpause();
         vm.expectEmit(false, true, false, true, address(vault));
-        emit IAvanaGasVault.PauseChanged(false, timelock);
-        vm.prank(timelock);
+        emit IAvanaGasVault.PauseChanged(false, governor);
+        vm.prank(governor);
         vault.unpause();
         assertFalse(vault.paused());
         vm.deal(primary, 0);
@@ -571,15 +574,15 @@ contract AvanaGasVaultUnitTest is Test {
     // TEST-333 verifies: REQ-GASV-012
     function test_TEST_333_withdraw_onlyTreasury() public {
         vm.prank(stranger);
-        vm.expectRevert(IAvanaGasVault.NotTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, stranger));
         vault.withdraw(1 ether);
         vm.expectEmit(false, false, false, true, address(vault));
         emit IAvanaGasVault.Withdrawn(10 ether);
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.withdraw(10 ether);
         assertEq(treasury.balance, 10 ether);
-        assertEq(timelock.balance, 0);
-        vm.startPrank(timelock);
+        assertEq(governor.balance, 0);
+        vm.startPrank(governor);
         vm.expectRevert(abi.encodeWithSelector(IAvanaGasVault.InvalidWithdrawal.selector, 0, 40 ether));
         vault.withdraw(0);
         vm.expectRevert(abi.encodeWithSelector(IAvanaGasVault.InvalidWithdrawal.selector, 41 ether, 40 ether));
@@ -604,7 +607,7 @@ contract AvanaGasVaultUnitTest is Test {
         assertTrue(ok);
         uint256 held = address(vault).balance;
         uint256 before = treasury.balance;
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.withdraw(held);
         assertEq(address(vault).balance, 0);
         assertEq(treasury.balance, before + held);
@@ -613,9 +616,10 @@ contract AvanaGasVaultUnitTest is Test {
     // TEST-333 verifies: REQ-GASV-012
     function test_TEST_333_withdraw_refusingTreasuryReverts() public {
         RefusingSigner t = new RefusingSigner();
-        AvanaGasVault v = new AvanaGasVault(address(t), timelock, guardian, 8);
+        AvanaGasVault v = new AvanaGasVault(address(t), address(accessManager), guardian, 8);
+        _bindAccess(AvanaAccess.Kind.GasVault, address(v));
         v.fund{value: 1 ether}();
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IAvanaGasVault.SendFailed.selector, address(t), 1 ether));
         v.withdraw(1 ether);
     }

@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 /// @title MarketRegistryListingLogic
 /// @notice Bodies of `listToken`, `setPriceSource` and `listCollateralMarket`. Normal delay.
-/// @dev Runs only by delegatecall from the MarketRegistry, which checks `APPLICATION_ADMIN` first.
+/// @dev Runs only by delegatecall from the MarketRegistry, which checks the caller with the AccessManager first.
 // Bodies of IMarketRegistry selectors; this contract inherits no interface piece.
 // solhint-disable comprehensive-interface
 // forge-lint: disable-start(reentrancy-events)
@@ -264,7 +264,7 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         Layout storage l = _s();
         SpokeDef storage sp = l.spokes[def.spoke];
         if (!sp.approved || sp.hub != def.hub) revert InvalidSpoke(def.spoke);
-        lpVault = l.integrationLpVault[def.integrationId];
+        lpVault = IVaultTokenFactory(_VAULT_TOKEN_FACTORY).lpVaultOf(def.integrationId);
         if (sp.integrationId != def.integrationId || lpVault == address(0)) {
             revert IMarketRegistry.InvalidIntegration(def.integrationId);
         }

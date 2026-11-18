@@ -4,8 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
-import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
-import {GovernedTargets, SelectorPair} from "../../src/governance/timelock/IAvanaTimelock.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
@@ -41,15 +39,13 @@ interface ISpokeConfiguratorManagers {
 }
 
 /// @title AaveAdapterHostileUnitTest
-/// @notice A hostile Adapter upgrade through the real AvanaTimelock and the borrower's exit inside its delay (TEST-195,
+/// @notice A hostile Adapter upgrade through the real AccessManager and the borrower's exit inside its delay (TEST-195,
 /// TEST-210); what the hostile implementation can and cannot do once executed (TEST-130); a RiskModule that approves or
 /// refuses everything (TEST-132, TEST-156); a MarketRegistry that answers nothing useful or reverts (TEST-243).
-/// @dev The Adapter's `TIMELOCK` is a real AvanaTimelock built before the fixture (normal delay 5 days, the governance
-/// multisig and the Aave governance executor as proposers, the Emergency Guardian and the Aave Protocol Guardian as
-/// cancellers, public execution).
+/// @dev The Adapter's authority is the suite's AccessManager (the governance multisig holds the governance role with
+/// a 5-day execution delay; the DAO is the guardian of every role and cancels).
 /// forge-config: default.isolate = false
 contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
-    AvanaTimelock internal tl;
     HostileAdapter internal hostile;
     bytes32 internal kA1;
     bytes32 internal kA2;
@@ -58,26 +54,6 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
     address internal pAB;
 
     function setUp() public override {
-        address[] memory proposers = new address[](2);
-        (proposers[0], proposers[1]) = (governanceMultisig, aaveGovernanceExecutor);
-        address[] memory executors = new address[](1);
-        executors[0] = governanceMultisig;
-        address[] memory cancellers = new address[](2);
-        (cancellers[0], cancellers[1]) = (emergencyGuardian, aaveGuardian);
-        address[] memory daoCancellers = new address[](1);
-        daoCancellers[0] = aaveGovernanceExecutor;
-        tl = new AvanaTimelock(
-            proposers,
-            executors,
-            cancellers,
-            daoCancellers,
-            NORMAL_DELAY,
-            true,
-            new SelectorPair[](0),
-            new SelectorPair[](0),
-            GovernedTargets(address(0xA001), address(0xA002), address(0xA003))
-        );
-        timelock = address(tl);
         super.setUp();
         hostile = new HostileAdapter();
         // Alice: three positions in two markets, 3,000 GHO and 2,000 USDC of debt on market A.
@@ -93,33 +69,26 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
         return abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (address(hostile), ""));
     }
 
-    function _schedule(
-        bytes32 salt
-    ) internal returns (bytes32 id) {
+    /// @dev Schedules the hostile upgrade as the governance multisig at the governance delay, and returns its id.
+    function _schedule() internal returns (bytes32 id) {
         bytes memory data = _upgradeCall();
-        assertEq(tl.requiredDelay(_targets(), _payloads(data)), NORMAL_DELAY, "normal delay");
+        (bool immediate, uint32 delay) = accessManager.canCall(governanceMultisig, adapter, bytes4(data));
+        assertFalse(immediate);
+        assertEq(delay, NORMAL_DELAY, "governance delay");
         vm.prank(governanceMultisig);
-        tl.schedule(adapter, 0, data, bytes32(0), salt, NORMAL_DELAY);
-        id = tl.hashOperation(adapter, 0, data, bytes32(0), salt);
+        accessManager.schedule(adapter, data, 0);
+        id = accessManager.hashOperation(governanceMultisig, adapter, data);
     }
 
-    function _targets() internal view returns (address[] memory t) {
-        t = new address[](1);
-        t[0] = adapter;
-    }
-
-    function _payloads(
-        bytes memory data
-    ) internal pure returns (bytes[] memory p) {
-        p = new bytes[](1);
-        p[0] = data;
+    function _executeUpgrade() internal {
+        vm.prank(governanceMultisig);
+        accessManager.execute(adapter, _upgradeCall());
     }
 
     function _installHostile() internal {
-        _schedule(bytes32("install"));
+        _schedule();
         vm.warp(block.timestamp + NORMAL_DELAY);
-        vm.prank(attacker);
-        tl.execute(adapter, 0, _upgradeCall(), bytes32(0), bytes32("install"));
+        _executeUpgrade();
         bytes32 slot = vm.load(adapter, 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc);
         assertEq(address(uint160(uint256(slot))), address(hostile), "hostile installed");
     }
@@ -148,10 +117,10 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
     // Sources: 5.1 TEST-195, Q-228
     /// @notice The governance multisig schedules an upgrade to a hostile implementation at the normal delay; the
     /// borrower repays both reserves and withdraws all three positions well inside the delay, in five calls; then a
-    /// canceller cancels the operation.
+    /// the DAO cancels the operation.
     function test_TEST_195_exitInsideDelayThenCancel() public {
-        bytes32 id = _schedule(bytes32("hostile"));
-        uint256 readyAt = tl.getTimestamp(id);
+        bytes32 id = _schedule();
+        uint256 readyAt = accessManager.getSchedule(id);
         vm.warp(block.timestamp + 2 hours);
         uint256 calls = _exitEverything();
         assertEq(calls, 5, "two repays and three withdrawals");
@@ -160,10 +129,10 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
         assertEq(lpVault.ownerOf(kA2), alice, "position 2");
         assertEq(lpVault.ownerOf(kB), alice, "position 3");
         assertEq(_borrowCountOf(pA), 0, "no debt");
-        assertTrue(tl.isOperationPending(id), "still pending");
-        vm.prank(emergencyGuardian);
-        tl.cancel(id);
-        assertFalse(tl.isOperation(id), "cancelled");
+        assertEq(accessManager.getSchedule(id), readyAt, "still pending");
+        vm.prank(aaveGovernanceExecutor);
+        accessManager.cancel(governanceMultisig, adapter, _upgradeCall());
+        assertEq(accessManager.getSchedule(id), 0, "cancelled");
     }
 
     // TEST-195 verifies: REQ-ADAPTER-042, REQ-ADAPTER-040, INV-018, ATTACK-122
@@ -171,11 +140,10 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
     /// @notice Second run: the borrower leaves inside the delay, the operation becomes ready and executes, and the
     /// hostile implementation finds no position and no collateral to act on.
     function test_TEST_195_readyOperationFindsNothing() public {
-        _schedule(bytes32("install"));
+        _schedule();
         _exitEverything();
         vm.warp(block.timestamp + NORMAL_DELAY);
-        vm.prank(attacker);
-        tl.execute(adapter, 0, _upgradeCall(), bytes32(0), bytes32("install"));
+        _executeUpgrade();
         HostileAdapter h = HostileAdapter(adapter);
         vm.expectRevert();
         h.borrowAgainst(pA, aave.cdpSpoke, debtReserveId, 1e18, attacker);
@@ -187,22 +155,27 @@ contract AaveAdapterHostileUnitTest is AaveAdapterFixture {
 
     // TEST-210 verifies: REQ-ADAPTER-003, REQ-ADAPTER-042, REQ-ACCESS-148, REQ-ACCESS-083
     // Sources: 5.1 TEST-210
-    /// @notice Every canceller of the Adapter upgrade (the two proposers and the two guardians) can cancel it inside
-    /// the delay, and nobody can execute it early.
-    function test_TEST_210_everyCancellerCancels() public {
-        address[4] memory cancellers = [governanceMultisig, aaveGovernanceExecutor, emergencyGuardian, aaveGuardian];
+    /// @notice The scheduler and the DAO (guardian of the role) can cancel the Adapter upgrade inside the delay;
+    /// nobody can execute it early, and a stranger cannot cancel it.
+    function test_TEST_210_schedulerAndDaoCancel() public {
+        address[2] memory cancellers = [governanceMultisig, aaveGovernanceExecutor];
+        bytes memory data = _upgradeCall();
         for (uint256 i = 0; i < cancellers.length; ++i) {
-            bytes32 salt = bytes32(i + 1);
-            bytes32 id = _schedule(salt);
+            bytes32 id = _schedule();
             vm.expectRevert();
-            tl.execute(adapter, 0, _upgradeCall(), bytes32(0), salt);
+            vm.prank(governanceMultisig);
+            accessManager.execute(adapter, data);
             vm.prank(cancellers[i]);
-            tl.cancel(id);
-            assertFalse(tl.isOperation(id), "cancelled");
+            accessManager.cancel(governanceMultisig, adapter, data);
+            assertEq(accessManager.getSchedule(id), 0, "cancelled");
         }
+        _schedule();
         vm.expectRevert();
         vm.prank(attacker);
-        tl.cancel(bytes32(uint256(1)));
+        accessManager.cancel(governanceMultisig, adapter, data);
+        vm.expectRevert();
+        vm.prank(emergencyGuardian);
+        accessManager.cancel(governanceMultisig, adapter, data);
     }
 
     // ─── What a hostile implementation can and cannot do ───

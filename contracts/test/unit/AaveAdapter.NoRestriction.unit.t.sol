@@ -33,7 +33,7 @@ contract AaveAdapterNoRestrictionUnitTest is AaveAdapterFixture {
             [adapter, address(implementation), logics.user, logics.exit, logics.collateral, logics.settlement];
         for (uint256 t = 0; t < targets.length; ++t) {
             for (uint256 i = 0; i < absent.length; ++i) {
-                vm.prank(timelock);
+                vm.prank(governor);
                 (bool ok,) = targets[t].call(abi.encodeWithSignature(absent[i], uint256(MARKET_ID), true));
                 assertFalse(ok, absent[i]);
             }

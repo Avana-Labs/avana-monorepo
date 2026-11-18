@@ -191,9 +191,7 @@ contract AvanaFirstLossReservePerAssetUnitTest is AvanaFirstLossReserveFixture {
             vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, others[i]));
             ghoCoverage.coverDeficit(aave.cdpSpoke, 1);
             vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, others[i]));
-            ghoCoverage.requestWithdrawal(1, others[i]);
-            vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, others[i]));
-            ghoCoverage.executeWithdrawal(1);
+            ghoCoverage.withdraw(1, others[i]);
             vm.stopPrank();
         }
 

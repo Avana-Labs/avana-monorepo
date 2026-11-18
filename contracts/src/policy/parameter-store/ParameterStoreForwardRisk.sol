@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
 import {IParameterStore} from "./IParameterStore.sol";
 import {IParameterStoreLoosen} from "./IParameterStoreLoosen.sol";
 import {IParameterStoreTighten} from "./IParameterStoreTighten.sol";
@@ -24,7 +23,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     function tightenMarketDynamicCap(
         uint256,
         MarketDynamicCap calldata
-    ) external override onlyAdminOrSteward {
+    ) external override restricted {
         _forward(_TIGHTEN_LOGIC);
     }
 
@@ -32,7 +31,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     function loosenMarketDynamicCap(
         uint256,
         MarketDynamicCap calldata
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_LOOSEN_LOGIC);
     }
 
@@ -40,7 +39,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     function tightenSlippageAllowanceBps(
         uint256,
         uint16
-    ) external override onlyAdminOrSteward {
+    ) external override restricted {
         _forward(_TIGHTEN_LOGIC);
     }
 
@@ -48,7 +47,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     function tightenFloorRoundingAllowance(
         address,
         uint256
-    ) external override onlyAdminOrSteward {
+    ) external override restricted {
         _forward(_TIGHTEN_LOGIC);
     }
 
@@ -56,7 +55,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     function tightenBorrowPriceMaxAge(
         address,
         uint32
-    ) external override onlyAdminOrSteward {
+    ) external override restricted {
         _forward(_TIGHTEN_LOGIC);
     }
 
@@ -64,7 +63,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     function tightenPoolRiskFactor(
         uint256,
         uint16
-    ) external override onlyAdminOrSteward {
+    ) external override restricted {
         _forward(_TIGHTEN_LOGIC);
     }
 
@@ -75,7 +74,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
         address,
         uint8,
         uint256
-    ) external override onlyAdminOrSteward {
+    ) external override restricted {
         _forward(_TIGHTEN_LOGIC);
     }
 
@@ -83,7 +82,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     function tightenMarketUsdCap(
         uint256,
         uint256
-    ) external override onlyAdminOrSteward {
+    ) external override restricted {
         _forward(_TIGHTEN_LOGIC);
     }
 
@@ -91,7 +90,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     function tightenTopUpSliceUsd(
         uint256,
         uint256
-    ) external override onlyAdminOrSteward {
+    ) external override restricted {
         _forward(_TIGHTEN_LOGIC);
     }
 
@@ -100,7 +99,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
         address,
         address,
         uint256
-    ) external override onlyAdminOrSteward {
+    ) external override restricted {
         _forward(_TIGHTEN_LOGIC);
     }
 
@@ -108,7 +107,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     function tightenMinPledgeUsd(
         uint256,
         uint256
-    ) external override onlyAdminOrSteward {
+    ) external override restricted {
         _forward(_TIGHTEN_LOGIC);
     }
 
@@ -116,7 +115,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     function loosenSlippageAllowanceBps(
         uint256,
         uint16
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_LOOSEN_LOGIC);
     }
 
@@ -124,7 +123,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     function loosenFloorRoundingAllowance(
         address,
         uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_LOOSEN_LOGIC);
     }
 
@@ -135,7 +134,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
         address,
         uint8,
         uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_LOOSEN_LOGIC);
     }
 
@@ -143,7 +142,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     function loosenMarketUsdCap(
         uint256,
         uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_LOOSEN_LOGIC);
     }
 
@@ -151,7 +150,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     function loosenTopUpSliceUsd(
         uint256,
         uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_LOOSEN_LOGIC);
     }
 
@@ -160,7 +159,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
         address,
         address,
         uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_LOOSEN_LOGIC);
     }
 
@@ -168,7 +167,7 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     function loosenMinPledgeUsd(
         uint256,
         uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_LOOSEN_LOGIC);
     }
 }

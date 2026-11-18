@@ -24,7 +24,7 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
     function setUp() public {
         _setUpWorld();
         hub2 = new RegistryHubMock();
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.recordHub(address(hub2), RiskTier.Correlated);
         // Three CDP Spokes on hub2 (integrations 10, 11, 12) that may draw GHO from the Stable LP Hub through
         // cross-Hub lines.
@@ -45,7 +45,7 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         sp.setOracle(address(o));
         sp.setImplementation(address(spokeImpl));
         o.setSpoke(address(sp));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         s = registry.deployCdpSpoke(SpokeDef(false, h, id, tier, address(spokeImpl), address(o)));
     }
 
@@ -55,9 +55,8 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         RegistryLPVaultMock vault = new RegistryLPVaultMock(id, address(collat), lockAddr);
         vault.setRegistry(address(registry));
         address v = address(vault);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         factory.registerIntegration(id, v);
-        registry.registerIntegration(id, v, makeAddr(string(abi.encodePacked("pricing", bytes1(uint8(48 + id))))));
         vm.stopPrank();
     }
 
@@ -77,7 +76,7 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
     // One call records 1 to 16 contracts: 16 pass, 17 deployed contracts are refused for the count alone.
     function test_TEST_054_integrationContractsCountBound() public {
         address[] memory seventeen = _contracts(17);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, V3));
         registry.recordIntegrationContracts(V3, seventeen);
         address[] memory sixteen = new address[](16);
@@ -86,13 +85,13 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         }
         vm.expectEmit(address(registry));
         emit IMarketRegistry.IntegrationContractsRecorded(V3, _recordKeyOf(V3), sixteen);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.recordIntegrationContracts(V3, sixteen);
         assertEq(registry.integrationContracts(V3).length, 16);
         // A later call appends; a contract already recorded is refused.
         address[] memory last = new address[](1);
         last[0] = seventeen[16];
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.recordIntegrationContracts(V3, last);
         address[] memory got = registry.integrationContracts(V3);
         assertEq(got.length, 17);
@@ -104,7 +103,7 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
     function test_TEST_054_badEntryLeavesNoPartialRecord() public {
         address[] memory list = _contracts(3);
         list[2] = makeAddr("eoa");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, V3));
         registry.recordIntegrationContracts(V3, list);
         assertEq(registry.integrationContracts(V3).length, 0);
@@ -114,7 +113,7 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
     // Lists are per integration: the same contract may serve two integrations, each recording it once.
     function test_TEST_054_listsArePerIntegration() public {
         address[] memory list = _contracts(1);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.recordIntegrationContracts(V3, list);
         registry.recordIntegrationContracts(10, list);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, uint32(10)));
@@ -137,12 +136,12 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         RiskTier tier = RiskTier(bound(tierSeed, 1, 3));
         vm.expectEmit(address(registry));
         emit IMarketRegistry.HubRecorded(h, tier);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.recordHub(h, tier);
         assertEq(uint8(registry.hubTier(h)), uint8(tier));
         assertTrue(registry.isRecordedHub(h));
         assertEq(registry.getHubs()[2], h);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidHub.selector, h));
         registry.recordHub(h, tier == RiskTier.Stable ? RiskTier.Volatile : RiskTier.Stable);
         assertEq(uint8(registry.hubTier(h)), uint8(tier), "the tier never changes");
@@ -159,7 +158,7 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         RegistryFlashSourceMock wrongSwap = new RegistryFlashSourceMock(aaveV3Pool, alice);
         RegistryFlashSourceMock hubLender = new RegistryFlashSourceMock(address(hub2), address(lpVaultSwap));
         RegistryFlashSourceMock good = new RegistryFlashSourceMock(makeAddr("otherPool"), address(lpVaultSwap));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setFlashSource(address(0));
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
@@ -184,15 +183,15 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         RegistryFlashSourceMock f2 = new RegistryFlashSourceMock(makeAddr("pool2"), address(lpVaultSwap));
         vm.expectEmit(address(registry));
         emit IMarketRegistry.FlashSourceSet(address(0), address(f1));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setFlashSource(address(f1));
         vm.expectEmit(address(registry));
         emit IMarketRegistry.FlashSourceSet(address(f1), address(f2));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setFlashSource(address(f2));
         RegistryFlashSourceMock wrong = new RegistryFlashSourceMock(makeAddr("pool3"), alice);
         vm.recordLogs();
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setFlashSource(address(wrong));
         Vm.Log[] memory logs = vm.getRecordedLogs();
@@ -206,7 +205,7 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
     function test_TEST_285_recordHubFollowsTheCurrentFlashSource() public {
         address newLender = makeAddr("newLender");
         RegistryFlashSourceMock next = new RegistryFlashSourceMock(newLender, address(lpVaultSwap));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.recordHub(aaveV3Pool, RiskTier.Volatile);
         registry.setFlashSource(address(next));

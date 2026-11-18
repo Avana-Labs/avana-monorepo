@@ -26,7 +26,7 @@ contract MarketRegistryActivationChecksUnitTest is MarketRegistryFixture {
     function _expectCheck(
         bytes32 check
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ActivationCheckFailed.selector, id, check));
         registry.activateMarket(id);
         _assertUntouched();
@@ -44,7 +44,7 @@ contract MarketRegistryActivationChecksUnitTest is MarketRegistryFixture {
     }
 
     function _activate() internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.activateMarket(id);
         assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Active));
     }
@@ -90,7 +90,7 @@ contract MarketRegistryActivationChecksUnitTest is MarketRegistryFixture {
     function test_TEST_231_priceSourceChangeGuardsARegisteredMarket() public {
         address[] memory usdcAlt = registry.getToken(address(usdc)).alternateRoute;
         (address[] memory p,) = _routes("usdt2");
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("commonMode")));
         registry.setPriceSource(address(usdt), p, usdcAlt);
         _activate();

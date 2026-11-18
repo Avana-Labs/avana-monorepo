@@ -3,29 +3,31 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
 import {AvanaGasVault} from "../../src/periphery/gas-vault/AvanaGasVault.sol";
+import {AvanaTest} from "../utils/AvanaTest.sol";
 import {AvanaGasVaultHandler} from "./handlers/AvanaGasVaultHandler.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";
-import {Test} from "forge-std/Test.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @title AvanaGasVaultInvariantTest
 /// @notice TEST-335: random sequences of funding, gas spending, permissionless `topUp` and `topUpAll` by outsiders,
-/// clock steps up to 30 h, timelock adds, raises, unpauses and withdrawals, guardian removals, lowerings and pauses, and
+/// clock steps up to 30 h, governance adds, raises, unpauses and withdrawals, guardian removals, lowerings and pauses, and
 /// privileged calls by strangers and by the guardian. After every call: ETH sent to a signer over any 24 h window never
 /// passed the cap in force at each send; ETH left the vault only to then-listed signers (never above their target) or to
 /// `TREASURY`; a removed signer received nothing; funded = held + sent + withdrawn; no forbidden call succeeded.
-contract AvanaGasVaultInvariantTest is Test, HandlerReach {
+contract AvanaGasVaultInvariantTest is AvanaTest, HandlerReach {
     AvanaGasVault internal vault;
     AvanaGasVaultHandler internal handler;
     address internal treasury = makeAddr("treasury");
-    address internal timelock = makeAddr("timelock");
     address internal guardian = makeAddr("guardian");
 
     uint256 internal constant ACTIONS = 13;
 
     function setUp() public {
         vm.warp(1_800_000_000);
-        vault = new AvanaGasVault(treasury, timelock, guardian, 8);
+        vault = new AvanaGasVault(treasury, address(accessManager), guardian, 8);
+        _bindAccess(AvanaAccess.Kind.GasVault, address(vault));
         address[] memory candidates = new address[](10);
         for (uint256 i; i < candidates.length; ++i) {
             candidates[i] = makeAddr(string.concat("signer", vm.toString(i)));
@@ -34,11 +36,11 @@ contract AvanaGasVaultInvariantTest is Test, HandlerReach {
         strangers[0] = makeAddr("stranger0");
         strangers[1] = makeAddr("stranger1");
         strangers[2] = makeAddr("stranger2");
-        handler = new AvanaGasVaultHandler(vault, candidates, strangers);
+        handler = new AvanaGasVaultHandler(vault, governor, candidates, strangers);
         vm.deal(address(handler), 0);
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.addSigner(candidates[0], 0.3 ether, 1 ether, 1 ether);
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.addSigner(candidates[1], 0.3 ether, 1 ether, 1 ether);
         handler.fund(0, 10 ether);
         targetContract(address(handler));

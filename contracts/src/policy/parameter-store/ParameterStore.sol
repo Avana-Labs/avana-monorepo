@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
 import {IParameterStore} from "./IParameterStore.sol";
 import {ParameterStoreForwardAdmin} from "./ParameterStoreForwardAdmin.sol";
 import {ParameterStoreForwardRisk} from "./ParameterStoreForwardRisk.sol";
@@ -19,7 +18,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 
 /// @title ParameterStore
 /// @notice Every Avana risk and feed parameter of one chain, with its bounds and change direction.
-/// @dev UUPS proxy; only the timelock can upgrade it. Setter bodies run in five logic contracts by delegatecall.
+/// @dev UUPS proxy; only the AccessManager's upgrade role can upgrade it. Setter bodies run in five logic contracts by delegatecall.
 contract ParameterStore is UUPSUpgradeable, ParameterStoreForwardRisk, ParameterStoreForwardAdmin {
     /// @inheritdoc IParameterStore
     function getMarketParams(
@@ -108,11 +107,6 @@ contract ParameterStore is UUPSUpgradeable, ParameterStoreForwardRisk, Parameter
     }
 
     /// @inheritdoc IParameterStore
-    function TIMELOCK() external view override returns (address timelock) {
-        timelock = _TIMELOCK;
-    }
-
-    /// @inheritdoc IParameterStore
     function marketUsdCap(
         uint256 marketId
     ) external view override returns (uint256 value) {
@@ -172,23 +166,18 @@ contract ParameterStore is UUPSUpgradeable, ParameterStoreForwardRisk, Parameter
 
     /// @notice Fixes the implementation immutables and the five logic contracts.
     constructor(
-        address timelock,
         address marketRegistry,
         uint32 chainBlockTime,
         ParameterStoreLogics memory logics
-    ) ParameterStoreRouter(timelock, marketRegistry, chainBlockTime, logics) {}
+    ) ParameterStoreRouter(marketRegistry, chainBlockTime, logics) {}
 
     /// @inheritdoc IParameterStore
     function initialize(
-        address timelock,
+        address authority,
         GlobalParams calldata
     ) external override initializer {
-        if (timelock != _TIMELOCK) revert AdminRoleOnlyTimelock(DEFAULT_ADMIN_ROLE, timelock);
-        __AccessControl_init();
+        __AccessManaged_init(authority);
         __UUPSUpgradeable_init();
-        _setRoleAdmin(AvanaRoles.APPLICATION_RISK_STEWARD, AvanaRoles.APPLICATION_ADMIN);
-        _grantRole(DEFAULT_ADMIN_ROLE, timelock);
-        _grantRole(AvanaRoles.APPLICATION_ADMIN, timelock);
         _forward(_ADMIN_RISK_LOGIC);
     }
 
@@ -245,7 +234,7 @@ contract ParameterStore is UUPSUpgradeable, ParameterStoreForwardRisk, Parameter
         address,
         address,
         uint256
-    ) external override onlyAdminOrSteward {
+    ) external override restricted {
         _forward(_TIGHTEN_LOGIC);
     }
 
@@ -254,21 +243,21 @@ contract ParameterStore is UUPSUpgradeable, ParameterStoreForwardRisk, Parameter
         address,
         address,
         uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_LOOSEN_LOGIC);
     }
 
     /// @inheritdoc IParameterStore
     function tightenMaxShortfallBps(
         uint16
-    ) external override onlyAdminOrSteward {
+    ) external override restricted {
         _forward(_TIGHTEN_LOGIC);
     }
 
     /// @inheritdoc IParameterStore
     function loosenMaxShortfallBps(
         uint16
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_LOOSEN_LOGIC);
     }
 
@@ -276,7 +265,7 @@ contract ParameterStore is UUPSUpgradeable, ParameterStoreForwardRisk, Parameter
     function tightenDebtStressRiseBps(
         address,
         uint16
-    ) external override onlyAdminOrSteward {
+    ) external override restricted {
         _forward(_TIGHTEN_LOGIC);
     }
 
@@ -284,19 +273,19 @@ contract ParameterStore is UUPSUpgradeable, ParameterStoreForwardRisk, Parameter
     function loosenDebtStressRiseBps(
         address,
         uint16
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_LOOSEN_LOGIC);
     }
 
     /// @inheritdoc IParameterStore
     function setCoverageRatioBps(
         uint16
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
+    ) external override restricted {
         _forward(_LISTING_LOGIC);
     }
 
-    /// @dev Only `APPLICATION_ADMIN` (the timelock) upgrades, at the normal delay.
+    /// @dev Only the AccessManager's governance role upgrades, after its execution delay.
     function _authorizeUpgrade(
         address
-    ) internal view override onlyRole(AvanaRoles.APPLICATION_ADMIN) {}
+    ) internal override restricted {}
 }

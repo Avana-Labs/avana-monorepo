@@ -5,19 +5,6 @@
 export const aaveAdapterAbi = [
   {
     "type": "function",
-    "name": "APPLICATION_ADMIN",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "COLLATERALIZATION",
     "inputs": [],
     "outputs": [
@@ -109,19 +96,6 @@ export const aaveAdapterAbi = [
   },
   {
     "type": "function",
-    "name": "TIMELOCK",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "timelock",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "VAULT_TOKEN_FACTORY",
     "inputs": [],
     "outputs": [
@@ -163,6 +137,19 @@ export const aaveAdapterAbi = [
         "name": "reserveId",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "authority",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -384,13 +371,26 @@ export const aaveAdapterAbi = [
     "name": "initialize",
     "inputs": [
       {
-        "name": "timelock",
+        "name": "authority",
         "type": "address",
         "internalType": "address"
       }
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "isConsumingScheduledOp",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes4",
+        "internalType": "bytes4"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -820,6 +820,19 @@ export const aaveAdapterAbi = [
   },
   {
     "type": "function",
+    "name": "setAuthority",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "walletOf",
     "inputs": [
       {
@@ -881,6 +894,19 @@ export const aaveAdapterAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "AuthorityUpdated",
+    "inputs": [
+      {
+        "name": "authority",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -1363,10 +1389,10 @@ export const aaveAdapterAbi = [
   },
   {
     "type": "error",
-    "name": "AccountNotEmpty",
+    "name": "AccessManagedInvalidAuthority",
     "inputs": [
       {
-        "name": "proxy",
+        "name": "authority",
         "type": "address",
         "internalType": "address"
       }
@@ -1374,15 +1400,37 @@ export const aaveAdapterAbi = [
   },
   {
     "type": "error",
-    "name": "AdminRoleOnlyTimelock",
+    "name": "AccessManagedRequiredDelay",
     "inputs": [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        "name": "account",
+        "name": "delay",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "AccessManagedUnauthorized",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "AccountNotEmpty",
+    "inputs": [
+      {
+        "name": "proxy",
         "type": "address",
         "internalType": "address"
       }

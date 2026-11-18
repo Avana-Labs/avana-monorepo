@@ -23,17 +23,16 @@ const ABI_DIR = join(PKG, "src/abis");
 
 /**
  * [export name, build ("avana" | "aave"), artifact name], sorted by export name. Each ABI is the contract's interface,
- * which carries its events and errors, except where the interface leaves out events the deployed contract emits; those
- * two come from the contract itself. IAvanaTimelock declares only what AvanaTimelock adds to OpenZeppelin's
- * TimelockController (no CallScheduled, CallExecuted, Cancelled or role events), and IAvanaFirstLossReserve does not inherit
- * IAvanaFirstLossReserveAdmin (BorrowSpokeAllowlistUpdated, FirstLossReserveMinimumUpdated).
+ * which carries its events and errors, except where the interface leaves out events the deployed contract emits; that
+ * one comes from the contract itself. IAvanaFirstLossReserve does not inherit IAvanaFirstLossReserveAdmin
+ * (BorrowSpokeAllowlistUpdated, FirstLossReserveMinimumUpdated).
  */
 const CONTRACTS = [
   ["aaveAdapterAbi", "avana", "IAaveAdapter"],
+  ["accessManagerAbi", "avana", "IAccessManager"],
   ["aaveV4HubAbi", "aave", "IHub"],
   ["aaveV4SpokeAbi", "aave", "ISpoke"],
   ["avanaGasVaultAbi", "avana", "IAvanaGasVault"],
-  ["avanaTimelockAbi", "avana", "AvanaTimelock"],
   ["collateralizationAbi", "avana", "ICollateralization"],
   ["firstLossReserveAbi", "avana", "AvanaFirstLossReserve"],
   ["flashLiquidatorAbi", "avana", "IFlashLiquidator"],

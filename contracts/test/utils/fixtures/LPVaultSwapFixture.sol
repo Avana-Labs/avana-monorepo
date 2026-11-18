@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {AvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {AaveV3FlashSource} from "../../../src/flash/AaveV3FlashSource.sol";
@@ -75,7 +76,6 @@ abstract contract LPVaultSwapFixture is AaveV4Fixture {
     uint256 internal constant SLIPPAGE_BPS = 100;
     uint40 internal constant DEFAULT_BORROW_CAP = 10_000_000;
 
-    address internal timelock = makeAddr("timelock");
     address internal pool = makeAddr("usdcUsdtPool");
 
     AaveAdapterMock internal adapter;
@@ -150,7 +150,9 @@ abstract contract LPVaultSwapFixture is AaveV4Fixture {
         address predictedProxy = vm.computeCreateAddress(address(this), n0 + 8);
         lock = new Lock(address(adapter), predictedProxy);
         escrow = new PayoutEscrow(predictedProxy, address(lock));
-        factory = new VaultTokenFactory(address(adapter), predictedProxy, predictedColl, timelock, address(registry));
+        factory = new VaultTokenFactory(
+            address(adapter), predictedProxy, predictedColl, address(accessManager), address(registry)
+        );
         coll = ICollateralization(
             deployCode(
                 "Collateralization.sol:Collateralization",
@@ -167,10 +169,14 @@ abstract contract LPVaultSwapFixture is AaveV4Fixture {
         keepers[0] = keeper;
         lvs = ILPVaultSwap(
             address(
-                new ERC1967Proxy(address(implementation), abi.encodeCall(LPVaultSwap.initialize, (timelock, keepers)))
+                new ERC1967Proxy(
+                    address(implementation), abi.encodeCall(LPVaultSwap.initialize, (address(accessManager), keepers))
+                )
             )
         );
         require(address(lvs) == predictedProxy, "predicted LPVaultSwap");
+        _bindAccess(AvanaAccess.Kind.LPVaultSwap, address(lvs));
+        _bindAccess(AvanaAccess.Kind.VaultTokenFactory, address(factory));
         adapter.setCore(address(lock), address(lvs), address(coll));
     }
 
@@ -189,8 +195,8 @@ abstract contract LPVaultSwapFixture is AaveV4Fixture {
 
     function _deployMarket() private {
         lpVault = new CollLPVaultMock(INTEGRATION, address(coll), address(lock));
-        lpVault.setCore(timelock, address(registry));
-        vm.prank(timelock);
+        lpVault.setCore(address(accessManager), address(registry));
+        vm.prank(governor);
         factory.registerIntegration(INTEGRATION, address(lpVault));
         uint256[] memory prices = new uint256[](2);
         prices[0] = PRICE_UNIT;
@@ -204,7 +210,7 @@ abstract contract LPVaultSwapFixture is AaveV4Fixture {
         lpVault.bind(MARKET_ID, pool, _pair(address(usdc), address(usdt)), rates);
         usdc.mint(address(lpVault), 1e30);
         usdt.mint(address(lpVault), 1e30);
-        vm.prank(timelock);
+        vm.prank(governor);
         vt = VaultToken(
             factory.deployVaultToken(
                 INTEGRATION,
@@ -311,7 +317,7 @@ abstract contract LPVaultSwapFixture is AaveV4Fixture {
         uint256 assetId,
         string memory label
     ) private returns (AvanaFirstLossReserve cs) {
-        cs = new AvanaFirstLossReserve(aave.hub, token, assetId, aave.accessManager, 1_209_600);
+        cs = new AvanaFirstLossReserve(aave.hub, token, assetId, aave.accessManager);
         vm.label(address(cs), label);
         uint24 maxRp = IAaveV4Hub(aave.hub).MAX_RISK_PREMIUM_THRESHOLD();
         vm.prank(aaveDao);
@@ -506,7 +512,7 @@ abstract contract LPVaultSwapFixture is AaveV4Fixture {
         rates[0] = USDC_RATE;
         rates[1] = USDT_RATE;
         lpVault.bind(MARKET_B, poolB, _pair(address(usdc), address(usdt)), rates);
-        vm.prank(timelock);
+        vm.prank(governor);
         vtB = VaultToken(
             factory.deployVaultToken(
                 INTEGRATION,

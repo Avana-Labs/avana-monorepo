@@ -17,11 +17,11 @@ contract UniswapV3IntegrationHarness is UniswapV3Integration {
         address collateralization,
         address marketRegistry,
         address lock,
-        address timelock,
+        address authority,
         address nfpm,
         address factory,
         bytes32 initCodeHash
-    ) UniswapV3Integration(integrationId, collateralization, marketRegistry, lock, timelock, nfpm, factory, 12) {
+    ) UniswapV3Integration(integrationId, collateralization, marketRegistry, lock, authority, nfpm, factory, 12) {
         _INIT_CODE_HASH = initCodeHash;
     }
 

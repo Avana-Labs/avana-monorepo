@@ -107,7 +107,7 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
         uint8 kind,
         address route
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setRoute(id, token, asset, kind, route);
     }
 
@@ -117,7 +117,7 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
         uint8 kind,
         address route
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setRoute(id, token, asset, kind, route);
     }
@@ -143,7 +143,7 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
     function _activate(
         bytes memory err
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         if (err.length != 0) vm.expectRevert(err);
         registry.activateMarket(id);
     }
@@ -205,13 +205,13 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
             _set(toks[k / 2], address(gho), uint8(k % 2), routes[k]);
         }
         for (uint8 kind = 0; kind < 2; ++kind) {
-            vm.prank(address(timelock));
+            vm.prank(governor);
             registry.disableRoute(id, address(usdt), address(gho), kind);
             (address r, bool usable) = registry.getRoute(id, address(usdt), address(gho), kind);
             assertEq(r, routes[2 + kind], "the slot keeps its route");
             assertFalse(usable, "a disabled slot is unusable");
             _activate(_routesErr());
-            vm.prank(address(timelock));
+            vm.prank(governor);
             registry.restoreRoute(id, address(usdt), address(gho), kind, routes[2 + kind]);
             (, usable) = registry.getRoute(id, address(usdt), address(gho), kind);
             assertTrue(usable, "restored");
@@ -233,17 +233,17 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
         bytes memory bound =
             abi.encodeWithSelector(IMarketRegistryBase.LivenessBound.selector, address(spoke), id, DAI_RESERVE);
 
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(bound);
         registry.enableDebtReserve(address(spoke), def);
         _set(address(usdc), address(dai), 0, _route(address(usdc), address(dai)));
         _set(address(usdc), address(dai), 1, _route(address(usdc), address(dai)));
         _set(address(usdt), address(dai), 0, _route(address(usdt), address(dai)));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(bound);
         registry.enableDebtReserve(address(spoke), def);
         _set(address(usdt), address(dai), 1, _route(address(usdt), address(dai)));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.enableDebtReserve(address(spoke), def);
         assertTrue(registry.isApprovedDebtReserve(address(spoke), DAI_RESERVE), "enabled with every route in place");
     }
@@ -266,7 +266,7 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
         spoke.setReserve(DAI_RESERVE, r, c, d);
         aaveOracle.setSource(DAI_RESERVE, address(daiOracle));
         ps.setStressRise(address(dai), 500);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.setAvanaFirstLossReserve(address(hub), address(dai), address(daiCoverage));
         vm.stopPrank();
         def = DebtReserveDef({

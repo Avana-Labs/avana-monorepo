@@ -86,7 +86,7 @@ abstract contract FullStackMarkets is FullStackFixture {
         _storeListing(id);
         _aaveListing(m);
         _routes(id);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.activateMarket(id);
         vm.label(m.vaultToken, string.concat("VaultToken ", vm.toString(id)));
         vm.label(address(m.oracle), string.concat("LPOracle ", vm.toString(id)));
@@ -99,7 +99,7 @@ abstract contract FullStackMarkets is FullStackFixture {
     ) private returns (address vt) {
         (int24 lower, int24 upper) = _fullRange(p);
         string memory n = vm.toString(id);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vt = vtFactory.deployVaultToken(
             V3,
             address(p),
@@ -127,7 +127,7 @@ abstract contract FullStackMarkets is FullStackFixture {
         (d.vaultToken, d.lpOracle) = (vt, oracle);
         // The listing valuation prices of the two tokens, 8 decimals (read by the real LPVault's `bindMarket`).
         d.integrationData = abi.encode(uint256(1e8), uint256(1e8));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listCollateralMarket(d);
     }
 
@@ -151,7 +151,7 @@ abstract contract FullStackMarkets is FullStackFixture {
         // Slippage allowance 195: the largest the LIQ-I1 fee bound admits at minLB = 10,250 and a 20 % fee share.
         (p.slippageAllowanceBps, p.slippageAllowanceMinBps) = (195, 30);
         (p.poolRiskFactor, p.minPledgeUsd) = (4000, MIN_PLEDGE_USD);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         store.setInitialMarketParams(id, p);
         store.setInitialMarketCaps(id, 1_000_000e8, 100_000e8, 1e8);
         // Default dynamic borrow cap terms (IParameterStore example): 6-hour interval, 25 %, $250k to $2.5M buffer.
@@ -207,7 +207,7 @@ abstract contract FullStackMarkets is FullStackFixture {
                 if (toks[i] == debts[j]) continue;
                 if (_realStack()) {
                     address[2] memory r = _realRoutes(toks[i], debts[j]);
-                    vm.startPrank(address(timelock));
+                    vm.startPrank(governor);
                     registry.setRoute(id, toks[i], debts[j], 0, r[0]);
                     registry.setRoute(id, toks[i], debts[j], 1, r[1]);
                     vm.stopPrank();
@@ -216,7 +216,7 @@ abstract contract FullStackMarkets is FullStackFixture {
                 for (uint8 kind = 0; kind < 2; ++kind) {
                     address[] memory deps = _list(makeAddr(string.concat("dex ", vm.toString(kind))));
                     address route = address(new RegistryRouteMock(toks[i], debts[j], address(swap), deps));
-                    vm.prank(address(timelock));
+                    vm.prank(governor);
                     registry.setRoute(id, toks[i], debts[j], kind, route);
                 }
             }
@@ -420,32 +420,26 @@ abstract contract FullStackMarkets is FullStackFixture {
 
     // ─── Governance ───
 
-    /// @dev Schedules `data` on `target` through the real timelock at its required delay, waits it (republishing every
-    /// feed so prices stay fresh) and executes it on the public path; returns the delay.
+    /// @dev Schedules `data` on `target` through the real AccessManager as the governance Safe at the delay of its
+    /// role, waits it (republishing every feed so prices stay fresh) and executes it; returns the delay.
     function _govern(
         address target,
         bytes memory data
     ) internal returns (uint256 delay) {
         delay = _requiredDelay(target, data);
-        bytes32 salt = bytes32(++opNonce);
-        vm.prank(governanceMultisig);
-        timelock.schedule(target, 0, data, bytes32(0), salt, delay);
+        _scheduleOp(governanceMultisig, target, data);
         vm.warp(block.timestamp + delay);
         vm.roll(block.number + delay / BLOCK_TIME);
         _refreshFeeds();
-        vm.prank(attacker);
-        timelock.execute(target, 0, data, bytes32(0), salt);
+        vm.prank(governanceMultisig);
+        accessManager.execute(target, data);
     }
 
     function _requiredDelay(
         address target,
         bytes memory data
     ) internal view returns (uint256) {
-        address[] memory t = new address[](1);
-        t[0] = target;
-        bytes[] memory p = new bytes[](1);
-        p[0] = data;
-        return timelock.requiredDelay(t, p);
+        return _delayOf(target, data);
     }
 
     // ─── Helpers ───

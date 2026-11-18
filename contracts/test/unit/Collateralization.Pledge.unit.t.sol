@@ -530,7 +530,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         rates[0] = 800_000;
         rates[1] = 1_250_000;
         lpVault.bind(MARKET_ID + 1, pool, tokens, rates);
-        vm.prank(timelock);
+        vm.prank(governor);
         second = factory.deployVaultToken(
             INTEGRATION,
             pool,

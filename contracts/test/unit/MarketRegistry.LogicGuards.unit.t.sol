@@ -39,11 +39,10 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
     function _bodies() internal view returns (Body[] memory b) {
         address[] memory one = new address[](1);
         one[0] = address(gho);
-        b = new Body[](20);
+        b = new Body[](19);
         uint256 k = 0;
         // Hubs logic.
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.recordHub, (alice, RiskTier.Stable)));
-        b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.registerIntegration, (2, alice, bob)));
         b[k++] = Body(
             logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.setAvanaFirstLossReserve, (address(hub), alice, bob))
         );
@@ -89,7 +88,7 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
     // stranger alike: the bodies run only inside the registry, after its caller check.
     function test_TEST_168_everyLogicBodyRefusesADirectCall() public {
         Body[] memory b = _bodies();
-        address[4] memory callers = [address(timelock), emergencyGuardian, address(rm), attacker];
+        address[4] memory callers = [governor, emergencyGuardian, address(rm), attacker];
         for (uint256 i = 0; i < b.length; ++i) {
             for (uint256 c = 0; c < callers.length; ++c) {
                 vm.prank(callers[c]);
@@ -174,34 +173,33 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
         }
     }
 
-    /// @dev `im` with field `i` (0..12) set to zero.
+    /// @dev `im` with field `i` (0..11) set to zero.
     function _zeroField(
         uint256 i
     ) internal view returns (MarketRegistryImmutables memory x) {
         x = im;
-        if (i == 0) x.timelock = address(0);
-        if (i == 1) x.aaveGovernanceExecutor = address(0);
-        if (i == 2) x.vaultTokenFactory = address(0);
-        if (i == 3) x.aaveAdapter = address(0);
-        if (i == 4) x.collateralization = address(0);
-        if (i == 5) x.lock = address(0);
-        if (i == 6) x.proxyManager = address(0);
-        if (i == 7) x.parameterStore = address(0);
-        if (i == 8) x.riskModule = address(0);
-        if (i == 9) x.lpVaultSwap = address(0);
-        if (i == 10) x.payoutEscrow = address(0);
-        if (i == 11) x.flashLiquidator = address(0);
-        if (i == 12) x.standardSpokeImplementation = address(0);
-        if (i == 13) x.maxMarketCount = 0;
+        if (i == 0) x.aaveGovernanceExecutor = address(0);
+        if (i == 1) x.vaultTokenFactory = address(0);
+        if (i == 2) x.aaveAdapter = address(0);
+        if (i == 3) x.collateralization = address(0);
+        if (i == 4) x.lock = address(0);
+        if (i == 5) x.proxyManager = address(0);
+        if (i == 6) x.parameterStore = address(0);
+        if (i == 7) x.riskModule = address(0);
+        if (i == 8) x.lpVaultSwap = address(0);
+        if (i == 9) x.payoutEscrow = address(0);
+        if (i == 10) x.flashLiquidator = address(0);
+        if (i == 11) x.standardSpokeImplementation = address(0);
+        if (i == 12) x.maxMarketCount = 0;
     }
 
     // TEST-168 verifies: REQ-CONFIG-005, REQ-MREG-034
-    // Fail closed at construction: each of the 13 per-chain addresses at zero, and a market-count limit of 0, is refused
+    // Fail closed at construction: each of the 12 per-chain addresses at zero, and a market-count limit of 0, is refused
     // by every logic contract and by the registry implementation.
     function test_TEST_168_everyZeroImmutableRefused() public {
         bytes memory err =
             abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("immutables"));
-        for (uint256 i = 0; i < 14; ++i) {
+        for (uint256 i = 0; i < 13; ++i) {
             MarketRegistryImmutables memory x = _zeroField(i);
             vm.expectRevert(err);
             new MarketRegistryHubsLogic(x);
@@ -248,7 +246,7 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
     function test_TEST_168_implementationContractIsInert() public {
         MarketRegistry impl = new MarketRegistry(im, logics);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        impl.initialize(address(timelock));
+        impl.initialize(address(accessManager));
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.MarketNotOffboarding.selector, 1));
         impl.closeMarket(1);
     }

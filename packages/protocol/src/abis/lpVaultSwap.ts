@@ -18,19 +18,6 @@ export const lpVaultSwapAbi = [
   },
   {
     "type": "function",
-    "name": "APPLICATION_ADMIN",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "COLLATERALIZATION",
     "inputs": [],
     "outputs": [
@@ -148,19 +135,6 @@ export const lpVaultSwapAbi = [
   },
   {
     "type": "function",
-    "name": "TIMELOCK",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "timelock",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "activeKeeperCount",
     "inputs": [],
     "outputs": [
@@ -194,6 +168,19 @@ export const lpVaultSwapAbi = [
         "name": "count",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "authority",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -304,7 +291,7 @@ export const lpVaultSwapAbi = [
     "name": "initialize",
     "inputs": [
       {
-        "name": "timelock",
+        "name": "authority",
         "type": "address",
         "internalType": "address"
       },
@@ -332,6 +319,19 @@ export const lpVaultSwapAbi = [
         "name": "approved",
         "type": "bool",
         "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isConsumingScheduledOp",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes4",
+        "internalType": "bytes4"
       }
     ],
     "stateMutability": "view"
@@ -513,6 +513,19 @@ export const lpVaultSwapAbi = [
   },
   {
     "type": "function",
+    "name": "setAuthority",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "settlePending",
     "inputs": [
       {
@@ -544,6 +557,19 @@ export const lpVaultSwapAbi = [
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "AuthorityUpdated",
+    "inputs": [
+      {
+        "name": "authority",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -1008,15 +1034,37 @@ export const lpVaultSwapAbi = [
   },
   {
     "type": "error",
-    "name": "AdminRoleOnlyTimelock",
+    "name": "AccessManagedInvalidAuthority",
     "inputs": [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "name": "authority",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "AccessManagedRequiredDelay",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        "name": "account",
+        "name": "delay",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "AccessManagedUnauthorized",
+    "inputs": [
+      {
+        "name": "caller",
         "type": "address",
         "internalType": "address"
       }

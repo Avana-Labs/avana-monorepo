@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {IClIntegration} from "../../src/amm/IClIntegration.sol";
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
+import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {DexHop, HopKind, RouteConfig} from "../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {ILPOracle} from "../../src/oracle/ILPOracle.sol";
@@ -25,9 +26,10 @@ import {
 import {MarketDef} from "../../src/types/MarketTypes.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
+import {IAccessManagerOps} from "./lib/AccessOperations.sol";
+import {AvanaAccess} from "./lib/AvanaAccess.sol";
 import {ChainInputs} from "./lib/DeployTypes.sol";
 import {IPoolTokens, ListingBase} from "./lib/ListingBase.sol";
-import {ITimelockOps} from "./lib/TimelockOperations.sol";
 import {TokenProbe} from "./lib/TokenProbe.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
@@ -53,9 +55,9 @@ interface IRelistedToken {
 
 /// @title ListMarkets
 /// @notice The listing of the network's collateral markets (3.8 `MKT-018`…`MKT-026`, `MKT-044`, `MKT-055`), in the
-/// steps the contracts require, each a timelock operation the governance Safe schedules (with `AVANA_SCHEDULE=1` on
+/// steps the contracts require, each an AccessManager operation the governance Safe schedules (with `AVANA_SCHEDULE=1` on
 /// anvil) and `05_ExecuteOperations` executes once ready. `AVANA_LISTING_STEP` picks the step:
-/// - `setup` (normal delay): each integration's AMM contracts recorded and finalized; the Hubs' depositor caps; every
+/// - `setup` (governance delay): each integration's AMM contracts recorded and finalized; the Hubs' depositor caps; every
 ///   feed of the listed tokens (`setFeed`); the pool tokens and debt assets (`listToken`: two routes and the issuer
 ///   probe, GHO as a fixed-price monitoring-only listing), then their collateral factor and Hub token caps, USDC's
 ///   debt stress rise; each CDP Spoke (`approveSpokeCodeHash`,
@@ -65,7 +67,7 @@ interface IRelistedToken {
 ///   other debt asset, initialised in its deploying transaction once the asset is listed (`DebtOracle.initialize` reads
 ///   its routes). `10_AaveListingPayload` (`debt`) then names them as the reserves' price sources and makes the
 ///   approved reserves borrowable.
-/// - `markets` (normal delay): Avana operators deploy each market's LPOracle proxy and swap routes (a cancelled market
+/// - `markets` (governance delay): Avana operators deploy each market's LPOracle proxy and swap routes (a cancelled market
 ///   of the config is relisted under its reserved ID with its first vault token and LPOracle); the batch enables
 ///   the debt reserves (`enableDebtReserve`, the debt asset's settlement parameters and, on the first reserve of a
 ///   (Hub, asset)), then per market `deployVaultToken`, `listCollateralMarket`,
@@ -73,18 +75,19 @@ interface IRelistedToken {
 ///   every pool token into the Spoke's debt asset and each route slot's depth threshold (`tightenRouteDepthThreshold`,
 ///   from the route's `depthThreshold` in the config). `10_AaveListingPayload` (`vault-tokens`) then lists the vault
 ///   tokens.
-/// - `activate` (short delay): every LPOracle poked Live, then `activateMarket` for each market.
+/// - `activate` (tighten role, 12 hours): every LPOracle poked Live, then `activateMarket` for each market.
 /// @dev A Uniswap v4 market has no pool address: its config `pool` names an entry of `listing.uniswapV4Pools` (the pool
 /// key's currencies, fee and tick spacing, and the Uniswap v3 reference pool of its pair), and the market is keyed by
 /// `poolId = keccak256(abi.encode(key))` with `pool = address(0)`. Native ETH (`currency0 = address(0)`) is the
 /// LPVault's `wrappedNative()` among the market's tokens.
 /// The dynamic borrow cap fails closed: a market without written terms refuses every borrow, so the listing batch
-/// writes the config values (tau 6 h, alpha 25 %, L_min $250k, L_max $2.5M). The `markets` operation's salt is keccak256 of the listing metadata file
+/// writes the config values (tau 6 h, alpha 25 %, L_min $250k, L_max $2.5M). The `markets` operation file records keccak256 of the listing metadata file
 /// (`09-market-metadata`), so the operation commits to the pages it adds. Outputs: `listing-oracles.json` and `listing-markets.json` in
 /// `deployments-local/<network>/`, read by the manifest producer and the scenarios.
 contract ListMarkets is ListingBase {
     // From the network inputs (`ChainInputs` holds arrays of structs, which the legacy pipeline cannot copy to storage).
     address internal safe;
+    address internal dao;
     uint32[] internal integrationIds;
     mapping(uint32 => bool) internal isSlipstream;
     mapping(uint32 => bool) internal isUniswapV4;
@@ -93,6 +96,7 @@ contract ListMarkets is ListingBase {
         _loadListing();
         ChainInputs memory c = _loadInputs(_network());
         safe = c.gov.governanceSafe;
+        dao = c.gov.aaveGovernanceExecutor;
         for (uint256 i = 0; i < c.integrations.length; ++i) {
             integrationIds.push(c.integrations[i].integrationId);
             isSlipstream[c.integrations[i].integrationId] = _eq(c.integrations[i].kind, "slipstream");
@@ -114,9 +118,9 @@ contract ListMarkets is ListingBase {
         }
     }
 
-    /// @notice Writes the operation and, with `AVANA_SCHEDULE`, schedules it as the Safe at the delay the timelock
-    /// requires of it: the short delay for an operation that must be short (`short`, the activation), else the normal
-    /// delay set at deployment.
+    /// @notice Writes the operation and, with `AVANA_SCHEDULE`, schedules it as the Safe, each call ready after the
+    /// execution delay of its role: the tighten role's for an operation that must be short (`short`, the activation),
+    /// else the governance role's.
     function _propose(
         Operation memory op,
         bool short
@@ -127,17 +131,18 @@ contract ListMarkets is ListingBase {
             console2.log(op.name, "nothing to schedule: everything in the config is already on chain");
             return;
         }
-        _freshSalt(timelock, op);
-        bytes32 id = _writeOperation(timelock, op);
-        console2.log(op.name, vm.toString(id), _operationPath(op.name));
+        uint256 delay = _writeOperation(accessManager, safe, op);
+        console2.log(op.name, _operationPath(op.name), "ready after", delay);
         if (vm.envOr("AVANA_SCHEDULE", false)) {
-            uint256 delay = ITimelockOps(timelock).requiredDelay(op.targets, op.payloads);
             require(
-                !short || delay == ITimelockOps(timelock).getMinDelay(),
-                string.concat(op.name, " is not a short-delay operation")
+                !short || delay == AvanaAccess.TIGHTEN_DELAY, string.concat(op.name, " is not a short-delay operation")
             );
+            if (_isScheduled(accessManager, safe, op)) {
+                console2.log(op.name, "is scheduled already");
+                return;
+            }
             vm.broadcast(safe);
-            ITimelockOps(timelock).scheduleBatch(op.targets, op.values, op.payloads, op.predecessor, op.salt, delay);
+            IAccessManagerOps(accessManager).multicall(_scheduleCalls(op));
             console2.log("scheduled as the governance Safe", safe);
         }
     }
@@ -147,7 +152,7 @@ contract ListMarkets is ListingBase {
     function _setup(
         ChainInputs memory c
     ) private returns (Operation memory op) {
-        op = _newOperation("listing-setup", release, 200);
+        op = _newOperation("listing-setup", 200);
         for (uint256 i = 0; i < c.integrations.length; ++i) {
             uint32 id = c.integrations[i].integrationId;
             uint256 n = c.integrations[i].positionManagers.length;
@@ -466,7 +471,7 @@ contract ListMarkets is ListingBase {
     /// @return starts The index in `op` of each new market's first call; the calls before the first are the routes of
     /// listed markets and the debt reserves.
     function _markets() private returns (Operation memory op, uint256[] memory starts) {
-        op = _newOperation("listing-markets", release, 400);
+        op = _newOperation("listing-markets", 400);
         uint256 first = registry.marketCount() + 1;
         uint256 n = _cfgCount(".listing.markets");
         starts = new uint256[](n);
@@ -510,19 +515,20 @@ contract ListMarkets is ListingBase {
         assembly ("memory-safe") {
             mstore(starts, newMarkets)
         }
-        if (op.targets.length != 0) op.salt = _listingMetadataHash(first);
+        if (op.targets.length != 0) op.metadataHash = _listingMetadataHash(first);
         // A listing with calls but no market (debt assets only) has no market entry to record.
         if (op.targets.length != 0 && bytes(json).length != 0) vm.writeJson(json, _outputPath("listing-markets"));
     }
 
     // ─── listing batch gas ───
 
-    /// @notice Gas the timelock spends per call of a batch beyond the call itself (the loop, the cold call, the
-    /// payload copy and the `CallExecuted` event), the price of a calldata byte, and a transaction's base cost.
-    uint256 internal constant PER_CALL_GAS = 12_000;
+    /// @notice Gas the AccessManager spends per call of a batch beyond the call itself (`execute`'s operation id and
+    /// storage clear, the cold call, the target's `consumeScheduledOp` round trip and the payload copy), the price of a
+    /// calldata byte, and a transaction's base cost.
+    uint256 internal constant PER_CALL_GAS = 60_000;
     uint256 internal constant CALLDATA_GAS_PER_BYTE = 16;
     uint256 internal constant TX_BASE_GAS = 21_000;
-    /// @notice Default execution gas budget of one timelock operation: about five markets on Ethereum, well inside a
+    /// @notice Default execution gas budget of one operation: about five markets on Ethereum, well inside a
     /// block. `.chain.operationGasBudget` in the network config sets a chain's own; `AVANA_OPERATION_GAS_BUDGET`
     /// overrides both.
     uint256 internal constant DEFAULT_OPERATION_GAS_BUDGET = 40_000_000;
@@ -538,10 +544,9 @@ contract ListMarkets is ListingBase {
     /// budget (`_operationGasBudget`). The batch is cut only at the group starts in `starts`: for `listing-markets`
     /// between any two of the calls before the first new market (the routes of listed markets and the debt reserves)
     /// and between markets, each market's calls staying together (`_leadingCallsApart`); for `listing-setup` between
-    /// any two calls (`_everyCall`), since the parts run in order. Part 1 keeps the batch's name; part k is `<name>.<k>` and names part k-1 as its predecessor, so the
-    /// parts execute in order (`05_ExecuteOperations` follows them). The last part carries the batch's salt (for
-    /// `listing-markets` the listing metadata salt, so the pages load once every market of the listing is on chain);
-    /// the others' salts derive from it.
+    /// any two calls (`_everyCall`), since the parts run in order. Part 1 keeps the batch's name; part k is `<name>.<k>`, and
+    /// `05_ExecuteOperations` executes the parts in order. The last part carries the batch's metadata hash (for
+    /// `listing-markets`, so the pages load once every market of the listing is on chain).
     function _proposeInParts(
         Operation memory op,
         uint256[] memory starts
@@ -554,14 +559,11 @@ contract ListMarkets is ListingBase {
         uint256 budget = _operationGasBudget();
         uint256[] memory cuts = _cuts(op, starts, gas, budget);
         uint256 parts = cuts.length - 1;
-        bytes32 previous;
         for (uint256 k = 0; k < parts; ++k) {
             Operation memory part = _part(op, gas, cuts[k], cuts[k + 1], k, parts);
-            part.predecessor = previous;
             console2.log(part.name, "calls", part.targets.length);
             console2.log("  estimated execution gas", part.gasEstimate, "budget", budget);
             _propose(part, false);
-            previous = _operationId(timelock, part);
         }
         if (parts > 1) console2.log(string.concat(op.name, " split in"), parts, "operations, executed in order");
     }
@@ -639,7 +641,7 @@ contract ListMarkets is ListingBase {
     }
 
     /// @notice Part `k` of `parts`: calls [from, to) of the batch with their gas estimate. Part 1 keeps the batch's
-    /// name and part k is `<name>.<k>`; the last part keeps the batch's salt and the others' derive from it.
+    /// name and part k is `<name>.<k>`; the last part keeps the batch's metadata hash.
     function _part(
         Operation memory op,
         uint256[] memory gas,
@@ -647,29 +649,29 @@ contract ListMarkets is ListingBase {
         uint256 to,
         uint256 k,
         uint256 parts
-    ) private view returns (Operation memory part) {
-        part = _newOperation(k == 0 ? op.name : string.concat(op.name, ".", vm.toString(k + 1)), release, to - from);
+    ) private pure returns (Operation memory part) {
+        part = _newOperation(k == 0 ? op.name : string.concat(op.name, ".", vm.toString(k + 1)), to - from);
         part.gasEstimate = TX_BASE_GAS;
         for (uint256 i = from; i < to; ++i) {
             _add(part, op.targets[i], op.payloads[i], op.labels[i]);
-            part.values[i - from] = op.values[i];
             part.gasEstimate += gas[i];
         }
-        part.salt = k + 1 == parts ? op.salt : keccak256(abi.encode(op.salt, "part", k + 1));
+        if (k + 1 == parts) part.metadataHash = op.metadataHash;
     }
 
-    /// @notice Each call's estimated execution gas inside `executeBatch`: the call itself, made in order as the
-    /// timelock on a snapshot of the chain that is reverted afterwards, plus the timelock's per-call cost and its
-    /// calldata. A call that reverts stops the step, since it would revert at execution, after the delay.
+    /// @notice Each call's estimated execution gas inside the Safe's `multicall` of `execute` calls: the call itself, made
+    /// in order as the Safe on a snapshot of the chain that is reverted afterwards (the DAO first lifts the Safe's
+    /// execution delays on the snapshot), plus the AccessManager's per-call cost and the calldata. A call that reverts stops the step, since it would revert at execution, after the delay.
     function _simulatedGas(
         Operation memory op
     ) private returns (uint256[] memory gas) {
         gas = new uint256[](op.targets.length);
         uint256 snap = vm.snapshotState();
+        _liftDelays();
         for (uint256 i = 0; i < op.targets.length; ++i) {
-            vm.prank(timelock);
+            vm.prank(safe);
             uint256 before = gasleft();
-            (bool ok, bytes memory ret) = op.targets[i].call{value: op.values[i]}(op.payloads[i]);
+            (bool ok, bytes memory ret) = op.targets[i].call(op.payloads[i]);
             uint256 used = before - gasleft();
             if (!ok) {
                 // The call's own revert data, which forge decodes (a custom error by name), after the call's label.
@@ -681,15 +683,25 @@ contract ListMarkets is ListingBase {
                     revert(add(ret, 0x20), mload(ret))
                 }
             }
-            // A payload costs its bytes plus its offset, length, target and value words in the batch's calldata.
-            gas[i] = used + PER_CALL_GAS + CALLDATA_GAS_PER_BYTE * (op.payloads[i].length + 4 * 32);
+            // A payload costs its bytes plus its offset, length and target words in the batch's calldata.
+            gas[i] = used + PER_CALL_GAS + CALLDATA_GAS_PER_BYTE * (op.payloads[i].length + 3 * 32);
         }
         vm.revertToState(snap);
     }
 
+    /// @notice On the simulation snapshot only: the DAO sets the Safe's execution delays to 0, so the Safe's calls run at
+    /// once, as they will at execution.
+    function _liftDelays() private {
+        uint64[2] memory ids = [AvanaRoles.TIGHTEN_ROLE, AvanaRoles.GOVERNANCE_ROLE];
+        for (uint256 i = 0; i < ids.length; ++i) {
+            vm.prank(dao);
+            IAccessManagerOps(accessManager).grantRole(ids[i], safe, 0);
+        }
+    }
+
     /// @notice Refuses a market whose `collateralFactorBps` (the vault token's Aave collateral factor, set by step 10's
     /// AIP) is above `SPEC-CF-001`'s bound, min(token collateral factors) x `poolRiskFactorBps` / 1e4. Activation
-    /// would fail `CollateralFactorAboveExpected` after both timelock delays; the step fails before scheduling instead.
+    /// would fail `CollateralFactorAboveExpected` after both execution delays; the step fails before scheduling instead.
     function _checkCollateralFactor(
         Mkt memory m
     ) private view {
@@ -775,8 +787,8 @@ contract ListMarkets is ListingBase {
         return _isV4Market(key) ? _v4Key(name).tickSpacing : IPoolTokens(_pool(name)).tickSpacing();
     }
 
-    /// @notice The listing's timelock salt: keccak256 of the listing metadata file `09-market-metadata` wrote
-    /// (`script/deploy/market-metadata.ts`), the pages this listing adds. Convex loads the file by that hash once the
+    /// @notice The listing's metadata hash: keccak256 of the listing metadata file `09-market-metadata` wrote
+    /// (`script/deploy/market-metadata.ts`), the pages this listing adds. Convex loads the file by that hash (recorded in the operation file) once the
     /// operation executes and refuses one whose bytes hash otherwise. The file must be for this chain and for the market
     /// IDs this listing gives, the ones after `marketCount()`.
     function _listingMetadataHash(
@@ -788,8 +800,8 @@ contract ListMarkets is ListingBase {
             vm.parseJsonUint(pointer, ".firstMarketId") == firstMarketId,
             "listing metadata names other market IDs: rerun 09-market-metadata"
         );
-        // No new market or debt reserve (new routes only): no pages; the salt names the release, the next market ID and
-        // the time, so two such operations never share an ID.
+        // No new market or debt reserve (new routes only): no pages; the hash names the release, the next market ID and
+        // the time.
         if (vm.parseJsonUint(pointer, ".entries") == 0) {
             return keccak256(
                 bytes(
@@ -1236,10 +1248,10 @@ contract ListMarkets is ListingBase {
     // ─── activate ───
 
     /// @notice `MKT-022`, `MKT-026`: every listed LPOracle poked (it must be Live), then `activateMarket` for each.
-    function _activate() private returns (Operation memory op) {
+    function _activate() private view returns (Operation memory op) {
         IVaultTokenFactory f = IVaultTokenFactory(vm.parseJsonAddress(avanaJson, ".vaultTokenFactory"));
         uint256 n = _cfgCount(".listing.markets");
-        op = _newOperation("listing-activate", release, n);
+        op = _newOperation("listing-activate", n);
         // The config's markets that are listed and still Registered: each LPOracle poked Live, then `activateMarket`.
         uint256[] memory ids = new uint256[](n);
         uint256 k;

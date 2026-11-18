@@ -72,7 +72,7 @@ contract RiskModuleBorrowUnitTest is RiskModuleFixture {
 
     // TEST-155 verifies: REQ-ADAPTER-019, REQ-ADAPTER-025, REQ-ADAPTER-056, REQ-PROXY-079, INV-060, REQ-ACCESS-036, REQ-RISK-032, REQ-RISK-034
     function test_TEST_155_offboardingBlocksBorrowOnly() public {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.setMarketOffboarding(mid);
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.MarketOffboarding.selector, mid));
         _borrow(GHO_RESERVE);
@@ -115,7 +115,7 @@ contract RiskModuleBorrowUnitTest is RiskModuleFixture {
         riskModule.preWithdrawCheck(address(proxy));
         swap.setKeepers(1);
         // USDT has no usable route into USDC once both routes are gone; USDC itself needs none.
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.disableRoute(mid, address(usdt), address(usdc), 0);
         registry.disableRoute(mid, address(usdt), address(usdc), 1);
         vm.stopPrank();

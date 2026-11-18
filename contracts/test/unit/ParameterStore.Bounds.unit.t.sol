@@ -28,7 +28,7 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
     function _accepts(
         bytes memory data
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (bool ok, bytes memory ret) = address(store).call(data);
         assertTrue(ok, "refused an in-bounds value");
         assertEq(ret.length, 0, "setter returned data");
@@ -38,7 +38,7 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         bytes memory data,
         bytes memory err
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (bool ok, bytes memory ret) = address(store).call(data);
         assertFalse(ok, "accepted an out-of-bounds value");
         assertEq(ret, err, "wrong error");
@@ -51,7 +51,7 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
     function _relist(
         MarketParams memory p
     ) internal returns (bool ok, bytes memory ret) {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (ok, ret) = address(store).call(abi.encodeCall(store.setInitialMarketParams, (M, p)));
     }
 

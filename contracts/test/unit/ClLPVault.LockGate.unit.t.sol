@@ -112,7 +112,7 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
         _assertLockedSurface(key, stray);
         _cAs(_cCore().adapter, calls[1]);
         assertEq(_cManager(key).ownerOf(_cTokenId(key)), bob, "returned under the Lock");
-        vm.prank(_cCore().timelock);
+        vm.prank(governor);
         _cVault().returnStray(stray, carol);
         assertEq(_cManager(stray).ownerOf(_cTokenId(stray)), carol, "the stray leaves once the Lock is free");
     }
@@ -147,7 +147,7 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
         IClIntegration v = _cVault();
         vm.prank(c.adapter);
         c.lock.acquire();
-        vm.prank(c.timelock);
+        vm.prank(governor);
         vm.expectRevert(Locked.selector);
         v.returnStray(stray, carol);
         vm.prank(alice);
@@ -177,7 +177,7 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
         address[6] memory callers = [
             alice,
             makeAddr("positionProxy"),
-            address(_cVaultWithTimelock(_cCore().timelock)),
+            address(_cVaultWithAuthority(address(accessManager))),
             address(intruder),
             _cCore().adapter,
             _cCore().lpVaultSwap
@@ -190,7 +190,7 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
             }
         }
         _assertBacked(key, bob, units);
-        vm.prank(_cCore().timelock);
+        vm.prank(governor);
         vm.expectRevert(NotStray.selector);
         _cVault().returnStray(key, alice);
         _laterMarketUsesTheSameLock();
@@ -432,7 +432,7 @@ abstract contract ClLPVaultLockGateTests is ClLPVaultBase {
             assertFalse(okColl, "custody entry point outside the Lock");
         }
         _assertBacked(key, alice, units);
-        vm.prank(_cCore().timelock);
+        vm.prank(governor);
         vm.expectRevert(NotStray.selector);
         _cVault().returnStray(key, operator);
         _assertBacked(key, alice, units);

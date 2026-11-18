@@ -10,7 +10,7 @@ import {Market} from "../../src/types/MarketTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 
 /// @notice REQ-PSTORE-017 for each of the six step-limited parameters: the exact step edge with integer
-/// comparisons, the spacing measured from the timelock's live `normalDelay`, one key per scope, the order of the
+/// comparisons, the spacing of 5 days (`LOOSEN_SPACING`), one key per scope, the order of the
 /// step, `addCap` and spacing checks, and the setters that neither check nor update the spacing.
 contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
     uint256 internal constant M2 = 2;
@@ -26,7 +26,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         m.lpOracle = makeAddr("lpOracle2Unused");
         // Market 2's LPOracle holds no code: no setter used here re-runs checkConfig.
         registry.setMarket(M2, m);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.setInitialMarketCaps(M2, 5_000_000e8, 500_000e8, 1e8);
     }
 
@@ -47,7 +47,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
     function _call(
         bytes memory data
     ) internal returns (bool ok, bytes memory ret) {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         (ok, ret) = address(store).call(data);
     }
 
@@ -86,7 +86,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
     function test_TEST_225_slippageStepFromZero() public {
         MarketParams memory p = store.getMarketParams(M);
         (p.slippageAllowanceBps, p.slippageAllowanceMinBps) = (0, 0);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         store.setInitialMarketParams(M, p);
         bytes32 key = _key("slippageAllowanceBps", bytes32(M));
         _refuses(abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 26)), _tooLarge(key));
@@ -198,20 +198,6 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         }
     }
 
-    // TEST-225 verifies: REQ-PSTORE-017, REQ-CONFIG-053, INV-090
-    function test_TEST_225_spacingFollowsTheLiveNormalDelay() public {
-        // The timelock's normal delay is lowered to its 4-day minimum by its own operation.
-        _run(_self(abi.encodeCall(timelock.setNormalDelay, (MIN_NORMAL_DELAY))), bytes32("delay"));
-        assertEq(timelock.normalDelay(), MIN_NORMAL_DELAY);
-        bytes32 key = _key("marketUsdCap", bytes32(M));
-        uint256 t = block.timestamp;
-        _accepts(abi.encodeCall(store.loosenMarketUsdCap, (M, 6_000_000e8)));
-        vm.warp(t + MIN_NORMAL_DELAY - 1);
-        _refuses(abi.encodeCall(store.loosenMarketUsdCap, (M, 7_000_000e8)), _tooSoon(key, t + MIN_NORMAL_DELAY));
-        vm.warp(t + MIN_NORMAL_DELAY);
-        _accepts(abi.encodeCall(store.loosenMarketUsdCap, (M, 7_000_000e8)));
-    }
-
     // TEST-225 verifies: REQ-PSTORE-017, REQ-PSTORE-026, Q-246
     function test_TEST_225_eachScopeHasItsOwnKey() public {
         _accepts(abi.encodeCall(store.loosenMarketUsdCap, (M, 6_000_000e8)));
@@ -265,7 +251,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
 
     // TEST-225 verifies: REQ-PSTORE-017, REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-030
     function test_TEST_225_unsteppedLooseningsRunBackToBack() public {
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         store.tightenMaxShortfallBps(100);
         store.tightenDebtStressRiseBps(usdc, 3000);
         store.tightenRouteDepthThreshold(M, usdc, gho, 0, 1_000_000e8);
@@ -384,7 +370,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
 
     // TEST-225 verifies: REQ-RISK-043, REQ-CONFIG-051, REQ-CONFIG-067
     function test_TEST_225_everyLoosenSetterRefusesTheCurrentValue() public {
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         store.tightenDebtStressRiseBps(usdc, 500);
         store.tightenRouteDepthThreshold(M, usdc, gho, 0, 5e8);
         store.setDebtAssetParams(gho, DebtReserveParams(1e17));

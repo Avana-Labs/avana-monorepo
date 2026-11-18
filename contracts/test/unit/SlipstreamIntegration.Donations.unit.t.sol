@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 import {LPVaultLedgerFixture} from "../utils/fixtures/LPVaultLedgerFixture.sol";
 import {SlipstreamIntegrationFixture} from "../utils/fixtures/SlipstreamIntegrationFixture.sol";
 import {MintableToken, NftHolder, OtherNft} from "../utils/mocks/UniswapV3Mocks.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -21,7 +22,7 @@ contract SlipstreamIntegrationDonationsUnitTest is SlipstreamIntegrationFixture,
     function setUp() public override {
         super.setUp();
         _deployLedger(
-            LedgerCore(adapter, lpVaultSwap, coll, address(lock), timelock, registry),
+            LedgerCore(adapter, lpVaultSwap, coll, address(lock), address(accessManager), registry),
             INTEGRATION,
             address(vault),
             M1,
@@ -110,9 +111,9 @@ contract SlipstreamIntegrationDonationsUnitTest is SlipstreamIntegrationFixture,
         assertEq(ledger.recordIdOf(INTEGRATION, stray), 0, "a stray has no backing record");
         _assertLedgerUnchanged(before, _ledgerState(pledged, bob, bobProxy, alice));
         vm.prank(alice);
-        vm.expectRevert(NotTimelock.selector);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, alice));
         vault.returnStray(stray, alice);
-        vm.startPrank(timelock);
+        vm.startPrank(governor);
         vm.expectRevert(InvalidRecipient.selector);
         vault.returnStray(stray, address(0));
         vm.expectRevert(InvalidRecipient.selector);
@@ -125,13 +126,13 @@ contract SlipstreamIntegrationDonationsUnitTest is SlipstreamIntegrationFixture,
         vault.returnStray(_key(0, _id(stray)), alice); // same token ID on another generation, not held
         vm.stopPrank();
         _lock();
-        vm.prank(timelock);
+        vm.prank(governor);
         vm.expectRevert(Locked.selector);
         vault.returnStray(stray, alice);
         _unlock();
         vm.expectEmit(address(vault));
         emit StrayReturned(stray, carol);
-        vm.prank(timelock);
+        vm.prank(governor);
         vault.returnStray(stray, carol);
         assertEq(_npm1().ownerOf(_id(stray)), carol);
         _assertLedgerUnchanged(before, _ledgerState(pledged, bob, bobProxy, alice));

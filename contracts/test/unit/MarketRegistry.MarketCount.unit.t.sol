@@ -46,7 +46,7 @@ contract MarketRegistryMarketCountUnitTest is MarketRegistryFixture {
     function _list(
         MarketDef memory d
     ) internal returns (uint256 id) {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         id = registry.listCollateralMarket(d);
     }
 
@@ -59,7 +59,7 @@ contract MarketRegistryMarketCountUnitTest is MarketRegistryFixture {
     function _expectCapped(
         MarketDef memory d
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.MarketCountLimit.selector, CAP));
         registry.listCollateralMarket(d);
     }
@@ -81,7 +81,7 @@ contract MarketRegistryMarketCountUnitTest is MarketRegistryFixture {
     function test_TEST_295_closedAndCancelledMarketsStillCount() public {
         _fill();
         _prepareActivation(1, registry.getMarket(1).vaultToken);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.activateMarket(1);
         registry.setMarketOffboarding(1);
         registry.cancelRegistration(2);
@@ -99,7 +99,7 @@ contract MarketRegistryMarketCountUnitTest is MarketRegistryFixture {
         _fill();
         MarketDef memory d3 = _marketDef(registry.getMarket(3).vaultToken, registry.getMarket(3).lpOracle);
         d3.shape = _shapeOf(3);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.cancelRegistration(3);
         assertEq(_list(d3), 3);
         assertEq(registry.marketCount(), CAP);
@@ -117,7 +117,7 @@ contract MarketRegistryMarketCountUnitTest is MarketRegistryFixture {
         // A token carrying a live (Registered) identifier: not a relisting.
         MarketDef memory live = _marketDef(registry.getMarket(2).vaultToken, registry.getMarket(2).lpOracle);
         live.shape = _shapeOf(2);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.DuplicateMarketKey.selector);
         registry.listCollateralMarket(live);
         _expectCapped(_defFor(CAP + 1, CAP + 1));
@@ -127,7 +127,7 @@ contract MarketRegistryMarketCountUnitTest is MarketRegistryFixture {
     function _expectMismatch(
         MarketDef memory d
     ) internal {
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(IMarketRegistryBase.VaultTokenMismatch.selector);
         registry.listCollateralMarket(d);
     }

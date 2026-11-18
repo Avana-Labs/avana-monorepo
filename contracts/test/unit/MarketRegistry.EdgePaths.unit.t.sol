@@ -41,10 +41,9 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
         ghoSource = new RegistryFeedMock(8, 1e8);
         ghoCoverage = new RegistryAvanaFirstLossReserveMock(address(hub), address(gho), GHO_ASSET);
         ghoCoverage.setFunded(4e24, false);
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         factory.registerIntegration(V3, address(lpVault));
         registry.recordHub(address(hub), RiskTier.Stable);
-        registry.registerIntegration(V3, address(lpVault), makeAddr("clPricing"));
         registry.deployCdpSpoke(_spokeDef());
         hub.setAsset(address(gho), GHO_ASSET);
         registry.setAvanaFirstLossReserve(address(hub), address(gho), address(ghoCoverage));
@@ -52,12 +51,12 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
         _setGhoReserve();
         _listTokenWithProbe(address(gho), "gho", IssuerProbe.None);
         assertEq(registry.flashSource(), address(0));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidDebtReserve.selector, bytes32("flash")));
         registry.enableDebtReserve(address(spoke), _ghoDef());
         // Once a source lends GHO, the same definition is accepted.
         flash = new RegistryFlashSourceMock(aaveV3Pool, address(lpVaultSwap));
-        vm.startPrank(address(timelock));
+        vm.startPrank(governor);
         registry.setFlashSource(address(flash));
         registry.enableDebtReserve(address(spoke), _ghoDef());
         vm.stopPrank();
@@ -75,7 +74,7 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
         (, address[] memory a) = _routes("t");
         address[] memory p = new address[](1);
         p[0] = address(big);
-        vm.prank(address(timelock));
+        vm.prank(governor);
         registry.listToken(t, _tokenDef(p, a));
         address[] memory toks = new address[](2);
         (toks[0], toks[1]) = (address(usdc), t);
@@ -84,12 +83,12 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
         (address vt, RegistryLPOracleMock o) = _deployTokenAndOracle(1, sh);
         MarketDef memory d = _marketDef(vt, address(o));
         d.shape = sh;
-        vm.prank(address(timelock));
+        vm.prank(governor);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("rawPrice")));
         registry.listCollateralMarket(d);
         // At 2^95 / 10^8 (still at 1 decimal) the route reads below 2^96 and the bound itself decides.
         big.setAnswer(int256(uint256(2 ** 95) / 1e8));
-        vm.prank(address(timelock));
+        vm.prank(governor);
         assertEq(registry.listCollateralMarket(d), 1);
     }
 }
