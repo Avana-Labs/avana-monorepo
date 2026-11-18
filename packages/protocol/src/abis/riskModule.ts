@@ -387,16 +387,6 @@ export const riskModuleAbi = [
                 "internalType": "bool"
               },
               {
-                "name": "aaveReservePaused",
-                "type": "bool",
-                "internalType": "bool"
-              },
-              {
-                "name": "aaveReserveFrozen",
-                "type": "bool",
-                "internalType": "bool"
-              },
-              {
                 "name": "hubSharesEqualAssets",
                 "type": "bool",
                 "internalType": "bool"
@@ -425,11 +415,6 @@ export const riskModuleAbi = [
           },
           {
             "name": "unapprovedDebtReserveId",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "pausedDebtReserveId",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -976,22 +961,6 @@ export const riskModuleAbi = [
   },
   {
     "type": "error",
-    "name": "AaveReservePaused",
-    "inputs": [
-      {
-        "name": "reserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "AaveReserveUnavailable",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "AdminRoleOnlyTimelock",
     "inputs": [
       {
@@ -1141,17 +1110,6 @@ export const riskModuleAbi = [
   },
   {
     "type": "error",
-    "name": "DebtReservePaused",
-    "inputs": [
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "DebtSpeedExceeded",
     "inputs": [
       {
@@ -1194,11 +1152,6 @@ export const riskModuleAbi = [
   },
   {
     "type": "error",
-    "name": "HubAddCapReached",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "HubSharesNotEqualAssets",
     "inputs": [
       {
@@ -1207,11 +1160,6 @@ export const riskModuleAbi = [
         "internalType": "uint256"
       }
     ]
-  },
-  {
-    "type": "error",
-    "name": "HubSpokeUnavailable",
-    "inputs": []
   },
   {
     "type": "error",
@@ -1413,17 +1361,6 @@ export const riskModuleAbi = [
   },
   {
     "type": "error",
-    "name": "ReserveFrozen",
-    "inputs": [
-      {
-        "name": "reserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "ShapeMismatch",
     "inputs": []
   },
@@ -1480,11 +1417,6 @@ export const riskModuleAbi = [
         "internalType": "address"
       }
     ]
-  },
-  {
-    "type": "error",
-    "name": "UserReservesLimit",
-    "inputs": []
   },
   {
     "type": "error",

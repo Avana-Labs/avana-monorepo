@@ -83,25 +83,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "aaveTargetHealthFactor",
-    "inputs": [
-      {
-        "name": "spoke",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "avanaFeeShareBps",
     "inputs": [],
     "outputs": [
@@ -999,25 +980,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "minLiquidationBonus",
-    "inputs": [
-      {
-        "name": "spoke",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "minPledgeUsd",
     "inputs": [
       {
@@ -1366,29 +1328,6 @@ export const parameterStoreAbi = [
         "name": "cap",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setLiquidationExpectations",
-    "inputs": [
-      {
-        "name": "spoke",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "targetHealthFactor",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "minLiquidationBonusBps",
-        "type": "uint16",
-        "internalType": "uint16"
       }
     ],
     "outputs": [],
@@ -2765,17 +2704,6 @@ export const parameterStoreAbi = [
         "name": "marketId",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "UnknownSpoke",
-    "inputs": [
-      {
-        "name": "spoke",
-        "type": "address",
-        "internalType": "address"
       }
     ]
   }

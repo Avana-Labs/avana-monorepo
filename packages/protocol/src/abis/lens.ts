@@ -468,16 +468,6 @@ export const lensAbi = [
                     "internalType": "bool"
                   },
                   {
-                    "name": "aaveReservePaused",
-                    "type": "bool",
-                    "internalType": "bool"
-                  },
-                  {
-                    "name": "aaveReserveFrozen",
-                    "type": "bool",
-                    "internalType": "bool"
-                  },
-                  {
                     "name": "hubSharesEqualAssets",
                     "type": "bool",
                     "internalType": "bool"
@@ -506,11 +496,6 @@ export const lensAbi = [
               },
               {
                 "name": "unapprovedDebtReserveId",
-                "type": "uint256",
-                "internalType": "uint256"
-              },
-              {
-                "name": "pausedDebtReserveId",
                 "type": "uint256",
                 "internalType": "uint256"
               },
@@ -969,16 +954,6 @@ export const lensAbi = [
                     "internalType": "bool"
                   },
                   {
-                    "name": "aaveReservePaused",
-                    "type": "bool",
-                    "internalType": "bool"
-                  },
-                  {
-                    "name": "aaveReserveFrozen",
-                    "type": "bool",
-                    "internalType": "bool"
-                  },
-                  {
                     "name": "hubSharesEqualAssets",
                     "type": "bool",
                     "internalType": "bool"
@@ -1007,11 +982,6 @@ export const lensAbi = [
               },
               {
                 "name": "unapprovedDebtReserveId",
-                "type": "uint256",
-                "internalType": "uint256"
-              },
-              {
-                "name": "pausedDebtReserveId",
                 "type": "uint256",
                 "internalType": "uint256"
               },
